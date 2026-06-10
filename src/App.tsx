@@ -17,7 +17,7 @@ function App() {
 
       <div className="h-dvh w-dvw overflow-hidden">
         <FontStyleInjector />
-        <div className="window-container flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+        <div className="window-container flex size-full flex-col overflow-hidden bg-primary-bg">
           <MainLayout />
         </div>
         <ZoomIndicator />

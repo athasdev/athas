@@ -430,7 +430,7 @@ const DiffFileSection = memo(function DiffFileSection({
             <button
               type="button"
               onClick={handleToggle}
-              className="relative z-50 flex h-8 w-8 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
+              className="relative z-50 flex size-8 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
               aria-label={expanded ? "Collapse file diff" : "Expand file diff"}
               aria-expanded={expanded}
             >

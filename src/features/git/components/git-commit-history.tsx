@@ -85,7 +85,7 @@ const WorkingTreeItem = memo(function WorkingTreeItem({
         </span>
       </button>
 
-      <div className="pointer-events-none absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-border/70 bg-secondary-bg/95 p-2.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/history-item:opacity-100 group-focus-within/history-item:opacity-100">
+      <div className="pointer-events-none absolute inset-x-0 top-full z-30 mt-1 rounded-lg border border-border/70 bg-secondary-bg/95 p-2.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/history-item:opacity-100 group-focus-within/history-item:opacity-100">
         <div className="flex items-center gap-2 text-text">
           <WarningCircle className="size-4 text-git-modified" weight="duotone" />
           <span className="ui-text-sm font-medium">Uncommitted working tree</span>
@@ -154,7 +154,7 @@ const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: Com
         </span>
       </button>
 
-      <div className="pointer-events-none absolute left-0 right-0 top-full z-30 mt-1 rounded-lg border border-border/70 bg-secondary-bg/95 p-2.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/history-item:opacity-100 group-focus-within/history-item:opacity-100">
+      <div className="pointer-events-none absolute inset-x-0 top-full z-30 mt-1 rounded-lg border border-border/70 bg-secondary-bg/95 p-2.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/history-item:opacity-100 group-focus-within/history-item:opacity-100">
         <div className="flex min-w-0 items-center gap-2 text-text">
           <CommitIcon className="size-4 shrink-0 text-accent" weight="duotone" />
           <span className="ui-text-sm min-w-0 truncate font-medium">{commit.message}</span>

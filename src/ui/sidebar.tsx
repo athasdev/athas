@@ -54,7 +54,7 @@ export const SidebarFooter = forwardRef<
         "shrink-0 bg-primary-bg/95 px-2 py-2",
         surface &&
           cn(
-            "mx-2 mb-2 border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] px-0 py-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
+            "mx-2 mb-2 border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
             attached ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
           ),
         className,

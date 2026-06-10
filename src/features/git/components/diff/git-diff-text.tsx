@@ -199,7 +199,7 @@ const TextDiffViewer = memo(
           isEmbeddedInScrollView
             ? "min-w-0 overflow-x-auto overflow-y-hidden"
             : viewMode === "split"
-              ? "min-w-0 overflow-x-hidden overflow-y-hidden"
+              ? "min-w-0 overflow-hidden"
               : "min-w-0 overflow-x-auto overflow-y-hidden"
         }
       >

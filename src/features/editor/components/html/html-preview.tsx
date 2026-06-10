@@ -42,11 +42,11 @@ export function HtmlPreview() {
   }
 
   return (
-    <div ref={containerRef} className="html-preview h-full w-full bg-white">
+    <div ref={containerRef} className="html-preview size-full bg-white">
       <iframe
         title="HTML Preview"
         srcDoc={iframeContent}
-        className="h-full w-full border-none"
+        className="size-full border-none"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
       />
     </div>

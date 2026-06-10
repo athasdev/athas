@@ -237,7 +237,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
 
 function WebViewerDisabledState() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-primary-bg px-6">
+    <div className="flex size-full items-center justify-center bg-primary-bg px-6">
       <div className="max-w-sm text-center">
         <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
         <div className="mt-1 ui-text-xs text-text-lighter">
@@ -948,7 +948,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       ref={containerRef}
       data-pane-container
       data-pane-id={pane.id}
-      className={`relative flex h-full w-full flex-col overflow-hidden bg-primary-bg ${
+      className={`relative flex size-full flex-col overflow-hidden bg-primary-bg ${
         isActivePane ? "ring-1 ring-accent/30" : ""
       } ${isDragOver || internalHoverZone ? "ring-2 ring-accent" : ""}`}
       onMouseDownCapture={handlePaneMouseDownCapture}
@@ -1034,7 +1034,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           }
                     }
                   >
-                    <div className="h-full w-full">
+                    <div className="size-full">
                       {isStandardEditorBuffer(buffer) ? (
                         <CodeEditor
                           paneId={pane.id}
@@ -1045,9 +1045,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         />
                       ) : buffer.type === "terminal" ? (
                         <div
-                          className={
-                            isActiveBuffer ? "h-full w-full" : "pointer-events-none h-full w-full"
-                          }
+                          className={isActiveBuffer ? "size-full" : "pointer-events-none size-full"}
                         >
                           <TerminalTab
                             sessionId={buffer.sessionId}
@@ -1060,7 +1058,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           />
                         </div>
                       ) : buffer.type === "webViewer" && isActiveBuffer ? (
-                        <div className="h-full w-full">
+                        <div className="size-full">
                           {webViewerEnabled ? (
                             <WebViewer
                               url={buffer.url}

@@ -200,7 +200,7 @@ function FlowLineNumbersComponent({
                         }}
                         aria-label={isCollapsed ? "Expand fold" : "Collapse fold"}
                         aria-expanded={!isCollapsed}
-                        className="flex h-4 w-4 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover/40 hover:text-text"
+                        className="flex size-4 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover/40 hover:text-text"
                       >
                         {isCollapsed ? (
                           <ChevronRight size={14} strokeWidth={2} />

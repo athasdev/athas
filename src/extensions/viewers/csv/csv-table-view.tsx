@@ -83,7 +83,7 @@ export function TableView({
               return (
                 <div
                   key={virtualRow.key}
-                  className="absolute right-0 left-0 grid w-full gap-0 hover:bg-hover"
+                  className="absolute inset-x-0 grid w-full gap-0 hover:bg-hover"
                   style={{
                     transform: `translateY(${virtualRow.start}px)`,
                     height: virtualRow.size,

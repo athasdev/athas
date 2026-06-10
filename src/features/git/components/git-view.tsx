@@ -900,7 +900,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyActionState className="h-full" message="No repository selected">
@@ -919,7 +919,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyState className="h-full">Loading Git status...</SidebarEmptyState>
@@ -933,7 +933,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
@@ -955,7 +955,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
-        <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
+        <SidebarHeader className="min-w-0 bg-transparent p-0 backdrop-blur-none">
           <GitProjectSelector
             className="w-fit max-w-[calc(100%-4.5rem)]"
             onRepositoryChange={() => setRepoSelectionError(null)}

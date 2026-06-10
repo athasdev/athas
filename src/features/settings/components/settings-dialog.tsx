@@ -195,7 +195,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           content: "flex p-0",
         }}
       >
-        <div className="flex h-full w-full min-w-0 overflow-hidden">
+        <div className="flex size-full min-w-0 overflow-hidden">
           <div className="w-52 shrink-0 max-[720px]:hidden">
             <SettingsVerticalTabs
               activeTab={activeTab}

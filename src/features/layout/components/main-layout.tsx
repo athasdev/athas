@@ -246,7 +246,7 @@ export function MainLayout() {
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
   return (
-    <div className="athas-layout-shell relative flex h-full w-full flex-col overflow-hidden bg-secondary-bg">
+    <div className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-secondary-bg">
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
