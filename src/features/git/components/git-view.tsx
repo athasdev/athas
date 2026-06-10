@@ -797,20 +797,37 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <Button
         onClick={() => void handleInitializeRepository()}
         disabled={!canInitializeRepository || isInitializingRepo}
-        variant="accent"
+        variant="ghost"
         compact
-        className="mt-1.5 h-6 px-2 ui-text-xs"
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
             : "Open a folder before initializing Git"
         }
       >
-        <GitBranch />
-        {isInitializingRepo ? "Initializing..." : "Initialize Repository"}
+        <GitBranch weight="duotone" />
+        {isInitializingRepo ? "Initializing..." : "Initialize"}
       </Button>
     );
   };
+
+  const renderRepositoryEmptyActions = () => (
+    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        compact
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
+        disabled={isSelectingRepo}
+        onClick={() => void handleSelectRepository()}
+      >
+        <FolderSimpleStar weight="duotone" />
+        {isSelectingRepo ? "Selecting..." : "Browse"}
+      </Button>
+      {renderInitializeRepositoryButton()}
+    </div>
+  );
 
   const renderGitActionsMenu = ({
     hasGitRepo,
@@ -891,14 +908,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
-          <SidebarEmptyActionState
-            className="h-full"
-            message="No repository selected"
-            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-            actionDisabled={isSelectingRepo}
-            onAction={() => void handleSelectRepository()}
-          >
-            {renderInitializeRepositoryButton()}
+          <SidebarEmptyActionState className="h-full" message="No repository selected">
+            {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             ) : null}
@@ -930,14 +941,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
-          <SidebarEmptyActionState
-            className="h-full"
-            message="Not a Git repository"
-            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-            actionDisabled={isSelectingRepo}
-            onAction={() => void handleSelectRepository()}
-          >
-            {renderInitializeRepositoryButton()}
+          <SidebarEmptyActionState className="h-full" message="Not a Git repository">
+            {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             ) : null}
