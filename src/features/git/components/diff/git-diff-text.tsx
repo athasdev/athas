@@ -99,11 +99,12 @@ const TextDiffViewer = memo(
     const selectionScopeRef = useRef<HTMLDivElement>(null);
     const editorFontSize = useEditorSettingsStore.use.fontSize();
     const editorFontFamily = useEditorSettingsStore.use.fontFamily();
+    const editorLineHeight = useEditorSettingsStore.use.lineHeight();
     const editorTabSize = useEditorSettingsStore.use.tabSize();
     const wordWrap = useEditorSettingsStore.use.wordWrap();
     const zoomLevel = useZoomStore.use.editorZoomLevel();
     const fontSize = editorFontSize * zoomLevel;
-    const lineHeight = Math.max(calculateLineHeight(fontSize), Math.ceil(fontSize * 1.6), 22);
+    const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
     const tabSize = editorTabSize;
 
     const hunks = useMemo(() => groupLinesIntoHunks(diff.lines), [diff.lines]);

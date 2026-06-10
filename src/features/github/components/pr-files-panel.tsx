@@ -1,8 +1,13 @@
 import {
+  ListBulletsIcon as ListBullets,
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as SlidersHorizontal,
 } from "@phosphor-icons/react";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useMemo } from "react";
+import {
+  GitDiffFileSidebar,
+  type DiffFileTreeItem,
+} from "@/features/git/components/diff/git-diff-file-sidebar";
 import { Button, buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
@@ -42,11 +47,11 @@ interface PRFilesPanelProps {
   fileQuery: string;
   fileStatusFilter: FileStatusFilter;
   selectedFilePath: string | null;
-  isWideSplit: boolean;
+  isFileTreeVisible: boolean;
   diffDebugSummary: DiffDebugSummary;
   patchError?: string;
   onRetry: () => void;
-  onToggleSplit: () => void;
+  onToggleFileTree: () => void;
   onFileQueryChange: (value: string) => void;
   onFileStatusFilterChange: (value: FileStatusFilter) => void;
   onSelectFile: (path: string) => void;
@@ -64,70 +69,27 @@ export const PRFilesPanel = memo(
     fileQuery,
     fileStatusFilter,
     selectedFilePath,
-    isWideSplit,
+    isFileTreeVisible,
     diffDebugSummary,
     patchError,
     onRetry,
-    onToggleSplit,
+    onToggleFileTree,
     onFileQueryChange,
     onFileStatusFilterChange,
     onSelectFile,
     onOpenChangedFile,
   }: PRFilesPanelProps) => {
-    const selectedIndex = useMemo(
-      () => filteredDiff.findIndex((file) => file.path === selectedFilePath),
-      [filteredDiff, selectedFilePath],
-    );
-
-    const focusAndSelect = useCallback(
-      (nextIndex: number) => {
-        const nextFile = filteredDiff[nextIndex];
-        if (!nextFile) return;
-
-        onSelectFile(nextFile.path);
-        window.requestAnimationFrame(() => {
-          const escapedPath =
-            typeof window.CSS?.escape === "function"
-              ? window.CSS.escape(nextFile.path)
-              : nextFile.path.replace(/"/g, '\\"');
-          const selector = `[data-pr-file-path="${escapedPath}"]`;
-          const button = document.querySelector<HTMLButtonElement>(selector);
-          button?.focus();
-        });
-      },
-      [filteredDiff, onSelectFile],
-    );
-
-    const handleSidebarKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (filteredDiff.length === 0) return;
-
-        const currentIndex = selectedIndex >= 0 ? selectedIndex : 0;
-
-        if (event.key === "ArrowDown") {
-          event.preventDefault();
-          focusAndSelect(Math.min(currentIndex + 1, filteredDiff.length - 1));
-          return;
-        }
-
-        if (event.key === "ArrowUp") {
-          event.preventDefault();
-          focusAndSelect(Math.max(currentIndex - 1, 0));
-          return;
-        }
-
-        if (event.key === "Home") {
-          event.preventDefault();
-          focusAndSelect(0);
-          return;
-        }
-
-        if (event.key === "End") {
-          event.preventDefault();
-          focusAndSelect(filteredDiff.length - 1);
-        }
-      },
-      [filteredDiff.length, focusAndSelect, selectedIndex],
+    const fileTreeItems = useMemo<DiffFileTreeItem[]>(
+      () =>
+        filteredDiff.map((file) => ({
+          key: file.path,
+          path: file.path,
+          oldPath: file.oldPath,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+        })),
+      [filteredDiff],
     );
 
     if (isLoadingContent && !selectedPRDiff) {
@@ -173,57 +135,28 @@ export const PRFilesPanel = memo(
     }
 
     return (
-      <div className="flex min-h-[560px] min-w-0 items-stretch gap-3">
-        <div
-          className={cn(
-            "shrink-0 overflow-auto rounded-xl bg-secondary-bg/20 p-1",
-            isWideSplit ? "w-[280px]" : "w-[220px]",
-          )}
-          onKeyDown={handleSidebarKeyDown}
-          role="listbox"
-          aria-label="Changed files"
-        >
-          <div className="space-y-1">
-            {filteredDiff.map((file) => {
-              const isSelected = selectedDiffFile?.path === file.path;
-              return (
-                <Button
-                  key={file.path}
-                  data-pr-file-path={file.path}
-                  type="button"
-                  variant="ghost"
-                  active={isSelected}
-                  tabIndex={isSelected ? 0 : -1}
-                  onClick={() => onSelectFile(file.path)}
-                  className="h-auto w-full items-start justify-start rounded-md px-2 py-1.5 text-left"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="ui-text-sm truncate leading-4 text-current">{file.path}</div>
-                    <div className="mt-0.5 flex items-center gap-1.5 ui-text-xs text-text-lighter">
-                      <span className="capitalize">{file.status}</span>
-                      <span className="text-git-added">+{file.additions}</span>
-                      <span className="text-git-deleted">-{file.deletions}</span>
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
+      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden rounded-md border border-border/70 bg-primary-bg">
+        {isFileTreeVisible ? (
+          <GitDiffFileSidebar
+            items={fileTreeItems}
+            selectedKey={selectedFilePath}
+            onSelect={onSelectFile}
+          />
+        ) : null}
 
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="min-w-0 flex-1 space-y-3 p-2">
           <div className="rounded-md bg-terniary-bg px-3 py-1.5">
             <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-1">
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={onToggleSplit}
+                  onClick={onToggleFileTree}
                   className={compactToolbarButtonClass}
-                  aria-label="Toggle files split width"
+                  aria-label={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
                   compact
                 >
-                  {isWideSplit ? "Narrow Split" : "Wide Split"}
+                  <ListBullets weight="duotone" />
                 </Button>
                 <span className="ui-text-sm text-text-lighter">
                   {filteredDiff.length} / {diffFiles.length}
