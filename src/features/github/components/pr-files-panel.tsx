@@ -5,9 +5,9 @@ import {
 } from "@phosphor-icons/react";
 import { memo, useMemo } from "react";
 import {
-  GitDiffFileSidebar,
-  type DiffFileTreeItem,
-} from "@/features/git/components/diff/git-diff-file-sidebar";
+  FileNavigatorSidebar,
+  type FileNavigatorItem,
+} from "@/features/file-explorer/components/file-navigator-sidebar";
 import { Button, buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
@@ -20,6 +20,13 @@ const compactToolbarButtonClass = cn(
   buttonVariants({ variant: "ghost", compact: true }),
   "h-5 rounded px-1.5 ui-text-xs text-text-lighter hover:bg-hover hover:text-text",
 );
+
+const statusClass: Record<DiffFileItem["status"], string> = {
+  added: "text-git-added",
+  deleted: "text-git-deleted",
+  modified: "text-git-modified",
+  renamed: "text-git-renamed",
+};
 
 interface DiffFileItem {
   path: string;
@@ -79,15 +86,20 @@ export const PRFilesPanel = memo(
     onSelectFile,
     onOpenChangedFile,
   }: PRFilesPanelProps) => {
-    const fileTreeItems = useMemo<DiffFileTreeItem[]>(
+    const fileTreeItems = useMemo<FileNavigatorItem[]>(
       () =>
         filteredDiff.map((file) => ({
           key: file.path,
           path: file.path,
-          oldPath: file.oldPath,
-          status: file.status,
-          additions: file.additions,
-          deletions: file.deletions,
+          iconClassName: statusClass[file.status],
+          metadata: [
+            ...(file.additions > 0
+              ? [{ label: `+${file.additions}`, className: "text-git-added" }]
+              : []),
+            ...(file.deletions > 0
+              ? [{ label: `-${file.deletions}`, className: "text-git-deleted" }]
+              : []),
+          ],
         })),
       [filteredDiff],
     );
@@ -137,10 +149,11 @@ export const PRFilesPanel = memo(
     return (
       <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden rounded-md border border-border/70 bg-primary-bg">
         {isFileTreeVisible ? (
-          <GitDiffFileSidebar
+          <FileNavigatorSidebar
             items={fileTreeItems}
             selectedKey={selectedFilePath}
             onSelect={onSelectFile}
+            ariaLabel="Changed files"
           />
         ) : null}
 

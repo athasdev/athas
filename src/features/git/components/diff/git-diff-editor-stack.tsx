@@ -25,6 +25,10 @@ import Breadcrumb, {
 } from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import {
+  FileNavigatorSidebar,
+  type FileNavigatorItem,
+} from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
@@ -51,7 +55,6 @@ import {
   serializeGitDiffSourceForSplitEditor,
 } from "../../utils/diff-editor-content";
 import DiffLineBackgroundLayer from "./diff-line-background-layer";
-import { GitDiffFileSidebar, type DiffFileTreeItem } from "./git-diff-file-sidebar";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
 import Badge from "@/ui/badge";
@@ -553,19 +556,21 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() =>
     getInitialExpandedFiles(multiDiff),
   );
-  const diffFileItems = useMemo<DiffFileTreeItem[]>(
+  const diffFileItems = useMemo<FileNavigatorItem[]>(
     () =>
       multiDiff.files.map((diff, index) => {
         const filePath = diff.new_path || diff.old_path || diff.file_path;
         const { additions, deletions } = countStats(diff);
+        const status = getFileStatus(diff);
 
         return {
           key: getDiffSectionKey(multiDiff, diff, index),
           path: filePath,
-          oldPath: diff.old_path,
-          status: getFileStatus(diff) as DiffFileTreeItem["status"],
-          additions,
-          deletions,
+          iconClassName: statusTextClass[status],
+          metadata: [
+            ...(additions > 0 ? [{ label: `+${additions}`, className: "text-git-added" }] : []),
+            ...(deletions > 0 ? [{ label: `-${deletions}`, className: "text-git-deleted" }] : []),
+          ],
         };
       }),
     [multiDiff],
@@ -833,10 +838,11 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {isFileTreeVisible ? (
-          <GitDiffFileSidebar
+          <FileNavigatorSidebar
             items={diffFileItems}
             selectedKey={selectedFileKey}
             onSelect={handleSelectFileFromTree}
+            ariaLabel="Changed files"
           />
         ) : null}
 

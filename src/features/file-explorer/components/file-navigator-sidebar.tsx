@@ -1,41 +1,36 @@
-import { memo, useMemo } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { memo, type ReactNode, useMemo } from "react";
 import { cn } from "@/utils/cn";
+import { FileExplorerIcon } from "./file-explorer-icon";
 
-export interface DiffFileTreeItem {
+export interface FileNavigatorItem {
   key: string;
   path: string;
-  oldPath?: string;
-  status: "added" | "deleted" | "modified" | "renamed";
-  additions: number;
-  deletions: number;
+  iconPath?: string;
+  iconClassName?: string;
+  metadata?: Array<{
+    label: ReactNode;
+    className?: string;
+  }>;
 }
 
-interface DiffFileTreeNode {
+interface FileNavigatorNode {
   id: string;
   name: string;
   path: string;
   isDir: boolean;
-  children: DiffFileTreeNode[];
-  item?: DiffFileTreeItem;
+  children: FileNavigatorNode[];
+  item?: FileNavigatorItem;
 }
 
-interface GitDiffFileSidebarProps {
-  items: DiffFileTreeItem[];
+interface FileNavigatorSidebarProps {
+  items: FileNavigatorItem[];
   selectedKey: string | null;
   onSelect: (key: string) => void;
   className?: string;
   ariaLabel?: string;
 }
 
-const statusClass: Record<DiffFileTreeItem["status"], string> = {
-  added: "text-git-added",
-  deleted: "text-git-deleted",
-  modified: "text-git-modified",
-  renamed: "text-git-renamed",
-};
-
-function createDirectoryNode(name: string, path: string): DiffFileTreeNode {
+function createDirectoryNode(name: string, path: string): FileNavigatorNode {
   return {
     id: `dir:${path}`,
     name,
@@ -45,8 +40,8 @@ function createDirectoryNode(name: string, path: string): DiffFileTreeNode {
   };
 }
 
-function buildFileTree(items: DiffFileTreeItem[]): DiffFileTreeNode[] {
-  const root: DiffFileTreeNode = createDirectoryNode("", "");
+function buildFileTree(items: FileNavigatorItem[]): FileNavigatorNode[] {
+  const root: FileNavigatorNode = createDirectoryNode("", "");
 
   for (const item of items) {
     const segments = item.path.split("/").filter(Boolean);
@@ -78,7 +73,7 @@ function buildFileTree(items: DiffFileTreeItem[]): DiffFileTreeNode[] {
     });
   }
 
-  const sortNodes = (nodes: DiffFileTreeNode[]) => {
+  const sortNodes = (nodes: FileNavigatorNode[]) => {
     nodes.sort((a, b) => {
       if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
       return a.name.localeCompare(b.name);
@@ -90,13 +85,13 @@ function buildFileTree(items: DiffFileTreeItem[]): DiffFileTreeNode[] {
   return root.children;
 }
 
-const DiffFileTreeNodeRow = memo(function DiffFileTreeNodeRow({
+const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   node,
   depth,
   selectedKey,
   onSelect,
 }: {
-  node: DiffFileTreeNode;
+  node: FileNavigatorNode;
   depth: number;
   selectedKey: string | null;
   onSelect: (key: string) => void;
@@ -117,7 +112,7 @@ const DiffFileTreeNodeRow = memo(function DiffFileTreeNodeRow({
           <span className="truncate">{node.name}</span>
         </div>
         {node.children.map((child) => (
-          <DiffFileTreeNodeRow
+          <FileNavigatorNodeRow
             key={child.id}
             node={child}
             depth={depth + 1}
@@ -146,27 +141,32 @@ const DiffFileTreeNodeRow = memo(function DiffFileTreeNodeRow({
       aria-current={isSelected ? "true" : undefined}
     >
       <FileExplorerIcon
-        fileName={node.name}
+        fileName={item.iconPath ?? node.name}
         isDir={false}
         size={14}
-        className={cn("shrink-0", statusClass[item.status])}
+        className={cn("shrink-0", item.iconClassName)}
       />
       <span className="min-w-0 flex-1 truncate">{node.name}</span>
-      <span className="flex shrink-0 items-center gap-1 tabular-nums">
-        {item.additions > 0 ? <span className="text-git-added">+{item.additions}</span> : null}
-        {item.deletions > 0 ? <span className="text-git-deleted">-{item.deletions}</span> : null}
-      </span>
+      {item.metadata && item.metadata.length > 0 ? (
+        <span className="flex shrink-0 items-center gap-1 tabular-nums">
+          {item.metadata.map((metadata, index) => (
+            <span key={index} className={metadata.className}>
+              {metadata.label}
+            </span>
+          ))}
+        </span>
+      ) : null}
     </button>
   );
 });
 
-export const GitDiffFileSidebar = memo(function GitDiffFileSidebar({
+export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   items,
   selectedKey,
   onSelect,
   className,
-  ariaLabel = "Changed files",
-}: GitDiffFileSidebarProps) {
+  ariaLabel = "Files",
+}: FileNavigatorSidebarProps) {
   const tree = useMemo(() => buildFileTree(items), [items]);
 
   return (
@@ -178,7 +178,7 @@ export const GitDiffFileSidebar = memo(function GitDiffFileSidebar({
       aria-label={ariaLabel}
     >
       {tree.map((node) => (
-        <DiffFileTreeNodeRow
+        <FileNavigatorNodeRow
           key={node.id}
           node={node}
           depth={0}

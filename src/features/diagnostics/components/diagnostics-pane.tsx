@@ -9,6 +9,7 @@ import {
   CopyIcon as Copy,
   FunnelIcon as Filter,
   InfoIcon as Info,
+  ListBulletsIcon as ListBullets,
   ArrowsOutIcon as Maximize,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
@@ -19,6 +20,10 @@ import {
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import {
+  FileNavigatorSidebar,
+  type FileNavigatorItem,
+} from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
@@ -96,6 +101,12 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
   info: "Info",
 };
 
+const SEVERITY_TEXT_CLASS: Record<Diagnostic["severity"], string> = {
+  error: "text-error",
+  warning: "text-warning",
+  info: "text-info",
+};
+
 const CONTROL_PILL_BASE =
   "ui-font ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
@@ -115,6 +126,14 @@ const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
 const getFileName = (filePath: string) => {
   const parts = filePath.split(/[\\/]/);
   return parts[parts.length - 1] || filePath;
+};
+
+const getHighestSeverity = (
+  counts: Record<Diagnostic["severity"], number>,
+): Diagnostic["severity"] => {
+  if (counts.error > 0) return "error";
+  if (counts.warning > 0) return "warning";
+  return "info";
 };
 
 const buildDiagnosticKey = (diagnostic: Diagnostic) => {
@@ -218,6 +237,8 @@ const DiagnosticsPane = ({
     warning: true,
     info: true,
   });
+  const [isFileNavigatorVisible, setIsFileNavigatorVisible] = useState(true);
+  const [selectedDiagnosticFilePath, setSelectedDiagnosticFilePath] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const [codeActionsByDiagnostic, setCodeActionsByDiagnostic] = useState<
@@ -397,6 +418,66 @@ const DiagnosticsPane = ({
     );
   }, [filteredDiagnostics]);
 
+  const diagnosticFileItems = useMemo<FileNavigatorItem[]>(() => {
+    const byFile = new Map<
+      string,
+      {
+        total: number;
+        counts: Record<Diagnostic["severity"], number>;
+      }
+    >();
+
+    for (const diagnostic of filteredDiagnostics) {
+      const current =
+        byFile.get(diagnostic.filePath) ??
+        ({
+          total: 0,
+          counts: { error: 0, warning: 0, info: 0 },
+        } satisfies {
+          total: number;
+          counts: Record<Diagnostic["severity"], number>;
+        });
+
+      current.total += 1;
+      current.counts[diagnostic.severity] += 1;
+      byFile.set(diagnostic.filePath, current);
+    }
+
+    return Array.from(byFile.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([filePath, summary]) => {
+        const severity = getHighestSeverity(summary.counts);
+
+        return {
+          key: filePath,
+          path: filePath,
+          iconPath: filePath,
+          iconClassName: SEVERITY_TEXT_CLASS[severity],
+          metadata: [
+            {
+              label: summary.total,
+              className: SEVERITY_TEXT_CLASS[severity],
+            },
+          ],
+        };
+      });
+  }, [filteredDiagnostics]);
+
+  const selectedFileNavigatorKey = useMemo(() => {
+    if (
+      selectedDiagnosticFilePath &&
+      diagnosticFileItems.some((item) => item.key === selectedDiagnosticFilePath)
+    ) {
+      return selectedDiagnosticFilePath;
+    }
+
+    if (activeFilePath && diagnosticFileItems.some((item) => item.key === activeFilePath)) {
+      return activeFilePath;
+    }
+
+    return null;
+  }, [activeFilePath, diagnosticFileItems, selectedDiagnosticFilePath]);
+
   const toggleSeverity = useCallback((severity: Diagnostic["severity"]) => {
     setSeverityFilter((prev) => ({
       ...prev,
@@ -428,6 +509,22 @@ const DiagnosticsPane = ({
       [groupId]: !prev[groupId],
     }));
   }, []);
+
+  const selectDiagnosticFile = useCallback(
+    (filePath: string) => {
+      setSelectedDiagnosticFilePath(filePath);
+      setCollapsedGroups((prev) => ({
+        ...prev,
+        [`file-${filePath}`]: false,
+      }));
+
+      const diagnostic = filteredDiagnostics.find((item) => item.filePath === filePath);
+      if (diagnostic) {
+        onDiagnosticClick?.(diagnostic);
+      }
+    },
+    [filteredDiagnostics, onDiagnosticClick],
+  );
 
   const applyCodeAction = useCallback(
     async (diagnostic: Diagnostic, action: DiagnosticCodeAction) => {
@@ -628,6 +725,7 @@ const DiagnosticsPane = ({
 
   const hasSearch = Boolean(searchQuery.trim());
   const visibleProblemCount = filteredDiagnostics.length;
+  const hasDiagnosticFiles = diagnosticFileItems.length > 0;
   const problemSummary = `${visibleProblemCount} problem${visibleProblemCount === 1 ? "" : "s"}`;
   const problemSummaryTone =
     visibleBySeverity.error > 0
@@ -773,6 +871,18 @@ const DiagnosticsPane = ({
           <span className={cn("ui-font ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
 
           <div className="ml-auto flex items-center gap-1">
+            {hasDiagnosticFiles && (
+              <PaneIconButton
+                type="button"
+                onClick={() => setIsFileNavigatorVisible((visible) => !visible)}
+                className={cn(isFileNavigatorVisible && "border-border/70 bg-hover text-text")}
+                tooltip={isFileNavigatorVisible ? "Hide files" : "Show files"}
+                aria-label={isFileNavigatorVisible ? "Hide files" : "Show files"}
+              >
+                <ListBullets />
+              </PaneIconButton>
+            )}
+
             <PaneIconButton
               type="button"
               onClick={() => {
@@ -878,145 +988,158 @@ const DiagnosticsPane = ({
         </div>
       </div>
 
-      <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
-        {diagnostics.length === 0 ? (
-          <div className="ui-text-sm flex h-full items-center justify-center text-text-lighter">
-            No problems detected
-          </div>
-        ) : filteredDiagnostics.length === 0 ? (
-          <div className="ui-text-sm flex h-full flex-col items-center justify-center gap-1 text-text-lighter">
-            <p>No problems match the current filters</p>
-            {hasFilters && (
-              <Button
-                type="button"
-                onClick={resetFilters}
-                variant="ghost"
-                className={CONTROL_PILL_BASE}
-                compact
-              >
-                Reset filters
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {groupedDiagnostics.map((group) => {
-              const isCollapsed = collapsedGroups[group.id] ?? false;
-              const hasGroupHeader = preferences.groupBy !== "none";
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {isFileNavigatorVisible && hasDiagnosticFiles ? (
+          <FileNavigatorSidebar
+            items={diagnosticFileItems}
+            selectedKey={selectedFileNavigatorKey}
+            onSelect={selectDiagnosticFile}
+            ariaLabel="Diagnostic files"
+          />
+        ) : null}
 
-              return (
-                <section
-                  key={group.id}
-                  className="overflow-hidden rounded-xl border border-border/60 bg-secondary-bg/40"
+        <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
+          {diagnostics.length === 0 ? (
+            <div className="ui-text-sm flex h-full items-center justify-center text-text-lighter">
+              No problems detected
+            </div>
+          ) : filteredDiagnostics.length === 0 ? (
+            <div className="ui-text-sm flex h-full flex-col items-center justify-center gap-1 text-text-lighter">
+              <p>No problems match the current filters</p>
+              {hasFilters && (
+                <Button
+                  type="button"
+                  onClick={resetFilters}
+                  variant="ghost"
+                  className={CONTROL_PILL_BASE}
+                  compact
                 >
-                  {hasGroupHeader && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => toggleGroupCollapse(group.id)}
-                      className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-primary-bg/70 px-2 py-1 text-left hover:bg-hover"
-                    >
-                      {isCollapsed ? (
-                        <ChevronRight className="text-text-lighter" />
-                      ) : (
-                        <ChevronDown className="text-text-lighter" />
-                      )}
+                  Reset filters
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {groupedDiagnostics.map((group) => {
+                const isCollapsed = collapsedGroups[group.id] ?? false;
+                const hasGroupHeader = preferences.groupBy !== "none";
 
-                      {group.severity ? (
-                        getSeverityIcon(group.severity)
-                      ) : (
-                        <Info className="text-text-lighter" />
-                      )}
+                return (
+                  <section
+                    key={group.id}
+                    className="overflow-hidden rounded-xl border border-border/60 bg-secondary-bg/40"
+                  >
+                    {hasGroupHeader && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => toggleGroupCollapse(group.id)}
+                        className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-primary-bg/70 px-2 py-1 text-left hover:bg-hover"
+                      >
+                        {isCollapsed ? (
+                          <ChevronRight className="text-text-lighter" />
+                        ) : (
+                          <ChevronDown className="text-text-lighter" />
+                        )}
 
-                      <span className="ui-font ui-text-sm flex-1 truncate font-medium text-text">
-                        {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
-                      </span>
+                        {group.severity ? (
+                          getSeverityIcon(group.severity)
+                        ) : (
+                          <Info className="text-text-lighter" />
+                        )}
 
-                      <PaneChip>{group.items.length}</PaneChip>
-                    </Button>
-                  )}
+                        <span className="ui-font ui-text-sm flex-1 truncate font-medium text-text">
+                          {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
+                        </span>
 
-                  {!isCollapsed && (
-                    <div className="divide-y divide-border/40">
-                      {group.items.map((diagnostic) => {
-                        const rowKey = buildDiagnosticKey(diagnostic);
-                        const { summary, description } = splitDiagnosticMessage(diagnostic.message);
+                        <PaneChip>{group.items.length}</PaneChip>
+                      </Button>
+                    )}
 
-                        return (
-                          <div
-                            key={rowKey}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => onDiagnosticClick?.(diagnostic)}
-                            onContextMenu={(event) => {
-                              diagnosticContextMenu.open(event, diagnostic);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                onDiagnosticClick?.(diagnostic);
-                              }
-                            }}
-                            className="group cursor-pointer px-2 py-1.5 transition-colors hover:bg-hover"
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span className="shrink-0">
-                                {getSeverityIcon(diagnostic.severity, 11)}
-                              </span>
+                    {!isCollapsed && (
+                      <div className="divide-y divide-border/40">
+                        {group.items.map((diagnostic) => {
+                          const rowKey = buildDiagnosticKey(diagnostic);
+                          const { summary, description } = splitDiagnosticMessage(
+                            diagnostic.message,
+                          );
 
-                              <span
-                                className={cn(
-                                  "ui-font ui-text-sm min-w-0 flex-1",
-                                  preferences.wrapMessages
-                                    ? "whitespace-pre-wrap break-words leading-snug"
-                                    : "truncate",
-                                  diagnostic.severity === "error" && "text-error",
-                                  diagnostic.severity === "warning" && "text-warning",
-                                  diagnostic.severity === "info" && "text-info",
-                                )}
-                              >
-                                {summary}
-                              </span>
-
-                              <PaneChip>
-                                {diagnostic.line + 1}:{diagnostic.column + 1}
-                              </PaneChip>
-                            </div>
-
-                            <div className="mt-1 pl-5">
-                              {description && (
-                                <div
-                                  className={cn(
-                                    "ui-text-sm mb-1 text-text-lighter/90 leading-snug",
-                                    preferences.wrapMessages
-                                      ? "whitespace-pre-wrap break-words"
-                                      : "truncate",
-                                  )}
-                                >
-                                  {description}
-                                </div>
-                              )}
-
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="ui-text-sm max-w-[420px] truncate text-text-lighter/75">
-                                  {diagnostic.filePath}
+                          return (
+                            <div
+                              key={rowKey}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => onDiagnosticClick?.(diagnostic)}
+                              onContextMenu={(event) => {
+                                diagnosticContextMenu.open(event, diagnostic);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  onDiagnosticClick?.(diagnostic);
+                                }
+                              }}
+                              className="group cursor-pointer px-2 py-1.5 transition-colors hover:bg-hover"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="shrink-0">
+                                  {getSeverityIcon(diagnostic.severity, 11)}
                                 </span>
 
-                                {diagnostic.source && <PaneChip>{diagnostic.source}</PaneChip>}
+                                <span
+                                  className={cn(
+                                    "ui-font ui-text-sm min-w-0 flex-1",
+                                    preferences.wrapMessages
+                                      ? "whitespace-pre-wrap break-words leading-snug"
+                                      : "truncate",
+                                    diagnostic.severity === "error" && "text-error",
+                                    diagnostic.severity === "warning" && "text-warning",
+                                    diagnostic.severity === "info" && "text-info",
+                                  )}
+                                >
+                                  {summary}
+                                </span>
 
-                                {diagnostic.code && <PaneChip>{diagnostic.code}</PaneChip>}
+                                <PaneChip>
+                                  {diagnostic.line + 1}:{diagnostic.column + 1}
+                                </PaneChip>
+                              </div>
+
+                              <div className="mt-1 pl-5">
+                                {description && (
+                                  <div
+                                    className={cn(
+                                      "ui-text-sm mb-1 text-text-lighter/90 leading-snug",
+                                      preferences.wrapMessages
+                                        ? "whitespace-pre-wrap break-words"
+                                        : "truncate",
+                                    )}
+                                  >
+                                    {description}
+                                  </div>
+                                )}
+
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="ui-text-sm max-w-[420px] truncate text-text-lighter/75">
+                                    {diagnostic.filePath}
+                                  </span>
+
+                                  {diagnostic.source && <PaneChip>{diagnostic.source}</PaneChip>}
+
+                                  {diagnostic.code && <PaneChip>{diagnostic.code}</PaneChip>}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       <ContextMenu
