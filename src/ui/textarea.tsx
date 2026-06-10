@@ -32,11 +32,26 @@ const textareaVariants = cva(
 );
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { size = "sm", variant = "default", className, ...props },
+  {
+    size = "sm",
+    variant = "default",
+    className,
+    autoComplete = "off",
+    autoCorrect = "off",
+    spellCheck = "false",
+    ...props
+  },
   ref,
 ) {
   return (
-    <textarea ref={ref} className={cn(textareaVariants({ size, variant }), className)} {...props} />
+    <textarea
+      ref={ref}
+      autoComplete={autoComplete}
+      autoCorrect={autoCorrect}
+      spellCheck={spellCheck}
+      className={cn(textareaVariants({ size, variant }), className)}
+      {...props}
+    />
   );
 });
 

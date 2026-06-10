@@ -71,6 +71,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     leftIcon: LeftIcon,
     rightIcon: RightIcon,
     containerClassName,
+    autoComplete = "off",
+    autoCorrect = "off",
+    spellCheck = "false",
     ...props
   },
   ref,
@@ -99,6 +102,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     return (
       <input
         ref={ref}
+        autoComplete={autoComplete}
+        autoCorrect={autoCorrect}
+        spellCheck={spellCheck}
         className={cn(
           controlFieldSurfaceVariants({ variant }),
           controlFieldSizeVariants({ size }),
@@ -120,6 +126,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       )}
       <input
         ref={ref}
+        autoComplete={autoComplete}
+        autoCorrect={autoCorrect}
+        spellCheck={spellCheck}
         className={cn(
           controlFieldSurfaceVariants({ variant }),
           controlFieldSizeVariants({ size }),
