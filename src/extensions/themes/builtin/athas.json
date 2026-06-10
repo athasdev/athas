@@ -76,8 +76,8 @@
       "description": "Low-glare near-black theme with lifted content surfaces",
       "appearance": "dark",
       "colors": {
-        "primary-bg": "#080809",
-        "secondary-bg": "#111113",
+        "primary-bg": "#111113",
+        "secondary-bg": "#080809",
         "text": "#f3f4f6",
         "text-light": "#c7c8ce",
         "text-lighter": "#8f929a",
