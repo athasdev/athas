@@ -19,6 +19,7 @@ import {
 import { useCallback, useEffect, useRef, type ComponentType, type WheelEvent } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
+import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
@@ -130,16 +131,14 @@ export const SettingsVerticalTabs = ({
   const subscription = useAuthStore((state) => state.subscription);
   const { isPro } = useProFeature();
   const { promptUpgrade } = useUpgradeToPro();
-  const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
-  const hasTeamsAccess = Boolean(subscription?.collaboration?.enabled);
+  const settingsAccess = resolveSettingsAccess(subscription);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
 
   const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
-    hasEnterpriseAccess,
-    hasTeamsAccess,
+    ...settingsAccess,
     matchingTabs,
   });
 
