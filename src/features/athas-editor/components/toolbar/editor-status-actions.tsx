@@ -54,6 +54,13 @@ function getLanguageDisplayNameOrNull(languageId: string | null) {
   return getLanguageDisplayName(languageId);
 }
 
+function canStartLanguageServerForPath(filePath: string, languageId: string) {
+  return (
+    extensionRegistry.getLanguageId(filePath) === languageId &&
+    Boolean(extensionRegistry.getLspServerPath(filePath))
+  );
+}
+
 interface EditorStatusActionsProps {
   bufferId?: string;
   editorViewKey?: string | null;
@@ -237,7 +244,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         await setSyntaxHighlightingFilePath(activeBuffer.path);
       }
 
-      if (rootFolderPath && activeBuffer.path) {
+      if (
+        rootFolderPath &&
+        activeBuffer.path &&
+        canStartLanguageServerForPath(activeBuffer.path, languageId)
+      ) {
         try {
           await lspClient.notifyDocumentClose(activeBuffer.path);
           const started = await lspClient.startForFile(activeBuffer.path, rootFolderPath, {

@@ -16,8 +16,6 @@ import {
   ArrowRightIcon as ArrowRight,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
-  LockIcon as Lock,
-  LockOpenIcon as LockOpen,
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
 } from "@phosphor-icons/react";
@@ -784,24 +782,6 @@ const TabBar = ({
             {paneId && !disablePaneActions && !isBottomPane && (
               <Button
                 type="button"
-                onClick={handleTogglePaneLocked}
-                variant="ghost"
-                className={
-                  isPaneLocked
-                    ? "h-5 min-w-5 shrink-0 rounded-md px-1 text-accent"
-                    : "h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
-                }
-                tooltip={isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group"}
-                tooltipSide="bottom"
-                aria-label={isPaneLocked ? "Unlock editor group" : "Lock editor group"}
-                compact
-              >
-                {isPaneLocked ? <Lock /> : <LockOpen />}
-              </Button>
-            )}
-            {paneId && !disablePaneActions && !isBottomPane && (
-              <Button
-                type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
                 className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
@@ -841,6 +821,10 @@ const TabBar = ({
         onCloseOthers={handleCloseOtherTabs}
         onCloseAll={handleCloseAllTabs}
         onCloseToRight={handleCloseTabsToRight}
+        isPaneLocked={isPaneLocked}
+        onTogglePaneLocked={
+          paneId && !disablePaneActions && !isBottomPane ? handleTogglePaneLocked : undefined
+        }
         onCopyPath={handleCopyPath}
         onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {

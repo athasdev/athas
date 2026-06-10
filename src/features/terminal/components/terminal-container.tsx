@@ -1,10 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  ArrowsOutIcon as Maximize2,
-  ArrowsInIcon as Minimize2,
-  PlusIcon as Plus,
-  MagnifyingGlassIcon as Search,
-} from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -18,8 +12,6 @@ import {
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";
@@ -687,53 +679,6 @@ const TerminalContainer = ({
       className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
       data-terminal-container="active"
     >
-      {/* Vertical-only actions header */}
-      {isVertical && (
-        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 rounded-t-lg bg-primary-bg px-1.5 py-1">
-          <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-            <Button
-              type="button"
-              onClick={handleSearchTerminal}
-              variant="ghost"
-              className="size-6 shrink-0 text-text-lighter"
-              aria-label="Find in Terminal"
-              compact
-            >
-              <Search />
-            </Button>
-          </Tooltip>
-          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-            <Button
-              type="button"
-              onClick={() => handleNewTerminal()}
-              variant="ghost"
-              compact
-              className="size-6 shrink-0 text-text-lighter"
-              aria-label="New Terminal"
-            >
-              <Plus />
-            </Button>
-          </Tooltip>
-          {onFullScreen && (
-            <Tooltip
-              content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
-              side="bottom"
-            >
-              <Button
-                type="button"
-                onClick={onFullScreen}
-                variant="ghost"
-                className="size-6 shrink-0 text-text-lighter"
-                aria-label="Full Screen Terminal"
-                compact
-              >
-                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-              </Button>
-            </Tooltip>
-          )}
-        </div>
-      )}
-
       <div className={cn("min-h-0 flex-1", isVertical ? "flex flex-row" : "flex flex-col")}>
         {(!isVertical || tabSidebarPosition === "left") && (
           <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />

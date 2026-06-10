@@ -151,7 +151,7 @@ function ExcerptEditorSurface({
         bufferId={bufferId}
         isActiveSurface={false}
         showToolbar={false}
-        readOnly={false}
+        readOnly
         scrollable={false}
         onReadonlySurfaceClick={onOpenLocation}
         highlightMatches={excerpt.highlights}
@@ -205,7 +205,7 @@ function SearchExcerptPreview({
               key={`${lineIndex}-${mappedLine ?? "gap"}`}
               type="button"
               className="flex w-full min-w-0 items-start text-left text-text hover:bg-hover/25"
-              onDoubleClick={() => {
+              onClick={() => {
                 if (mappedLine !== null && mappedLine !== undefined) {
                   onOpenLocation({ line: lineIndex, column: 0 });
                 }

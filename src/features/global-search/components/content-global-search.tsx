@@ -103,8 +103,13 @@ const ContentGlobalSearch = () => {
     allResults: navigationItems,
     onClose,
     onSelect: (path) => {
-      const [filePath, lineStr] = path.split(":");
-      const lineNumber = parseInt(lineStr, 10);
+      const separatorIndex = path.lastIndexOf(":");
+      if (separatorIndex === -1) return;
+
+      const filePath = path.slice(0, separatorIndex);
+      const lineNumber = Number.parseInt(path.slice(separatorIndex + 1), 10);
+      if (!filePath || Number.isNaN(lineNumber)) return;
+
       handleFileClick(filePath, lineNumber);
     },
   });

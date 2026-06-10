@@ -636,7 +636,7 @@ export function MonacoBackedEditor({
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
       minimap: { enabled: minimapEnabled },
-      scrollBeyondLastLine: false,
+      scrollBeyondLastLine: true,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
@@ -745,6 +745,41 @@ export function MonacoBackedEditor({
 
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyA, selectEntireModel);
 
+    const handleWindowSelectAllShortcut = (event: KeyboardEvent) => {
+      const isSelectAllShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "a";
+
+      if (!isSelectAllShortcut) return;
+
+      const target = event.target;
+      const targetElement = target instanceof HTMLElement ? target : null;
+      const activeElement = document.activeElement;
+      const isInsideEditor =
+        editor.hasTextFocus() ||
+        (target instanceof Node && container.contains(target)) ||
+        (activeElement instanceof Node && container.contains(activeElement));
+
+      if (!isInsideEditor) {
+        const isTextField =
+          targetElement instanceof HTMLInputElement ||
+          targetElement instanceof HTMLTextAreaElement ||
+          targetElement?.isContentEditable;
+
+        if (isTextField || targetElement?.closest(".terminal-container")) return;
+        if (!isActiveSurface) return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      selectEntireModel();
+    };
+
+    window.addEventListener("keydown", handleWindowSelectAllShortcut, true);
+
     const disposables = [
       editor.onKeyDown((event) => {
         const browserEvent = event.browserEvent;
@@ -823,6 +858,7 @@ export function MonacoBackedEditor({
       onModelPositionResolverChange?.(null);
       unsubscribeCursor();
       unsubscribeSelection();
+      window.removeEventListener("keydown", handleWindowSelectAllShortcut, true);
       for (const disposable of disposables) {
         disposable.dispose();
       }

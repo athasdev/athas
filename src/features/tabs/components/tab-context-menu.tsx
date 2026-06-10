@@ -2,6 +2,8 @@ import {
   ColumnsIcon as Columns2,
   CopyIcon as Copy,
   FolderOpenIcon as FolderOpen,
+  LockIcon as Lock,
+  LockOpenIcon as LockOpen,
   PencilSimpleLineIcon as PencilSimpleLine,
   PushPinIcon as Pin,
   PushPinSlashIcon as PinOff,
@@ -37,6 +39,8 @@ interface TabContextMenuProps {
   onRevealInFinder?: (path: string) => void;
   onSplitRight?: (paneId: string, bufferId: string) => void;
   onSplitDown?: (paneId: string, bufferId: string) => void;
+  isPaneLocked?: boolean;
+  onTogglePaneLocked?: () => void;
 }
 
 const TabContextMenu = ({
@@ -56,6 +60,8 @@ const TabContextMenu = ({
   onRevealInFinder,
   onSplitRight,
   onSplitDown,
+  isPaneLocked = false,
+  onTogglePaneLocked,
 }: TabContextMenuProps) => {
   if (!isOpen || !buffer) return null;
 
@@ -117,6 +123,17 @@ const TabContextMenu = ({
       : []),
     ...(paneId && (onSplitRight || onSplitDown)
       ? [{ id: "sep-2", label: "", separator: true, onClick: () => {} }]
+      : []),
+    ...(onTogglePaneLocked
+      ? [
+          {
+            id: "toggle-editor-group-lock",
+            label: isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group",
+            icon: isPaneLocked ? <LockOpen /> : <Lock />,
+            onClick: onTogglePaneLocked,
+          },
+          { id: "sep-lock", label: "", separator: true, onClick: () => {} },
+        ]
       : []),
     {
       id: "copy-path",
