@@ -43,7 +43,7 @@ export const defaultSettings: Settings = {
   terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
-  terminalCursorStyle: "block",
+  terminalCursorStyle: "bar",
   terminalCursorBlink: true,
   terminalCursorWidth: 2,
   terminalDefaultShellId: "",
