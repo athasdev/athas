@@ -19,7 +19,9 @@ import {
 } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
-import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
+import Breadcrumb, {
+  BreadcrumbActionButton,
+} from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
@@ -27,8 +29,6 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings-store"
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom-store";
 import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { joinPath } from "@/utils/path-helpers";
@@ -684,57 +684,51 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         rightContent={
           <div className="flex items-center gap-1">
             {githubCommitUrl ? (
-              <Tooltip content="View on GitHub" side="bottom">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => void openUrl(githubCommitUrl)}
-                  className="h-5 gap-1 px-1.5 text-text-lighter ui-text-sm"
-                  aria-label="View on GitHub"
-                >
-                  <ExternalLink />
-                  View on GitHub
-                </Button>
-              </Tooltip>
-            ) : null}
-            <Tooltip content={showWhitespace ? "Hide whitespace" : "Show whitespace"} side="bottom">
-              <Button
+              <BreadcrumbActionButton
                 type="button"
-                variant="ghost"
-                active={showWhitespace}
-                onClick={() => setShowWhitespace((prev) => !prev)}
-                className={cn("h-5 gap-1 px-1.5 text-text-lighter", showWhitespace && "text-text")}
-                aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+                onClick={() => void openUrl(githubCommitUrl)}
+                className="gap-1 ui-text-sm"
+                tooltip="View on GitHub"
+                tooltipSide="bottom"
+                aria-label="View on GitHub"
               >
-                <Trash2 />
-                {showWhitespace ? <Check /> : null}
-              </Button>
-            </Tooltip>
+                <ExternalLink weight="duotone" />
+                View on GitHub
+              </BreadcrumbActionButton>
+            ) : null}
+            <BreadcrumbActionButton
+              type="button"
+              active={showWhitespace}
+              onClick={() => setShowWhitespace((prev) => !prev)}
+              className="gap-1"
+              tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+              tooltipSide="bottom"
+              aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
+            >
+              <Trash2 weight="duotone" />
+              {showWhitespace ? <Check weight="duotone" /> : null}
+            </BreadcrumbActionButton>
             <div className="flex items-center gap-0.5">
-              <Tooltip content="Unified view" side="bottom">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  active={viewMode === "unified"}
-                  onClick={() => setViewMode("unified")}
-                  className="text-text-lighter"
-                  aria-label="Unified view"
-                >
-                  <Rows3 />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Split view" side="bottom">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  active={viewMode === "split"}
-                  onClick={() => setViewMode("split")}
-                  className="text-text-lighter"
-                  aria-label="Split view"
-                >
-                  <Columns2 />
-                </Button>
-              </Tooltip>
+              <BreadcrumbActionButton
+                type="button"
+                active={viewMode === "unified"}
+                onClick={() => setViewMode("unified")}
+                tooltip="Unified view"
+                tooltipSide="bottom"
+                aria-label="Unified view"
+              >
+                <Rows3 weight="duotone" />
+              </BreadcrumbActionButton>
+              <BreadcrumbActionButton
+                type="button"
+                active={viewMode === "split"}
+                onClick={() => setViewMode("split")}
+                tooltip="Split view"
+                tooltipSide="bottom"
+                aria-label="Split view"
+              >
+                <Columns2 weight="duotone" />
+              </BreadcrumbActionButton>
             </div>
           </div>
         }
