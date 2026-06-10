@@ -77,12 +77,6 @@ const WorkingTreeItem = memo(function WorkingTreeItem({
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate font-medium text-text">Uncommitted Changes</span>
-            <Badge
-              size="compact"
-              className="border-git-modified/30 bg-git-modified/10 text-git-modified"
-            >
-              Working tree
-            </Badge>
           </span>
           <span className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
             <span className="truncate">{branch || "Current branch"}</span>
