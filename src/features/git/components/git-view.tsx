@@ -962,7 +962,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
         <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
           <GitProjectSelector
-            className="min-w-0 flex-1"
+            className="w-fit max-w-[calc(100%-4.5rem)]"
             onRepositoryChange={() => setRepoSelectionError(null)}
           />
 

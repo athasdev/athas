@@ -25,7 +25,15 @@ import {
 import { hasTextContent } from "@/features/panes/types/pane-content";
 import { useSettingsStore } from "@/features/settings/store";
 import { Button, buttonVariants } from "@/ui/button";
-import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/ui/combobox";
+import { Dropdown } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -66,6 +74,8 @@ interface EditorStatusActionsProps {
   editorViewKey?: string | null;
 }
 
+type LanguageOption = ReturnType<typeof getAllLanguages>[number];
+
 function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
   const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
@@ -93,15 +103,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [languageSearch, setLanguageSearch] = useState("");
   const [isCurrentFileLspAvailable, setIsCurrentFileLspAvailable] = useState(false);
   const [isRestartingCurrent, setIsRestartingCurrent] = useState(false);
   const [busyServerKey, setBusyServerKey] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewButtonRef = useRef<HTMLButtonElement>(null);
-  const languageButtonRef = useRef<HTMLButtonElement>(null);
-  const languageSearchRef = useRef<HTMLInputElement>(null);
 
   const getStatusConfig = (status: LspStatus) => {
     switch (status) {
@@ -221,22 +227,24 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
 
   const allLanguages = useMemo(() => getAllLanguages(), []);
 
-  const filteredLanguages = useMemo(() => {
-    if (!languageSearch) return allLanguages;
-    const query = languageSearch.toLowerCase();
-    return allLanguages.filter(
-      (lang) =>
-        lang.displayName.toLowerCase().includes(query) || lang.id.toLowerCase().includes(query),
+  const currentLanguageOption = useMemo(
+    () => allLanguages.find((language) => language.id === currentFileLanguageId) ?? null,
+    [allLanguages, currentFileLanguageId],
+  );
+
+  const filterLanguages = useCallback((language: LanguageOption, query: string) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+    return (
+      language.displayName.toLowerCase().includes(normalizedQuery) ||
+      language.id.toLowerCase().includes(normalizedQuery)
     );
-  }, [allLanguages, languageSearch]);
+  }, []);
 
   const handleLanguageChange = useCallback(
     async (languageId: string) => {
       if (!activeBuffer || !resolvedBufferId || activeBuffer.type !== "editor") return;
-      if (languageId === currentFileLanguageId) {
-        setIsLanguageOpen(false);
-        return;
-      }
+      if (languageId === currentFileLanguageId) return;
 
       useBufferStore.getState().actions.updateBufferLanguage(resolvedBufferId, languageId);
 
@@ -267,9 +275,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           // LSP restart is best-effort
         }
       }
-
-      setIsLanguageOpen(false);
-      setLanguageSearch("");
     },
     [activeBuffer, resolvedBufferId, currentFileLanguageId, rootFolderPath, lspClient],
   );
@@ -364,84 +369,45 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       <CursorPositionChip editorViewKey={editorViewKey} />
 
       {activeBuffer?.type === "editor" && (
-        <div className="relative flex h-5 items-center self-center">
-          <Button
-            ref={languageButtonRef}
-            type="button"
-            onClick={() => {
-              setIsLanguageOpen((open) => !open);
-              setLanguageSearch("");
+        <div className="flex h-5 items-center self-center">
+          <Combobox
+            value={currentLanguageOption}
+            onValueChange={(value) => {
+              if (value) {
+                void handleLanguageChange(value.id);
+              }
             }}
-            variant="ghost"
-            compact
-            className={cn(
-              statusChipClass,
-              "min-w-0 cursor-pointer",
-              isLanguageOpen && "bg-hover text-text",
-            )}
-            aria-expanded={isLanguageOpen}
-            aria-haspopup="listbox"
-            tooltip="Select language mode"
-            tooltipSide="bottom"
+            items={allLanguages}
+            itemToStringLabel={(item) => item.displayName}
+            itemToStringValue={(item) => item.id}
+            isItemEqualToValue={(item, value) => item.id === value.id}
+            filter={filterLanguages}
           >
-            {currentFileDisplayName || "Plain Text"}
-          </Button>
-          <Dropdown
-            isOpen={isLanguageOpen}
-            anchorRef={languageButtonRef}
-            anchorSide="bottom"
-            anchorAlign="end"
-            onClose={() => {
-              setIsLanguageOpen(false);
-              setLanguageSearch("");
-            }}
-            className="w-[220px] overflow-hidden rounded-lg p-1.5"
-          >
-            <div className="px-1.5 pb-1.5">
-              <input
-                ref={languageSearchRef}
-                type="text"
-                value={languageSearch}
-                onChange={(e) => setLanguageSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setIsLanguageOpen(false);
-                    setLanguageSearch("");
-                  }
-                }}
-                placeholder="Search languages..."
-                className="ui-font w-full rounded-md border border-border/70 bg-primary-bg px-2 py-1 ui-text-xs text-text outline-none placeholder:text-text-lighter/50 focus:border-accent/50"
-                autoFocus
-                aria-label="Search languages"
-              />
-            </div>
-            <div className="max-h-[200px] overflow-y-auto">
-              {filteredLanguages.map((lang) => (
-                <Button
-                  key={lang.id}
-                  type="button"
-                  onClick={() => void handleLanguageChange(lang.id)}
-                  variant="ghost"
-                  compact
-                  className={dropdownItemClassName(
-                    cn("justify-between", lang.id === currentFileLanguageId && "text-accent"),
-                  )}
-                  role="option"
-                  aria-selected={lang.id === currentFileLanguageId}
-                >
-                  <span className="truncate">{lang.displayName}</span>
-                  {lang.id === currentFileLanguageId && (
-                    <Check className="shrink-0 text-accent" weight="duotone" />
-                  )}
-                </Button>
-              ))}
-              {filteredLanguages.length === 0 && (
-                <div className="px-2.5 py-2 text-center text-text-lighter ui-text-xs">
-                  No languages found
-                </div>
-              )}
-            </div>
-          </Dropdown>
+            <ComboboxInput
+              aria-label="Select language mode"
+              placeholder={currentFileDisplayName || "Plain Text"}
+              size="xs"
+              variant="ghost"
+              showClear={false}
+              inputClassName="ui-text-xs"
+              className={cn(statusChipClass, "h-5 w-[112px] rounded-md px-0")}
+              inputStyle={{ width: `${Math.max(currentFileDisplayName?.length ?? 10, 10)}ch` }}
+            />
+            <ComboboxContent align="end" className="w-[220px] min-w-[220px] rounded-lg">
+              <ComboboxList className="max-h-[220px] p-1.5">
+                {allLanguages.map((lang) => (
+                  <ComboboxItem
+                    key={lang.id}
+                    value={lang}
+                    className={cn("ui-text-xs", lang.id === currentFileLanguageId && "text-accent")}
+                  >
+                    <span className="truncate">{lang.displayName}</span>
+                  </ComboboxItem>
+                ))}
+                <ComboboxEmpty className="ui-text-xs">No languages found</ComboboxEmpty>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
       )}
 

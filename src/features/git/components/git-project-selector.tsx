@@ -110,11 +110,11 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
   };
 
   return (
-    <div className={cn("min-w-0 shrink-0", className)}>
+    <div className={cn("min-w-0 max-w-full shrink-0", className)}>
       <button
         ref={triggerRef}
         type="button"
-        className="ui-font flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-secondary-bg/45 px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
+        className="ui-font flex h-7 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-secondary-bg/45 px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         title={activeRepoTitle ?? undefined}
