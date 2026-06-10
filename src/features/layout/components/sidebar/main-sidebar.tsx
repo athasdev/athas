@@ -13,7 +13,6 @@ import { useSettingsStore } from "@/features/settings/store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
 import { useBufferStore } from "@/features/editor/stores/buffer-store";
 import { useUIState } from "@/features/window/stores/ui-state-store";
-import { NotificationsPane } from "@/features/window/components/notifications-sidebar";
 import { useAuthStore } from "@/features/window/stores/auth-store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
@@ -176,10 +175,6 @@ export const MainSidebar = memo(
             },
           ]
         : []),
-      {
-        id: "notifications",
-        content: <NotificationsPane />,
-      },
       {
         id: "databases",
         content: <DatabaseSidebar />,

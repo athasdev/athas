@@ -88,6 +88,7 @@ import {
   resetZoom,
   showFind,
   showFindReplace,
+  showNotifications,
   showThemeSelector,
   showWhatsNew,
   toggleAgentLauncher,
@@ -509,6 +510,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+p",
     execute: openCommandPalette,
+  },
+  {
+    id: "workbench.showNotifications",
+    title: "Show Notifications",
+    category: "View",
+    execute: showNotifications,
   },
   {
     id: "workbench.agentLauncher",

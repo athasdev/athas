@@ -41,6 +41,10 @@ export function openCommandPalette(): void {
   useUIState.getState().setIsCommandPaletteVisible(true);
 }
 
+export function showNotifications(): void {
+  window.dispatchEvent(new CustomEvent("athas:notifications:show"));
+}
+
 export function toggleAgentLauncher(): void {
   const state = useUIState.getState();
   state.setIsAgentLauncherVisible(!state.isAgentLauncherVisible);
