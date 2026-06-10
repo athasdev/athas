@@ -39,6 +39,7 @@ export abstract class AIProvider {
 
   // Optional: Allows providers to fetch available models dynamically
   async getModels?(apiKey?: string): Promise<ProviderModel[]> {
+    void apiKey;
     return [];
   }
 

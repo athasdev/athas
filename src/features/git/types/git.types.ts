@@ -44,6 +44,13 @@ export interface GitDiff {
   deletions?: number;
 }
 
+export interface GitDiffStat {
+  file_path: string;
+  staged: boolean;
+  additions: number;
+  deletions: number;
+}
+
 export interface GitHunk {
   file_path: string;
   lines: GitDiffLine[];

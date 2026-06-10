@@ -21,6 +21,17 @@ export interface FileSearchResult {
   total_matches: number;
 }
 
+export interface SearchFilesResponse {
+  results: FileSearchResult[];
+  total_files: number;
+  searched_files: number;
+  searchable_files: number;
+  files_with_matches: number;
+  next_file_offset: number;
+  has_more: boolean;
+  regex_fallback_error?: string | null;
+}
+
 export interface SearchFilesRequest {
   root_path: string;
   query: string;
@@ -28,11 +39,14 @@ export interface SearchFilesRequest {
   whole_word?: boolean;
   use_regex?: boolean;
   max_results?: number;
+  file_offset?: number;
   context_lines?: number;
 }
 
-export async function searchFilesContent(request: SearchFilesRequest): Promise<FileSearchResult[]> {
-  return invoke<FileSearchResult[]>("search_files_content", { request });
+export async function searchFilesContent(
+  request: SearchFilesRequest,
+): Promise<SearchFilesResponse> {
+  return invoke<SearchFilesResponse>("search_files_content", { request });
 }
 
 export interface FffSearchHit {

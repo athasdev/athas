@@ -13,8 +13,6 @@ const NOT_REPO_PATTERNS = [
 ];
 
 const WORKSPACE_REPO_CACHE_TTL_MS = 5 * 60_000;
-const WORKSPACE_REPO_SCAN_MAX_DEPTH = 5;
-const WORKSPACE_REPO_SCAN_MAX_DIRS = 1200;
 const REPO_SCAN_SKIP_DIRS = new Set([
   ".git",
   ".svn",
@@ -178,21 +176,17 @@ export async function discoverWorkspaceRepositories(
 
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
-  const queue: Array<{ path: string; depth: number }> = [
-    { path: normalizedWorkspacePath, depth: 0 },
-  ];
-  let scannedDirectories = 0;
+  const queue: string[] = [normalizedWorkspacePath];
 
-  while (queue.length > 0 && scannedDirectories < WORKSPACE_REPO_SCAN_MAX_DIRS) {
-    const current = queue.shift();
-    if (!current) break;
+  while (queue.length > 0) {
+    const currentPath = queue.shift();
+    if (!currentPath) break;
 
-    const directoryPath = normalizePath(current.path);
+    const directoryPath = normalizePath(currentPath);
     if (visitedDirectories.has(directoryPath)) {
       continue;
     }
     visitedDirectories.add(directoryPath);
-    scannedDirectories += 1;
 
     let entries: Awaited<ReturnType<typeof readDir>>;
     try {
@@ -204,10 +198,6 @@ export async function discoverWorkspaceRepositories(
     const hasGitMetadata = entries.some((entry) => entry?.name === ".git");
     if (hasGitMetadata) {
       discoveredRepos.add(directoryPath);
-    }
-
-    if (current.depth >= WORKSPACE_REPO_SCAN_MAX_DEPTH) {
-      continue;
     }
 
     for (const entry of entries) {
@@ -226,7 +216,7 @@ export async function discoverWorkspaceRepositories(
         continue;
       }
 
-      queue.push({ path: childPath, depth: current.depth + 1 });
+      queue.push(childPath);
     }
   }
 

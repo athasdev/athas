@@ -29,10 +29,7 @@ import {
   buildTokenOverlapIndex,
   findFirstTokenOverlappingOffset,
 } from "@/features/athas-editor/utils/token-layers";
-import {
-  createVisibleWhitespaceMask,
-  splitVisibleWhitespaceSegments,
-} from "@/features/athas-editor/utils/visible-whitespace";
+import { splitVisibleWhitespaceSegments } from "@/features/athas-editor/utils/visible-whitespace";
 import type { RenderWhitespaceMode } from "@/features/settings/types/settings.types";
 
 interface LineMapping {
@@ -113,7 +110,6 @@ const Line = memo<LineProps>(
       }
 
       const result: ReactNode[] = [];
-      const visibleWhitespaceMask = createVisibleWhitespaceMask(lineContent, renderWhitespace);
       let lastIndex = 0;
       let spanKey = 0;
       let lastTokenClass: string | undefined;
@@ -181,7 +177,7 @@ const Line = memo<LineProps>(
             lineContent,
             segmentStart,
             segmentEnd,
-            visibleWhitespaceMask,
+            renderWhitespace,
           );
 
           for (const segment of segments) {

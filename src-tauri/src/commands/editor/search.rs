@@ -32,6 +32,18 @@ pub struct FileSearchResult {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SearchFilesResponse {
+   pub results: Vec<FileSearchResult>,
+   pub total_files: usize,
+   pub searched_files: usize,
+   pub searchable_files: usize,
+   pub files_with_matches: usize,
+   pub next_file_offset: usize,
+   pub has_more: bool,
+   pub regex_fallback_error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SearchFilesRequest {
    pub root_path: String,
    pub query: String,
@@ -39,6 +51,7 @@ pub struct SearchFilesRequest {
    pub whole_word: Option<bool>,
    pub use_regex: Option<bool>,
    pub max_results: Option<usize>,
+   pub file_offset: Option<usize>,
    pub context_lines: Option<usize>,
 }
 
@@ -100,9 +113,18 @@ pub fn search_files_content(
    app: AppHandle,
    state: State<'_, FffSearchState>,
    request: SearchFilesRequest,
-) -> Result<Vec<FileSearchResult>, String> {
+) -> Result<SearchFilesResponse, String> {
    if request.query.trim().is_empty() || should_skip_fff_path(&request.root_path) {
-      return Ok(Vec::new());
+      return Ok(SearchFilesResponse {
+         results: Vec::new(),
+         total_files: 0,
+         searched_files: 0,
+         searchable_files: 0,
+         files_with_matches: 0,
+         next_file_offset: 0,
+         has_more: false,
+         regex_fallback_error: None,
+      });
    }
 
    state.ensure_workspace(&app, std::path::Path::new(&request.root_path))?;
@@ -134,7 +156,16 @@ pub fn search_files_content(
       .read()
       .map_err(|e| format!("fff picker read: {e}"))?;
    let Some(picker) = picker_guard.as_ref() else {
-      return Ok(Vec::new());
+      return Ok(SearchFilesResponse {
+         results: Vec::new(),
+         total_files: 0,
+         searched_files: 0,
+         searchable_files: 0,
+         files_with_matches: 0,
+         next_file_offset: 0,
+         has_more: false,
+         regex_fallback_error: None,
+      });
    };
 
    let (pattern, mode) = build_fff_grep_pattern(&request);
@@ -143,10 +174,10 @@ pub fn search_files_content(
    let grep_result = picker.grep(
       &parsed_query,
       &GrepSearchOptions {
-         max_file_size: 1_000_000,
-         max_matches_per_file: 50,
+         max_file_size: u64::MAX,
+         max_matches_per_file: usize::MAX,
          smart_case: false,
-         file_offset: 0,
+         file_offset: request.file_offset.unwrap_or(0),
          page_limit: request.max_results.unwrap_or(100).max(1),
          mode,
          time_budget_ms: 250,
@@ -210,5 +241,14 @@ pub fn search_files_content(
       grouped.total_matches += 1;
    }
 
-   Ok(grouped_results)
+   Ok(SearchFilesResponse {
+      results: grouped_results,
+      total_files: grep_result.total_files,
+      searched_files: grep_result.total_files_searched,
+      searchable_files: grep_result.filtered_file_count,
+      files_with_matches: grep_result.files_with_matches,
+      next_file_offset: grep_result.next_file_offset,
+      has_more: grep_result.next_file_offset > 0,
+      regex_fallback_error: grep_result.regex_fallback_error,
+   })
 }

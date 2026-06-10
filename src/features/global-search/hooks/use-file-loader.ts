@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { MAX_FILES_TO_PROCESS } from "../constants/limits";
 import type { FileItem } from "../types/global-search.types";
 import { shouldIgnoreFile } from "../utils/file-filtering";
 
@@ -26,7 +25,6 @@ export const useFileLoader = (isVisible: boolean) => {
 
         const allFiles = await getAllProjectFiles();
         const filteredFiles = allFiles
-          .slice(0, MAX_FILES_TO_PROCESS)
           .filter((file) => !file.isDir && !shouldIgnoreFile(file.path))
           .map((file) => ({
             name: file.name,

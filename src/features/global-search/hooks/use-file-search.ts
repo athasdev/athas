@@ -2,12 +2,7 @@ import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
-import {
-  MAX_OTHER_FILES_NO_QUERY,
-  MAX_OTHER_FILES_SHOWN,
-  MAX_RECENT_FILES_NO_QUERY,
-  MAX_RESULTS,
-} from "../constants/limits";
+import { MAX_OTHER_FILES_SHOWN, MAX_RECENT_FILES_NO_QUERY, MAX_RESULTS } from "../constants/limits";
 import type { CategorizedFiles, FileItem } from "../types/global-search.types";
 import type { FffSearchHit } from "../lib/rust-api/search";
 import { fuzzyScore } from "../utils/fuzzy-search";
@@ -63,7 +58,6 @@ export const useFileSearch = (
             !openBufferPaths.has(file.path) &&
             (!activeBuffer || file.path !== activeBuffer.path),
         )
-        .slice(0, MAX_OTHER_FILES_NO_QUERY)
         .sort((a, b) => a.name.localeCompare(b.name));
 
       return {

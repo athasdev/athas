@@ -3,11 +3,7 @@ import { KeyIcon as KeyRound } from "@phosphor-icons/react";
 import type React from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
-import {
-  appendChatAcpEvent,
-  type ChatAcpEventInput,
-  truncateDetail,
-} from "@/features/ai/lib/acp-event-timeline";
+import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
@@ -869,15 +865,12 @@ details: ${errorDetails || mainError}
             case "plan_update": {
               const summary =
                 event.entries.length > 0
-                  ? event.entries
-                      .slice(0, 2)
-                      .map((entry) => entry.content)
-                      .join(" | ")
+                  ? event.entries.map((entry) => entry.content).join(" | ")
                   : "No plan steps";
               appendAcpEvent({
                 kind: "plan",
                 label: `Plan updated (${event.entries.length} steps)`,
-                detail: truncateDetail(summary),
+                detail: summary,
                 state: "info",
               });
               break;
@@ -889,7 +882,7 @@ details: ${errorDetails || mainError}
               appendAcpEvent({
                 kind: "error",
                 label: "Agent error",
-                detail: truncateDetail(event.error),
+                detail: event.error,
                 state: "error",
               });
               break;

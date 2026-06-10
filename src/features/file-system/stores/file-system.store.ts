@@ -155,18 +155,6 @@ const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
 let latestFileOpenRequestId = 0;
 const textFileDecoder = new TextDecoder("utf-8");
 const MAX_SESSION_BUFFERS_TO_RESTORE = 8;
-const LARGE_WORKSPACE_GIT_STATUS_THRESHOLD = 2000;
-const MAX_PROJECT_FILES_TO_SCAN = 5000;
-const MAX_PROJECT_SCAN_DEPTH = 8;
-
-const shouldSkipLargeWorkspaceRestore = (gitFilesCount: number) =>
-  gitFilesCount > LARGE_WORKSPACE_GIT_STATUS_THRESHOLD;
-
-const notifyLargeWorkspaceRestoreSkipped = (gitFilesCount: number) => {
-  toast.warning(
-    `Skipped restoring tabs for this large workspace (${gitFilesCount.toLocaleString()} git files).`,
-  );
-};
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
@@ -328,19 +316,6 @@ const initializeLocalWorkspaceInBackground = (
       }
 
       useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, path);
-      if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
-        notifyLargeWorkspaceRestoreSkipped(gitStatus?.files.length ?? 0);
-        console.warn("[workspace-open] skipping restoreSession for large workspace", {
-          path,
-          gitFiles: gitStatus?.files.length ?? 0,
-        });
-        frontendTrace("warn", "workspace-open", "restoreSession:skipped-large-workspace", {
-          path,
-          gitFiles: gitStatus?.files.length ?? 0,
-        });
-        logWorkspaceOpenStep("end", "backgroundInit", path, backgroundInitStartedAt);
-        return;
-      }
 
       const restoreStartedAt = performance.now();
       logWorkspaceOpenStep("start", "restoreSession", path);
@@ -1849,31 +1824,30 @@ export const useFileSystemStore = createSelectors(
           try {
             const allFiles: FileEntry[] = [];
             let processedFiles = 0;
-            let didHitScanLimit = false;
+            const visitedDirectories = new Set<string>();
 
-            const scanDirectory = async (
-              directoryPath: string,
-              depth: number = 0,
-            ): Promise<boolean> => {
-              // Prevent infinite recursion and very deep scanning
-              if (depth > MAX_PROJECT_SCAN_DEPTH || processedFiles > MAX_PROJECT_FILES_TO_SCAN) {
-                didHitScanLimit = true;
-                return false; // Signal to stop scanning
+            const yieldToBrowser = () =>
+              new Promise((resolve) => {
+                if ("requestIdleCallback" in window) {
+                  requestIdleCallback(resolve, { timeout: 4 });
+                } else {
+                  setTimeout(resolve, 1);
+                }
+              });
+
+            const scanDirectory = async (directoryPath: string): Promise<void> => {
+              if (visitedDirectories.has(directoryPath)) {
+                return;
               }
+              visitedDirectories.add(directoryPath);
 
               try {
                 const entries = await readDirectory(directoryPath);
 
                 for (const entry of entries as any[]) {
-                  if (processedFiles > MAX_PROJECT_FILES_TO_SCAN) {
-                    didHitScanLimit = true;
-                    break;
-                  }
-
                   const name = entry.name || "Unknown";
                   const isDir = entry.is_dir || false;
 
-                  // Skip ignored files/directories early
                   if (shouldIgnore(name, isDir)) {
                     continue;
                   }
@@ -1888,49 +1862,22 @@ export const useFileSystemStore = createSelectors(
                   };
 
                   if (!fileEntry.isDir) {
-                    // Only add non-directory files to the list
                     allFiles.push(fileEntry);
                   } else {
-                    // Recursively scan subdirectories
-                    const shouldContinue = await scanDirectory(fileEntry.path, depth + 1);
-                    if (!shouldContinue) break;
+                    await scanDirectory(fileEntry.path);
                   }
 
-                  // Yield control more frequently for better UI responsiveness
                   if (processedFiles % 100 === 0) {
-                    await new Promise((resolve) => {
-                      if ("requestIdleCallback" in window) {
-                        requestIdleCallback(resolve, { timeout: 4 });
-                      } else {
-                        setTimeout(resolve, 1);
-                      }
-                    });
+                    await yieldToBrowser();
                   }
                 }
               } catch (error) {
                 console.warn(`Failed to scan directory ${directoryPath}:`, error);
-                return false;
               }
-
-              return true;
             };
 
             for (const workspaceFolderPath of workspaceFolderPaths) {
-              if (processedFiles > MAX_PROJECT_FILES_TO_SCAN) {
-                didHitScanLimit = true;
-                break;
-              }
               await scanDirectory(workspaceFolderPath);
-            }
-
-            if (didHitScanLimit) {
-              frontendTrace("warn", "project-files", "getAllProjectFiles:scan-truncated", {
-                rootFolderPath,
-                workspaceFolders: workspaceFolderPaths,
-                processedFiles,
-                maxFiles: MAX_PROJECT_FILES_TO_SCAN,
-                maxDepth: MAX_PROJECT_SCAN_DEPTH,
-              });
             }
 
             // Update cache with new results
@@ -2375,26 +2322,6 @@ export const useFileSystemStore = createSelectors(
                 }
 
                 useGitStore.getState().actions.setWorkspaceGitStatus(gitStatus, tab.path);
-
-                if (shouldSkipLargeWorkspaceRestore(gitStatus?.files.length ?? 0)) {
-                  notifyLargeWorkspaceRestoreSkipped(gitStatus?.files.length ?? 0);
-                  frontendTrace(
-                    "warn",
-                    "workspace-open",
-                    "switchToProject:restoreSession:skipped-large-workspace",
-                    {
-                      path: tab.path,
-                      gitFiles: gitStatus?.files.length ?? 0,
-                    },
-                  );
-                  logWorkspaceOpenStep(
-                    "end",
-                    "switchToProject:backgroundInit",
-                    tab.path,
-                    backgroundInitStartedAt,
-                  );
-                  return;
-                }
 
                 const activeSessionBuffer = restorePlan.initialBuffer;
                 if (activeSessionBuffer) {

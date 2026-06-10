@@ -1,4 +1,4 @@
-import { FileIcon as File, MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
+import { FileIcon as File } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -87,7 +87,7 @@ export const ContentSearchResult = ({
       </Button>
 
       <div className="space-y-0.5 p-1.5">
-        {result.matches.slice(0, 10).map((match, idx) => (
+        {result.matches.map((match, idx) => (
           <MatchLine
             key={`${match.line_number}-${idx}`}
             match={match}
@@ -97,12 +97,6 @@ export const ContentSearchResult = ({
             itemIndex={getMatchIndex?.(match.line_number)}
           />
         ))}
-        {result.matches.length > 10 && (
-          <div className="ui-text-sm flex items-center gap-2 px-2 py-2 text-text-lighter">
-            <MagnifyingGlass className="size-4 shrink-0" weight="duotone" />
-            <span>... and {result.matches.length - 10} more matches</span>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -15,8 +15,6 @@ interface UseFilePreviewReturn {
   error: string | null;
 }
 
-const MAX_PREVIEW_SIZE = 100000;
-const MAX_LINES = 500;
 const MAX_CACHE_SIZE = 30;
 
 const contentCache = new Map<string, string>();
@@ -129,22 +127,11 @@ export const useFilePreview = (filePath: string | null): UseFilePreviewReturn =>
 
         if (currentRequestId !== requestIdRef.current) return;
 
-        if (fileContent.length > MAX_PREVIEW_SIZE) {
-          setError("File too large to preview");
-          setContent("");
-          return;
-        }
-
-        const lines = fileContent.split("\n");
-        const limitedContent = lines.slice(0, MAX_LINES).join("\n");
-        const isTruncated = lines.length > MAX_LINES;
-        const finalContent = isTruncated ? `${limitedContent}\n\n... (truncated)` : limitedContent;
-
-        addToContentCache(filePath, finalContent);
-        setContent(finalContent);
+        addToContentCache(filePath, fileContent);
+        setContent(fileContent);
         setIsLoading(false);
 
-        tokenizeAsync(filePath, limitedContent, currentRequestId);
+        tokenizeAsync(filePath, fileContent, currentRequestId);
       } catch (err) {
         if (currentRequestId !== requestIdRef.current) return;
         setError(`Failed to load: ${err}`);
