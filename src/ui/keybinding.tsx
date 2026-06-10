@@ -1,7 +1,6 @@
 import { cva } from "class-variance-authority";
 import { cn } from "@/utils/cn";
-import { keybindingToDisplay } from "@/utils/keybinding-display";
-import { IS_MAC } from "@/utils/platform";
+import { keybindingToDisplayParts, keysToDisplayParts } from "@/utils/keybinding-display";
 
 interface KeybindingProps {
   keys?: string[];
@@ -14,15 +13,24 @@ const keybindingKeyVariants = cva(
 );
 
 export default function Keybinding({ keys, binding, className }: KeybindingProps) {
-  const displayKeys = binding ? keybindingToDisplay(binding) : (keys ?? []);
+  const displayParts = binding ? keybindingToDisplayParts(binding) : keysToDisplayParts(keys ?? []);
+  const hasKeys = displayParts.some((part) => part.length > 0);
 
-  if (displayKeys.length === 0) {
+  if (!hasKeys) {
     return null;
   }
 
   return (
-    <kbd className={cn(keybindingKeyVariants(), className)}>
-      {displayKeys.join(IS_MAC ? "" : "+")}
-    </kbd>
+    <span className={cn("inline-flex items-center gap-0.5", className)}>
+      {displayParts.map((part, partIndex) => (
+        <span key={`${part.join("-")}-${partIndex}`} className="inline-flex items-center gap-0.5">
+          {part.map((key, keyIndex) => (
+            <kbd key={`${key}-${keyIndex}`} className={keybindingKeyVariants()}>
+              {key}
+            </kbd>
+          ))}
+        </span>
+      ))}
+    </span>
   );
 }

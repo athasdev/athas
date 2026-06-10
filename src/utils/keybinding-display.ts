@@ -20,15 +20,24 @@ function formatKey(key: string) {
 }
 
 export function keybindingToDisplay(binding: string): string[] {
+  return keybindingToDisplayParts(binding).flat();
+}
+
+export function keybindingToDisplayParts(binding: string): string[][] {
   const parsed = parseKeybinding(binding.replace(/\bmod\b/gi, "cmd"));
-  const keys: string[] = [];
+  const parts: string[][] = [];
 
   for (const part of parsed.parts) {
-    keys.push(...part.modifiers.map(formatModifier));
+    const keys = part.modifiers.map(formatModifier);
     if (part.key) {
       keys.push(formatKey(part.key));
     }
+    parts.push(keys);
   }
 
-  return keys;
+  return parts;
+}
+
+export function keysToDisplayParts(keys: string[]): string[][] {
+  return [keys];
 }
