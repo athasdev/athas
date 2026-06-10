@@ -14,7 +14,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { resolveRepositoryPath } from "../api/git-repo-api";
-import { useRepositoryStore } from "../stores/git-repository-store";
+import { useRepositoryStore } from "../stores/git-repository.store";
 
 interface GitProjectSelectorProps {
   className?: string;

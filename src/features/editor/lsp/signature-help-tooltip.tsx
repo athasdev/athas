@@ -1,8 +1,8 @@
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { LspClient } from "./lsp-client";

@@ -1,6 +1,6 @@
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff, GitDiffLine } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff, GitDiffLine } from "../types/git.types";
 import { countDiffStats } from "./git-diff-helpers";
 
 function stripGitPrefix(path: string): string {

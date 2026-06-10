@@ -2,11 +2,11 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
 import { formatHoverContents } from "@/features/editor/lsp/hover-content";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFoldStore } from "@/features/editor/stores/fold-store";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFoldStore } from "@/features/editor/stores/fold.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import {
   readEditorClipboardText,
   writeEditorClipboardText,
@@ -18,7 +18,7 @@ import {
   resolveSelectPreviousOccurrenceAction,
   type OccurrenceRange,
 } from "@/features/editor/utils/select-next-occurrence";
-import { showChoiceDialog } from "@/features/dialogs/dialog-service";
+import { showChoiceDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 
@@ -517,7 +517,7 @@ export async function runQuickFixForActiveEditor(): Promise<void> {
     return;
   }
 
-  const { useDiagnosticsStore } = await import("@/features/diagnostics/stores/diagnostics-store");
+  const { useDiagnosticsStore } = await import("@/features/diagnostics/stores/diagnostics.store");
   const { selectDiagnosticForQuickFix, selectPreferredCodeAction } =
     await import("@/features/diagnostics/utils/quick-fix");
   const diagnostics = useDiagnosticsStore

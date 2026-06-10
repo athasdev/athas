@@ -5,7 +5,7 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
-import type { Chat } from "@/features/ai/types/ai-chat";
+import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

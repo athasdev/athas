@@ -1,5 +1,5 @@
 import { logger } from "../../utils/logger";
-import type { EditorAPI, EditorExtension } from "../types";
+import type { EditorAPI, EditorExtension } from "../../types/editor-extension.types";
 
 export const SYNTAX_HIGHLIGHTING_REFRESH_EVENT = "syntax-highlighting-refresh";
 

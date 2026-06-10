@@ -10,8 +10,8 @@ import {
   ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
-import { showConfirmDialog, showPromptDialog } from "@/features/dialogs/dialog-service";
-import type { Action } from "../models/action.types";
+import { showConfirmDialog, showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import type { Action } from "../types/action.types";
 
 interface GitActionsParams {
   rootFolderPath: string | null | undefined;

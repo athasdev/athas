@@ -6,8 +6,8 @@ import { Button } from "@/ui/button";
 import KeybindingDisplay from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
-import { useKeymapStore } from "../stores/store";
-import type { Command, Keybinding } from "../types";
+import { useKeymapStore } from "../stores/keymaps.store";
+import type { Command, Keybinding } from "../types/keymaps.types";
 import { KeybindingInput } from "./keybinding-input";
 
 export const keybindingTableGridCols = cva(

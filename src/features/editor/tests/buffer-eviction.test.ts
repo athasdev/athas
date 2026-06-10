@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { evictLeastRecentAutoClosableBuffer } from "../stores/buffer-eviction";
 
 const buffer = (

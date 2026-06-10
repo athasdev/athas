@@ -11,7 +11,7 @@ import {
   UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import {
   chromeControl,
   chromeControlGroup,
@@ -24,8 +24,8 @@ import {
   getAiUsageModeLabel,
   getUsageProgress,
 } from "@/features/window/lib/account-usage";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";

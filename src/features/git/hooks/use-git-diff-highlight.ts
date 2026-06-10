@@ -5,9 +5,9 @@ import {
   getDefaultParserWasmUrl,
 } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizeByLine } from "@/features/editor/lib/wasm-parser/tokenizer";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
-import type { GitDiffLine } from "../types/git-types";
+import type { GitDiffLine } from "../types/git.types";
 
 function getLanguageId(filePath: string): string | null {
   return getLanguageIdFromPath(filePath);

@@ -1,17 +1,17 @@
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import {
   calculateOffsetFromContentPosition,
   getLineTextFromContent,
   getLineTextsFromContent,
 } from "@/features/editor/utils/position";
-import { useReferencesStore } from "@/features/references/stores/references-store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { showPromptDialog } from "@/features/dialogs/dialog-service";
+import { useReferencesStore } from "@/features/references/stores/references.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 
 type LspNavigationLocation = {

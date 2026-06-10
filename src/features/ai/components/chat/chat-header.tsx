@@ -2,9 +2,9 @@ import { ClockCounterClockwiseIcon as History } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
-import { useSettingsStore } from "@/features/settings/store";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Input from "@/ui/input";
 import {
   PaneChip,
@@ -13,7 +13,7 @@ import {
   paneTitleClassName,
 } from "@/features/panes/components/pane-chrome";
 import { cn } from "@/utils/cn";
-import { useAIChatStore } from "../../store/store";
+import { useAIChatStore } from "../../stores/ai-chat.store";
 import ChatHistoryDropdown from "../history/sidebar";
 import { AgentSelector } from "../selectors/agent-selector";
 

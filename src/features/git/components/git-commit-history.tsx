@@ -6,13 +6,13 @@ import {
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import Badge from "@/ui/badge";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
-import type { GitCommit, GitFile } from "../types/git-types";
-import { useGitStore } from "../stores/git-store";
+import type { GitCommit, GitFile } from "../types/git.types";
+import { useGitStore } from "../stores/git.store";
 import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
 interface GitCommitHistoryProps {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content";
-import type { useBufferStore as useBufferStoreHook } from "@/features/editor/stores/buffer-store";
+import type { EditorContent, PaneContent } from "@/features/panes/types/pane-content.types";
+import type { useBufferStore as useBufferStoreHook } from "@/features/editor/stores/buffer.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -81,7 +81,7 @@ describe("file command actions", () => {
       dispatchEvent: vi.fn(),
     });
 
-    ({ useBufferStore } = await import("@/features/editor/stores/buffer-store"));
+    ({ useBufferStore } = await import("@/features/editor/stores/buffer.store"));
     ({ closeAllTabs, closeOtherTabs, closeSavedTabs, closeTabsToLeft, closeTabsToRight } =
       await import("../commands/file-command-actions"));
   });

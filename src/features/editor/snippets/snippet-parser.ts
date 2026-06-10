@@ -1,4 +1,4 @@
-import type { ParsedSnippet, TabStop } from "./types";
+import type { ParsedSnippet, TabStop } from "../types/snippet.types";
 
 /**
  * Parse a snippet body into a ParsedSnippet with tab stops

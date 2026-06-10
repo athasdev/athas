@@ -1,4 +1,4 @@
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 
 const MAX_EVENTS = 40;
 const DEDUPE_WINDOW_MS = 1200;

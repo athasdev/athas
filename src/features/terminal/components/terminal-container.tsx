@@ -1,17 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
-import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
-import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";

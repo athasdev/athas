@@ -18,10 +18,10 @@ import {
 } from "@phosphor-icons/react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import type { TerminalWidthMode } from "@/features/terminal/stores/terminal-store";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
+import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -32,7 +32,7 @@ import {
 } from "@/features/panes/components/pane-chrome";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
-import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
+import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 
 interface DiagnosticsPaneProps {
   diagnostics: Diagnostic[];

@@ -2,7 +2,7 @@ import { PlusIcon as Plus, XIcon as X } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import type { ColumnFilter, ColumnInfo, FilterOperator } from "../models/common.types";
+import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types/common.types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "equals", label: "=" },

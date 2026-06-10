@@ -13,7 +13,7 @@ import {
   getColumnConstraintLabels,
   mapForeignKeysByColumn,
 } from "../lib/database-schema";
-import type { ColumnInfo, ForeignKeyInfo } from "../models/common.types";
+import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },

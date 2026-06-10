@@ -2,7 +2,7 @@
  * Outdent operator (d)
  */
 
-import type { EditorContext, Operator, VimRange } from "../core/types";
+import type { EditorContext, Operator, VimRange } from "../core/types/core.types";
 
 /**
  * Outdent operator - outdents text in the given range

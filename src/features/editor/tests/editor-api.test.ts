@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { editorAPI as editorAPIInstance } from "../extensions/api";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer-store";
-import type { useEditorStateStore as useEditorStateStoreHook } from "../stores/state-store";
-import type { useHistoryStore as useHistoryStoreHook } from "../stores/history-store";
-import type { useEditorSettingsStore as useEditorSettingsStoreHook } from "../stores/settings-store";
+import type { useBufferStore as useBufferStoreHook } from "../stores/buffer.store";
+import type { useEditorStateStore as useEditorStateStoreHook } from "../stores/state.store";
+import type { useHistoryStore as useHistoryStoreHook } from "../stores/history.store";
+import type { useEditorSettingsStore as useEditorSettingsStoreHook } from "../stores/settings.store";
 import { calculateCursorPositionFromContent } from "../utils/position";
-import type { EditorContent } from "@/features/panes/types/pane-content";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
 
 type EditorAPIInstance = typeof editorAPIInstance;
 type BufferStoreHook = typeof useBufferStoreHook;
@@ -87,10 +87,10 @@ describe("editor API model operations", () => {
     vi.stubGlobal("document", documentStub);
 
     ({ editorAPI } = await import("../extensions/api"));
-    ({ useBufferStore } = await import("../stores/buffer-store"));
-    ({ useEditorStateStore } = await import("../stores/state-store"));
-    ({ useHistoryStore } = await import("../stores/history-store"));
-    ({ useEditorSettingsStore } = await import("../stores/settings-store"));
+    ({ useBufferStore } = await import("../stores/buffer.store"));
+    ({ useEditorStateStore } = await import("../stores/state.store"));
+    ({ useHistoryStore } = await import("../stores/history.store"));
+    ({ useEditorSettingsStore } = await import("../stores/settings.store"));
 
     onChange.mockReset();
     editorAPI.setTextareaRef?.(null);

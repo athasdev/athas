@@ -1,7 +1,7 @@
 import { CheckIcon as Check } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
+import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";

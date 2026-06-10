@@ -1,8 +1,8 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useVimStore } from "./vim-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useVimStore } from "./vim.store";
 
 export interface VimCommand {
   name: string;

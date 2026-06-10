@@ -1,4 +1,4 @@
-import type { Position, Range } from "@/features/editor/types/editor";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import { findBracketSelectionRange } from "./bracket-matching";
 import { getWordRangeAtOffset } from "./word-navigation";
 

@@ -1,4 +1,4 @@
-import type { ColumnInfo, DatabaseRow } from "../models/common.types";
+import type { ColumnInfo, DatabaseRow } from "../types/common.types";
 
 export function coerceDatabaseValue(rawValue: string, columnType?: string): string | number | null {
   const normalizedValue = rawValue.trim();

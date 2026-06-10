@@ -98,9 +98,9 @@ describe("search replace store actions", () => {
   });
 
   afterEach(async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const { useEditorStateStore } = await import("../stores/state.store");
+    const { useEditorUIStore } = await import("../stores/ui.store");
 
     useBufferStore.setState({
       activeBufferId: null,
@@ -124,8 +124,8 @@ describe("search replace store actions", () => {
   });
 
   it("does not replace all when the match list is limited", async () => {
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+    const { useEditorStateStore } = await import("../stores/state.store");
+    const { useEditorUIStore } = await import("../stores/ui.store");
     const onChange = vi.fn();
     const limitedMatches = [{ start: 0, end: 4 }];
 
@@ -145,8 +145,8 @@ describe("search replace store actions", () => {
   });
 
   it("preserves replacement case through store replace all", async () => {
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+    const { useEditorStateStore } = await import("../stores/state.store");
+    const { useEditorUIStore } = await import("../stores/ui.store");
     const onChange = vi.fn();
 
     useEditorStateStore.setState({ onChange });
@@ -167,7 +167,7 @@ describe("search replace store actions", () => {
       },
     });
 
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       activeBufferId: "active",
       buffers: [

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { EditorContent } from "@/features/panes/types/pane-content";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer-store";
-import type { useEditorAppStore as useEditorAppStoreHook } from "../stores/editor-app-store";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
+import type { useBufferStore as useBufferStoreHook } from "../stores/buffer.store";
+import type { useEditorAppStore as useEditorAppStoreHook } from "../stores/editor-app.store";
 
 const mocks = vi.hoisted(() => ({
   notifyDocumentSave: vi.fn(),
@@ -96,8 +96,8 @@ describe("editor save all", () => {
     mocks.recordLocalHistoryFile.mockResolvedValue(undefined);
     mocks.notifyDocumentSave.mockResolvedValue(undefined);
 
-    ({ useBufferStore } = await import("../stores/buffer-store"));
-    ({ useEditorAppStore } = await import("../stores/editor-app-store"));
+    ({ useBufferStore } = await import("../stores/buffer.store"));
+    ({ useEditorAppStore } = await import("../stores/editor-app.store"));
 
     useBufferStore.setState({
       activeBufferId: "a",

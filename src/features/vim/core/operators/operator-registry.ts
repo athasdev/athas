@@ -2,7 +2,7 @@
  * Central registry for all vim operators
  */
 
-import type { Operator } from "../core/types";
+import type { Operator } from "../core/types/core.types";
 import { lowercaseOperator, uppercaseOperator } from "./case-operator";
 import { changeOperator } from "./change-operator";
 import { deleteOperator } from "./delete-operator";

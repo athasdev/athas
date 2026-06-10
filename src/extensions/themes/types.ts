@@ -1,4 +1,4 @@
-import type { EditorExtension } from "@/features/editor/extensions/types";
+import type { EditorExtension } from "@/features/editor/types/editor-extension.types";
 
 /**
  * Internal theme definition used by the registry

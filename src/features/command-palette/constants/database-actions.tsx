@@ -1,5 +1,5 @@
 import { DatabaseIcon as Database } from "@phosphor-icons/react";
-import type { Action } from "../models/action.types";
+import type { Action } from "../types/action.types";
 
 interface DatabaseActionsParams {
   onClose: () => void;

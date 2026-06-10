@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { currentPlatform, IS_WINDOWS } from "@/utils/platform";
 import { getUiFontScale, normalizeUiFontSize } from "../lib/ui-font-size";
 

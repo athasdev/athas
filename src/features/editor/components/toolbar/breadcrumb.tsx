@@ -6,13 +6,13 @@ import {
 } from "@phosphor-icons/react";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";

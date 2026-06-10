@@ -4,9 +4,9 @@
  */
 
 import { useEffect } from "react";
-import { useSettingsStore } from "@/features/settings/store";
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useKeymapStore } from "../stores/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
+import { useKeymapStore } from "../stores/keymaps.store";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 
 export function useKeymapContext() {

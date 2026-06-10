@@ -11,7 +11,7 @@ import {
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { ImageFormat } from "../models/image-operation.types";
+import type { ImageFormat } from "../types/image-operation.types";
 import { ImageFormatDialog } from "./image-format-dialog";
 
 interface ImageEditorToolbarProps {

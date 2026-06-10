@@ -1,4 +1,4 @@
-import type { SplitDirection, SplitPlacement } from "../types/pane";
+import type { SplitDirection, SplitPlacement } from "../types/pane.types";
 
 export type PaneDropZone = "left" | "right" | "top" | "bottom" | "center" | null;
 

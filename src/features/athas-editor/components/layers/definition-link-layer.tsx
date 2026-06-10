@@ -4,8 +4,8 @@
 
 import type { RefObject } from "react";
 import { memo, useMemo } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { getAccurateCursorX } from "@/features/athas-editor/utils/position";
 import { calculateSelectionBoxes } from "@/features/athas-editor/utils/selection-boxes";
 import type { EditorViewLayout } from "@/features/athas-editor/view-model/view-layout";

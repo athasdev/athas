@@ -6,9 +6,9 @@
  * - {: Move backward to the previous blank line (or start of file)
  */
 
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import type { Motion, VimRange } from "../core/types";
+import type { Motion, VimRange } from "../core/types/core.types";
 
 /**
  * Motion: } - move forward to next blank line (paragraph boundary)

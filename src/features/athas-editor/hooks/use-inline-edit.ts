@@ -3,18 +3,18 @@ import {
   canUseHostedProvider,
   canUseProviderWithoutApiKey,
 } from "@/features/ai/lib/provider-access";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { getProviderById } from "@/features/ai/types/providers";
-import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { getProviderById } from "@/features/ai/types/providers.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { toast } from "@/ui/toast";
 import {
   InlineEditError,
   requestInlineEdit,
 } from "@/features/editor/services/editor-inline-edit-service";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { Position, Range } from "@/features/editor/types/editor";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import type { EditorModelPositionResolver } from "@/features/athas-editor/view-model/view-layout";
 import {
   calculateCursorPositionFromContent,

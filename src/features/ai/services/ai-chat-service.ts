@@ -1,23 +1,23 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
-import type { AcpEvent } from "@/features/ai/types/acp";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import type { AgentType } from "@/features/ai/types/ai-chat";
-import type { AIMessage } from "@/features/ai/types/messages";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat-store.types";
+import type { AcpEvent } from "@/features/ai/types/acp.types";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
+import type { AIMessage } from "@/features/ai/types/messages.types";
 import {
   getAvailableProviders,
   getModelById,
   getProviderById,
-} from "@/features/ai/types/providers";
+} from "@/features/ai/types/providers.types";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { getAuthToken } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";

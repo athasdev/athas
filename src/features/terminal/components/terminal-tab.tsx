@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { TerminalSlot } from "./terminal-slot";
 

@@ -1,8 +1,8 @@
 import { FolderOpenIcon as FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   type KeybindingPreset,
   keybindingPresetDefinitions,
@@ -15,8 +15,8 @@ import {
   TELEMETRY_DESCRIPTION,
   TELEMETRY_LEARN_MORE_URL,
 } from "@/features/settings/lib/telemetry-copy";
-import { useSettingsStore } from "@/features/settings/store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";

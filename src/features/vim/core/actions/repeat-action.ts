@@ -2,9 +2,9 @@
  * Repeat action (.)
  */
 
-import { useVimStore } from "../../stores/vim-store";
+import { useVimStore } from "../../stores/vim.store";
 import { executeVimCommand } from "../core/command-executor";
-import type { Action } from "../core/types";
+import type { Action } from "../core/types/core.types";
 
 /**
  * Repeat action - repeats the last operation

@@ -6,8 +6,8 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageEditorToolbar } from "@/features/image-editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/image-editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/image-editor/hooks/use-image-operations";

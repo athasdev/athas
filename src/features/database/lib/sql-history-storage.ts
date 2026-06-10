@@ -1,4 +1,4 @@
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 import { getSqlHistoryEntryKey, SQL_HISTORY_LIMIT } from "./sql-history";
 
 type SqlHistoryMode = "file" | "connection";

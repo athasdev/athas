@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { isVirtualContent } from "@/features/panes/types/pane-content";
-import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { isVirtualContent } from "@/features/panes/types/pane-content.types";
+import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import {
   MAX_OTHER_FILES_NO_QUERY,
   MAX_OTHER_FILES_SHOWN,
@@ -9,7 +9,7 @@ import {
   MAX_RESULTS,
 } from "../constants/limits";
 import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
-import type { CategorizedFiles, FileItem } from "../types/quick-open";
+import type { CategorizedFiles, FileItem } from "../types/quick-open.types";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 export const useFileSearch = (

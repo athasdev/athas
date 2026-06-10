@@ -1,9 +1,9 @@
-import type { Settings } from "@/features/settings/types/settings";
-import { useSettingsStore } from "@/features/settings/store";
+import type { Settings } from "@/features/settings/types/settings.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   useSettingsSyncStore,
   type SettingsSyncSource,
-} from "@/features/settings/stores/settings-sync-store";
+} from "@/features/settings/stores/settings-sync.store";
 import {
   fetchSettingsSyncSnapshot,
   isAuthInvalidError,

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { AgentContent, PaneContent } from "@/features/panes/types/pane-content";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { AgentContent, PaneContent } from "@/features/panes/types/pane-content.types";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import AIChat from "./chat/ai-chat";
 
 interface AgentTabProps {

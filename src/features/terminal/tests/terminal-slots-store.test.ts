@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { useTerminalSlotsStore } from "../stores/terminal-slots-store";
+import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
 
 function slotElement(id: string) {
   return { id } as HTMLDivElement;

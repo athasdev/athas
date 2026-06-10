@@ -5,8 +5,8 @@ import {
   type FileTreeDensity,
 } from "@/features/file-explorer/lib/file-tree-density";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
-import type { FileEntry } from "@/features/file-system/types/app";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import Input from "@/ui/input";
 import { TreeRow } from "@/features/sidebar-tree/components/tree-row";
 import { cn } from "@/utils/cn";

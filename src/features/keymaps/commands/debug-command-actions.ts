@@ -2,11 +2,11 @@ import {
   buildDebugCommand,
   createGeneratedDebugConfig,
 } from "@/features/debugger/utils/debugger-command";
-import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 
 function openDebuggerPane() {
   const state = useUIState.getState();

@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import type { Token } from "@/features/athas-editor/utils/html";
 import { bucketTokensByLine, getMinimapHorizontalMetrics } from "./minimap-utils";
 

@@ -12,7 +12,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
-import { useRedisStore } from "./stores/redis-store";
+import { useRedisStore } from "./stores/redis.store";
 
 const TYPE_COLORS: Record<string, string> = {
   string: "text-accent",

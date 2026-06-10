@@ -5,7 +5,7 @@ import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
-import type { CreatePostgresSubscriptionParams } from "../../../models/common.types";
+import type { CreatePostgresSubscriptionParams } from "../../../types/common.types";
 import {
   canCreatePostgresSubscription,
   initialCreatePostgresSubscriptionForm,

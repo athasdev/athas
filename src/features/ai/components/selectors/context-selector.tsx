@@ -10,12 +10,12 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileEntry } from "@/features/file-system/types/app";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import type { FileItem } from "@/features/global-search/models/types";
+import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -26,7 +26,7 @@ import {
 } from "../input/chat-composer-control-styles";
 import { AIFileSelector } from "../mentions/ai-file-selector";
 
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 function getBufferContextDescription(buffer: PaneContent) {
   if (buffer.type === "webViewer") return buffer.url;

@@ -3,7 +3,7 @@ import type {
   ConversionOptions,
   ImageFormat,
   ImageOperationResult,
-} from "../models/image-operation.types";
+} from "../types/image-operation.types";
 import { createCanvas, getCanvasBlob, getContext2D, loadImage } from "./canvas-utils";
 
 /**

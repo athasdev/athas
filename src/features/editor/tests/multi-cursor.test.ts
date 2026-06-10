@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Cursor } from "../types/editor";
+import type { Cursor } from "../types/editor.types";
 import {
   applyMultiCursorBackspace,
   applyMultiCursorEdit,

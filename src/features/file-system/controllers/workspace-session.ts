@@ -1,4 +1,4 @@
-import type { BufferSession } from "@/features/window/stores/session-store";
+import type { BufferSession } from "@/features/window/stores/session.store";
 
 export interface WorkspaceSessionBuffer {
   type: BufferSession["type"];

@@ -11,21 +11,21 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { AI_CHAT_INSERT_SKILL_EVENT } from "@/features/ai/lib/skill-events";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { InlineDropdownPosition } from "@/features/ai/store/types";
-import type { AIChatSkill } from "@/features/ai/types/skills";
-import type { SlashCommand } from "@/features/ai/types/acp";
-import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
-import type { FileEntry } from "@/features/file-system/types/app";
-import { getProviderById } from "@/features/ai/types/providers";
-import { openSidebarResourceBuffer } from "@/features/sidebar-drag/open-sidebar-resource";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { InlineDropdownPosition } from "@/features/ai/types/ai-chat-store.types";
+import type { AIChatSkill } from "@/features/ai/types/skills.types";
+import type { SlashCommand } from "@/features/ai/types/acp.types";
+import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import { getProviderById } from "@/features/ai/types/providers.types";
+import { openSidebarResourceBuffer } from "@/features/sidebar-drag/utils/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   SIDEBAR_RESOURCE_DROP_ON_AI_EVENT,
   type SidebarDragResource,
-} from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
+} from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";

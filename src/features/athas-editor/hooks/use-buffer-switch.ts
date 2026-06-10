@@ -1,6 +1,6 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { shouldRestoreBufferSwitchState } from "@/features/athas-editor/utils/buffer-switch-state";
 
 interface UseBufferSwitchOptions {

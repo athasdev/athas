@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AgentType, Chat, Message, ToolCall } from "@/features/ai/types/ai-chat";
+import type { AgentType, Chat, Message, ToolCall } from "@/features/ai/types/ai-chat.types";
 
 /**
  * Chat History Database Utilities

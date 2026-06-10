@@ -2,7 +2,7 @@ import type {
   DebuggableFile,
   DebugLaunchConfig,
   DebuggerRuntime,
-} from "@/features/debugger/types/debugger";
+} from "@/features/debugger/types/debugger.types";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 
 const JS_EXTENSIONS = new Set(["js", "cjs", "mjs", "jsx", "ts", "tsx"]);

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
-import type { HistoryEntry } from "@/features/editor/history/types";
-import { useHistoryStore } from "@/features/editor/stores/history-store";
+import type { HistoryEntry } from "@/features/editor/types/history.types";
+import { useHistoryStore } from "@/features/editor/stores/history.store";
 
 function entry(content: string): HistoryEntry {
   return {

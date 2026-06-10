@@ -5,7 +5,7 @@ import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   Menubar,
   MenubarContent,

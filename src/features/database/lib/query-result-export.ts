@@ -1,4 +1,4 @@
-import type { QueryResult } from "../models/common.types";
+import type { QueryResult } from "../types/common.types";
 
 interface QueryResultExportFilenameOptions {
   isCustomQuery: boolean;

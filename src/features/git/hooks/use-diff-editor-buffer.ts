@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { detectLanguageFromPath } from "@/features/editor/utils/language-detection";
-import type { EditorContent } from "@/features/panes/types/pane-content";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { TokenEntry } from "@/features/panes/types/pane-content";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { TokenEntry } from "@/features/panes/types/pane-content.types";
 import { createDiffTokensForEditorContent, getDiffEditorPath } from "../utils/diff-editor-content";
 
 interface UseDiffEditorBufferOptions {

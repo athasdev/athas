@@ -2,7 +2,7 @@
  * Change operator (c)
  */
 
-import type { EditorContext, Operator, VimRange } from "../core/types";
+import type { EditorContext, Operator, VimRange } from "../core/types/core.types";
 import { deleteOperator } from "./delete-operator";
 
 /**

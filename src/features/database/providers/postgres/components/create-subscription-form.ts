@@ -1,4 +1,4 @@
-import type { CreatePostgresSubscriptionParams } from "../../../models/common.types";
+import type { CreatePostgresSubscriptionParams } from "../../../types/common.types";
 
 export const initialCreatePostgresSubscriptionForm: CreatePostgresSubscriptionParams = {
   name: "",

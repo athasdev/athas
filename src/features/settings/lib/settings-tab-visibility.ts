@@ -1,4 +1,4 @@
-import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 
 export function filterVisibleSettingsTabs<T extends { id: SettingsTab }>(
   tabs: T[],

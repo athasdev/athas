@@ -6,9 +6,9 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openFolder } from "@/features/file-system/controllers/platform";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
@@ -20,9 +20,9 @@ import {
 } from "@/features/layout/components/chrome-control-styles";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";

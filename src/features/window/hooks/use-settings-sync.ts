@@ -3,7 +3,7 @@ import {
   ensureSettingsSyncStarted,
   initializeSettingsSyncPreferences,
 } from "@/features/settings/lib/settings-sync";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 
 export function useSettingsSync() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);

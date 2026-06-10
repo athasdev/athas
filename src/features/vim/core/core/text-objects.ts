@@ -2,8 +2,8 @@
  * Text objects for vim commands (iw, aw, i", a(, etc.)
  */
 
-import type { Position } from "@/features/editor/types/editor";
-import type { TextObject, VimRange } from "./types";
+import type { Position } from "@/features/editor/types/editor.types";
+import type { TextObject, VimRange } from "./types/core.types";
 
 /**
  * Helper to get the full content as a string

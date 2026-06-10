@@ -3,10 +3,10 @@ import {
   CaretDownIcon as ChevronDown,
   CaretRightIcon as ChevronRight,
 } from "@phosphor-icons/react";
-import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useFoldStore } from "@/features/editor/stores/fold-store";
+import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { calculateLineNumberWidth, GUTTER_CONFIG } from "@/features/athas-editor/utils/gutter";
 import type { ResolvedEditorViewZone } from "@/features/athas-editor/view-model/view-layout";
 

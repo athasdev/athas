@@ -1,4 +1,4 @@
-import type { Decoration } from "../types/editor";
+import type { Decoration } from "../types/editor.types";
 import { logger } from "../utils/logger";
 import type {
   Command,
@@ -8,7 +8,7 @@ import type {
   ExtensionContext,
   LanguageExtension,
   LanguageProvider,
-} from "./types";
+} from "../types/editor-extension.types";
 
 class ExtensionManager {
   private extensions: Map<string, EditorExtension> = new Map();

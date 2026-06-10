@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "../constants/pane";
-import { usePaneStore } from "../stores/pane-store";
+import { usePaneStore } from "../stores/pane.store";
 import { getAllPaneGroups } from "../utils/pane-tree";
 
 const createMockStorage = () => {
@@ -43,7 +43,7 @@ describe("pane command actions", () => {
 
   afterEach(async () => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+    const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
@@ -54,7 +54,7 @@ describe("pane command actions", () => {
   });
 
   it("splits the active editor group with an editor buffer", async () => {
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+    const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     const { splitActiveEditorGroup } = await import("../utils/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 
@@ -88,7 +88,7 @@ describe("pane command actions", () => {
   });
 
   it("splits stateful buffers into an empty editor group", async () => {
-    const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
+    const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
     const { splitActiveEditorGroup } = await import("../utils/pane-command-actions");
     const paneActions = usePaneStore.getState().actions;
 

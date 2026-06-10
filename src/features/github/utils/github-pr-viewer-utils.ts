@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
 import { createElement } from "react";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
-import type { Commit, DiffSectionIndex, FileDiff, FilePatchData } from "../types/github-pr-viewer";
-import type { PullRequestFile } from "../types/github";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
+import type {
+  Commit,
+  DiffSectionIndex,
+  FileDiff,
+  FilePatchData,
+} from "../types/github-pr-viewer.types";
+import type { PullRequestFile } from "../types/github.types";
 
 export const EXPAND_ALL_EAGER_PATCH_LIMIT = 10;
 export const EXPANDED_PATCH_BACKGROUND_BATCH = 4;
@@ -31,7 +36,7 @@ export function buildDiffSectionIndex(diffText: string): DiffSectionIndex {
 
   const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm;
   const headers: Array<
-    Pick<import("../types/github-pr-viewer").DiffSectionRef, "start" | "oldPath" | "newPath">
+    Pick<import("../types/github-pr-viewer.types").DiffSectionRef, "start" | "oldPath" | "newPath">
   > = [];
   for (let match = headerRegex.exec(diffText); match !== null; match = headerRegex.exec(diffText)) {
     headers.push({

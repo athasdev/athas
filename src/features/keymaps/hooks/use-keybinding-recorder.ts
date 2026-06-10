@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { keybindingToDisplay } from "@/utils/keybinding-display";
 import { normalizeKey } from "@/utils/platform";
-import { useKeymapStore } from "../stores/store";
+import { useKeymapStore } from "../stores/keymaps.store";
 import { eventToKey } from "../utils/matcher";
 
 interface RecorderState {

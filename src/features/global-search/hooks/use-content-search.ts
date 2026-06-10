@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileSearchResult } from "@/features/global-search/lib/rust-api/search";
 import { searchFilesContent } from "@/features/global-search/lib/rust-api/search";
 import { CONTENT_SEARCH_BACKEND_LIMIT, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";

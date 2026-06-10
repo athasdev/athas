@@ -9,13 +9,13 @@ import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
 import { ArrowSquareOutIcon as ExternalLink } from "@phosphor-icons/react";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
-import { showConfirmDialog } from "@/features/dialogs/dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
 

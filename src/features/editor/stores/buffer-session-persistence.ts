@@ -1,9 +1,9 @@
-import { useProjectStore } from "@/features/window/stores/project-store";
-import type { BufferSession } from "@/features/window/stores/session-store";
-import { useSessionStore } from "@/features/window/stores/session-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import type { BufferSession } from "@/features/window/stores/session.store";
+import { useSessionStore } from "@/features/window/stores/session.store";
 import { getEditorWorkspaceScope } from "@/features/file-system/controllers/workspace-session";
 import { createWorkspaceSessionSaveQueue } from "./workspace-session-save-queue";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { buildPersistedEditorViewState } from "./editor-session-state";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;

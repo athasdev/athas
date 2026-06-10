@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { detectLanguageFromPath } from "@/features/editor/utils/language-detection";
-import type { EditorContent } from "@/features/panes/types/pane-content";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
 import { getBaseName } from "@/utils/path-helpers";
 
 interface UseSearchExcerptBufferOptions {

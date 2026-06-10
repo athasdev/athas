@@ -1,5 +1,5 @@
 import { memo } from "react";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { cn } from "@/utils/cn";
 import { renderTokenizedContent } from "../utils/github-pr-viewer-utils";
 

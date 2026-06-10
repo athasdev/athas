@@ -11,13 +11,13 @@ import {
   XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import type { WorkflowRunDetails, WorkflowRunJob } from "../types/github";
+import type { WorkflowRunDetails, WorkflowRunJob } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
 import {

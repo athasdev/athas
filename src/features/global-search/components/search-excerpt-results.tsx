@@ -6,14 +6,14 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { useSearchExcerptBuffer } from "../hooks/use-search-excerpt-buffer";

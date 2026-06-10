@@ -1,12 +1,17 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import type { GitDiff, GitDiffLine } from "@/features/git/types/git-types";
-import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import type { GitDiff, GitDiffLine } from "@/features/git/types/git.types";
+import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import { Button } from "@/ui/button";
 import { toast } from "@/ui/toast";
-import type { Commit, FilePatchState, FileStatusFilter, TabType } from "../types/github-pr-viewer";
+import type {
+  Commit,
+  FilePatchState,
+  FileStatusFilter,
+  TabType,
+} from "../types/github-pr-viewer.types";
 import {
   buildPRBufferPath,
   parseSelectedFilePathFromPRBufferPath,
@@ -20,7 +25,7 @@ import {
   toFileDiffFromMetadata,
 } from "../utils/github-pr-viewer-utils";
 import { copyToClipboard } from "../utils/github-viewer-utils";
-import { useGitHubStore } from "../stores/github-store";
+import { useGitHubStore } from "../stores/github.store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
 import { GitHubPRViewerHeader } from "./github-pr-viewer-header";

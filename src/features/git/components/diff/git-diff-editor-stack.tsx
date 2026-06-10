@@ -24,19 +24,19 @@ import Breadcrumb, {
 } from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { joinPath } from "@/utils/path-helpers";
 import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
-import type { MultiFileDiff } from "../../types/git-diff-types";
-import type { GitDiff } from "../../types/git-types";
+import type { MultiFileDiff } from "../../types/git-diff.types";
+import type { GitDiff } from "../../types/git.types";
 import { gitDiffCache } from "../../utils/git-diff-cache";
 import { getFileStatus } from "../../utils/git-diff-helpers";
 import {

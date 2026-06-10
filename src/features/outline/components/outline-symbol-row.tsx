@@ -17,7 +17,7 @@ import {
   SidebarTreeIcon,
   SidebarTreeRow,
 } from "@/features/sidebar-tree/components/sidebar-tree";
-import type { OutlineSymbol } from "../types/outline-symbol";
+import type { OutlineSymbol } from "../types/outline-symbol.types";
 
 function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; className?: string }) {
   return (

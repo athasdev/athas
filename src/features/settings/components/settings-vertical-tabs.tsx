@@ -17,11 +17,11 @@ import {
   UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, type ComponentType, type WheelEvent } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

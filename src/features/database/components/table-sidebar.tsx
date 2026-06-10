@@ -9,7 +9,7 @@ import {
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
-import type { DatabaseObjectKind, TableInfo } from "../models/common.types";
+import type { DatabaseObjectKind, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
 
 interface TableSidebarProps {

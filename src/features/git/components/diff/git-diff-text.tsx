@@ -1,10 +1,10 @@
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
-import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff-types";
+import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff.types";
 import { groupLinesIntoHunks } from "../../utils/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {

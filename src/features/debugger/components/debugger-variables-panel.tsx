@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
-import { useDebuggerStore } from "../stores/debugger-store";
-import type { DebugRequestContext, DebugScope, DebugVariable } from "../types/debugger";
+import { useDebuggerStore } from "../stores/debugger.store";
+import type { DebugRequestContext, DebugScope, DebugVariable } from "../types/debugger.types";
 import { DebugEmptyState, EMPTY_DEBUG_SECTION_MESSAGES } from "./debugger-panels";
 
 interface DebugVariablesPanelProps {

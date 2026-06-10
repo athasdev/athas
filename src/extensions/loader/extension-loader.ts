@@ -5,7 +5,7 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { extensionManager } from "@/features/editor/extensions/manager";
-import type { EditorAPI, ExtensionContext } from "@/features/editor/extensions/types";
+import type { EditorAPI, ExtensionContext } from "@/features/editor/types/editor-extension.types";
 import { logger } from "@/features/editor/utils/logger";
 import { extensionRegistry } from "../registry/extension-registry";
 import {

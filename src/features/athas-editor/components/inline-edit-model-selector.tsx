@@ -9,9 +9,9 @@ import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

@@ -8,7 +8,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { getLanguageAssetConfig } from "../lib/wasm-parser/extension-assets";
 import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-client";
-import type { HighlightToken } from "../lib/wasm-parser/types";
+import type { HighlightToken } from "../types/wasm-parser/wasm-parser.types";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import {

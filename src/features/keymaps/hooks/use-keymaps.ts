@@ -8,11 +8,11 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/features/editor/utils/logger";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX } from "@/utils/platform";
-import { useKeymapStore } from "../stores/store";
+import { useKeymapStore } from "../stores/keymaps.store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";

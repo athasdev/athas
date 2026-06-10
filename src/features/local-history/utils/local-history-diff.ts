@@ -1,4 +1,4 @@
-import type { GitDiff, GitDiffLine } from "@/features/git/types/git-types";
+import type { GitDiff, GitDiffLine } from "@/features/git/types/git.types";
 import { getBaseName } from "@/utils/path-helpers";
 
 const MAX_EXACT_DIFF_CELLS = 500_000;

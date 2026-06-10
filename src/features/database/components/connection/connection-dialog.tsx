@@ -1,9 +1,9 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpenIcon as FolderOpen, PlugsConnectedIcon as PlugZap } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
@@ -12,9 +12,9 @@ import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { Tab, TabsList } from "@/ui/tabs";
 import { normalizeDatabaseError } from "../../lib/database-errors";
-import type { DatabaseType } from "../../models/provider.types";
+import type { DatabaseType } from "../../types/provider.types";
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
-import { useConnectionStore } from "../../stores/connection-store";
+import { useConnectionStore } from "../../stores/connection.store";
 import { buildSavedConnectionConfig } from "./connection-config";
 import { getInstalledDatabaseTypes, validateConnectionInput } from "./connection-validation";
 

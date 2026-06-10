@@ -8,7 +8,7 @@ import {
   TELEMETRY_DESCRIPTION,
   TELEMETRY_LEARN_MORE_URL,
 } from "@/features/settings/lib/telemetry-copy";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clearTelemetryLogEntries,
   getTelemetryLogEntries,

@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitDiff } from "../types/git-types";
+import type { GitDiff } from "../types/git.types";
 import { gitDiffCache } from "../utils/git-diff-cache";
 import {
   isNotGitRepositoryError,

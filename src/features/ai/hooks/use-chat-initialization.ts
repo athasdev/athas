@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { performMigrationIfNeeded } from "../lib/chat-migration";
-import { useAIChatStore } from "../store/store";
+import { useAIChatStore } from "../stores/ai-chat.store";
 
 /**
  * Hook to initialize AI chat storage

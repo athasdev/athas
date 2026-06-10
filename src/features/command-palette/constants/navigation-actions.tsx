@@ -9,10 +9,13 @@ import {
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
 } from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import type { BottomPaneTab, SettingsTab } from "@/features/window/stores/ui-state/types";
-import type { Action } from "../models/action.types";
+import type {
+  BottomPaneTab,
+  SettingsTab,
+} from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { Action } from "../types/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;

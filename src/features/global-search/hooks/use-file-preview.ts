@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Token } from "@/features/editor/extensions/types";
+import type { Token } from "@/features/editor/types/editor-extension.types";
 import {
   fetchHighlightQuery,
   getDefaultParserWasmUrl,

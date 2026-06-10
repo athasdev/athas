@@ -1,4 +1,4 @@
-import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders";
+import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders.types";
 
 export const MAX_RECENT_PROJECTS = 12;
 

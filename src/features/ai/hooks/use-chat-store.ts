@@ -1,4 +1,4 @@
-import { useAIChatStore } from "../store/store";
+import { useAIChatStore } from "../stores/ai-chat.store";
 
 export function useChatState() {
   return {

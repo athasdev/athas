@@ -1,4 +1,4 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { buildSearchRegex } from "@/features/editor/utils/search";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";

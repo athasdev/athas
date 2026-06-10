@@ -21,15 +21,15 @@ import {
   getKeybindingPresetDiffReport,
   keybindingPresetOptions,
 } from "@/features/keymaps/defaults/keybinding-presets";
-import { useKeymapStore } from "@/features/keymaps/stores/store";
-import type { Keybinding } from "@/features/keymaps/types";
+import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
+import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import { getEffectiveKeybindingForCommand } from "@/features/keymaps/utils/effective-keymaps";
 import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
   parseKeybindingsImportJson,
 } from "@/features/keymaps/utils/keybinding-import-export";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";

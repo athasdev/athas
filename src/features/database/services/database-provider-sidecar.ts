@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 
 const COMMAND_PROVIDER_PREFIXES: Array<[string, DatabaseType]> = [
   ["sqlite", "sqlite"],

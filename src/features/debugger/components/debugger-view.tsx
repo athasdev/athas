@@ -8,11 +8,11 @@ import {
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -25,7 +25,7 @@ import {
   stopDebugAdapterSession,
   syncDebugBreakpoints,
 } from "../services/debug-adapter-service";
-import { useDebuggerStore } from "../stores/debugger-store";
+import { useDebuggerStore } from "../stores/debugger.store";
 import {
   buildDebugCommand,
   createGeneratedDebugConfig,

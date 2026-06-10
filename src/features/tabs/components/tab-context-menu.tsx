@@ -12,12 +12,12 @@ import {
   TerminalWindowIcon as Terminal,
   XIcon as X,
 } from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { isVirtualContent } from "@/features/panes/types/pane-content";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { isVirtualContent } from "@/features/panes/types/pane-content.types";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { showPromptDialog } from "@/features/dialogs/dialog-service";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";

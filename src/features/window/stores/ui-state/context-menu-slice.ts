@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
-import type { DatabaseObjectKind, DatabaseRow } from "@/features/database/models/common.types";
-import type { DatabaseType } from "@/features/database/models/provider.types";
+import type { DatabaseObjectKind, DatabaseRow } from "@/features/database/types/common.types";
+import type { DatabaseType } from "@/features/database/types/provider.types";
 
 export interface ContextMenuState {
   folderHeaderContextMenu: { x: number; y: number } | null;

@@ -3,7 +3,7 @@ import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
 import type { FoldTransformResult } from "./use-fold-transform";
-import type { MultiCursorState, Position, Range } from "@/features/editor/types/editor";
+import type { MultiCursorState, Position, Range } from "@/features/editor/types/editor.types";
 import { calculateActualOffset } from "@/features/athas-editor/utils/fold-transformer";
 import {
   buildSelectionFromAnchor,

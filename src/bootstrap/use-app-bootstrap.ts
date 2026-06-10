@@ -8,19 +8,19 @@ import {
 import {
   cleanupFileWatcherListener,
   initializeFileWatcherListener,
-} from "@/features/file-system/controllers/file-watcher-store";
-import { useOnboardingStore } from "@/features/onboarding/store";
+} from "@/features/file-system/stores/file-watcher.store";
+import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { useLspInitialization } from "@/features/editor/hooks/use-lsp-initialization";
 import { useKeymapContext } from "@/features/keymaps/hooks/use-keymap-context";
 import { useKeymaps } from "@/features/keymaps/hooks/use-keymaps";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useCliOpen } from "@/features/window/hooks/use-cli-open";
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useDeepLink } from "@/features/window/hooks/use-deep-link";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import {
   enqueueWindowOpenRequest,
   parseWindowOpenUrl,

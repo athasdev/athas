@@ -37,9 +37,9 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
-import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
@@ -48,8 +48,8 @@ import {
   type TerminalTabSidebarPosition,
   type TerminalWidthMode,
   useTerminalStore,
-} from "@/features/terminal/stores/terminal-store";
-import type { Terminal } from "@/features/terminal/types/terminal";
+} from "@/features/terminal/stores/terminal.store";
+import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
@@ -60,7 +60,7 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";

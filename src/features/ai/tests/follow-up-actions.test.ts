@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { extractFollowUpActions, getFollowUpActionsForMessage } from "../lib/follow-up-actions";
-import type { Message } from "../types/ai-chat";
+import type { Message } from "../types/ai-chat.types";
 
 function assistantMessage(overrides: Partial<Message>): Message {
   return {

@@ -1,4 +1,4 @@
-import type { RenderWhitespaceMode } from "@/features/settings/types/settings";
+import type { RenderWhitespaceMode } from "@/features/settings/types/settings.types";
 
 const MAX_VISIBLE_WHITESPACE_LINE_LENGTH = 20_000;
 

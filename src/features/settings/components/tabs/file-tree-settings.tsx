@@ -3,7 +3,7 @@ import {
   FILE_TREE_DENSITY_OPTIONS,
   type FileTreeDensity,
 } from "@/features/file-explorer/lib/file-tree-density";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
 import Select from "@/ui/select";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";

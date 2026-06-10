@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitStash } from "../types/git-types";
+import type { GitStash } from "../types/git.types";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "./git-repo-api";
 
 export const getStashes = async (repoPath: string): Promise<GitStash[]> => {

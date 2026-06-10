@@ -11,10 +11,10 @@ import {
   UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
-import { showConfirmDialog } from "@/features/dialogs/dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import {
   fetchChanges,
@@ -23,7 +23,7 @@ import {
   type GitRemoteActionResult,
 } from "../api/git-remotes-api";
 import { discardAllChanges, initRepository } from "../api/git-status-api";
-import { useGitStore } from "../stores/git-store";
+import { useGitStore } from "../stores/git.store";
 import { type GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 
 interface GitActionsMenuProps {

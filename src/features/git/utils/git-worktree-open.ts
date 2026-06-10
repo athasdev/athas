@@ -1,5 +1,5 @@
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 
 type GitWorktreeOpenTarget = "current-window" | "new-window";

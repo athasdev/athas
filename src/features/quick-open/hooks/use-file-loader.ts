@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileItem } from "../types/quick-open";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { FileItem } from "../types/quick-open.types";
 import { shouldIgnoreFile } from "../utils/file-filtering";
 
 export const useFileLoader = (isVisible: boolean) => {

@@ -1,7 +1,7 @@
 import type ignore from "ignore";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import type { FileEntry } from "@/features/file-system/types/app";
-import type { GitFile, GitStatus } from "@/features/git/types/git-types";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { GitFile, GitStatus } from "@/features/git/types/git.types";
 import { getRelativePath } from "@/utils/path-helpers";
 
 export function filterHiddenFiles(

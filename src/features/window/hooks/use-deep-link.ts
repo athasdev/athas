@@ -2,8 +2,8 @@ import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "@/ui/toast";
-import type { Settings } from "@/features/settings/types/settings";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types";
+import type { Settings } from "@/features/settings/types/settings.types";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import {
   enqueueWindowOpenRequest,
   parseWindowOpenUrl,
@@ -153,8 +153,8 @@ async function openSettingsFromDeepLink(
   extensionsCategory?: Settings["extensionsActiveTab"],
 ) {
   const [{ useSettingsStore }, { useUIState }] = await Promise.all([
-    import("@/features/settings/store"),
-    import("@/features/window/stores/ui-state-store"),
+    import("@/features/settings/stores/settings.store"),
+    import("@/features/window/stores/ui-state.store"),
   ]);
 
   if (tab === "extensions" && extensionsCategory) {

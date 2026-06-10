@@ -1,5 +1,5 @@
 import { ArrowsOutIcon as Maximize, ArrowsInIcon as Minimize } from "@phosphor-icons/react";
-import type { Action } from "../models/action.types";
+import type { Action } from "../types/action.types";
 
 interface WindowActionsParams {
   onClose: () => void;

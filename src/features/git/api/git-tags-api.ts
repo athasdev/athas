@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitTag } from "../types/git-types";
+import type { GitTag } from "../types/git.types";
 import type { GitRemoteActionResult } from "./git-remotes-api";
 
 interface CheckoutTagResult {

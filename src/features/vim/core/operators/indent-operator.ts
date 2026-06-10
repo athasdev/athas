@@ -2,7 +2,7 @@
  * Indent operator (d)
  */
 
-import type { EditorContext, Operator, VimRange } from "../core/types";
+import type { EditorContext, Operator, VimRange } from "../core/types/core.types";
 
 /**
  * Indent operator - indents text in the given range

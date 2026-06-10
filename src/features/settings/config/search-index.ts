@@ -1,4 +1,4 @@
-import type { SettingSearchRecord } from "../types/search";
+import type { SettingSearchRecord } from "../types/search.types";
 import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [

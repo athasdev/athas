@@ -3,7 +3,7 @@ import {
   defaultSettings,
   getDefaultSettingsSnapshot,
 } from "@/features/settings/config/default-settings";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 
 let storeInstance: Store;
 

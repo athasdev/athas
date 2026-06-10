@@ -1,7 +1,7 @@
 import { useCallback, type RefObject } from "react";
 import type { FoldTransformResult } from "./use-fold-transform";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import type { Position, Range } from "@/features/editor/types/editor";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import { calculateActualOffset } from "@/features/athas-editor/utils/fold-transformer";
 import {
   getTextareaSelectionAnchorOffset,

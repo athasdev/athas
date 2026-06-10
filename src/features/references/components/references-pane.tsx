@@ -7,15 +7,15 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LoadingIndicator } from "@/ui/loading";
 import {
   PaneChip,
   PaneIconButton,
   paneHeaderClassName,
 } from "@/features/panes/components/pane-chrome";
-import { useReferencesStore } from "../stores/references-store";
-import type { Reference } from "../types/reference";
+import { useReferencesStore } from "../stores/references.store";
+import type { Reference } from "../types/reference.types";
 
 interface ReferencesPaneProps {
   onFullScreen?: () => void;

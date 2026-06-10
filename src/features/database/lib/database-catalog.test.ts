@@ -4,7 +4,7 @@ import {
   groupDatabaseObjects,
   getDatabaseObjectKind,
 } from "./database-catalog";
-import type { TableInfo } from "../models/common.types";
+import type { TableInfo } from "../types/common.types";
 
 describe("database catalog helpers", () => {
   it("groups database objects in stable UI order", () => {

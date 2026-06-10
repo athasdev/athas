@@ -1,6 +1,12 @@
 import { nanoid } from "nanoid";
 import { DEFAULT_SPLIT_RATIO, MIN_PANE_SIZE } from "../constants/pane";
-import type { PaneGroup, PaneNode, PaneSplit, SplitDirection, SplitPlacement } from "../types/pane";
+import type {
+  PaneGroup,
+  PaneNode,
+  PaneSplit,
+  SplitDirection,
+  SplitPlacement,
+} from "../types/pane.types";
 
 export interface FlatPaneEntry {
   node: PaneNode;

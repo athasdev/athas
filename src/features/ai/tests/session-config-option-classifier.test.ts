@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { classifySessionConfigOption } from "../lib/session-config-option-classifier";
-import type { SessionConfigOption } from "../types/acp";
+import type { SessionConfigOption } from "../types/acp.types";
 
 function selectOption(option: Partial<SessionConfigOption>): SessionConfigOption {
   return {

@@ -5,7 +5,7 @@ import type {
   ImageFormat,
   ResizeOptions,
   RotationDegrees,
-} from "../models/image-operation.types";
+} from "../types/image-operation.types";
 import { blobToDataURL } from "../utils/canvas-utils";
 import { convertImageFormat } from "../utils/image-conversion";
 import {

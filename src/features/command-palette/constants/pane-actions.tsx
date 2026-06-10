@@ -14,7 +14,7 @@ import {
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
 } from "@/features/panes/utils/pane-command-actions";
-import type { Action } from "../models/action.types";
+import type { Action } from "../types/action.types";
 
 interface PaneActionsParams {
   onClose: () => void;

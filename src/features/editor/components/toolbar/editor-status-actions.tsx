@@ -8,22 +8,22 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
-import type { Position } from "@/features/editor/types/editor";
+import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
+import type { Position } from "@/features/editor/types/editor.types";
 import { LoadingIndicator } from "@/ui/loading";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   getAllLanguages,
   getLanguageDisplayName,
   getLanguageIdFromPath,
 } from "@/features/editor/utils/language-id";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, buttonVariants } from "@/ui/button";
 import {
   Combobox,

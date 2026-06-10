@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { IS_MAC } from "@/utils/platform";
-import { usePaneStore } from "../stores/pane-store";
+import { usePaneStore } from "../stores/pane.store";
 import { PaneContainer } from "./pane-container";
 import { PaneNodeRenderer } from "./pane-node-renderer";
 

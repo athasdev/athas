@@ -15,7 +15,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, createStash, dropStash, getStashes, popStash } from "../../api/git-stash-api";
-import type { GitStash } from "../../types/git-types";
+import type { GitStash } from "../../types/git.types";
 
 interface GitStashManagerProps {
   isOpen: boolean;

@@ -9,13 +9,13 @@ import {
   useState,
   type DragEvent,
 } from "react";
-import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { useSettingsStore } from "@/features/settings/store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { showConfirmDialog } from "@/features/dialogs/dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import {
   createTerminalAddons,
   injectLinkStyles,
@@ -25,7 +25,7 @@ import {
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import { useTerminalTheme } from "../hooks/use-terminal-theme";
-import { useTerminalStore } from "../stores/terminal-store";
+import { useTerminalStore } from "../stores/terminal.store";
 import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";

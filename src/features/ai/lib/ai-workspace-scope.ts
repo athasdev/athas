@@ -1,4 +1,4 @@
-import type { Chat } from "@/features/ai/types/ai-chat";
+import type { Chat } from "@/features/ai/types/ai-chat.types";
 
 export const normalizeAiWorkspacePath = (workspacePath: string | null | undefined) =>
   workspacePath || null;

@@ -14,12 +14,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useGitHubStore } from "../stores/github-store";
-import type { IssueFilter, IssueListItem } from "../types/github";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useGitHubStore } from "../stores/github.store";
+import type { IssueFilter, IssueListItem } from "../types/github.types";
 import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
 import { LoadingIndicator } from "@/ui/loading";
 import { SidebarListItem } from "@/ui/sidebar";

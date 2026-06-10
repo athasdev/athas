@@ -11,12 +11,12 @@ import {
   UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
-import { showAlertDialog } from "@/features/dialogs/dialog-service";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,
@@ -36,10 +36,10 @@ import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git
 import { clearRepositoryDiscoveryCache, resolveRepositoryPath } from "../api/git-repo-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus, initRepository } from "../api/git-status-api";
-import { useRepositoryStore } from "../stores/git-repository-store";
-import { useGitStore } from "../stores/git-store";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitFile } from "../types/git-types";
+import { useRepositoryStore } from "../stores/git-repository.store";
+import { useGitStore } from "../stores/git.store";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitFile } from "../types/git.types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";

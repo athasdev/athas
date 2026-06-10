@@ -1,5 +1,5 @@
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { ContextMenu } from "@/ui/context-menu";
 import { IS_MAC } from "@/utils/platform";
 import {

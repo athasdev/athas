@@ -11,9 +11,9 @@ import { memo } from "react";
 import Breadcrumb, {
   BreadcrumbActionButton,
 } from "@/features/editor/components/toolbar/breadcrumb";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { cn } from "@/utils/cn";
-import type { DiffHeaderProps } from "../../types/git-diff-types";
+import type { DiffHeaderProps } from "../../types/git-diff.types";
 import { getFileStatus } from "../../utils/git-diff-helpers";
 
 const DiffHeader = memo(

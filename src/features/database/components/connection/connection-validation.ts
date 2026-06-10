@@ -1,4 +1,4 @@
-import type { DatabaseType } from "../../models/provider.types";
+import type { DatabaseType } from "../../types/provider.types";
 
 const CONNECTION_DB_TYPES: DatabaseType[] = [
   "sqlite",
