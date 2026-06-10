@@ -350,6 +350,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
   const focusedNotificationIndex = focusedNotificationId
     ? visibleNotifications.findIndex((notification) => notification.id === focusedNotificationId)
     : -1;
+  const hasNotificationRows = filteredNotifications.length > 0;
 
   useEffect(() => {
     if (visibleNotifications.length === 0) {
@@ -454,7 +455,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         isVisible={isVisible}
         onClose={onClose}
         title="Notifications"
-        className="h-[480px] max-h-[calc(100vh-8rem)] w-[520px]"
+        className={cn("max-h-[calc(100vh-8rem)] w-[520px]", hasNotificationRows && "h-[480px]")}
       >
         <div
           className="flex h-full min-h-0 flex-col"
