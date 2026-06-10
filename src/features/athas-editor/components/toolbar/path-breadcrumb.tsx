@@ -49,7 +49,9 @@ export function PathBreadcrumb({
 
         return (
           <div key={`${segment}-${index}`} className="flex shrink-0 items-center gap-0.5">
-            {index > 0 && <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" />}
+            {index > 0 && (
+              <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" weight="duotone" />
+            )}
             {interactive ? (
               <Button
                 ref={(element) => setSegmentRef?.(index, element)}

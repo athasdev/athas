@@ -210,7 +210,7 @@ export function FilePathBreadcrumb({
               )}
               compact
             >
-              <ArrowLeft className="shrink-0" />
+              <ArrowLeft className="shrink-0" weight="duotone" />
               <span>Go back</span>
             </Button>
           )}

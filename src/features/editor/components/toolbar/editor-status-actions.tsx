@@ -100,7 +100,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
     switch (status) {
       case "connected":
         return {
-          icon: <Zap />,
+          icon: <Zap weight="duotone" />,
           color: "text-green-400",
           title: "Language Servers Active",
         };
@@ -112,13 +112,13 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         };
       case "error":
         return {
-          icon: <ZapOff />,
+          icon: <ZapOff weight="duotone" />,
           color: "text-red-400",
           title: "Language server issue",
         };
       default:
         return {
-          icon: <ZapOff />,
+          icon: <ZapOff weight="duotone" />,
           color: "text-text-lighter opacity-50",
           title: "No active language servers",
         };
@@ -419,7 +419,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   aria-selected={lang.id === currentFileLanguageId}
                 >
                   <span className="truncate">{lang.displayName}</span>
-                  {lang.id === currentFileLanguageId && <Check className="shrink-0 text-accent" />}
+                  {lang.id === currentFileLanguageId && (
+                    <Check className="shrink-0 text-accent" weight="duotone" />
+                  )}
                 </Button>
               ))}
               {filteredLanguages.length === 0 && (
@@ -470,7 +472,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap className="shrink-0 text-green-400" />
+                        <Zap className="shrink-0 text-green-400" weight="duotone" />
                         <span className="truncate text-text ui-text-xs">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -492,7 +494,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           compact
                           className="rounded-md px-2 ui-text-xs text-text-lighter"
                         >
-                          <Square />
+                          <Square weight="duotone" />
                         </Button>
                       </div>
                     </div>
@@ -501,7 +503,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 {!currentServerEntry && isCurrentFileLspAvailable && currentFileDisplayName && (
                   <div className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
                     <div className="flex min-w-0 items-center gap-2">
-                      <ZapOff className="shrink-0 opacity-60" />
+                      <ZapOff className="shrink-0 opacity-60" weight="duotone" />
                       <span className="truncate text-text ui-text-xs">
                         {currentFileDisplayName}
                       </span>
@@ -528,7 +530,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">
                 <div className="flex items-center gap-2 text-red-400">
-                  <ZapOff />
+                  <ZapOff weight="duotone" />
                   <span className="ui-text-xs">Language server issue</span>
                 </div>
                 <div className="px-0.5 ui-text-xs text-text-lighter">
@@ -538,7 +540,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
-                <ZapOff className="opacity-50" />
+                <ZapOff className="opacity-50" weight="duotone" />
                 <span className="ui-text-xs">No active language servers</span>
               </div>
             )}
@@ -561,7 +563,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           tooltipSide="bottom"
         >
           <span className="flex size-full items-center justify-center">
-            <SlidersHorizontal />
+            <SlidersHorizontal weight="duotone" />
           </span>
         </Button>
         <Dropdown
@@ -589,7 +591,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                     <Keybinding binding={option.shortcut} className="shrink-0" />
                   ) : null}
                   <span className="flex size-4 items-center justify-center">
-                    {option.checked ? <Check className="text-accent" /> : null}
+                    {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
                   </span>
                 </span>
               </Button>
@@ -607,7 +609,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               >
                 <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-accent" /> : null}
+                  {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
                 </span>
               </Button>
             ))}
@@ -624,7 +626,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               >
                 <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-accent" /> : null}
+                  {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
                 </span>
               </Button>
             ))}

@@ -13,7 +13,8 @@ import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
 import { useSettingsStore } from "@/features/settings/store";
-import { Button } from "@/ui/button";
+import { Button, type ButtonProps } from "@/ui/button";
+import { cn } from "@/utils/cn";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
 export interface BreadcrumbProps {
@@ -25,6 +26,19 @@ export interface BreadcrumbProps {
   showDefaultActions?: boolean;
   interactive?: boolean;
   showPath?: boolean;
+}
+
+type BreadcrumbActionButtonProps = Omit<ButtonProps, "variant" | "compact">;
+
+export function BreadcrumbActionButton({ className, ...props }: BreadcrumbActionButtonProps) {
+  return (
+    <Button
+      variant="ghost"
+      compact
+      className={cn("rounded text-text-lighter", className)}
+      {...props}
+    />
+  );
 }
 
 export default function Breadcrumb({
@@ -138,39 +152,30 @@ export default function Breadcrumb({
         {((isMarkdownFile() && activeBuffer.type !== "markdownPreview") ||
           (isHtmlFile() && activeBuffer.type !== "htmlPreview") ||
           (isCsvFile() && activeBuffer.type !== "csvPreview")) && (
-          <Button
+          <BreadcrumbActionButton
             onClick={handlePreviewClick}
-            variant="ghost"
-            className="rounded text-text-lighter"
             tooltip="Preview"
             tooltipSide="bottom"
-            compact
           >
-            <Eye />
-          </Button>
+            <Eye weight="duotone" />
+          </BreadcrumbActionButton>
         )}
-        <Button
+        <BreadcrumbActionButton
           onClick={handleInlineEditClick}
-          variant="ghost"
-          className="rounded text-text-lighter"
           tooltip="AI inline edit"
           commandId="editor.inlineEdit"
           tooltipSide="bottom"
-          compact
         >
-          <Sparkles />
-        </Button>
-        <Button
+          <Sparkles weight="duotone" />
+        </BreadcrumbActionButton>
+        <BreadcrumbActionButton
           onClick={onSearchClick}
-          variant="ghost"
-          className="rounded text-text-lighter"
           tooltip="Find in file"
           commandId="workbench.showFind"
           tooltipSide="bottom"
-          compact
         >
-          <Search />
-        </Button>
+          <Search weight="duotone" />
+        </BreadcrumbActionButton>
         <div className="mx-1 h-3.5 w-px bg-border/70" />
         <EditorStatusActions
           bufferId={resolvedBufferId ?? undefined}
