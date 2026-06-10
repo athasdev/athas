@@ -53,7 +53,7 @@ export const defaultSettings: Settings = {
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark",
-  iconTheme: "material",
+  iconTheme: "symbols",
   syncSystemTheme: false,
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
