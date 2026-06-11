@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  moveNotebookCell,
   notebookCellSource,
   parseNotebookContent,
   serializeNotebook,
@@ -71,5 +72,38 @@ describe("notebook model", () => {
 
   it("keeps trailing newlines in source line arrays", () => {
     expect(sourceToNotebookLines("a\nb\n")).toEqual(["a\n", "b\n"]);
+  });
+
+  it("moves notebook cells without changing cell contents", () => {
+    const parsed = parseNotebookContent(
+      JSON.stringify({
+        cells: [
+          { cell_type: "markdown", source: ["# Intro\n"] },
+          { cell_type: "code", source: ["print('middle')\n"], outputs: [] },
+          { cell_type: "raw", source: ["notes"] },
+        ],
+      }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const next = moveNotebookCell(parsed.notebook, 0, 2);
+
+    expect(next.cells.map((cell) => cell.cell_type)).toEqual(["code", "raw", "markdown"]);
+    expect(notebookCellSource(next.cells[2])).toBe("# Intro\n");
+  });
+
+  it("ignores invalid notebook cell moves", () => {
+    const notebook = {
+      cells: [
+        { cell_type: "markdown", source: ["# Intro\n"] },
+        { cell_type: "code", source: ["print('ok')\n"] },
+      ],
+    };
+
+    expect(moveNotebookCell(notebook, -1, 1)).toBe(notebook);
+    expect(moveNotebookCell(notebook, 0, 4)).toBe(notebook);
+    expect(moveNotebookCell(notebook, 1, 1)).toBe(notebook);
   });
 });

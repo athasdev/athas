@@ -119,6 +119,31 @@ export function updateNotebookCellOutputs(
   };
 }
 
+export function moveNotebookCell(
+  notebook: NotebookDocument,
+  fromIndex: number,
+  toIndex: number,
+): NotebookDocument {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= notebook.cells.length ||
+    toIndex >= notebook.cells.length
+  ) {
+    return notebook;
+  }
+
+  const cells = [...notebook.cells];
+  const [cell] = cells.splice(fromIndex, 1);
+  cells.splice(toIndex, 0, cell);
+
+  return {
+    ...notebook,
+    cells,
+  };
+}
+
 export function serializeNotebook(notebook: NotebookDocument): string {
   return `${JSON.stringify(notebook, null, 2)}\n`;
 }

@@ -7,7 +7,7 @@ import {
   WarningCircleIcon as Warning,
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import { useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type Ref } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
@@ -19,6 +19,7 @@ import { cn } from "@/utils/cn";
 import { HighlightedCode } from "./highlighted-code";
 import { NotebookCodeCellEditor } from "./notebook-code-cell-editor";
 import {
+  moveNotebookCell,
   notebookCellSource,
   notebookLanguage,
   notebookOutputText,
@@ -38,11 +39,28 @@ interface NotebookRunResult {
   timedOut: boolean;
 }
 
+const NOTEBOOK_CELL_DRAG_TYPE = "application/x-athas-notebook-cell";
+
+type DropPlacement = "before" | "after";
+
 function maxExecutionCount(notebook: NotebookDocument): number {
   return notebook.cells.reduce((max, cell) => {
     const count = typeof cell.execution_count === "number" ? cell.execution_count : 0;
     return Math.max(max, count);
   }, 0);
+}
+
+function dragDropPlacement(event: DragEvent<HTMLElement>): DropPlacement {
+  const rect = event.currentTarget.getBoundingClientRect();
+  return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+}
+
+function remapMovedIndex(index: number, fromIndex: number, toIndex: number): number {
+  if (fromIndex === toIndex) return index;
+  if (index === fromIndex) return toIndex;
+  if (fromIndex < toIndex && index > fromIndex && index <= toIndex) return index - 1;
+  if (fromIndex > toIndex && index >= toIndex && index < fromIndex) return index + 1;
+  return index;
 }
 
 function outputDataText(data: Record<string, string | string[]> | undefined, mime: string): string {
@@ -189,12 +207,19 @@ function NotebookCellView({
   language,
   isEditing,
   isSelected,
+  isDragged,
+  dropPlacement,
   isRunning,
   onSelect,
   onEditToggle,
   onRun,
   onSourceChange,
   onMoveSelection,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
 }: {
   cell: NotebookCell;
   cellRef?: Ref<HTMLElement>;
@@ -202,12 +227,19 @@ function NotebookCellView({
   language: string;
   isEditing: boolean;
   isSelected: boolean;
+  isDragged: boolean;
+  dropPlacement: DropPlacement | null;
   isRunning: boolean;
   onSelect: (cellIndex: number) => void;
   onEditToggle: (cellIndex: number) => void;
   onRun: (cellIndex: number) => void;
   onSourceChange: (cellIndex: number, source: string) => void;
   onMoveSelection: (direction: -1 | 1) => void;
+  onDragStart: (event: DragEvent<HTMLElement>, cellIndex: number) => void;
+  onDragOver: (event: DragEvent<HTMLElement>, cellIndex: number) => void;
+  onDragLeave: (event: DragEvent<HTMLElement>) => void;
+  onDrop: (event: DragEvent<HTMLElement>, cellIndex: number) => void;
+  onDragEnd: () => void;
 }) {
   const source = notebookCellSource(cell);
   const isCode = cell.cell_type === "code";
@@ -241,11 +273,24 @@ function NotebookCellView({
       className={cn(
         "group relative mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-md border border-transparent py-1 pr-1 outline-none transition-colors",
         isSelected && "border-accent/45 bg-accent/5",
+        isDragged && "opacity-45",
       )}
       onFocus={() => onSelect(cellIndex)}
       onMouseDown={() => onSelect(cellIndex)}
       onKeyDown={handleKeyDown}
+      onDragOver={(event) => onDragOver(event, cellIndex)}
+      onDragLeave={onDragLeave}
+      onDrop={(event) => onDrop(event, cellIndex)}
+      onDragEnd={onDragEnd}
     >
+      {dropPlacement ? (
+        <div
+          className={cn(
+            "pointer-events-none absolute right-1 left-[68px] z-10 h-0.5 rounded-full bg-accent",
+            dropPlacement === "before" ? "-top-1" : "-bottom-1",
+          )}
+        />
+      ) : null}
       <div
         className={cn(
           "absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-transparent transition-colors",
@@ -253,9 +298,31 @@ function NotebookCellView({
         )}
       />
       <div className="pt-[31px] text-right">
-        <span className="font-mono text-[0.82em] text-text-lighter">
-          {isCode ? `[${cell.execution_count ?? ""}]` : ""}
-        </span>
+        <div
+          role="button"
+          tabIndex={-1}
+          aria-label="Move cell"
+          draggable
+          className="inline-flex cursor-grab items-center justify-end gap-1 rounded px-1 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text active:cursor-grabbing"
+          onClick={() => onSelect(cellIndex)}
+          onDragStart={(event) => onDragStart(event, cellIndex)}
+          onDragEnd={onDragEnd}
+        >
+          <span
+            aria-hidden
+            className="grid h-3.5 w-2 grid-cols-2 content-center gap-x-0.5 gap-y-0.5 opacity-70"
+          >
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+            <span className="size-1 rounded-full bg-current" />
+          </span>
+          <span className="font-mono text-[0.82em]">
+            {isCode ? `[${cell.execution_count ?? ""}]` : ""}
+          </span>
+        </div>
       </div>
       <div className="min-w-0">
         <div className="flex min-h-7 items-center justify-between gap-2 opacity-75 transition-opacity hover:opacity-100 focus-within:opacity-100">
@@ -346,6 +413,11 @@ export function NotebookEditor() {
   const [editingCells, setEditingCells] = useState<Set<number>>(new Set());
   const [selectedCellIndex, setSelectedCellIndex] = useState(0);
   const [runningCell, setRunningCell] = useState<number | null>(null);
+  const [draggedCellIndex, setDraggedCellIndex] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    cellIndex: number;
+    placement: DropPlacement;
+  } | null>(null);
 
   const parsed = useMemo(() => parseNotebookContent(content), [content]);
 
@@ -430,6 +502,89 @@ export function NotebookEditor() {
     });
   };
 
+  const resetDragState = () => {
+    setDraggedCellIndex(null);
+    setDropTarget(null);
+  };
+
+  const handleCellDragStart = (event: DragEvent<HTMLElement>, cellIndex: number) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(NOTEBOOK_CELL_DRAG_TYPE, String(cellIndex));
+    event.dataTransfer.setData("text/plain", `Notebook cell ${cellIndex + 1}`);
+    setDraggedCellIndex(cellIndex);
+    setSelectedCellIndex(cellIndex);
+  };
+
+  const handleCellDragOver = (event: DragEvent<HTMLElement>, cellIndex: number) => {
+    if (draggedCellIndex === null) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    if (draggedCellIndex === cellIndex) {
+      setDropTarget(null);
+      return;
+    }
+
+    setDropTarget({
+      cellIndex,
+      placement: dragDropPlacement(event),
+    });
+  };
+
+  const handleCellDragLeave = (event: DragEvent<HTMLElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+      setDropTarget(null);
+    }
+  };
+
+  const handleCellDrop = (event: DragEvent<HTMLElement>, cellIndex: number) => {
+    event.preventDefault();
+    if (!parsed.ok) {
+      resetDragState();
+      return;
+    }
+
+    const sourceData = event.dataTransfer.getData(NOTEBOOK_CELL_DRAG_TYPE);
+    const sourceIndex = sourceData ? Number(sourceData) : NaN;
+    const fromIndex = Number.isFinite(sourceIndex) ? sourceIndex : draggedCellIndex;
+    if (fromIndex === null || fromIndex < 0 || fromIndex >= parsed.notebook.cells.length) {
+      resetDragState();
+      return;
+    }
+
+    const placement =
+      dropTarget?.cellIndex === cellIndex ? dropTarget.placement : dragDropPlacement(event);
+    let toIndex = cellIndex + (placement === "after" ? 1 : 0);
+    if (fromIndex < toIndex) toIndex -= 1;
+    toIndex = Math.max(0, Math.min(parsed.notebook.cells.length - 1, toIndex));
+
+    if (fromIndex === toIndex) {
+      resetDragState();
+      return;
+    }
+
+    updateNotebook(moveNotebookCell(parsed.notebook, fromIndex, toIndex));
+    setSelectedCellIndex(toIndex);
+    setEditingCells((current) => {
+      const next = new Set<number>();
+      current.forEach((index) => {
+        next.add(remapMovedIndex(index, fromIndex, toIndex));
+      });
+      return next;
+    });
+    setRunningCell((current) =>
+      current === null ? null : remapMovedIndex(current, fromIndex, toIndex),
+    );
+    resetDragState();
+
+    requestAnimationFrame(() => {
+      cellRefs.current[toIndex]?.focus({ preventScroll: true });
+      cellRefs.current[toIndex]?.scrollIntoView({ block: "nearest" });
+    });
+  };
+
   if (!bufferId) return null;
 
   if (!parsed.ok) {
@@ -463,12 +618,19 @@ export function NotebookEditor() {
             language={language}
             isEditing={editingCells.has(cellIndex)}
             isSelected={selectedCellIndex === cellIndex}
+            isDragged={draggedCellIndex === cellIndex}
+            dropPlacement={dropTarget?.cellIndex === cellIndex ? dropTarget.placement : null}
             isRunning={runningCell === cellIndex}
             onSelect={setSelectedCellIndex}
             onEditToggle={handleEditToggle}
             onRun={handleRunCell}
             onSourceChange={handleSourceChange}
             onMoveSelection={moveSelection}
+            onDragStart={handleCellDragStart}
+            onDragOver={handleCellDragOver}
+            onDragLeave={handleCellDragLeave}
+            onDrop={handleCellDrop}
+            onDragEnd={resetDragState}
           />
         ))}
       </div>
