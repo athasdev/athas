@@ -1,9 +1,8 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { parseMarkdown } from "@/features/editor/markdown/parser";
+import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
-import { highlightCodeBlock } from "./hover-tooltip-highlight";
 import "./hover-tooltip.css";
 
 export const HoverTooltip = memo(() => {
@@ -12,10 +11,10 @@ export const HoverTooltip = memo(() => {
   const fontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { hoverInfo, actions } = useEditorUIStore();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
   const [resolvedPosition, setResolvedPosition] = useState<{ top: number; left: number } | null>(
     null,
   );
+  const displayHtml = useHighlightedMarkdown(hoverInfo?.content);
 
   const handleMouseEnter = () => actions.setIsHovering(true);
   const handleMouseLeave = () => {
@@ -58,17 +57,6 @@ export const HoverTooltip = memo(() => {
     };
   }, [actions]);
 
-  const renderedContent = useMemo(() => {
-    if (!hoverInfo?.content) return null;
-    return parseMarkdown(hoverInfo.content);
-  }, [hoverInfo?.content]);
-
-  // Apply syntax highlighting to code blocks after initial render
-  const applyHighlighting = useCallback(async (html: string) => {
-    const highlighted = await highlightCodeBlock(html);
-    setHighlightedHtml(highlighted);
-  }, []);
-
   useLayoutEffect(() => {
     if (!hoverInfo || !containerRef.current) {
       setResolvedPosition(null);
@@ -101,18 +89,10 @@ export const HoverTooltip = memo(() => {
       }
       return { top, left };
     });
-  }, [hoverInfo, highlightedHtml, renderedContent]);
-
-  useEffect(() => {
-    if (renderedContent) {
-      setHighlightedHtml(null);
-      applyHighlighting(renderedContent);
-    }
-  }, [renderedContent, applyHighlighting]);
+  }, [hoverInfo, displayHtml]);
 
   if (!hoverInfo) return null;
 
-  const displayHtml = highlightedHtml ?? renderedContent;
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
   const maxWidth = Math.min(
     EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH,

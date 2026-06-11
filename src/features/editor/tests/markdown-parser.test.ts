@@ -9,7 +9,8 @@ vi.mock("dompurify", () => ({
 
 describe("parseMarkdown", () => {
   it("renders YAML front matter as preview properties", () => {
-    const html = parseMarkdown(`---
+    const html = parseMarkdown(
+      `---
 title: Research Analysis Report
 description: Reproducible analysis workflow
 author: Athas Highlighting Check
@@ -21,7 +22,9 @@ params:
 
 # Summary
 
-Body text`);
+Body text`,
+      { frontMatter: "render" },
+    );
 
     expect(html).toContain("<h1>Summary</h1>");
     expect(html).toContain("<p>Body text</p>");
@@ -36,6 +39,14 @@ Body text`);
     expect(html).toContain("<dt>output</dt><dd>html_document</dd>");
     expect(html).toContain("<dt>params.min_score</dt><dd>0.25</dd>");
     expect(html).not.toContain("<hr />");
+  });
+
+  it("preserves front matter as regular Markdown unless requested", () => {
+    const html = parseMarkdown("---\ntitle: Example\n---\n\n# Body");
+
+    expect(html).toContain("<hr />");
+    expect(html).toContain("<p>title: Example</p>");
+    expect(html).not.toContain("Document properties");
   });
 
   it("keeps thematic breaks outside the first front matter block", () => {

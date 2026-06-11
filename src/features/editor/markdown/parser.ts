@@ -11,6 +11,10 @@ interface FrontMatterEntry {
   value: string;
 }
 
+export interface ParseMarkdownOptions {
+  frontMatter?: "preserve" | "render" | "strip";
+}
+
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -139,8 +143,12 @@ function renderFrontMatter(frontMatter: string[]): string | null {
   return `<section class="markdown-front-matter" aria-label="Document properties">${headerParts}${propertyGrid}</section>`;
 }
 
-export function parseMarkdown(content: string): string {
-  const { frontMatter, body } = extractYamlFrontMatter(content);
+export function parseMarkdown(content: string, options: ParseMarkdownOptions = {}): string {
+  const frontMatterMode = options.frontMatter ?? "preserve";
+  const { frontMatter, body } =
+    frontMatterMode === "preserve"
+      ? { frontMatter: [], body: content }
+      : extractYamlFrontMatter(content);
   const lines = body.split("\n");
   const processedLines: string[] = [];
   const footnotes: Footnote[] = [];
@@ -292,9 +300,11 @@ export function parseMarkdown(content: string): string {
     processedLines.push("</div>");
   }
 
-  const frontMatterHtml = renderFrontMatter(frontMatter);
-  if (frontMatterHtml) {
-    processedLines.unshift(frontMatterHtml);
+  if (frontMatterMode === "render") {
+    const frontMatterHtml = renderFrontMatter(frontMatter);
+    if (frontMatterHtml) {
+      processedLines.unshift(frontMatterHtml);
+    }
   }
 
   const rawHtml = processedLines.join("\n");

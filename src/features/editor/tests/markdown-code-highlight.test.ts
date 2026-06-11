@@ -18,11 +18,11 @@ vi.mock("@/features/editor/lib/wasm-parser/tokenizer", () => ({
   tokenizeCode: vi.fn(async () => []),
 }));
 
-import { highlightCodeBlock } from "../lsp/hover-tooltip-highlight";
+import { highlightMarkdownCodeBlocks } from "../markdown/code-highlight";
 
-describe("highlightCodeBlock", () => {
+describe("highlightMarkdownCodeBlocks", () => {
   it("uses fallback highlighting for R, Python, and SQL preview code blocks", async () => {
-    const html = await highlightCodeBlock(
+    const html = await highlightMarkdownCodeBlocks(
       [
         '<pre><code class="language-r">library(dplyr)\nvalue &lt;- 1</code></pre>',
         '<pre><code class="language-python">import pandas as pd\nprint("ok")</code></pre>',
