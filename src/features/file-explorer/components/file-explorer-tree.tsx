@@ -98,7 +98,7 @@ interface FileExplorerTreeProps {
   onUpdateFiles?: (files: FileEntry[]) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onDuplicatePath?: (path: string) => void;
-  onRefreshDirectory?: (path: string) => void;
+  onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
   onFileMove?: (oldPath: string, newPath: string) => void;
@@ -1064,7 +1064,7 @@ function FileExplorerTreeComponent({
             const targetDir = isDir ? current.path : current.path.split(sep).slice(0, -1).join(sep);
             if (targetDir) {
               clipboardActions.paste(targetDir).then(() => {
-                onRefreshDirectory?.(targetDir);
+                onRefreshDirectory?.(targetDir, { force: true });
               });
             }
             return;

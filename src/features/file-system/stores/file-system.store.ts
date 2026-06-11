@@ -1679,7 +1679,7 @@ export const useFileSystemStore = createSelectors(
         return get().deleteFile(targetPath);
       },
 
-      refreshDirectory: async (directoryPath: string) => {
+      refreshDirectory: async (directoryPath: string, options?: { force?: boolean }) => {
         const dirNode = findFileInTree(get().files, directoryPath);
 
         if (!dirNode || !dirNode.isDir) {
@@ -1691,7 +1691,7 @@ export const useFileSystemStore = createSelectors(
         const isRoot = directoryPath === get().rootFolderPath;
         const isExpanded = isRoot || useFileTreeStore.getState().isExpanded(directoryPath);
 
-        if (!isExpanded) {
+        if (!isExpanded && !options?.force) {
           return;
         }
 

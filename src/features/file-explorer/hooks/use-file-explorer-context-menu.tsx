@@ -48,7 +48,7 @@ interface UseFileExplorerContextMenuOptions {
   ) => void | string | Promise<string | undefined>;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onGenerateImage?: (directoryPath: string) => void;
-  onRefreshDirectory?: (path: string) => void;
+  onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
@@ -157,7 +157,7 @@ export function useFileExplorerContextMenu({
           bufferStore.actions.updateBufferContent(createdBuffer.id, templateContent, false);
         }
 
-        onRefreshDirectory?.(directoryPath);
+        onRefreshDirectory?.(directoryPath, { force: true });
         toast.success(`Created ${targetFileName}`);
       } catch (error) {
         console.error("Failed to create env template file:", error);
@@ -223,7 +223,7 @@ export function useFileExplorerContextMenu({
           id: "refresh",
           label: "Refresh",
           icon: <RefreshCw />,
-          onClick: () => onRefreshDirectory?.(contextMenu.path),
+          onClick: () => onRefreshDirectory?.(contextMenu.path, { force: true }),
         },
         {
           id: "add-folder-to-workspace",
@@ -407,7 +407,7 @@ export function useFileExplorerContextMenu({
         icon: <Clipboard />,
         onClick: () => {
           clipboardActions.paste(contextMenu.path).then(() => {
-            onRefreshDirectory?.(contextMenu.path);
+            onRefreshDirectory?.(contextMenu.path, { force: true });
           });
         },
       });
