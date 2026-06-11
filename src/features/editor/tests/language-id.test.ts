@@ -3,8 +3,10 @@ import {
   getLanguageDisplayName as getAthasEditorLanguageDisplayName,
   getLanguageIdFromPath as getAthasEditorLanguageIdFromPath,
 } from "@/features/athas-editor/utils/language-id";
+import { isMarkdownFile as isAthasEditorMarkdownFile } from "@/features/athas-editor/utils/lines";
 import { detectLanguageFromFileName } from "../utils/language-detection";
 import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
+import { isMarkdownFile as isEditorMarkdownFile } from "../utils/lines";
 import {
   hasLineBasedSyntaxFallback,
   hasLineBasedSyntaxHighlighter,
@@ -15,6 +17,7 @@ import {
   MONACO_LANGUAGE_BY_ATHAS_ID,
   toMonacoLanguageId,
 } from "../monaco/language";
+import { getLanguageOverlayTokens } from "../lib/wasm-parser/language-overlays";
 
 describe("getLanguageIdFromPath", () => {
   it("detects scm files as scheme", () => {
@@ -43,6 +46,11 @@ describe("getLanguageIdFromPath", () => {
 
   it("detects extension-backed highlight languages without registry data", () => {
     expect(getLanguageIdFromPath("/tmp/component.tsx")).toBe("typescriptreact");
+    expect(getLanguageIdFromPath("/tmp/analysis.R")).toBe("r");
+    expect(getLanguageIdFromPath("/tmp/.Rprofile")).toBe("r");
+    expect(getLanguageIdFromPath("/tmp/exploration.ipy")).toBe("python");
+    expect(getLanguageIdFromPath("/tmp/report.Rmd")).toBe("rmarkdown");
+    expect(getLanguageIdFromPath("/tmp/notebook.ipynb")).toBe("jupyter-notebook");
     expect(getLanguageIdFromPath("/tmp/styles.scss")).toBe("scss");
     expect(getLanguageIdFromPath("/tmp/Dockerfile")).toBe("dockerfile");
     expect(getLanguageIdFromPath("/tmp/.gitignore")).toBe("gitignore");
@@ -68,10 +76,17 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageDisplayName("gitattributes")).toBe("Git Attributes");
     expect(getLanguageDisplayName("elisp")).toBe("Emacs Lisp");
     expect(getLanguageDisplayName("lockfile")).toBe("Lockfile");
+    expect(getLanguageDisplayName("r")).toBe("R");
+    expect(getLanguageDisplayName("rmarkdown")).toBe("R Markdown");
+    expect(getLanguageDisplayName("jupyter-notebook")).toBe("Jupyter Notebook");
   });
 
   it("maps Monaco-highlighted extensions to registered Monaco language ids", () => {
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/component.tsx"))).toBe("typescript");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/exploration.ipy"))).toBe("python");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/analysis.R"))).toBe("r");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/report.Rmd"))).toBe("markdown");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/notebook.ipynb"))).toBe("json");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitignore"))).toBe("gitignore");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.dockerignore"))).toBe("gitignore");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitattributes"))).toBe("gitattributes");
@@ -98,6 +113,10 @@ describe("toMonacoLanguageId", () => {
 describe("Athas editor language detection", () => {
   it("keeps dotfile syntax mappings aligned with the shared editor surface", () => {
     expect(getAthasEditorLanguageIdFromPath("/tmp/.gitignore")).toBe("gitignore");
+    expect(getAthasEditorLanguageIdFromPath("/tmp/exploration.ipy")).toBe("python");
+    expect(getAthasEditorLanguageIdFromPath("/tmp/analysis.R")).toBe("r");
+    expect(getAthasEditorLanguageIdFromPath("/tmp/report.Rmd")).toBe("rmarkdown");
+    expect(getAthasEditorLanguageIdFromPath("/tmp/notebook.ipynb")).toBe("jupyter-notebook");
     expect(getAthasEditorLanguageIdFromPath("/tmp/.dockerignore")).toBe("gitignore");
     expect(getAthasEditorLanguageIdFromPath("/tmp/.gitattributes")).toBe("gitattributes");
     expect(getAthasEditorLanguageIdFromPath("/tmp/.git/info/exclude")).toBe("gitignore");
@@ -105,6 +124,33 @@ describe("Athas editor language detection", () => {
     expect(getAthasEditorLanguageIdFromPath("/tmp/bun.lock")).toBe("lockfile");
     expect(getAthasEditorLanguageDisplayName("gitattributes")).toBe("Git Attributes");
     expect(getAthasEditorLanguageDisplayName("lockfile")).toBe("Lockfile");
+    expect(getAthasEditorLanguageDisplayName("rmarkdown")).toBe("R Markdown");
+  });
+});
+
+describe("Markdown preview file detection", () => {
+  it("treats R Markdown as a Markdown-previewable source file", () => {
+    expect(isEditorMarkdownFile("/tmp/README.md")).toBe(true);
+    expect(isEditorMarkdownFile("/tmp/report.Rmd")).toBe(true);
+    expect(isAthasEditorMarkdownFile("/tmp/report.Rmd")).toBe(true);
+    expect(isEditorMarkdownFile("/tmp/analysis.R")).toBe(false);
+  });
+});
+
+describe("R Markdown overlays", () => {
+  it("highlights YAML front matter tokens", () => {
+    const tokens = getLanguageOverlayTokens(
+      "rmarkdown",
+      "---\ntitle: Research Report\noutput: html_document\n---\n\n```{r}\nsummary(cars)\n```",
+    );
+
+    expect(tokens).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "token-punctuation" }),
+        expect.objectContaining({ type: "token-property" }),
+        expect.objectContaining({ type: "token-string" }),
+      ]),
+    );
   });
 });
 
@@ -182,6 +228,11 @@ describe("line-based syntax highlighting", () => {
 describe("detectLanguageFromFileName", () => {
   it("keeps buffer metadata aligned for Monaco-highlighted extensions", () => {
     expect(detectLanguageFromFileName("component.tsx")).toBe("typescriptreact");
+    expect(detectLanguageFromFileName("exploration.ipy")).toBe("python");
+    expect(detectLanguageFromFileName("analysis.R")).toBe("r");
+    expect(detectLanguageFromFileName(".Rprofile")).toBe("r");
+    expect(detectLanguageFromFileName("report.Rmd")).toBe("rmarkdown");
+    expect(detectLanguageFromFileName("notebook.ipynb")).toBe("jupyter-notebook");
     expect(detectLanguageFromFileName(".gitignore")).toBe("gitignore");
     expect(detectLanguageFromFileName(".dockerignore")).toBe("gitignore");
     expect(detectLanguageFromFileName(".gitattributes")).toBe("gitattributes");

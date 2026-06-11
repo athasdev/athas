@@ -8,6 +8,7 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { highlightCodeBlock } from "../lsp/hover-tooltip-highlight";
 import { logger } from "../utils/logger";
 import { parseMarkdown } from "./parser";
 
@@ -37,13 +38,25 @@ export function MarkdownPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!sourceContent) {
       setHtml("");
-      return;
+      return undefined;
     }
 
     const parsedHtml = parseMarkdown(sourceContent);
     setHtml(parsedHtml);
+
+    void highlightCodeBlock(parsedHtml).then((highlightedHtml) => {
+      if (!cancelled) {
+        setHtml(highlightedHtml);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [sourceContent]);
 
   const resolvePath = useCallback(

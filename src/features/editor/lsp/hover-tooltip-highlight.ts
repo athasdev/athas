@@ -38,6 +38,77 @@ function applyTokensToCode(code: string, tokens: HighlightToken[]): string {
   return result.join("");
 }
 
+function makeFallbackToken(
+  code: string,
+  startIndex: number,
+  text: string,
+  type: string,
+): HighlightToken {
+  return {
+    type,
+    startIndex,
+    endIndex: startIndex + text.length,
+    startPosition: { row: 0, column: 0 },
+    endPosition: { row: 0, column: 0 },
+  };
+}
+
+function fallbackTokensForLanguage(code: string, lang: string): HighlightToken[] {
+  const patternsByLanguage: Record<string, Array<[RegExp, string]>> = {
+    python: [
+      [/#.*$/gm, "token-comment"],
+      [/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, "token-string"],
+      [
+        /\b(import|from|as|def|class|return|if|elif|else|for|while|with|lambda|try|except|finally|raise|in|is|and|or|not)\b/g,
+        "token-keyword",
+      ],
+      [/\b(True|False|None)\b/g, "token-constant"],
+      [/\b\d+(\.\d+)?\b/g, "token-number"],
+      [/\b[A-Za-z_][\w]*(?=\s*\()/g, "token-function"],
+    ],
+    r: [
+      [/#.*$/gm, "token-comment"],
+      [/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, "token-string"],
+      [
+        /\b(function|if|else|for|while|repeat|in|next|break|TRUE|FALSE|NULL|NA)\b/g,
+        "token-keyword",
+      ],
+      [/\b\d+(\.\d+)?\b/g, "token-number"],
+      [/\b[A-Za-z.][\w.]*(?=\s*\()/g, "token-function"],
+      [/(<-|->|=>|>=|<=|==|!=|\|>|\+|-|\*|\/|~)/g, "token-operator"],
+    ],
+    sql: [
+      [/--.*$/gm, "token-comment"],
+      [/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, "token-string"],
+      [
+        /\b(select|from|where|join|left|right|inner|outer|on|group|by|order|having|limit|as|and|or|not|null|insert|update|delete|create|table|view|with|case|when|then|else|end)\b/gi,
+        "token-keyword",
+      ],
+      [/\b(avg|count|sum|min|max|coalesce|cast|round)\s*(?=\()/gi, "token-function"],
+      [/\b\d+(\.\d+)?\b/g, "token-number"],
+    ],
+  };
+
+  const patterns = patternsByLanguage[lang];
+  if (!patterns) return [];
+
+  const tokens: HighlightToken[] = [];
+
+  for (const [pattern, type] of patterns) {
+    for (const match of code.matchAll(pattern)) {
+      const start = match.index ?? 0;
+      const text = match[0];
+      const end = start + text.length;
+      const overlaps = tokens.some((token) => start < token.endIndex && end > token.startIndex);
+      if (!overlaps) {
+        tokens.push(makeFallbackToken(code, start, text, type));
+      }
+    }
+  }
+
+  return tokens.sort((a, b) => a.startIndex - b.startIndex);
+}
+
 async function tokenizeForLanguage(code: string, lang: string): Promise<HighlightToken[] | null> {
   try {
     const cached = await indexedDBParserCache.get(lang);
@@ -100,9 +171,11 @@ export async function highlightCodeBlock(html: string): Promise<string> {
     const rawCode = m.code.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
     const tokens = await tokenizeForLanguage(rawCode, lang);
-    if (!tokens || tokens.length === 0) continue;
+    const resolvedTokens =
+      tokens && tokens.length > 0 ? tokens : fallbackTokensForLanguage(rawCode, lang);
+    if (resolvedTokens.length === 0) continue;
 
-    const highlighted = applyTokensToCode(rawCode, tokens);
+    const highlighted = applyTokensToCode(rawCode, resolvedTokens);
     result = result.replace(
       m.full,
       `<pre><code class="language-${lang}">${highlighted}</code></pre>`,

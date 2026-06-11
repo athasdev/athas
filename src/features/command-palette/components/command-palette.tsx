@@ -6,6 +6,7 @@ import { ThemeSelectorContent } from "@/features/command-palette/components/them
 import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { isMarkdownFile } from "@/features/editor/utils/lines";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
 import { OutlineCommandContent } from "@/features/outline/components/outline-command";
@@ -138,17 +139,12 @@ const CommandPalette = () => {
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
   const { openBuffer } = useBufferStore.use.actions();
 
-  // Helper function to check if the active buffer is a markdown file
-  const isMarkdownFile = () => {
-    if (!activeBuffer) return false;
-    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "md" || extension === "markdown";
-  };
+  const isActiveMarkdownFile = activeBuffer ? isMarkdownFile(activeBuffer.path) : false;
 
   // Create all actions using factory functions
   const allActions: Action[] = [
     ...createMarkdownActions({
-      isMarkdownFile: isMarkdownFile(),
+      isMarkdownFile: isActiveMarkdownFile,
       activeBuffer,
       openBuffer,
       onClose,

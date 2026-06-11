@@ -88,7 +88,7 @@ export default function Breadcrumb({
   const isMarkdownFile = () => {
     if (!activeBuffer) return false;
     const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "md" || extension === "markdown";
+    return extension === "md" || extension === "markdown" || extension === "rmd";
   };
 
   const isHtmlFile = () => {

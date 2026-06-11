@@ -269,6 +269,8 @@ async function handleTokenize(
           node,
           parentNode,
         );
+        if (embeddedLanguageId === "text" || embeddedLanguageId === "plaintext") continue;
+
         const subTokens = await tokenizeEmbeddedContent(embeddedContent, embeddedLanguageId);
         const startOffset = node.startIndex;
         const startRow = node.startPosition.row;

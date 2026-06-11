@@ -10,8 +10,8 @@
   "languages": [
     {
       "id": "python",
-      "extensions": [".py", ".pyw", ".pyi"],
-      "aliases": ["Python", "python3"]
+      "extensions": [".py", ".pyw", ".pyi", ".ipy"],
+      "aliases": ["Python", "python3", "IPython"]
     }
   ],
   "capabilities": {

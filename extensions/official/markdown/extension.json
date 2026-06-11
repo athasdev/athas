@@ -12,6 +12,11 @@
       "id": "markdown",
       "extensions": [".md", ".markdown", ".mdx"],
       "aliases": ["Markdown", "md"]
+    },
+    {
+      "id": "rmarkdown",
+      "extensions": [".Rmd", ".rmd"],
+      "aliases": ["R Markdown", "Rmd", "rmarkdown"]
     }
   ],
   "capabilities": {

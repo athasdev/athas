@@ -52,7 +52,9 @@ describe("toggleLineComment", () => {
     expect(result.content).toBe("// one\ntwo");
   });
 
-  it("uses hash comments for dotenv", () => {
+  it("uses hash comments for dotenv and statistical languages", () => {
     expect(getLineCommentTokenForLanguage("dotenv")).toBe("#");
+    expect(getLineCommentTokenForLanguage("r")).toBe("#");
+    expect(getLineCommentTokenForLanguage("rmarkdown")).toBe("#");
   });
 });

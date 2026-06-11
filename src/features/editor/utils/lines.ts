@@ -19,5 +19,5 @@ export function calculateLineOffset(lines: string[], lineIndex: number): number 
 
 export function isMarkdownFile(filePath: string): boolean {
   const extension = filePath.split(".").pop()?.toLowerCase();
-  return extension === "md" || extension === "markdown";
+  return extension === "md" || extension === "markdown" || extension === "rmd";
 }
