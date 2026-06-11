@@ -43,6 +43,7 @@ import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
+import { NotebookEditor } from "../notebook/notebook-editor";
 import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
@@ -167,7 +168,10 @@ const CodeEditor = ({
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
   const editorEngine = settings.editorEngine ?? "monaco";
   const useAthasEditor = editorEngine === "athas";
-  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
+  const showNotebookEditor =
+    activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
+  const enableInteractiveServices =
+    isActiveSurface && !isPreviewBuffer && !readOnly && !showNotebookEditor;
   const largeEditorModeInfo = useLargeEditorModeInfo(value);
   const largeContentMode = useAthasEditor && largeEditorModeInfo.largeContentMode;
   const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
@@ -567,6 +571,8 @@ const CodeEditor = ({
               <HtmlPreview />
             ) : showCsvPreview ? (
               <CsvPreview />
+            ) : showNotebookEditor ? (
+              <NotebookEditor />
             ) : useAthasEditor ? (
               <Suspense fallback={<div className="absolute inset-0 bg-primary-bg" />}>
                 <AthasEditor
