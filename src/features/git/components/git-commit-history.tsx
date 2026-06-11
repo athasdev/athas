@@ -7,7 +7,6 @@ import {
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
-import Badge from "@/ui/badge";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
@@ -120,7 +119,7 @@ const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: Com
         type="button"
         onClick={handleCommitClick}
         className={cn(
-          "ui-text-sm flex w-full cursor-pointer items-start gap-2 rounded-lg border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
+          "ui-text-sm flex w-full cursor-pointer items-start rounded-lg border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
           isSelected && "border-accent/35 bg-accent/8",
         )}
         draggable={!!repoPath}
@@ -137,15 +136,9 @@ const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: Com
           });
         }}
       >
-        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-accent/8 text-text-lighter">
-          <CommitIcon className="size-4" weight="duotone" />
-        </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate text-text leading-tight">{commit.message}</span>
-            <Badge size="compact" className="shrink-0">
-              Commit {shortHash}
-            </Badge>
           </span>
           <span className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
             <span className="truncate">{commit.author}</span>
