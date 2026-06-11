@@ -8,17 +8,17 @@ import type {
 import {
   convertLSPDiagnostic,
   useDiagnosticsStore,
-} from "@/features/diagnostics/stores/diagnostics-store";
+} from "@/features/diagnostics/stores/diagnostics.store";
 import type {
   ApplyDiagnosticCodeActionResult,
   Diagnostic,
   DiagnosticCodeAction,
-} from "@/features/diagnostics/types/diagnostics";
+} from "@/features/diagnostics/types/diagnostics.types";
 import type { BackendLanguageToolConfigSet } from "@/extensions/registry/extension-store-runtime";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useBufferStore } from "../stores/buffer-store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useBufferStore } from "../stores/buffer.store";
 import { logger } from "../utils/logger";
-import { useLspStore } from "./lsp-store";
+import { useLspStore } from "./stores/lsp.store";
 import {
   applyWorkspaceEdit,
   applyTextEditsToContent,

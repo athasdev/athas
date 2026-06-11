@@ -41,7 +41,12 @@ export default function Tooltip({
         {children}
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Positioner side={side} sideOffset={6} collisionPadding={8}>
+        <TooltipPrimitive.Positioner
+          side={side}
+          sideOffset={6}
+          collisionPadding={8}
+          className="z-[99999]"
+        >
           <TooltipPrimitive.Popup
             className={cn(
               tooltipContentVariants(),

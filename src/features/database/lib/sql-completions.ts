@@ -1,4 +1,4 @@
-import type { ColumnInfo, TableInfo } from "../models/common.types";
+import type { ColumnInfo, TableInfo } from "../types/common.types";
 
 const SQL_KEYWORDS = [
   "SELECT",

@@ -9,7 +9,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
-import type { FileDiff } from "../types/github-pr-viewer";
+import type { FileDiff } from "../types/github-pr-viewer.types";
 import { DiffLineDisplay } from "./diff-line-display";
 
 interface FileDiffViewProps {

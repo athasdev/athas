@@ -1,4 +1,4 @@
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { getNextWordOffset, getPreviousWordOffset } from "./word-navigation";
 
 export interface LargeEditorSelectedOffsetRange {

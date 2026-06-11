@@ -1,13 +1,9 @@
-// Performance limits for file processing
-export const MAX_FILES_TO_PROCESS = 2000;
-export const MAX_OTHER_FILES_NO_QUERY = 200;
-
 // Result limits
 export const MAX_RESULTS = 20;
 export const MAX_OPEN_BUFFERS_SHOWN = 20;
 export const MAX_RECENT_FILES_NO_QUERY = 10;
 export const MAX_OTHER_FILES_SHOWN = 20;
-export const CONTENT_SEARCH_BACKEND_LIMIT = 300;
+export const CONTENT_SEARCH_PAGE_SIZE = 300;
 export const CONTENT_SEARCH_INITIAL_RENDER_LIMIT = 80;
 export const CONTENT_SEARCH_RENDER_INCREMENT = 80;
 

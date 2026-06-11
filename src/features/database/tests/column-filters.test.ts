@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ColumnFilter, FilterOperator } from "../models/common.types";
+import type { ColumnFilter, FilterOperator } from "../types/common.types";
 
 const VALID_OPERATORS: FilterOperator[] = [
   "equals",

@@ -5,7 +5,7 @@
  */
 
 import { memo, useCallback, useRef } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface InputLayerProps {
   content: string;

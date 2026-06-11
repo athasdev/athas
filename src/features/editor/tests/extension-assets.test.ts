@@ -34,6 +34,33 @@ describe("extension-assets", () => {
     }
   });
 
+  it("resolves bundled parser assets for reported editor highlight languages", () => {
+    expect(getLanguageAssetConfig("typescriptreact")).toMatchObject({
+      parserLanguageId: "tsx",
+      queryLanguageId: "tsx",
+      wasmPath: "/tree-sitter/parsers/tsx/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/tsx/highlights.scm",
+    });
+    expect(getLanguageAssetConfig("zig")).toMatchObject({
+      parserLanguageId: "zig",
+      queryLanguageId: "zig",
+      wasmPath: "/tree-sitter/parsers/zig/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/zig/highlights.scm",
+    });
+    expect(getLanguageAssetConfig("elm")).toMatchObject({
+      parserLanguageId: "elm",
+      queryLanguageId: "elm",
+      wasmPath: "/tree-sitter/parsers/elm/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/elm/highlights.scm",
+    });
+    expect(getLanguageAssetConfig("elisp")).toMatchObject({
+      parserLanguageId: "elisp",
+      queryLanguageId: "elisp",
+      wasmPath: "/tree-sitter/parsers/elisp/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/elisp/highlights.scm",
+    });
+  });
+
   it("prefers registered manifest asset URLs", () => {
     registerLanguageAssetOverride("example", {
       wasmPath: "https://example.com/example/parser.wasm",

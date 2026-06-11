@@ -3,7 +3,7 @@ import type {
   IssueListItem,
   WorkflowRunDetails,
   WorkflowRunListItem,
-} from "../types/github";
+} from "../types/github.types";
 import { createTimedResourceCache } from "./github-resource-cache";
 
 export const GITHUB_ISSUE_LIST_TTL_MS = 60_000;

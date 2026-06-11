@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { useEditorSettingsStore } from "../../stores/settings-store";
-import { useEditorStateStore } from "../../stores/state-store";
+import { useEditorSettingsStore } from "../../stores/settings.store";
+import { useEditorStateStore } from "../../stores/state.store";
 import { getLineHeight } from "../../utils/position";
 
 interface ScrollMetrics {

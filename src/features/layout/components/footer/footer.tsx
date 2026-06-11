@@ -15,8 +15,8 @@ import { Tab, TabsList } from "@/ui/tabs";
 import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
 import { Dropdown } from "@/ui/dropdown";
-import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import {
   chromeControl,
@@ -28,15 +28,15 @@ import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pa
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
 import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
-import { useGitStore } from "@/features/git/stores/git-store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
+import { useGitStore } from "@/features/git/stores/git.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { cn } from "@/utils/cn";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { NotificationsTrigger } from "@/features/window/components/notifications-sidebar";
 import {
   FOOTER_TRAILING_ITEM_IDS,
@@ -44,7 +44,7 @@ import {
   type FooterLeadingItemId,
   type FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
-import { useFileSystemStore } from "../../../file-system/controllers/store";
+import { useFileSystemStore } from "../../../file-system/stores/file-system.store";
 
 type FooterItem<T extends string> = {
   id: T;

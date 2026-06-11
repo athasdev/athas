@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { highlightCodeBlock } from "./hover-tooltip-highlight";
 import "./hover-tooltip.css";
 

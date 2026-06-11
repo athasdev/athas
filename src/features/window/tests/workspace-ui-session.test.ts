@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import {
   buildCurrentProjectPaneSession,
   buildPaneLayoutFromSession,

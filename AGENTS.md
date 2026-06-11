@@ -53,6 +53,7 @@
 - Follow existing code style and keep changes aligned with nearby code.
 - Use kebab-case for file and folder names by default.
 - React component files, hook files, and utility files should use descriptive kebab-case names such as `settings-dialog.tsx`, `use-keymaps.ts`, or `theme-loader.ts`.
+- Import React hooks directly and call them by name, such as `useEffect(...)`, instead of qualifying hooks through the React namespace.
 - Avoid new vague filenames such as `helpers.ts`, `misc.ts`, or `utils.ts` when the file can be named after what it actually does.
 - Avoid unnecessary comments in UI components; prefer self-explanatory code.
 - Avoid unnecessary `cn(...)` calls; use it only for conditional or merged class names.

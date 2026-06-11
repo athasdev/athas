@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitRemote } from "../types/git-types";
+import type { GitRemote } from "../types/git.types";
 
 export interface GitRemoteActionResult {
   success: boolean;

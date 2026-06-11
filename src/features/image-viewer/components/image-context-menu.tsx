@@ -11,9 +11,9 @@ import {
   ArrowCounterClockwiseIcon as Undo2,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
-import type { ImageFormat } from "@/features/image-editor/models/image-operation.types";
+import type { ImageFormat } from "@/features/image-editor/types/image-operation.types";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 interface ImageContextMenuProps {

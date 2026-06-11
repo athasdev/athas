@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
 import type React from "react";
-import { useActionsStore } from "@/features/command-palette/store";
+import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
 import { cn } from "@/utils/cn";
 

@@ -7,7 +7,7 @@ import {
   ArrowCounterClockwiseIcon as RotateCcw,
   XIcon as X,
 } from "@phosphor-icons/react";
-import type { Terminal } from "@/features/terminal/types/terminal";
+import type { Terminal } from "@/features/terminal/types/terminal.types";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import Keybinding from "@/ui/keybinding";

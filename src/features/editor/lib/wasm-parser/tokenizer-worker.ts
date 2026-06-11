@@ -6,7 +6,11 @@ import { getLanguageAssetConfig } from "./extension-assets";
 import { getLanguageOverlayTokens } from "./language-overlays";
 import { wasmParserLoader } from "./loader";
 import { dedupeHighlightTokens, isIgnoredCapture, mapCaptureToClass } from "./capture-map";
-import type { HighlightToken, LoadedParser, ParserConfig } from "./types";
+import type {
+  HighlightToken,
+  LoadedParser,
+  ParserConfig,
+} from "../../types/wasm-parser/wasm-parser.types";
 import { calculateEdit, isSimpleEdit } from "../../utils/tree-sitter-edit";
 import {
   findInjectionNodes,

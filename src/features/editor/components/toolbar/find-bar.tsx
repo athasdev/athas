@@ -1,11 +1,11 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   SEARCH_TOGGLE_ICONS,
   SearchPopover,

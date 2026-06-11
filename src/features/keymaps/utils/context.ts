@@ -3,7 +3,7 @@
  * Evaluates expressions like "editorFocus && !vimMode"
  */
 
-import type { KeymapContext } from "../types";
+import type { KeymapContext } from "../types/keymaps.types";
 
 /**
  * Evaluate a when clause against current context

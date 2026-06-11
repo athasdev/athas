@@ -1,4 +1,4 @@
-import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 
 export interface VisibleFileTreeRow {
   file: FileEntry;

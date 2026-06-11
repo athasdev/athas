@@ -8,24 +8,32 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/builtin/syntax-highlighting";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { type LspStatus, useLspStore } from "@/features/editor/lsp/lsp-store";
-import type { Position } from "@/features/editor/types/editor";
+import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
+import type { Position } from "@/features/editor/types/editor.types";
 import { LoadingIndicator } from "@/ui/loading";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   getAllLanguages,
   getLanguageDisplayName,
   getLanguageIdFromPath,
 } from "@/features/athas-editor/utils/language-id";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, buttonVariants } from "@/ui/button";
-import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/ui/combobox";
+import { Dropdown } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -54,10 +62,19 @@ function getLanguageDisplayNameOrNull(languageId: string | null) {
   return getLanguageDisplayName(languageId);
 }
 
+function canStartLanguageServerForPath(filePath: string, languageId: string) {
+  return (
+    extensionRegistry.getLanguageId(filePath) === languageId &&
+    Boolean(extensionRegistry.getLspServerPath(filePath))
+  );
+}
+
 interface EditorStatusActionsProps {
   bufferId?: string;
   editorViewKey?: string | null;
 }
+
+type LanguageOption = ReturnType<typeof getAllLanguages>[number];
 
 function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
   const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
@@ -86,21 +103,17 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [languageSearch, setLanguageSearch] = useState("");
   const [isCurrentFileLspAvailable, setIsCurrentFileLspAvailable] = useState(false);
   const [isRestartingCurrent, setIsRestartingCurrent] = useState(false);
   const [busyServerKey, setBusyServerKey] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewButtonRef = useRef<HTMLButtonElement>(null);
-  const languageButtonRef = useRef<HTMLButtonElement>(null);
-  const languageSearchRef = useRef<HTMLInputElement>(null);
 
   const getStatusConfig = (status: LspStatus) => {
     switch (status) {
       case "connected":
         return {
-          icon: <Zap />,
+          icon: <Zap weight="duotone" />,
           color: "text-green-400",
           title: "Language Servers Active",
         };
@@ -112,13 +125,13 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         };
       case "error":
         return {
-          icon: <ZapOff />,
+          icon: <ZapOff weight="duotone" />,
           color: "text-red-400",
           title: "Language server issue",
         };
       default:
         return {
-          icon: <ZapOff />,
+          icon: <ZapOff weight="duotone" />,
           color: "text-text-lighter opacity-50",
           title: "No active language servers",
         };
@@ -214,22 +227,24 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
 
   const allLanguages = useMemo(() => getAllLanguages(), []);
 
-  const filteredLanguages = useMemo(() => {
-    if (!languageSearch) return allLanguages;
-    const query = languageSearch.toLowerCase();
-    return allLanguages.filter(
-      (lang) =>
-        lang.displayName.toLowerCase().includes(query) || lang.id.toLowerCase().includes(query),
+  const currentLanguageOption = useMemo(
+    () => allLanguages.find((language) => language.id === currentFileLanguageId) ?? null,
+    [allLanguages, currentFileLanguageId],
+  );
+
+  const filterLanguages = useCallback((language: LanguageOption, query: string) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+    return (
+      language.displayName.toLowerCase().includes(normalizedQuery) ||
+      language.id.toLowerCase().includes(normalizedQuery)
     );
-  }, [allLanguages, languageSearch]);
+  }, []);
 
   const handleLanguageChange = useCallback(
     async (languageId: string) => {
       if (!activeBuffer || !resolvedBufferId || activeBuffer.type !== "editor") return;
-      if (languageId === currentFileLanguageId) {
-        setIsLanguageOpen(false);
-        return;
-      }
+      if (languageId === currentFileLanguageId) return;
 
       useBufferStore.getState().actions.updateBufferLanguage(resolvedBufferId, languageId);
 
@@ -237,7 +252,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         await setSyntaxHighlightingFilePath(activeBuffer.path);
       }
 
-      if (rootFolderPath && activeBuffer.path) {
+      if (
+        rootFolderPath &&
+        activeBuffer.path &&
+        canStartLanguageServerForPath(activeBuffer.path, languageId)
+      ) {
         try {
           await lspClient.notifyDocumentClose(activeBuffer.path);
           const started = await lspClient.startForFile(activeBuffer.path, rootFolderPath, {
@@ -256,9 +275,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           // LSP restart is best-effort
         }
       }
-
-      setIsLanguageOpen(false);
-      setLanguageSearch("");
     },
     [activeBuffer, resolvedBufferId, currentFileLanguageId, rootFolderPath, lspClient],
   );
@@ -353,82 +369,45 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       <CursorPositionChip editorViewKey={editorViewKey} />
 
       {activeBuffer?.type === "editor" && (
-        <div className="relative flex h-5 items-center self-center">
-          <Button
-            ref={languageButtonRef}
-            type="button"
-            onClick={() => {
-              setIsLanguageOpen((open) => !open);
-              setLanguageSearch("");
+        <div className="flex h-5 items-center self-center">
+          <Combobox
+            value={currentLanguageOption}
+            onValueChange={(value) => {
+              if (value) {
+                void handleLanguageChange(value.id);
+              }
             }}
-            variant="ghost"
-            compact
-            className={cn(
-              statusChipClass,
-              "min-w-0 cursor-pointer",
-              isLanguageOpen && "bg-hover text-text",
-            )}
-            aria-expanded={isLanguageOpen}
-            aria-haspopup="listbox"
-            tooltip="Select language mode"
-            tooltipSide="bottom"
+            items={allLanguages}
+            itemToStringLabel={(item) => item.displayName}
+            itemToStringValue={(item) => item.id}
+            isItemEqualToValue={(item, value) => item.id === value.id}
+            filter={filterLanguages}
           >
-            {currentFileDisplayName || "Plain Text"}
-          </Button>
-          <Dropdown
-            isOpen={isLanguageOpen}
-            anchorRef={languageButtonRef}
-            anchorSide="bottom"
-            anchorAlign="end"
-            onClose={() => {
-              setIsLanguageOpen(false);
-              setLanguageSearch("");
-            }}
-            className="w-[220px] overflow-hidden rounded-lg p-1.5"
-          >
-            <div className="px-1.5 pb-1.5">
-              <input
-                ref={languageSearchRef}
-                type="text"
-                value={languageSearch}
-                onChange={(e) => setLanguageSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setIsLanguageOpen(false);
-                    setLanguageSearch("");
-                  }
-                }}
-                placeholder="Search languages..."
-                className="ui-font w-full rounded-md border border-border/70 bg-primary-bg px-2 py-1 ui-text-xs text-text outline-none placeholder:text-text-lighter/50 focus:border-accent/50"
-                autoFocus
-                aria-label="Search languages"
-              />
-            </div>
-            <div className="max-h-[200px] overflow-y-auto">
-              {filteredLanguages.map((lang) => (
-                <Button
-                  key={lang.id}
-                  type="button"
-                  onClick={() => void handleLanguageChange(lang.id)}
-                  variant="ghost"
-                  compact
-                  className={dropdownItemClassName(
-                    cn("justify-between", lang.id === currentFileLanguageId && "text-accent"),
-                  )}
-                  role="option"
-                  aria-selected={lang.id === currentFileLanguageId}
-                >
-                  <span className="truncate">{lang.displayName}</span>
-                  {lang.id === currentFileLanguageId && <Check className="shrink-0 text-accent" />}
-                </Button>
-              ))}
-              {filteredLanguages.length === 0 && (
-                <div className="px-2.5 py-2 text-center text-text-lighter ui-text-xs">
-                  No languages found
-                </div>
-              )}
-            </div>
-          </Dropdown>
+            <ComboboxInput
+              aria-label="Select language mode"
+              placeholder={currentFileDisplayName || "Plain Text"}
+              size="xs"
+              variant="ghost"
+              showClear={false}
+              inputClassName="ui-text-xs"
+              className={cn(statusChipClass, "h-5 w-[112px] rounded-md px-0")}
+              inputStyle={{ width: `${Math.max(currentFileDisplayName?.length ?? 10, 10)}ch` }}
+            />
+            <ComboboxContent align="end" className="w-[220px] min-w-[220px] rounded-lg">
+              <ComboboxList className="max-h-[220px] p-1.5">
+                {allLanguages.map((lang) => (
+                  <ComboboxItem
+                    key={lang.id}
+                    value={lang}
+                    className={cn("ui-text-xs", lang.id === currentFileLanguageId && "text-accent")}
+                  >
+                    <span className="truncate">{lang.displayName}</span>
+                  </ComboboxItem>
+                ))}
+                <ComboboxEmpty className="ui-text-xs">No languages found</ComboboxEmpty>
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
       )}
 
@@ -470,7 +449,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap className="shrink-0 text-green-400" />
+                        <Zap className="shrink-0 text-green-400" weight="duotone" />
                         <span className="truncate text-text ui-text-xs">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -492,7 +471,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           compact
                           className="rounded-md px-2 ui-text-xs text-text-lighter"
                         >
-                          <Square />
+                          <Square weight="duotone" />
                         </Button>
                       </div>
                     </div>
@@ -501,7 +480,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 {!currentServerEntry && isCurrentFileLspAvailable && currentFileDisplayName && (
                   <div className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
                     <div className="flex min-w-0 items-center gap-2">
-                      <ZapOff className="shrink-0 opacity-60" />
+                      <ZapOff className="shrink-0 opacity-60" weight="duotone" />
                       <span className="truncate text-text ui-text-xs">
                         {currentFileDisplayName}
                       </span>
@@ -528,7 +507,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">
                 <div className="flex items-center gap-2 text-red-400">
-                  <ZapOff />
+                  <ZapOff weight="duotone" />
                   <span className="ui-text-xs">Language server issue</span>
                 </div>
                 <div className="px-0.5 ui-text-xs text-text-lighter">
@@ -538,7 +517,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
-                <ZapOff className="opacity-50" />
+                <ZapOff className="opacity-50" weight="duotone" />
                 <span className="ui-text-xs">No active language servers</span>
               </div>
             )}
@@ -561,7 +540,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           tooltipSide="bottom"
         >
           <span className="flex size-full items-center justify-center">
-            <SlidersHorizontal />
+            <SlidersHorizontal weight="duotone" />
           </span>
         </Button>
         <Dropdown
@@ -589,7 +568,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                     <Keybinding binding={option.shortcut} className="shrink-0" />
                   ) : null}
                   <span className="flex size-4 items-center justify-center">
-                    {option.checked ? <Check className="text-accent" /> : null}
+                    {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
                   </span>
                 </span>
               </Button>
@@ -607,7 +586,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               >
                 <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-accent" /> : null}
+                  {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
                 </span>
               </Button>
             ))}
@@ -624,7 +603,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               >
                 <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-accent" /> : null}
+                  {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
                 </span>
               </Button>
             ))}

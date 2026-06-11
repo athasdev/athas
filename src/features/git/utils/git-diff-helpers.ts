@@ -1,5 +1,5 @@
-import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff-types";
-import type { GitDiff, GitDiffLine, GitHunk } from "../types/git-types";
+import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff.types";
+import type { GitDiff, GitDiffLine, GitHunk } from "../types/git.types";
 
 export type DiffLineVisualType = "added" | "removed" | "context";
 

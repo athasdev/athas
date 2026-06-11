@@ -2,11 +2,11 @@
  * Viewport-based motions (H, M, L)
  */
 
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import type { Position } from "@/features/editor/types/editor";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import type { Position } from "@/features/editor/types/editor.types";
 import { calculateOffsetFromPosition, getLineHeight } from "@/features/editor/utils/position";
-import type { Motion, VimRange } from "../core/types";
+import type { Motion, VimRange } from "../core/types/core.types";
 
 const firstNonBlankColumn = (line: string): number => {
   for (let i = 0; i < line.length; i++) {

@@ -19,11 +19,11 @@ import {
   TextAlignJustifyIcon as WrapText,
 } from "@phosphor-icons/react";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
-import type { Settings as AppSettings } from "@/features/settings/store";
-import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import type { Settings as AppSettings } from "@/features/settings/stores/settings.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { scoreSearchQuery } from "@/utils/search-match";
-import type { Action } from "../models/action.types";
-import type { CommandPaletteViewId } from "../models/view.types";
+import type { Action } from "../types/action.types";
+import type { CommandPaletteViewId } from "../types/view.types";
 
 interface SettingsActionsParams {
   query: string;

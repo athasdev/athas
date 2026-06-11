@@ -1,6 +1,6 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
-import type { Snippet } from "./types";
+import type { Snippet } from "../types/snippet.types";
 
 /**
  * Get all snippets for a specific language

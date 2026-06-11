@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface UseDiffViewStateReturn {
   viewMode: "unified" | "split";

@@ -1,7 +1,7 @@
 import "../styles/github-markdown.css";
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { parseGitHubEntityLink } from "../utils/github-link-utils";
 
 interface GitHubMarkdownProps {

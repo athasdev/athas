@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS } from "@/ui/search";
@@ -13,7 +13,6 @@ import { useContentSearch } from "../hooks/use-content-search";
 import { useKeyboardNavigation } from "../hooks/use-keyboard-navigation";
 import { ContentSearchResult } from "./content-search-result";
 import { FilePreview } from "./file-preview";
-const MAX_DISPLAYED_MATCHES = 500;
 
 const ContentGlobalSearch = () => {
   const isVisible = useUIState((state) => state.isGlobalSearchVisible);
@@ -29,7 +28,12 @@ const ContentGlobalSearch = () => {
     debouncedQuery,
     results,
     isSearching,
+    isLoadingMore,
     error,
+    searchWarning,
+    hasMoreResults,
+    searchedFiles,
+    searchableFiles,
     rootFolderPath,
     searchOptions,
     setSearchOption,
@@ -37,6 +41,7 @@ const ContentGlobalSearch = () => {
     setIncludeQuery,
     excludeQuery,
     setExcludeQuery,
+    loadMoreResults,
   } = useContentSearch(isVisible);
 
   const debouncedSetPreview = useDebouncedCallback(
@@ -78,10 +83,6 @@ const ContentGlobalSearch = () => {
           displayPath,
           match,
         });
-
-        if (matches.length >= MAX_DISPLAYED_MATCHES) {
-          return matches;
-        }
       }
     }
 
@@ -103,8 +104,13 @@ const ContentGlobalSearch = () => {
     allResults: navigationItems,
     onClose,
     onSelect: (path) => {
-      const [filePath, lineStr] = path.split(":");
-      const lineNumber = parseInt(lineStr, 10);
+      const separatorIndex = path.lastIndexOf(":");
+      if (separatorIndex === -1) return;
+
+      const filePath = path.slice(0, separatorIndex);
+      const lineNumber = Number.parseInt(path.slice(separatorIndex + 1), 10);
+      if (!filePath || Number.isNaN(lineNumber)) return;
+
       handleFileClick(filePath, lineNumber);
     },
   });
@@ -150,13 +156,11 @@ const ContentGlobalSearch = () => {
   }
 
   const hasResults = results.length > 0;
-  const totalMatches = results.reduce((sum, r) => sum + r.total_matches, 0);
   const displayedCount = flattenedMatches.length;
-  const hasMore = totalMatches > displayedCount;
 
   const resultLabel =
     debouncedQuery && !isSearching
-      ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
+      ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMoreResults ? ` across ${searchedFiles.toLocaleString()} of ${searchableFiles.toLocaleString()} files` : ""}`
       : null;
 
   const searchOptionsButtons = [
@@ -286,6 +290,11 @@ const ContentGlobalSearch = () => {
 
               {hasResults && (
                 <>
+                  {searchWarning && (
+                    <div className="ui-text-xs border-border/70 border-b px-3 py-2 text-warning">
+                      {searchWarning}
+                    </div>
+                  )}
                   <div className="space-y-1">
                     {results.map((result) => (
                       <ContentSearchResult
@@ -301,9 +310,18 @@ const ContentGlobalSearch = () => {
                       />
                     ))}
                   </div>
-                  {hasMore && (
-                    <div className="ui-text-sm px-3 py-2 text-center text-text-lighter">
-                      Showing first {displayedCount} of {totalMatches} results
+                  {hasMoreResults && (
+                    <div className="flex justify-center px-3 py-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={loadMoreResults}
+                        disabled={isLoadingMore}
+                        className="ui-text-sm text-text-lighter"
+                        compact
+                      >
+                        {isLoadingMore ? "Loading..." : "Load more results"}
+                      </Button>
                     </div>
                   )}
                 </>

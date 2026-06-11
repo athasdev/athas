@@ -1,4 +1,4 @@
-import type { HighlightToken } from "./types";
+import type { HighlightToken } from "../../types/wasm-parser/wasm-parser.types";
 
 export interface ViewportRangePayload {
   startLine: number;

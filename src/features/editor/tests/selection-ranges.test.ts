@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Position, Range } from "../types/editor";
+import type { Position, Range } from "../types/editor.types";
 import {
   buildSelectionFromAnchor,
   getSelectionAnchorForCursor,

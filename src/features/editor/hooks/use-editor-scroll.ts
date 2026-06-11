@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef } from "react";
-import { useEditorStateStore } from "../stores/state-store";
+import { useEditorStateStore } from "../stores/state.store";
 import { applyEditorScrollTransform, type ScrollLayerRef } from "../utils/scroll-layers";
 import { scrollLogger } from "../utils/scroll-logger";
 

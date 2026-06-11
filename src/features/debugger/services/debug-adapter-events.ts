@@ -2,14 +2,14 @@ import {
   sendDebugAdapterRequest,
   subscribeDebuggerEvents,
 } from "@/features/debugger/services/debug-adapter-service";
-import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import type {
   DebugProtocolMessage,
   DebugScope,
   DebugStackFrame,
   DebugThread,
   DebugVariable,
-} from "@/features/debugger/types/debugger";
+} from "@/features/debugger/types/debugger.types";
 
 let unsubscribeDebuggerEvents: (() => void) | null = null;
 let pendingSubscription: Promise<void> | null = null;

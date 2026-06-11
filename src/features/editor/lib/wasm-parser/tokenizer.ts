@@ -20,7 +20,7 @@ import type {
   LoadedParser,
   ParserConfig,
   TokenizeResult,
-} from "./types";
+} from "../../types/wasm-parser/wasm-parser.types";
 
 /**
  * Tokenize code using a WASM parser with optional incremental parsing support.

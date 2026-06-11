@@ -7,9 +7,9 @@ import {
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import {
   fetchHighlightQuery,

@@ -4,7 +4,7 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
-import type { FileCategory, FileItem } from "../models/types";
+import type { FileCategory, FileItem } from "../types/global-search.types";
 
 interface FileListItemProps {
   id?: string;

@@ -5,8 +5,8 @@ import {
   FileCodeIcon as FileJson2,
   FileTextIcon as FileText,
 } from "@phosphor-icons/react";
-import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
-import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";
 import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
 import type { ResolvedEditorViewZone } from "@/features/athas-editor/view-model/view-layout";
@@ -29,11 +29,8 @@ import {
   buildTokenOverlapIndex,
   findFirstTokenOverlappingOffset,
 } from "@/features/athas-editor/utils/token-layers";
-import {
-  createVisibleWhitespaceMask,
-  splitVisibleWhitespaceSegments,
-} from "@/features/athas-editor/utils/visible-whitespace";
-import type { RenderWhitespaceMode } from "@/features/settings/types/settings";
+import { splitVisibleWhitespaceSegments } from "@/features/athas-editor/utils/visible-whitespace";
+import type { RenderWhitespaceMode } from "@/features/settings/types/settings.types";
 
 interface LineMapping {
   actualToVirtual: Map<number, number>;
@@ -113,7 +110,6 @@ const Line = memo<LineProps>(
       }
 
       const result: ReactNode[] = [];
-      const visibleWhitespaceMask = createVisibleWhitespaceMask(lineContent, renderWhitespace);
       let lastIndex = 0;
       let spanKey = 0;
       let lastTokenClass: string | undefined;
@@ -181,7 +177,7 @@ const Line = memo<LineProps>(
             lineContent,
             segmentStart,
             segmentEnd,
-            visibleWhitespaceMask,
+            renderWhitespace,
           );
 
           for (const segment of segments) {

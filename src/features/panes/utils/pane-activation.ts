@@ -1,5 +1,5 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { usePaneStore } from "../stores/pane-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { usePaneStore } from "../stores/pane.store";
 import { ensureBufferInPane } from "./pane-buffer-actions";
 
 export function activatePaneAndSyncBuffer(paneId: string) {

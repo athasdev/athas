@@ -16,13 +16,13 @@ import {
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
-import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
-import type { GitDiff } from "@/features/git/types/git-types";
+import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
+import type { GitDiff } from "@/features/git/types/git.types";
 
 interface TabBarItemProps {
   buffer: PaneContent;
@@ -97,7 +97,7 @@ const TabBarItem = memo(function TabBarItem({
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        className={cn("h-5 pl-2 pr-6", isActive && "bg-hover/80")}
+        className={cn("h-5 pl-2 pr-6 hover:bg-transparent", isActive && "bg-hover/80")}
         onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
@@ -119,7 +119,7 @@ const TabBarItem = memo(function TabBarItem({
             }}
             className={cn(
               "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
-              "hover:text-text",
+              "hover:bg-transparent hover:text-text",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
             tooltip={buffer.isPinned ? "Unpin tab" : "Close"}

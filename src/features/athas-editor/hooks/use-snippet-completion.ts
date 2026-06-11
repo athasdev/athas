@@ -7,12 +7,12 @@ import {
   nextTabStop,
   previousTabStop,
 } from "@/features/editor/snippets/snippet-expander";
-import type { SnippetSession } from "@/features/editor/snippets/types";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import type { Position } from "@/features/editor/types/editor";
+import type { SnippetSession } from "@/features/editor/types/snippet.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import type { Position } from "@/features/editor/types/editor.types";
 import { calculateCursorPositionFromContent } from "@/features/athas-editor/utils/position";
-import { isEditorContent } from "@/features/panes/types/pane-content";
+import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { logger } from "@/features/athas-editor/utils/logger";
 
 /**

@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 export interface FormatOptions {
   filePath: string;

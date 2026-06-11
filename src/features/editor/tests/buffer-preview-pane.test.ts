@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -42,7 +42,7 @@ describe("buffer preview pane integration", () => {
 
   afterEach(async () => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
@@ -53,7 +53,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("replaces preview buffers only within the target pane", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -100,7 +100,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("clears pane preview metadata when a preview becomes definite", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -123,7 +123,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("pins preview buffers as definite pane metadata", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -146,7 +146,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("opens a new tab placeholder in the active pane", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -166,7 +166,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("opens references as a singleton buffer like diagnostics", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
 
     const firstReferencesId = bufferActions.openReferencesBuffer();

@@ -1,5 +1,5 @@
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { isVirtualContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 
 /**
  * Get path segments (directories) from a file path

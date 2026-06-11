@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useConnectionStore, type SavedConnection } from "./connection-store";
+import { useConnectionStore, type SavedConnection } from "./connection.store";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),

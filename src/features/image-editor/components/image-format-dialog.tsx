@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
-import type { ImageFormat } from "../models/image-operation.types";
+import type { ImageFormat } from "../types/image-operation.types";
 import { convertImageFormat } from "../utils/image-conversion";
 import { formatFileSize, getDataURLSize } from "../utils/image-file-utils";
 

@@ -1,6 +1,6 @@
 import { forwardRef, memo, useEffect, useState, type RefObject } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { measureRenderedTextWidth } from "@/features/athas-editor/utils/position";
 import type { ViewPosition } from "@/features/athas-editor/view-model/view-layout";
 

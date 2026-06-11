@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitHunk, GitStatus } from "../types/git-types";
+import type { GitHunk, GitStatus } from "../types/git.types";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "./git-repo-api";
 
 export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> => {

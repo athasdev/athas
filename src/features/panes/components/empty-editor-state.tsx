@@ -10,12 +10,12 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Input from "@/ui/input";
@@ -278,7 +278,7 @@ export function EmptyEditorState() {
                     }
                     variant="ghost"
                     compact
-                    className="h-auto min-w-0 flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
+                    className="h-auto min-w-0 flex-1 justify-start gap-3 p-0 hover:bg-transparent"
                   >
                     <Terminal className="shrink-0 text-text-light" />
                     <span className="truncate text-text ui-text-xs">{action.name}</span>

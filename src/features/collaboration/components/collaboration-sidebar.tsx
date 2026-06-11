@@ -31,8 +31,8 @@ import {
   deleteCollaborationNoteItem,
   renameCollaborationNoteItem,
 } from "@/features/collaboration/lib/collaboration-sidebar-model";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import {
   appendCollaborationPrivateChatMessage,
@@ -43,7 +43,7 @@ import {
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
 } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
@@ -1568,7 +1568,7 @@ export function CollaborationSidebarView() {
 
   return (
     <SidebarPanel className="gap-1 p-1">
-      <SidebarHeader className="relative z-[10020] bg-transparent px-0 py-0 backdrop-blur-none">
+      <SidebarHeader className="relative z-[10020] bg-transparent p-0 backdrop-blur-none">
         <SidebarSectionSwitcher
           items={collaborationTabs}
           value={activeTab}

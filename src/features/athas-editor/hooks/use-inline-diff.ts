@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiffAgainstContent } from "@/features/git/api/git-diff-api";
-import type { GitDiffLine } from "@/features/git/types/git-types";
+import type { GitDiffLine } from "@/features/git/types/git.types";
 
 interface InlineDiffState {
   isOpen: boolean;

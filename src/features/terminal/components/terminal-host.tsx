@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
-import { useTerminalSlotsStore } from "../stores/terminal-slots-store";
-import { useTerminalStore } from "../stores/terminal-store";
+import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
+import { useTerminalStore } from "../stores/terminal.store";
 import { XtermTerminal } from "./terminal";
 
 // Renders all live xterm instances at app root. Each session owns a stable

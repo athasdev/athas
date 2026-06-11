@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { useDebuggerStore } from "@/features/debugger/stores/debugger-store";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { GUTTER_CONFIG } from "@/features/editor/utils/gutter";
 import {

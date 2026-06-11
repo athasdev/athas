@@ -2,10 +2,10 @@ import { WarningCircleIcon as AlertCircle } from "@phosphor-icons/react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/ui/button";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { LoadingIndicator } from "@/ui/loading";
 import { GITHUB_ACCOUNT_API_BASE, GITHUB_CONNECTION_URL } from "../services/github-token-service";
-import { useGitHubStore } from "../stores/github-store";
+import { useGitHubStore } from "../stores/github.store";
 
 export function GitHubAuthStatusMessage() {
   const githubAccountStatus = useGitHubStore((s) => s.githubAccountStatus);

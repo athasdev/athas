@@ -5,15 +5,15 @@ import {
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   chromeControl,
   chromeControlGroup,
   chromeIcon,
 } from "@/features/layout/components/chrome-control-styles";
-import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
@@ -151,7 +151,7 @@ export default function RunActionsButton() {
                   type="button"
                   variant="ghost"
                   onClick={() => runAction(action.command, action.name)}
-                  className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent px-0 py-0 text-text hover:bg-transparent"
+                  className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent p-0 text-text hover:bg-transparent"
                   style={{ fontSize: "var(--ui-text-sm)" }}
                 >
                   <Play className="shrink-0 text-text-lighter" weight="duotone" />

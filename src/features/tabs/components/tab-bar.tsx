@@ -16,33 +16,31 @@ import {
   ArrowRightIcon as ArrowRight,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
-  LockIcon as Lock,
-  LockOpenIcon as LockOpen,
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
 } from "@phosphor-icons/react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
-import { useSettingsStore } from "@/features/settings/store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
-import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-viewer-navigation-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-viewer-navigation.store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
@@ -784,24 +782,6 @@ const TabBar = ({
             {paneId && !disablePaneActions && !isBottomPane && (
               <Button
                 type="button"
-                onClick={handleTogglePaneLocked}
-                variant="ghost"
-                className={
-                  isPaneLocked
-                    ? "h-5 min-w-5 shrink-0 rounded-md px-1 text-accent"
-                    : "h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
-                }
-                tooltip={isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group"}
-                tooltipSide="bottom"
-                aria-label={isPaneLocked ? "Unlock editor group" : "Lock editor group"}
-                compact
-              >
-                {isPaneLocked ? <Lock /> : <LockOpen />}
-              </Button>
-            )}
-            {paneId && !disablePaneActions && !isBottomPane && (
-              <Button
-                type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
                 className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
@@ -841,6 +821,10 @@ const TabBar = ({
         onCloseOthers={handleCloseOtherTabs}
         onCloseAll={handleCloseAllTabs}
         onCloseToRight={handleCloseTabsToRight}
+        isPaneLocked={isPaneLocked}
+        onTogglePaneLocked={
+          paneId && !disablePaneActions && !isBottomPane ? handleTogglePaneLocked : undefined
+        }
         onCopyPath={handleCopyPath}
         onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {

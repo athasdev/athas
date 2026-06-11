@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
-import type { PullRequestDetails } from "../types/github";
+import type { PullRequestDetails } from "../types/github.types";
 import {
   AssigneesList,
   CIStatusIndicator,

@@ -16,7 +16,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
-import { useMongoDbStore } from "./stores/mongodb-store";
+import { useMongoDbStore } from "./stores/mongodb.store";
 
 interface MongoDBViewerProps {
   connectionId: string;

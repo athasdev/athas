@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
-import { useLspStore } from "@/features/editor/lsp/lsp-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LocalHistoryCommandContent } from "@/features/local-history/components/local-history-command";
 import { OutlineCommandContent } from "@/features/outline/components/outline-command";
 import { commitChanges } from "@/features/git/api/git-commits-api";
@@ -16,18 +16,18 @@ import {
   stageAllFiles,
   unstageAllFiles,
 } from "@/features/git/api/git-status-api";
-import { useGitStore } from "@/features/git/stores/git-store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { useGitHubStore } from "@/features/github/stores/github-store";
+import { useGitStore } from "@/features/git/stores/git.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useOnboardingStore } from "@/features/onboarding/store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { vimCommands } from "@/features/vim/stores/vim-commands";
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import Command, {
   CommandEmpty,
@@ -49,9 +49,9 @@ import { createPaneActions } from "../constants/pane-actions";
 import { createSettingsActions } from "../constants/settings-actions";
 import { createViewActions } from "../constants/view-actions";
 import { createWindowActions } from "../constants/window-actions";
-import type { Action } from "../models/action.types";
-import type { CommandPaletteViewId } from "../models/view.types";
-import { useActionsStore } from "../store";
+import type { Action } from "../types/action.types";
+import type { CommandPaletteViewId } from "../types/view.types";
+import { useActionsStore } from "../stores/action-history.store";
 
 const CommandPalette = () => {
   // Get data from stores

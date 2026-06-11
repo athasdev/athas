@@ -1,4 +1,4 @@
-import type { Chat } from "@/features/ai/types/ai-chat";
+import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { saveChatToDb } from "@/features/ai/services/ai-chat-history-service";
 
 /**

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { EditorConfigProperties } from "../api/editorconfig";
-import { useEditorConfigStore } from "../stores/editorconfig-store";
-import { useEditorSettingsStore } from "../stores/settings-store";
+import { useEditorConfigStore } from "../stores/editorconfig.store";
+import { useEditorSettingsStore } from "../stores/settings.store";
 
 export interface ResolvedEditorSettings {
   tabSize: number;

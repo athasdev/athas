@@ -74,6 +74,14 @@ pub struct GitDiff {
 }
 
 #[derive(Serialize)]
+pub struct GitDiffStat {
+   pub file_path: String,
+   pub staged: bool,
+   pub additions: usize,
+   pub deletions: usize,
+}
+
+#[derive(Serialize)]
 pub struct GitBlame {
    pub file_path: String,
    pub lines: Vec<GitBlameLine>,

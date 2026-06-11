@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ProjectTab } from "../stores/workspace-tabs-store";
+import type { ProjectTab } from "../stores/workspace-tabs.store";
 import { renameRemoteProjectTabs } from "../utils/project-tab-remote";
 
 const createProjectTab = (overrides: Partial<ProjectTab>): ProjectTab => ({

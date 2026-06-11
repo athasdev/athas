@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   getSidebarPaneLevel,
   resolveSidebarPaneTrigger,

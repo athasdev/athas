@@ -13,11 +13,11 @@ import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
 import { useLargeEditorModeInfo } from "@/features/editor/hooks/use-large-editor-mode-info";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
@@ -26,11 +26,11 @@ import type {
   EditorCoordinateResolver,
   EditorModelPositionResolver,
 } from "@/features/editor/view-model/view-layout";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { CompletionDropdown } from "../completion/completion-dropdown";
 import { editorAPI } from "../extensions/api";
 import CodeLensOverlay from "../lsp/code-lens-overlay";
@@ -43,7 +43,7 @@ import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
-import type { Position, Range } from "../types/editor";
+import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
 import { MonacoBackedEditor } from "./monaco-editor";
@@ -91,7 +91,6 @@ interface GoToLineEventDetail {
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 const LSP_VIEWPORT_LINE_BUFFER = 30;
-const MAX_FILE_SEARCH_MATCHES = 20_000;
 const AthasEditor = lazy(() =>
   import("@/features/athas-editor/components/editor").then((module) => ({
     default: module.Editor,
@@ -444,7 +443,7 @@ const CodeEditor = ({
         return;
       }
 
-      void findLimitedMatchesCooperative(value, regex, MAX_FILE_SEARCH_MATCHES, {
+      void findLimitedMatchesCooperative(value, regex, Number.POSITIVE_INFINITY, {
         shouldCancel: () => searchRunIdRef.current !== searchRunId,
       }).then((result) => {
         if (!result || searchRunIdRef.current !== searchRunId) return;

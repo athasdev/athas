@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitCommit } from "../types/git-types";
+import type { GitCommit } from "../types/git.types";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "./git-repo-api";
 
 export const commitChanges = async (repoPath: string, message: string): Promise<boolean> => {

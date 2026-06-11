@@ -3,7 +3,7 @@ import {
   buildSavedProjectSession,
   buildSavedProjectUiSession,
   type ProjectSession,
-} from "../stores/session-store";
+} from "../stores/session.store";
 
 const previousSession: ProjectSession = {
   projectPath: "/workspace",

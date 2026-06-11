@@ -1,9 +1,9 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useKeymapStore } from "../stores/store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useKeymapStore } from "../stores/keymaps.store";
 
 function isTerminalFocused(): boolean {
   return useKeymapStore.getState().contexts.terminalFocus === true;

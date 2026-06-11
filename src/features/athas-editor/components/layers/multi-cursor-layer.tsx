@@ -6,7 +6,7 @@
 
 import { forwardRef, memo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { Cursor } from "@/features/editor/types/editor";
+import type { Cursor } from "@/features/editor/types/editor.types";
 import { calculateSelectionBoxes } from "@/features/athas-editor/utils/selection-boxes";
 import type { EditorViewLayout } from "@/features/athas-editor/view-model/view-layout";
 

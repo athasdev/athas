@@ -1,5 +1,5 @@
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff } from "../types/git.types";
 
 export const LARGE_DIFF_EDITOR_LINE_THRESHOLD = 20_000;
 

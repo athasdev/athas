@@ -5,7 +5,6 @@ export type SidebarView =
   | "outline"
   | "databases"
   | "collaboration"
-  | "notifications"
   | (string & {});
 
 interface SidebarPaneState {
@@ -33,12 +32,7 @@ interface SidebarPaneTriggerResult extends SidebarPaneClickResult {
   nextPosition: SidebarPosition;
 }
 
-const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>([
-  "outline",
-  "databases",
-  "collaboration",
-  "notifications",
-]);
+const EDGE_SIDEBAR_VIEWS = new Set<SidebarView>(["outline", "databases", "collaboration"]);
 
 export function getSidebarPaneLevel(view: SidebarView): SidebarPaneLevel {
   if (EDGE_SIDEBAR_VIEWS.has(view)) return "edge";

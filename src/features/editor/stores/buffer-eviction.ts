@@ -1,4 +1,4 @@
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
   "agent",

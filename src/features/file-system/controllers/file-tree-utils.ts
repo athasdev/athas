@@ -1,4 +1,4 @@
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../types/app.types";
 import { getDirName } from "@/utils/path-helpers";
 
 export function sortFileEntries(entries: FileEntry[]): FileEntry[] {

@@ -5,8 +5,8 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
-import { useDebuggerStore } from "../stores/debugger-store";
-import type { DebugRequestContext } from "../types/debugger";
+import { useDebuggerStore } from "../stores/debugger.store";
+import type { DebugRequestContext } from "../types/debugger.types";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 

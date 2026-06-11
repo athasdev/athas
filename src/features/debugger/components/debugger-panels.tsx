@@ -13,7 +13,7 @@ import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
-import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger";
+import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger.types";
 
 export const EMPTY_DEBUG_SECTION_MESSAGES = {
   stack: "Start a session to see frames.",

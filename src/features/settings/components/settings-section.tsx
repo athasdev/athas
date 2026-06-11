@@ -1,12 +1,19 @@
 import { ArrowCounterClockwiseIcon as RotateCcw } from "@phosphor-icons/react";
-import React from "react";
+import {
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 interface SectionProps {
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
@@ -38,9 +45,9 @@ export default function Section({ title, description, children, className }: Sec
 
 interface SettingRowProps {
   label: string;
-  labelAccessory?: React.ReactNode;
-  description?: React.ReactNode;
-  children: React.ReactNode;
+  labelAccessory?: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
   className?: string;
   onReset?: () => void;
   canReset?: boolean;
@@ -57,8 +64,8 @@ export function SettingRow({
   canReset = !!onReset,
   resetLabel,
 }: SettingRowProps) {
-  const controlRef = React.useRef<HTMLDivElement>(null);
-  const rowId = React.useId();
+  const controlRef = useRef<HTMLDivElement>(null);
+  const rowId = useId();
   const labelId = `${rowId}-label`;
   const descriptionId = `${rowId}-description`;
 
@@ -67,7 +74,7 @@ export function SettingRow({
   const passthroughSelector =
     "button, input, select, textarea, a, label, [role='button'], [role='switch'], [data-slot='button'], [data-setting-interactive-root='true']";
 
-  const getPrimaryInteractive = React.useCallback(() => {
+  const getPrimaryInteractive = useCallback(() => {
     const controlRoot = controlRef.current;
     if (!controlRoot) return null;
 
@@ -83,7 +90,7 @@ export function SettingRow({
       : primaryInteractive.querySelector<HTMLElement>(interactiveSelector);
   }, [interactiveSelector]);
 
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     const control = getPrimaryInteractive();
     if (!control) return;
 
@@ -96,7 +103,7 @@ export function SettingRow({
     }
   }, [description, descriptionId, getPrimaryInteractive, labelId]);
 
-  const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleRowClick = (event: MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
 
     if (target.closest(passthroughSelector)) {

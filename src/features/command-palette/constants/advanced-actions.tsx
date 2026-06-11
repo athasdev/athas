@@ -4,10 +4,10 @@ import {
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { showAlertDialog } from "@/features/dialogs/dialog-service";
-import type { Action } from "../models/action.types";
-import type { CommandPaletteViewId } from "../models/view.types";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import type { Action } from "../types/action.types";
+import type { CommandPaletteViewId } from "../types/view.types";
 
 interface AdvancedActionsParams {
   lspStatus: {

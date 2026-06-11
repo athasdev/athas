@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getExplorerTargetPath } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 
 interface UseFileExplorerSyncOptions {

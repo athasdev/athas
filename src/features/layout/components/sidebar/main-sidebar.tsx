@@ -2,19 +2,18 @@ import { memo, type ReactNode } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DatabaseSidebar } from "@/features/database/components/database-sidebar";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
-import { useSettingsStore } from "@/features/settings/store";
-import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { NotificationsPane } from "@/features/window/components/notifications-sidebar";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { LoadingIndicator } from "@/ui/loading";
@@ -176,10 +175,6 @@ export const MainSidebar = memo(
             },
           ]
         : []),
-      {
-        id: "notifications",
-        content: <NotificationsPane />,
-      },
       {
         id: "databases",
         content: <DatabaseSidebar />,

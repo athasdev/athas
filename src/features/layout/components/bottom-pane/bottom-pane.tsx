@@ -1,12 +1,12 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import DebuggerView from "@/features/debugger/components/debugger-view";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -15,8 +15,8 @@ import {
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {
@@ -195,14 +195,14 @@ const BottomPane = () => {
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "group absolute top-0 right-0 left-0 z-10 h-1",
+            "group absolute inset-x-0 top-0 z-10 h-1",
             "cursor-ns-resize transition-colors duration-150 hover:bg-blue-500/30",
             isResizing && "bg-blue-500/50",
           )}
         >
           <div
             className={cn(
-              "-translate-y-[1px] absolute top-0 right-0 left-0 h-[3px]",
+              "-translate-y-[1px] absolute inset-x-0 top-0 h-[3px]",
               "bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
             )}
           />

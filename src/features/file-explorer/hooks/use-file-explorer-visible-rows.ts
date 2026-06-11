@@ -6,9 +6,9 @@ import {
   buildVisibleFileTreeRows,
   type VisibleFileTreeRow,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
-import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
-import type { FileEntry } from "@/features/file-system/types/app";
-import { useSettingsStore } from "@/features/settings/store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface UseFileExplorerVisibleRowsOptions {
   files: FileEntry[];

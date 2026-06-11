@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { ROOT_PANE_ID } from "../constants/pane";
-import type { PaneGroup, PaneNode } from "../types/pane";
+import type { PaneGroup, PaneNode } from "../types/pane.types";
 import { createPaneGroup, createPaneSplit } from "../utils/pane-tree";
 import { getPaneScopeForPaneId, resolveWritablePaneForBuffer } from "../utils/pane-routing";
 

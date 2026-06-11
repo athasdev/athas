@@ -1,4 +1,4 @@
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { isMac } from "@/utils/platform";
 
 export function toggleFullscreen(): void {

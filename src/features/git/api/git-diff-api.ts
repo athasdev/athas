@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitDiff } from "../types/git-types";
+import type { GitDiff, GitDiffStat } from "../types/git.types";
 import { gitDiffCache } from "../utils/git-diff-cache";
 import {
   isNotGitRepositoryError,
@@ -141,6 +141,24 @@ export const getFileDiffAgainstContent = async (
       console.error("Failed to get file diff against content:", error);
     }
     return null;
+  }
+};
+
+export const getStatusDiffStats = async (repoPath: string): Promise<GitDiffStat[]> => {
+  try {
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return [];
+    }
+
+    return await tauriInvoke<GitDiffStat[]>("git_status_diff_stats", {
+      repoPath: resolvedRepoPath,
+    });
+  } catch (error) {
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get status diff stats:", error);
+    }
+    return [];
   }
 };
 

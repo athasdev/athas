@@ -12,12 +12,12 @@ import {
   MagnifyingGlassPlusIcon as ZoomIn,
   MagnifyingGlassMinusIcon as ZoomOut,
 } from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
-import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
-import { showPromptDialog } from "@/features/dialogs/dialog-service";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
-import type { Action } from "../models/action.types";
+import type { Action } from "../types/action.types";
 
 interface ViewActionsParams {
   isSidebarVisible: boolean;

@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 const DRAG_THRESHOLD = 4;

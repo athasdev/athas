@@ -3,8 +3,8 @@
  * Converts WASM tokens to editor Token format
  */
 
-import type { Token } from "../../extensions/types";
-import type { HighlightToken } from "./types";
+import type { Token } from "../../types/editor-extension.types";
+import type { HighlightToken } from "../../types/wasm-parser/wasm-parser.types";
 
 /**
  * Convert WASM HighlightToken to editor Token format

@@ -39,9 +39,9 @@ describe("getActiveSidebarView", () => {
       getActiveSidebarView({
         isGitViewActive: false,
         isGitHubPRsViewActive: false,
-        activeSidebarView: "notifications",
+        activeSidebarView: "databases",
       }),
-    ).toBe("notifications");
+    ).toBe("databases");
   });
 
   test("returns collaboration when the collaboration pane is active", () => {
@@ -127,13 +127,13 @@ describe("resolveSidebarPaneClick", () => {
           isSidebarVisible: true,
           isGitViewActive: false,
           isGitHubPRsViewActive: false,
-          activeSidebarView: "notifications",
+          activeSidebarView: "databases",
         },
-        "notifications",
+        "databases",
       ),
     ).toEqual({
       nextIsSidebarVisible: false,
-      nextView: "notifications",
+      nextView: "databases",
     });
   });
 
@@ -219,7 +219,7 @@ describe("resolveSidebarPaneTrigger", () => {
           isGitHubPRsViewActive: false,
           activeSidebarView: "files",
         },
-        "notifications",
+        "databases",
         {
           currentPosition: "left",
           triggerSide: "right",
@@ -227,7 +227,7 @@ describe("resolveSidebarPaneTrigger", () => {
       ),
     ).toEqual({
       nextIsSidebarVisible: true,
-      nextView: "notifications",
+      nextView: "databases",
       nextPosition: "right",
     });
   });

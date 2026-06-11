@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
-import type { Decoration } from "@/features/editor/types/editor";
+import { useEditorDecorationsStore } from "@/features/editor/stores/decorations.store";
+import type { Decoration } from "@/features/editor/types/editor.types";
 import { GUTTER_CONFIG } from "@/features/athas-editor/utils/gutter";
 import {
   getViewZoneHeightBeforeLine,

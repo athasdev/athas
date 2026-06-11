@@ -5,7 +5,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
-import type { ColumnInfo, TableInfo } from "../models/common.types";
+import type { ColumnInfo, TableInfo } from "../types/common.types";
 import {
   applySqlCompletion,
   getSqlCompletions,

@@ -109,15 +109,15 @@ describe("settings normalization", () => {
     expect(normalized.coreFeatures.webViewer).toBe(false);
   });
 
-  it("migrates legacy icon theme aliases to Material", () => {
+  it("migrates legacy icon theme aliases to Symbols", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       iconTheme: "colorful-material",
     });
 
-    expect(normalized.iconTheme).toBe("material");
-    expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("material");
-    expect(normalizeSettingValue("iconTheme", "seti")).toBe("material");
+    expect(normalized.iconTheme).toBe("symbols");
+    expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("symbols");
+    expect(normalizeSettingValue("iconTheme", "seti")).toBe("symbols");
   });
 
   it("does not migrate legacy external editor settings into editor engine", () => {

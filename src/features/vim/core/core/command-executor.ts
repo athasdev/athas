@@ -3,19 +3,19 @@
  * Orchestrates operators, motions, text objects, and actions
  */
 
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 import { getAction } from "../actions/action-registry";
 import { createReplaceAction } from "../actions/replace-action";
 import { getOperator } from "../operators/operator-registry";
 import { getEffectiveCount, parseVimCommand } from "./command-parser";
 import { getMotion } from "./motion-registry";
 import { getTextObject } from "./text-objects";
-import type { EditorContext, VimRange } from "./types";
+import type { EditorContext, VimRange } from "./types/core.types";
 
 const buildLinewiseRange = (context: EditorContext, count: number): VimRange => {
   const { cursor, lines } = context;

@@ -1,25 +1,25 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import type { DatabaseType } from "@/features/database/models/provider.types";
+import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
   PROVIDER_REGISTRY,
   type DatabaseViewerProps,
 } from "@/features/database/providers/provider-registry";
 import CodeEditor from "@/features/editor/components/code-editor";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { Buffer } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { Buffer } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
-import type { GitHunk } from "@/features/git/types/git-types";
-import { useGitHubStore } from "@/features/github/stores/github-store";
+import type { GitHunk } from "@/features/git/types/git.types";
+import { useGitHubStore } from "@/features/github/stores/github.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
-import { openSidebarResourceBuffer } from "@/features/sidebar-drag/open-sidebar-resource";
+import { openSidebarResourceBuffer } from "@/features/sidebar-drag/utils/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   type SidebarDragResource,
-} from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
+} from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import {
@@ -32,9 +32,9 @@ import { cn } from "@/utils/cn";
 import { activateBufferInPaneAndSync, activatePaneAndSyncBuffer } from "../utils/pane-activation";
 import { EmptyEditorState } from "./empty-editor-state";
 import { BOTTOM_PANE_ID } from "../constants/pane";
-import { usePaneStore } from "../stores/pane-store";
-import type { PaneGroup } from "../types/pane";
-import type { EditorContent, NewTabContent, PullRequestContent } from "../types/pane-content";
+import { usePaneStore } from "../stores/pane.store";
+import type { PaneGroup } from "../types/pane.types";
+import type { EditorContent, NewTabContent, PullRequestContent } from "../types/pane-content.types";
 import {
   ensureBufferInPaneDropTarget,
   getOrCreatePaneDropTarget,
@@ -237,7 +237,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
 
 function WebViewerDisabledState() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-primary-bg px-6">
+    <div className="flex size-full items-center justify-center bg-primary-bg px-6">
       <div className="max-w-sm text-center">
         <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
         <div className="mt-1 ui-text-xs text-text-lighter">
@@ -948,7 +948,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       ref={containerRef}
       data-pane-container
       data-pane-id={pane.id}
-      className={`relative flex h-full w-full flex-col overflow-hidden bg-primary-bg ${
+      className={`relative flex size-full flex-col overflow-hidden bg-primary-bg ${
         isActivePane ? "ring-1 ring-accent/30" : ""
       } ${isDragOver || internalHoverZone ? "ring-2 ring-accent" : ""}`}
       onMouseDownCapture={handlePaneMouseDownCapture}
@@ -1034,7 +1034,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           }
                     }
                   >
-                    <div className="h-full w-full">
+                    <div className="size-full">
                       {isStandardEditorBuffer(buffer) ? (
                         <CodeEditor
                           paneId={pane.id}
@@ -1045,9 +1045,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                         />
                       ) : buffer.type === "terminal" ? (
                         <div
-                          className={
-                            isActiveBuffer ? "h-full w-full" : "pointer-events-none h-full w-full"
-                          }
+                          className={isActiveBuffer ? "size-full" : "pointer-events-none size-full"}
                         >
                           <TerminalTab
                             sessionId={buffer.sessionId}
@@ -1060,7 +1058,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           />
                         </div>
                       ) : buffer.type === "webViewer" && isActiveBuffer ? (
-                        <div className="h-full w-full">
+                        <div className="size-full">
                           {webViewerEnabled ? (
                             <WebViewer
                               url={buffer.url}
@@ -1103,8 +1101,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                   (
                     b,
                   ): b is
-                    | import("../types/pane-content").TerminalContent
-                    | import("../types/pane-content").WebViewerContent =>
+                    | import("../types/pane-content.types").TerminalContent
+                    | import("../types/pane-content.types").WebViewerContent =>
                     b.type === "terminal" || (webViewerEnabled && b.type === "webViewer"),
                 )
                 .map((b) => {

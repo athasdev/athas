@@ -1,4 +1,4 @@
-import type { Message } from "@/features/ai/types/ai-chat";
+import type { Message } from "@/features/ai/types/ai-chat.types";
 
 export const FOLLOW_UP_ACTIONS_START = "[FOLLOW_UP_ACTIONS]";
 export const FOLLOW_UP_ACTIONS_END = "[/FOLLOW_UP_ACTIONS]";

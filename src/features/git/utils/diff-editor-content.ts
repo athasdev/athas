@@ -1,6 +1,6 @@
-import type { TokenEntry } from "@/features/panes/types/pane-content";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff, GitDiffLine } from "../types/git-types";
+import type { TokenEntry } from "@/features/panes/types/pane-content.types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff, GitDiffLine } from "../types/git.types";
 
 const DIFF_ACCORDION_PREFIX = "\uE000ATHAS_DIFF_FILE ";
 

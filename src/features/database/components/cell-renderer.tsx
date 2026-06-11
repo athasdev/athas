@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { ForeignKeyInfo } from "../models/common.types";
+import type { ForeignKeyInfo } from "../types/common.types";
 
 interface CellRendererProps {
   value: unknown;

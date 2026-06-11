@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
 import { extensionInstaller } from "../installer/extension-installer";
 import {

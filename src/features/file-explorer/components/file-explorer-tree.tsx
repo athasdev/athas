@@ -11,8 +11,8 @@ import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { useEventListener } from "usehooks-ts";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
-import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import {
   filterFileTreeForFffHits,
   getGuideAncestorRows,
@@ -35,11 +35,11 @@ import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileEntry } from "@/features/file-system/types/app";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
-import { useGitStore } from "@/features/git/stores/git-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useGitStore } from "@/features/git/stores/git.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";

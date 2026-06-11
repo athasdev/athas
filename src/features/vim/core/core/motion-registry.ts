@@ -29,7 +29,7 @@ import {
   wordForward,
   wordPreviousEnd,
 } from "../motions/word-motions";
-import type { Motion } from "./types";
+import type { Motion } from "./types/core.types";
 
 /**
  * Registry of all available motions

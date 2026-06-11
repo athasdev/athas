@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { LspClient } from "./lsp-client";
 
 export interface InlayHint {

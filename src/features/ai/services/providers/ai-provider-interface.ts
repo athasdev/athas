@@ -1,4 +1,4 @@
-import type { AIMessage } from "@/features/ai/types/messages";
+import type { AIMessage } from "@/features/ai/types/messages.types";
 
 export interface ProviderConfig {
   id: string;
@@ -39,6 +39,7 @@ export abstract class AIProvider {
 
   // Optional: Allows providers to fetch available models dynamically
   async getModels?(apiKey?: string): Promise<ProviderModel[]> {
+    void apiKey;
     return [];
   }
 

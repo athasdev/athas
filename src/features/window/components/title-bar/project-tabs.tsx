@@ -14,10 +14,10 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import type { ProjectTab } from "@/features/window/stores/workspace-tabs-store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
