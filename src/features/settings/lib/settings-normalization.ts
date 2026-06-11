@@ -340,7 +340,7 @@ export function normalizeSettings(settings: Settings): Settings {
     normalizedSettings.iconTheme === "colorful-material" ||
     normalizedSettings.iconTheme === "seti"
   ) {
-    normalizedSettings.iconTheme = "material";
+    normalizedSettings.iconTheme = "symbols";
   }
 
   normalizedSettings.headerTrailingItemsOrder = normalizeItemOrder(
@@ -412,7 +412,7 @@ export function normalizeSettingValue<K extends keyof Settings>(
   }
 
   if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
-    return "material" as Settings[K];
+    return "symbols" as Settings[K];
   }
 
   if (key === "keybindingPreset" && !isKeybindingPreset(value as string)) {

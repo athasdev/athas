@@ -116,7 +116,7 @@ const tabVariants = cva(
       variant: {
         default: "rounded-md",
         pill: "rounded-md border border-transparent",
-        segmented: "h-full w-full rounded-none border-0",
+        segmented: "size-full rounded-none border-0",
       },
       active: {
         true: "",

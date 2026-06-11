@@ -1,4 +1,4 @@
-use crate::git::{DiffLineType, GitDiff, GitDiffLine, get_blob_base64, is_image_file};
+use crate::git::{DiffLineType, GitDiff, GitDiffLine, GitDiffStat, get_blob_base64, is_image_file};
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
 use git2::{Diff, DiffFormat, Oid, Repository, Tree};
@@ -222,6 +222,75 @@ fn count_line_stats(lines: &[GitDiffLine]) -> (usize, usize) {
    }
 
    (additions, deletions)
+}
+
+fn collect_diff_stats(
+   diff: &mut Diff,
+   staged: bool,
+) -> Result<HashMap<String, GitDiffStat>, String> {
+   let mut stats_by_path: HashMap<String, GitDiffStat> = HashMap::new();
+
+   diff
+      .print(DiffFormat::Patch, |delta, _hunk, line| {
+         let origin = line.origin();
+         if origin != '+' && origin != '-' {
+            return true;
+         }
+
+         let file_path = diff_delta_file_path(&delta);
+         if file_path.is_empty() {
+            return true;
+         }
+
+         let entry = stats_by_path
+            .entry(file_path.clone())
+            .or_insert_with(|| GitDiffStat {
+               file_path,
+               staged,
+               additions: 0,
+               deletions: 0,
+            });
+
+         if origin == '+' {
+            entry.additions += 1;
+         } else {
+            entry.deletions += 1;
+         }
+
+         true
+      })
+      .map_err(|error| error.to_string())?;
+
+   Ok(stats_by_path)
+}
+
+pub fn git_status_diff_stats(repo_path: String) -> Result<Vec<GitDiffStat>, String> {
+   let repo =
+      Repository::open(&repo_path).map_err(|e| format!("Failed to open repository: {e}"))?;
+   let head_tree = repo
+      .head()
+      .ok()
+      .and_then(|head| head.peel_to_commit().ok())
+      .and_then(|commit| commit.tree().ok());
+   let index = repo
+      .index()
+      .map_err(|e| format!("Failed to get index: {e}"))?;
+
+   let mut staged_diff = repo
+      .diff_tree_to_index(head_tree.as_ref(), Some(&index), None)
+      .map_err(|e| format!("Failed to create staged diff: {e}"))?;
+
+   let mut unstaged_options = git2::DiffOptions::new();
+   unstaged_options.include_untracked(true);
+   unstaged_options.recurse_untracked_dirs(false);
+   let mut unstaged_diff = repo
+      .diff_index_to_workdir(Some(&index), Some(&mut unstaged_options))
+      .map_err(|e| format!("Failed to create unstaged diff: {e}"))?;
+
+   let mut stats = collect_diff_stats(&mut staged_diff, true)?;
+   stats.extend(collect_diff_stats(&mut unstaged_diff, false)?);
+
+   Ok(stats.into_values().collect())
 }
 
 pub fn git_diff_file(

@@ -151,7 +151,7 @@ export default function RunActionsButton() {
                   type="button"
                   variant="ghost"
                   onClick={() => runAction(action.command, action.name)}
-                  className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent px-0 py-0 text-text hover:bg-transparent"
+                  className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent p-0 text-text hover:bg-transparent"
                   style={{ fontSize: "var(--ui-text-sm)" }}
                 >
                   <Play className="shrink-0 text-text-lighter" weight="duotone" />

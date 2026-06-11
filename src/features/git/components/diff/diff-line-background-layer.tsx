@@ -24,7 +24,7 @@ function DiffLineBackgroundLayerComponent({ lineKinds, lineHeight }: DiffLineBac
         return (
           <div
             key={`${lineKind}-${index}`}
-            className={`absolute left-0 right-0 ${className}`}
+            className={`absolute inset-x-0 ${className}`}
             style={{
               top: `${EDITOR_CONSTANTS.EDITOR_PADDING_TOP + index * lineHeight}px`,
               height: `${lineHeight}px`,

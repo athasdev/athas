@@ -83,7 +83,6 @@ export const EDITOR_CONSTANTS = {
   TYPING_SPEED_ADJUSTMENT: 50,
 
   // Buffer Management
-  MAX_OPEN_TABS: 10,
   MAX_CLOSED_BUFFERS_HISTORY: 10,
 
   // Precision

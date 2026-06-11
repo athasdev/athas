@@ -32,7 +32,13 @@ import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
 import { getGitLog } from "../api/git-commits-api";
-import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git-diff-api";
+import {
+  getCommitDiff,
+  getFileDiff,
+  getRefDiff,
+  getStashDiff,
+  getStatusDiffStats,
+} from "../api/git-diff-api";
 import { clearRepositoryDiscoveryCache, resolveRepositoryPath } from "../api/git-repo-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus, initRepository } from "../api/git-status-api";
@@ -74,7 +80,6 @@ type GitPaletteAction =
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
-  const MAX_STATUS_DIFF_STATS_FILES = 40;
   const { gitStatus, isLoadingGitData, isRefreshing, actions } = useGitStore();
   const stashes = useGitStore((state) => state.stashes);
   const { setIsLoadingGitData, setIsRefreshing } = actions;
@@ -365,28 +370,18 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     let isCancelled = false;
 
     const loadFileDiffStats = async () => {
-      const uniqueFiles = Array.from(
-        new Map(
-          visibleGitFiles.map((file) => [
-            `${file.staged ? "staged" : "unstaged"}:${file.path}`,
-            file,
-          ]),
-        ).values(),
+      const visibleFileKeys = new Set(
+        visibleGitFiles.map((file) => `${file.staged ? "staged" : "unstaged"}:${file.path}`),
       );
-      const filesToMeasure = uniqueFiles.slice(0, MAX_STATUS_DIFF_STATS_FILES);
-
-      const statsEntries = await Promise.all(
-        filesToMeasure.map(async (file) => {
-          const diff = await getFileDiff(activeRepoPath, file.path, file.staged);
-          const { additions, deletions } = diff
-            ? countDiffStats([diff])
-            : { additions: 0, deletions: 0 };
-          return [
-            `${file.staged ? "staged" : "unstaged"}:${file.path}`,
-            { additions, deletions },
-          ] as const;
-        }),
-      );
+      const statsEntries = (await getStatusDiffStats(activeRepoPath))
+        .map(
+          (stat) =>
+            [
+              `${stat.staged ? "staged" : "unstaged"}:${stat.file_path}`,
+              { additions: stat.additions, deletions: stat.deletions },
+            ] as const,
+        )
+        .filter(([key]) => visibleFileKeys.has(key));
 
       if (!isCancelled) {
         setFileDiffStats(Object.fromEntries(statsEntries));
@@ -905,7 +900,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyActionState className="h-full" message="No repository selected">
@@ -924,7 +919,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyState className="h-full">Loading Git status...</SidebarEmptyState>
@@ -938,7 +933,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
@@ -960,7 +955,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
-        <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
+        <SidebarHeader className="min-w-0 bg-transparent p-0 backdrop-blur-none">
           <GitProjectSelector
             className="w-fit max-w-[calc(100%-4.5rem)]"
             onRepositoryChange={() => setRepoSelectionError(null)}

@@ -23,8 +23,8 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
   }, [buffer, chatTitle, updateBuffer]);
 
   return (
-    <div className="h-full w-full overflow-hidden">
-      <div className="mx-auto h-full w-full max-w-4xl">
+    <div className="size-full overflow-hidden">
+      <div className="mx-auto size-full max-w-4xl">
         <AIChat
           mode="chat"
           chatId={buffer.sessionId}

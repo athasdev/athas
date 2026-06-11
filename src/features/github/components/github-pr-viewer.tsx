@@ -111,7 +111,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(
     () => parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "") ?? null,
   );
-  const [isWideSplit, setIsWideSplit] = useState(false);
+  const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
 
   useEffect(() => {
@@ -613,11 +613,11 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
             fileQuery={fileQuery}
             fileStatusFilter={fileStatusFilter}
             selectedFilePath={selectedFilePath}
-            isWideSplit={isWideSplit}
+            isFileTreeVisible={isFileTreeVisible}
             diffDebugSummary={diffDebugSummary}
             patchError={selectedDiffFile ? filePatches[selectedDiffFile.path]?.error : undefined}
             onRetry={handleRefresh}
-            onToggleSplit={() => setIsWideSplit((current) => !current)}
+            onToggleFileTree={() => setIsFileTreeVisible((current) => !current)}
             onFileQueryChange={setFileQuery}
             onFileStatusFilterChange={setFileStatusFilter}
             onSelectFile={setSelectedFilePath}

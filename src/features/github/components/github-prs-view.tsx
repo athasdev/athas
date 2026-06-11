@@ -516,7 +516,7 @@ const GitHubPRsView = memo(() => {
   if (!isAuthenticated) {
     return (
       <SidebarPanel className="gap-2 p-2">
-        <SidebarHeader className="bg-transparent px-0 py-0 backdrop-blur-none">
+        <SidebarHeader className="bg-transparent p-0 backdrop-blur-none">
           <span className="ui-text-sm font-medium text-text">GitHub</span>
         </SidebarHeader>
         <GitHubAuthStatusMessage />

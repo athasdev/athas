@@ -1568,7 +1568,7 @@ export function CollaborationSidebarView() {
 
   return (
     <SidebarPanel className="gap-1 p-1">
-      <SidebarHeader className="relative z-[10020] bg-transparent px-0 py-0 backdrop-blur-none">
+      <SidebarHeader className="relative z-[10020] bg-transparent p-0 backdrop-blur-none">
         <SidebarSectionSwitcher
           items={collaborationTabs}
           value={activeTab}

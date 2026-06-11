@@ -78,6 +78,7 @@ fn main() {
          git_log,
          git_diff_file,
          git_diff_file_with_content,
+         git_status_diff_stats,
          git_commit_diff,
          git_ref_diff,
          git_branches,

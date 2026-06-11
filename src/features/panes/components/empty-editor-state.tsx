@@ -278,7 +278,7 @@ export function EmptyEditorState() {
                     }
                     variant="ghost"
                     compact
-                    className="h-auto min-w-0 flex-1 justify-start gap-3 px-0 py-0 hover:bg-transparent"
+                    className="h-auto min-w-0 flex-1 justify-start gap-3 p-0 hover:bg-transparent"
                   >
                     <Terminal className="shrink-0 text-text-light" />
                     <span className="truncate text-text ui-text-xs">{action.name}</span>

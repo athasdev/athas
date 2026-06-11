@@ -231,7 +231,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   };
 
   return (
-    <div className="relative h-full w-full select-none overflow-hidden bg-primary-bg">
+    <div className="relative size-full select-none overflow-hidden bg-primary-bg">
       {/* Header */}
       <div
         className={cn(

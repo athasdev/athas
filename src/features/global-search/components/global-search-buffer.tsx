@@ -445,7 +445,7 @@ const GlobalSearchBuffer = () => {
                       type="button"
                       aria-label={`Result ${markerIndex + 1}`}
                       className={cn(
-                        "pointer-events-auto absolute right-0 h-1 w-1 rounded-full bg-text-lighter/35 hover:bg-accent",
+                        "pointer-events-auto absolute right-0 size-1 rounded-full bg-text-lighter/35 hover:bg-accent",
                         selectedItemKey === item.path && "bg-accent",
                       )}
                       style={{

@@ -4,6 +4,7 @@ import {
   CaretRightIcon as ChevronRight,
   ColumnsIcon as Columns2,
   ArrowSquareOutIcon as ExternalLink,
+  ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
   TrashIcon as Trash2,
 } from "@phosphor-icons/react";
@@ -24,6 +25,10 @@ import Breadcrumb, {
 } from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import {
+  FileNavigatorSidebar,
+  type FileNavigatorItem,
+} from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
@@ -88,6 +93,10 @@ const statusBadgeClass: Record<string, string> = {
 };
 
 const MAX_HUNK_ACTION_DIFF_LINES = 1200;
+
+function getDiffSectionKey(multiDiff: MultiFileDiff, diff: GitDiff, index: number): string {
+  return multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
+}
 
 function parseGitHubRemoteSlug(remoteUrl: string): { owner: string; repo: string } | null {
   const normalized = remoteUrl.trim();
@@ -157,6 +166,7 @@ function EmbeddedDiffSectionEditor({
   viewMode: "unified" | "split";
 }) {
   const fontSize = useEditorSettingsStore.use.fontSize();
+  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const sourcePath = diff.new_path || diff.old_path || diff.file_path;
@@ -191,7 +201,7 @@ function EmbeddedDiffSectionEditor({
             splitLines(splitContent.right.content).length,
           )
         : splitLines(unifiedContent.content).length;
-    const lineHeight = calculateLineHeight(fontSize * zoomLevel);
+    const lineHeight = calculateLineHeight(fontSize * zoomLevel, editorLineHeight);
 
     return Math.max(
       lineCount * lineHeight +
@@ -201,6 +211,7 @@ function EmbeddedDiffSectionEditor({
     );
   }, [
     fontSize,
+    editorLineHeight,
     splitContent.left.content,
     splitContent.right.content,
     unifiedContent.content,
@@ -208,8 +219,8 @@ function EmbeddedDiffSectionEditor({
     zoomLevel,
   ]);
   const lineHeight = useMemo(
-    () => calculateLineHeight(fontSize * zoomLevel),
-    [fontSize, zoomLevel],
+    () => calculateLineHeight(fontSize * zoomLevel, editorLineHeight),
+    [fontSize, editorLineHeight, zoomLevel],
   );
   const resolveAbsolutePath = useCallback(() => {
     if (sourcePath.startsWith("/") || sourcePath.startsWith("remote://")) return sourcePath;
@@ -422,7 +433,7 @@ const DiffFileSection = memo(function DiffFileSection({
             <button
               type="button"
               onClick={handleToggle}
-              className="relative z-50 flex h-8 w-8 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
+              className="relative z-50 flex size-8 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
               aria-label={expanded ? "Collapse file diff" : "Expand file diff"}
               aria-expanded={expanded}
             >
@@ -514,10 +525,17 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
+  const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isRefreshingRef = useRef(false);
+  const sectionElementsRef = useRef(new Map<string, HTMLDivElement>());
+  const [selectedFileKey, setSelectedFileKey] = useState<string | null>(
+    () =>
+      multiDiff.initiallyExpandedFileKey ??
+      (multiDiff.files[0] ? getDiffSectionKey(multiDiff, multiDiff.files[0], 0) : null),
+  );
   const handleOpenFile = useCallback(
     async (filePath: string) => {
       const repoPath = multiDiff.repoPath ?? rootFolderPath;
@@ -538,12 +556,54 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() =>
     getInitialExpandedFiles(multiDiff),
   );
+  const diffFileItems = useMemo<FileNavigatorItem[]>(
+    () =>
+      multiDiff.files.map((diff, index) => {
+        const filePath = diff.new_path || diff.old_path || diff.file_path;
+        const { additions, deletions } = countStats(diff);
+        const status = getFileStatus(diff);
+
+        return {
+          key: getDiffSectionKey(multiDiff, diff, index),
+          path: filePath,
+          iconClassName: statusTextClass[status],
+          metadata: [
+            ...(additions > 0 ? [{ label: `+${additions}`, className: "text-git-added" }] : []),
+            ...(deletions > 0 ? [{ label: `-${deletions}`, className: "text-git-deleted" }] : []),
+          ],
+        };
+      }),
+    [multiDiff],
+  );
   const handleToggleSection = useCallback((sectionKey: string) => {
     setExpandedFiles((prev) => {
       const next = new Set(prev);
       if (next.has(sectionKey)) next.delete(sectionKey);
       else next.add(sectionKey);
       return next;
+    });
+  }, []);
+  const registerSectionElement = useCallback((sectionKey: string, node: HTMLDivElement | null) => {
+    if (node) {
+      sectionElementsRef.current.set(sectionKey, node);
+      return;
+    }
+
+    sectionElementsRef.current.delete(sectionKey);
+  }, []);
+  const handleSelectFileFromTree = useCallback((sectionKey: string) => {
+    setSelectedFileKey(sectionKey);
+    setExpandedFiles((prev) => {
+      if (prev.has(sectionKey)) return prev;
+      const next = new Set(prev);
+      next.add(sectionKey);
+      return next;
+    });
+
+    window.requestAnimationFrame(() => {
+      sectionElementsRef.current.get(sectionKey)?.scrollIntoView({
+        block: "start",
+      });
     });
   }, []);
   const handleStackWheelCapture = useCallback((event: WheelEvent<HTMLDivElement>) => {
@@ -564,9 +624,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 
   useEffect(() => {
     const nextKeys = new Set(
-      multiDiff.files.map(
-        (diff, index) => multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`,
-      ),
+      multiDiff.files.map((diff, index) => getDiffSectionKey(multiDiff, diff, index)),
     );
 
     setExpandedFiles((previous) => {
@@ -581,6 +639,14 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       }
 
       return nextExpanded;
+    });
+
+    setSelectedFileKey((previous) => {
+      if (previous && nextKeys.has(previous)) return previous;
+      return (
+        multiDiff.initiallyExpandedFileKey ??
+        (multiDiff.files[0] ? getDiffSectionKey(multiDiff, multiDiff.files[0], 0) : null)
+      );
     });
   }, [multiDiff.fileKeys, multiDiff.files, multiDiff.initiallyExpandedFileKey]);
 
@@ -683,6 +749,17 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         }
         rightContent={
           <div className="flex items-center gap-1">
+            <BreadcrumbActionButton
+              type="button"
+              active={isFileTreeVisible}
+              onClick={() => setIsFileTreeVisible((current) => !current)}
+              className="gap-1"
+              tooltip={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
+              tooltipSide="bottom"
+              aria-label={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
+            >
+              <ListBullets weight="duotone" />
+            </BreadcrumbActionButton>
             {githubCommitUrl ? (
               <BreadcrumbActionButton
                 type="button"
@@ -759,29 +836,41 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         </div>
       ) : null}
 
-      <div
-        className="min-h-0 flex-1 overflow-auto px-2 pb-2"
-        style={{ overflowAnchor: "none" }}
-        data-diff-stack-scroll-container
-        onWheelCapture={handleStackWheelCapture}
-      >
-        <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
-          {multiDiff.files.map((diff, index) => {
-            const sectionKey = multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {isFileTreeVisible ? (
+          <FileNavigatorSidebar
+            items={diffFileItems}
+            selectedKey={selectedFileKey}
+            onSelect={handleSelectFileFromTree}
+            ariaLabel="Changed files"
+          />
+        ) : null}
 
-            return (
-              <DiffFileSection
-                key={sectionKey}
-                diff={diff}
-                sectionKey={sectionKey}
-                expanded={expandedFiles.has(sectionKey)}
-                viewMode={viewMode}
-                showWhitespace={showWhitespace}
-                onToggle={handleToggleSection}
-                onOpenFile={handleOpenFile}
-              />
-            );
-          })}
+        <div
+          className="min-h-0 flex-1 overflow-auto px-2 pt-2 pb-2"
+          style={{ overflowAnchor: "none" }}
+          data-diff-stack-scroll-container
+          onWheelCapture={handleStackWheelCapture}
+        >
+          <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
+            {multiDiff.files.map((diff, index) => {
+              const sectionKey = getDiffSectionKey(multiDiff, diff, index);
+
+              return (
+                <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
+                  <DiffFileSection
+                    diff={diff}
+                    sectionKey={sectionKey}
+                    expanded={expandedFiles.has(sectionKey)}
+                    viewMode={viewMode}
+                    showWhitespace={showWhitespace}
+                    onToggle={handleToggleSection}
+                    onOpenFile={handleOpenFile}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

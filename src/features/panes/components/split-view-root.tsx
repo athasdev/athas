@@ -28,7 +28,7 @@ export function SplitViewRoot() {
 
   return (
     <>
-      <div className="h-full w-full overflow-hidden">
+      <div className="size-full overflow-hidden">
         <PaneNodeRenderer node={root} hiddenPaneId={fullscreenPaneId} />
       </div>
 

@@ -26,6 +26,7 @@ import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
+import { defaultSettings } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
 import type {
@@ -282,7 +283,7 @@ export const useBufferStore = createSelectors(
     immer((set, get) => ({
       buffers: [],
       activeBufferId: null,
-      maxOpenTabs: EDITOR_CONSTANTS.MAX_OPEN_TABS,
+      maxOpenTabs: defaultSettings.maxOpenTabs,
       pendingClose: null,
       closedBuffersHistory: [],
       actions: {

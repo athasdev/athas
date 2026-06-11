@@ -279,7 +279,7 @@ export function SearchReplaceRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
         <Replace />
       </span>
 

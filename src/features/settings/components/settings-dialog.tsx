@@ -1,8 +1,11 @@
 import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  resolveSettingsAccess,
+  resolveVisibleSettingsSection,
+} from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
-import type { SettingsSection } from "@/features/settings/types/settings.types";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
 import Dialog from "@/ui/dialog";
@@ -37,8 +40,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const lastSettingsTab = useSettingsStore((state) => state.settings.lastSettingsTab);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const subscription = useAuthStore((state) => state.subscription);
-  const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
-  const hasTeamsAccess = Boolean(subscription?.collaboration?.enabled);
+  const settingsAccess = resolveSettingsAccess(subscription);
+  const { canShowEnterpriseSettings, canShowCollaborationSettings } = settingsAccess;
 
   const clearSearch = useSettingsStore((state) => state.clearSearch);
   const searchQuery = useSettingsStore((state) => state.search.query);
@@ -49,8 +52,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const [isTabDropdownOpen, setIsTabDropdownOpen] = useState(false);
   const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
   const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
-    hasEnterpriseAccess,
-    hasTeamsAccess,
+    ...settingsAccess,
     matchingTabs,
   });
   const activeTabItem =
@@ -58,20 +60,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     SETTINGS_TAB_ITEMS.find((tab) => tab.id === activeTab) ??
     SETTINGS_TAB_ITEMS[0];
   const ActiveTabIcon = activeTabItem.icon;
-  const resolveVisibleTab = (tab: SettingsTab): SettingsSection => {
-    if (tab === "language") {
-      return "editor";
-    }
-
-    if (
-      (!hasEnterpriseAccess && tab === "enterprise") ||
-      (!hasTeamsAccess && tab === "collaboration")
-    ) {
-      return "general";
-    }
-
-    return tab;
-  };
+  const resolveVisibleTab = (tab: SettingsTab) =>
+    resolveVisibleSettingsSection(tab, settingsAccess);
 
   // Sync active tab with explicit requests, or fall back to the persisted last section.
   useEffect(() => {
@@ -85,8 +75,8 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     settingsInitialTab,
     lastSettingsTab,
     isOpen,
-    hasEnterpriseAccess,
-    hasTeamsAccess,
+    canShowEnterpriseSettings,
+    canShowCollaborationSettings,
     updateSetting,
   ]);
 
@@ -137,9 +127,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       case "features":
         return <FeaturesSettings />;
       case "collaboration":
-        return hasTeamsAccess ? <CollaborationSettings /> : <GeneralSettings />;
+        return canShowCollaborationSettings ? <CollaborationSettings /> : <GeneralSettings />;
       case "enterprise":
-        return hasEnterpriseAccess ? <EnterpriseSettings /> : <GeneralSettings />;
+        return canShowEnterpriseSettings ? <EnterpriseSettings /> : <GeneralSettings />;
       case "advanced":
         return <AdvancedSettings />;
       case "terminal":
@@ -195,7 +185,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           content: "flex p-0",
         }}
       >
-        <div className="flex h-full w-full min-w-0 overflow-hidden">
+        <div className="flex size-full min-w-0 overflow-hidden">
           <div className="w-52 shrink-0 max-[720px]:hidden">
             <SettingsVerticalTabs
               activeTab={activeTab}

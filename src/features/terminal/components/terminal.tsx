@@ -758,7 +758,7 @@ export const XtermTerminal = ({
   );
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex size-full flex-col overflow-hidden bg-primary-bg">
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
