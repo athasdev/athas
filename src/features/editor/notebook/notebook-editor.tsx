@@ -1,5 +1,4 @@
 import "../markdown/styles.css";
-import "./styles.css";
 import DOMPurify from "dompurify";
 import {
   EyeIcon as Eye,
@@ -94,7 +93,7 @@ function MarkdownCellPreview({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview notebook-markdown-preview"
+      className="markdown-preview !block !h-auto !overflow-visible !bg-transparent !p-0 py-1.5 [&_.markdown-content]:max-w-none"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -104,16 +103,19 @@ function MarkdownOutput({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview notebook-output-markdown"
+      className="markdown-preview overflow-auto rounded-md border border-border bg-secondary-bg p-2.5 [&_.markdown-content]:max-w-none"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
 
+const outputClassName =
+  "m-0 overflow-auto rounded-md border border-border bg-secondary-bg p-2.5 font-mono text-[0.92em] leading-[1.55] text-text";
+
 function NotebookOutputView({ output }: { output: NotebookOutput }) {
   if (output.output_type === "stream") {
     return (
-      <pre className="notebook-output notebook-output-stream">
+      <pre className={cn(outputClassName, "whitespace-pre-wrap")}>
         <code>{notebookOutputText(output.text)}</code>
       </pre>
     );
@@ -124,7 +126,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
       ? output.traceback.join("\n")
       : [output.ename, output.evalue].filter(Boolean).join(": ");
     return (
-      <pre className="notebook-output notebook-output-error">
+      <pre className={cn(outputClassName, "whitespace-pre-wrap border-error/45 text-error")}>
         <code>{traceback}</code>
       </pre>
     );
@@ -134,8 +136,8 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     const png = outputDataText(output.data, "image/png").replace(/\s/g, "");
     if (png) {
       return (
-        <div className="notebook-output notebook-output-image">
-          <img src={`data:image/png;base64,${png}`} alt="" />
+        <div className={cn(outputClassName, "p-2.5")}>
+          <img src={`data:image/png;base64,${png}`} alt="" className="block max-w-full" />
         </div>
       );
     }
@@ -143,8 +145,8 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     const jpeg = outputDataText(output.data, "image/jpeg").replace(/\s/g, "");
     if (jpeg) {
       return (
-        <div className="notebook-output notebook-output-image">
-          <img src={`data:image/jpeg;base64,${jpeg}`} alt="" />
+        <div className={cn(outputClassName, "p-2.5")}>
+          <img src={`data:image/jpeg;base64,${jpeg}`} alt="" className="block max-w-full" />
         </div>
       );
     }
@@ -153,7 +155,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     if (html) {
       return (
         <div
-          className="notebook-output notebook-output-html"
+          className="overflow-auto rounded-md border border-border bg-secondary-bg p-2.5"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
       );
@@ -164,15 +166,13 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
 
     const json = outputDataJson(output.data);
     if (json) {
-      return (
-        <HighlightedCode code={json} language="json" className="notebook-output notebook-code" />
-      );
+      return <HighlightedCode code={json} language="json" className={outputClassName} />;
     }
 
     const text = outputDataText(output.data, "text/plain");
     if (text) {
       return (
-        <pre className="notebook-output notebook-output-stream">
+        <pre className={cn(outputClassName, "whitespace-pre-wrap")}>
           <code>{text}</code>
         </pre>
       );
@@ -207,21 +207,21 @@ function NotebookCellView({
   const outputs = Array.isArray(cell.outputs) ? cell.outputs : [];
 
   return (
-    <section className={cn("notebook-cell", isCode && "notebook-code-cell")}>
-      <div className="notebook-cell-gutter">
-        <span className="notebook-cell-count">
+    <section className="mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5">
+      <div className="pt-[31px] text-right">
+        <span className="font-mono text-[0.82em] text-text-lighter">
           {isCode ? `[${cell.execution_count ?? ""}]` : ""}
         </span>
       </div>
-      <div className="notebook-cell-body">
-        <div className="notebook-cell-toolbar">
-          <span className="notebook-cell-kind">{cell.cell_type}</span>
-          <div className="notebook-cell-actions">
+      <div className="min-w-0">
+        <div className="flex min-h-7 items-center justify-between gap-2 opacity-75 transition-opacity hover:opacity-100 focus-within:opacity-100">
+          <span className="font-mono text-[0.78em] text-text-lighter">{cell.cell_type}</span>
+          <div className="flex items-center gap-0.5">
             {isCode ? (
               <Button
                 variant="ghost"
                 compact
-                className="notebook-icon-button"
+                className="h-6 min-w-6 text-text-lighter hover:text-text"
                 onClick={() => onRun(cellIndex)}
                 disabled={isRunning}
                 tooltip={isRunning ? "Running cell" : "Run cell"}
@@ -233,7 +233,7 @@ function NotebookCellView({
             <Button
               variant="ghost"
               compact
-              className="notebook-icon-button"
+              className="h-6 min-w-6 text-text-lighter hover:text-text"
               onClick={() => onEditToggle(cellIndex)}
               tooltip={isEditing ? "Preview cell" : "Edit cell"}
               tooltipSide="bottom"
@@ -253,7 +253,7 @@ function NotebookCellView({
             />
           ) : (
             <textarea
-              className="notebook-cell-textarea"
+              className="m-0 block min-h-[92px] w-full resize-y rounded-md border border-border bg-secondary-bg p-2.5 font-mono text-[0.92em] leading-[1.55] text-text outline-none focus:border-accent"
               value={source}
               spellCheck={isMarkdown}
               onChange={(event) => onSourceChange(cellIndex, event.target.value)}
@@ -266,12 +266,12 @@ function NotebookCellView({
           <HighlightedCode
             code={source}
             language={isCode ? language : "plaintext"}
-            className="notebook-input notebook-code"
+            className={outputClassName}
           />
         )}
 
         {outputs.length > 0 ? (
-          <div className="notebook-outputs">
+          <div className="mt-2 grid gap-2">
             {outputs.map((output, outputIndex) => (
               <NotebookOutputView key={`${output.output_type}-${outputIndex}`} output={output} />
             ))}
@@ -370,7 +370,7 @@ export function NotebookEditor() {
   if (!parsed.ok) {
     return (
       <div
-        className="notebook-editor notebook-empty"
+        className="flex h-full items-center justify-center gap-2 overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text-lighter"
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
         <Warning weight="duotone" />
@@ -383,10 +383,10 @@ export function NotebookEditor() {
 
   return (
     <div
-      className="notebook-editor"
+      className="h-full overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text"
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >
-      <div className="notebook-document">
+      <div className="mx-auto w-[min(100%,980px)]">
         {parsed.notebook.cells.map((cell, cellIndex) => (
           <NotebookCellView
             key={cell.id ?? cellIndex}

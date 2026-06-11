@@ -191,8 +191,8 @@ export function NotebookCodeCellEditor({
   } as CSSProperties;
 
   return (
-    <div className="notebook-cell-monaco-shell monaco-editor-shell" style={shellStyle}>
-      <div ref={containerRef} className="notebook-cell-monaco" />
+    <div className="monaco-editor-shell overflow-hidden bg-primary-bg" style={shellStyle}>
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 }
