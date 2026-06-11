@@ -16,6 +16,23 @@
   outline: 1px solid color-mix(in srgb, var(--color-accent, #4f8cff) 72%, white 8%);
 }
 
+.monaco-editor-shell .peekview-widget .head .peekview-title,
+.monaco-editor-shell .reference-zone-widget .ref-tree,
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list-row,
+.monaco-editor-shell .reference-zone-widget .ref-tree .reference,
+.monaco-editor-shell .reference-zone-widget .ref-tree .reference-file,
+.monaco-editor-shell .reference-zone-widget .ref-tree .referenceMatch,
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-highlighted-label,
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-highlighted-label span {
+  font-family: var(--athas-monaco-font-family, var(--editor-font-family));
+  font-size: var(--athas-monaco-font-size, 13px);
+  line-height: var(--athas-monaco-line-height, 20px);
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title .dirname:not(:empty) {
+  font-size: 0.9em;
+}
+
 .monaco-vim-statusbar {
   position: absolute;
   right: 10px;

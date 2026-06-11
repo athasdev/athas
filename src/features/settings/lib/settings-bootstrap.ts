@@ -6,7 +6,7 @@ import {
   loadSettingsFromStore,
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 
 function getSystemThemePreference(): "light" | "dark" {
   if (typeof window !== "undefined" && window.matchMedia) {

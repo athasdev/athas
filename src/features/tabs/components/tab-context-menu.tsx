@@ -2,6 +2,8 @@ import {
   ColumnsIcon as Columns2,
   CopyIcon as Copy,
   FolderOpenIcon as FolderOpen,
+  LockIcon as Lock,
+  LockOpenIcon as LockOpen,
   PencilSimpleLineIcon as PencilSimpleLine,
   PushPinIcon as Pin,
   PushPinSlashIcon as PinOff,
@@ -10,12 +12,12 @@ import {
   TerminalWindowIcon as Terminal,
   XIcon as X,
 } from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { isVirtualContent } from "@/features/panes/types/pane-content";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { isVirtualContent } from "@/features/panes/types/pane-content.types";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { showPromptDialog } from "@/features/dialogs/dialog-service";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
@@ -37,6 +39,8 @@ interface TabContextMenuProps {
   onRevealInFinder?: (path: string) => void;
   onSplitRight?: (paneId: string, bufferId: string) => void;
   onSplitDown?: (paneId: string, bufferId: string) => void;
+  isPaneLocked?: boolean;
+  onTogglePaneLocked?: () => void;
 }
 
 const TabContextMenu = ({
@@ -56,6 +60,8 @@ const TabContextMenu = ({
   onRevealInFinder,
   onSplitRight,
   onSplitDown,
+  isPaneLocked = false,
+  onTogglePaneLocked,
 }: TabContextMenuProps) => {
   if (!isOpen || !buffer) return null;
 
@@ -117,6 +123,17 @@ const TabContextMenu = ({
       : []),
     ...(paneId && (onSplitRight || onSplitDown)
       ? [{ id: "sep-2", label: "", separator: true, onClick: () => {} }]
+      : []),
+    ...(onTogglePaneLocked
+      ? [
+          {
+            id: "toggle-editor-group-lock",
+            label: isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group",
+            icon: isPaneLocked ? <LockOpen /> : <Lock />,
+            onClick: onTogglePaneLocked,
+          },
+          { id: "sep-lock", label: "", separator: true, onClick: () => {} },
+        ]
       : []),
     {
       id: "copy-path",

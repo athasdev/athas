@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { FileEntry } from "@/features/file-system/types/app";
-import type { FileItem } from "@/features/global-search/models/types";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { chatComposerDropdownClassName } from "../input/chat-composer-control-styles";
 import { AIFileSelector } from "./ai-file-selector";
 

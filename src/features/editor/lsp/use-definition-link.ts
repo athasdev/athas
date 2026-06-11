@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorUIStore } from "../stores/ui-store";
+import { useEditorUIStore } from "../stores/ui.store";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
 
 interface Definition {

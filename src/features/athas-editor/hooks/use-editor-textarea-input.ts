@@ -8,9 +8,9 @@ import {
 } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
 import type { FoldTransformResult } from "./use-fold-transform";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { applyIncrementalLineEdit } from "@/features/editor/stores/view-store";
-import type { Position, Range } from "@/features/editor/types/editor";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { applyIncrementalLineEdit } from "@/features/editor/stores/view.store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import { applyVirtualEdit } from "@/features/athas-editor/utils/fold-transformer";
 import { applyIncrementalLineOffsetEdit } from "@/features/athas-editor/utils/html";
 import {

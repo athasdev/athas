@@ -19,7 +19,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
-import { showConfirmDialog } from "@/features/dialogs/dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import Select from "@/ui/select";
 import { toast } from "@/ui/toast";
 import { formatShortDate } from "@/utils/date";
@@ -33,7 +33,7 @@ import {
   getTags,
   pushTag,
 } from "../api/git-tags-api";
-import type { GitRemote, GitTag } from "../types/git-types";
+import type { GitRemote, GitTag } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
 interface GitTagManagerProps {

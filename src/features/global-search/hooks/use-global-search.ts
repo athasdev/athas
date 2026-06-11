@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebounce, useDebouncedCallback } from "use-debounce";
-import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { getBaseName } from "@/utils/path-helpers";
 import { PREVIEW_DEBOUNCE_DELAY, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { useFffSearch } from "./use-fff-search";

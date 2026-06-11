@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useExtensionStore } from "../registry/extension-store";
 

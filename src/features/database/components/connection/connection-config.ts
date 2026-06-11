@@ -1,5 +1,5 @@
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
-import type { SavedConnection } from "../../stores/connection-store";
+import type { SavedConnection } from "../../stores/connection.store";
 import type { ConnectionValidationInput } from "./connection-validation";
 
 type ConnectionConfigInput = Pick<

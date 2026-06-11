@@ -3,11 +3,11 @@ import { exists } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-shell";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { logger } from "../utils/logger";
 import { parseMarkdown } from "./parser";
 

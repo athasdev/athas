@@ -16,13 +16,13 @@ import {
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
-import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
-import type { GitDiff } from "@/features/git/types/git-types";
+import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
+import type { GitDiff } from "@/features/git/types/git.types";
 
 interface TabBarItemProps {
   buffer: PaneContent;

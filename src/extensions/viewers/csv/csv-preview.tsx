@@ -4,10 +4,10 @@ import {
   RowsIcon as Rows,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import { TableView } from "./csv-table-view";

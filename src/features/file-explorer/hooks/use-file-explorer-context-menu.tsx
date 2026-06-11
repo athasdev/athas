@@ -22,7 +22,7 @@ import {
   WarningIcon as Warning,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   buildEnvTemplateContent,
@@ -30,9 +30,9 @@ import {
   isEnvFileName,
 } from "@/features/file-explorer/lib/env-template";
 import { openLocalHistoryForPath } from "@/features/local-history/utils/open-local-history";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
-import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
-import type { ContextMenuState } from "@/features/file-system/types/app";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
+import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";

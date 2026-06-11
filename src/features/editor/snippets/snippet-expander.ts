@@ -1,6 +1,6 @@
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { parseSnippet, replaceVariables } from "./snippet-parser";
-import type { SnippetSession, TabStop } from "./types";
+import type { SnippetSession, TabStop } from "../types/snippet.types";
 
 /**
  * Expand a snippet and create a snippet session

@@ -14,7 +14,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
-import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github";
+import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github.types";
 
 // CI Status Indicator
 interface CIStatusProps {

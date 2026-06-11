@@ -13,11 +13,11 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
-import { isEditorContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { isEditorContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import EditorContextMenu from "@/features/editor/context-menu/context-menu";
@@ -60,14 +60,14 @@ import {
 } from "@/features/athas-editor/hooks/use-viewport-lines";
 import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
 import type { SemanticTokenState } from "@/features/editor/lsp/use-semantic-tokens";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFoldStore } from "@/features/editor/stores/fold-store";
-import { useMinimapStore } from "@/features/editor/stores/minimap-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import type { Position, Range } from "@/features/editor/types/editor";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFoldStore } from "@/features/editor/stores/fold.store";
+import { useMinimapStore } from "@/features/editor/stores/minimap.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import {
   applyVirtualEdit,
   calculateActualOffset,

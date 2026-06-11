@@ -6,19 +6,22 @@ import {
   HardDrivesIcon as Server,
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
-import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { RecentFolder } from "@/features/file-system/types/recent-folders";
-import ConnectionDialog from "@/features/remote/connection-dialog";
-import PasswordPromptDialog from "@/features/remote/password-prompt-dialog";
+import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
+import ConnectionDialog from "@/features/remote/components/connection-dialog";
+import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
 import {
   connectRemoteConnection,
   loadRemoteConnections,
 } from "@/features/remote/services/remote-connection-actions";
-import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
+import type {
+  RemoteConnection,
+  RemoteConnectionFormData,
+} from "@/features/remote/types/remote.types";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import Command, {
   CommandEmpty,
@@ -33,7 +36,7 @@ import Command, {
 } from "@/ui/command";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 
 interface ProjectPickerProps {
   isOpen: boolean;

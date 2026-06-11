@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 
 export interface DiagnosticDecoration {
   diagnostic: Diagnostic;

@@ -1,4 +1,4 @@
-import type { FoldRegion } from "../stores/fold-store";
+import type { FoldRegion } from "../stores/fold.store";
 import type { Token } from "./html";
 import { buildLineOffsetMap } from "./html";
 import {

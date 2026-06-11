@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 export interface LintOptions {
   filePath: string;

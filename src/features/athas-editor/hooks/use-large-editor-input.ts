@@ -11,8 +11,8 @@ import {
 } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import type { Position, Range } from "@/features/editor/types/editor";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import {
   readEditorClipboardText,
   writeEditorClipboardText,

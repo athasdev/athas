@@ -1,8 +1,8 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
-import type { GitDiff, GitDiffLine } from "@/features/git/types/git-types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
+import type { GitDiff, GitDiffLine } from "@/features/git/types/git.types";
 import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 
 interface AcpDiffOutput {
   path: string;

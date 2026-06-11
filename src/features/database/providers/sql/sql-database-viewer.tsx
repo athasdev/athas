@@ -18,11 +18,11 @@ import {
 } from "../../lib/query-result-export";
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { LoadingIndicator } from "@/ui/loading";
-import type { DatabaseObjectKind, ViewMode } from "../../models/common.types";
-import type { DatabaseType } from "../../models/provider.types";
-import type { SqlDatabaseActions, SqlDatabaseState } from "./create-sql-store";
+import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
+import type { DatabaseType } from "../../types/provider.types";
+import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
 
 export interface SqlDatabaseViewerProps {
   databasePath?: string;

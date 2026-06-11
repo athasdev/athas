@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { isMac } from "@/utils/platform";
 
 export function usePlatformSetup() {

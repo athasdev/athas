@@ -18,7 +18,7 @@ import type {
   DatabaseObjectKind,
   PostgresSubscriptionInfo,
   ViewMode,
-} from "../models/common.types";
+} from "../types/common.types";
 
 interface TableToolbarProps {
   fileName: string;

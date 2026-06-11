@@ -5,7 +5,7 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { GitDiffLine } from "@/features/git/types/git-types";
+import type { GitDiffLine } from "@/features/git/types/git.types";
 import { Button } from "@/ui/button";
 
 interface InlineDiffProps {

@@ -1,4 +1,4 @@
-import type { EditorAPI } from "@/features/editor/extensions/types";
+import type { EditorAPI } from "@/features/editor/types/editor-extension.types";
 import { BaseThemeExtension } from "./base-theme-extension";
 // Import all theme JSON files
 import ayuThemes from "./builtin/ayu.json";

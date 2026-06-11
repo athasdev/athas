@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { type TerminalSlotProps, useTerminalSlotsStore } from "../stores/terminal-slots-store";
+import { type TerminalSlotProps, useTerminalSlotsStore } from "../stores/terminal-slots.store";
 
 interface Props extends Omit<TerminalSlotProps, "el"> {
   sessionId: string;

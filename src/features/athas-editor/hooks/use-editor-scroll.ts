@@ -1,5 +1,5 @@
 import { type RefObject, useCallback, useEffect, useRef } from "react";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   applyEditorScrollTransform,
   type ScrollLayerRef,

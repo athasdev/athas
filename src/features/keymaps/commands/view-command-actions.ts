@@ -1,10 +1,10 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { useKeymapStore } from "../stores/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useKeymapStore } from "../stores/keymaps.store";
 
 function getZoomTarget(): "editor" | "terminal" | "webviewer" {
   const terminalContainer = document.querySelector('[data-terminal-container="active"]');
@@ -39,6 +39,10 @@ export function openDiagnosticsBuffer(): void {
 
 export function openCommandPalette(): void {
   useUIState.getState().setIsCommandPaletteVisible(true);
+}
+
+export function showNotifications(): void {
+  window.dispatchEvent(new CustomEvent("athas:notifications:show"));
 }
 
 export function toggleAgentLauncher(): void {

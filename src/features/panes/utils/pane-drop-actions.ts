@@ -1,4 +1,4 @@
-import { usePaneStore } from "../stores/pane-store";
+import { usePaneStore } from "../stores/pane.store";
 import { ensureBufferInPane } from "./pane-buffer-actions";
 import type { PaneDropZone } from "./pane-drop-zones";
 import { getPaneSplitDropOptions } from "./pane-drop-zones";

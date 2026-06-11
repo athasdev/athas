@@ -5,15 +5,15 @@ import {
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   chromeControl,
   chromeControlGroup,
   chromeIcon,
 } from "@/features/layout/components/chrome-control-styles";
-import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";

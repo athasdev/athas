@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
-import type { CommandPaletteViewId } from "@/features/command-palette/models/view.types";
-import type { SettingsTab } from "./types";
+import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
+import type { SettingsTab } from "./types/ui-state.types";
 
 export interface ModalState {
   isQuickOpenVisible: boolean;

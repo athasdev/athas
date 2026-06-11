@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
 import { getSqlHistoryStorageKey } from "../../../lib/sql-history-storage";
-import type { ColumnInfo, FilteredQueryResult, QueryResult } from "../../../models/common.types";
-import { createSqlStore } from "../create-sql-store";
+import type { ColumnInfo, FilteredQueryResult, QueryResult } from "../../../types/common.types";
+import { createSqlStore } from "../stores/create-sql.store";
 
 vi.mock("@/features/database/services/database-provider-sidecar", () => ({
   invokeDatabaseProvider: vi.fn(),

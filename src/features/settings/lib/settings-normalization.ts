@@ -1,4 +1,4 @@
-import { getProviderById } from "@/features/ai/types/providers";
+import { getProviderById } from "@/features/ai/types/providers.types";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import { normalizeFileTreeDensity } from "@/features/file-explorer/lib/file-tree-density";
 import {
@@ -20,7 +20,7 @@ import {
   normalizeItemOrder,
 } from "@/features/layout/config/item-order";
 import { normalizeUiFontSize } from "@/features/settings/lib/ui-font-size";
-import type { Settings, SettingsSection } from "@/features/settings/types/settings";
+import type { Settings, SettingsSection } from "@/features/settings/types/settings.types";
 
 const AI_MODEL_MIGRATIONS: Record<string, Record<string, string>> = {
   anthropic: {

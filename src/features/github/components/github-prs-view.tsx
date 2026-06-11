@@ -27,14 +27,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
@@ -49,8 +49,8 @@ import {
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
-import { useGitHubStore } from "../stores/github-store";
-import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github";
+import { useGitHubStore } from "../stores/github.store";
+import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubCreateCommand, type GitHubCreateKind } from "./github-create-command";
 import GitHubIssuesView from "./github-issues-view";

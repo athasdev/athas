@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitWorktree } from "../types/git-types";
+import type { GitWorktree } from "../types/git.types";
 
 export const getWorktrees = async (repoPath: string): Promise<GitWorktree[]> => {
   try {

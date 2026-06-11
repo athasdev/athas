@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { buildHtmlPreviewDocument } from "./html-preview-document";
 
 export function HtmlPreview() {

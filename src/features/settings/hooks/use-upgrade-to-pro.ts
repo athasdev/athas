@@ -1,4 +1,4 @@
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 
 export function useUpgradeToPro() {
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);

@@ -1,5 +1,9 @@
-import type { ToolCall } from "@/features/ai/types/ai-chat";
-import type { AcpToolCallLocation, AcpToolCallStatus, AcpToolKind } from "@/features/ai/types/acp";
+import type { ToolCall } from "@/features/ai/types/ai-chat.types";
+import type {
+  AcpToolCallLocation,
+  AcpToolCallStatus,
+  AcpToolKind,
+} from "@/features/ai/types/acp.types";
 
 export const createToolCall = (
   toolName: string,

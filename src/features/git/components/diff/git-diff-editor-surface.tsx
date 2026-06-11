@@ -5,8 +5,8 @@ import {
   serializeGitDiffForEditor,
   serializeMultiFileDiffForEditor,
 } from "../../utils/diff-editor-content";
-import type { MultiFileDiff } from "../../types/git-diff-types";
-import type { GitDiff } from "../../types/git-types";
+import type { MultiFileDiff } from "../../types/git-diff.types";
+import type { GitDiff } from "../../types/git.types";
 
 interface GitDiffEditorSurfaceProps {
   cacheKey: string;

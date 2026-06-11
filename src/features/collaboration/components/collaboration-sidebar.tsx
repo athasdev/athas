@@ -31,8 +31,8 @@ import {
   deleteCollaborationNoteItem,
   renameCollaborationNoteItem,
 } from "@/features/collaboration/lib/collaboration-sidebar-model";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import {
   appendCollaborationPrivateChatMessage,
@@ -43,7 +43,7 @@ import {
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
 } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";

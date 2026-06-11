@@ -11,7 +11,7 @@ import {
   HEADER_TRAILING_ITEM_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
 } from "@/features/layout/config/item-order";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
 export const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
@@ -43,7 +43,7 @@ export const defaultSettings: Settings = {
   terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
-  terminalCursorStyle: "block",
+  terminalCursorStyle: "bar",
   terminalCursorBlink: true,
   terminalCursorWidth: 2,
   terminalDefaultShellId: "",

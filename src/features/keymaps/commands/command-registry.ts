@@ -1,4 +1,4 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   closeActiveEditorGroup,
   closeOtherEditorGroups,
@@ -7,7 +7,7 @@ import {
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
 } from "@/features/panes/utils/pane-command-actions";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   startGeneratedDebugSession,
   stopDebugSession,
@@ -88,6 +88,7 @@ import {
   resetZoom,
   showFind,
   showFindReplace,
+  showNotifications,
   showThemeSelector,
   showWhatsNew,
   toggleAgentLauncher,
@@ -115,8 +116,8 @@ import {
   toggleFullscreenMac,
   toggleNativeMenuBar,
 } from "./window-command-actions";
-import { useKeymapStore } from "../stores/store";
-import type { Command } from "../types";
+import { useKeymapStore } from "../stores/keymaps.store";
+import type { Command } from "../types/keymaps.types";
 import { keymapRegistry } from "../utils/registry";
 
 const fileCommands: Command[] = [
@@ -509,6 +510,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+p",
     execute: openCommandPalette,
+  },
+  {
+    id: "workbench.showNotifications",
+    title: "Show Notifications",
+    category: "View",
+    execute: showNotifications,
   },
   {
     id: "workbench.agentLauncher",

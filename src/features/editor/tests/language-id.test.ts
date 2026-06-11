@@ -5,7 +5,11 @@ import {
 } from "@/features/athas-editor/utils/language-id";
 import { detectLanguageFromFileName } from "../utils/language-detection";
 import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
-import { hasLineBasedSyntaxHighlighter, tokenizeLineBasedSyntax } from "../utils/line-based-syntax";
+import {
+  hasLineBasedSyntaxFallback,
+  hasLineBasedSyntaxHighlighter,
+  tokenizeLineBasedSyntax,
+} from "../utils/line-based-syntax";
 import {
   MONACO_HIGHLIGHT_LANGUAGE_IDS,
   MONACO_LANGUAGE_BY_ATHAS_ID,
@@ -129,6 +133,47 @@ describe("line-based syntax highlighting", () => {
         expect.objectContaining({ class_name: "token-property" }),
         expect.objectContaining({ class_name: "token-string" }),
         expect.objectContaining({ class_name: "token-constant" }),
+      ]),
+    );
+  });
+
+  it("provides fallback tokens for reported parser-backed languages", () => {
+    for (const languageId of ["typescriptreact", "zig", "elm", "elisp"]) {
+      expect(hasLineBasedSyntaxHighlighter(languageId)).toBe(false);
+      expect(hasLineBasedSyntaxFallback(languageId)).toBe(true);
+    }
+
+    expect(
+      tokenizeLineBasedSyntax(
+        'export const View = () => <div className="root" />',
+        "typescriptreact",
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-tag" }),
+        expect.objectContaining({ class_name: "token-attribute" }),
+      ]),
+    );
+    expect(tokenizeLineBasedSyntax("pub fn main() void { const n: i32 = 1; }", "zig")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-type" }),
+        expect.objectContaining({ class_name: "token-number" }),
+      ]),
+    );
+    expect(tokenizeLineBasedSyntax("module Main exposing (main)\nmain = 1", "elm")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-type" }),
+        expect.objectContaining({ class_name: "token-function" }),
+      ]),
+    );
+    expect(tokenizeLineBasedSyntax('(defun hello () "hi")', "elisp")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-string" }),
+        expect.objectContaining({ class_name: "token-punctuation" }),
       ]),
     );
   });

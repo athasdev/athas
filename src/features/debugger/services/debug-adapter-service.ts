@@ -8,7 +8,7 @@ import type {
   DebugProcessOutput,
   DebugProtocolMessage,
   DebugSessionEnded,
-} from "@/features/debugger/types/debugger";
+} from "@/features/debugger/types/debugger.types";
 
 interface DebuggerEventHandlers {
   onMessage?: (payload: DebugProtocolMessage) => void;

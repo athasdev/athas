@@ -1,5 +1,5 @@
 import { cn } from "@/utils/cn";
-import type { GitFile } from "../../types/git-types";
+import type { GitFile } from "../../types/git.types";
 
 interface GitStatusDotProps {
   status: GitFile["status"];

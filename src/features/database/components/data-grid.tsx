@@ -19,7 +19,7 @@ import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
 import { mapForeignKeysByColumn } from "../lib/database-schema";
-import type { ColumnInfo, ForeignKeyInfo } from "../models/common.types";
+import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
 import {
   formatGridSelection,
   getFullGridRange,

@@ -1,16 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type {
   AcpAgentStatus,
   AcpEvent,
   AcpPromptContentBlock,
   AcpSessionList,
   AgentConfig,
-} from "@/features/ai/types/acp";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
+} from "@/features/ai/types/acp.types";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 import { buildContextPrompt } from "../utils/ai-context-builder";

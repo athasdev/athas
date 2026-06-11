@@ -37,9 +37,9 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
-import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
@@ -48,8 +48,8 @@ import {
   type TerminalTabSidebarPosition,
   type TerminalWidthMode,
   useTerminalStore,
-} from "@/features/terminal/stores/terminal-store";
-import type { Terminal } from "@/features/terminal/types/terminal";
+} from "@/features/terminal/stores/terminal.store";
+import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
@@ -60,7 +60,7 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "@/features/tabs/utils/internal-tab-drag";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Tooltip from "../../../ui/tooltip";
 import TerminalTabBarItem from "./terminal-tab-bar-item";
 import TerminalTabContextMenu from "./terminal-tab-context-menu";
@@ -428,6 +428,65 @@ const TerminalTabBar = ({
   const sortedTerminalIds = sortedTerminals.map((terminal) => terminal.id);
   const draggedTerminal =
     sortedTerminals.find((terminal) => terminal.id === draggedTerminalId) ?? null;
+  const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
+  const terminalToolbarActions = (
+    <div
+      className={cn(
+        "flex shrink-0 items-center gap-1",
+        orientation === "vertical" ? "border-border/60 border-b px-1.5 py-1" : "px-1",
+      )}
+    >
+      {onSearchTerminal && (
+        <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
+          <Button
+            onClick={onSearchTerminal}
+            variant="ghost"
+            className="shrink-0 rounded-lg text-text-lighter"
+            compact
+          >
+            <Search />
+          </Button>
+        </Tooltip>
+      )}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <Tooltip content="New Terminal (Cmd+T)" side="bottom">
+          <Button
+            onClick={onNewTerminal}
+            variant="ghost"
+            className="shrink-0 rounded-lg text-text-lighter"
+            compact
+          >
+            <Plus />
+          </Button>
+        </Tooltip>
+        {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
+          <Tooltip content="Choose Terminal Profile" side="bottom">
+            <Button
+              ref={profileMenuButtonRef}
+              onClick={openProfileMenu}
+              variant="ghost"
+              className="h-6 w-5 shrink-0 rounded-lg text-text-lighter"
+              compact
+            >
+              <ChevronDown />
+            </Button>
+          </Tooltip>
+        )}
+      </div>
+      {onFullScreen && (
+        <Tooltip content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"} side="bottom">
+          <Button
+            onClick={onFullScreen}
+            variant="ghost"
+            className="shrink-0 rounded-lg text-text-lighter"
+            compact
+          >
+            {isFullScreen ? <Minimize2 /> : <Maximize2 />}
+          </Button>
+        </Tooltip>
+      )}
+    </div>
+  );
   const sortableStrategy =
     orientation === "vertical" ? verticalListSortingStrategy : horizontalListSortingStrategy;
   const pinnedTerminals = sortedTerminals.filter((terminal) => terminal.isPinned);
@@ -469,7 +528,6 @@ const TerminalTabBar = ({
     if (dirLabel) return dirLabel;
     return terminal.name;
   };
-  const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
   const profileMenuItems: MenuItem[] = terminalProfiles.map((profile) => ({
     id: profile.id,
     label: profile.name,
@@ -687,6 +745,8 @@ const TerminalTabBar = ({
           aria-label="Terminal tabs"
           onContextMenu={handleToolbarContextMenu}
         >
+          {orientation === "vertical" && terminalToolbarActions}
+
           {/* Tab list */}
           <SortableContext items={sortedTerminalIds} strategy={sortableStrategy}>
             <div
@@ -807,62 +867,7 @@ const TerminalTabBar = ({
           </SortableContext>
 
           {/* Horizontal mode - Action buttons on the right */}
-          {orientation === "horizontal" && (
-            <div className="flex shrink-0 items-center gap-1 px-1">
-              {onSearchTerminal && (
-                <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-                  <Button
-                    onClick={onSearchTerminal}
-                    variant="ghost"
-                    className="shrink-0 rounded-lg text-text-lighter"
-                    compact
-                  >
-                    <Search />
-                  </Button>
-                </Tooltip>
-              )}
-              <div className="flex shrink-0 items-center gap-0.5">
-                <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-                  <Button
-                    onClick={onNewTerminal}
-                    variant="ghost"
-                    className="shrink-0 rounded-lg text-text-lighter"
-                    compact
-                  >
-                    <Plus />
-                  </Button>
-                </Tooltip>
-                {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
-                  <Tooltip content="Choose Terminal Profile" side="bottom">
-                    <Button
-                      ref={profileMenuButtonRef}
-                      onClick={openProfileMenu}
-                      variant="ghost"
-                      className="h-6 w-5 shrink-0 rounded-lg text-text-lighter"
-                      compact
-                    >
-                      <ChevronDown />
-                    </Button>
-                  </Tooltip>
-                )}
-              </div>
-              {onFullScreen && (
-                <Tooltip
-                  content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
-                  side="bottom"
-                >
-                  <Button
-                    onClick={onFullScreen}
-                    variant="ghost"
-                    className="shrink-0 rounded-lg text-text-lighter"
-                    compact
-                  >
-                    {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
-          )}
+          {orientation === "horizontal" && terminalToolbarActions}
 
           <DragOverlay dropAnimation={null}>
             {draggedTerminal ? (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 
 interface UseInlayHintSuppressionOptions {
   durationMs: number;

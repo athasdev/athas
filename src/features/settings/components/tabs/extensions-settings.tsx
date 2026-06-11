@@ -29,11 +29,11 @@ import {
   resetSkillLocalOverride,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
-import type { AgentConfig } from "@/features/ai/types/acp";
-import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
+import type { AgentConfig } from "@/features/ai/types/acp.types";
+import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

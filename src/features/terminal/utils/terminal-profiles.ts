@@ -1,5 +1,5 @@
-import type { Settings } from "@/features/settings/store";
-import type { Shell, TerminalProfile } from "../types/terminal";
+import type { Settings } from "@/features/settings/stores/settings.store";
+import type { Shell, TerminalProfile } from "../types/terminal.types";
 
 export const SYSTEM_DEFAULT_PROFILE_ID = "system-default";
 export const DEFAULT_SHELL_OPTION_VALUE = "system";

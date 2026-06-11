@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useDiagnosticsStore } from "../stores/diagnostics-store";
-import type { Diagnostic } from "../types/diagnostics";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useDiagnosticsStore } from "../stores/diagnostics.store";
+import type { Diagnostic } from "../types/diagnostics.types";
 import DiagnosticsPane from "./diagnostics-pane";
 
 const DiagnosticsBuffer = () => {

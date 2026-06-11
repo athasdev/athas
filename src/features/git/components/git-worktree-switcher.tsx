@@ -11,7 +11,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
-import type { GitWorktree } from "../types/git-types";
+import type { GitWorktree } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
 interface GitWorktreeSwitcherProps {

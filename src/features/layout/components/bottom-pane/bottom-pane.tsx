@@ -1,12 +1,12 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import DebuggerView from "@/features/debugger/components/debugger-view";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -15,8 +15,8 @@ import {
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
 import { IS_MAC } from "@/utils/platform";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {

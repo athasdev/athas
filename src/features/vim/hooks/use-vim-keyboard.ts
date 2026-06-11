@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateOffsetFromPosition, getLineHeight } from "@/features/editor/utils/position";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   executeReplaceCommand,
   executeVimCommand,
@@ -12,7 +12,7 @@ import { getCommandParseStatus, parseVimCommand } from "@/features/vim/core/core
 import { createFindCharMotion } from "@/features/vim/core/motions/character-motions";
 import { createVimEditing } from "@/features/vim/stores/vim-editing";
 import { useVimSearchStore } from "@/features/vim/stores/vim-search";
-import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 
 interface UseVimKeyboardProps {
   onSave?: () => void;

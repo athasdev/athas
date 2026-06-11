@@ -4,7 +4,7 @@ import {
   ArrowCounterClockwiseIcon as RotateCcw,
   XIcon as X,
 } from "@phosphor-icons/react";
-import type { Action } from "@/features/command-palette/models/action.types";
+import type { Action } from "@/features/command-palette/types/action.types";
 
 interface TabActionsParams {
   activeBufferId: string | null;

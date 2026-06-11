@@ -8,7 +8,7 @@ import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import type { FileStatusFilter } from "../types/github-pr-viewer";
+import type { FileStatusFilter } from "../types/github-pr-viewer.types";
 import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(

@@ -6,10 +6,10 @@
  * so that successive calls advance correctly.
  */
 
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import type { Action, EditorContext } from "../core/types";
+import type { Action, EditorContext } from "../core/types/core.types";
 
 export const toggleCaseAction: Action = {
   name: "toggleCase",

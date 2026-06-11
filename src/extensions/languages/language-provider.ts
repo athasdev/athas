@@ -2,7 +2,7 @@ import type {
   ExtensionContext,
   LanguageExtension,
   Token,
-} from "@/features/editor/extensions/types";
+} from "@/features/editor/types/editor-extension.types";
 import {
   convertToEditorTokens,
   tokenizeCode,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff } from "../types/git.types";
 import { isDiffFile, parseRawDiffContent } from "../utils/git-diff-parser";
 import { getDiffLineVisualState } from "../utils/git-diff-helpers";
 

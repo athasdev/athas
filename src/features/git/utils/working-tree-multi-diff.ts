@@ -1,6 +1,6 @@
 import { getFileDiff } from "../api/git-diff-api";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff, GitFile, GitStatus } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff, GitFile, GitStatus } from "../types/git.types";
 import { countDiffStats } from "./git-diff-helpers";
 
 const WORKING_TREE_TITLE = "Uncommitted Changes";

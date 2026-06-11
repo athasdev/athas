@@ -1,14 +1,14 @@
 import type { MouseEvent } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Checkbox from "@/ui/checkbox";
 import {
   SIDEBAR_TREE_ICON_SIZE,
   SidebarTreeRow,
 } from "@/features/sidebar-tree/components/sidebar-tree";
 import { cn } from "@/utils/cn";
-import type { GitFile } from "../../types/git-types";
+import type { GitFile } from "../../types/git.types";
 
 interface GitFileItemProps {
   file: GitFile;

@@ -11,6 +11,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  type CSSProperties,
   type RefObject,
   type MouseEventHandler,
   type ReactNode,
@@ -20,15 +21,15 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 import { InlineEditPopover } from "@/features/athas-editor/components/inline-edit-popover";
 import { useInlineEdit } from "@/features/athas-editor/hooks/use-inline-edit";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
-import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { useBufferStore } from "../stores/buffer-store";
-import { useEditorSettingsStore } from "../stores/settings-store";
-import { useEditorStateStore } from "../stores/state-store";
-import { useEditorUIStore } from "../stores/ui-store";
-import type { Position, Range } from "../types/editor";
+import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useBufferStore } from "../stores/buffer.store";
+import { useEditorSettingsStore } from "../stores/settings.store";
+import { useEditorStateStore } from "../stores/state.store";
+import { useEditorUIStore } from "../stores/ui.store";
+import type { Position, Range } from "../types/editor.types";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { calculateLineHeight } from "../utils/lines";
 import { editorAPI } from "../extensions/api";
@@ -360,6 +361,17 @@ function toAthasVimMode(mode: string): AthasVimMode {
   return "normal";
 }
 
+function syncContainedEditorFontOptions(
+  container: HTMLElement,
+  options: Pick<Monaco.editor.IEditorOptions, "fontFamily" | "fontSize" | "lineHeight">,
+) {
+  for (const editor of monacoEditor.getEditors()) {
+    const editorElement = editor.getDomNode();
+    if (!editorElement || !container.contains(editorElement)) continue;
+    editor.updateOptions(options);
+  }
+}
+
 export function MonacoBackedEditor({
   bufferId: propBufferId,
   viewStateKey,
@@ -623,6 +635,7 @@ export function MonacoBackedEditor({
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !buffer) return;
+    const fontOptions = { fontFamily, fontSize, lineHeight };
 
     const model = monacoEditor.createModel(content, monacoLanguageId, modelUri);
     const editor = monacoEditor.create(container, {
@@ -636,7 +649,7 @@ export function MonacoBackedEditor({
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
       minimap: { enabled: minimapEnabled },
-      scrollBeyondLastLine: false,
+      scrollBeyondLastLine: true,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
@@ -675,6 +688,16 @@ export function MonacoBackedEditor({
       editor.focus();
       syncCursorAndSelection();
     };
+
+    const syncNestedEditorFonts = () => syncContainedEditorFontOptions(container, fontOptions);
+    const createdEditorDisposable = monacoEditor.onDidCreateEditor((createdEditor) => {
+      requestAnimationFrame(() => {
+        const editorElement = createdEditor.getDomNode();
+        if (!editorElement || !container.contains(editorElement)) return;
+        createdEditor.updateOptions(fontOptions);
+      });
+    });
+    requestAnimationFrame(syncNestedEditorFonts);
 
     if (isActiveSurface && !readOnly && !isPreviewMode) {
       const executeTextEdit = (range: Monaco.Range, text: string) => {
@@ -744,6 +767,41 @@ export function MonacoBackedEditor({
     }
 
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyA, selectEntireModel);
+
+    const handleWindowSelectAllShortcut = (event: KeyboardEvent) => {
+      const isSelectAllShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "a";
+
+      if (!isSelectAllShortcut) return;
+
+      const target = event.target;
+      const targetElement = target instanceof HTMLElement ? target : null;
+      const activeElement = document.activeElement;
+      const isInsideEditor =
+        editor.hasTextFocus() ||
+        (target instanceof Node && container.contains(target)) ||
+        (activeElement instanceof Node && container.contains(activeElement));
+
+      if (!isInsideEditor) {
+        const isTextField =
+          targetElement instanceof HTMLInputElement ||
+          targetElement instanceof HTMLTextAreaElement ||
+          targetElement?.isContentEditable;
+
+        if (isTextField || targetElement?.closest(".terminal-container")) return;
+        if (!isActiveSurface) return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      selectEntireModel();
+    };
+
+    window.addEventListener("keydown", handleWindowSelectAllShortcut, true);
 
     const disposables = [
       editor.onKeyDown((event) => {
@@ -823,9 +881,11 @@ export function MonacoBackedEditor({
       onModelPositionResolverChange?.(null);
       unsubscribeCursor();
       unsubscribeSelection();
+      window.removeEventListener("keydown", handleWindowSelectAllShortcut, true);
       for (const disposable of disposables) {
         disposable.dispose();
       }
+      createdEditorDisposable.dispose();
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === model) modelRef.current = null;
       editor.dispose();
@@ -933,15 +993,15 @@ export function MonacoBackedEditor({
 
   useEffect(() => {
     const editor = editorRef.current;
+    const container = containerRef.current;
     if (!editor) return;
+    const fontOptions = { fontFamily, fontSize, lineHeight };
 
     const applyTheme = () => monacoEditor.setTheme(defineMonacoTheme(settingsTheme || theme));
 
     applyTheme();
     editor.updateOptions({
-      fontFamily,
-      fontSize,
-      lineHeight,
+      ...fontOptions,
       tabSize,
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
@@ -966,6 +1026,7 @@ export function MonacoBackedEditor({
         horizontal: scrollable ? "auto" : "hidden",
       },
     });
+    if (container) syncContainedEditorFontOptions(container, fontOptions);
 
     const unsubscribeRegistry = themeRegistry.onRegistryChange(applyTheme);
     const unsubscribeTheme = themeRegistry.onThemeChange((themeId) => {
@@ -1167,9 +1228,16 @@ export function MonacoBackedEditor({
 
   if (!buffer) return null;
 
+  const shellStyle = {
+    "--athas-monaco-font-family": fontFamily,
+    "--athas-monaco-font-size": `${fontSize}px`,
+    "--athas-monaco-line-height": `${lineHeight}px`,
+  } as CSSProperties;
+
   return (
     <div
       className={`monaco-editor-shell absolute inset-0 min-h-0 bg-primary-bg ${className ?? ""}`}
+      style={shellStyle}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       onMouseEnter={onMouseEnter}

@@ -1,5 +1,5 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import type { DatabaseType } from "@/features/database/models/provider.types";
+import type { DatabaseType } from "@/features/database/types/provider.types";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 

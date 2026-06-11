@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
-import { useRedisStore } from "./redis-store";
+import { useRedisStore } from "./redis.store";
 
 vi.mock("@/features/database/services/database-provider-sidecar", () => ({
   invokeDatabaseProvider: vi.fn(),

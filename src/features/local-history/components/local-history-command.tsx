@@ -9,7 +9,7 @@ import {
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   deleteLocalHistoryEntry,
@@ -19,11 +19,11 @@ import {
   renameLocalHistoryEntry,
   type LocalHistoryEntry,
 } from "@/features/local-history/api/local-history-api";
-import { useLocalHistoryStore } from "@/features/local-history/store/local-history-store";
+import { useLocalHistoryStore } from "@/features/local-history/stores/local-history.store";
 import { createLocalHistoryDiff } from "@/features/local-history/utils/local-history-diff";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
-import { showPromptDialog } from "@/features/dialogs/dialog-service";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";

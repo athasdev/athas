@@ -15,7 +15,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
-import { showConfirmDialog } from "@/features/dialogs/dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -25,8 +25,8 @@ import {
   pruneWorktrees,
   removeWorktree,
 } from "../api/git-worktrees-api";
-import type { GitWorktree } from "../types/git-types";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
+import type { GitWorktree } from "../types/git.types";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import GitSidebarSectionHeader, {
   gitSidebarSectionActionButtonClassName,
 } from "./git-sidebar-section-header";

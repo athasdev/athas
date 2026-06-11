@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import type {
   PersistedTerminal,
   Terminal,
   TerminalAction,
   TerminalState,
-} from "@/features/terminal/types/terminal";
+} from "@/features/terminal/types/terminal.types";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
 import {
   dedupePersistedTerminals,

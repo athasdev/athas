@@ -5,7 +5,7 @@
 
 import { forwardRef, memo } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { measureTextWidth } from "@/features/athas-editor/utils/position";
 import type { ViewPosition } from "@/features/athas-editor/view-model/view-layout";
 

@@ -6,7 +6,7 @@ import {
   restoreSettingsFromCloud,
   syncSettingsNow,
 } from "@/features/settings/lib/settings-sync";
-import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-store";
+import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import {
@@ -16,7 +16,7 @@ import {
   getAccountPlanLabel,
   getUsageProgress,
 } from "@/features/window/lib/account-usage";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";

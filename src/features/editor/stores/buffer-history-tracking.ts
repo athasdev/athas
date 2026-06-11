@@ -1,6 +1,6 @@
 import { EditorUndoGroupTracker } from "@/features/editor/history/undo-group-tracker";
-import type { Position, Range } from "@/features/editor/types/editor";
-import { useHistoryStore } from "@/features/editor/stores/history-store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
+import { useHistoryStore } from "@/features/editor/stores/history.store";
 
 const undoGroupTracker = new EditorUndoGroupTracker();
 

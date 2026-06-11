@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 
 export const useCenterCursor = () => {

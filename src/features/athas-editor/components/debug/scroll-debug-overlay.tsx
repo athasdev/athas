@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { getLineHeight } from "@/features/athas-editor/utils/position";
 
 interface ScrollMetrics {

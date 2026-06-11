@@ -4,8 +4,8 @@ import {
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
 import { resolveAvailableFontFamily } from "@/features/settings/lib/font-family-resolution";
-import { useSettingsStore } from "@/features/settings/store";
-import { useFontStore } from "@/features/settings/stores/font-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useFontStore } from "@/features/settings/stores/font.store";
 
 export function useFontLoading() {
   const { loadAvailableFonts } = useFontStore.use.actions();

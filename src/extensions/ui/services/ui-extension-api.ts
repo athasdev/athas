@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Disposable } from "../types/ui-extension";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 
 export interface UIExtensionHostAPI {
   sidebar: {

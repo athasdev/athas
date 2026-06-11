@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { cloneElement, isValidElement, useSyncExternalStore } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 
 interface FileExplorerIconProps {
   fileName: string;

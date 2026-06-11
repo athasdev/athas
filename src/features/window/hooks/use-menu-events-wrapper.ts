@@ -3,20 +3,20 @@ import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { splitActiveEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { showAlertDialog } from "@/features/dialogs/dialog-service";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {

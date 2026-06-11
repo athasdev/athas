@@ -8,7 +8,7 @@ import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { applyStash, dropStash, popStash } from "../../api/git-stash-api";
-import { useGitStore } from "../../stores/git-store";
+import { useGitStore } from "../../stores/git.store";
 import { getStashDisplayTitle, getStashPositionLabel } from "../../utils/git-stash-format";
 import GitSidebarSectionHeader from "../git-sidebar-section-header";
 

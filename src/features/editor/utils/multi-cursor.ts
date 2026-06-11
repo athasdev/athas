@@ -3,7 +3,7 @@
  * Handles text insertion, deletion, and cursor position updates for multiple cursors
  */
 
-import type { Cursor, MultiCursorState, Position } from "../types/editor";
+import type { Cursor, MultiCursorState, Position } from "../types/editor.types";
 
 interface CursorEdit {
   cursor: Cursor;

@@ -17,7 +17,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,
@@ -26,7 +26,7 @@ import {
   SidebarHeaderSearch,
 } from "@/ui/sidebar";
 import { useDocumentOutline } from "../hooks/use-document-outline";
-import type { OutlineSymbol } from "../types/outline-symbol";
+import type { OutlineSymbol } from "../types/outline-symbol.types";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 

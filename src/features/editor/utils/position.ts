@@ -1,5 +1,5 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
-import type { Position } from "../types/editor";
+import type { Position } from "../types/editor.types";
 
 export const EDITOR_FONT_METRICS_READY_EVENT = "athas:editor-font-metrics-ready";
 

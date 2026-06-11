@@ -4,7 +4,7 @@ import {
   getLanguageAssetConfig,
 } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizeCode } from "@/features/editor/lib/wasm-parser/tokenizer";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { normalizeLanguage } from "@/features/editor/markdown/language-map";
 
 function escapeHtml(text: string): string {

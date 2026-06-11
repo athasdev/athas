@@ -11,7 +11,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";

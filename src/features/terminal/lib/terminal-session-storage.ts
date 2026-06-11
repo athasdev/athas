@@ -1,4 +1,4 @@
-import type { PersistedTerminal, Terminal } from "@/features/terminal/types/terminal";
+import type { PersistedTerminal, Terminal } from "@/features/terminal/types/terminal.types";
 
 const PERSISTENCE_KEY_PREFIX = "terminal-sessions";
 const PERSISTENCE_ENABLED_KEY = "terminal-persistence-enabled";

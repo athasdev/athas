@@ -6,14 +6,14 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { useSearchExcerptBuffer } from "../hooks/use-search-excerpt-buffer";
@@ -151,7 +151,7 @@ function ExcerptEditorSurface({
         bufferId={bufferId}
         isActiveSurface={false}
         showToolbar={false}
-        readOnly={false}
+        readOnly
         scrollable={false}
         onReadonlySurfaceClick={onOpenLocation}
         highlightMatches={excerpt.highlights}
@@ -205,7 +205,7 @@ function SearchExcerptPreview({
               key={`${lineIndex}-${mappedLine ?? "gap"}`}
               type="button"
               className="flex w-full min-w-0 items-start text-left text-text hover:bg-hover/25"
-              onDoubleClick={() => {
+              onClick={() => {
                 if (mappedLine !== null && mappedLine !== undefined) {
                   onOpenLocation({ line: lineIndex, column: 0 });
                 }

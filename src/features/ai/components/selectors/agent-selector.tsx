@@ -8,9 +8,9 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { AgentConfig } from "@/features/ai/types/acp";
-import type { AgentType } from "@/features/ai/types/ai-chat";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { AgentConfig } from "@/features/ai/types/acp.types";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { LoadingIndicator } from "@/ui/loading";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";

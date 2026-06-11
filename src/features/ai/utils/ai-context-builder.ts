@@ -1,6 +1,6 @@
-import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content";
+import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat-store.types";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 

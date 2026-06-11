@@ -2,7 +2,7 @@
  * Central registry for all vim actions
  */
 
-import type { Action } from "../core/types";
+import type { Action } from "../core/types/core.types";
 import { joinLinesAction } from "./join-lines-action";
 import { joinLinesNoSpaceAction } from "./join-lines-no-space-action";
 import { pasteAction, pasteBeforeAction } from "./paste-actions";

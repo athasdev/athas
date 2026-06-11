@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { FileEntry } from "@/features/file-system/types/app";
-import type { SavedConnection } from "../stores/connection-store";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { SavedConnection } from "../stores/connection.store";
 import {
   getSavedFileConnectionPathKeys,
   getWorkspaceDatabaseFiles,

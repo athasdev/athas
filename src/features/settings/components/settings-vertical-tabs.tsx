@@ -16,12 +16,12 @@ import {
   UserCircleIcon as UserCircle,
   UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
-import * as React from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useCallback, useEffect, useRef, type ComponentType, type WheelEvent } from "react";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -35,7 +35,7 @@ interface SettingsVerticalTabsProps {
 export interface SettingsTabItem {
   id: SettingsTab;
   label: string;
-  icon: React.ComponentType<{
+  icon: ComponentType<{
     size?: string | number;
     className?: string;
     weight?: "regular" | "duotone";
@@ -132,8 +132,8 @@ export const SettingsVerticalTabs = ({
   const { promptUpgrade } = useUpgradeToPro();
   const hasEnterpriseAccess = Boolean(subscription?.enterprise?.has_access);
   const hasTeamsAccess = Boolean(subscription?.collaboration?.enabled);
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
 
@@ -143,7 +143,7 @@ export const SettingsVerticalTabs = ({
     matchingTabs,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (searchQuery && visibleTabs.length > 0) {
       const firstVisibleTab = visibleTabs[0].id;
       if (firstVisibleTab !== activeTab) {
@@ -152,7 +152,7 @@ export const SettingsVerticalTabs = ({
     }
   }, [searchQuery, visibleTabs, activeTab, onTabChange]);
 
-  const handleSidebarWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+  const handleSidebarWheel = (event: WheelEvent<HTMLDivElement>) => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
@@ -163,7 +163,7 @@ export const SettingsVerticalTabs = ({
     event.preventDefault();
   };
 
-  const focusTabAtIndex = React.useCallback(
+  const focusTabAtIndex = useCallback(
     (index: number) => {
       const nextTab = visibleTabs[index];
       if (!nextTab) return;

@@ -1,4 +1,4 @@
-import type { HighlightToken } from "../types";
+import type { HighlightToken } from "../../../types/wasm-parser/wasm-parser.types";
 import {
   ANGULAR_TEMPLATE_LANGUAGE_ID,
   angularTemplateTokens,

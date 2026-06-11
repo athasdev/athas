@@ -1,8 +1,8 @@
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { JumpListEntry } from "@/features/editor/stores/jump-list-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { JumpListEntry } from "@/features/editor/stores/jump-list.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "./logger";
 

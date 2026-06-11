@@ -8,7 +8,7 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/athas-editor/utils/logger";
 import { getLanguageAssetConfig } from "@/features/editor/lib/wasm-parser/extension-assets";
 import { tokenizerWorkerClient } from "@/features/editor/lib/wasm-parser/tokenizer-worker-client";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import {
   buildLineOffsetMap,
   normalizeLineEndings,

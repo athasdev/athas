@@ -3,7 +3,7 @@ import {
   cacheThemeForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
 import { invoke } from "@tauri-apps/api/core";
-import type { Settings, Theme } from "@/features/settings/types/settings";
+import type { Settings, Theme } from "@/features/settings/types/settings.types";
 
 const ALL_THEME_CLASSES = [
   "force-athas-light",

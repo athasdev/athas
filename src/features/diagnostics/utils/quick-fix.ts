@@ -1,4 +1,4 @@
-import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics";
+import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 
 const SEVERITY_RANK: Record<Diagnostic["severity"], number> = {
   error: 3,

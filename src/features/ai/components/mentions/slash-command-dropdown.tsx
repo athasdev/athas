@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { SlashCommand } from "@/features/ai/types/acp";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { SlashCommand } from "@/features/ai/types/acp.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";

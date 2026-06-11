@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useRecentFilesStore } from "@/features/file-system/controllers/recent-files-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { getBaseName } from "@/utils/path-helpers";

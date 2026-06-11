@@ -2,7 +2,7 @@ import { ClockIcon } from "@phosphor-icons/react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import type { FileCategory, FileItem } from "../types/quick-open";
+import type { FileCategory, FileItem } from "../types/quick-open.types";
 
 interface FileListItemProps {
   file: FileItem;

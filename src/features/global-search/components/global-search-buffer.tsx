@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";

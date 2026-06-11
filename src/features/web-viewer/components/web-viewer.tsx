@@ -2,12 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { WarningCircleIcon as AlertCircle } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { isWebViewerContent, type WebViewerContent } from "@/features/panes/types/pane-content";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import {
+  isWebViewerContent,
+  type WebViewerContent,
+} from "@/features/panes/types/pane-content.types";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { LoadingIndicator } from "@/ui/loading";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
-import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation-store";
+import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation.store";
 import { getEmbeddedWebViewerUserAgent, getWebViewerProfileKey } from "../utils/web-viewer-profile";
 import { getWebViewerSecurity, normalizeWebViewerUrl } from "../utils/web-viewer-url";
 import { WebViewerToolbar } from "./web-viewer-toolbar";

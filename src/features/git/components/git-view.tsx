@@ -11,12 +11,12 @@ import {
   UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
-import { showAlertDialog } from "@/features/dialogs/dialog-service";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,
@@ -36,13 +36,14 @@ import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git
 import { clearRepositoryDiscoveryCache, resolveRepositoryPath } from "../api/git-repo-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus, initRepository } from "../api/git-status-api";
-import { useRepositoryStore } from "../stores/git-repository-store";
-import { useGitStore } from "../stores/git-store";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitFile } from "../types/git-types";
+import { useRepositoryStore } from "../stores/git-repository.store";
+import { useGitStore } from "../stores/git.store";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitFile } from "../types/git.types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
+import { buildWorkingTreeMultiDiff } from "../utils/working-tree-multi-diff";
 import GitActionsMenu from "./git-actions-menu";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
@@ -558,6 +559,42 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
+  const handleViewWorkingTreeDiff = async () => {
+    if (!activeRepoPath || !gitStatus) return;
+
+    try {
+      const multiDiff = await buildWorkingTreeMultiDiff({
+        repoPath: activeRepoPath,
+        status: {
+          ...gitStatus,
+          files: visibleGitFiles,
+        },
+      });
+
+      if (multiDiff.totalFiles === 0) {
+        await showAlertDialog("No diffable uncommitted changes.", "Git Diff");
+        return;
+      }
+
+      const displayName = `Uncommitted Changes (${multiDiff.totalFiles} file${multiDiff.totalFiles === 1 ? "" : "s"})`;
+      useBufferStore
+        .getState()
+        .actions.openBuffer(
+          "diff://working-tree/all-files",
+          displayName,
+          "",
+          false,
+          undefined,
+          true,
+          true,
+          multiDiff,
+        );
+    } catch (error) {
+      console.error("Error getting working tree diff:", error);
+      await showAlertDialog(`Failed to get working tree diff:\n${error}`, "Git Diff");
+    }
+  };
+
   const handleViewCommitDiff = async (commitHash: string, filePath?: string) => {
     if (!activeRepoPath || !onFileSelect) return;
 
@@ -760,20 +797,37 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <Button
         onClick={() => void handleInitializeRepository()}
         disabled={!canInitializeRepository || isInitializingRepo}
-        variant="accent"
+        variant="ghost"
         compact
-        className="mt-1.5 h-6 px-2 ui-text-xs"
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
             : "Open a folder before initializing Git"
         }
       >
-        <GitBranch />
-        {isInitializingRepo ? "Initializing..." : "Initialize Repository"}
+        <GitBranch weight="duotone" />
+        {isInitializingRepo ? "Initializing..." : "Initialize"}
       </Button>
     );
   };
+
+  const renderRepositoryEmptyActions = () => (
+    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        compact
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
+        disabled={isSelectingRepo}
+        onClick={() => void handleSelectRepository()}
+      >
+        <FolderSimpleStar weight="duotone" />
+        {isSelectingRepo ? "Selecting..." : "Browse"}
+      </Button>
+      {renderInitializeRepositoryButton()}
+    </div>
+  );
 
   const renderGitActionsMenu = ({
     hasGitRepo,
@@ -854,14 +908,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
-          <SidebarEmptyActionState
-            className="h-full"
-            message="No repository selected"
-            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-            actionDisabled={isSelectingRepo}
-            onAction={() => void handleSelectRepository()}
-          >
-            {renderInitializeRepositoryButton()}
+          <SidebarEmptyActionState className="h-full" message="No repository selected">
+            {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             ) : null}
@@ -893,14 +941,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
-          <SidebarEmptyActionState
-            className="h-full"
-            message="Not a Git repository"
-            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-            actionDisabled={isSelectingRepo}
-            onAction={() => void handleSelectRepository()}
-          >
-            {renderInitializeRepositoryButton()}
+          <SidebarEmptyActionState className="h-full" message="Not a Git repository">
+            {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             ) : null}
@@ -920,7 +962,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
         <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
           <GitProjectSelector
-            className="min-w-0 flex-1"
+            className="w-fit max-w-[calc(100%-4.5rem)]"
             onRepositoryChange={() => setRepoSelectionError(null)}
           />
 
@@ -972,8 +1014,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     isCollapsed={false}
                     onToggle={() => {}}
                     onViewCommitDiff={handleViewCommitDiff}
+                    onViewWorkingTreeDiff={handleViewWorkingTreeDiff}
                     repoPath={activeRepoPath}
                     showHeader={false}
+                    uncommittedFiles={visibleGitFiles}
+                    currentBranch={gitStatus.branch}
                   />
                 ),
               },

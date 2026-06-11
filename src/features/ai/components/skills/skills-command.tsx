@@ -14,9 +14,9 @@ import {
   loadMarketplaceSkills,
 } from "@/features/ai/lib/skill-library";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
-import { useSettingsStore } from "@/features/settings/store";
-import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-store";
-import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
+import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

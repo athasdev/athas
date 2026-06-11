@@ -11,7 +11,7 @@ import {
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";

@@ -1,4 +1,4 @@
-import type { HighlightToken } from "./types";
+import type { HighlightToken } from "../../types/wasm-parser/wasm-parser.types";
 
 export const CAPTURE_TO_CLASS: Record<string, string> = {
   keyword: "token-keyword",
@@ -20,7 +20,10 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   include: "token-keyword",
   exception: "token-keyword",
   storageclass: "token-keyword",
+  storage: "token-keyword",
+  "storage.type": "token-type",
   function: "token-function",
+  local: "token-function",
   "function.call": "token-function",
   "function.method": "token-function",
   "function.method.call": "token-function",
@@ -46,6 +49,7 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "string.escape": "token-string",
   "string.regexp": "token-string",
   character: "token-string",
+  char: "token-string",
   "character.special": "token-string",
   comment: "token-comment",
   "comment.line": "token-comment",
@@ -87,6 +91,7 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "markup.raw": "token-string",
   "markup.link.label": "token-string",
   label: "token-constant",
+  union: "token-type",
   namespace: "token-type",
   module: "token-type",
   "module.builtin": "token-type",

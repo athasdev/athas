@@ -1,10 +1,10 @@
 import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
-import type { SettingsSection } from "@/features/settings/types/settings";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state-store";
+import type { SettingsSection } from "@/features/settings/types/settings.types";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { HistoryEntry } from "@/features/editor/history/types";
-import { useHistoryStore } from "@/features/editor/stores/history-store";
-import type { Position, Range } from "@/features/editor/types/editor";
+import type { HistoryEntry } from "@/features/editor/types/history.types";
+import { useHistoryStore } from "@/features/editor/stores/history.store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 
 const HISTORY_DEBOUNCE_MS = 500;
 

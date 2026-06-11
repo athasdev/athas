@@ -3,7 +3,7 @@ import type {
   EditorContent,
   PaneContent,
   TerminalContent,
-} from "@/features/panes/types/pane-content";
+} from "@/features/panes/types/pane-content.types";
 import {
   getDirtyEditorBuffers,
   getUnsavedProjectTransitionMessage,

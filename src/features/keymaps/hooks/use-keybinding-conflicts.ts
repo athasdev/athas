@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { useKeymapStore } from "../stores/store";
-import type { Command } from "../types";
+import { useKeymapStore } from "../stores/keymaps.store";
+import type { Command } from "../types/keymaps.types";
 import { keymapRegistry } from "../utils/registry";
 
 interface ConflictInfo {

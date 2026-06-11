@@ -13,7 +13,7 @@ import {
   TerminalWindowIcon as TerminalIcon,
   UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
-import type { CoreFeature, CoreFeaturesState } from "../types/feature";
+import type { CoreFeature, CoreFeaturesState } from "../types/feature.types";
 
 export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFeature[] => [
   {

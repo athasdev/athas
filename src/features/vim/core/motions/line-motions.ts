@@ -8,9 +8,9 @@
  * - _: Move to first non-blank character (with count support)
  */
 
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import type { Motion, VimRange } from "../core/types";
+import type { Motion, VimRange } from "../core/types/core.types";
 
 /**
  * Motion: 0 - start of line (column 0)

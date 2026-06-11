@@ -7,12 +7,12 @@ import {
   ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
-import type { IssueDetails } from "../types/github";
+import type { IssueDetails } from "../types/github.types";
 import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";

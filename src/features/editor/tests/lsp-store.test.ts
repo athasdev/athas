@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { CompletionItem } from "vscode-languageserver-protocol";
-import type { useLspStore as useLspStoreHook } from "../lsp/lsp-store";
-import type { useEditorUIStore as useEditorUIStoreHook } from "../stores/ui-store";
+import type { useLspStore as useLspStoreHook } from "../lsp/stores/lsp.store";
+import type { useEditorUIStore as useEditorUIStoreHook } from "../stores/ui.store";
 
 type LspStoreHook = typeof useLspStoreHook;
 type EditorUIStoreHook = typeof useEditorUIStoreHook;
@@ -24,8 +24,8 @@ describe("lsp store completions", () => {
       dispatchEvent: vi.fn(),
     });
 
-    ({ useLspStore } = await import("../lsp/lsp-store"));
-    ({ useEditorUIStore } = await import("../stores/ui-store"));
+    ({ useLspStore } = await import("../lsp/stores/lsp.store"));
+    ({ useEditorUIStore } = await import("../stores/ui.store"));
   });
 
   afterEach(() => {

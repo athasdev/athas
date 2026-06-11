@@ -13,16 +13,16 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useOverlayManager } from "@/features/editor/hooks/use-overlay-manager";
 import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
 import { getCommitDiff } from "../api/git-diff-api";
-import { useGitBlameStore } from "../stores/git-blame-store";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitBlameLine } from "../types/git-types";
+import { useGitBlameStore } from "../stores/git-blame.store";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitBlameLine } from "../types/git.types";
 import { countDiffStats } from "../utils/git-diff-helpers";
 
 interface InlineGitBlameProps {

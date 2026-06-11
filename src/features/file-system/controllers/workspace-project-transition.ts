@@ -1,5 +1,5 @@
-import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content";
-import { showChoiceDialog } from "@/features/dialogs/dialog-service";
+import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";
+import { showChoiceDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 
 export type ProjectTransitionAction =
@@ -30,8 +30,8 @@ export const getUnsavedProjectTransitionMessage = (
 };
 
 const saveDirtyEditorBuffers = async (dirtyBuffers: PaneContent[]) => {
-  const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-  const { useEditorAppStore } = await import("@/features/editor/stores/editor-app-store");
+  const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
+  const { useEditorAppStore } = await import("@/features/editor/stores/editor-app.store");
   const { setActiveBuffer } = useBufferStore.getState().actions;
   const { handleSave } = useEditorAppStore.getState().actions;
 

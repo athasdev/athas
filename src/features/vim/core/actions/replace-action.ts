@@ -3,7 +3,7 @@
  */
 
 import { calculateCursorPosition } from "@/features/editor/utils/position";
-import type { Action, EditorContext } from "../core/types";
+import type { Action, EditorContext } from "../core/types/core.types";
 import { setVimClipboard } from "../operators/yank-operator";
 
 /**

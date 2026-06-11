@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { EditorContent } from "@/features/panes/types/pane-content";
-import type { useBufferStore as useBufferStoreHook } from "../stores/buffer-store";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
+import type { useBufferStore as useBufferStoreHook } from "../stores/buffer.store";
 
 const mocks = vi.hoisted(() => ({
   readFileContent: vi.fn(),
@@ -75,7 +75,7 @@ describe("editor revert file command", () => {
 
     mocks.readFileContent.mockResolvedValue("disk");
 
-    ({ useBufferStore } = await import("../stores/buffer-store"));
+    ({ useBufferStore } = await import("../stores/buffer.store"));
     ({ revertActiveFile } = await import("@/features/keymaps/commands/file-command-actions"));
 
     useBufferStore.setState({

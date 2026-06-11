@@ -152,7 +152,7 @@ export function collectWorkspaceTextEdits(edit: WorkspaceEdit): Map<string, LspT
 async function readEditableSource(
   filePath: string,
 ): Promise<{ bufferId: string | null; content: string }> {
-  const { useBufferStore } = await import("../stores/buffer-store");
+  const { useBufferStore } = await import("../stores/buffer.store");
   const { readFile } = await import("@/features/file-system/controllers/platform");
   const { buffers } = useBufferStore.getState();
   const openBuffer = buffers.find(
@@ -167,7 +167,7 @@ async function readEditableSource(
 }
 
 async function writeEditableSource(filePath: string, bufferId: string | null, content: string) {
-  const { useBufferStore } = await import("../stores/buffer-store");
+  const { useBufferStore } = await import("../stores/buffer.store");
   const { writeFile } = await import("@/features/file-system/controllers/platform");
 
   if (bufferId) {
