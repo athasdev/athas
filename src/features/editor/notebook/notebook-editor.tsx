@@ -7,7 +7,7 @@ import {
   WarningCircleIcon as Warning,
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
@@ -184,30 +184,74 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
 
 function NotebookCellView({
   cell,
+  cellRef,
   cellIndex,
   language,
   isEditing,
+  isSelected,
   isRunning,
+  onSelect,
   onEditToggle,
   onRun,
   onSourceChange,
+  onMoveSelection,
 }: {
   cell: NotebookCell;
+  cellRef?: Ref<HTMLElement>;
   cellIndex: number;
   language: string;
   isEditing: boolean;
+  isSelected: boolean;
   isRunning: boolean;
+  onSelect: (cellIndex: number) => void;
   onEditToggle: (cellIndex: number) => void;
   onRun: (cellIndex: number) => void;
   onSourceChange: (cellIndex: number, source: string) => void;
+  onMoveSelection: (direction: -1 | 1) => void;
 }) {
   const source = notebookCellSource(cell);
   const isCode = cell.cell_type === "code";
   const isMarkdown = cell.cell_type === "markdown";
   const outputs = Array.isArray(cell.outputs) ? cell.outputs : [];
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.defaultPrevented) return;
+    if (event.target !== event.currentTarget) return;
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      onMoveSelection(-1);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      onMoveSelection(1);
+    } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && isCode) {
+      event.preventDefault();
+      onRun(cellIndex);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      onEditToggle(cellIndex);
+    }
+  };
+
   return (
-    <section className="mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5">
+    <section
+      ref={cellRef}
+      tabIndex={0}
+      aria-selected={isSelected}
+      className={cn(
+        "group relative mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-md border border-transparent py-1 pr-1 outline-none transition-colors",
+        isSelected && "border-accent/45 bg-accent/5",
+      )}
+      onFocus={() => onSelect(cellIndex)}
+      onMouseDown={() => onSelect(cellIndex)}
+      onKeyDown={handleKeyDown}
+    >
+      <div
+        className={cn(
+          "absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-transparent transition-colors",
+          isSelected && "bg-accent",
+        )}
+      />
       <div className="pt-[31px] text-right">
         <span className="font-mono text-[0.82em] text-text-lighter">
           {isCode ? `[${cell.execution_count ?? ""}]` : ""}
@@ -283,6 +327,7 @@ function NotebookCellView({
 }
 
 export function NotebookEditor() {
+  const cellRefs = useRef<Array<HTMLElement | null>>([]);
   const { bufferId, content, path } = useBufferStore(
     useShallow((state) => {
       const buffer = state.activeBufferId
@@ -299,6 +344,7 @@ export function NotebookEditor() {
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
   const { handleContentChange } = useEditorAppStore.use.actions();
   const [editingCells, setEditingCells] = useState<Set<number>>(new Set());
+  const [selectedCellIndex, setSelectedCellIndex] = useState(0);
   const [runningCell, setRunningCell] = useState<number | null>(null);
 
   const parsed = useMemo(() => parseNotebookContent(content), [content]);
@@ -308,6 +354,7 @@ export function NotebookEditor() {
   };
 
   const handleEditToggle = (cellIndex: number) => {
+    setSelectedCellIndex(cellIndex);
     setEditingCells((current) => {
       const next = new Set(current);
       if (next.has(cellIndex)) {
@@ -320,11 +367,13 @@ export function NotebookEditor() {
   };
 
   const handleSourceChange = (cellIndex: number, source: string) => {
+    setSelectedCellIndex(cellIndex);
     if (!parsed.ok) return;
     updateNotebook(updateNotebookCellSource(parsed.notebook, cellIndex, source));
   };
 
   const handleRunCell = async (cellIndex: number) => {
+    setSelectedCellIndex(cellIndex);
     if (!parsed.ok || runningCell !== null) return;
 
     const cell = parsed.notebook.cells[cellIndex];
@@ -365,6 +414,22 @@ export function NotebookEditor() {
     }
   };
 
+  const moveSelection = (direction: -1 | 1) => {
+    if (!parsed.ok || parsed.notebook.cells.length === 0) return;
+
+    const nextIndex = Math.max(
+      0,
+      Math.min(parsed.notebook.cells.length - 1, selectedCellIndex + direction),
+    );
+    setSelectedCellIndex(nextIndex);
+
+    requestAnimationFrame(() => {
+      const nextCell = cellRefs.current[nextIndex];
+      nextCell?.focus({ preventScroll: true });
+      nextCell?.scrollIntoView({ block: "nearest" });
+    });
+  };
+
   if (!bufferId) return null;
 
   if (!parsed.ok) {
@@ -390,14 +455,20 @@ export function NotebookEditor() {
         {parsed.notebook.cells.map((cell, cellIndex) => (
           <NotebookCellView
             key={cell.id ?? cellIndex}
+            cellRef={(element) => {
+              cellRefs.current[cellIndex] = element;
+            }}
             cell={cell}
             cellIndex={cellIndex}
             language={language}
             isEditing={editingCells.has(cellIndex)}
+            isSelected={selectedCellIndex === cellIndex}
             isRunning={runningCell === cellIndex}
+            onSelect={setSelectedCellIndex}
             onEditToggle={handleEditToggle}
             onRun={handleRunCell}
             onSourceChange={handleSourceChange}
+            onMoveSelection={moveSelection}
           />
         ))}
       </div>
