@@ -5,13 +5,10 @@ import "../styles/monaco-editor.css";
 
 import { editor as monacoEditor, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { toMonacoLanguageId } from "../monaco/language";
-import { calculateLineHeight } from "../utils/lines";
-import { defineMonacoTheme } from "../components/monaco-editor";
+import { defineMonacoTheme } from "../monaco/theme";
+import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
 
 interface NotebookCodeCellEditorProps {
   id: string;
@@ -36,16 +33,18 @@ export function NotebookCodeCellEditor({
   const applyingExternalChangeRef = useRef(false);
   const onChangeRef = useRef(onChange);
   const [height, setHeight] = useState(120);
-  const baseFontSize = useEditorSettingsStore.use.fontSize();
-  const fontFamily = useEditorSettingsStore.use.fontFamily();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
-  const tabSize = useEditorSettingsStore.use.tabSize();
-  const wordWrap = useEditorSettingsStore.use.wordWrap();
-  const theme = useEditorSettingsStore.use.theme();
-  const settingsTheme = useSettingsStore((state) => state.settings.theme);
-  const zoomLevel = useZoomStore.use.editorZoomLevel();
-  const fontSize = baseFontSize * zoomLevel;
-  const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
+  const {
+    fontFamily,
+    fontSize,
+    lineHeight,
+    tabSize,
+    wordWrap,
+    lineNumbers,
+    renderWhitespace,
+    renderIndentGuides,
+    highlightOccurrences,
+    themeId,
+  } = useMonacoEditorSettings();
   const monacoLanguage = toMonacoLanguageId(language);
   const modelUri = useMemo(
     () => Uri.parse(`athas://notebook-cell/${encodeURIComponent(id)}.${monacoLanguage}`),
@@ -69,7 +68,7 @@ export function NotebookCodeCellEditor({
       insertSpaces: true,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
-      lineNumbers: "on",
+      lineNumbers: lineNumbers ? "on" : "off",
       glyphMargin: false,
       folding: false,
       lineDecorationsWidth: 8,
@@ -77,13 +76,19 @@ export function NotebookCodeCellEditor({
       renderLineHighlight: "line",
       overviewRulerLanes: 0,
       hideCursorInOverviewRuler: true,
-      renderWhitespace: "selection",
+      renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
+      guides: {
+        indentation: renderIndentGuides,
+        highlightActiveIndentation: renderIndentGuides,
+      },
+      occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
+      selectionHighlight: highlightOccurrences,
       quickSuggestions: true,
       suggestOnTriggerCharacters: true,
       parameterHints: { enabled: true },
       contextmenu: false,
-      theme: defineMonacoTheme(settingsTheme || theme),
+      theme: defineMonacoTheme(themeId),
       fixedOverflowWidgets: true,
       scrollbar: {
         vertical: "hidden",
@@ -115,13 +120,16 @@ export function NotebookCodeCellEditor({
   }, [
     fontFamily,
     fontSize,
+    highlightOccurrences,
     id,
     lineHeight,
+    lineNumbers,
     modelUri,
     monacoLanguage,
-    settingsTheme,
+    renderIndentGuides,
+    renderWhitespace,
     tabSize,
-    theme,
+    themeId,
     wordWrap,
   ]);
 
@@ -144,19 +152,46 @@ export function NotebookCodeCellEditor({
       fontFamily,
       fontSize,
       lineHeight,
+      lineNumbers: lineNumbers ? "on" : "off",
       tabSize,
+      renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
+      guides: {
+        indentation: renderIndentGuides,
+        highlightActiveIndentation: renderIndentGuides,
+      },
+      occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
+      selectionHighlight: highlightOccurrences,
     });
-    monacoEditor.setTheme(defineMonacoTheme(settingsTheme || theme));
+    monacoEditor.setTheme(defineMonacoTheme(themeId));
     setHeight(editorHeight(editor, lineHeight));
-  }, [fontFamily, fontSize, lineHeight, monacoLanguage, settingsTheme, tabSize, theme, wordWrap]);
+  }, [
+    fontFamily,
+    fontSize,
+    highlightOccurrences,
+    lineHeight,
+    lineNumbers,
+    monacoLanguage,
+    renderIndentGuides,
+    renderWhitespace,
+    tabSize,
+    themeId,
+    wordWrap,
+  ]);
 
   useEffect(() => {
     editorRef.current?.layout();
   }, [height]);
 
+  const shellStyle = {
+    height,
+    "--athas-monaco-font-family": fontFamily,
+    "--athas-monaco-font-size": `${fontSize}px`,
+    "--athas-monaco-line-height": `${lineHeight}px`,
+  } as CSSProperties;
+
   return (
-    <div className="notebook-cell-monaco-shell" style={{ height }}>
+    <div className="notebook-cell-monaco-shell monaco-editor-shell" style={shellStyle}>
       <div ref={containerRef} className="notebook-cell-monaco" />
     </div>
   );
