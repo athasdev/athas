@@ -112,6 +112,18 @@
   border-color: var(--color-accent);
 }
 
+.notebook-cell-monaco-shell {
+  overflow: hidden;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  background: var(--color-secondary-bg, rgba(0, 0, 0, 0.2));
+}
+
+.notebook-cell-monaco {
+  height: 100%;
+  width: 100%;
+}
+
 .notebook-markdown-preview {
   display: block;
   height: auto;

@@ -200,7 +200,7 @@ function syntaxTokenColor(theme: ThemeDefinition, token: string): string | undef
   );
 }
 
-function defineMonacoTheme(themeId: string): string {
+export function defineMonacoTheme(themeId: string): string {
   const theme = themeRegistry.getTheme(themeId);
   if (!theme) return getThemeId(themeId);
 

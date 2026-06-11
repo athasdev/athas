@@ -18,6 +18,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { HighlightedCode } from "./highlighted-code";
+import { NotebookCodeCellEditor } from "./notebook-code-cell-editor";
 import {
   notebookCellSource,
   notebookLanguage,
@@ -243,13 +244,22 @@ function NotebookCellView({
         </div>
 
         {isEditing ? (
-          <textarea
-            className="notebook-cell-textarea"
-            value={source}
-            spellCheck={isMarkdown}
-            onChange={(event) => onSourceChange(cellIndex, event.target.value)}
-            rows={Math.max(3, source.split("\n").length + 1)}
-          />
+          isCode ? (
+            <NotebookCodeCellEditor
+              id={cell.id ?? `cell-${cellIndex}`}
+              value={source}
+              language={language}
+              onChange={(value) => onSourceChange(cellIndex, value)}
+            />
+          ) : (
+            <textarea
+              className="notebook-cell-textarea"
+              value={source}
+              spellCheck={isMarkdown}
+              onChange={(event) => onSourceChange(cellIndex, event.target.value)}
+              rows={Math.max(3, source.split("\n").length + 1)}
+            />
+          )
         ) : isMarkdown ? (
           <MarkdownCellPreview source={source} />
         ) : (
