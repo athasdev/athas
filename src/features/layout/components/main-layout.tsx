@@ -103,7 +103,7 @@ export function MainLayout() {
     if (result.openedFolderCount + result.openedFileCount === 0) {
       toast.warning("No supported dropped files or folders could be opened.");
     }
-  });
+  }, !rootFolderPath);
 
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);

@@ -89,23 +89,36 @@ function isExternalFileDrag(event: DragEvent): boolean {
   return isExternalFileDragTypeList(event.dataTransfer?.types);
 }
 
-function getExternalFileDropRouteAtPosition(position?: { x: number; y: number }) {
+function getExternalFileDropRouteAtPosition(
+  position: { x: number; y: number } | undefined,
+  treatLocalDropAsGlobal: boolean,
+) {
   if (!position) return "global";
-  return getExternalFileDropRoute(resolveClientPoint(position).element);
+  return getExternalFileDropRoute(resolveClientPoint(position).element, treatLocalDropAsGlobal);
 }
 
-function isGlobalExternalFileDropEventTarget(event: DragEvent): boolean {
+function isGlobalExternalFileDropEventTarget(
+  event: DragEvent,
+  treatLocalDropAsGlobal: boolean,
+): boolean {
   return (
-    getExternalFileDropRoute(event.target instanceof Element ? event.target : null) === "global"
+    getExternalFileDropRoute(
+      event.target instanceof Element ? event.target : null,
+      treatLocalDropAsGlobal,
+    ) === "global"
   );
 }
 
 /**
  * Hook to handle drag-and-drop from OS into the application
  * @param onDrop - Callback when files/folders are dropped (array of paths)
+ * @param treatLocalDropAsGlobal - Whether local pane surfaces should fall through to onDrop
  * @returns isDraggingOver - Boolean indicating if a drag is over the window
  */
-export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Promise<void>) => {
+export const useFileSystemFolderDrop = (
+  onDrop: (paths: string[]) => void | Promise<void>,
+  treatLocalDropAsGlobal = false,
+) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   useEffect(() => {
@@ -141,7 +154,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           return;
         }
         const position = "position" in event.payload ? event.payload.position : undefined;
-        if (getExternalFileDropRouteAtPosition(position) !== "global") {
+        if (getExternalFileDropRouteAtPosition(position, treatLocalDropAsGlobal) !== "global") {
           setIsDraggingOver(false);
           return;
         }
@@ -165,7 +178,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           return;
         }
         const position = "position" in event.payload ? event.payload.position : undefined;
-        if (getExternalFileDropRouteAtPosition(position) !== "global") {
+        if (getExternalFileDropRouteAtPosition(position, treatLocalDropAsGlobal) !== "global") {
           setIsDraggingOver(false);
           return;
         }
@@ -175,7 +188,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
       const onDomDragOver = (event: DragEvent) => {
         if (getInternalTabDragData()) return;
         if (!isExternalFileDrag(event)) return;
-        if (!isGlobalExternalFileDropEventTarget(event)) {
+        if (!isGlobalExternalFileDropEventTarget(event, treatLocalDropAsGlobal)) {
           setIsDraggingOver(false);
           return;
         }
@@ -187,7 +200,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
           return;
         }
         if (!isExternalFileDrag(event)) return;
-        if (!isGlobalExternalFileDropEventTarget(event)) {
+        if (!isGlobalExternalFileDropEventTarget(event, treatLocalDropAsGlobal)) {
           setIsDraggingOver(false);
           return;
         }
@@ -197,7 +210,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
       const onDomEnter = (event: DragEvent) => {
         if (getInternalTabDragData()) return;
         if (!isExternalFileDrag(event)) return;
-        if (!isGlobalExternalFileDropEventTarget(event)) {
+        if (!isGlobalExternalFileDropEventTarget(event, treatLocalDropAsGlobal)) {
           setIsDraggingOver(false);
           return;
         }
@@ -234,7 +247,7 @@ export const useFileSystemFolderDrop = (onDrop: (paths: string[]) => void | Prom
       if (unlistenWebview) unlistenWebview();
       if (domTeardown) domTeardown();
     };
-  }, [onDrop]);
+  }, [onDrop, treatLocalDropAsGlobal]);
 
   return { isDraggingOver };
 };

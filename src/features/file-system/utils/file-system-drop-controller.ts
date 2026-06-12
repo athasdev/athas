@@ -67,9 +67,12 @@ const LOCAL_DROP_TARGET_SELECTOR = [
 
 export function getExternalFileDropRoute(
   target: Pick<Element, "closest"> | null | undefined,
+  treatLocalDropAsGlobal = false,
 ): ExternalFileDropRoute {
   if (!target) return "global";
   if (target.closest(TERMINAL_DROP_TARGET_SELECTOR)) return "terminal";
-  if (target.closest(LOCAL_DROP_TARGET_SELECTOR)) return "local";
+  if (target.closest(LOCAL_DROP_TARGET_SELECTOR)) {
+    return treatLocalDropAsGlobal ? "global" : "local";
+  }
   return "global";
 }
