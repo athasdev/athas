@@ -211,21 +211,27 @@ export async function goToReferences(): Promise<void> {
     referenceLinesByFile.set(filePath, lineNumbers);
   }
 
-  for (const [filePath, lineNumbers] of referenceLinesByFile) {
-    let content = "";
-    const buffer = bufferStore.buffers.find((b) => b.path === filePath);
+  const lineContextEntries = await Promise.all(
+    Array.from(referenceLinesByFile, async ([filePath, lineNumbers]) => {
+      let content = "";
+      const buffer = bufferStore.buffers.find((b) => b.path === filePath);
 
-    if (buffer && "content" in buffer && typeof buffer.content === "string") {
-      content = buffer.content;
-    } else {
-      try {
-        content = await readFileContent(filePath);
-      } catch {
-        content = "";
+      if (buffer && "content" in buffer && typeof buffer.content === "string") {
+        content = buffer.content;
+      } else {
+        try {
+          content = await readFileContent(filePath);
+        } catch {
+          content = "";
+        }
       }
-    }
 
-    lineContextCache.set(filePath, getLineTextsFromContent(content, lineNumbers));
+      return [filePath, getLineTextsFromContent(content, lineNumbers)] as const;
+    }),
+  );
+
+  for (const [filePath, lines] of lineContextEntries) {
+    lineContextCache.set(filePath, lines);
   }
 
   const converted = references.map((ref) => {

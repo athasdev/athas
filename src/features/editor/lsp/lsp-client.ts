@@ -792,9 +792,7 @@ export class LspClient {
 
   async restartAllTrackedServers(): Promise<void> {
     const serverKeys = this.getActiveServerEntries().map((entry) => entry.key);
-    for (const serverKey of serverKeys) {
-      await this.restartTrackedServer(serverKey);
-    }
+    await Promise.all(serverKeys.map((serverKey) => this.restartTrackedServer(serverKey)));
   }
 
   async stopAll(): Promise<void> {

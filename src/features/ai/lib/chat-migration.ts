@@ -86,10 +86,16 @@ export async function migrateChatsToSQLite(): Promise<{
       return { success: true, migratedCount: 0, errors: [] };
     }
 
-    // Migrate each chat
-    for (const chat of legacyChats) {
+    const migrationResults = await Promise.allSettled(
+      legacyChats.map((chat) => saveChatToDb(chat).then(() => chat.id)),
+    );
+
+    for (const [index, result] of migrationResults.entries()) {
+      const chat = legacyChats[index];
       try {
-        await saveChatToDb(chat);
+        if (result.status === "rejected") {
+          throw result.reason;
+        }
         migratedCount++;
       } catch (error) {
         const errorMsg = `Failed to migrate chat ${chat.id}: ${error}`;

@@ -597,25 +597,30 @@ export async function installLanguageExtensionManifest(
   const languageConfigs = getManifestLanguageContributions(manifest);
   const languageCount = languageConfigs.length;
 
-  for (const [index, languageConfig] of languageConfigs.entries()) {
-    const languageId = languageConfig.id;
-    const wasmUrl = getWasmUrlForLanguage(languageId);
-    const highlightQueryUrl =
-      getHighlightQueryUrl(languageId) ||
-      getHighlightQueryUrlForExtension(manifest) ||
-      `${wasmUrl.replace(/parser\.wasm$/, "highlights.scm")}`;
+  const progressByLanguage = Array.from({ length: languageCount }, () => 0);
 
-    await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
-      extensionId,
-      version: manifest.version,
-      checksum: manifest.installation?.checksum || "",
-      onProgress: (progress) => {
-        const completedLanguages = index * 100;
-        const normalizedProgress = (completedLanguages + progress.percentage) / languageCount;
-        onProgress(normalizedProgress);
-      },
-    });
-  }
+  await Promise.all(
+    languageConfigs.map((languageConfig, index) => {
+      const languageId = languageConfig.id;
+      const wasmUrl = getWasmUrlForLanguage(languageId);
+      const highlightQueryUrl =
+        getHighlightQueryUrl(languageId) ||
+        getHighlightQueryUrlForExtension(manifest) ||
+        `${wasmUrl.replace(/parser\.wasm$/, "highlights.scm")}`;
+
+      return extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
+        extensionId,
+        version: manifest.version,
+        checksum: manifest.installation?.checksum || "",
+        onProgress: (progress) => {
+          progressByLanguage[index] = progress.percentage;
+          const totalProgress = progressByLanguage.reduce((sum, value) => sum + value, 0);
+          const normalizedProgress = totalProgress / languageCount;
+          onProgress(normalizedProgress);
+        },
+      });
+    }),
+  );
 }
 
 export function getExtensionManifestForLanguage(

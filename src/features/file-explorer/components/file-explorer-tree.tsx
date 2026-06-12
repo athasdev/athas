@@ -694,38 +694,41 @@ function FileExplorerTreeComponent({
       const stack: string[] = [directoryPath];
 
       while (stack.length > 0) {
-        const currentPath = stack.pop();
-        if (!currentPath) continue;
+        const currentBatch = stack.splice(0, 8);
+        const directoryEntries = await Promise.all(
+          currentBatch.map((currentPath) => readDirectory(currentPath)),
+        );
 
-        const entries = await readDirectory(currentPath);
-        for (const entry of entries as Array<{
-          path: string;
-          is_dir?: boolean;
-        }>) {
-          if (!entry.path) continue;
-          const isDir = !!entry.is_dir;
-          const entryName = getPathBaseName(entry.path);
+        for (const entries of directoryEntries) {
+          for (const entry of entries as Array<{
+            path: string;
+            is_dir?: boolean;
+          }>) {
+            if (!entry.path) continue;
+            const isDir = !!entry.is_dir;
+            const entryName = getPathBaseName(entry.path);
 
-          if (isAlwaysHiddenFileName(entryName)) {
-            continue;
-          }
+            if (isAlwaysHiddenFileName(entryName)) {
+              continue;
+            }
 
-          if (isUserHidden(entry.path, isDir)) {
-            continue;
-          }
+            if (isUserHidden(entry.path, isDir)) {
+              continue;
+            }
 
-          if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
-            continue;
-          }
+            if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
+              continue;
+            }
 
-          if (!settings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
-            continue;
-          }
+            if (!settings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
+              continue;
+            }
 
-          if (isDir) {
-            stack.push(entry.path);
-          } else {
-            collected.push(entry.path);
+            if (isDir) {
+              stack.push(entry.path);
+            } else {
+              collected.push(entry.path);
+            }
           }
         }
       }

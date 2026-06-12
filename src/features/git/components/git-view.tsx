@@ -495,34 +495,26 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         if (diffEntries.length > 0) {
           void (async () => {
-            const accumulatedDiffs = [{ fileKey: selectedFileKey, diff }];
+            const remainingDiffs = await Promise.all(
+              diffEntries.map(async ([fileKey, entry]) => {
+                const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
+                if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
+                  return null;
+                }
 
-            for (const [fileKey, entry] of diffEntries) {
-              const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
-              if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
-                continue;
-              }
+                return {
+                  fileKey,
+                  diff: nextDiff,
+                };
+              }),
+            );
 
-              accumulatedDiffs.push({
-                fileKey,
-                diff: nextDiff,
-              });
-
-              const stats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
-              useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
-                title: "Uncommitted Changes",
-                repoPath,
-                commitHash: "working-tree",
-                files: accumulatedDiffs.map((item) => item.diff),
-                totalFiles: accumulatedDiffs.length,
-                totalAdditions: stats.additions,
-                totalDeletions: stats.deletions,
-                fileKeys: accumulatedDiffs.map((item) => item.fileKey),
-                initiallyExpandedFileKey: selectedFileKey,
-                isLoading: true,
-              } satisfies MultiFileDiff);
-              await Promise.resolve();
-            }
+            const accumulatedDiffs = [
+              { fileKey: selectedFileKey, diff },
+              ...remainingDiffs.filter(
+                (entry): entry is NonNullable<typeof entry> => entry !== null,
+              ),
+            ];
 
             const allStats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
             useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {

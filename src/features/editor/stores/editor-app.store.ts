@@ -332,19 +332,17 @@ export const useEditorAppStore = createSelectors(
           const dirtyBufferIds = getDirtyEditorBuffers(useBufferStore.getState().buffers).map(
             (buffer) => buffer.id,
           );
-          let savedCount = 0;
+          const saveResults = await Promise.all(
+            dirtyBufferIds.map(async (bufferId) => {
+              const saved = await saveEditorBufferById(bufferId);
+              const nextBuffer = useBufferStore
+                .getState()
+                .buffers.find((buffer) => buffer.id === bufferId);
+              return saved && (!nextBuffer || !isEditorContent(nextBuffer) || !nextBuffer.isDirty);
+            }),
+          );
 
-          for (const bufferId of dirtyBufferIds) {
-            const saved = await saveEditorBufferById(bufferId);
-            const nextBuffer = useBufferStore
-              .getState()
-              .buffers.find((buffer) => buffer.id === bufferId);
-            if (saved && (!nextBuffer || !isEditorContent(nextBuffer) || !nextBuffer.isDirty)) {
-              savedCount += 1;
-            }
-          }
-
-          return savedCount;
+          return saveResults.filter(Boolean).length;
         },
 
         openQuickEdit: (params) => {

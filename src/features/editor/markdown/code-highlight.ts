@@ -246,19 +246,26 @@ export async function highlightMarkdownCodeBlocks(html: string): Promise<string>
 
   if (matches.length === 0) return html;
 
+  const highlightedMatches = await Promise.all(
+    matches.map(async (match) => {
+      const rawCode = match.code.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+      const segments = await getCodeHighlightSegments(rawCode, match.lang);
+      if (segments.length === 0) return null;
+
+      const highlighted = renderHighlightedCodeHtml(rawCode, segments);
+      const languageId = normalizeCodeFenceLanguage(match.lang);
+      return {
+        full: match.full,
+        replacement: `<pre><code class="language-${languageId}">${highlighted}</code></pre>`,
+      };
+    }),
+  );
+
   let result = html;
 
-  for (const match of matches) {
-    const rawCode = match.code.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-    const segments = await getCodeHighlightSegments(rawCode, match.lang);
-    if (segments.length === 0) continue;
-
-    const highlighted = renderHighlightedCodeHtml(rawCode, segments);
-    const languageId = normalizeCodeFenceLanguage(match.lang);
-    result = result.replace(
-      match.full,
-      `<pre><code class="language-${languageId}">${highlighted}</code></pre>`,
-    );
+  for (const match of highlightedMatches) {
+    if (!match) continue;
+    result = result.replace(match.full, match.replacement);
   }
 
   return result;

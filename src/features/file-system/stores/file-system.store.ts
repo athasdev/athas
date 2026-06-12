@@ -542,20 +542,23 @@ export const useFileSystemStore = createSelectors(
               .files.filter((file) => file.isDir)
               .map((file) => file.path),
           );
-          const restoredRootEntries: FileEntry[] = [];
+          const restoredRootEntries = (
+            await Promise.all(
+              foldersToRestore.map(async (folder) => {
+                if (folder.path === projectPath || currentRootPaths.has(folder.path)) {
+                  return null;
+                }
 
-          for (const folder of foldersToRestore) {
-            if (folder.path === projectPath || currentRootPaths.has(folder.path)) {
-              continue;
-            }
-
-            try {
-              restoredRootEntries.push(await readWorkspaceRootEntry(folder.path));
-            } catch (error) {
-              console.warn("Failed to restore workspace folder:", folder.path, error);
-              toast.warning(`Could not restore workspace folder "${folder.name}".`);
-            }
-          }
+                try {
+                  return await readWorkspaceRootEntry(folder.path);
+                } catch (error) {
+                  console.warn("Failed to restore workspace folder:", folder.path, error);
+                  toast.warning(`Could not restore workspace folder "${folder.name}".`);
+                  return null;
+                }
+              }),
+            )
+          ).filter((entry): entry is FileEntry => entry !== null);
 
           if (restoredRootEntries.length > 0) {
             set((state) => {

@@ -43,40 +43,46 @@ export async function loadInstalledExtensionsSnapshot(
 
   const indexedDBInstalled = await extensionInstaller.listInstalled();
 
-  for (const installed of indexedDBInstalled) {
-    const languageId = installed.languageId;
-    const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
-    const extension = getExtensionManifestForLanguage(extensionId, availableExtensions, languageId);
-    const languageConfig = extension?.languages?.find((lang) => lang.id === languageId);
-    const languageExtensions = languageConfig?.extensions || [`.${languageId}`];
-    const aliases = languageConfig?.aliases;
-
-    if (extension) {
-      const resolvedTools = await resolveToolPaths(languageId, extension, {
-        repairMissing: true,
-      });
-      const runtimeManifest = buildRuntimeManifest(extension, resolvedTools.toolPaths);
-      extensionRegistry.registerExtension(runtimeManifest, {
-        isBundled: false,
-        isEnabled: true,
-        state: "installed",
-      });
-      runtimeIssues.set(extensionId, resolvedTools.issues);
-    }
-
-    try {
-      await registerLanguageProvider({
+  await Promise.all(
+    indexedDBInstalled.map(async (installed) => {
+      const languageId = installed.languageId;
+      const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
+      const extension = getExtensionManifestForLanguage(
         extensionId,
+        availableExtensions,
         languageId,
-        displayName: extension?.displayName || languageId,
-        version: installed.version,
-        extensions: languageExtensions,
-        aliases,
-      });
-    } catch (error) {
-      console.debug(`Could not load language extension ${languageId}:`, error);
-    }
-  }
+      );
+      const languageConfig = extension?.languages?.find((lang) => lang.id === languageId);
+      const languageExtensions = languageConfig?.extensions || [`.${languageId}`];
+      const aliases = languageConfig?.aliases;
+
+      if (extension) {
+        const resolvedTools = await resolveToolPaths(languageId, extension, {
+          repairMissing: true,
+        });
+        const runtimeManifest = buildRuntimeManifest(extension, resolvedTools.toolPaths);
+        extensionRegistry.registerExtension(runtimeManifest, {
+          isBundled: false,
+          isEnabled: true,
+          state: "installed",
+        });
+        runtimeIssues.set(extensionId, resolvedTools.issues);
+      }
+
+      try {
+        await registerLanguageProvider({
+          extensionId,
+          languageId,
+          displayName: extension?.displayName || languageId,
+          version: installed.version,
+          extensions: languageExtensions,
+          aliases,
+        });
+      } catch (error) {
+        console.debug(`Could not load language extension ${languageId}:`, error);
+      }
+    }),
+  );
 
   return {
     backendInstalled,
