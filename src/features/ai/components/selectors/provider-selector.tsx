@@ -80,7 +80,7 @@ export function ProviderSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-[min(128px,34vw)] max-w-[128px]")
+      ? chatComposerControlClassName("max-w-[128px]")
       : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
@@ -181,7 +181,7 @@ export function ProviderSelector({
             size={isComposer ? 12 : 14}
             className="shrink-0 text-text-lighter"
           />
-          <span className="block min-w-0 flex-1 truncate text-text">{currentProviderName}</span>
+          <span className="block min-w-0 truncate text-text">{currentProviderName}</span>
         </Button>
       )}
 

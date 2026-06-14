@@ -229,7 +229,7 @@ export function ModelSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-[min(176px,45vw)] max-w-[176px]")
+      ? chatComposerControlClassName("max-w-[176px]")
       : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
@@ -336,7 +336,7 @@ export function ModelSelector({
           onClick={() => setOpen(!isOpen)}
           className={triggerClass}
         >
-          <span className="block min-w-0 flex-1 truncate text-text">{currentModelName}</span>
+          <span className="block min-w-0 truncate text-text">{currentModelName}</span>
         </Button>
       )}
 
