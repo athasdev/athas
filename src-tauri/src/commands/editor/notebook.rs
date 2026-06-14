@@ -5,6 +5,7 @@ use tokio::{io::AsyncReadExt, process::Command, time};
 const NOTEBOOK_CELL_TIMEOUT_SECS: u64 = 20;
 const PYTHON_CELL_RUNNER: &str = r#"
 import contextlib
+import base64
 import io
 import json
 import sys
@@ -22,10 +23,38 @@ def run_code(code, capture):
 
 setup_capture = {"stdout": io.StringIO(), "stderr": io.StringIO()}
 cell_capture = {"stdout": io.StringIO(), "stderr": io.StringIO()}
+display_data = []
+
+def close_matplotlib_figures():
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        return
+    plt.close("all")
+
+def collect_matplotlib_figures():
+    try:
+        import matplotlib.pyplot as plt
+    except Exception:
+        return
+
+    for number in plt.get_fignums():
+        figure = plt.figure(number)
+        buffer = io.BytesIO()
+        figure.savefig(buffer, format="png", bbox_inches="tight")
+        display_data.append({
+            "data": {
+                "image/png": base64.b64encode(buffer.getvalue()).decode("ascii"),
+                "text/plain": f"<Figure size {figure.get_size_inches()[0]}x{figure.get_size_inches()[1]}>",
+            },
+            "metadata": {},
+        })
 
 try:
     run_code(setup_code, setup_capture)
+    close_matplotlib_figures()
     run_code(cell_code, cell_capture)
+    collect_matplotlib_figures()
     status = 0
 except Exception:
     status = 1
@@ -35,6 +64,7 @@ print(json.dumps({
     "stdout": cell_capture["stdout"].getvalue(),
     "stderr": cell_capture["stderr"].getvalue(),
     "status": status,
+    "displayData": display_data,
 }))
 "#;
 
@@ -45,13 +75,23 @@ pub struct NotebookRunResult {
    stderr: String,
    status: Option<i32>,
    timed_out: bool,
+   display_data: Vec<PythonDisplayData>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PythonDisplayData {
+   data: std::collections::HashMap<String, String>,
+   metadata: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct PythonCellRunnerResult {
    stdout: String,
    stderr: String,
    status: Option<i32>,
+   display_data: Vec<PythonDisplayData>,
 }
 
 #[tauri::command]
@@ -122,6 +162,7 @@ pub async fn notebook_run_python_cell(
                },
                status: result.status,
                timed_out: false,
+               display_data: result.display_data,
             });
          }
 
@@ -130,6 +171,7 @@ pub async fn notebook_run_python_cell(
             stderr: String::from_utf8_lossy(&stderr).to_string(),
             status: status.code(),
             timed_out: false,
+            display_data: Vec::new(),
          })
       }
       Err(_) => {
@@ -146,6 +188,7 @@ pub async fn notebook_run_python_cell(
             stderr: stderr_text,
             status: None,
             timed_out: true,
+            display_data: Vec::new(),
          })
       }
    }

@@ -102,6 +102,7 @@ interface NotebookRunResult {
   stderr: string;
   status: number | null;
   timedOut: boolean;
+  displayData?: Array<unknown>;
 }
 
 function isPythonScriptFile(filePath: string): boolean {
@@ -359,7 +360,15 @@ const CodeEditor = ({
               return;
             }
             const stdout = truncateCellOutput(result.stdout);
-            toast.success(stdout ? `Python cell output: ${stdout}` : "Python cell ran.");
+            if (stdout) {
+              toast.success(`Python cell output: ${stdout}`);
+              return;
+            }
+            if (result.displayData?.length) {
+              toast.success(`Python cell produced ${result.displayData.length} display output(s).`);
+              return;
+            }
+            toast.success("Python cell ran.");
           })
           .catch((error) => {
             toast.error(error instanceof Error ? error.message : "Failed to run Python cell");

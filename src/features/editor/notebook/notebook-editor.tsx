@@ -64,6 +64,10 @@ interface NotebookRunResult {
   stderr: string;
   status: number | null;
   timedOut: boolean;
+  displayData?: Array<{
+    data: Record<string, string>;
+    metadata?: Record<string, unknown>;
+  }>;
 }
 
 const NOTEBOOK_CELL_ID_PREFIX = "notebook-cell";
@@ -138,6 +142,14 @@ function resultToOutputs(result: NotebookRunResult): NotebookOutput[] {
       ename: result.timedOut ? "TimeoutError" : "PythonError",
       evalue: message.trim(),
       traceback: message ? message.split("\n") : [],
+    });
+  }
+
+  for (const output of result.displayData ?? []) {
+    outputs.push({
+      output_type: "display_data",
+      data: output.data,
+      metadata: output.metadata ?? {},
     });
   }
 
