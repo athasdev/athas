@@ -98,6 +98,23 @@ export const FileTreeSettings = () => {
         </SettingRow>
 
         <SettingRow
+          label="Hide Root Folder"
+          description="Show project files directly at the top level"
+          onReset={() =>
+            updateSetting("hideRootFolderInFileTree", getDefaultSetting("hideRootFolderInFileTree"))
+          }
+          canReset={
+            settings.hideRootFolderInFileTree !== getDefaultSetting("hideRootFolderInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.hideRootFolderInFileTree}
+            onChange={(checked) => updateSetting("hideRootFolderInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Show Hidden Files"
           description="Show dotfiles and hidden directories"
           onReset={() =>

@@ -200,6 +200,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["compact", "folders", "directories", "single child", "collapse", "nested"],
   },
   {
+    id: "file-tree-hide-root-folder",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Hide Root Folder",
+    description: "Show project files directly at the top level",
+    keywords: ["root", "folder", "project", "workspace", "top level", "file explorer"],
+  },
+  {
     id: "file-tree-density",
     tab: "file-explorer",
     section: "Display",

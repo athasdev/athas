@@ -15,6 +15,7 @@ interface UseFileExplorerVisibleRowsOptions {
   activePath?: string;
   containerRef: RefObject<HTMLDivElement | null>;
   expandedPathsOverride?: ReadonlySet<string>;
+  rootFolderPath?: string;
 }
 
 export function useFileExplorerVisibleRows({
@@ -22,17 +23,20 @@ export function useFileExplorerVisibleRows({
   activePath,
   containerRef,
   expandedPathsOverride,
+  rootFolderPath,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
   const compactFolders = useSettingsStore((state) => state.settings.compactFoldersInFileTree);
+  const hideRootFolder = useSettingsStore((state) => state.settings.hideRootFolderInFileTree);
   const density = useSettingsStore((state) => state.settings.fileTreeDensity);
   const rowHeight = FILE_TREE_DENSITY_CONFIG[density].rowHeight;
 
   const visibleRows = useMemo(() => {
     return buildVisibleFileTreeRows(files, expandedPathsOverride ?? expandedPaths, {
       compactFolders,
+      hiddenRootPath: hideRootFolder ? rootFolderPath : undefined,
     });
-  }, [compactFolders, expandedPaths, expandedPathsOverride, files]);
+  }, [compactFolders, expandedPaths, expandedPathsOverride, files, hideRootFolder, rootFolderPath]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleRows.length,

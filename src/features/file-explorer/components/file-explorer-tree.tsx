@@ -450,6 +450,7 @@ function FileExplorerTreeComponent({
     activePath,
     containerRef,
     expandedPathsOverride: displayedExpandedPaths,
+    rootFolderPath,
   });
   const keyboardPath = focusedPath || activePath;
   const highlightedPath = hasTreeFocus ? keyboardPath : activePath;

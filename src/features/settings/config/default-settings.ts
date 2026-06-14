@@ -129,7 +129,8 @@ export const defaultSettings: Settings = {
   horizontalTabScroll: false,
   //// File tree
   fileTreeIndentSize: 16,
-  compactFoldersInFileTree: false,
+  compactFoldersInFileTree: true,
+  hideRootFolderInFileTree: false,
   fileTreeDensity: "default",
   showHiddenFilesInFileTree: true,
   showGitignoredFilesInFileTree: true,
