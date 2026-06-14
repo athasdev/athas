@@ -10,6 +10,7 @@ import {
   applySettingSideEffect,
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
+import { getSystemSyncThemePreferencePatch } from "@/features/settings/lib/theme-resolution";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
 import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 import {
@@ -111,13 +112,19 @@ export const useSettingsStore = create(
 
         updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
           const normalizedValue = normalizeSettingValue(key, value);
+          const savePatch: Partial<Settings> = { [key]: normalizedValue };
 
           set((state) => {
             state.settings[key] = normalizedValue;
+            if (key === "syncSystemTheme" && normalizedValue === true) {
+              const syncThemePatch = getSystemSyncThemePreferencePatch(state.settings);
+              Object.assign(state.settings, syncThemePatch);
+              Object.assign(savePatch, syncThemePatch);
+            }
           });
 
           applySettingSideEffect(key, normalizedValue, () => useSettingsStore.getState().settings);
-          debouncedSaveSettingsToStore({ [key]: normalizedValue });
+          debouncedSaveSettingsToStore(savePatch);
         },
 
         setSearchQuery: (query: string) => {

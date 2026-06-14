@@ -269,7 +269,15 @@ export function useMenuEventsWrapper() {
     onPrevTab: () => {
       void keymapRegistry.executeCommand("workbench.previousTab");
     },
-    onThemeChange: (theme: string) => updateSetting("theme", theme),
+    onThemeChange: (theme: string) => {
+      const { settings } = useSettingsStore.getState();
+      if (settings.syncSystemTheme) {
+        void updateSetting("syncSystemTheme", false).then(() => updateSetting("theme", theme));
+        return;
+      }
+
+      updateSetting("theme", theme);
+    },
     onExecuteCommand: (commandId: string) => {
       void keymapRegistry.executeCommand(commandId);
     },

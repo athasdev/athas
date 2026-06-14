@@ -1,4 +1,3 @@
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useEditorSettingsStore } from "../stores/settings.store";
 import { calculateLineHeight } from "../utils/lines";
@@ -13,8 +12,7 @@ export function useMonacoEditorSettings() {
   const renderWhitespace = useEditorSettingsStore.use.renderWhitespace();
   const renderIndentGuides = useEditorSettingsStore.use.renderIndentGuides();
   const highlightOccurrences = useEditorSettingsStore.use.highlightOccurrences();
-  const editorTheme = useEditorSettingsStore.use.theme();
-  const appTheme = useSettingsStore((state) => state.settings.theme);
+  const themeId = useEditorSettingsStore.use.theme();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = baseFontSize * zoomLevel;
 
@@ -28,6 +26,6 @@ export function useMonacoEditorSettings() {
     renderWhitespace,
     renderIndentGuides,
     highlightOccurrences,
-    themeId: appTheme || editorTheme,
+    themeId,
   };
 }

@@ -3,6 +3,7 @@ import { ClockCounterClockwiseIcon as History } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -111,7 +112,13 @@ const CommandPalette = () => {
   };
 
   const handleThemeChange = useCallback((theme: string) => {
-    void useSettingsStore.getState().updateSetting("theme", theme);
+    const { settings, updateSetting } = useSettingsStore.getState();
+    if (settings.syncSystemTheme) {
+      void updateSetting("syncSystemTheme", false).then(() => updateSetting("theme", theme));
+      return;
+    }
+
+    void updateSetting("theme", theme);
   }, []);
 
   const handleIconThemeChange = useCallback((iconTheme: string) => {
@@ -121,6 +128,7 @@ const CommandPalette = () => {
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.pushAction();
   const { settings } = useSettingsStore();
+  const effectiveTheme = useEditorSettingsStore.use.theme();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
   const { clearLspError, updateLspStatus } = useLspStore.use.actions();
@@ -381,7 +389,7 @@ const CommandPalette = () => {
           onBack={popView}
           onClose={onClose}
           onThemeChange={handleThemeChange}
-          currentTheme={settings.theme}
+          currentTheme={settings.syncSystemTheme ? effectiveTheme : settings.theme}
         />
       ) : currentView === "icon-theme" ? (
         <IconThemeSelectorContent
