@@ -1,4 +1,5 @@
 import type React from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   lazy,
   Suspense,
@@ -28,6 +29,7 @@ import type {
 } from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { toast } from "@/ui/toast";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
@@ -38,12 +40,13 @@ import { HoverTooltip } from "../lsp/hover-tooltip";
 import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
-import { useCodeLens } from "../lsp/use-code-lens";
+import { useCodeLens, type CodeLensItem } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { NotebookEditor } from "../notebook/notebook-editor";
+import { getPythonScriptCells } from "../notebook/python-script-cells";
 import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
@@ -92,6 +95,33 @@ interface GoToLineEventDetail {
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 const LSP_VIEWPORT_LINE_BUFFER = 30;
+const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";
+
+interface NotebookRunResult {
+  stdout: string;
+  stderr: string;
+  status: number | null;
+  timedOut: boolean;
+}
+
+function isPythonScriptFile(filePath: string): boolean {
+  const normalized = filePath.toLowerCase();
+  return normalized.endsWith(".py") || normalized.endsWith(".ipy");
+}
+
+function editorWorkingDirectory(path: string): string | null {
+  if (!path || path.startsWith("remote://") || path.includes("://")) return null;
+  const lastSlash = path.lastIndexOf("/");
+  if (lastSlash <= 0) return null;
+  return path.slice(0, lastSlash);
+}
+
+function truncateCellOutput(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= 180) return trimmed;
+  return `${trimmed.slice(0, 177)}...`;
+}
+
 const AthasEditor = lazy(() =>
   import("@/features/athas-editor/components/editor").then((module) => ({
     default: module.Editor,
@@ -283,10 +313,59 @@ const CodeEditor = ({
     enableRichEditorServices ? filePath : undefined,
     enableRichEditorServices,
   );
+  const pythonScriptCells = useMemo(
+    () =>
+      enableInteractiveServices && isPythonScriptFile(filePath) ? getPythonScriptCells(value) : [],
+    [enableInteractiveServices, filePath, value],
+  );
+  const pythonScriptCellLenses = useMemo<CodeLensItem[]>(
+    () =>
+      pythonScriptCells.map((cell) => ({
+        line: cell.markerLine,
+        title: "Run cell",
+        command: PYTHON_SCRIPT_CELL_COMMAND,
+        arguments: [cell.index],
+      })),
+    [pythonScriptCells],
+  );
+  const visibleCodeLenses = useMemo(
+    () => [...pythonScriptCellLenses, ...codeLenses],
+    [codeLenses, pythonScriptCellLenses],
+  );
 
   const handleCodeLensExecute = useCallback(
     (lens: { title: string; command?: string; arguments?: unknown[] }) => {
       if (!filePath || !lens.command) return;
+
+      if (lens.command === PYTHON_SCRIPT_CELL_COMMAND) {
+        const cellIndex = typeof lens.arguments?.[0] === "number" ? lens.arguments[0] : -1;
+        const cell = pythonScriptCells[cellIndex];
+        if (!cell) return;
+
+        void invoke<NotebookRunResult>("notebook_run_python_cell", {
+          code: cell.code,
+          setupCode: cell.setupCode,
+          cwd: editorWorkingDirectory(filePath),
+        })
+          .then((result) => {
+            if (result.timedOut) {
+              toast.error("Python cell timed out.");
+              return;
+            }
+            if (result.status !== 0 || result.stderr.trim()) {
+              toast.error(
+                truncateCellOutput(result.stderr || `Python exited with status ${result.status}.`),
+              );
+              return;
+            }
+            const stdout = truncateCellOutput(result.stdout);
+            toast.success(stdout ? `Python cell output: ${stdout}` : "Python cell ran.");
+          })
+          .catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to run Python cell");
+          });
+        return;
+      }
 
       void lspClient.applyCodeAction(filePath, {
         title: lens.title,
@@ -294,7 +373,7 @@ const CodeEditor = ({
         arguments: lens.arguments ?? [],
       });
     },
-    [filePath, lspClient],
+    [filePath, lspClient, pythonScriptCells],
   );
 
   const updateLspVisibleLineRange = useCallback(
@@ -528,10 +607,10 @@ const CodeEditor = ({
           {enableRichEditorServices && useAthasEditor && <CompletionDropdown />}
 
           {/* Code Lens */}
-          {enableRichEditorServices && codeLenses.length > 0 && (
+          {enableRichEditorServices && visibleCodeLenses.length > 0 && (
             <CodeLensOverlay
               ref={codeLensRef}
-              lenses={codeLenses}
+              lenses={visibleCodeLenses}
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
