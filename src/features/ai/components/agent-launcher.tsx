@@ -181,7 +181,6 @@ export function AgentLauncher() {
           <ContextSelector
             buffers={selectableBuffers}
             selectedBufferIds={selectedBufferIds}
-            selectedFilesPaths={selectedFilesPaths}
             onToggleBuffer={(bufferId) =>
               setLocalSelectedBufferIds((current) => {
                 const next = new Set(current);
