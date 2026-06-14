@@ -65,22 +65,28 @@ export const HoverTooltip = memo(() => {
 
     const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
     const rect = containerRef.current.getBoundingClientRect();
+    const bounds = hoverInfo.bounds ?? {
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      left: 0,
+    };
 
     let left = hoverInfo.position.left;
     let top = hoverInfo.opensUpward ? hoverInfo.position.top - rect.height : hoverInfo.position.top;
 
-    if (left + rect.width > window.innerWidth - margin) {
-      left = window.innerWidth - rect.width - margin;
+    if (left + rect.width > bounds.right - margin) {
+      left = bounds.right - rect.width - margin;
     }
-    if (left < margin) {
-      left = margin;
+    if (left < bounds.left + margin) {
+      left = bounds.left + margin;
     }
 
-    if (top + rect.height > window.innerHeight - margin) {
-      top = window.innerHeight - rect.height - margin;
+    if (top + rect.height > bounds.bottom - margin) {
+      top = bounds.bottom - rect.height - margin;
     }
-    if (top < margin) {
-      top = margin;
+    if (top < bounds.top + margin) {
+      top = bounds.top + margin;
     }
 
     setResolvedPosition((current) => {
@@ -94,13 +100,17 @@ export const HoverTooltip = memo(() => {
   if (!hoverInfo) return null;
 
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-  const maxWidth = Math.min(
-    EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH,
-    Math.max(220, window.innerWidth - margin * 2),
-  );
+  const bounds = hoverInfo.bounds ?? {
+    top: 0,
+    right: window.innerWidth,
+    bottom: window.innerHeight,
+    left: 0,
+  };
+  const boundedWidth = Math.max(0, bounds.right - bounds.left - margin * 2);
+  const maxWidth = Math.min(EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH, boundedWidth);
   const availableHeight = hoverInfo.opensUpward
-    ? Math.max(140, hoverInfo.position.top - margin)
-    : Math.max(140, window.innerHeight - hoverInfo.position.top - margin);
+    ? Math.max(0, hoverInfo.position.top - bounds.top - margin)
+    : Math.max(0, bounds.bottom - hoverInfo.position.top - margin);
   const maxHeight = Math.min(EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT, availableHeight);
 
   const positionStyle = resolvedPosition ?? {
@@ -130,7 +140,10 @@ export const HoverTooltip = memo(() => {
       onMouseLeave={handleMouseLeave}
     >
       {displayHtml && (
-        <div className="hover-tooltip-body custom-scrollbar" style={{ maxHeight: maxHeight - 4 }}>
+        <div
+          className="hover-tooltip-body custom-scrollbar"
+          style={{ maxHeight: Math.max(0, maxHeight - 4) }}
+        >
           <div
             className="markdown-preview hover-tooltip-content text-text"
             dangerouslySetInnerHTML={{ __html: displayHtml }}

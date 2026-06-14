@@ -20,6 +20,7 @@ import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { InlineEditPopover } from "@/features/athas-editor/components/inline-edit-popover";
 import { useInlineEdit } from "@/features/athas-editor/hooks/use-inline-edit";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim.store";
@@ -195,6 +196,61 @@ function syncContainedEditorFontOptions(
     const editorElement = editor.getDomNode();
     if (!editorElement || !container.contains(editorElement)) continue;
     editor.updateOptions(options);
+  }
+}
+
+function syncMonacoHoverBounds(container: HTMLElement) {
+  const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
+  const maxWidth = Math.max(120, container.clientWidth - margin * 2);
+  container.style.setProperty("--athas-monaco-hover-max-width", `${maxWidth}px`);
+}
+
+function setStyleProperty(
+  element: HTMLElement,
+  property: "left" | "maxWidth" | "width",
+  value: string,
+) {
+  if (element.style[property] === value) return;
+  element.style[property] = value;
+}
+
+function clampMonacoHoverWidgets(container: HTMLElement) {
+  syncMonacoHoverBounds(container);
+
+  const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
+  const maxWidth = Math.max(120, container.clientWidth - margin * 2);
+  const widgetNodes = container.querySelectorAll<HTMLElement>(
+    '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]',
+  );
+
+  for (const widgetNode of widgetNodes) {
+    const hoverNode = widgetNode.querySelector<HTMLElement>(".monaco-hover") ?? widgetNode;
+    const scrollNode = hoverNode.querySelector<HTMLElement>(".monaco-scrollable-element");
+    const contentNode = hoverNode.querySelector<HTMLElement>(".monaco-hover-content");
+    const nextWidth = Math.min(maxWidth, Math.max(120, hoverNode.getBoundingClientRect().width));
+
+    for (const node of [widgetNode, hoverNode, scrollNode, contentNode]) {
+      if (!node) continue;
+      setStyleProperty(node, "maxWidth", `${maxWidth}px`);
+      if (node.getBoundingClientRect().width > maxWidth) {
+        setStyleProperty(node, "width", `${nextWidth}px`);
+      }
+    }
+
+    const widgetRect = widgetNode.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const currentLeft = widgetRect.left - containerRect.left;
+    let nextLeft = currentLeft;
+
+    if (currentLeft + nextWidth > container.clientWidth - margin) {
+      nextLeft = container.clientWidth - nextWidth - margin;
+    }
+    if (nextLeft < margin) {
+      nextLeft = margin;
+    }
+    if (nextLeft !== currentLeft) {
+      setStyleProperty(widgetNode, "left", `${nextLeft}px`);
+    }
   }
 }
 
@@ -460,6 +516,7 @@ export function MonacoBackedEditor({
     const container = containerRef.current;
     if (!container || !buffer) return;
     const fontOptions = { fontFamily, fontSize, lineHeight };
+    syncMonacoHoverBounds(container);
 
     const model = monacoEditor.createModel(content, monacoLanguageId, modelUri);
     const editor = monacoEditor.create(container, {
@@ -505,6 +562,25 @@ export function MonacoBackedEditor({
     pendingLocalContentSnapshotsRef.current = [];
     editorAPI.setTextareaRef(null);
     editorAPI.setViewportRef(container);
+
+    let hoverClampRaf: number | null = null;
+    const scheduleMonacoHoverClamp = () => {
+      if (hoverClampRaf !== null) return;
+      hoverClampRaf = requestAnimationFrame(() => {
+        hoverClampRaf = null;
+        clampMonacoHoverWidgets(container);
+      });
+    };
+    const hoverMutationObserver = new MutationObserver(scheduleMonacoHoverClamp);
+    hoverMutationObserver.observe(container, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+      childList: true,
+      subtree: true,
+    });
+    const hoverResizeObserver = new ResizeObserver(scheduleMonacoHoverClamp);
+    hoverResizeObserver.observe(container);
+    scheduleMonacoHoverClamp();
 
     const adapterOwnerId = viewStateKey ?? activeBufferId ?? modelUri.toString();
     const selectEntireModel = () => {
@@ -662,12 +738,15 @@ export function MonacoBackedEditor({
         const viewKey = viewStateKey ?? activeBufferId ?? null;
         setScrollForBuffer(viewKey, event.scrollTop, event.scrollLeft);
         onScrollOffsetChange?.(event.scrollTop, event.scrollLeft);
+        scheduleMonacoHoverClamp();
         updateVisibleLineRange(editor);
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
+        scheduleMonacoHoverClamp();
         updateVisibleLineRange(editor);
       }),
+      editor.onMouseMove(scheduleMonacoHoverClamp),
     ];
 
     const unsubscribeCursor = editorAPI.on("cursorChange", (position) => {
@@ -708,6 +787,11 @@ export function MonacoBackedEditor({
       window.removeEventListener("keydown", handleWindowSelectAllShortcut, true);
       for (const disposable of disposables) {
         disposable.dispose();
+      }
+      hoverMutationObserver.disconnect();
+      hoverResizeObserver.disconnect();
+      if (hoverClampRaf !== null) {
+        cancelAnimationFrame(hoverClampRaf);
       }
       createdEditorDisposable.dispose();
       if (editorRef.current === editor) editorRef.current = null;

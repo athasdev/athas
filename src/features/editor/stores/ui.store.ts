@@ -12,6 +12,7 @@ import { replaceAllSearchMatches, replaceSearchMatch } from "../utils/search-rep
 type HoverInfo = {
   content: string;
   position: { top: number; left: number };
+  bounds?: { top: number; right: number; bottom: number; left: number };
   opensUpward?: boolean;
 };
 

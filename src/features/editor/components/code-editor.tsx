@@ -358,14 +358,18 @@ const CodeEditor = ({
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!enableInteractiveServices) return;
-    hoverHandlers.handleHover(e);
+    if (useAthasEditor) {
+      hoverHandlers.handleHover(e);
+    }
     definitionLinkHandlers.handleMouseMove(e);
   };
 
   // Combine mouse leave handlers
   const handleMouseLeave = () => {
     if (!enableInteractiveServices) return;
-    hoverHandlers.handleMouseLeave();
+    if (useAthasEditor) {
+      hoverHandlers.handleMouseLeave();
+    }
     definitionLinkHandlers.handleMouseLeave();
   };
 
@@ -518,7 +522,7 @@ const CodeEditor = ({
           }}
         >
           {/* Hover Tooltip */}
-          {enableRichEditorServices && <HoverTooltip />}
+          {enableRichEditorServices && useAthasEditor && <HoverTooltip />}
 
           {/* Completion Dropdown */}
           {enableRichEditorServices && useAthasEditor && <CompletionDropdown />}
@@ -599,7 +603,9 @@ const CodeEditor = ({
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                   onMouseEnter={
-                    enableRichEditorServices ? hoverHandlers.handleMouseEnter : undefined
+                    enableRichEditorServices && useAthasEditor
+                      ? hoverHandlers.handleMouseEnter
+                      : undefined
                   }
                   onClick={
                     enableRichEditorServices ? goToDefinitionHandlers.handleClick : undefined
@@ -627,7 +633,6 @@ const CodeEditor = ({
                 onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                onMouseEnter={enableRichEditorServices ? hoverHandlers.handleMouseEnter : undefined}
                 onClick={enableRichEditorServices ? goToDefinitionHandlers.handleClick : undefined}
               />
             )}
