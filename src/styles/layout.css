@@ -143,16 +143,19 @@
   overflow: hidden;
 }
 
-html:not([data-window-transparency="disabled"]) {
+html.platform-macos:not([data-window-transparency="disabled"]) {
   --athas-macos-glass-shell-bg: color-mix(in srgb, var(--color-secondary-bg) 12%, transparent);
-  --athas-macos-glass-workbench-bg: color-mix(in srgb, var(--color-secondary-bg) 10%, transparent);
-  --athas-macos-glass-chrome-bg: color-mix(in srgb, var(--color-secondary-bg) 18%, transparent);
   --athas-macos-glass-control-bg: color-mix(in srgb, var(--color-secondary-bg) 20%, transparent);
   --athas-macos-glass-control-active-bg: color-mix(in srgb, var(--color-hover) 70%, transparent);
   --athas-macos-glass-control-border: color-mix(in srgb, var(--color-border) 26%, transparent);
   --athas-macos-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 62%, transparent);
   --athas-macos-glass-popover-border: color-mix(in srgb, var(--color-border) 50%, transparent);
   --athas-macos-glass-chrome-border: transparent;
+  --athas-macos-glass-chrome-overlay-bg: color-mix(
+    in srgb,
+    var(--color-secondary-bg) 6%,
+    transparent
+  );
   --athas-macos-glass-chrome-filter: saturate(1.2) blur(20px);
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text-light) 78%, transparent);
   --athas-chrome-icon-hover-color: var(--color-text);
@@ -161,10 +164,8 @@ html:not([data-window-transparency="disabled"]) {
   --athas-chrome-control-active-bg: color-mix(in srgb, var(--color-hover) 72%, transparent);
 }
 
-html:not([data-window-transparency="disabled"])[data-theme-type="light"] {
+html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="light"] {
   --athas-macos-glass-shell-bg: color-mix(in srgb, var(--color-secondary-bg) 42%, transparent);
-  --athas-macos-glass-workbench-bg: color-mix(in srgb, var(--color-secondary-bg) 30%, transparent);
-  --athas-macos-glass-chrome-bg: color-mix(in srgb, var(--color-secondary-bg) 62%, transparent);
   --athas-macos-glass-control-bg: color-mix(in srgb, var(--color-primary-bg) 42%, transparent);
   --athas-macos-glass-control-active-bg: color-mix(
     in srgb,
@@ -175,6 +176,11 @@ html:not([data-window-transparency="disabled"])[data-theme-type="light"] {
   --athas-macos-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
   --athas-macos-glass-popover-border: color-mix(in srgb, var(--color-border) 55%, transparent);
   --athas-macos-glass-chrome-border: color-mix(in srgb, var(--color-border) 45%, transparent);
+  --athas-macos-glass-chrome-overlay-bg: color-mix(
+    in srgb,
+    var(--color-primary-bg) 10%,
+    transparent
+  );
   --athas-macos-glass-chrome-filter: saturate(1.08) blur(24px);
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text) 66%, transparent);
   --athas-chrome-icon-hover-color: color-mix(
@@ -191,33 +197,35 @@ html:not([data-window-transparency="disabled"])[data-theme-type="light"] {
   --athas-chrome-control-active-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
 }
 
-html:not([data-window-transparency="disabled"]) .window-container {
+html.platform-macos:not([data-window-transparency="disabled"]) .window-container {
   background: transparent !important;
 }
 
-html:not([data-window-transparency="disabled"]) .athas-layout-shell {
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-layout-shell {
   background: var(--athas-macos-glass-shell-bg) !important;
-}
-
-html:not([data-window-transparency="disabled"]) .athas-resizable-pane,
-html:not([data-window-transparency="disabled"]) .athas-sidebar-rail {
-  background: transparent !important;
-}
-
-html:not([data-window-transparency="disabled"]) .athas-workbench-glass {
-  background: var(--athas-macos-glass-workbench-bg) !important;
-}
-
-html:not([data-window-transparency="disabled"]) .athas-title-bar,
-html:not([data-window-transparency="disabled"]) .athas-footer-bar {
-  background: var(--athas-macos-glass-chrome-bg) !important;
-  border-color: var(--athas-macos-glass-chrome-border);
   -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
   backdrop-filter: var(--athas-macos-glass-chrome-filter);
 }
 
-html:not([data-window-transparency="disabled"]) [data-title-bar-project-tabs="true"] [role="tab"],
-html:not([data-window-transparency="disabled"]) .athas-title-project-add-button {
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-resizable-pane,
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-sidebar-rail {
+  background: transparent !important;
+}
+
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-workbench-glass {
+  background: transparent !important;
+}
+
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-bar,
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-footer-bar {
+  background: var(--athas-macos-glass-chrome-overlay-bg) !important;
+  border-color: var(--athas-macos-glass-chrome-border);
+}
+
+html.platform-macos:not([data-window-transparency="disabled"])
+  [data-title-bar-project-tabs="true"]
+  [role="tab"],
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-project-add-button {
   border-color: var(--athas-macos-glass-control-border) !important;
   background: var(--athas-macos-glass-control-bg) !important;
   color: var(--athas-chrome-icon-color) !important;
@@ -225,53 +233,57 @@ html:not([data-window-transparency="disabled"]) .athas-title-project-add-button 
   backdrop-filter: var(--athas-macos-glass-chrome-filter);
 }
 
-html:not([data-window-transparency="disabled"])
+html.platform-macos:not([data-window-transparency="disabled"])
   [data-title-bar-project-tabs="true"]
   [role="tab"][data-active="true"] {
   background: var(--athas-macos-glass-control-active-bg) !important;
   color: var(--athas-chrome-icon-active-color) !important;
 }
 
-html:not([data-window-transparency="disabled"]) .athas-title-project-surface:hover,
-html:not([data-window-transparency="disabled"])
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-project-surface:hover,
+html.platform-macos:not([data-window-transparency="disabled"])
   [data-title-bar-project-tabs="true"]
   [role="tab"]:hover,
-html:not([data-window-transparency="disabled"]) .athas-title-project-add-button:hover {
+html.platform-macos:not([data-window-transparency="disabled"])
+  .athas-title-project-add-button:hover {
   background: var(--athas-chrome-control-hover-bg) !important;
   color: var(--athas-chrome-icon-hover-color) !important;
 }
 
-html:not([data-window-transparency="disabled"]) .athas-title-project-tabs-list {
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-project-tabs-list {
   border-color: var(--athas-macos-glass-control-border) !important;
   background: color-mix(in srgb, var(--athas-macos-glass-control-bg) 82%, transparent) !important;
   -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
   backdrop-filter: var(--athas-macos-glass-chrome-filter);
 }
 
-html:not([data-window-transparency="disabled"]) .athas-project-picker-command {
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-project-picker-command {
   border-color: var(--athas-macos-glass-popover-border) !important;
   background: var(--athas-macos-glass-popover-bg) !important;
   -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
   backdrop-filter: var(--athas-macos-glass-chrome-filter);
 }
 
-html:not([data-window-transparency="disabled"]) .athas-project-picker-command [data-command-header],
-html:not([data-window-transparency="disabled"])
+html.platform-macos:not([data-window-transparency="disabled"])
+  .athas-project-picker-command
+  [data-command-header],
+html.platform-macos:not([data-window-transparency="disabled"])
   .athas-project-picker-command
   [data-command-footer] {
   background: color-mix(in srgb, var(--athas-macos-glass-popover-bg) 72%, transparent) !important;
 }
 
-html:not([data-window-transparency="disabled"]) .athas-chrome-control {
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-chrome-control {
   color: var(--athas-chrome-icon-color) !important;
 }
 
-html:not([data-window-transparency="disabled"]) .athas-chrome-control:hover {
+html.platform-macos:not([data-window-transparency="disabled"]) .athas-chrome-control:hover {
   background: var(--athas-chrome-control-hover-bg) !important;
   color: var(--athas-chrome-icon-hover-color) !important;
 }
 
-html:not([data-window-transparency="disabled"]) .athas-chrome-control[data-active="true"] {
+html.platform-macos:not([data-window-transparency="disabled"])
+  .athas-chrome-control[data-active="true"] {
   background: var(--athas-chrome-control-active-bg) !important;
   color: var(--athas-chrome-icon-active-color) !important;
 }

@@ -157,13 +157,17 @@ fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, St
 }
 
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
-   let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-
    #[cfg(target_os = "macos")]
    {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
       if let Err(error) = apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
       }
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
    }
 
    #[cfg(target_os = "windows")]
@@ -337,7 +341,7 @@ fn create_labeled_app_window_internal(
       .min_inner_size(400.0, 400.0)
       .center()
       .decorations(true)
-      .transparent(true)
+      .transparent(cfg!(target_os = "macos"))
       .resizable(true)
       .shadow(true);
 
