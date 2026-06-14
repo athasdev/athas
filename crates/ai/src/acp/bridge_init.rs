@@ -5,6 +5,7 @@ use super::{
       AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
+   workspace_path::{path_to_string, resolve_workspace_path},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use acp::Agent;
@@ -12,7 +13,11 @@ use agent_client_protocol as acp;
 use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
 use serde_json::json;
-use std::{path::PathBuf, process::Stdio, sync::Arc};
+use std::{
+   path::{Path, PathBuf},
+   process::Stdio,
+   sync::Arc,
+};
 use tauri::Emitter;
 use tokio::{
    process::{Child, Command},
@@ -30,6 +35,7 @@ pub(super) struct InitializedAcpWorker {
    pub io_handle: tokio::task::JoinHandle<()>,
    pub client: Arc<AthasAcpClient>,
    pub permission_sender: mpsc::Sender<PermissionResponse>,
+   pub workspace_path: Option<PathBuf>,
 }
 
 pub(super) async fn initialize_worker(
@@ -40,6 +46,7 @@ pub(super) async fn initialize_worker(
    requested_session_id: Option<String>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 ) -> Result<InitializedAcpWorker> {
+   let workspace_path = resolve_workspace_path(workspace_path)?;
    let (mut child, uses_npx_codex_adapter) =
       spawn_agent_process(config, workspace_path.as_deref())?;
    let process_group_id = child.id();
@@ -93,8 +100,11 @@ pub(super) async fn initialize_worker(
 
    let cwd = workspace_path
       .clone()
-      .map(PathBuf::from)
       .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+   log::info!(
+      "ACP workspace path resolved to {}",
+      path_to_string(cwd.as_path())
+   );
 
    let session_bootstrap = bootstrap_session(
       connection.clone(),
@@ -128,6 +138,7 @@ pub(super) async fn initialize_worker(
       io_handle,
       client,
       permission_sender,
+      workspace_path,
    })
 }
 
@@ -163,7 +174,7 @@ fn configure_background_agent_command(command: &mut Command) {
 
 fn spawn_agent_process(
    config: &AgentConfig,
-   workspace_path: Option<&str>,
+   workspace_path: Option<&Path>,
 ) -> Result<(Child, bool)> {
    let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
    log::info!(

@@ -21,6 +21,7 @@ export interface AcpAgentStatus {
   sessionActive: boolean;
   initialized: boolean;
   sessionId?: string | null;
+  workspacePath?: string | null;
   agentCapabilities?: AcpAgentCapabilities | null;
 }
 

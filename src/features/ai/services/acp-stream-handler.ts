@@ -11,7 +11,9 @@ import type {
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 import { buildContextPrompt } from "../utils/ai-context-builder";
 
@@ -85,20 +87,29 @@ export class AcpStreamHandler {
       const targetChat = this.getTargetChat();
       const desiredSessionId =
         targetChat?.agentId === this.agentId ? (targetChat.acpSessionId ?? null) : null;
+      const workspacePath = this.getWorkspacePath();
+      const statusWorkspacePath = normalizeAcpWorkspacePath(status.workspacePath);
+      const desiredWorkspacePath = normalizeAcpWorkspacePath(workspacePath);
       const shouldRestartForSession =
         status.running &&
         status.agentId === this.agentId &&
         (status.sessionId ?? null) !== desiredSessionId;
+      const shouldRestartForWorkspace =
+        status.running &&
+        status.agentId === this.agentId &&
+        statusWorkspacePath !== desiredWorkspacePath;
 
       if (status.running) {
         useAIChatStore.getState().setAcpStatus(status);
       }
 
-      if (!status.running || status.agentId !== this.agentId || shouldRestartForSession) {
+      if (
+        !status.running ||
+        status.agentId !== this.agentId ||
+        shouldRestartForSession ||
+        shouldRestartForWorkspace
+      ) {
         console.log(`Starting agent ${this.agentId}...`);
-
-        // Get current workspace path if available
-        const workspacePath = this.getWorkspacePath();
 
         let startStatus: AcpAgentStatus;
         try {
@@ -199,7 +210,7 @@ export class AcpStreamHandler {
         blocks.push({
           type: "resource",
           resource: {
-            uri: `file://${file.path}`,
+            uri: toAcpFileUri(file.path),
             text: file.content,
             mimeType: "text/plain",
           },
@@ -207,8 +218,8 @@ export class AcpStreamHandler {
       } else {
         blocks.push({
           type: "resource_link",
-          uri: `file://${file.path}`,
-          name: file.path.split("/").pop() || file.path,
+          uri: toAcpFileUri(file.path),
+          name: getAcpPathBaseName(file.path),
           mimeType: "text/plain",
         });
       }
@@ -225,8 +236,8 @@ export class AcpStreamHandler {
       resourceLinks.add(filePath);
       blocks.push({
         type: "resource_link",
-        uri: `file://${filePath}`,
-        name: filePath.split("/").pop() || filePath,
+        uri: toAcpFileUri(filePath),
+        name: getAcpPathBaseName(filePath),
         mimeType: "text/plain",
       });
     }
