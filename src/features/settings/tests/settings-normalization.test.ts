@@ -159,6 +159,32 @@ describe("settings normalization", () => {
     );
   });
 
+  it("migrates stale built-in AI model selections to supported models", () => {
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiProviderId: "deepseek",
+        aiModelId: "deepseek-reasoner",
+      }).aiModelId,
+    ).toBe("deepseek-v4-pro");
+
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiProviderId: "mistral",
+        aiModelId: "mistral-medium-3-1-25-08",
+      }).aiModelId,
+    ).toBe("mistral-medium-2604");
+
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiProviderId: "grok",
+        aiModelId: "grok-code-fast-1",
+      }).aiModelId,
+    ).toBe("grok-build-0.1");
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [
