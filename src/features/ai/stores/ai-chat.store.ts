@@ -5,6 +5,7 @@ import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
@@ -55,6 +56,13 @@ async function buildProviderApiKeyMap(
   );
 
   return new Map(entries);
+}
+
+function getProviderAccessFromMap(providerId: string, providerApiKeys: Map<string, boolean>) {
+  const provider = AI_PROVIDERS.find((item) => item.id === providerId);
+  if (!provider) return false;
+  if (!provider.requiresApiKey) return true;
+  return providerApiKeys.get(providerId) || false;
 }
 
 export const useAIChatStore = create<AIChatState & AIChatActions>()(
@@ -562,9 +570,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         checkAllProviderApiKeys: async () => {
           const subscription = useAuthStore.getState().subscription;
           const newApiKeyMap = await buildProviderApiKeyMap(subscription);
+          const currentProviderId = useSettingsStore.getState().settings.aiProviderId;
 
           set((state) => {
             state.providerApiKeys = newApiKeyMap;
+            state.hasApiKey = getProviderAccessFromMap(currentProviderId, newApiKeyMap);
           });
         },
 
@@ -576,27 +586,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
               const subscription = useAuthStore.getState().subscription;
 
               const newApiKeyMap = await buildProviderApiKeyMap(subscription);
+              const currentProviderId = useSettingsStore.getState().settings.aiProviderId;
               set((state) => {
                 state.providerApiKeys = newApiKeyMap;
+                state.hasApiKey = getProviderAccessFromMap(currentProviderId, newApiKeyMap);
               });
-
-              // Update hasApiKey for current provider
-              const currentProvider = AI_PROVIDERS.find((p) => p.id === providerId);
-              if (currentProvider && !currentProvider.requiresApiKey) {
-                set((state) => {
-                  state.hasApiKey = true;
-                });
-              } else {
-                const token = await getProviderApiToken(providerId);
-                set((state) => {
-                  state.hasApiKey = canUseProviderWithoutApiKey({
-                    providerId,
-                    subscription,
-                    hasStoredKey: !!token,
-                    requiresApiKey: currentProvider?.requiresApiKey ?? true,
-                  });
-                });
-              }
 
               return true;
             }
@@ -613,26 +607,11 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             const subscription = useAuthStore.getState().subscription;
 
             const newApiKeyMap = await buildProviderApiKeyMap(subscription);
+            const currentProviderId = useSettingsStore.getState().settings.aiProviderId;
             set((state) => {
               state.providerApiKeys = newApiKeyMap;
+              state.hasApiKey = getProviderAccessFromMap(currentProviderId, newApiKeyMap);
             });
-
-            // Update hasApiKey for current provider
-            const currentProvider = AI_PROVIDERS.find((p) => p.id === providerId);
-            if (currentProvider && !currentProvider.requiresApiKey) {
-              set((state) => {
-                state.hasApiKey = true;
-              });
-            } else {
-              set((state) => {
-                state.hasApiKey = canUseProviderWithoutApiKey({
-                  providerId,
-                  subscription,
-                  hasStoredKey: false,
-                  requiresApiKey: currentProvider?.requiresApiKey ?? true,
-                });
-              });
-            }
           } catch (error) {
             console.error("Error removing API key:", error);
             throw error;

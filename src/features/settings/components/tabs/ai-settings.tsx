@@ -31,6 +31,10 @@ import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-sectio
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
+import {
+  CUSTOM_AUTOCOMPLETE_PROVIDER_ID,
+  CUSTOM_CHAT_PROVIDER_ID,
+} from "@/features/ai/lib/custom-provider-config";
 import { cn } from "@/utils/cn";
 import {
   setCustomProviderBaseUrl,
@@ -49,8 +53,6 @@ import {
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
-const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
-const CUSTOM_CHAT_PROVIDER_ID = "custom";
 
 function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
   if (models.some((model) => model.id === DEFAULT_AUTOCOMPLETE_MODEL_ID)) {
