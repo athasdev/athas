@@ -110,7 +110,7 @@ const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
   "trailing",
   "all",
 ]);
-const EDITOR_ENGINES = new Set<Settings["editorEngine"]>(["monaco", "athas"]);
+const EDITOR_ENGINES = new Set<Settings["editorEngine"]>(["monaco"]);
 const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "none",
   "nvim",

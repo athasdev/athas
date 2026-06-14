@@ -77,6 +77,16 @@ describe("settings normalization", () => {
     expect(normalized.editorEngine).toBe("monaco");
   });
 
+  it("migrates legacy Athas editor engine selections to Monaco", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "athas",
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+    expect(normalizeSettingValue("editorEngine", "athas")).toBe("monaco");
+  });
+
   it("normalizes unsupported remembered settings tabs", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
@@ -107,6 +117,7 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.coreFeatures.webViewer).toBe(false);
+    expect(normalized.coreFeatures.athasEditorEngine).toBe(false);
   });
 
   it("migrates legacy icon theme aliases to Symbols", () => {

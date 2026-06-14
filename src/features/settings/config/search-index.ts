@@ -134,14 +134,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["highlight", "occurrences", "matches", "word", "symbol", "cursor"],
   },
   {
-    id: "editor-engine",
-    tab: "editor",
-    section: "Editor",
-    label: "Editor Engine",
-    description: "Choose Monaco or Athas",
-    keywords: ["engine", "monaco", "athas", "editor"],
-  },
-  {
     id: "editor-show-minimap",
     tab: "editor",
     section: "Display",
@@ -831,6 +823,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Web Viewer",
     description: "Open URLs in embedded editor tabs",
     keywords: ["web", "viewer", "browser", "url", "embedded", "experimental"],
+  },
+  {
+    id: "features-athas-editor-engine",
+    tab: "features",
+    section: "Features",
+    label: "Athas Editor Engine",
+    description: "Use the experimental Athas editor engine instead of Monaco",
+    keywords: ["athas", "editor", "engine", "monaco", "experimental"],
   },
 
   // Terminal Settings

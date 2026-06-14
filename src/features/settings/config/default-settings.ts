@@ -117,6 +117,7 @@ export const defaultSettings: Settings = {
     breadcrumbs: true,
     persistentCommands: true,
     webViewer: false,
+    athasEditorEngine: false,
   },
   // Advanced
   enterpriseManagedMode: false,

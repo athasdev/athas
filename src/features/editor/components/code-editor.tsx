@@ -217,8 +217,7 @@ const CodeEditor = ({
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
-  const editorEngine = settings.editorEngine ?? "monaco";
-  const useAthasEditor = editorEngine === "athas";
+  const useAthasEditor = settings.coreFeatures.athasEditorEngine;
   const showNotebookEditor =
     activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
   const enableInteractiveServices =
