@@ -1,5 +1,5 @@
 import type { SettingSearchRecord } from "../types/search.types";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // Enterprise Settings
@@ -418,7 +418,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show sidebar activity tabs across the top or in a left rail",
     keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
   },
-  ...(!IS_MAC && !IS_WINDOWS
+  ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {
           id: "appearance-native-menu-bar",

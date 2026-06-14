@@ -31,7 +31,7 @@ pub async fn toggle_menu_bar(
    app: crate::app_runtime::AppHandle,
    toggle: Option<bool>,
 ) -> Result<(), String> {
-   #[cfg(target_os = "windows")]
+   #[cfg(any(target_os = "windows", target_os = "linux"))]
    {
       let _ = toggle;
 
@@ -45,11 +45,11 @@ pub async fn toggle_menu_bar(
          let _ = store.save();
       }
 
-      log::info!("Native menu bar is disabled on Windows");
+      log::info!("Native menu bar is disabled on this platform");
       return Ok(());
    }
 
-   #[cfg(not(target_os = "windows"))]
+   #[cfg(not(any(target_os = "windows", target_os = "linux")))]
    {
       let is_menu_present = app.menu().is_some();
       let should_show_menu = match toggle {
@@ -602,12 +602,12 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
 }
 
 fn close_tab_accelerator() -> Option<&'static str> {
-   #[cfg(all(target_os = "linux", feature = "linux"))]
+   #[cfg(target_os = "linux")]
    {
       None
    }
 
-   #[cfg(not(all(target_os = "linux", feature = "linux")))]
+   #[cfg(not(target_os = "linux"))]
    {
       Some("CmdOrCtrl+W")
    }
