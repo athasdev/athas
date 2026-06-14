@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/athas-editor/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -242,13 +243,17 @@ export function FilePathBreadcrumb({
               }}
               variant="ghost"
               compact
-              className={dropdownItemClassName("justify-start")}
+              className={dropdownItemClassName("justify-start gap-2 font-normal")}
             >
-              <PathBreadcrumb
-                segments={[item.name]}
-                fullPath={item.path}
-                className="overflow-hidden"
+              <FileExplorerIcon
+                fileName={item.name}
+                isDir={item.isDir}
+                isExpanded={false}
+                className="shrink-0 text-text-lighter"
               />
+              <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
+                {item.name}
+              </span>
             </Button>
           ))}
         </Dropdown>

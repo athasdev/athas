@@ -1,5 +1,4 @@
 import type React from "react";
-import { CaretRightIcon as ChevronRight } from "@phosphor-icons/react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
@@ -50,7 +49,9 @@ export function PathBreadcrumb({
         return (
           <div key={`${segment}-${index}`} className="flex shrink-0 items-center gap-0.5">
             {index > 0 && (
-              <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" weight="duotone" />
+              <span aria-hidden="true" className="mx-0.5 shrink-0 text-text-lighter ui-text-xs">
+                /
+              </span>
             )}
             {interactive ? (
               <Button

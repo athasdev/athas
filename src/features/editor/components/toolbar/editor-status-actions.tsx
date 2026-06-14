@@ -79,6 +79,9 @@ type LanguageOption = ReturnType<typeof getAllLanguages>[number];
 function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
   const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftPosition, setDraftPosition] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const displayedCursorPosition = useMemo<Position>(() => {
     if (!editorViewKey || activeEditorViewKey === editorViewKey) {
       return cursorPosition;
@@ -87,11 +90,71 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
     const cachedCursor = useEditorStateStore.getState().actions.getCachedPosition(editorViewKey);
     return cachedCursor ?? { line: 0, column: 0, offset: 0 };
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
+  const displayPosition = `${displayedCursorPosition.line + 1}:${displayedCursorPosition.column + 1}`;
+
+  useEffect(() => {
+    if (!isEditing) return;
+    setDraftPosition(displayPosition);
+    const frameId = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [displayPosition, isEditing]);
+
+  const submitPosition = () => {
+    const match = draftPosition.trim().match(/^(\d+)(?::(\d+))?$/);
+    if (!match) {
+      setIsEditing(false);
+      return;
+    }
+
+    const line = Number(match[1]);
+    const column = match[2] ? Number(match[2]) : 1;
+
+    if (!Number.isFinite(line) || !Number.isFinite(column) || line < 1 || column < 1) {
+      setIsEditing(false);
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line, column } }));
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        aria-label="Go to line and column"
+        value={draftPosition}
+        onChange={(event) => setDraftPosition(event.target.value)}
+        onBlur={submitPosition}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            submitPosition();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            setIsEditing(false);
+          }
+        }}
+        className={cn(
+          statusChipClass,
+          "w-14 bg-hover text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+        )}
+      />
+    );
+  }
 
   return (
-    <span className={statusChipClass}>
-      {displayedCursorPosition.line + 1}:{displayedCursorPosition.column + 1}
-    </span>
+    <button
+      type="button"
+      className={statusChipClass}
+      onClick={() => setIsEditing(true)}
+      aria-label="Go to line and column"
+    >
+      {displayPosition}
+    </button>
   );
 }
 
@@ -389,9 +452,15 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               size="xs"
               variant="ghost"
               showClear={false}
-              inputClassName="ui-text-xs"
-              className={cn(statusChipClass, "h-5 w-[112px] rounded-md px-0")}
-              inputStyle={{ width: `${Math.max(currentFileDisplayName?.length ?? 10, 10)}ch` }}
+              showTrigger={false}
+              inputClassName="truncate ui-text-xs text-text-lighter group-hover/combobox-input:text-text"
+              className={cn(
+                statusChipClass,
+                "h-5 w-fit max-w-[240px] rounded-md bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
+              )}
+              inputStyle={{
+                width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
+              }}
             />
             <ComboboxContent align="end" className="w-[220px] min-w-[220px] rounded-lg">
               <ComboboxList className="max-h-[220px] p-1.5">
