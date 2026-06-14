@@ -3,10 +3,11 @@ import {
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as SlidersHorizontal,
 } from "@phosphor-icons/react";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
+  type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { Button, buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
@@ -38,9 +39,6 @@ interface DiffFileItem {
 }
 
 interface DiffDebugSummary {
-  diffReady: boolean;
-  indexedSections: number;
-  loadedCount: number;
   errorCount: number;
 }
 
@@ -86,6 +84,9 @@ export const PRFilesPanel = memo(
     onSelectFile,
     onOpenChangedFile,
   }: PRFilesPanelProps) => {
+    const [fileNavigatorViewMode, setFileNavigatorViewMode] =
+      useState<FileNavigatorViewMode>("flat");
+
     const fileTreeItems = useMemo<FileNavigatorItem[]>(
       () =>
         filteredDiff.map((file) => ({
@@ -154,11 +155,13 @@ export const PRFilesPanel = memo(
             selectedKey={selectedFilePath}
             onSelect={onSelectFile}
             ariaLabel="Changed files"
+            viewMode={fileNavigatorViewMode}
+            onViewModeChange={setFileNavigatorViewMode}
           />
         ) : null}
 
         <div className="min-w-0 flex-1 space-y-3 p-2">
-          <div className="rounded-md bg-terniary-bg px-3 py-1.5">
+          <div className="rounded-md border border-border/60 bg-terniary-bg px-2 py-1">
             <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-1">
                 <Button
@@ -172,8 +175,13 @@ export const PRFilesPanel = memo(
                   <ListBullets weight="duotone" />
                 </Button>
                 <span className="ui-text-sm text-text-lighter">
-                  {filteredDiff.length} / {diffFiles.length}
+                  {filteredDiff.length} of {diffFiles.length} files
                 </span>
+                {diffDebugSummary.errorCount > 0 ? (
+                  <span className="ui-text-xs text-error">
+                    {diffDebugSummary.errorCount} patch errors
+                  </span>
+                ) : null}
               </div>
               <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
                 <Input
@@ -200,20 +208,6 @@ export const PRFilesPanel = memo(
                 />
               </div>
             </div>
-          </div>
-
-          <div className="ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
-            <span>{diffDebugSummary.diffReady ? "diff ready" : "diff missing"}</span>
-            <span>&middot;</span>
-            <span>{`${diffDebugSummary.indexedSections} indexed`}</span>
-            <span>&middot;</span>
-            <span>{`${diffDebugSummary.loadedCount} loaded`}</span>
-            {diffDebugSummary.errorCount > 0 && (
-              <>
-                <span>&middot;</span>
-                <span className="text-error">{`${diffDebugSummary.errorCount} errors`}</span>
-              </>
-            )}
           </div>
 
           <div className="min-h-[560px] min-w-0 overflow-hidden rounded-xl bg-secondary-bg/12">

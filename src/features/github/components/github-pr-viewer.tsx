@@ -225,13 +225,9 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const diffDebugSummary = useMemo(() => {
     const patchStates = Object.values(filePatches);
     return {
-      diffReady: Boolean(selectedPRDiff),
-      indexedSections: Object.keys(diffSectionIndex).length,
-      loadingCount: patchStates.filter((patch) => patch.loading).length,
-      loadedCount: patchStates.filter((patch) => patch.data).length,
       errorCount: patchStates.filter((patch) => patch.error).length,
     };
-  }, [diffSectionIndex, filePatches, selectedPRDiff]);
+  }, [filePatches]);
 
   const diffFiles = useMemo(() => {
     return baseDiffFiles.map((file) => {
