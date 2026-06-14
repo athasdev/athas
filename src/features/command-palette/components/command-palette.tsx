@@ -87,9 +87,15 @@ const CommandPalette = () => {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [viewStack, setViewStack] = useState<CommandPaletteViewId[]>(["root"]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [activeInitialView, setActiveInitialView] = useState<CommandPaletteViewId>("root");
   const resultsRef = useRef<HTMLDivElement>(null);
-  const currentView = viewStack[viewStack.length - 1] || "root";
+  const initialViewStack = useMemo<CommandPaletteViewId[]>(
+    () => (commandPaletteInitialView === "root" ? ["root"] : ["root", commandPaletteInitialView]),
+    [commandPaletteInitialView],
+  );
+  const renderedViewStack =
+    isVisible && activeInitialView !== commandPaletteInitialView ? initialViewStack : viewStack;
+  const currentView = renderedViewStack[renderedViewStack.length - 1] || "root";
   const isRootView = currentView === "root";
 
   const pushView = (view: CommandPaletteViewId) => {
@@ -333,16 +339,10 @@ const CommandPalette = () => {
     if (isVisible) {
       setQuery("");
       setSelectedIndex(0);
-      setViewStack(
-        commandPaletteInitialView === "root" ? ["root"] : ["root", commandPaletteInitialView],
-      );
-      requestAnimationFrame(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      });
+      setActiveInitialView(commandPaletteInitialView);
+      setViewStack(initialViewStack);
     }
-  }, [isVisible, commandPaletteInitialView]);
+  }, [isVisible, commandPaletteInitialView, initialViewStack]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -412,12 +412,7 @@ const CommandPalette = () => {
             onClose={onClose}
             showClearButton={settings.coreFeatures.persistentCommands}
           >
-            <CommandInput
-              ref={inputRef}
-              value={query}
-              onChange={setQuery}
-              placeholder="Type a command..."
-            />
+            <CommandInput value={query} onChange={setQuery} placeholder="Type a command..." />
           </CommandHeader>
 
           <CommandList ref={resultsRef}>

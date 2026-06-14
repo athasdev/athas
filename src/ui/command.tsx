@@ -2,6 +2,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
+import { useCallback, useRef } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
@@ -14,7 +15,10 @@ interface CommandProps {
   onClose?: () => void;
   placement?: "top" | "bottom";
   title?: string;
+  autoFocus?: boolean;
 }
+
+const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
   "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl focus:outline-none",
@@ -69,12 +73,18 @@ const Command = ({
   onClose,
   placement = "top",
   title = "Command palette",
+  autoFocus = true,
 }: CommandProps) => {
+  const popupRef = useRef<HTMLDivElement>(null);
   const containerClassName =
     placement === "bottom"
       ? "fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
       : "fixed inset-0 z-[10060] flex items-start justify-center pt-16";
   const motionY = placement === "bottom" ? 8 : -8;
+  const getInitialFocusTarget = useCallback(
+    () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
+    [],
+  );
 
   return (
     <AnimatePresence>
@@ -97,7 +107,9 @@ const Command = ({
                 tabIndex={-1}
               />
               <DialogPrimitive.Popup
+                ref={popupRef}
                 aria-describedby={undefined}
+                initialFocus={autoFocus ? getInitialFocusTarget : false}
                 render={
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: motionY }}
@@ -224,6 +236,7 @@ export const CommandInput = ({
     onKeyDown={onKeyDown}
     placeholder={placeholder}
     className={cn(commandInputVariants({ size }), className)}
+    data-command-input=""
   />
 );
 
