@@ -6,8 +6,9 @@ import "../styles/monaco-editor.css";
 import { editor as monacoEditor, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { toMonacoLanguageId } from "../monaco/language";
-import { defineMonacoTheme } from "../monaco/theme";
+import { defineActiveMonacoTheme, defineMonacoTheme } from "../monaco/theme";
 import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
 
 interface NotebookCodeCellEditorProps {
@@ -88,7 +89,7 @@ export function NotebookCodeCellEditor({
       suggestOnTriggerCharacters: true,
       parameterHints: { enabled: true },
       contextmenu: true,
-      theme: defineMonacoTheme(themeId),
+      theme: defineActiveMonacoTheme(themeId),
       fixedOverflowWidgets: true,
       scrollbar: {
         vertical: "hidden",
@@ -163,7 +164,7 @@ export function NotebookCodeCellEditor({
       occurrencesHighlight: highlightOccurrences ? "singleFile" : "off",
       selectionHighlight: highlightOccurrences,
     });
-    monacoEditor.setTheme(defineMonacoTheme(themeId));
+    monacoEditor.setTheme(defineActiveMonacoTheme(themeId));
     setHeight(editorHeight(editor, lineHeight));
   }, [
     fontFamily,
@@ -178,6 +179,28 @@ export function NotebookCodeCellEditor({
     themeId,
     wordWrap,
   ]);
+
+  useEffect(() => {
+    const applyTheme = (nextThemeId?: string) => {
+      monacoEditor.setTheme(
+        nextThemeId
+          ? defineMonacoTheme(nextThemeId)
+          : defineActiveMonacoTheme(themeId),
+      );
+    };
+
+    applyTheme();
+
+    const unsubscribeRegistry = themeRegistry.onRegistryChange(applyTheme);
+    const unsubscribeTheme = themeRegistry.onThemeChange(applyTheme);
+    const unsubscribeReady = themeRegistry.onReady(applyTheme);
+
+    return () => {
+      unsubscribeRegistry();
+      unsubscribeTheme();
+      unsubscribeReady();
+    };
+  }, [themeId]);
 
   useEffect(() => {
     editorRef.current?.layout();

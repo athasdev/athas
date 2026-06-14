@@ -174,3 +174,7 @@ export function defineMonacoTheme(themeId: string): string {
 
   return monacoThemeId;
 }
+
+export function defineActiveMonacoTheme(fallbackThemeId: string): string {
+  return defineMonacoTheme(themeRegistry.getCurrentTheme() ?? fallbackThemeId);
+}

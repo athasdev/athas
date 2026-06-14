@@ -43,7 +43,7 @@ import type {
 } from "../view-model/view-layout";
 import { consumeLocalContentSnapshot, rememberLocalContentSnapshot } from "../monaco/content-sync";
 import { toMonacoLanguageId } from "../monaco/language";
-import { defineMonacoTheme } from "../monaco/theme";
+import { defineActiveMonacoTheme, defineMonacoTheme } from "../monaco/theme";
 import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
 
 interface MonacoBackedEditorProps {
@@ -986,7 +986,13 @@ export function MonacoBackedEditor({
     if (!editor) return;
     const fontOptions = { fontFamily, fontSize, lineHeight };
 
-    const applyTheme = () => monacoEditor.setTheme(defineMonacoTheme(themeId));
+    const applyTheme = (nextThemeId?: string) => {
+      monacoEditor.setTheme(
+        nextThemeId
+          ? defineMonacoTheme(nextThemeId)
+          : defineActiveMonacoTheme(themeId),
+      );
+    };
 
     applyTheme();
     editor.updateOptions({
@@ -1018,9 +1024,7 @@ export function MonacoBackedEditor({
     if (container) syncContainedEditorFontOptions(container, fontOptions);
 
     const unsubscribeRegistry = themeRegistry.onRegistryChange(applyTheme);
-    const unsubscribeTheme = themeRegistry.onThemeChange((changedThemeId) => {
-      if (changedThemeId === themeId) applyTheme();
-    });
+    const unsubscribeTheme = themeRegistry.onThemeChange(applyTheme);
     const unsubscribeReady = themeRegistry.onReady(applyTheme);
 
     return () => {
