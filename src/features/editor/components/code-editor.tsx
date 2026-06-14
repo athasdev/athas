@@ -47,6 +47,7 @@ import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { NotebookEditor } from "../notebook/notebook-editor";
 import { getPythonScriptCells } from "../notebook/python-script-cells";
+import { getRMarkdownChunks } from "../notebook/rmarkdown-chunks";
 import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
@@ -96,6 +97,7 @@ interface GoToLineEventDetail {
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 const LSP_VIEWPORT_LINE_BUFFER = 30;
 const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";
+const R_MARKDOWN_CHUNK_COMMAND = "athas.runRMarkdownChunk";
 
 interface NotebookRunResult {
   stdout: string;
@@ -108,6 +110,10 @@ interface NotebookRunResult {
 function isPythonScriptFile(filePath: string): boolean {
   const normalized = filePath.toLowerCase();
   return normalized.endsWith(".py") || normalized.endsWith(".ipy");
+}
+
+function isRMarkdownFile(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith(".rmd");
 }
 
 function editorWorkingDirectory(path: string): string | null {
@@ -329,9 +335,23 @@ const CodeEditor = ({
       })),
     [pythonScriptCells],
   );
+  const rMarkdownChunks = useMemo(
+    () => (enableInteractiveServices && isRMarkdownFile(filePath) ? getRMarkdownChunks(value) : []),
+    [enableInteractiveServices, filePath, value],
+  );
+  const rMarkdownChunkLenses = useMemo<CodeLensItem[]>(
+    () =>
+      rMarkdownChunks.map((chunk) => ({
+        line: chunk.markerLine,
+        title: "Run chunk",
+        command: R_MARKDOWN_CHUNK_COMMAND,
+        arguments: [chunk.index],
+      })),
+    [rMarkdownChunks],
+  );
   const visibleCodeLenses = useMemo(
-    () => [...pythonScriptCellLenses, ...codeLenses],
-    [codeLenses, pythonScriptCellLenses],
+    () => [...pythonScriptCellLenses, ...rMarkdownChunkLenses, ...codeLenses],
+    [codeLenses, pythonScriptCellLenses, rMarkdownChunkLenses],
   );
 
   const handleCodeLensExecute = useCallback(
@@ -376,13 +396,43 @@ const CodeEditor = ({
         return;
       }
 
+      if (lens.command === R_MARKDOWN_CHUNK_COMMAND) {
+        const chunkIndex = typeof lens.arguments?.[0] === "number" ? lens.arguments[0] : -1;
+        const chunk = rMarkdownChunks[chunkIndex];
+        if (!chunk) return;
+
+        void invoke<NotebookRunResult>("notebook_run_r_cell", {
+          code: chunk.code,
+          setupCode: chunk.setupCode,
+          cwd: editorWorkingDirectory(filePath),
+        })
+          .then((result) => {
+            if (result.timedOut) {
+              toast.error("R chunk timed out.");
+              return;
+            }
+            if (result.status !== 0 || result.stderr.trim()) {
+              toast.error(
+                truncateCellOutput(result.stderr || `R exited with status ${result.status}.`),
+              );
+              return;
+            }
+            const stdout = truncateCellOutput(result.stdout);
+            toast.success(stdout ? `R chunk output: ${stdout}` : "R chunk ran.");
+          })
+          .catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to run R chunk");
+          });
+        return;
+      }
+
       void lspClient.applyCodeAction(filePath, {
         title: lens.title,
         command: lens.command,
         arguments: lens.arguments ?? [],
       });
     },
-    [filePath, lspClient, pythonScriptCells],
+    [filePath, lspClient, pythonScriptCells, rMarkdownChunks],
   );
 
   const updateLspVisibleLineRange = useCallback(
