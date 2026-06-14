@@ -10,6 +10,7 @@ import {
   applySettingSideEffect,
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
+import { getAIModelSelectionPatch } from "@/features/settings/lib/ai-model-selection";
 import { getSystemSyncThemePreferencePatch } from "@/features/settings/lib/theme-resolution";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
 import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
@@ -121,6 +122,10 @@ export const useSettingsStore = create(
               Object.assign(state.settings, syncThemePatch);
               Object.assign(savePatch, syncThemePatch);
             }
+
+            const aiModelPatch = getAIModelSelectionPatch(state.settings, key);
+            Object.assign(state.settings, aiModelPatch);
+            Object.assign(savePatch, aiModelPatch);
           });
 
           applySettingSideEffect(key, normalizedValue, () => useSettingsStore.getState().settings);
