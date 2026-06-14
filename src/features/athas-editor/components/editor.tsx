@@ -50,7 +50,6 @@ import { useTokenizationScheduler } from "@/features/athas-editor/hooks/use-toke
 import {
   getLanguageId,
   resolveSyntaxTokensForContent,
-  retargetTokensForContentEdit,
   useTokenizer,
   type SyntaxTokenSnapshot,
 } from "@/features/athas-editor/hooks/use-tokenizer";
@@ -709,19 +708,15 @@ export function Editor({
     if (!canApplySemanticTokenState(semanticTokens, filePath)) return [];
 
     const semanticContent = semanticTokens.content || normalizedEditorContent;
+    if (semanticContent !== normalizedEditorContent) return [];
+
     const tokensForSemanticContent = semanticTokensToEditorTokens(
       semanticTokens.tokens,
       buildLineOffsetMap(semanticContent),
       semanticContent.length,
     );
 
-    if (semanticContent === normalizedEditorContent) return tokensForSemanticContent;
-
-    return retargetTokensForContentEdit(
-      tokensForSemanticContent,
-      semanticContent,
-      normalizedEditorContent,
-    );
+    return tokensForSemanticContent;
   }, [filePath, largeContentMode, normalizedEditorContent, semanticTokens]);
   const layeredTokens = useMemo(
     () => mergeTokenLayers(baseTokens, semanticEditorTokens),

@@ -45,4 +45,22 @@ describe("Athas editor key edits", () => {
       selectionEnd: 6,
     });
   });
+
+  it("does not accept inline completion on Shift+Tab", () => {
+    const result = resolvePreCompletionKeyEdit({
+      keyState: {
+        key: "Tab",
+        shiftKey: true,
+        content: "const value",
+        selectionStart: 5,
+        selectionEnd: 5,
+        tabSize: 2,
+      },
+      hasBlockedModifier: false,
+      autocompleteCompletion: { text: " extra", cursorOffset: 5 },
+      isLspCompletionVisible: false,
+    });
+
+    expect(result).toBeNull();
+  });
 });
