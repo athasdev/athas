@@ -16,6 +16,12 @@
   outline: 1px solid color-mix(in srgb, var(--color-accent, #4f8cff) 72%, white 8%);
 }
 
+.monaco-editor-shell .monaco-inline-git-blame {
+  color: var(--color-text-lighter, var(--text-lighter, rgba(128, 128, 128, 0.78)));
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
 .monaco-editor-shell .monaco-resizable-hover,
 .monaco-editor-shell .monaco-hover,
 .monaco-editor-shell .monaco-hover .monaco-scrollable-element,

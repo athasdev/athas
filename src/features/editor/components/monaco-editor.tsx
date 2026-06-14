@@ -21,9 +21,11 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { InlineEditPopover } from "@/features/athas-editor/components/inline-edit-popover";
 import { useInlineEdit } from "@/features/athas-editor/hooks/use-inline-edit";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim.store";
+import { formatRelativeTime } from "@/utils/date";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useEditorUIStore } from "../stores/ui.store";
@@ -287,6 +289,7 @@ export function MonacoBackedEditor({
   const previousContentRef = useRef("");
   const pendingLocalContentSnapshotsRef = useRef<string[]>([]);
   const decorationsRef = useRef<string[]>([]);
+  const gitBlameDecorationRef = useRef<string[]>([]);
   const latestContentChangeRef = useRef(onContentChange);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const activeBuffer = useBufferStore(
@@ -318,6 +321,7 @@ export function MonacoBackedEditor({
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
@@ -327,6 +331,7 @@ export function MonacoBackedEditor({
     useEditorStateStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentSearchMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const { getBlameForLine } = useGitBlame(inlineGitBlameEnabled && filePath ? filePath : undefined);
 
   const modelUri = useMemo(
     () => createModelUri(activeBufferId ?? undefined, filePath),
@@ -1033,6 +1038,49 @@ export function MonacoBackedEditor({
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decorations);
   }, [currentHighlightIndex, currentSearchMatchIndex, highlightMatches, searchMatches]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    if (!editor || !model) return;
+
+    const clearDecoration = () => {
+      gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, []);
+    };
+
+    if (!inlineGitBlameEnabled || !isActiveSurface || !filePath) {
+      clearDecoration();
+      return;
+    }
+
+    const lineIndex = cursorPosition.line;
+    const lineNumber = lineIndex + 1;
+    if (lineNumber < 1 || lineNumber > model.getLineCount()) {
+      clearDecoration();
+      return;
+    }
+
+    const blameLine = getBlameForLine(lineIndex);
+    if (!blameLine) {
+      clearDecoration();
+      return;
+    }
+
+    const column = model.getLineMaxColumn(lineNumber);
+    gitBlameDecorationRef.current = editor.deltaDecorations(gitBlameDecorationRef.current, [
+      {
+        range: new MonacoRange(lineNumber, column, lineNumber, column),
+        options: {
+          after: {
+            content: `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`,
+            inlineClassName: "monaco-inline-git-blame",
+            cursorStops: monacoEditor.InjectedTextCursorStops.None,
+          },
+          showIfCollapsed: false,
+        },
+      },
+    ]);
+  }, [cursorPosition.line, filePath, getBlameForLine, inlineGitBlameEnabled, isActiveSurface]);
 
   useEffect(() => {
     const editor = editorRef.current;
