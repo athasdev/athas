@@ -886,14 +886,18 @@ const TerminalTabBar = ({
           {/* Resize handle for vertical sidebar */}
           {orientation === "vertical" && (
             <div
-              className="absolute top-0 right-0 z-10 h-full w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60"
+              className={cn(
+                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60",
+                tabSidebarPosition === "right" ? "left-0" : "right-0",
+              )}
               onMouseDown={(e) => {
                 e.preventDefault();
                 const startX = e.clientX;
                 const startWidth = tabSidebarWidth;
+                const directionMultiplier = tabSidebarPosition === "right" ? -1 : 1;
 
                 const onMouseMove = (ev: MouseEvent) => {
-                  setTabSidebarWidth(startWidth + (ev.clientX - startX));
+                  setTabSidebarWidth(startWidth + (ev.clientX - startX) * directionMultiplier);
                 };
                 const onMouseUp = () => {
                   document.removeEventListener("mousemove", onMouseMove);

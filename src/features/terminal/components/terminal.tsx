@@ -758,7 +758,7 @@ export const XtermTerminal = ({
   );
 
   return (
-    <div className="relative flex size-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-primary-bg">
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
@@ -768,13 +768,13 @@ export const XtermTerminal = ({
         currentMatch={searchResults.current}
         totalMatches={searchResults.total}
       />
-      <div className="flex min-h-0 flex-1 flex-col pl-[16px]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-[16px]">
         <div
           ref={terminalContainerRef}
           id={`terminal-${sessionId}`}
           data-terminal-drop-target
           data-terminal-session-id={sessionId}
-          className={`xterm-container flex h-full min-h-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
           onDragOver={handleTerminalDragOver}
           onDrop={handleTerminalFileDrop}
           onMouseDown={() => {
