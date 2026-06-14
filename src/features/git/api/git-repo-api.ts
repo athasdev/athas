@@ -135,6 +135,14 @@ export async function resolveRepositoryPath(repoPath: string): Promise<string | 
   return discoverRepo(repoPath);
 }
 
+export async function resolveRepositoryPathOrThrow(repoPath: string): Promise<string> {
+  const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+  if (!resolvedRepoPath) {
+    throw new Error("Not a Git repository");
+  }
+  return resolvedRepoPath;
+}
+
 export async function resolveRepositoryForFile(
   repoPath: string,
   filePath: string,
@@ -177,6 +185,11 @@ export async function discoverWorkspaceRepositories(
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
   const queue: string[] = [normalizedWorkspacePath];
+  const containingRepoPath = await discoverRepo(normalizedWorkspacePath);
+
+  if (containingRepoPath) {
+    discoveredRepos.add(containingRepoPath);
+  }
 
   while (queue.length > 0) {
     const batch = queue.splice(0, 8);
@@ -225,10 +238,17 @@ export async function discoverWorkspaceRepositories(
     }
   }
 
-  const repositories = sortWorkspaceRepositories(
+  let repositories = sortWorkspaceRepositories(
     Array.from(discoveredRepos),
     normalizedWorkspacePath,
   );
+
+  if (containingRepoPath) {
+    repositories = [
+      containingRepoPath,
+      ...repositories.filter((repoPath) => repoPath !== containingRepoPath),
+    ];
+  }
 
   workspaceRepoDiscoveryCache.set(normalizedWorkspacePath, {
     discoveredAt: Date.now(),
