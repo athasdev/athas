@@ -17,7 +17,7 @@ import {
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
-import { scoreSearchQuery } from "@/utils/search-match";
+import { scoreSettingSearchRecord } from "@/features/settings/lib/settings-search";
 import { settingsSearchIndex } from "../config/search-index";
 import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
@@ -123,6 +123,7 @@ export const useSettingsStore = create(
         setSearchQuery: (query: string) => {
           set((state) => {
             state.search.query = query;
+            state.search.selectedResultId = null;
           });
           useSettingsStore.getState().runSearch();
         },
@@ -144,17 +145,10 @@ export const useSettingsStore = create(
 
           const results: SearchResult[] = settingsSearchIndex
             .map((record) => {
-              const score = scoreSearchQuery(query, [
-                { value: record.label, weight: 11 },
-                { value: record.description, weight: 1 },
-                { value: record.section, weight: 1 },
-                ...(record.keywords || []).map((keyword) => ({ value: keyword, weight: 6 })),
-              ]);
-
-              return { ...record, score };
+              return { ...record, score: scoreSettingSearchRecord(query, record) };
             })
             .filter((result) => result.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
 
           set((state) => {
             state.search.results = results;

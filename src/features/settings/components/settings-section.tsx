@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { getSettingSearchTargetKey } from "../lib/settings-search";
 
 interface SectionProps {
   title: string;
@@ -33,6 +34,7 @@ export default function Section({ title, description, children, className }: Sec
     <section
       className={cn("px-1 py-0.5 first:[&>.settings-section-header]:hidden", className)}
       data-settings-section={title}
+      data-settings-section-key={getSettingSearchTargetKey(title)}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
         <h4 className="ui-font ui-text-base text-text">{title}</h4>
@@ -164,8 +166,11 @@ export function SettingRow({
       role="group"
       aria-labelledby={labelId}
       aria-describedby={description ? descriptionId : undefined}
+      data-setting-row-key={getSettingSearchTargetKey(label)}
+      data-setting-row-label={label}
+      tabIndex={-1}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
+        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 focus:outline-none data-[settings-search-active=true]:bg-accent/10 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-accent/35 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
         className,
       )}
       onClick={handleRowClick}
