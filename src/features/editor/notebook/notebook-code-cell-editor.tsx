@@ -183,9 +183,7 @@ export function NotebookCodeCellEditor({
   useEffect(() => {
     const applyTheme = (nextThemeId?: string) => {
       monacoEditor.setTheme(
-        nextThemeId
-          ? defineMonacoTheme(nextThemeId)
-          : defineActiveMonacoTheme(themeId),
+        nextThemeId ? defineMonacoTheme(nextThemeId) : defineActiveMonacoTheme(themeId),
       );
     };
 

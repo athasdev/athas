@@ -33,27 +33,20 @@ describe("buildEditorContextMenuItems", () => {
         onSelectNextOccurrence: vi.fn(),
       }).disabled,
     ).toBe(false);
-    expect(
-      getItem("go-to-definition", { onGoToDefinition: vi.fn() }).disabled,
-    ).toBe(false);
-    expect(
-      getItem("trigger-suggest", { onTriggerSuggest: vi.fn() }).disabled,
-    ).toBe(false);
+    expect(getItem("go-to-definition", { onGoToDefinition: vi.fn() }).disabled).toBe(false);
+    expect(getItem("trigger-suggest", { onTriggerSuggest: vi.fn() }).disabled).toBe(false);
   });
 
   it("keeps selection-only commands disabled without a selection", () => {
-    const [copy, toggleCase, formatSelection] = [
-      "copy",
-      "toggle-case",
-      "format-selection",
-    ].map((id) =>
-      buildEditorContextMenuItems({
-        ...baseOptions,
-        hasSelection: false,
-        onCopy: vi.fn(),
-        onFormatSelection: vi.fn(),
-        onToggleCase: vi.fn(),
-      }).find((entry) => entry.id === id),
+    const [copy, toggleCase, formatSelection] = ["copy", "toggle-case", "format-selection"].map(
+      (id) =>
+        buildEditorContextMenuItems({
+          ...baseOptions,
+          hasSelection: false,
+          onCopy: vi.fn(),
+          onFormatSelection: vi.fn(),
+          onToggleCase: vi.fn(),
+        }).find((entry) => entry.id === id),
     );
 
     expect(copy?.disabled).toBe(true);

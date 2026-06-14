@@ -988,9 +988,7 @@ export function MonacoBackedEditor({
 
     const applyTheme = (nextThemeId?: string) => {
       monacoEditor.setTheme(
-        nextThemeId
-          ? defineMonacoTheme(nextThemeId)
-          : defineActiveMonacoTheme(themeId),
+        nextThemeId ? defineMonacoTheme(nextThemeId) : defineActiveMonacoTheme(themeId),
       );
     };
 
@@ -1327,8 +1325,12 @@ export function MonacoBackedEditor({
             onSelectNextOccurrence={() => executeEditorCommand("editor.selectNextOccurrence")}
             onSelectAllOccurrences={() => executeEditorCommand("editor.selectAllOccurrences")}
             onIndent={canEdit ? () => triggerMonacoAction("editor.action.indentLines") : undefined}
-            onOutdent={canEdit ? () => triggerMonacoAction("editor.action.outdentLines") : undefined}
-            onToggleComment={canEdit ? () => executeEditorCommand("editor.toggleComment") : undefined}
+            onOutdent={
+              canEdit ? () => triggerMonacoAction("editor.action.outdentLines") : undefined
+            }
+            onToggleComment={
+              canEdit ? () => executeEditorCommand("editor.toggleComment") : undefined
+            }
             onFormat={canEdit ? () => executeEditorCommand("editor.formatDocument") : undefined}
             onFormatSelection={
               canEdit ? () => executeEditorCommand("editor.formatSelection") : undefined
@@ -1341,7 +1343,9 @@ export function MonacoBackedEditor({
             onRenameSymbol={canEdit ? () => executeEditorCommand("editor.renameSymbol") : undefined}
             onQuickFix={canEdit ? () => executeEditorCommand("editor.quickFix") : undefined}
             onShowHover={() => executeEditorCommand("editor.showHover")}
-            onTriggerSuggest={canEdit ? () => executeEditorCommand("editor.triggerSuggest") : undefined}
+            onTriggerSuggest={
+              canEdit ? () => executeEditorCommand("editor.triggerSuggest") : undefined
+            }
           />,
           document.body,
         )}
