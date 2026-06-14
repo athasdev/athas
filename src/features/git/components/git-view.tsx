@@ -947,36 +947,36 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
-        <SidebarHeader className="min-w-0 bg-transparent p-0 backdrop-blur-none">
-          <GitProjectSelector
-            className="w-fit max-w-[calc(100%-4.5rem)]"
-            onRepositoryChange={() => setRepoSelectionError(null)}
-          />
-
-          <div className="flex shrink-0 items-center gap-1">
-            <SidebarHeaderIconButton
-              onClick={handleManualRefresh}
-              disabled={isLoadingGitData || isRefreshing}
-              className="disabled:opacity-50"
-              tooltip="Refresh"
-              aria-label="Refresh git status"
-            >
-              {isLoadingGitData || isRefreshing ? (
-                <LoadingIndicator label="Refreshing git status" compact />
-              ) : (
-                <RefreshCw />
-              )}
-            </SidebarHeaderIconButton>
-            {renderActionsButton()}
-          </div>
-        </SidebarHeader>
-
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <SidebarSectionSwitcher
             items={gitTabs}
             value={activeTab}
             onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
           />
+
+          <SidebarHeader className="min-w-0 justify-between bg-transparent p-0 backdrop-blur-none">
+            <GitProjectSelector
+              className="min-w-0 max-w-[calc(100%-4.5rem)] shrink"
+              onRepositoryChange={() => setRepoSelectionError(null)}
+            />
+
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <SidebarHeaderIconButton
+                onClick={handleManualRefresh}
+                disabled={isLoadingGitData || isRefreshing}
+                className="disabled:opacity-50"
+                tooltip="Refresh"
+                aria-label="Refresh git status"
+              >
+                {isLoadingGitData || isRefreshing ? (
+                  <LoadingIndicator label="Refreshing git status" compact />
+                ) : (
+                  <RefreshCw />
+                )}
+              </SidebarHeaderIconButton>
+              {renderActionsButton()}
+            </div>
+          </SidebarHeader>
 
           <SidebarSectionPager
             className="flex-1"

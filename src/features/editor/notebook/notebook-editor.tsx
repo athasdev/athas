@@ -29,7 +29,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { invoke } from "@tauri-apps/api/core";
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
@@ -48,7 +48,6 @@ import {
   notebookLanguage,
   notebookOutputText,
   parseNotebookContent,
-  previousNotebookCodeSource,
   serializeNotebook,
   updateNotebookCellType,
   updateNotebookCellOutputs,
@@ -56,6 +55,7 @@ import {
   type NotebookCell,
   type NotebookCellType,
   type NotebookDocument,
+  type NotebookMimeValue,
   type NotebookOutput,
 } from "./notebook-model";
 
@@ -65,7 +65,8 @@ interface NotebookRunResult {
   status: number | null;
   timedOut: boolean;
   displayData?: Array<{
-    data: Record<string, string>;
+    outputType?: string;
+    data: Record<string, NotebookMimeValue>;
     metadata?: Record<string, unknown>;
   }>;
 }
@@ -111,14 +112,45 @@ function sortableCellIds(cells: NotebookCell[]): string[] {
   });
 }
 
-function outputDataText(data: Record<string, string | string[]> | undefined, mime: string): string {
-  return notebookOutputText(data?.[mime]);
+function outputDataValue(
+  data: Record<string, NotebookMimeValue> | undefined,
+  mime: string,
+): NotebookMimeValue | undefined {
+  return data?.[mime];
 }
 
-function outputDataJson(data: Record<string, string | string[]> | undefined): string {
-  const value = data?.["application/json"];
+function outputDataText(data: Record<string, NotebookMimeValue> | undefined, mime: string): string {
+  const value = outputDataValue(data, mime);
   if (Array.isArray(value)) return value.join("");
   if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value && typeof value === "object") return JSON.stringify(value, null, 2);
+  return "";
+}
+
+function outputDataJson(data: Record<string, NotebookMimeValue> | undefined): string {
+  const value = data?.["application/json"];
+  if (typeof value === "string") {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return value;
+    }
+  }
+  if (value !== undefined && value !== null) return JSON.stringify(value, null, 2);
+
+  const jsonMime = Object.keys(data ?? {}).find((mime) => mime.endsWith("+json"));
+  if (!jsonMime) return "";
+
+  const jsonValue = data?.[jsonMime];
+  if (typeof jsonValue === "string") {
+    try {
+      return JSON.stringify(JSON.parse(jsonValue), null, 2);
+    } catch {
+      return jsonValue;
+    }
+  }
+  if (jsonValue !== undefined && jsonValue !== null) return JSON.stringify(jsonValue, null, 2);
   return "";
 }
 
@@ -147,7 +179,7 @@ function resultToOutputs(result: NotebookRunResult): NotebookOutput[] {
 
   for (const output of result.displayData ?? []) {
     outputs.push({
-      output_type: "display_data",
+      output_type: output.outputType === "execute_result" ? "execute_result" : "display_data",
       data: output.data,
       metadata: output.metadata ?? {},
     });
@@ -225,6 +257,27 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
       );
     }
 
+    const svg = outputDataText(output.data, "image/svg+xml");
+    if (svg) {
+      return (
+        <div
+          className="overflow-auto rounded-md border border-border bg-secondary-bg p-2.5"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svg) }}
+        />
+      );
+    }
+
+    const pdf = outputDataText(output.data, "application/pdf").replace(/\s/g, "");
+    if (pdf) {
+      return (
+        <iframe
+          title="PDF output"
+          src={`data:application/pdf;base64,${pdf}`}
+          className="h-[420px] w-full rounded-md border border-border bg-secondary-bg"
+        />
+      );
+    }
+
     const html = outputDataText(output.data, "text/html");
     if (html) {
       return (
@@ -241,6 +294,22 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     const json = outputDataJson(output.data);
     if (json) {
       return <HighlightedCode code={json} language="json" className={outputClassName} />;
+    }
+
+    const javascript = outputDataText(output.data, "application/javascript");
+    if (javascript) {
+      return (
+        <HighlightedCode code={javascript} language="javascript" className={outputClassName} />
+      );
+    }
+
+    const latex = outputDataText(output.data, "text/latex");
+    if (latex) {
+      return (
+        <pre className={cn(outputClassName, "whitespace-pre-wrap")}>
+          <code>{latex}</code>
+        </pre>
+      );
     }
 
     const text = outputDataText(output.data, "text/plain");
@@ -404,7 +473,7 @@ function NotebookCellView({
               tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
               tooltipSide="bottom"
             >
-              {isCode ? <Text weight="duotone" /> : <Code weight="duotone" />}
+              {isCode ? <Text /> : <Code />}
             </Button>
             <Button
               variant="ghost"
@@ -414,7 +483,7 @@ function NotebookCellView({
               tooltip="Insert cell below"
               tooltipSide="bottom"
             >
-              <Plus weight="duotone" />
+              <Plus />
             </Button>
             <Button
               variant="ghost"
@@ -500,6 +569,8 @@ export function NotebookEditor() {
   const [runningCell, setRunningCell] = useState<number | null>(null);
 
   const parsed = useMemo(() => parseNotebookContent(content), [content]);
+  const latestNotebookRef = useRef<NotebookDocument | null>(parsed.ok ? parsed.notebook : null);
+  const notebookCommitQueueRef = useRef<Promise<void>>(Promise.resolve());
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -515,8 +586,20 @@ export function NotebookEditor() {
     [parsed],
   );
 
+  useEffect(() => {
+    latestNotebookRef.current = parsed.ok ? parsed.notebook : null;
+  }, [parsed]);
+
+  const currentNotebook = () => latestNotebookRef.current ?? (parsed.ok ? parsed.notebook : null);
+
   const updateNotebook = (notebook: NotebookDocument) => {
-    void handleContentChange(serializeNotebook(notebook));
+    latestNotebookRef.current = notebook;
+    const serializedNotebook = serializeNotebook(notebook);
+    const nextCommit = notebookCommitQueueRef.current
+      .catch(() => undefined)
+      .then(() => handleContentChange(serializedNotebook));
+    notebookCommitQueueRef.current = nextCommit;
+    void nextCommit;
   };
 
   const handleEditToggle = (cellIndex: number) => {
@@ -534,15 +617,17 @@ export function NotebookEditor() {
 
   const handleSourceChange = (cellIndex: number, source: string) => {
     setSelectedCellIndex(cellIndex);
-    if (!parsed.ok) return;
-    updateNotebook(updateNotebookCellSource(parsed.notebook, cellIndex, source));
+    const notebook = currentNotebook();
+    if (!notebook) return;
+    updateNotebook(updateNotebookCellSource(notebook, cellIndex, source));
   };
 
   const handleRunCell = async (cellIndex: number) => {
     setSelectedCellIndex(cellIndex);
-    if (!parsed.ok || runningCell !== null) return;
+    const runNotebook = currentNotebook();
+    if (!runNotebook || runningCell !== null) return;
 
-    const cell = parsed.notebook.cells[cellIndex];
+    const cell = runNotebook.cells[cellIndex];
     if (!cell || cell.cell_type !== "code") return;
 
     setRunningCell(cellIndex);
@@ -550,11 +635,12 @@ export function NotebookEditor() {
       const result = await invoke<NotebookRunResult>("notebook_run_python_cell", {
         code: notebookCellSource(cell),
         cwd: notebookWorkingDirectory(path),
-        setupCode: previousNotebookCodeSource(parsed.notebook, cellIndex),
+        setupCode: "",
       });
-      const executionCount = maxExecutionCount(parsed.notebook) + 1;
+      const latestNotebook = currentNotebook() ?? runNotebook;
+      const executionCount = maxExecutionCount(latestNotebook) + 1;
       const nextNotebook = updateNotebookCellOutputs(
-        parsed.notebook,
+        latestNotebook,
         cellIndex,
         resultToOutputs(result),
         executionCount,
@@ -562,8 +648,9 @@ export function NotebookEditor() {
       updateNotebook(nextNotebook);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const latestNotebook = currentNotebook() ?? runNotebook;
       const nextNotebook = updateNotebookCellOutputs(
-        parsed.notebook,
+        latestNotebook,
         cellIndex,
         [
           {
@@ -582,9 +669,10 @@ export function NotebookEditor() {
   };
 
   const handleInsertCell = (cellIndex: number, cellType: NotebookCellType) => {
-    if (!parsed.ok) return;
-    const insertIndex = Math.max(0, Math.min(parsed.notebook.cells.length, cellIndex + 1));
-    updateNotebook(insertNotebookCell(parsed.notebook, insertIndex, cellType));
+    const notebook = currentNotebook();
+    if (!notebook) return;
+    const insertIndex = Math.max(0, Math.min(notebook.cells.length, cellIndex + 1));
+    updateNotebook(insertNotebookCell(notebook, insertIndex, cellType));
     setSelectedCellIndex(insertIndex);
     setEditingCells((current) => {
       const next = new Set<number>();
@@ -597,21 +685,20 @@ export function NotebookEditor() {
   };
 
   const handleAddCell = (cellType: NotebookCellType) => {
-    if (!parsed.ok) return;
-    const insertIndex = parsed.notebook.cells.length;
-    updateNotebook(insertNotebookCell(parsed.notebook, insertIndex, cellType));
+    const notebook = currentNotebook();
+    if (!notebook) return;
+    const insertIndex = notebook.cells.length;
+    updateNotebook(insertNotebookCell(notebook, insertIndex, cellType));
     setSelectedCellIndex(insertIndex);
     setEditingCells((current) => new Set([...current, insertIndex]));
   };
 
   const handleDeleteCell = (cellIndex: number) => {
-    if (!parsed.ok) return;
-    updateNotebook(deleteNotebookCell(parsed.notebook, cellIndex));
+    const notebook = currentNotebook();
+    if (!notebook) return;
+    updateNotebook(deleteNotebookCell(notebook, cellIndex));
     setSelectedCellIndex((current) =>
-      Math.max(
-        0,
-        Math.min(parsed.notebook.cells.length - 2, current > cellIndex ? current - 1 : current),
-      ),
+      Math.max(0, Math.min(notebook.cells.length - 2, current > cellIndex ? current - 1 : current)),
     );
     setEditingCells((current) => {
       const next = new Set<number>();
@@ -624,8 +711,9 @@ export function NotebookEditor() {
   };
 
   const handleTypeChange = (cellIndex: number, cellType: NotebookCellType) => {
-    if (!parsed.ok) return;
-    updateNotebook(updateNotebookCellType(parsed.notebook, cellIndex, cellType));
+    const notebook = currentNotebook();
+    if (!notebook) return;
+    updateNotebook(updateNotebookCellType(notebook, cellIndex, cellType));
     setSelectedCellIndex(cellIndex);
     setEditingCells((current) => new Set([...current, cellIndex]));
   };
@@ -683,6 +771,7 @@ export function NotebookEditor() {
   if (!parsed.ok) {
     return (
       <div
+        data-notebook-editor
         className="flex h-full items-center justify-center gap-2 overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text-lighter"
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
@@ -696,6 +785,7 @@ export function NotebookEditor() {
 
   return (
     <div
+      data-notebook-editor
       className="h-full overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text"
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >

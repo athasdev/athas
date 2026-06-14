@@ -31,6 +31,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
+import GitProjectSelector from "@/features/git/components/git-project-selector";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -545,13 +546,17 @@ const GitHubPRsView = memo(() => {
               onChange={(section) => setActiveSection(section as GitHubSidebarSection)}
             />
 
-            <SidebarHeader className="px-0">
+            <SidebarHeader className="min-w-0 px-0">
+              <GitProjectSelector
+                className="min-w-0 max-w-[34%] shrink-0"
+                onRepositoryChange={() => setRepoSelectionError(null)}
+              />
               <SidebarHeaderSearch
                 value={searchQuery}
                 onChange={setSearchQuery}
                 leftIcon={Search}
                 placeholder="Search"
-                containerClassName="pl-4"
+                containerClassName="min-w-0 flex-1 pl-1"
               />
               <SidebarHeaderIconButton
                 className="shrink-0"

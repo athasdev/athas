@@ -1,4 +1,12 @@
 export type NotebookCellType = "code" | "markdown" | "raw";
+export type NotebookMimeValue =
+  | string
+  | string[]
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
 
 export interface NotebookDocument {
   cells: NotebookCell[];
@@ -22,7 +30,7 @@ export interface NotebookOutput {
   output_type: string;
   name?: string;
   text?: string | string[];
-  data?: Record<string, string | string[]>;
+  data?: Record<string, NotebookMimeValue>;
   metadata?: Record<string, unknown>;
   execution_count?: number | null;
   ename?: string;
