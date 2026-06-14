@@ -40,7 +40,7 @@ import { HoverTooltip } from "../lsp/hover-tooltip";
 import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
-import { useCodeLens, type CodeLensItem } from "../lsp/use-code-lens";
+import type { CodeLensItem } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { useSemanticTokens } from "../lsp/use-semantic-tokens";
@@ -336,11 +336,7 @@ const CodeEditor = ({
     value,
   );
 
-  // Code lens
-  const codeLenses = useCodeLens(
-    enableRichEditorServices ? filePath : undefined,
-    enableRichEditorServices,
-  );
+  // Inline lenses are reserved for Athas-owned actions that do not require LSP layout support.
   const pythonScriptCells = useMemo(
     () =>
       enableInteractiveServices && isPythonScriptFile(filePath) ? getPythonScriptCells(value) : [],
@@ -371,8 +367,8 @@ const CodeEditor = ({
     [rMarkdownChunks],
   );
   const visibleCodeLenses = useMemo(
-    () => [...pythonScriptCellLenses, ...rMarkdownChunkLenses, ...codeLenses],
-    [codeLenses, pythonScriptCellLenses, rMarkdownChunkLenses],
+    () => [...pythonScriptCellLenses, ...rMarkdownChunkLenses],
+    [pythonScriptCellLenses, rMarkdownChunkLenses],
   );
 
   const handleCodeLensExecute = useCallback(
