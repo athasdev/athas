@@ -169,6 +169,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const [isCurrentFileLspAvailable, setIsCurrentFileLspAvailable] = useState(false);
   const [isRestartingCurrent, setIsRestartingCurrent] = useState(false);
   const [busyServerKey, setBusyServerKey] = useState<string | null>(null);
+  const [bulkLspAction, setBulkLspAction] = useState<"restart" | "stop" | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -222,6 +223,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   );
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
+  const isBulkLspBusy = bulkLspAction !== null;
+  const canRunBulkLspAction =
+    activeServerEntries.length > 0 && !isBulkLspBusy && !isRestartingCurrent && !busyServerKey;
   const currentFileLanguageId =
     activeBuffer?.type === "editor" && activeBuffer.languageOverride
       ? activeBuffer.languageOverride
@@ -262,6 +266,32 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       toast.error(error instanceof Error ? error.message : "Failed to stop language server");
     } finally {
       setBusyServerKey(null);
+    }
+  };
+
+  const handleRestartAllServers = async () => {
+    if (activeServerEntries.length === 0) return;
+
+    setBulkLspAction("restart");
+    try {
+      await lspClient.restartAllTrackedServers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to restart language servers");
+    } finally {
+      setBulkLspAction(null);
+    }
+  };
+
+  const handleStopAllServers = async () => {
+    if (activeServerEntries.length === 0) return;
+
+    setBulkLspAction("stop");
+    try {
+      await lspClient.stopAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to stop language servers");
+    } finally {
+      setBulkLspAction(null);
     }
   };
 
@@ -510,6 +540,30 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
             </div>
             {hasActiveServers || isCurrentFileLspAvailable ? (
               <div className="space-y-1">
+                {activeServerEntries.length > 0 && (
+                  <div className="flex gap-1 px-1 pb-1">
+                    <Button
+                      type="button"
+                      onClick={() => void handleRestartAllServers()}
+                      disabled={!canRunBulkLspAction}
+                      variant="default"
+                      compact
+                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                    >
+                      {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void handleStopAllServers()}
+                      disabled={!canRunBulkLspAction}
+                      variant="default"
+                      compact
+                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                    >
+                      {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
+                    </Button>
+                  </div>
+                )}
                 {activeServerEntries.map((entry) => {
                   const isBusy = busyServerKey === entry.key;
                   return (
@@ -525,7 +579,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         <Button
                           type="button"
                           onClick={() => void handleRestartServer(entry.key)}
-                          disabled={isBusy || isRestartingCurrent}
+                          disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
                           className="rounded-md px-2 ui-text-xs text-text-lighter"
@@ -535,10 +589,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         <Button
                           type="button"
                           onClick={() => void handleStopServer(entry.key)}
-                          disabled={isBusy || isRestartingCurrent}
+                          disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
                           className="rounded-md px-2 ui-text-xs text-text-lighter"
+                          aria-label={`Stop ${entry.displayName} language server`}
                         >
                           <Square weight="duotone" />
                         </Button>
@@ -558,7 +613,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       <Button
                         type="button"
                         onClick={() => void handleStartCurrent()}
-                        disabled={isRestartingCurrent}
+                        disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
                         compact
                         className="rounded-md px-2 ui-text-xs text-text-lighter"

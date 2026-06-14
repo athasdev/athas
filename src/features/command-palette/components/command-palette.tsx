@@ -131,7 +131,6 @@ const CommandPalette = () => {
   const effectiveTheme = useEditorSettingsStore.use.theme();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
-  const { clearLspError, updateLspStatus } = useLspStore.use.actions();
   const { rootFolderPath } = useFileSystemStore();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const gitStore = useGitStore();
@@ -276,13 +275,6 @@ const CommandPalette = () => {
     }),
     ...createAdvancedActions({
       lspStatus,
-      updateLspStatus: updateLspStatus as (
-        status: string,
-        workspaces?: string[],
-        error?: string,
-      ) => void,
-      clearLspError,
-      rootFolderPath,
       vimMode: settings.vimMode,
       vimCommands,
       setMode,

@@ -80,6 +80,7 @@ import {
   openOutlineSidebar,
   promptGoToLine,
 } from "./navigation-command-actions";
+import { restartAllLanguageServers, stopAllLanguageServers } from "./lsp-command-actions";
 import {
   openCommandPalette,
   openDiagnosticsBuffer,
@@ -253,6 +254,27 @@ const terminalCommands: Command[] = [
     keybinding: "cmd+d",
     execute: () => {
       window.dispatchEvent(new CustomEvent("terminal-split"));
+    },
+  },
+];
+
+const lspCommands: Command[] = [
+  {
+    id: "lsp.restartAllServers",
+    title: "Language Server: Restart All Servers",
+    category: "Language Server",
+    description: "Restart every active language server",
+    execute: () => {
+      void restartAllLanguageServers();
+    },
+  },
+  {
+    id: "lsp.stopAllServers",
+    title: "Language Server: Stop All Servers",
+    category: "Language Server",
+    description: "Stop every active language server",
+    execute: () => {
+      void stopAllLanguageServers();
     },
   },
 ];
@@ -1005,6 +1027,7 @@ const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
   ...terminalCommands,
+  ...lspCommands,
   ...viewCommands,
   ...navigationCommands,
   ...paneCommands,
