@@ -47,7 +47,15 @@ import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
 import { NotebookEditor } from "../notebook/notebook-editor";
 import { getPythonScriptCells } from "../notebook/python-script-cells";
-import { getRMarkdownChunks } from "../notebook/rmarkdown-chunks";
+import {
+  applyRMarkdownChunkOptionSemantics,
+  clearRMarkdownChunkOutput,
+  formatRMarkdownChunkOutput,
+  getRMarkdownChunks,
+  rMarkdownChunkShouldEvaluate,
+  rMarkdownChunkShouldPersistOutput,
+  updateRMarkdownChunkOutput,
+} from "../notebook/rmarkdown-chunks";
 import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
@@ -414,23 +422,54 @@ const CodeEditor = ({
         const chunk = rMarkdownChunks[chunkIndex];
         if (!chunk) return;
 
+        if (!rMarkdownChunkShouldEvaluate(chunk)) {
+          onChange(clearRMarkdownChunkOutput(valueRef.current, chunk));
+          toast.success("R chunk skipped because eval=FALSE.");
+          return;
+        }
+
         void invoke<NotebookRunResult>("notebook_run_r_cell", {
           code: chunk.code,
           setupCode: chunk.setupCode,
           cwd: editorWorkingDirectory(filePath),
         })
           .then((result) => {
+            const currentValue = valueRef.current;
+            const currentChunk = getRMarkdownChunks(currentValue)[chunkIndex] ?? chunk;
+            const semanticResult = applyRMarkdownChunkOptionSemantics(result, currentChunk);
+            if (rMarkdownChunkShouldPersistOutput(currentChunk)) {
+              onChange(
+                updateRMarkdownChunkOutput(
+                  currentValue,
+                  currentChunk,
+                  formatRMarkdownChunkOutput(semanticResult),
+                ),
+              );
+            } else {
+              onChange(clearRMarkdownChunkOutput(currentValue, currentChunk));
+            }
+
             if (result.timedOut) {
               toast.error("R chunk timed out.");
               return;
             }
-            if (result.status !== 0 || result.stderr.trim()) {
+            const allowCapturedError = currentChunk.options.error === true;
+            if (
+              !allowCapturedError &&
+              (semanticResult.status !== 0 || semanticResult.stderr.trim())
+            ) {
               toast.error(
-                truncateCellOutput(result.stderr || `R exited with status ${result.status}.`),
+                truncateCellOutput(
+                  semanticResult.stderr || `R exited with status ${semanticResult.status}.`,
+                ),
               );
               return;
             }
-            const stdout = truncateCellOutput(result.stdout);
+            const stdout = truncateCellOutput(semanticResult.stdout);
+            if (allowCapturedError && semanticResult.stderr.trim()) {
+              toast.success("R chunk completed with captured error output.");
+              return;
+            }
             toast.success(stdout ? `R chunk output: ${stdout}` : "R chunk ran.");
           })
           .catch((error) => {
@@ -445,7 +484,7 @@ const CodeEditor = ({
         arguments: lens.arguments ?? [],
       });
     },
-    [filePath, lspClient, pythonScriptCells, rMarkdownChunks],
+    [filePath, lspClient, onChange, pythonScriptCells, rMarkdownChunks],
   );
 
   const updateLspVisibleLineRange = useCallback(
