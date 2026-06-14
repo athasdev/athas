@@ -17,7 +17,7 @@
   "capabilities": {
     "lsp": {
       "name": "sourcekit-lsp",
-      "runtime": "binary",
+      "runtime": "system",
       "args": []
     }
   }

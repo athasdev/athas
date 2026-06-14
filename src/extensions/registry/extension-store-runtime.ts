@@ -16,7 +16,7 @@ type ToolPathMap = Partial<Record<ToolType, string>>;
 type ToolIssueMap = Partial<Record<ToolType, string>>;
 type BackendToolRuntime = Extract<
   ToolRuntime,
-  "bun" | "node" | "python" | "go" | "rust" | "binary"
+  "bun" | "node" | "python" | "go" | "rust" | "ruby" | "r" | "system" | "binary"
 >;
 
 export interface BackendToolConfig {
@@ -38,9 +38,12 @@ export interface BackendLanguageToolConfigSet {
 
 const MARKSMAN_LATEST_RELEASE_BASE =
   "https://github.com/artempyanykh/marksman/releases/latest/download";
+const STYLUA_LATEST_RELEASE_BASE =
+  "https://github.com/JohnnyMorganz/StyLua/releases/latest/download";
 const LUA_LANGUAGE_SERVER_VERSION = "3.18.2";
 const LUA_LANGUAGE_SERVER_RELEASE_BASE =
   "https://github.com/LuaLS/lua-language-server/releases/download";
+const ZIG_VERSION = "0.16.0";
 
 interface ResolvedToolPathsResult {
   toolPaths: ToolPathMap;
@@ -173,6 +176,28 @@ function getLuaLanguageServerDownloadUrl(): string {
   return `${LUA_LANGUAGE_SERVER_RELEASE_BASE}/${LUA_LANGUAGE_SERVER_VERSION}/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-${platformArch}.${archiveExtension}`;
 }
 
+function getStyLuaDownloadUrl(): string {
+  if (NODE_PLATFORM === "darwin") {
+    return `${STYLUA_LATEST_RELEASE_BASE}/stylua-macos-${getTargetArchToken()}.zip`;
+  }
+
+  if (NODE_PLATFORM === "win32") {
+    return `${STYLUA_LATEST_RELEASE_BASE}/stylua-windows-x86_64.zip`;
+  }
+
+  const libcSuffix =
+    getLinuxLibcToken() === "musl" && getTargetArchToken() === "x86_64" ? "-musl" : "";
+  return `${STYLUA_LATEST_RELEASE_BASE}/stylua-linux-${getTargetArchToken()}${libcSuffix}.zip`;
+}
+
+function getZigDownloadUrl(): string {
+  const platform =
+    NODE_PLATFORM === "darwin" ? "macos" : NODE_PLATFORM === "win32" ? "windows" : "linux";
+  const archiveExtension = NODE_PLATFORM === "win32" ? "zip" : "tar.xz";
+
+  return `https://ziglang.org/download/${ZIG_VERSION}/zig-${getTargetArchToken()}-${platform}-${ZIG_VERSION}.${archiveExtension}`;
+}
+
 function getKnownToolDownloadUrl(name: string): string | undefined {
   if (name === "marksman") {
     return getMarksmanDownloadUrl();
@@ -180,6 +205,14 @@ function getKnownToolDownloadUrl(name: string): string | undefined {
 
   if (name === "lua-language-server") {
     return getLuaLanguageServerDownloadUrl();
+  }
+
+  if (name === "stylua") {
+    return getStyLuaDownloadUrl();
+  }
+
+  if (name === "zig") {
+    return getZigDownloadUrl();
   }
 
   return undefined;
@@ -382,13 +415,14 @@ async function installLanguageTools(
   const issues: ToolIssueMap = {};
 
   try {
-    const status = await invoke<{ lsp?: string; formatter?: string; linter?: string }>(
-      "install_language_tools",
-      {
-        languageId,
-        tools: getLanguageToolConfigSet(manifest),
-      },
-    );
+    const status = await invoke<{
+      lsp?: string;
+      formatter?: string;
+      linter?: string;
+    }>("install_language_tools", {
+      languageId,
+      tools: getLanguageToolConfigSet(manifest),
+    });
 
     for (const [tool, toolStatus] of Object.entries(status)) {
       const failureMessage = extractFailedToolMessage(toolStatus);

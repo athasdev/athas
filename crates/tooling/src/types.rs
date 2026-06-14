@@ -30,7 +30,11 @@ pub enum ToolRuntime {
    Rust,
    /// RubyGems
    Ruby,
-   /// Direct binary download (no runtime needed)
+   /// R packages installed via Rscript
+   R,
+   /// System-provided executable discovered on PATH or known toolchain locations
+   System,
+   /// Direct binary download with system executable fallback
    Binary,
 }
 

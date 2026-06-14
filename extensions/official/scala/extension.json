@@ -17,7 +17,7 @@
   "capabilities": {
     "lsp": {
       "name": "metals",
-      "runtime": "binary",
+      "runtime": "system",
       "args": []
     }
   }

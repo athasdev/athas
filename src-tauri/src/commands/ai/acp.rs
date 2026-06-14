@@ -435,6 +435,8 @@ fn remove_managed_tool(app_handle: &AppHandle, tool_config: &ToolConfig) -> Resu
       ToolRuntime::Binary => tools_dir.join("binary").join(&tool_config.name),
       ToolRuntime::Bun => tools_dir.join("bun").join(package),
       ToolRuntime::Ruby => tools_dir.join("ruby").join(package),
+      ToolRuntime::R => tools_dir.join("r").join(package),
+      ToolRuntime::System => return Ok(()),
    };
 
    if path.is_dir() {
