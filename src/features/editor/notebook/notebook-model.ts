@@ -43,6 +43,21 @@ export interface NotebookParseFailure {
 
 export type NotebookParseResult = ParsedNotebook | NotebookParseFailure;
 
+export function createNotebookCell(cellType: NotebookCellType, source = ""): NotebookCell {
+  const cell: NotebookCell = {
+    cell_type: cellType,
+    metadata: {},
+    source: sourceToNotebookLines(source),
+  };
+
+  if (cellType === "code") {
+    cell.execution_count = null;
+    cell.outputs = [];
+  }
+
+  return cell;
+}
+
 export function parseNotebookContent(content: string): NotebookParseResult {
   try {
     const parsed = JSON.parse(content) as unknown;
@@ -119,6 +134,63 @@ export function updateNotebookCellOutputs(
   };
 }
 
+export function updateNotebookCellType(
+  notebook: NotebookDocument,
+  cellIndex: number,
+  cellType: NotebookCellType,
+): NotebookDocument {
+  return {
+    ...notebook,
+    cells: notebook.cells.map((cell, index) => {
+      if (index !== cellIndex) return cell;
+      const nextCell: NotebookCell = {
+        ...cell,
+        cell_type: cellType,
+      };
+
+      if (cellType === "code") {
+        nextCell.execution_count =
+          typeof cell.execution_count === "number" ? cell.execution_count : null;
+        nextCell.outputs = Array.isArray(cell.outputs) ? cell.outputs : [];
+      } else {
+        delete nextCell.execution_count;
+        delete nextCell.outputs;
+      }
+
+      return nextCell;
+    }),
+  };
+}
+
+export function insertNotebookCell(
+  notebook: NotebookDocument,
+  cellIndex: number,
+  cellType: NotebookCellType,
+): NotebookDocument {
+  const cells = [...notebook.cells];
+  const insertIndex = Math.max(0, Math.min(cells.length, cellIndex));
+  cells.splice(insertIndex, 0, createNotebookCell(cellType));
+
+  return {
+    ...notebook,
+    cells,
+  };
+}
+
+export function deleteNotebookCell(
+  notebook: NotebookDocument,
+  cellIndex: number,
+): NotebookDocument {
+  if (cellIndex < 0 || cellIndex >= notebook.cells.length) {
+    return notebook;
+  }
+
+  return {
+    ...notebook,
+    cells: notebook.cells.filter((_, index) => index !== cellIndex),
+  };
+}
+
 export function moveNotebookCell(
   notebook: NotebookDocument,
   fromIndex: number,
@@ -155,4 +227,13 @@ export function notebookLanguage(notebook: NotebookDocument): string {
     if (typeof value === "string" && value.trim()) return value;
   }
   return "python";
+}
+
+export function previousNotebookCodeSource(notebook: NotebookDocument, cellIndex: number): string {
+  return notebook.cells
+    .slice(0, Math.max(0, cellIndex))
+    .filter((cell) => cell.cell_type === "code")
+    .map((cell) => notebookCellSource(cell))
+    .filter((source) => source.trim().length > 0)
+    .join("\n");
 }

@@ -4,6 +4,10 @@ import {
   EyeIcon as Eye,
   PencilSimpleIcon as Edit,
   PlayIcon as Play,
+  PlusIcon as Plus,
+  CodeIcon as Code,
+  TextTIcon as Text,
+  TrashIcon as Trash,
   WarningCircleIcon as Warning,
 } from "@phosphor-icons/react";
 import {
@@ -37,15 +41,20 @@ import { cn } from "@/utils/cn";
 import { HighlightedCode } from "./highlighted-code";
 import { NotebookCodeCellEditor } from "./notebook-code-cell-editor";
 import {
+  deleteNotebookCell,
+  insertNotebookCell,
   moveNotebookCell,
   notebookCellSource,
   notebookLanguage,
   notebookOutputText,
   parseNotebookContent,
+  previousNotebookCodeSource,
   serializeNotebook,
+  updateNotebookCellType,
   updateNotebookCellOutputs,
   updateNotebookCellSource,
   type NotebookCell,
+  type NotebookCellType,
   type NotebookDocument,
   type NotebookOutput,
 } from "./notebook-model";
@@ -246,6 +255,9 @@ function NotebookCellView({
   isRunning,
   onSelect,
   onEditToggle,
+  onTypeChange,
+  onInsertBelow,
+  onDelete,
   onRun,
   onSourceChange,
   onMoveSelection,
@@ -260,6 +272,9 @@ function NotebookCellView({
   isRunning: boolean;
   onSelect: (cellIndex: number) => void;
   onEditToggle: (cellIndex: number) => void;
+  onTypeChange: (cellIndex: number, cellType: NotebookCellType) => void;
+  onInsertBelow: (cellIndex: number, cellType: NotebookCellType) => void;
+  onDelete: (cellIndex: number) => void;
   onRun: (cellIndex: number) => void;
   onSourceChange: (cellIndex: number, source: string) => void;
   onMoveSelection: (direction: -1 | 1) => void;
@@ -369,6 +384,36 @@ function NotebookCellView({
                 <Play weight="duotone" />
               </Button>
             ) : null}
+            <Button
+              variant="ghost"
+              compact
+              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              onClick={() => onTypeChange(cellIndex, isCode ? "markdown" : "code")}
+              tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
+              tooltipSide="bottom"
+            >
+              {isCode ? <Text weight="duotone" /> : <Code weight="duotone" />}
+            </Button>
+            <Button
+              variant="ghost"
+              compact
+              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              onClick={() => onInsertBelow(cellIndex, isCode ? "code" : "markdown")}
+              tooltip="Insert cell below"
+              tooltipSide="bottom"
+            >
+              <Plus weight="duotone" />
+            </Button>
+            <Button
+              variant="ghost"
+              compact
+              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              onClick={() => onDelete(cellIndex)}
+              tooltip="Delete cell"
+              tooltipSide="bottom"
+            >
+              <Trash weight="duotone" />
+            </Button>
             <Button
               variant="ghost"
               compact
@@ -493,6 +538,7 @@ export function NotebookEditor() {
       const result = await invoke<NotebookRunResult>("notebook_run_python_cell", {
         code: notebookCellSource(cell),
         cwd: notebookWorkingDirectory(path),
+        setupCode: previousNotebookCodeSource(parsed.notebook, cellIndex),
       });
       const executionCount = maxExecutionCount(parsed.notebook) + 1;
       const nextNotebook = updateNotebookCellOutputs(
@@ -521,6 +567,55 @@ export function NotebookEditor() {
     } finally {
       setRunningCell(null);
     }
+  };
+
+  const handleInsertCell = (cellIndex: number, cellType: NotebookCellType) => {
+    if (!parsed.ok) return;
+    const insertIndex = Math.max(0, Math.min(parsed.notebook.cells.length, cellIndex + 1));
+    updateNotebook(insertNotebookCell(parsed.notebook, insertIndex, cellType));
+    setSelectedCellIndex(insertIndex);
+    setEditingCells((current) => {
+      const next = new Set<number>();
+      current.forEach((index) => {
+        next.add(index >= insertIndex ? index + 1 : index);
+      });
+      next.add(insertIndex);
+      return next;
+    });
+  };
+
+  const handleAddCell = (cellType: NotebookCellType) => {
+    if (!parsed.ok) return;
+    const insertIndex = parsed.notebook.cells.length;
+    updateNotebook(insertNotebookCell(parsed.notebook, insertIndex, cellType));
+    setSelectedCellIndex(insertIndex);
+    setEditingCells((current) => new Set([...current, insertIndex]));
+  };
+
+  const handleDeleteCell = (cellIndex: number) => {
+    if (!parsed.ok) return;
+    updateNotebook(deleteNotebookCell(parsed.notebook, cellIndex));
+    setSelectedCellIndex((current) =>
+      Math.max(
+        0,
+        Math.min(parsed.notebook.cells.length - 2, current > cellIndex ? current - 1 : current),
+      ),
+    );
+    setEditingCells((current) => {
+      const next = new Set<number>();
+      current.forEach((index) => {
+        if (index === cellIndex) return;
+        next.add(index > cellIndex ? index - 1 : index);
+      });
+      return next;
+    });
+  };
+
+  const handleTypeChange = (cellIndex: number, cellType: NotebookCellType) => {
+    if (!parsed.ok) return;
+    updateNotebook(updateNotebookCellType(parsed.notebook, cellIndex, cellType));
+    setSelectedCellIndex(cellIndex);
+    setEditingCells((current) => new Set([...current, cellIndex]));
   };
 
   const moveSelection = (direction: -1 | 1) => {
@@ -593,6 +688,26 @@ export function NotebookEditor() {
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >
       <div className="mx-auto w-[min(100%,980px)]">
+        <div className="mb-3 flex items-center justify-end gap-1">
+          <Button
+            variant="ghost"
+            compact
+            className="h-7 gap-1.5 text-text-lighter hover:text-text"
+            onClick={() => handleAddCell("code")}
+          >
+            <Code weight="duotone" />
+            Code
+          </Button>
+          <Button
+            variant="ghost"
+            compact
+            className="h-7 gap-1.5 text-text-lighter hover:text-text"
+            onClick={() => handleAddCell("markdown")}
+          >
+            <Text weight="duotone" />
+            Markdown
+          </Button>
+        </div>
         <DndContext
           sensors={sensors}
           modifiers={[restrictToVerticalAxis]}
@@ -618,6 +733,9 @@ export function NotebookEditor() {
                   isRunning={runningCell === cellIndex}
                   onSelect={setSelectedCellIndex}
                   onEditToggle={handleEditToggle}
+                  onTypeChange={handleTypeChange}
+                  onInsertBelow={handleInsertCell}
+                  onDelete={handleDeleteCell}
                   onRun={handleRunCell}
                   onSourceChange={handleSourceChange}
                   onMoveSelection={moveSelection}

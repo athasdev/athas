@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  createNotebookCell,
+  deleteNotebookCell,
+  insertNotebookCell,
   moveNotebookCell,
   notebookCellSource,
   parseNotebookContent,
+  previousNotebookCodeSource,
   serializeNotebook,
   sourceToNotebookLines,
+  updateNotebookCellType,
   updateNotebookCellOutputs,
   updateNotebookCellSource,
 } from "../notebook/notebook-model";
@@ -68,6 +73,48 @@ describe("notebook model", () => {
 
     expect(next.cells[0].execution_count).toBe(1);
     expect(next.cells[0].outputs).toEqual([{ output_type: "stream", name: "stdout", text: "x\n" }]);
+  });
+
+  it("creates, inserts, deletes, and retags notebook cells", () => {
+    const notebook = {
+      cells: [
+        createNotebookCell("markdown", "# Intro\n"),
+        createNotebookCell("code", "value = 1\n"),
+      ],
+    };
+
+    const inserted = insertNotebookCell(notebook, 1, "code");
+    expect(inserted.cells.map((cell) => cell.cell_type)).toEqual(["markdown", "code", "code"]);
+    expect(inserted.cells[1].outputs).toEqual([]);
+    expect(inserted.cells[1].execution_count).toBeNull();
+
+    const retagged = updateNotebookCellType(inserted, 1, "markdown");
+    expect(retagged.cells[1].cell_type).toBe("markdown");
+    expect(retagged.cells[1].outputs).toBeUndefined();
+    expect(retagged.cells[1].execution_count).toBeUndefined();
+
+    const deleted = deleteNotebookCell(retagged, 1);
+    expect(deleted.cells.map((cell) => cell.cell_type)).toEqual(["markdown", "code"]);
+  });
+
+  it("collects previous code cells as execution setup", () => {
+    const parsed = parseNotebookContent(
+      JSON.stringify({
+        cells: [
+          { cell_type: "code", source: ["import math\n"] },
+          { cell_type: "markdown", source: ["notes"] },
+          { cell_type: "code", source: ["value = math.sqrt(9)\n"] },
+          { cell_type: "code", source: ["print(value)\n"] },
+        ],
+      }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    expect(previousNotebookCodeSource(parsed.notebook, 3)).toBe(
+      "import math\n\nvalue = math.sqrt(9)\n",
+    );
   });
 
   it("keeps trailing newlines in source line arrays", () => {
