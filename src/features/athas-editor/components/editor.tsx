@@ -739,7 +739,7 @@ export function Editor({
   const deferredMinimapLines = useDeferredValue(lines);
   const deferredMinimapLineOffsets = useDeferredValue(displayLineOffsets);
   const deferredMinimapTokens = useDeferredValue(effectiveTokens);
-  const useCustomInsertCaret = largeContentMode;
+  const useCustomInsertCaret = useGlobalEditorState && !readOnly;
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -1575,10 +1575,8 @@ export function Editor({
                 : (lines[visualCursorLine] ?? "")
             }
             textareaRef={largeContentMode ? largeEditorScrollRef : inputRef}
-            hidden={
-              !!largeSelectionOffsets ||
-              (vimModeEnabled && (vimMode === "normal" || vimMode === "visual"))
-            }
+            hasSelection={largeContentMode ? !!largeSelectionOffsets : !!selection}
+            hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
         )}
         {useGlobalEditorState && (
