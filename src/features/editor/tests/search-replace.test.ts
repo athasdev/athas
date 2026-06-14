@@ -144,6 +144,22 @@ describe("search replace store actions", () => {
     expect(useEditorUIStore.getState().searchResultsLimited).toBe(true);
   });
 
+  it("only marks search navigation for explicit match reveals", async () => {
+    const { useEditorUIStore } = await import("../stores/ui.store");
+
+    const actions = useEditorUIStore.getState().actions;
+    actions.setSearchResults([{ start: 4, end: 8 }], 0, false, true);
+    const initialRevision = useEditorUIStore.getState().searchNavigationRevision;
+
+    actions.setSearchResults([{ start: 5, end: 9 }], 0);
+
+    expect(useEditorUIStore.getState().searchNavigationRevision).toBe(initialRevision);
+
+    actions.searchNext();
+
+    expect(useEditorUIStore.getState().searchNavigationRevision).toBe(initialRevision + 1);
+  });
+
   it("preserves replacement case through store replace all", async () => {
     const { useEditorStateStore } = await import("../stores/state.store");
     const { useEditorUIStore } = await import("../stores/ui.store");

@@ -155,6 +155,9 @@ const CodeEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchRunIdRef = useRef(0);
+  const previousSearchInputSignatureRef = useRef<string | null>(null);
+  const wasFindVisibleForSearchRef = useRef(false);
+  const handledSearchNavigationRevisionRef = useRef(0);
   const codeLensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef("");
@@ -185,11 +188,22 @@ const CodeEditor = ({
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const searchNavigationRevision = useEditorUIStore.use.searchNavigationRevision();
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchResults } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const lspClient = useMemo(() => LspClient.getInstance(), []);
+  const searchInputSignature = useMemo(
+    () =>
+      [
+        searchQuery,
+        Number(searchOptions.caseSensitive),
+        Number(searchOptions.wholeWord),
+        Number(searchOptions.useRegex),
+      ].join("\u0000"),
+    [searchOptions.caseSensitive, searchOptions.useRegex, searchOptions.wholeWord, searchQuery],
+  );
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
@@ -565,6 +579,15 @@ const CodeEditor = ({
       clearTimeout(searchTimerRef.current);
     }
 
+    const previousSearchInputSignature = previousSearchInputSignatureRef.current;
+    const searchInputChanged =
+      previousSearchInputSignature !== null &&
+      previousSearchInputSignature !== searchInputSignature;
+    const searchJustOpened = isFindVisible && !wasFindVisibleForSearchRef.current;
+    const shouldRevealSearchResult = searchJustOpened || searchInputChanged;
+    previousSearchInputSignatureRef.current = searchInputSignature;
+    wasFindVisibleForSearchRef.current = isFindVisible;
+
     if (!enableInteractiveServices || !isFindVisible) {
       searchRunIdRef.current += 1;
       setSearchResults([], -1);
@@ -593,7 +616,12 @@ const CodeEditor = ({
         shouldCancel: () => searchRunIdRef.current !== searchRunId,
       }).then((result) => {
         if (!result || searchRunIdRef.current !== searchRunId) return;
-        setSearchResults(result.matches, result.matches.length > 0 ? 0 : -1, result.limited);
+        setSearchResults(
+          result.matches,
+          result.matches.length > 0 ? 0 : -1,
+          result.limited,
+          shouldRevealSearchResult,
+        );
       });
     }, SEARCH_DEBOUNCE_MS);
 
@@ -607,14 +635,18 @@ const CodeEditor = ({
     enableInteractiveServices,
     isFindVisible,
     searchQuery,
+    searchInputSignature,
     searchOptions,
     value,
     setSearchResults,
   ]);
 
-  // Effect to handle search navigation - scroll to current match and move cursor
+  // Effect to handle explicit search navigation - scroll to current match and move cursor
   useEffect(() => {
     if (!enableInteractiveServices) return;
+    if (searchNavigationRevision === handledSearchNavigationRevisionRef.current) return;
+    handledSearchNavigationRevisionRef.current = searchNavigationRevision;
+
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (!match) return;
@@ -625,7 +657,7 @@ const CodeEditor = ({
       editorAPI.setSelection({ start: startPosition, end: endPosition });
       editorAPI.setCursorPosition(endPosition);
     }
-  }, [currentMatchIndex, enableInteractiveServices, searchMatches]);
+  }, [currentMatchIndex, enableInteractiveServices, searchMatches, searchNavigationRevision]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;

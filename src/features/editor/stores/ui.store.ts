@@ -87,6 +87,7 @@ interface EditorUIState {
   searchMatches: SearchMatch[];
   searchResultsLimited: boolean;
   currentMatchIndex: number;
+  searchNavigationRevision: number;
   replaceQuery: string;
   isReplaceVisible: boolean;
   searchOptions: SearchOptions;
@@ -121,6 +122,7 @@ interface EditorUIActions {
     matches: SearchMatch[],
     preferredMatchIndex: number,
     limited?: boolean,
+    revealCurrentMatch?: boolean,
   ) => void;
   setCurrentMatchIndex: (index: number) => void;
   setReplaceQuery: (query: string) => void;
@@ -160,6 +162,7 @@ export const useEditorUIStore = createSelectors(
     searchMatches: [],
     searchResultsLimited: false,
     currentMatchIndex: -1,
+    searchNavigationRevision: 0,
     replaceQuery: "",
     isReplaceVisible: false,
     searchOptions: {
@@ -274,7 +277,12 @@ export const useEditorUIStore = createSelectors(
         }
         set({ searchMatches: matches, searchResultsLimited: false });
       },
-      setSearchResults: (matches, preferredMatchIndex, limited = false) => {
+      setSearchResults: (
+        matches,
+        preferredMatchIndex,
+        limited = false,
+        revealCurrentMatch = false,
+      ) => {
         const state = get();
         const matchesAreEqual = areSearchMatchesEqual(state.searchMatches, matches);
         const nextMatchIndex =
@@ -289,7 +297,8 @@ export const useEditorUIStore = createSelectors(
         if (
           matchesAreEqual &&
           state.currentMatchIndex === nextMatchIndex &&
-          state.searchResultsLimited === limited
+          state.searchResultsLimited === limited &&
+          !revealCurrentMatch
         ) {
           return;
         }
@@ -298,13 +307,21 @@ export const useEditorUIStore = createSelectors(
           searchMatches: matchesAreEqual ? state.searchMatches : matches,
           searchResultsLimited: limited,
           currentMatchIndex: nextMatchIndex,
+          searchNavigationRevision:
+            revealCurrentMatch && nextMatchIndex >= 0
+              ? state.searchNavigationRevision + 1
+              : state.searchNavigationRevision,
         });
       },
       setCurrentMatchIndex: (index) => {
         if (get().currentMatchIndex === index) {
           return;
         }
-        set({ currentMatchIndex: index });
+        set((state) => ({
+          currentMatchIndex: index,
+          searchNavigationRevision:
+            index >= 0 ? state.searchNavigationRevision + 1 : state.searchNavigationRevision,
+        }));
       },
       setReplaceQuery: (query) => {
         if (get().replaceQuery !== query) {
@@ -336,7 +353,10 @@ export const useEditorUIStore = createSelectors(
         const { searchMatches, currentMatchIndex } = get();
         if (searchMatches.length > 0) {
           const nextIndex = (currentMatchIndex + 1) % searchMatches.length;
-          set({ currentMatchIndex: nextIndex });
+          set((state) => ({
+            currentMatchIndex: nextIndex,
+            searchNavigationRevision: state.searchNavigationRevision + 1,
+          }));
         }
       },
       searchPrevious: () => {
@@ -344,7 +364,10 @@ export const useEditorUIStore = createSelectors(
         if (searchMatches.length > 0) {
           const prevIndex =
             currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
-          set({ currentMatchIndex: prevIndex });
+          set((state) => ({
+            currentMatchIndex: prevIndex,
+            searchNavigationRevision: state.searchNavigationRevision + 1,
+          }));
         }
       },
       replaceNext: () => {
@@ -361,9 +384,14 @@ export const useEditorUIStore = createSelectors(
         if (!result) return;
 
         onChange(result.content, value, cursorPosition, selection);
+        const state = get();
         set({
           searchMatches: result.matches,
           currentMatchIndex: result.currentMatchIndex,
+          searchNavigationRevision:
+            result.currentMatchIndex >= 0
+              ? state.searchNavigationRevision + 1
+              : state.searchNavigationRevision,
         });
       },
       replaceAll: () => {
