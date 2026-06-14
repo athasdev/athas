@@ -39,7 +39,7 @@ jobs:
           )
 
   deploy:
-    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch'
     needs: validate
     runs-on: ubuntu-latest
     steps:
