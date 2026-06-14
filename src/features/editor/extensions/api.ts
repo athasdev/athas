@@ -53,6 +53,9 @@ interface ActiveEditorAdapter {
   deleteRange: (range: Range) => void;
   replaceRange: (range: Range, text: string) => void;
   selectAll: () => void;
+  addSelectionToNextFindMatch?: () => void;
+  addSelectionToPreviousFindMatch?: () => void;
+  selectAllFindMatches?: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -225,6 +228,27 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     this.syncSelectionFromOffsets(content, 0, content.length);
+  }
+
+  addSelectionToNextFindMatch(): boolean {
+    if (!this.activeEditorAdapter?.addSelectionToNextFindMatch) return false;
+
+    this.activeEditorAdapter.addSelectionToNextFindMatch();
+    return true;
+  }
+
+  addSelectionToPreviousFindMatch(): boolean {
+    if (!this.activeEditorAdapter?.addSelectionToPreviousFindMatch) return false;
+
+    this.activeEditorAdapter.addSelectionToPreviousFindMatch();
+    return true;
+  }
+
+  selectAllFindMatches(): boolean {
+    if (!this.activeEditorAdapter?.selectAllFindMatches) return false;
+
+    this.activeEditorAdapter.selectAllFindMatches();
+    return true;
   }
 
   // Internal method to update cursor and selection from external changes

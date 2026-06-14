@@ -16,21 +16,26 @@ import {
   type MouseEventHandler,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { InlineEditPopover } from "@/features/athas-editor/components/inline-edit-popover";
 import { useInlineEdit } from "@/features/athas-editor/hooks/use-inline-edit";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
+import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
 import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim.store";
+import { useContextMenu } from "@/ui/context-menu";
 import { formatRelativeTime } from "@/utils/date";
+import EditorContextMenu from "../context-menu/context-menu";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useEditorUIStore } from "../stores/ui.store";
 import type { Position, Range } from "../types/editor.types";
 import { getLanguageIdFromPath } from "../utils/language-id";
+import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
 import type {
   EditorCoordinateResolver,
@@ -504,6 +509,44 @@ export function MonacoBackedEditor({
     setCursorPosition,
     setSelection,
   });
+  const contextMenu = useContextMenu();
+
+  const executeEditorCommand = useCallback((commandId: string) => {
+    void keymapRegistry.executeCommand(commandId);
+  }, []);
+
+  const triggerMonacoAction = useCallback(
+    (actionId: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      editor.trigger("athas-context-menu", actionId, null);
+      editor.focus();
+      syncCursorAndSelection();
+    },
+    [syncCursorAndSelection],
+  );
+
+  const toggleMonacoSelectionCase = useCallback(() => {
+    const editor = editorRef.current;
+    const model = modelRef.current;
+    const selection = editor?.getSelection();
+    if (!editor || !model || !selection || selection.isEmpty()) return;
+
+    const startOffset = model.getOffsetAt(selection.getStartPosition());
+    const endOffset = model.getOffsetAt(selection.getEndPosition());
+    const result = toggleCaseText(model.getValue(), startOffset, endOffset);
+    const replacement = result.content.slice(result.selectionStart, result.selectionEnd);
+
+    editor.pushUndoStop();
+    editor.executeEdits("athas-context-menu", [
+      { range: selection, text: replacement, forceMoveMarkers: true },
+    ]);
+    editor.setSelection(selection);
+    editor.pushUndoStop();
+    editor.focus();
+    syncCursorAndSelection();
+  }, [syncCursorAndSelection]);
 
   useOnClickOutside(inlineEditState.inlineEditPopoverRef as RefObject<HTMLElement>, (event) => {
     if (!inlineEditState.inlineEditVisible) return;
@@ -551,7 +594,7 @@ export function MonacoBackedEditor({
       theme: defineMonacoTheme(themeId),
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
       cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
-      contextmenu: true,
+      contextmenu: false,
       overviewRulerLanes: 0,
       fixedOverflowWidgets: false,
       "semanticHighlighting.enabled": true,
@@ -590,6 +633,11 @@ export function MonacoBackedEditor({
     const adapterOwnerId = viewStateKey ?? activeBufferId ?? modelUri.toString();
     const selectEntireModel = () => {
       editor.setSelection(model.getFullModelRange());
+      editor.focus();
+      syncCursorAndSelection();
+    };
+    const runMonacoSelectionAction = (actionId: string) => {
+      editor.trigger("athas-keybinding", actionId, null);
       editor.focus();
       syncCursorAndSelection();
     };
@@ -660,6 +708,11 @@ export function MonacoBackedEditor({
         deleteRange: (range) => executeTextEdit(toMonacoRange(model, range), ""),
         replaceRange: (range, text) => executeTextEdit(toMonacoRange(model, range), text),
         selectAll: selectEntireModel,
+        addSelectionToNextFindMatch: () =>
+          runMonacoSelectionAction("editor.action.addSelectionToNextFindMatch"),
+        addSelectionToPreviousFindMatch: () =>
+          runMonacoSelectionAction("editor.action.addSelectionToPreviousFindMatch"),
+        selectAllFindMatches: () => runMonacoSelectionAction("editor.action.selectHighlights"),
         undo: () => {
           editor.trigger("athas-api", "undo", null);
           syncCursorAndSelection();
@@ -709,6 +762,29 @@ export function MonacoBackedEditor({
     window.addEventListener("keydown", handleWindowSelectAllShortcut, true);
 
     const disposables = [
+      editor.onContextMenu((event) => {
+        event.event.preventDefault();
+        event.event.stopPropagation();
+
+        if (event.target.position) {
+          const currentSelection = editor.getSelection();
+          if (!currentSelection?.containsPosition(event.target.position)) {
+            editor.setPosition(event.target.position);
+            editor.setSelection(
+              new MonacoRange(
+                event.target.position.lineNumber,
+                event.target.position.column,
+                event.target.position.lineNumber,
+                event.target.position.column,
+              ),
+            );
+            syncCursorAndSelection();
+          }
+        }
+
+        editor.focus();
+        contextMenu.openAt({ x: event.event.posx, y: event.event.posy });
+      }),
       editor.onKeyDown((event) => {
         const browserEvent = event.browserEvent;
         const isSelectAllShortcut =
@@ -809,6 +885,7 @@ export function MonacoBackedEditor({
   }, [
     activeBufferId,
     autoCompletion,
+    contextMenu.openAt,
     filePath,
     fontFamily,
     fontSize,
@@ -1187,38 +1264,83 @@ export function MonacoBackedEditor({
     "--athas-monaco-font-size": `${fontSize}px`,
     "--athas-monaco-line-height": `${lineHeight}px`,
   } as CSSProperties;
+  const canEdit = !readOnly && !isPreviewMode;
 
   return (
-    <div
-      className={`monaco-editor-shell absolute inset-0 min-h-0 bg-primary-bg ${className ?? ""}`}
-      style={shellStyle}
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      onMouseEnter={onMouseEnter}
-      onClick={(event) => {
-        if (readOnly && onReadonlySurfaceClick) {
-          const editor = editorRef.current;
-          const model = modelRef.current;
-          const target = editor?.getTargetAtClientPoint(event.clientX, event.clientY);
-          if (target?.position && model) {
-            onReadonlySurfaceClick({
-              line: target.position.lineNumber - 1,
-              column: target.position.column - 1,
-            });
-          }
-        }
-        onClick?.(event);
-      }}
-    >
-      {backgroundLayer}
+    <>
       <div
-        ref={containerRef}
-        className="absolute inset-0"
-        data-monaco-editor-scroll
-        data-line-number-start={lineNumberStart}
-        data-line-number-map={lineNumberMap?.length ?? undefined}
-      />
-      <InlineEditPopover state={inlineEditState} selection={selection} />
-    </div>
+        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-primary-bg ${className ?? ""}`}
+        style={shellStyle}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+        onMouseEnter={onMouseEnter}
+        onClick={(event) => {
+          if (readOnly && onReadonlySurfaceClick) {
+            const editor = editorRef.current;
+            const model = modelRef.current;
+            const target = editor?.getTargetAtClientPoint(event.clientX, event.clientY);
+            if (target?.position && model) {
+              onReadonlySurfaceClick({
+                line: target.position.lineNumber - 1,
+                column: target.position.column - 1,
+              });
+            }
+          }
+          onClick?.(event);
+        }}
+      >
+        {backgroundLayer}
+        <div
+          ref={containerRef}
+          className="absolute inset-0"
+          data-monaco-editor-scroll
+          data-line-number-start={lineNumberStart}
+          data-line-number-map={lineNumberMap?.length ?? undefined}
+        />
+        <InlineEditPopover state={inlineEditState} selection={selection} />
+      </div>
+      {contextMenu.isOpen &&
+        createPortal(
+          <EditorContextMenu
+            isOpen={contextMenu.isOpen}
+            position={contextMenu.position}
+            onClose={contextMenu.close}
+            onCopy={() => executeEditorCommand("editor.copy")}
+            onCut={canEdit ? () => executeEditorCommand("editor.cut") : undefined}
+            onPaste={canEdit ? () => executeEditorCommand("editor.paste") : undefined}
+            onSelectAll={() => executeEditorCommand("editor.selectAll")}
+            onDelete={
+              canEdit
+                ? () => {
+                    const currentSelection = editorAPI.getSelection();
+                    if (currentSelection) editorAPI.deleteRange(currentSelection);
+                  }
+                : undefined
+            }
+            onFind={() => executeEditorCommand("workbench.showFind")}
+            onGoToLine={() => executeEditorCommand("editor.goToLine")}
+            onDuplicate={canEdit ? () => executeEditorCommand("editor.duplicateLine") : undefined}
+            onSelectNextOccurrence={() => executeEditorCommand("editor.selectNextOccurrence")}
+            onSelectAllOccurrences={() => executeEditorCommand("editor.selectAllOccurrences")}
+            onIndent={canEdit ? () => triggerMonacoAction("editor.action.indentLines") : undefined}
+            onOutdent={canEdit ? () => triggerMonacoAction("editor.action.outdentLines") : undefined}
+            onToggleComment={canEdit ? () => executeEditorCommand("editor.toggleComment") : undefined}
+            onFormat={canEdit ? () => executeEditorCommand("editor.formatDocument") : undefined}
+            onFormatSelection={
+              canEdit ? () => executeEditorCommand("editor.formatSelection") : undefined
+            }
+            onToggleCase={canEdit ? toggleMonacoSelectionCase : undefined}
+            onMoveLineUp={canEdit ? () => executeEditorCommand("editor.moveLineUp") : undefined}
+            onMoveLineDown={canEdit ? () => executeEditorCommand("editor.moveLineDown") : undefined}
+            onGoToDefinition={() => executeEditorCommand("editor.goToDefinition")}
+            onFindReferences={() => executeEditorCommand("editor.goToReferences")}
+            onRenameSymbol={canEdit ? () => executeEditorCommand("editor.renameSymbol") : undefined}
+            onQuickFix={canEdit ? () => executeEditorCommand("editor.quickFix") : undefined}
+            onShowHover={() => executeEditorCommand("editor.showHover")}
+            onTriggerSuggest={canEdit ? () => executeEditorCommand("editor.triggerSuggest") : undefined}
+          />,
+          document.body,
+        )}
+    </>
   );
 }

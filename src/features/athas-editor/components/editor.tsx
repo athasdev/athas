@@ -1824,6 +1824,12 @@ export function Editor({
             onDuplicate={() => {
               void keymapRegistry.executeCommand("editor.duplicateLine");
             }}
+            onSelectNextOccurrence={() => {
+              void keymapRegistry.executeCommand("editor.selectNextOccurrence");
+            }}
+            onSelectAllOccurrences={() => {
+              void keymapRegistry.executeCommand("editor.selectAllOccurrences");
+            }}
             onIndent={largeContentMode ? largeEditorInput.handleIndent : editorOps.indent}
             onOutdent={largeContentMode ? largeEditorInput.handleOutdent : editorOps.outdent}
             onToggleComment={() => {
@@ -1831,6 +1837,9 @@ export function Editor({
             }}
             onFormat={() => {
               void keymapRegistry.executeCommand("editor.formatDocument");
+            }}
+            onFormatSelection={() => {
+              void keymapRegistry.executeCommand("editor.formatSelection");
             }}
             onToggleCase={
               largeContentMode ? largeEditorInput.handleToggleCase : editorOps.toggleCase
@@ -1849,6 +1858,15 @@ export function Editor({
             }}
             onRenameSymbol={() => {
               void keymapRegistry.executeCommand("editor.renameSymbol");
+            }}
+            onQuickFix={() => {
+              void keymapRegistry.executeCommand("editor.quickFix");
+            }}
+            onShowHover={() => {
+              void keymapRegistry.executeCommand("editor.showHover");
+            }}
+            onTriggerSuggest={() => {
+              void keymapRegistry.executeCommand("editor.triggerSuggest");
             }}
           />,
           document.body,

@@ -291,14 +291,20 @@ export async function pasteIntoActiveEditor(): Promise<void> {
 }
 
 export function selectNextEditorOccurrence(): void {
+  if (editorAPI.addSelectionToNextFindMatch()) return;
+
   addEditorOccurrence("next");
 }
 
 export function selectPreviousEditorOccurrence(): void {
+  if (editorAPI.addSelectionToPreviousFindMatch()) return;
+
   addEditorOccurrence("previous");
 }
 
 export function selectAllEditorOccurrences(): void {
+  if (editorAPI.selectAllFindMatches()) return;
+
   const content = editorAPI.getContent();
   const editorState = useEditorStateStore.getState();
   const selection = getNormalizedEditorSelection();

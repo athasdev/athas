@@ -18,10 +18,10 @@ if (typeof window !== "undefined") {
   if (!window.__athasMonacoContextMenuInitialized) {
     window.__athasMonacoContextMenuInitialized = true;
     for (const editor of monacoEditor.getEditors()) {
-      editor.updateOptions({ contextmenu: true });
+      editor.updateOptions({ contextmenu: false });
     }
     monacoEditor.onDidCreateEditor((editor) => {
-      editor.updateOptions({ contextmenu: true });
+      editor.updateOptions({ contextmenu: false });
     });
   }
 

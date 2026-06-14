@@ -146,6 +146,9 @@ describe("editor API model operations", () => {
     const deleteRange = vi.fn();
     const replaceRange = vi.fn();
     const selectAll = vi.fn();
+    const addSelectionToNextFindMatch = vi.fn();
+    const addSelectionToPreviousFindMatch = vi.fn();
+    const selectAllFindMatches = vi.fn();
     const undo = vi.fn();
     const redo = vi.fn();
     const range = {
@@ -159,6 +162,9 @@ describe("editor API model operations", () => {
       deleteRange,
       replaceRange,
       selectAll,
+      addSelectionToNextFindMatch,
+      addSelectionToPreviousFindMatch,
+      selectAllFindMatches,
       undo,
       redo,
     });
@@ -167,6 +173,9 @@ describe("editor API model operations", () => {
     editorAPI.deleteRange(range);
     editorAPI.replaceRange(range, "Y");
     editorAPI.selectAll();
+    expect(editorAPI.addSelectionToNextFindMatch()).toBe(true);
+    expect(editorAPI.addSelectionToPreviousFindMatch()).toBe(true);
+    expect(editorAPI.selectAllFindMatches()).toBe(true);
     editorAPI.undo();
     editorAPI.redo();
 
@@ -174,6 +183,9 @@ describe("editor API model operations", () => {
     expect(deleteRange).toHaveBeenCalledWith(range);
     expect(replaceRange).toHaveBeenCalledWith(range, "Y");
     expect(selectAll).toHaveBeenCalledTimes(1);
+    expect(addSelectionToNextFindMatch).toHaveBeenCalledTimes(1);
+    expect(addSelectionToPreviousFindMatch).toHaveBeenCalledTimes(1);
+    expect(selectAllFindMatches).toHaveBeenCalledTimes(1);
     expect(undo).toHaveBeenCalledTimes(1);
     expect(redo).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalled();

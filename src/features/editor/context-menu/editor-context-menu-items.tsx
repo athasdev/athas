@@ -30,12 +30,18 @@ export interface EditorContextMenuHandlers {
   onGoToDefinition?: () => void;
   onFindReferences?: () => void;
   onRenameSymbol?: () => void;
+  onSelectNextOccurrence?: () => void;
+  onSelectAllOccurrences?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
   onIndent?: () => void;
   onOutdent?: () => void;
   onToggleComment?: () => void;
   onFormat?: () => void;
+  onFormatSelection?: () => void;
+  onTriggerSuggest?: () => void;
+  onShowHover?: () => void;
+  onQuickFix?: () => void;
   onToggleCase?: () => void;
   onMoveLineUp?: () => void;
   onMoveLineDown?: () => void;
@@ -54,7 +60,10 @@ function separator(id: string): ContextMenuItem {
   return { id, label: "", separator: true, onClick: noop };
 }
 
-function isDisabled(handler: (() => void) | undefined, disabled = false): boolean {
+function isDisabled(
+  handler: (() => void) | undefined,
+  disabled = false,
+): boolean {
   return disabled || !handler;
 }
 
@@ -71,12 +80,18 @@ export function buildEditorContextMenuItems({
   onGoToDefinition,
   onFindReferences,
   onRenameSymbol,
+  onSelectNextOccurrence,
+  onSelectAllOccurrences,
   onDelete,
   onDuplicate,
   onIndent,
   onOutdent,
   onToggleComment,
   onFormat,
+  onFormatSelection,
+  onTriggerSuggest,
+  onShowHover,
+  onQuickFix,
   onToggleCase,
   onMoveLineUp,
   onMoveLineDown,
@@ -87,7 +102,9 @@ export function buildEditorContextMenuItems({
       id: "copy",
       label: "Copy",
       icon: <Copy />,
-      keybinding: <Keybinding keys={[modifierKey, "C"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "C"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onCopy, !hasSelection),
       onClick: onCopy ?? noop,
     },
@@ -95,7 +112,9 @@ export function buildEditorContextMenuItems({
       id: "cut",
       label: "Cut",
       icon: <Scissors />,
-      keybinding: <Keybinding keys={[modifierKey, "X"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "X"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onCut, !hasSelection),
       onClick: onCut ?? noop,
     },
@@ -103,7 +122,9 @@ export function buildEditorContextMenuItems({
       id: "paste",
       label: "Paste",
       icon: <ClipboardPaste />,
-      keybinding: <Keybinding keys={[modifierKey, "V"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "V"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onPaste),
       onClick: onPaste ?? noop,
     },
@@ -120,7 +141,9 @@ export function buildEditorContextMenuItems({
       id: "select-all",
       label: "Select All",
       icon: <Type />,
-      keybinding: <Keybinding keys={[modifierKey, "A"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "A"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onSelectAll),
       onClick: onSelectAll ?? noop,
     },
@@ -128,16 +151,37 @@ export function buildEditorContextMenuItems({
       id: "duplicate",
       label: "Duplicate Line",
       icon: <FileText />,
-      keybinding: <Keybinding keys={[modifierKey, "D"]} className="opacity-60" />,
       disabled: isDisabled(onDuplicate),
       onClick: onDuplicate ?? noop,
+    },
+    {
+      id: "select-next-occurrence",
+      label: "Add Selection to Next Match",
+      icon: <Search />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "D"]} className="opacity-60" />
+      ),
+      disabled: isDisabled(onSelectNextOccurrence),
+      onClick: onSelectNextOccurrence ?? noop,
+    },
+    {
+      id: "select-all-occurrences",
+      label: "Select All Occurrences",
+      icon: <Search />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "Shift", "L"]} className="opacity-60" />
+      ),
+      disabled: isDisabled(onSelectAllOccurrences),
+      onClick: onSelectAllOccurrences ?? noop,
     },
     separator("sep-2"),
     {
       id: "toggle-comment",
       label: "Toggle Comment",
       icon: <Code />,
-      keybinding: <Keybinding keys={[modifierKey, "/"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "/"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onToggleComment),
       onClick: onToggleComment ?? noop,
     },
@@ -161,9 +205,24 @@ export function buildEditorContextMenuItems({
       id: "format",
       label: "Format Document",
       icon: <AlignLeft />,
-      keybinding: <Keybinding keys={["Shift", altKey, "F"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={["Shift", altKey, "F"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onFormat),
       onClick: onFormat ?? noop,
+    },
+    {
+      id: "format-selection",
+      label: "Format Selection",
+      icon: <AlignLeft />,
+      keybinding: (
+        <Keybinding
+          keys={[modifierKey, "K", modifierKey, "F"]}
+          className="opacity-60"
+        />
+      ),
+      disabled: isDisabled(onFormatSelection, !hasSelection),
+      onClick: onFormatSelection ?? noop,
     },
     separator("sep-3"),
     {
@@ -214,12 +273,47 @@ export function buildEditorContextMenuItems({
       disabled: isDisabled(onRenameSymbol),
       onClick: onRenameSymbol ?? noop,
     },
+    {
+      id: "quick-fix",
+      label: "Quick Fix...",
+      icon: <PenLine />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "."]} className="opacity-60" />
+      ),
+      disabled: isDisabled(onQuickFix),
+      onClick: onQuickFix ?? noop,
+    },
+    {
+      id: "show-hover",
+      label: "Show Hover",
+      icon: <Code />,
+      keybinding: (
+        <Keybinding
+          keys={[modifierKey, "K", modifierKey, "I"]}
+          className="opacity-60"
+        />
+      ),
+      disabled: isDisabled(onShowHover),
+      onClick: onShowHover ?? noop,
+    },
+    {
+      id: "trigger-suggest",
+      label: "Trigger Suggest",
+      icon: <Code />,
+      keybinding: (
+        <Keybinding keys={["Ctrl", "Space"]} className="opacity-60" />
+      ),
+      disabled: isDisabled(onTriggerSuggest),
+      onClick: onTriggerSuggest ?? noop,
+    },
     separator("sep-5"),
     {
       id: "find",
       label: "Find",
       icon: <Search />,
-      keybinding: <Keybinding keys={[modifierKey, "F"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "F"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onFind),
       onClick: onFind ?? noop,
     },
@@ -227,7 +321,9 @@ export function buildEditorContextMenuItems({
       id: "go-to-line",
       label: "Go to Line",
       icon: <RotateCcw />,
-      keybinding: <Keybinding keys={[modifierKey, "G"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding keys={[modifierKey, "G"]} className="opacity-60" />
+      ),
       disabled: isDisabled(onGoToLine),
       onClick: onGoToLine ?? noop,
     },
@@ -235,7 +331,12 @@ export function buildEditorContextMenuItems({
       id: "bookmark",
       label: "Toggle Bookmark",
       icon: <Bookmark />,
-      keybinding: <Keybinding keys={[modifierKey, "K", modifierKey, "K"]} className="opacity-60" />,
+      keybinding: (
+        <Keybinding
+          keys={[modifierKey, "K", modifierKey, "K"]}
+          className="opacity-60"
+        />
+      ),
       disabled: isDisabled(onToggleBookmark),
       onClick: onToggleBookmark ?? noop,
     },

@@ -8,9 +8,10 @@ const baseOptions = {
 };
 
 function getItem(id: string, handlers = {}) {
-  const item = buildEditorContextMenuItems({ ...baseOptions, ...handlers }).find(
-    (entry) => entry.id === id,
-  );
+  const item = buildEditorContextMenuItems({
+    ...baseOptions,
+    ...handlers,
+  }).find((entry) => entry.id === id);
 
   if (!item) throw new Error(`Missing menu item ${id}`);
   return item;
@@ -19,26 +20,44 @@ function getItem(id: string, handlers = {}) {
 describe("buildEditorContextMenuItems", () => {
   it("disables command items that do not have a handler", () => {
     expect(getItem("format").disabled).toBe(true);
+    expect(getItem("format-selection").disabled).toBe(true);
     expect(getItem("go-to-definition").disabled).toBe(true);
+    expect(getItem("quick-fix").disabled).toBe(true);
     expect(getItem("bookmark").disabled).toBe(true);
   });
 
   it("enables command items when their handler is present", () => {
     expect(getItem("format", { onFormat: vi.fn() }).disabled).toBe(false);
-    expect(getItem("go-to-definition", { onGoToDefinition: vi.fn() }).disabled).toBe(false);
+    expect(
+      getItem("select-next-occurrence", {
+        onSelectNextOccurrence: vi.fn(),
+      }).disabled,
+    ).toBe(false);
+    expect(
+      getItem("go-to-definition", { onGoToDefinition: vi.fn() }).disabled,
+    ).toBe(false);
+    expect(
+      getItem("trigger-suggest", { onTriggerSuggest: vi.fn() }).disabled,
+    ).toBe(false);
   });
 
   it("keeps selection-only commands disabled without a selection", () => {
-    const [copy, toggleCase] = ["copy", "toggle-case"].map((id) =>
+    const [copy, toggleCase, formatSelection] = [
+      "copy",
+      "toggle-case",
+      "format-selection",
+    ].map((id) =>
       buildEditorContextMenuItems({
         ...baseOptions,
         hasSelection: false,
         onCopy: vi.fn(),
+        onFormatSelection: vi.fn(),
         onToggleCase: vi.fn(),
       }).find((entry) => entry.id === id),
     );
 
     expect(copy?.disabled).toBe(true);
     expect(toggleCase?.disabled).toBe(true);
+    expect(formatSelection?.disabled).toBe(true);
   });
 });
