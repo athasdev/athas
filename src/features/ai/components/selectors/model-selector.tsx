@@ -290,30 +290,36 @@ export function ModelSelector({
   return (
     <div className={className}>
       {isOpen ? (
-        <input
+        <div
           ref={(node) => {
-            triggerInputRef.current = node;
             triggerRef.current = node;
           }}
-          type="text"
-          value={query}
-          disabled={disabled}
-          placeholder={currentModelName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
-          aria-label="Search AI models"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={handleTriggerInputKeyDown}
           onMouseDown={(event) => event.stopPropagation()}
+          onClick={() => triggerInputRef.current?.focus()}
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
               compact: true,
             }),
             triggerClass,
-            "cursor-text text-left outline-none placeholder:text-text",
+            "relative cursor-text",
           )}
-        />
+        >
+          <span className="invisible min-w-0 truncate text-text">{currentModelName}</span>
+          <input
+            ref={triggerInputRef}
+            type="text"
+            value={query}
+            disabled={disabled}
+            placeholder={currentModelName}
+            aria-label="Search AI models"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleTriggerInputKeyDown}
+            className="ui-font absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+          />
+        </div>
       ) : (
         <Button
           ref={(node) => {

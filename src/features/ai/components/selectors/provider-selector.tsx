@@ -137,7 +137,7 @@ export function ProviderSelector({
               compact: true,
             }),
             triggerClass,
-            "cursor-text",
+            "relative cursor-text",
           )}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={() => triggerInputRef.current?.focus()}
@@ -147,6 +147,7 @@ export function ProviderSelector({
             size={isComposer ? 12 : 14}
             className="shrink-0 text-text-lighter"
           />
+          <span className="invisible min-w-0 truncate text-text">{currentProviderName}</span>
           <input
             ref={triggerInputRef}
             type="text"
@@ -156,7 +157,7 @@ export function ProviderSelector({
             aria-label="Search AI providers"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleTriggerInputKeyDown}
-            className="ui-font min-w-0 flex-1 bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+            className="ui-font absolute top-1/2 right-1.5 left-6 min-w-0 -translate-y-1/2 bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
           />
         </div>
       ) : (

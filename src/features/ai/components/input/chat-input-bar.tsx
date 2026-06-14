@@ -1418,7 +1418,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </div>
       </SidebarComposerBody>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5 pb-0.5">
         {isAcpMetadataLoading ? (
           <ChatLoadingIndicator label="loading session" compact />
         ) : (
