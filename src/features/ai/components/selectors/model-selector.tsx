@@ -229,7 +229,7 @@ export function ModelSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[176px]")
+      ? chatComposerControlClassName("w-[min(176px,45vw)] max-w-[176px]")
       : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
@@ -307,7 +307,7 @@ export function ModelSelector({
             "relative cursor-text",
           )}
         >
-          <span className="invisible min-w-0 truncate text-text">{currentModelName}</span>
+          <span className="invisible block min-w-0 truncate text-text">{currentModelName}</span>
           <input
             ref={triggerInputRef}
             type="text"
@@ -317,7 +317,7 @@ export function ModelSelector({
             aria-label="Search AI models"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleTriggerInputKeyDown}
-            className="ui-font absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+            className="ui-font absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
           />
         </div>
       ) : (
@@ -336,7 +336,7 @@ export function ModelSelector({
           onClick={() => setOpen(!isOpen)}
           className={triggerClass}
         >
-          <span className="min-w-0 truncate text-text">{currentModelName}</span>
+          <span className="block min-w-0 flex-1 truncate text-text">{currentModelName}</span>
         </Button>
       )}
 

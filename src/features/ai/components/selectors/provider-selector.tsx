@@ -80,7 +80,7 @@ export function ProviderSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[128px]")
+      ? chatComposerControlClassName("w-[min(128px,34vw)] max-w-[128px]")
       : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
@@ -147,7 +147,7 @@ export function ProviderSelector({
             size={isComposer ? 12 : 14}
             className="shrink-0 text-text-lighter"
           />
-          <span className="invisible min-w-0 truncate text-text">{currentProviderName}</span>
+          <span className="invisible block min-w-0 truncate text-text">{currentProviderName}</span>
           <input
             ref={triggerInputRef}
             type="text"
@@ -157,7 +157,7 @@ export function ProviderSelector({
             aria-label="Search AI providers"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleTriggerInputKeyDown}
-            className="ui-font absolute top-1/2 right-1.5 left-6 min-w-0 -translate-y-1/2 bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+            className="ui-font absolute top-1/2 right-1.5 left-6 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
           />
         </div>
       ) : (
@@ -181,7 +181,7 @@ export function ProviderSelector({
             size={isComposer ? 12 : 14}
             className="shrink-0 text-text-lighter"
           />
-          <span className="min-w-0 truncate text-text">{currentProviderName}</span>
+          <span className="block min-w-0 flex-1 truncate text-text">{currentProviderName}</span>
         </Button>
       )}
 
