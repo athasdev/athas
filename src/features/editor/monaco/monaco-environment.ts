@@ -1,3 +1,4 @@
+import { editor as monacoEditor } from "monaco-editor";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import CssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
 import HtmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
@@ -9,10 +10,21 @@ declare global {
     MonacoEnvironment?: {
       getWorker: (_workerId: string, label: string) => Worker;
     };
+    __athasMonacoContextMenuInitialized?: boolean;
   }
 }
 
 if (typeof window !== "undefined") {
+  if (!window.__athasMonacoContextMenuInitialized) {
+    window.__athasMonacoContextMenuInitialized = true;
+    for (const editor of monacoEditor.getEditors()) {
+      editor.updateOptions({ contextmenu: true });
+    }
+    monacoEditor.onDidCreateEditor((editor) => {
+      editor.updateOptions({ contextmenu: true });
+    });
+  }
+
   window.MonacoEnvironment = {
     getWorker: (_workerId, label) => {
       if (label === "json") return new JsonWorker();

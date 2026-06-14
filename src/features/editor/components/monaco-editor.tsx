@@ -551,7 +551,7 @@ export function MonacoBackedEditor({
       theme: defineMonacoTheme(themeId),
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
       cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
-      contextmenu: false,
+      contextmenu: true,
       overviewRulerLanes: 0,
       fixedOverflowWidgets: false,
       "semanticHighlighting.enabled": true,

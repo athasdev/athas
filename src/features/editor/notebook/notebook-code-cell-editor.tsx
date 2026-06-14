@@ -87,7 +87,7 @@ export function NotebookCodeCellEditor({
       quickSuggestions: true,
       suggestOnTriggerCharacters: true,
       parameterHints: { enabled: true },
-      contextmenu: false,
+      contextmenu: true,
       theme: defineMonacoTheme(themeId),
       fixedOverflowWidgets: true,
       scrollbar: {
