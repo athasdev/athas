@@ -66,12 +66,24 @@ const GitTagManager = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setQuery("");
-    setIsCreateOpen(false);
-    setExpandedTagName(null);
     void loadTags();
     void loadRemotes();
   }, [isOpen, repoPath]);
+
+  const resetTransientState = () => {
+    setQuery("");
+    setIsCreateOpen(false);
+    setNewTagName("");
+    setNewTagMessage("");
+    setNewTagCommit("");
+    setNewTagSigned(false);
+    setExpandedTagName(null);
+  };
+
+  const handleClose = () => {
+    resetTransientState();
+    onClose();
+  };
 
   const filteredTags = useMemo(() => {
     if (!query.trim()) return tags;
@@ -175,7 +187,7 @@ const GitTagManager = ({
       if (result.success) {
         toast.success(result.message);
         onRefresh?.();
-        onClose();
+        handleClose();
       } else {
         toast.error(result.message);
       }
@@ -219,7 +231,7 @@ const GitTagManager = ({
   return (
     <GitCommandSurface
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       query={query}
       onQueryChange={setQuery}
       placeholder="Search tags..."
@@ -419,7 +431,7 @@ const GitTagManager = ({
                         tag.name,
                         `${previousTag.name}..${tag.name}`,
                       );
-                      onClose();
+                      handleClose();
                     }}
                     disabled={!previousTag}
                     variant="ghost"
@@ -435,7 +447,7 @@ const GitTagManager = ({
                     onClick={(event) => {
                       event.stopPropagation();
                       onViewTagComparison?.("HEAD", tag.name, `HEAD..${tag.name}`);
-                      onClose();
+                      handleClose();
                     }}
                     variant="ghost"
                     compact

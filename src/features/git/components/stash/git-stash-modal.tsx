@@ -21,6 +21,24 @@ export const StashMessageModal = ({
   title = "Create Stash",
   placeholder = "Stash message...",
 }: StashMessageModalProps) => {
+  if (!isOpen) return null;
+
+  return (
+    <StashMessageModalContent
+      onClose={onClose}
+      onConfirm={onConfirm}
+      title={title}
+      placeholder={placeholder}
+    />
+  );
+};
+
+const StashMessageModalContent = ({
+  onClose,
+  onConfirm,
+  title,
+  placeholder,
+}: Omit<StashMessageModalProps, "isOpen">) => {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,12 +47,9 @@ export const StashMessageModal = ({
   useOnClickOutside(modalRef as RefObject<HTMLElement>, onClose);
 
   useEffect(() => {
-    if (isOpen) {
-      setMessage("");
-      const focusTimer = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(focusTimer);
-    }
-  }, [isOpen]);
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(focusTimer);
+  }, []);
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -47,8 +62,6 @@ export const StashMessageModal = ({
       setIsLoading(false);
     }
   };
-
-  if (!isOpen) return null;
 
   return createPortal(
     <motion.div

@@ -29,9 +29,15 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
 
   useEffect(() => {
     if (!isOpen) return;
-    setQuery("");
     void loadRemotes();
   }, [isOpen, repoPath]);
+
+  const handleClose = () => {
+    setQuery("");
+    setNewRemoteName("");
+    setNewRemoteUrl("");
+    onClose();
+  };
 
   const filteredRemotes = useMemo(() => {
     if (!query.trim()) return remotes;
@@ -86,7 +92,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   return (
     <GitCommandSurface
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       query={query}
       onQueryChange={setQuery}
       placeholder="Search remotes..."
