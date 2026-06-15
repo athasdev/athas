@@ -79,6 +79,10 @@ export function ModelSelector({
 
   const setOpen = (nextOpen: boolean) => {
     if (disabled && nextOpen) return;
+    if (!nextOpen) {
+      setQuery("");
+      setActiveIndex(0);
+    }
     if (open === undefined) {
       setUncontrolledOpen(nextOpen);
     }
@@ -174,11 +178,9 @@ export function ModelSelector({
   }, [availableModels, modelId, onChange]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      return;
-    }
-    requestAnimationFrame(() => triggerInputRef.current?.focus());
+    if (!isOpen) return;
+    const frame = requestAnimationFrame(() => triggerInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
   const currentModelName = useMemo(() => {
