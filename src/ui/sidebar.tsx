@@ -356,6 +356,34 @@ export function SidebarSectionHeader({
   );
 }
 
+export function SidebarSectionLabel({
+  children,
+  leading,
+  trailing,
+  className,
+  ...props
+}: ComponentProps<"div"> & {
+  children: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "ui-font ui-text-xs flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
+        className,
+      )}
+      {...props}
+    >
+      {leading ? (
+        <span className="flex shrink-0 items-center justify-center">{leading}</span>
+      ) : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
+    </div>
+  );
+}
+
 export interface SidebarSectionSwitcherItem {
   id: string;
   label: string;

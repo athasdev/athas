@@ -12,6 +12,12 @@ import {
   useMemo,
   useState,
 } from "react";
+import {
+  SidebarHeaderIconButton,
+  SidebarListItem,
+  SidebarSearchFilterRow,
+  SidebarSectionLabel,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { FileExplorerIcon } from "./file-explorer-icon";
@@ -160,22 +166,22 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
   const { fileName, directoryPath, title } = getFlatItemParts(item);
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "flex h-7 w-full min-w-0 items-center gap-1.5 rounded px-2 text-left ui-text-xs text-text-lighter hover:bg-hover/40 hover:text-text",
-        isSelected && "bg-selected text-text",
-      )}
+    <SidebarListItem
       onClick={() => onSelect(item.key)}
       aria-current={isSelected ? "true" : undefined}
       title={title}
+      active={isSelected}
+      className="h-7 min-h-0 gap-1.5 rounded px-2 py-0 ui-text-xs hover:bg-hover/40"
+      leading={
+        <FileExplorerIcon
+          fileName={item.iconPath ?? item.path}
+          isDir={false}
+          size={14}
+          className={cn("shrink-0", item.iconClassName)}
+        />
+      }
+      trailing={<FileNavigatorMetadata item={item} />}
     >
-      <FileExplorerIcon
-        fileName={item.iconPath ?? item.path}
-        isDir={false}
-        size={14}
-        className={cn("shrink-0", item.iconClassName)}
-      />
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
         <span className="min-w-0 max-w-[58%] shrink-0 truncate font-medium text-text">
           {fileName}
@@ -184,8 +190,7 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
           <span className="min-w-0 flex-1 truncate text-text-lighter">{directoryPath}</span>
         ) : null}
       </span>
-      <FileNavigatorMetadata item={item} />
-    </button>
+    </SidebarListItem>
   );
 });
 
@@ -203,18 +208,19 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   if (node.isDir) {
     return (
       <div>
-        <div
-          className="flex h-6 min-w-0 items-center gap-1.5 px-2 ui-text-xs text-text-lighter"
+        <SidebarSectionLabel
           style={{ paddingLeft: 8 + depth * 12 }}
+          leading={
+            <FileExplorerIcon
+              fileName={node.name}
+              isDir
+              size={14}
+              className="shrink-0 text-text-lighter"
+            />
+          }
         >
-          <FileExplorerIcon
-            fileName={node.name}
-            isDir
-            size={14}
-            className="shrink-0 text-text-lighter"
-          />
-          <span className="truncate">{node.name}</span>
-        </div>
+          {node.name}
+        </SidebarSectionLabel>
         {node.children.map((child) => (
           <FileNavigatorNodeRow
             key={child.id}
@@ -234,25 +240,24 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   const isSelected = selectedKey === item.key;
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "flex h-7 w-full min-w-0 items-center gap-1.5 rounded px-2 text-left ui-text-xs text-text-lighter hover:bg-hover/40 hover:text-text",
-        isSelected && "bg-selected text-text",
-      )}
+    <SidebarListItem
       style={{ paddingLeft: 8 + depth * 12 }}
       onClick={() => onSelect(item.key)}
       aria-current={isSelected ? "true" : undefined}
+      active={isSelected}
+      className="h-7 min-h-0 gap-1.5 rounded px-2 py-0 ui-text-xs hover:bg-hover/40"
+      leading={
+        <FileExplorerIcon
+          fileName={item.iconPath ?? node.name}
+          isDir={false}
+          size={14}
+          className={cn("shrink-0", item.iconClassName)}
+        />
+      }
+      trailing={<FileNavigatorMetadata item={item} />}
     >
-      <FileExplorerIcon
-        fileName={item.iconPath ?? node.name}
-        isDir={false}
-        size={14}
-        className={cn("shrink-0", item.iconClassName)}
-      />
-      <span className="min-w-0 flex-1 truncate">{node.name}</span>
-      <FileNavigatorMetadata item={item} />
-    </button>
+      {node.name}
+    </SidebarListItem>
   );
 });
 
@@ -331,51 +336,43 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <div className="flex h-8 shrink-0 items-center gap-1 border-b border-border/60 px-1.5">
-          <div className="flex min-w-0 flex-1 items-center gap-1 text-text-lighter">
-            <Search size={13} className="shrink-0" />
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 ui-text-xs text-text outline-none placeholder:text-text-lighter"
-              placeholder="Search"
-              aria-label="Search files"
-            />
-          </div>
-          <div className="inline-flex shrink-0 rounded border border-border/70 bg-primary-bg p-0.5">
-            <button
-              type="button"
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded text-text-lighter hover:bg-hover hover:text-text",
-                viewMode === "flat" && "bg-selected text-text",
-              )}
-              onClick={() => onViewModeChange("flat")}
-              aria-label="Show flat file list"
-              aria-pressed={viewMode === "flat"}
-              title="Flat list"
-            >
-              <ListBullets size={13} />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded text-text-lighter hover:bg-hover hover:text-text",
-                viewMode === "tree" && "bg-selected text-text",
-              )}
-              onClick={() => onViewModeChange("tree")}
-              aria-label="Show file tree"
-              aria-pressed={viewMode === "tree"}
-              title="File tree"
-            >
-              <TreeStructure size={13} />
-            </button>
-          </div>
-        </div>
+        <SidebarSearchFilterRow
+          value={searchQuery}
+          onChange={setSearchQuery}
+          searchIcon={Search}
+          placeholder="Search"
+          searchAriaLabel="Search files"
+          className="border-b border-border/60"
+          actions={
+            <div className="inline-flex shrink-0 rounded border border-border/70 bg-primary-bg p-0.5">
+              <SidebarHeaderIconButton
+                className={cn("size-5 rounded", viewMode === "flat" && "bg-selected text-text")}
+                onClick={() => onViewModeChange("flat")}
+                aria-label="Show flat file list"
+                aria-pressed={viewMode === "flat"}
+                tooltip="Flat list"
+                tooltipSide="bottom"
+              >
+                <ListBullets size={13} />
+              </SidebarHeaderIconButton>
+              <SidebarHeaderIconButton
+                className={cn("size-5 rounded", viewMode === "tree" && "bg-selected text-text")}
+                onClick={() => onViewModeChange("tree")}
+                aria-label="Show file tree"
+                aria-pressed={viewMode === "tree"}
+                tooltip="File tree"
+                tooltipSide="bottom"
+              >
+                <TreeStructure size={13} />
+              </SidebarHeaderIconButton>
+            </div>
+          }
+        />
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto p-1">
         {filteredItems.length === 0 ? (
-          <div className="px-2 py-2 ui-text-xs text-text-lighter">No files match</div>
+          <SidebarSectionLabel>No files match</SidebarSectionLabel>
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow
