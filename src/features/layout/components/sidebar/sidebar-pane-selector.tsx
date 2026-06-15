@@ -65,90 +65,108 @@ export const SidebarPaneSelector = ({
     (state) => state.settings.sidebarActivityItemsOrder,
   );
 
-  const items: TabsItem[] = [
-    {
-      id: "files",
-      icon: <Folder className={iconClassName} weight="duotone" />,
-      isActive: isFilesActive,
-      onClick: () => onViewChange("files"),
-      role: "tab",
-      ariaLabel: "Files",
-      className: tabClassName,
-      tooltip: {
-        content: "Files",
-        shortcut: "Mod+Shift+E",
-        side: tooltipSide,
+  const items = useMemo<TabsItem[]>(
+    () => [
+      {
+        id: "files",
+        icon: <Folder className={iconClassName} weight="duotone" />,
+        isActive: isFilesActive,
+        onClick: () => onViewChange("files"),
+        role: "tab",
+        ariaLabel: "Files",
+        className: tabClassName,
+        tooltip: {
+          content: "Files",
+          shortcut: "Mod+Shift+E",
+          side: tooltipSide,
+        },
       },
-    },
-    ...(coreFeatures.search && onSearchClick
-      ? [
-          {
-            id: "search",
-            icon: <MagnifyingGlass className={iconClassName} weight="duotone" />,
-            isActive: isSearchActive,
-            onClick: onSearchClick,
-            ariaLabel: "Search",
-            className: tabClassName,
-            tooltip: {
-              content: "Search",
-              shortcut: "Mod+Shift+F",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...(coreFeatures.git
-      ? [
-          {
-            id: "git",
-            icon: <GitBranch className={iconClassName} weight="duotone" />,
-            isActive: isGitViewActive,
-            onClick: () => onViewChange("git"),
+      ...(coreFeatures.search && onSearchClick
+        ? [
+            {
+              id: "search",
+              icon: <MagnifyingGlass className={iconClassName} weight="duotone" />,
+              isActive: isSearchActive,
+              onClick: onSearchClick,
+              ariaLabel: "Search",
+              className: tabClassName,
+              tooltip: {
+                content: "Search",
+                shortcut: "Mod+Shift+F",
+                side: tooltipSide,
+              },
+            } satisfies TabsItem,
+          ]
+        : []),
+      ...(coreFeatures.git
+        ? [
+            {
+              id: "git",
+              icon: <GitBranch className={iconClassName} weight="duotone" />,
+              isActive: isGitViewActive,
+              onClick: () => onViewChange("git"),
+              role: "tab",
+              ariaLabel: "Git Source Control",
+              className: tabClassName,
+              tooltip: {
+                content: "Source Control",
+                shortcut: "Mod+Shift+G",
+                side: tooltipSide,
+              },
+            } satisfies TabsItem,
+          ]
+        : []),
+      ...(coreFeatures.github
+        ? [
+            {
+              id: "github-prs",
+              icon: <GitPullRequest className={iconClassName} weight="duotone" />,
+              isActive: isGitHubPRsViewActive,
+              onClick: () => onViewChange("github-prs"),
+              role: "tab",
+              ariaLabel: "GitHub Pull Requests",
+              className: tabClassName,
+              tooltip: {
+                content: "Pull Requests",
+                side: tooltipSide,
+              },
+            } satisfies TabsItem,
+          ]
+        : []),
+      ...Array.from(extensionViews.values()).map(
+        (view) =>
+          ({
+            id: view.id,
+            icon: <DynamicIcon name={view.icon} className={iconClassName} />,
+            isActive: activeSidebarView === view.id,
+            onClick: () => onViewChange(view.id),
             role: "tab",
-            ariaLabel: "Git Source Control",
+            ariaLabel: view.title,
             className: tabClassName,
             tooltip: {
-              content: "Source Control",
-              shortcut: "Mod+Shift+G",
+              content: view.title,
               side: tooltipSide,
             },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...(coreFeatures.github
-      ? [
-          {
-            id: "github-prs",
-            icon: <GitPullRequest className={iconClassName} weight="duotone" />,
-            isActive: isGitHubPRsViewActive,
-            onClick: () => onViewChange("github-prs"),
-            role: "tab",
-            ariaLabel: "GitHub Pull Requests",
-            className: tabClassName,
-            tooltip: {
-              content: "Pull Requests",
-              side: tooltipSide,
-            },
-          } satisfies TabsItem,
-        ]
-      : []),
-    ...Array.from(extensionViews.values()).map(
-      (view) =>
-        ({
-          id: view.id,
-          icon: <DynamicIcon name={view.icon} className={iconClassName} />,
-          isActive: activeSidebarView === view.id,
-          onClick: () => onViewChange(view.id),
-          role: "tab",
-          ariaLabel: view.title,
-          className: tabClassName,
-          tooltip: {
-            content: view.title,
-            side: tooltipSide,
-          },
-        }) satisfies TabsItem,
-    ),
-  ];
+          }) satisfies TabsItem,
+      ),
+    ],
+    [
+      activeSidebarView,
+      coreFeatures.git,
+      coreFeatures.github,
+      coreFeatures.search,
+      extensionViews,
+      iconClassName,
+      isFilesActive,
+      isGitHubPRsViewActive,
+      isGitViewActive,
+      isSearchActive,
+      onSearchClick,
+      onViewChange,
+      tabClassName,
+      tooltipSide,
+    ],
+  );
 
   const orderedIds = useMemo(
     () =>
