@@ -7,13 +7,11 @@
 @import "./styles/base.css";
 @import "./styles/fonts.css";
 @import "./styles/scrollbars.css";
-@import "./styles/tokens.css";
+@import "./styles/syntax-tokens.css";
+@import "./styles/rendered-code-tokens.css";
 @import "./styles/layout.css";
 @import "./styles/utilities.css";
 
-@import "./features/editor/styles/token-theme.css";
-@import "./features/editor/styles/overlay-card.css";
-@import "./features/editor/markdown/styles.css";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));

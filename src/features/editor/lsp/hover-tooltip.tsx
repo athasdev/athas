@@ -3,6 +3,8 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import "../markdown/styles.css";
+import "../styles/overlay-card.css";
 import "./hover-tooltip.css";
 
 export const HoverTooltip = memo(() => {

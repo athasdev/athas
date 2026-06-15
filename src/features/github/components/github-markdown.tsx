@@ -1,3 +1,4 @@
+import "@/features/editor/markdown/styles.css";
 import "../styles/github-markdown.css";
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/code-highlight";
