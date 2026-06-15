@@ -43,19 +43,32 @@ const PLACEHOLDERS: Partial<Record<string, string>> = {
   mistral: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 };
 
+const MASKED_API_KEY = "••••••••••••••••••••";
+
 export function ProviderApiKeyCommand({
   isOpen,
   onClose,
   initialProviderId,
 }: ProviderApiKeyCommandProps) {
+  return (
+    <Command isVisible={isOpen} onClose={onClose} className="max-h-[430px] w-[560px]">
+      {isOpen ? (
+        <ProviderApiKeyCommandContent
+          key={initialProviderId ?? "default"}
+          onClose={onClose}
+          initialProviderId={initialProviderId}
+        />
+      ) : null}
+    </Command>
+  );
+}
+
+function ProviderApiKeyCommandContent({
+  onClose,
+  initialProviderId,
+}: Pick<ProviderApiKeyCommandProps, "onClose" | "initialProviderId">) {
   const searchRef = useRef<HTMLInputElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState("");
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
-  const [apiKey, setApiKey] = useState("");
-  const [isValidating, setIsValidating] = useState(false);
-  const [status, setStatus] = useState<"idle" | "valid" | "invalid">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
 
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
@@ -65,6 +78,19 @@ export function ProviderApiKeyCommand({
     () => getAvailableProviders().filter((provider) => provider.requiresApiKey),
     [],
   );
+  const initialProvider = initialProviderId
+    ? providers.find((provider) => provider.id === initialProviderId)
+    : null;
+  const initialSelectedProviderId = initialProvider?.id || providers[0]?.id || "";
+  const [query, setQuery] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(initialSelectedProviderId);
+  const [apiKey, setApiKey] = useState(() =>
+    initialSelectedProviderId && hasProviderApiKey(initialSelectedProviderId) ? MASKED_API_KEY : "",
+  );
+  const [isValidating, setIsValidating] = useState(false);
+  const [status, setStatus] = useState<"idle" | "valid" | "invalid">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
   const selectedProvider = getProviderById(selectedProviderId);
   const hasExistingKey = selectedProviderId ? hasProviderApiKey(selectedProviderId) : false;
   const dashboardLink = selectedProviderId ? DASHBOARD_LINKS[selectedProviderId] : undefined;
@@ -85,24 +111,9 @@ export function ProviderApiKeyCommand({
   }, [providers, query]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const initialProvider = initialProviderId
-      ? providers.find((provider) => provider.id === initialProviderId)
-      : null;
-    setSelectedProviderId(initialProvider?.id || providers[0]?.id || "");
-    setQuery("");
-    setApiKey("");
-    setStatus("idle");
-    setErrorMessage("");
-    requestAnimationFrame(() => searchRef.current?.focus());
-  }, [initialProviderId, isOpen, providers]);
-
-  useEffect(() => {
-    if (!selectedProviderId) return;
-    setApiKey(hasExistingKey ? "••••••••••••••••••••" : "");
-    setStatus("idle");
-    setErrorMessage("");
-  }, [hasExistingKey, selectedProviderId]);
+    const focusFrame = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(focusFrame);
+  }, []);
 
   const handleSave = async () => {
     if (!selectedProviderId) return;
@@ -124,7 +135,7 @@ export function ProviderApiKeyCommand({
         return;
       }
       setStatus("valid");
-      setApiKey("••••••••••••••••••••");
+      setApiKey(MASKED_API_KEY);
     } catch {
       setStatus("invalid");
       setErrorMessage("Failed to validate API key.");
@@ -147,7 +158,7 @@ export function ProviderApiKeyCommand({
   };
 
   return (
-    <Command isVisible={isOpen} onClose={onClose} className="max-h-[430px] w-[560px]">
+    <>
       <CommandHeader onClose={onClose}>
         <Search className="shrink-0 text-text-lighter" size={14} />
         <CommandInput
@@ -173,6 +184,9 @@ export function ProviderApiKeyCommand({
                   isSelected={isSelected}
                   onClick={() => {
                     setSelectedProviderId(provider.id);
+                    setApiKey(hasProviderApiKey(provider.id) ? MASKED_API_KEY : "");
+                    setStatus("idle");
+                    setErrorMessage("");
                     requestAnimationFrame(() => apiKeyInputRef.current?.focus());
                   }}
                   className="mb-1 px-2 py-2 last:mb-0"
@@ -288,6 +302,6 @@ export function ProviderApiKeyCommand({
           )}
         </div>
       </div>
-    </Command>
+    </>
   );
 }

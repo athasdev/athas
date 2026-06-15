@@ -18,7 +18,6 @@ import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } f
 import { writeClipboardText } from "@/utils/clipboard";
 
 interface QuickQuestionCommandContentProps {
-  isActive: boolean;
   onBack: () => void;
   onClose: () => void;
   activeBuffer: PaneContent | null;
@@ -71,7 +70,6 @@ async function copyText(text: string) {
 }
 
 export function QuickQuestionCommandContent({
-  isActive,
   onBack,
   onClose,
   activeBuffer,
@@ -109,17 +107,13 @@ export function QuickQuestionCommandContent({
   }, [activeBuffer, buffers, projectRoot, settings.aiProviderId]);
 
   useEffect(() => {
-    if (!isActive) {
-      requestIdRef.current += 1;
-      return;
-    }
+    const focusFrame = requestAnimationFrame(() => inputRef.current?.focus());
 
-    setQuestion("");
-    setAnswer("");
-    setError("");
-    setIsLoading(false);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, [isActive]);
+    return () => {
+      requestIdRef.current += 1;
+      cancelAnimationFrame(focusFrame);
+    };
+  }, []);
 
   const handleSubmit = async () => {
     const trimmedQuestion = question.trim();

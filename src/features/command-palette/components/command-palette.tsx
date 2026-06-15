@@ -368,7 +368,6 @@ const CommandPalette = () => {
     <Command isVisible={isVisible} onClose={onClose}>
       {currentView === "quick-question" ? (
         <QuickQuestionCommandContent
-          isActive={currentView === "quick-question"}
           onBack={popView}
           onClose={onClose}
           activeBuffer={activeBuffer}
