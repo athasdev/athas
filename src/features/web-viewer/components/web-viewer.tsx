@@ -9,6 +9,7 @@ import {
 } from "@/features/panes/types/pane-content.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { LoadingIndicator } from "@/ui/loading";
+import { writeClipboardText } from "@/utils/clipboard";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
 import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation.store";
 import { getEmbeddedWebViewerUserAgent, getWebViewerProfileKey } from "../utils/web-viewer-profile";
@@ -633,7 +634,7 @@ export function WebViewer({
 
   const handleCopyUrl = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(currentUrl);
+      await writeClipboardText(currentUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {

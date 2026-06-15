@@ -49,6 +49,7 @@ import {
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
@@ -397,7 +398,7 @@ const GitHubPRsView = memo(() => {
           label: "Copy Title",
           icon: <Copy />,
           onClick: () => {
-            void navigator.clipboard.writeText(selectedPR.title);
+            void writeClipboardText(selectedPR.title);
           },
         },
       ]

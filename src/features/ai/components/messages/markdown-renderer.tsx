@@ -19,6 +19,7 @@ import {
   normalizeLanguage,
 } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
 
 const LANGUAGE_HINTS = new Set([
   "bash",
@@ -155,12 +156,7 @@ function inferCodeLanguage(code: string): string {
 }
 
 async function copyTextToClipboard(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 }
 
 function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {

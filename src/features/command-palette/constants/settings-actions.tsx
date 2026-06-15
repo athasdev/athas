@@ -21,6 +21,7 @@ import {
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import type { Settings as AppSettings } from "@/features/settings/stores/settings.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import { writeClipboardText } from "@/utils/clipboard";
 import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";
@@ -166,12 +167,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
 
           const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
 
-          try {
-            const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-            await writeText(text);
-          } catch {
-            await navigator.clipboard.writeText(text);
-          }
+          await writeClipboardText(text);
 
           const { openUrl } = await import("@tauri-apps/plugin-opener");
           await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");

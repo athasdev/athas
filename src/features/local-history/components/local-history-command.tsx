@@ -26,7 +26,7 @@ import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/com
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import { formatRelativeDate } from "@/utils/date";
+import { formatRelativeDate, formatShortDateTime } from "@/utils/date";
 import { getBaseName } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -44,12 +44,7 @@ function formatSnapshotSize(bytes: number): string {
 }
 
 function formatSnapshotDate(timestamp: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(timestamp));
+  return formatShortDateTime(timestamp);
 }
 
 function getEntryTitle(entry: LocalHistoryEntry): string {

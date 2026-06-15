@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   CalendarIcon as Calendar,
   CaretDownIcon as CaretDown,
@@ -22,6 +21,7 @@ import Input from "@/ui/input";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import Select from "@/ui/select";
 import { toast } from "@/ui/toast";
+import { writeClipboardText } from "@/utils/clipboard";
 import { formatShortDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getRemotes } from "../api/git-remotes-api";
@@ -208,7 +208,7 @@ const GitTagManager = ({
 
   const handleCopy = async (value: string, label: string) => {
     try {
-      await writeText(value);
+      await writeClipboardText(value);
       toast.success(`${label} copied`);
     } catch (error) {
       console.error(`Failed to copy ${label.toLowerCase()}:`, error);

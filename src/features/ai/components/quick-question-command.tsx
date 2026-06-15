@@ -15,6 +15,7 @@ import { getModelById, getProviderById } from "@/features/ai/types/providers.typ
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import { writeClipboardText } from "@/utils/clipboard";
 
 interface QuickQuestionCommandContentProps {
   isActive: boolean;
@@ -66,12 +67,7 @@ function getReadableError(error: string): string {
 }
 
 async function copyText(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 }
 
 export function QuickQuestionCommandContent({

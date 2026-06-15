@@ -27,6 +27,7 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { ItemGroup } from "@/ui/item";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 
 interface NotificationsCommandProps {
@@ -72,7 +73,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
   }, [isVisible]);
 
   const copyText = async (text: string) => {
-    await navigator.clipboard.writeText(text);
+    await writeClipboardText(text);
   };
 
   const openNotificationDetails = (notification: NotificationEntry) => {

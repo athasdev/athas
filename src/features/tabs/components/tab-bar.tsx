@@ -19,7 +19,6 @@ import {
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
 } from "@phosphor-icons/react";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
@@ -27,6 +26,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
+import { writeClipboardText } from "@/utils/clipboard";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
@@ -391,24 +391,21 @@ const TabBar = ({
     });
   }, []);
 
-  const handleCopyPath = useCallback(
-    async (path: string) => {
-      await writeText(path);
-    },
-    [writeText],
-  );
+  const handleCopyPath = useCallback(async (path: string) => {
+    await writeClipboardText(path);
+  }, []);
 
   const handleCopyRelativePath = useCallback(
     async (path: string) => {
       if (!rootFolderPath) {
         // If no project is open, copy the full path
-        await writeText(path);
+        await writeClipboardText(path);
         return;
       }
 
-      await writeText(getRelativePath(path, rootFolderPath));
+      await writeClipboardText(getRelativePath(path, rootFolderPath));
     },
-    [rootFolderPath, writeText],
+    [rootFolderPath],
   );
 
   const closeContextMenu = () => {

@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   CheckIcon as Check,
   ClockIcon as Clock,
@@ -17,6 +16,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
 import { getCommitDiff } from "../api/git-diff-api";
@@ -128,7 +128,7 @@ export const InlineGitBlame = ({
   const handleCopyCommitHash = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
-      await writeText(blameLine.commit_hash.substring(0, 7));
+      await writeClipboardText(blameLine.commit_hash.substring(0, 7));
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 1500);
     },

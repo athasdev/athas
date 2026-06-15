@@ -22,6 +22,7 @@ import {
   WarningIcon as Warning,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
+import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
@@ -306,7 +307,7 @@ export function useFileExplorerContextMenu({
             try {
               const response = await fetch(contextMenu.path);
               const content = await response.text();
-              await navigator.clipboard.writeText(content);
+              await writeClipboardText(content);
             } catch {}
           },
         },
@@ -369,7 +370,7 @@ export function useFileExplorerContextMenu({
         icon: <Link />,
         onClick: async () => {
           try {
-            await navigator.clipboard.writeText(contextMenu.path);
+            await writeClipboardText(contextMenu.path);
           } catch {}
         },
       },
@@ -380,7 +381,7 @@ export function useFileExplorerContextMenu({
         onClick: async () => {
           try {
             const relativePath = getRelativePath(contextMenu.path, rootFolderPath);
-            await navigator.clipboard.writeText(relativePath);
+            await writeClipboardText(relativePath);
           } catch {}
         },
       },

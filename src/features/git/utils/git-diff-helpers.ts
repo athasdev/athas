@@ -1,5 +1,6 @@
 import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git.types";
+import { writeClipboardText } from "@/utils/clipboard";
 export {
   getDiffLineVisualState,
   getDiffLineVisualType,
@@ -128,5 +129,5 @@ export function countDiffStats(diffs: GitDiff[]): { additions: number; deletions
 }
 
 export function copyLineContent(content: string) {
-  navigator.clipboard.writeText(content);
+  void writeClipboardText(content);
 }

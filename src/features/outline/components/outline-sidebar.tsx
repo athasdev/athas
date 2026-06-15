@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   ArrowSquareOutIcon as ArrowSquareOut,
   BracketsCurlyIcon as Braces,
@@ -15,6 +14,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { writeClipboardText } from "@/utils/clipboard";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -271,7 +271,7 @@ export function OutlineSidebar() {
   };
 
   const copyText = (text: string) => {
-    void writeText(text);
+    void writeClipboardText(text);
   };
 
   const symbolContextMenuItems = useMemo<ContextMenuItem[]>(() => {

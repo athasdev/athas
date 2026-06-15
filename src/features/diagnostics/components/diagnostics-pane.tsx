@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   WarningCircleIcon as AlertCircle,
   WarningIcon as AlertTriangle,
@@ -26,6 +25,7 @@ import {
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { writeClipboardText } from "@/utils/clipboard";
 import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -205,11 +205,7 @@ const loadPreferences = (): PanePreferences => {
 };
 
 const copyToClipboard = async (text: string) => {
-  try {
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 };
 
 const DiagnosticsPane = ({
