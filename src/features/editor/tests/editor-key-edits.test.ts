@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolvePreCompletionKeyEdit } from "@/features/athas-editor/utils/editor-key-edits";
+import { resolvePreCompletionKeyEdit } from "@/features/editor/engines/athas/utils/editor-key-edits";
 
 describe("Athas editor key edits", () => {
   it.each(["Backspace", "Delete"])("collapses the selection after deleting it with %s", (key) => {

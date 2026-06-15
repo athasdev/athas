@@ -301,9 +301,7 @@ export default function Select({
     if (!open) return;
 
     const selectedIndex =
-      searchQuery.length === 0
-        ? filteredOptions.findIndex((option) => option.value === value)
-        : -1;
+      searchQuery.length === 0 ? filteredOptions.findIndex((option) => option.value === value) : -1;
 
     setHoveredIndex(selectedIndex >= 0 ? selectedIndex : 0);
   }, [filteredOptions, open, searchQuery, value]);

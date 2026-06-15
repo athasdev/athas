@@ -346,6 +346,7 @@ pub async fn lsp_get_semantic_tokens(
       Some(SemanticTokensResult::Partial(partial)) => partial.data,
       None => return Ok(vec![]),
    };
+   let token_type_names = lsp_manager.get_semantic_token_type_names(&file_path);
 
    let mut result = Vec::with_capacity(data.len());
    let mut current_line: u32 = 0;
@@ -364,6 +365,7 @@ pub async fn lsp_get_semantic_tokens(
          start_char: current_char,
          length: token.length,
          token_type: token.token_type,
+         token_type_name: token_type_names.get(token.token_type as usize).cloned(),
          token_modifiers: token.token_modifiers_bitset,
       });
    }

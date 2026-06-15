@@ -917,6 +917,7 @@ export class LspClient {
       startChar: number;
       length: number;
       tokenType: number;
+      tokenTypeName?: string;
       tokenModifiers: number;
     }[]
   > {

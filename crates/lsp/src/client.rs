@@ -811,6 +811,29 @@ impl LspClient {
          .await
    }
 
+   pub fn semantic_token_type_names(&self) -> Vec<String> {
+      let capabilities = self.capabilities.lock().unwrap();
+      let Some(provider) = capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.semantic_tokens_provider.as_ref())
+      else {
+         return Vec::new();
+      };
+
+      let legend = match provider {
+         SemanticTokensServerCapabilities::SemanticTokensOptions(options) => &options.legend,
+         SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(options) => {
+            &options.semantic_tokens_options.legend
+         }
+      };
+
+      legend
+         .token_types
+         .iter()
+         .map(|token_type| token_type.as_str().to_string())
+         .collect()
+   }
+
    pub async fn text_document_inlay_hint(
       &self,
       params: InlayHintParams,

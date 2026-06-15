@@ -138,7 +138,7 @@ function truncateCellOutput(value: string): string {
 }
 
 const AthasEditor = lazy(() =>
-  import("@/features/athas-editor/components/editor").then((module) => ({
+  import("@/features/editor/engines/athas/components/editor").then((module) => ({
     default: module.Editor,
   })),
 );

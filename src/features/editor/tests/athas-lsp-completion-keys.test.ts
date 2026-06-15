@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveLspCompletionKeyAction } from "@/features/athas-editor/utils/lsp-completion-keys";
+import { resolveLspCompletionKeyAction } from "@/features/editor/utils/lsp-completion-keys";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 
 const completions: FilteredCompletion[] = [

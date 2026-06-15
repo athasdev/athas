@@ -9,6 +9,7 @@ export interface SemanticToken {
   startChar: number;
   length: number;
   tokenType: number;
+  tokenTypeName?: string;
   tokenModifiers: number;
 }
 

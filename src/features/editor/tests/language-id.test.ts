@@ -2,8 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   getLanguageDisplayName as getAthasEditorLanguageDisplayName,
   getLanguageIdFromPath as getAthasEditorLanguageIdFromPath,
-} from "@/features/athas-editor/utils/language-id";
-import { isMarkdownFile as isAthasEditorMarkdownFile } from "@/features/athas-editor/utils/lines";
+} from "@/features/editor/utils/language-id";
 import { detectLanguageFromFileName } from "../utils/language-detection";
 import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
 import { isMarkdownFile as isEditorMarkdownFile } from "../utils/lines";
@@ -132,7 +131,6 @@ describe("Markdown preview file detection", () => {
   it("treats R Markdown as a Markdown-previewable source file", () => {
     expect(isEditorMarkdownFile("/tmp/README.md")).toBe(true);
     expect(isEditorMarkdownFile("/tmp/report.Rmd")).toBe(true);
-    expect(isAthasEditorMarkdownFile("/tmp/report.Rmd")).toBe(true);
     expect(isEditorMarkdownFile("/tmp/analysis.R")).toBe(false);
   });
 });
