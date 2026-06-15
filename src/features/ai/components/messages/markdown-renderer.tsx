@@ -428,7 +428,7 @@ const headerClasses: Record<number, string> = {
   6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-xs",
 };
 
-function renderHeader(level: number, text: string, key: number): React.ReactNode {
+function renderHeader(level: number, text: string, key: string): React.ReactNode {
   const className = headerClasses[level] || headerClasses[6];
   const content = renderInlineFormatting(text);
 
@@ -582,7 +582,7 @@ function getTableAlignmentClass(alignment: TableAlignment): string {
   }
 }
 
-function renderTable(table: MarkdownTable, key: number): React.ReactNode {
+function renderTable(table: MarkdownTable, key: string): React.ReactNode {
   return (
     <div key={key} className="my-2 max-w-full overflow-x-auto">
       <table className="w-full min-w-max border-collapse ui-text-xs">
@@ -621,14 +621,17 @@ function renderTable(table: MarkdownTable, key: number): React.ReactNode {
 function renderInlineFormatting(text: string): React.ReactNode {
   const elements: React.ReactNode[] = [];
   let remaining = text;
-  let key = 0;
+  const getInlineKey = (kind: string, value: string) => {
+    const offset = text.length - remaining.length;
+    return `${kind}-${offset}-${value.length}`;
+  };
 
   while (remaining.length > 0) {
     // Inline code
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
       elements.push(
-        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+        <code key={getInlineKey("code", codeMatch[0])} className={INLINE_CODE_CLASS_NAME}>
           {codeMatch[1]}
         </code>,
       );
@@ -639,7 +642,10 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
     if (pendingCodeMatch) {
       elements.push(
-        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+        <code
+          key={getInlineKey("pending-code", pendingCodeMatch[0])}
+          className={INLINE_CODE_CLASS_NAME}
+        >
           {pendingCodeMatch[1]}
         </code>,
       );
@@ -650,7 +656,10 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const strikeMatch = remaining.match(/^~~([^~]+)~~/);
     if (strikeMatch) {
       elements.push(
-        <del key={key++} className="text-text-lighter line-through">
+        <del
+          key={getInlineKey("strike", strikeMatch[0])}
+          className="text-text-lighter line-through"
+        >
           {strikeMatch[1]}
         </del>,
       );
@@ -662,7 +671,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
     if (boldMatch) {
       elements.push(
-        <strong key={key++} className="font-semibold">
+        <strong key={getInlineKey("bold", boldMatch[0])} className="font-semibold">
           {boldMatch[1]}
         </strong>,
       );
@@ -674,7 +683,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const italicMatch = remaining.match(/^\*([^*]+)\*/);
     if (italicMatch) {
       elements.push(
-        <em key={key++} className="italic">
+        <em key={getInlineKey("italic", italicMatch[0])} className="italic">
           {italicMatch[1]}
         </em>,
       );
@@ -688,7 +697,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       const url = linkMatch[2];
       elements.push(
         <a
-          key={key++}
+          key={getInlineKey("link", linkMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
@@ -709,7 +718,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       const url = urlMatch[1];
       elements.push(
         <a
-          key={key++}
+          key={getInlineKey("url", urlMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
@@ -727,15 +736,16 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Find next special character or consume all remaining text
     const nextSpecial = remaining.search(/[`~*[\]]|https?:\/\//);
     if (nextSpecial === -1) {
-      elements.push(<span key={key++}>{remaining}</span>);
+      elements.push(<span key={getInlineKey("text", remaining)}>{remaining}</span>);
       break;
     }
     if (nextSpecial === 0) {
       // Special char at start didn't match any pattern — treat as plain text
-      elements.push(<span key={key++}>{remaining[0]}</span>);
+      elements.push(<span key={getInlineKey("char", remaining[0])}>{remaining[0]}</span>);
       remaining = remaining.slice(1);
     } else {
-      elements.push(<span key={key++}>{remaining.slice(0, nextSpecial)}</span>);
+      const textChunk = remaining.slice(0, nextSpecial);
+      elements.push(<span key={getInlineKey("text", textChunk)}>{textChunk}</span>);
       remaining = remaining.slice(nextSpecial);
     }
   }
@@ -753,16 +763,18 @@ function renderContent(
   let inCodeBlock = false;
   let codeBlockLanguage = "";
   let codeBlockContent: string[] = [];
+  let codeBlockStartLine = 0;
   let currentList: { type: "ol" | "ul"; items: string[] } | null = null;
+  let currentListStartLine = 0;
   let currentParagraph: string[] = [];
-  let key = 0;
+  let currentParagraphStartLine = 0;
 
   const flushCodeBlock = () => {
     if (codeBlockContent.length > 0) {
       const code = codeBlockContent.join("\n");
       elements.push(
         <CodeBlock
-          key={key++}
+          key={`code-${codeBlockStartLine}-${code.length}`}
           code={code}
           languageHint={codeBlockLanguage}
           onApplyCode={onApplyCode}
@@ -777,7 +789,10 @@ function renderContent(
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol key={key++} className="my-2 ml-5 list-decimal space-y-0.5">
+          <ol
+            key={`ol-${currentListStartLine}-${currentList.items.length}`}
+            className="my-2 ml-5 list-decimal space-y-0.5"
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx} className="pl-1 text-text">
                 {renderInlineFormatting(item)}
@@ -787,7 +802,10 @@ function renderContent(
         );
       } else {
         elements.push(
-          <ul key={key++} className="my-2 ml-5 list-disc space-y-0.5">
+          <ul
+            key={`ul-${currentListStartLine}-${currentList.items.length}`}
+            className="my-2 ml-5 list-disc space-y-0.5"
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx} className="pl-1 text-text">
                 {renderInlineFormatting(item)}
@@ -805,7 +823,10 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="my-1.5 leading-[1.6]">
+          <p
+            key={`p-${currentParagraphStartLine}-${paragraphText.length}`}
+            className="my-1.5 leading-[1.6]"
+          >
             {renderInlineFormatting(paragraphText)}
           </p>,
         );
@@ -825,6 +846,7 @@ function renderContent(
         flushList();
         flushParagraph();
         inCodeBlock = true;
+        codeBlockStartLine = i;
         codeBlockLanguage = line.trimStart().slice(3).trim();
       }
       continue;
@@ -842,7 +864,7 @@ function renderContent(
     if (parsedTable) {
       flushList();
       flushParagraph();
-      elements.push(renderTable(parsedTable.table, key++));
+      elements.push(renderTable(parsedTable.table, `table-${i}-${parsedTable.endIndex}`));
       i = parsedTable.endIndex - 1;
       continue;
     }
@@ -853,7 +875,7 @@ function renderContent(
       flushList();
       flushParagraph();
       const level = headerMatch[1].length;
-      elements.push(renderHeader(level, headerMatch[2], key++));
+      elements.push(renderHeader(level, headerMatch[2], `h${level}-${i}`));
       continue;
     }
 
@@ -861,7 +883,7 @@ function renderContent(
     if (trimmedLine.match(/^[-*_]{3,}$/) && trimmedLine.length >= 3) {
       flushList();
       flushParagraph();
-      elements.push(<hr key={key++} className="my-3 border-border" />);
+      elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />);
       continue;
     }
 
@@ -872,7 +894,7 @@ function renderContent(
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
         <blockquote
-          key={key++}
+          key={`quote-${i}-${quoteContent.length}`}
           className="my-2 border-border border-l-2 pl-3 text-text-light italic"
         >
           {renderInlineFormatting(quoteContent)}
@@ -888,6 +910,7 @@ function renderContent(
       if (currentList?.type !== "ol") {
         flushList();
         currentList = { type: "ol", items: [] };
+        currentListStartLine = i;
       }
       currentList.items.push(numberedMatch[2]);
       continue;
@@ -900,6 +923,7 @@ function renderContent(
       if (currentList?.type !== "ul") {
         flushList();
         currentList = { type: "ul", items: [] };
+        currentListStartLine = i;
       }
       currentList.items.push(bulletMatch[1]);
       continue;
@@ -914,6 +938,9 @@ function renderContent(
 
     // Regular text — accumulate into paragraph
     flushList();
+    if (currentParagraph.length === 0) {
+      currentParagraphStartLine = i;
+    }
     currentParagraph.push(trimmedLine);
   }
 
