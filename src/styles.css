@@ -9,7 +9,7 @@
 @import "./styles/scrollbars.css";
 @import "./styles/syntax-tokens.css";
 @import "./styles/rendered-code-tokens.css";
-@import "./styles/layout.css";
+@import "./styles/window-transparency.css";
 @import "./styles/utilities.css";
 
 @import "tw-animate-css";
