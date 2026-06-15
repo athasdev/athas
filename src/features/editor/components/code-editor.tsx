@@ -267,9 +267,11 @@ const CodeEditor = ({
     if (!focusTarget) return;
 
     // Small delay to ensure the editor surface is mounted.
-    setTimeout(() => {
+    const focusTimer = setTimeout(() => {
       focusTarget.focus();
     }, 0);
+
+    return () => clearTimeout(focusTimer);
   }, [activeBufferId, enableInteractiveServices, largeContentMode]);
 
   // Sync content and file info with editor instance store

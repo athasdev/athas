@@ -111,7 +111,8 @@ export function ContextSelector({
       setSearchTerm("");
       setVisibleFileResults([]);
       setSelectedContextIndex(0);
-      setTimeout(() => searchInputRef.current?.focus(), 0);
+      const focusTimer = setTimeout(() => searchInputRef.current?.focus(), 0);
+      return () => clearTimeout(focusTimer);
     }
   }, [isOpen]);
 

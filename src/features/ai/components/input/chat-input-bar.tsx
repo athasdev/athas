@@ -588,6 +588,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const lastSyncedInputRef = useRef("");
 
   useEffect(() => {
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
     // Only sync when input changes externally (not from user typing)
     const checkAndSync = () => {
       if (!inputRef.current || isUpdatingContentRef.current) return;
@@ -608,7 +610,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         }
 
         // Position cursor at the end
-        setTimeout(() => {
+        syncTimer = setTimeout(() => {
           if (inputRef.current) {
             const selection = window.getSelection();
             if (selection) {
@@ -630,6 +632,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
     // Note: We don't subscribe to continuous changes to avoid re-renders
     // The checkAndSync on mount handles initial sync and chat switching
+    return () => {
+      if (syncTimer) {
+        clearTimeout(syncTimer);
+        isUpdatingContentRef.current = false;
+      }
+    };
   }, [getPlainTextFromDiv]);
 
   useEffect(() => {

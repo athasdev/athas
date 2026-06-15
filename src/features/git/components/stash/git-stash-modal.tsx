@@ -31,7 +31,8 @@ export const StashMessageModal = ({
   useEffect(() => {
     if (isOpen) {
       setMessage("");
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const focusTimer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(focusTimer);
     }
   }, [isOpen]);
 

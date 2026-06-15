@@ -302,12 +302,20 @@ export const ExternalEditorTerminal = ({
         clearTimeout(themeRefreshTimeoutRef.current);
       }
 
-      themeRefreshTimeoutRef.current = setTimeout(() => {
+      const themeRefreshTimeout = setTimeout(() => {
         if (xtermRef.current) {
           xtermRef.current.options.theme = getTerminalTheme();
         }
         themeRefreshTimeoutRef.current = null;
       }, 50);
+      themeRefreshTimeoutRef.current = themeRefreshTimeout;
+
+      return () => {
+        if (themeRefreshTimeoutRef.current === themeRefreshTimeout) {
+          clearTimeout(themeRefreshTimeout);
+          themeRefreshTimeoutRef.current = null;
+        }
+      };
     }
   }, [settings.theme, getTerminalTheme]);
 
