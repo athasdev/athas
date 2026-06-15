@@ -1,4 +1,9 @@
-import { CaretRightIcon as CaretRight, type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import {
+  CaretRightIcon as CaretRight,
+  FunnelIcon as Funnel,
+  MagnifyingGlassIcon as Search,
+  type Icon as PhosphorIcon,
+} from "@phosphor-icons/react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,
@@ -9,6 +14,7 @@ import {
   useRef,
 } from "react";
 import { Button, type ButtonProps } from "@/ui/button";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -171,6 +177,93 @@ export const SidebarHeaderIconButton = forwardRef<
     />
   );
 });
+
+export function SidebarSearchFilterRow({
+  value,
+  onChange,
+  searchIcon = Search,
+  placeholder = "Search",
+  searchAriaLabel,
+  searchClassName,
+  searchContainerClassName,
+  leading,
+  actions,
+  filterOpen,
+  onFilterOpenChange,
+  filterItems,
+  filterActive = false,
+  filterTooltip = "Filter",
+  filterAriaLabel = "Filter",
+  filterDisabled = false,
+  filterCloseOnSelect = true,
+  filterMenuClassName,
+  filterButtonClassName,
+  className,
+  ...props
+}: Omit<ComponentProps<"div">, "onChange"> & {
+  value: string;
+  onChange: (value: string) => void;
+  searchIcon?: PhosphorIcon;
+  placeholder?: string;
+  searchAriaLabel?: string;
+  searchClassName?: string;
+  searchContainerClassName?: string;
+  leading?: ReactNode;
+  actions?: ReactNode;
+  filterOpen: boolean;
+  onFilterOpenChange: (open: boolean) => void;
+  filterItems: MenuItem[];
+  filterActive?: boolean;
+  filterTooltip?: string;
+  filterAriaLabel?: string;
+  filterDisabled?: boolean;
+  filterCloseOnSelect?: boolean;
+  filterMenuClassName?: string;
+  filterButtonClassName?: string;
+}) {
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <SidebarHeader className={cn("min-w-0 px-0", className)} {...props}>
+        {leading}
+        <SidebarHeaderSearch
+          value={value}
+          onChange={onChange}
+          leftIcon={searchIcon}
+          placeholder={placeholder}
+          aria-label={searchAriaLabel ?? placeholder}
+          className={searchClassName}
+          containerClassName={searchContainerClassName}
+        />
+        {actions}
+        <SidebarHeaderIconButton
+          ref={filterTriggerRef}
+          active={filterActive}
+          className={cn("shrink-0", filterButtonClassName)}
+          disabled={filterDisabled}
+          tooltip={filterTooltip}
+          tooltipSide="bottom"
+          aria-label={filterAriaLabel}
+          onClick={() => onFilterOpenChange(true)}
+        >
+          <Funnel />
+        </SidebarHeaderIconButton>
+      </SidebarHeader>
+
+      <Dropdown
+        isOpen={filterOpen}
+        anchorRef={filterTriggerRef}
+        anchorSide="bottom"
+        anchorAlign="end"
+        items={filterItems}
+        onClose={() => onFilterOpenChange(false)}
+        closeOnSelect={filterCloseOnSelect}
+        className={filterMenuClassName}
+      />
+    </>
+  );
+}
 
 export function SidebarListItem({
   children,

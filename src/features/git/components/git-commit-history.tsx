@@ -1,14 +1,9 @@
-import {
-  CheckIcon as Check,
-  FunnelIcon as Filter,
-  MagnifyingGlassIcon as Search,
-  XIcon as X,
-} from "@phosphor-icons/react";
+import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
-import { ContextMenu, type ContextMenuItem, useContextMenu } from "@/ui/context-menu";
+import type { MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
-import { SidebarHeaderIconButton, SidebarHeaderSearch } from "@/ui/sidebar";
+import { SidebarSearchFilterRow } from "@/ui/sidebar";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { cn } from "@/utils/cn";
@@ -115,7 +110,7 @@ const GitCommitHistory = ({
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   const [historySearchScope, setHistorySearchScope] = useState<HistorySearchScope>("all");
-  const filterMenu = useContextMenu();
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const handleViewCommitDiff = useCallback(
     (commitHash: string, filePath?: string) => {
@@ -135,15 +130,19 @@ const GitCommitHistory = ({
   }, [commits, historySearchQuery, historySearchScope]);
 
   const hasHistoryRows = commits.length > 0;
-  const hasHistoryFilter = historySearchQuery.trim().length > 0 || historySearchScope !== "all";
+  const hasHistoryFilter = historySearchScope !== "all";
 
-  const filterMenuItems = useMemo<ContextMenuItem[]>(
+  const filterMenuItems = useMemo<MenuItem[]>(
     () =>
       (Object.keys(HISTORY_SEARCH_SCOPE_LABELS) as HistorySearchScope[]).map((scope) => ({
         id: scope,
         label: HISTORY_SEARCH_SCOPE_LABELS[scope],
-        icon: historySearchScope === scope ? <Check /> : undefined,
-        onClick: () => setHistorySearchScope(scope),
+        keybinding:
+          historySearchScope === scope ? <Check className="size-3.5 text-accent" /> : null,
+        onClick: () => {
+          setHistorySearchScope(scope);
+          setIsFilterOpen(false);
+        },
       })),
     [historySearchScope],
   );
@@ -256,32 +255,22 @@ const GitCommitHistory = ({
 
         {!isCollapsed && (
           <>
-            <div className="flex shrink-0 items-center gap-1.5 px-2 pb-1">
-              <SidebarHeaderSearch
-                value={historySearchQuery}
-                onChange={setHistorySearchQuery}
-                leftIcon={Search}
-                placeholder="Search history"
-                aria-label="Search history"
-              />
-              {historySearchQuery && (
-                <SidebarHeaderIconButton
-                  onClick={() => setHistorySearchQuery("")}
-                  tooltip="Clear search"
-                  aria-label="Clear history search"
-                >
-                  <X />
-                </SidebarHeaderIconButton>
-              )}
-              <SidebarHeaderIconButton
-                onClick={(event) => filterMenu.open(event)}
-                className={cn(hasHistoryFilter && "text-accent")}
-                tooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[historySearchScope]}`}
-                aria-label="Filter history"
-              >
-                <Filter />
-              </SidebarHeaderIconButton>
-            </div>
+            <SidebarSearchFilterRow
+              value={historySearchQuery}
+              onChange={setHistorySearchQuery}
+              searchIcon={Search}
+              placeholder="Search history"
+              searchAriaLabel="Search history"
+              filterOpen={isFilterOpen}
+              onFilterOpenChange={setIsFilterOpen}
+              filterItems={filterMenuItems}
+              filterActive={hasHistoryFilter}
+              filterTooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[historySearchScope]}`}
+              filterAriaLabel="Filter history"
+              filterCloseOnSelect={false}
+              filterMenuClassName="w-fit min-w-fit"
+              className="px-2 pb-1 pt-0"
+            />
 
             <div
               className={cn(
@@ -322,13 +311,6 @@ const GitCommitHistory = ({
                 </>
               )}
             </div>
-
-            <ContextMenu
-              isOpen={filterMenu.isOpen}
-              position={filterMenu.position}
-              items={filterMenuItems}
-              onClose={filterMenu.close}
-            />
           </>
         )}
       </div>
