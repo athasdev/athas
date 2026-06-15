@@ -9,8 +9,9 @@ import {
   MagnifyingGlassIcon as Search,
   TextTIcon as WholeWord,
   XIcon as X,
+  type Icon as PhosphorIcon,
 } from "@phosphor-icons/react";
-import type { ReactNode, RefObject } from "react";
+import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -41,6 +42,30 @@ interface SearchPopoverProps {
   secondaryRow?: ReactNode;
   className?: string;
 }
+
+export const SearchField = forwardRef<
+  HTMLInputElement,
+  Omit<ComponentProps<typeof Input>, "onChange" | "value" | "leftIcon"> & {
+    value: string;
+    onChange: (value: string) => void;
+    leftIcon?: PhosphorIcon;
+  }
+>(function SearchField(
+  { value, onChange, leftIcon = Search, placeholder = "Search", ...props },
+  ref,
+) {
+  return (
+    <Input
+      ref={ref}
+      type="text"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      leftIcon={leftIcon}
+      placeholder={placeholder}
+      {...props}
+    />
+  );
+});
 
 const searchSurfaceVariants = cva(
   "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.55)] backdrop-blur-sm",

@@ -4,7 +4,6 @@ import {
   CheckIcon as Check,
   ChatCircleTextIcon as ChatCircleText,
   FileTextIcon as FileText,
-  FunnelIcon as Funnel,
   FolderIcon as Folder,
   HashIcon as Hash,
   MicrophoneIcon as Mic,
@@ -46,15 +45,14 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Dropdown } from "@/ui/dropdown";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import {
   SidebarEmptyActionState,
   SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarHeaderSearch,
   SidebarListItem,
   SidebarPanel,
+  SidebarSearchFilterRow,
   SidebarSectionHeader,
   SidebarSectionPager,
   SidebarSectionSwitcher,
@@ -158,9 +156,6 @@ export function CollaborationSidebarView() {
   const micStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
-  const channelFilterButtonRef = useRef<HTMLButtonElement>(null);
-  const peopleFilterButtonRef = useRef<HTMLButtonElement>(null);
-  const notesFilterButtonRef = useRef<HTMLButtonElement>(null);
   const remoteSharesRef = useRef<RemoteMediaShare[]>([]);
   const lastMediaSignalIdRef = useRef(0);
   const localDeviceIdRef = useRef<string | null>(null);
@@ -1030,6 +1025,45 @@ export function CollaborationSidebarView() {
     { id: "secrets", label: "Secrets" },
     { id: "all", label: "All" },
   ];
+  const channelFilterMenuItems = useMemo<MenuItem[]>(
+    () =>
+      channelFilterItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        keybinding: channelFilter === item.id ? <Check className="size-3.5 text-accent" /> : null,
+        onClick: () => {
+          setChannelFilter(item.id);
+          setIsChannelFilterOpen(false);
+        },
+      })),
+    [channelFilter, channelFilterItems],
+  );
+  const peopleFilterMenuItems = useMemo<MenuItem[]>(
+    () =>
+      peopleFilterItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        keybinding: peopleFilter === item.id ? <Check className="size-3.5 text-accent" /> : null,
+        onClick: () => {
+          setPeopleFilter(item.id);
+          setIsPeopleFilterOpen(false);
+        },
+      })),
+    [peopleFilter, peopleFilterItems],
+  );
+  const notesFilterMenuItems = useMemo<MenuItem[]>(
+    () =>
+      notesFilterItems.map((item) => ({
+        id: item.id,
+        label: item.label,
+        keybinding: notesFilter === item.id ? <Check className="size-3.5 text-accent" /> : null,
+        onClick: () => {
+          setNotesFilter(item.id);
+          setIsNotesFilterOpen(false);
+        },
+      })),
+    [notesFilter, notesFilterItems],
+  );
 
   const channelsContent = (
     <div className="h-full min-h-0 overflow-hidden">
@@ -1038,48 +1072,18 @@ export function CollaborationSidebarView() {
           className="h-full select-none overflow-y-auto px-1 py-1"
           onContextMenu={(event) => channelsContextMenu.open(event)}
         >
-          <SidebarHeader>
-            <SidebarHeaderSearch
-              value={channelSearchQuery}
-              onChange={setChannelSearchQuery}
-              leftIcon={Search}
-            />
-            <SidebarHeaderIconButton
-              ref={channelFilterButtonRef}
-              active={channelFilter !== "all"}
-              tooltip="Filter Channels"
-              tooltipSide="bottom"
-              onClick={() => setIsChannelFilterOpen(true)}
-            >
-              <Funnel />
-            </SidebarHeaderIconButton>
-          </SidebarHeader>
-          <Dropdown
-            isOpen={isChannelFilterOpen}
-            anchorRef={channelFilterButtonRef}
-            anchorAlign="end"
-            onClose={() => setIsChannelFilterOpen(false)}
-            className="min-w-32"
-          >
-            {channelFilterItems.map((item) => (
-              <Button
-                key={item.id}
-                type="button"
-                variant="ghost"
-                compact
-                className="h-7 w-full justify-start px-2 ui-text-xs"
-                onClick={() => {
-                  setChannelFilter(item.id);
-                  setIsChannelFilterOpen(false);
-                }}
-              >
-                <span className="flex size-3.5 items-center justify-center">
-                  {channelFilter === item.id ? <Check /> : null}
-                </span>
-                {item.label}
-              </Button>
-            ))}
-          </Dropdown>
+          <SidebarSearchFilterRow
+            value={channelSearchQuery}
+            onChange={setChannelSearchQuery}
+            searchIcon={Search}
+            filterOpen={isChannelFilterOpen}
+            onFilterOpenChange={setIsChannelFilterOpen}
+            filterItems={channelFilterMenuItems}
+            filterActive={channelFilter !== "all"}
+            filterTooltip="Filter Channels"
+            filterAriaLabel="Filter channels"
+            filterMenuClassName="min-w-32"
+          />
           <div className="space-y-px">
             <SidebarSectionHeader
               expanded={!isChannelsSectionCollapsed}
@@ -1346,48 +1350,18 @@ export function CollaborationSidebarView() {
 
   const peopleContent = (
     <div className="h-full overflow-y-auto px-1 py-1">
-      <SidebarHeader>
-        <SidebarHeaderSearch
-          value={peopleSearchQuery}
-          onChange={setPeopleSearchQuery}
-          leftIcon={Search}
-        />
-        <SidebarHeaderIconButton
-          ref={peopleFilterButtonRef}
-          active={peopleFilter !== "all"}
-          tooltip="Filter People"
-          tooltipSide="bottom"
-          onClick={() => setIsPeopleFilterOpen(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
-      <Dropdown
-        isOpen={isPeopleFilterOpen}
-        anchorRef={peopleFilterButtonRef}
-        anchorAlign="end"
-        onClose={() => setIsPeopleFilterOpen(false)}
-        className="min-w-32"
-      >
-        {peopleFilterItems.map((item) => (
-          <Button
-            key={item.id}
-            type="button"
-            variant="ghost"
-            compact
-            className="h-7 w-full justify-start px-2 ui-text-xs"
-            onClick={() => {
-              setPeopleFilter(item.id);
-              setIsPeopleFilterOpen(false);
-            }}
-          >
-            <span className="flex size-3.5 items-center justify-center">
-              {peopleFilter === item.id ? <Check /> : null}
-            </span>
-            {item.label}
-          </Button>
-        ))}
-      </Dropdown>
+      <SidebarSearchFilterRow
+        value={peopleSearchQuery}
+        onChange={setPeopleSearchQuery}
+        searchIcon={Search}
+        filterOpen={isPeopleFilterOpen}
+        onFilterOpenChange={setIsPeopleFilterOpen}
+        filterItems={peopleFilterMenuItems}
+        filterActive={peopleFilter !== "all"}
+        filterTooltip="Filter People"
+        filterAriaLabel="Filter people"
+        filterMenuClassName="min-w-32"
+      />
       {remoteShares.length > 0 ? (
         <div className="mb-1 space-y-1.5">
           {remoteShares.map((share) => (
@@ -1452,48 +1426,18 @@ export function CollaborationSidebarView() {
       className="h-full overflow-y-auto px-1 py-1"
       onContextMenu={(event) => notesContextMenu.open(event)}
     >
-      <SidebarHeader>
-        <SidebarHeaderSearch
-          value={notesSearchQuery}
-          onChange={setNotesSearchQuery}
-          leftIcon={Search}
-        />
-        <SidebarHeaderIconButton
-          ref={notesFilterButtonRef}
-          active={notesFilter !== "notes"}
-          tooltip="Filter Notes"
-          tooltipSide="bottom"
-          onClick={() => setIsNotesFilterOpen(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
-      <Dropdown
-        isOpen={isNotesFilterOpen}
-        anchorRef={notesFilterButtonRef}
-        anchorAlign="end"
-        onClose={() => setIsNotesFilterOpen(false)}
-        className="min-w-32"
-      >
-        {notesFilterItems.map((item) => (
-          <Button
-            key={item.id}
-            type="button"
-            variant="ghost"
-            compact
-            className="h-7 w-full justify-start px-2 ui-text-xs"
-            onClick={() => {
-              setNotesFilter(item.id);
-              setIsNotesFilterOpen(false);
-            }}
-          >
-            <span className="flex size-3.5 items-center justify-center">
-              {notesFilter === item.id ? <Check /> : null}
-            </span>
-            {item.label}
-          </Button>
-        ))}
-      </Dropdown>
+      <SidebarSearchFilterRow
+        value={notesSearchQuery}
+        onChange={setNotesSearchQuery}
+        searchIcon={Search}
+        filterOpen={isNotesFilterOpen}
+        onFilterOpenChange={setIsNotesFilterOpen}
+        filterItems={notesFilterMenuItems}
+        filterActive={notesFilter !== "notes"}
+        filterTooltip="Filter Notes"
+        filterAriaLabel="Filter notes"
+        filterMenuClassName="min-w-32"
+      />
       <div className="space-y-px">
         {filteredNoteItems.map((item) => {
           return (

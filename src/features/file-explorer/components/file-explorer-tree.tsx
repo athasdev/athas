@@ -2,7 +2,6 @@ import ignore from "ignore";
 import {
   CheckIcon as Check,
   EyeIcon as Eye,
-  FunnelIcon as Funnel,
   GitBranchIcon as GitBranch,
   MagnifyingGlassIcon as Search,
   WarningIcon as AlertTriangle,
@@ -42,13 +41,8 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import {
-  SidebarEmptyActionState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarHeaderSearch,
-} from "@/ui/sidebar";
+import type { MenuItem } from "@/ui/dropdown";
+import { SidebarEmptyActionState, SidebarSearchFilterRow } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -157,7 +151,6 @@ function FileExplorerTreeComponent({
   const [isFileTreeFilterMenuOpen, setIsFileTreeFilterMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const documentRef = useRef<Document>(document);
 
   const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
@@ -1184,20 +1177,20 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      <SidebarHeader onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-        <SidebarHeaderSearch
-          ref={searchInputRef}
-          value={treeSearchQuery}
-          onChange={setTreeSearchQuery}
-          leftIcon={Search}
-          placeholder="Search"
-          aria-label="Filter files in tree"
-          aria-controls="file-tree-results"
-          autoCapitalize="none"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck="false"
-          onKeyDown={(e) => {
+      <SidebarSearchFilterRow
+        value={treeSearchQuery}
+        onChange={setTreeSearchQuery}
+        searchIcon={Search}
+        placeholder="Search"
+        searchAriaLabel="Filter files in tree"
+        searchInputRef={searchInputRef}
+        searchInputProps={{
+          "aria-controls": "file-tree-results",
+          autoCapitalize: "none",
+          autoComplete: "off",
+          autoCorrect: "off",
+          spellCheck: "false",
+          onKeyDown: (e) => {
             if (e.key === "Escape") {
               e.preventDefault();
               e.stopPropagation();
@@ -1210,19 +1203,19 @@ function FileExplorerTreeComponent({
               e.stopPropagation();
               navigateTreeSearchMatch(e.shiftKey ? -1 : 1);
             }
-          }}
-        />
-        <SidebarHeaderIconButton
-          ref={filterButtonRef}
-          active={hasActiveFileTreeFilters}
-          className="shrink-0"
-          tooltip="Filter Files"
-          tooltipSide="bottom"
-          onClick={() => setIsFileTreeFilterMenuOpen(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
+          },
+        }}
+        filterOpen={isFileTreeFilterMenuOpen}
+        onFilterOpenChange={setIsFileTreeFilterMenuOpen}
+        filterItems={fileTreeFilterMenuItems}
+        filterActive={hasActiveFileTreeFilters}
+        filterTooltip="Filter Files"
+        filterAriaLabel="Filter files"
+        filterCloseOnSelect={false}
+        filterMenuClassName="w-fit min-w-fit"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      />
       {!rootFolderPath ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <SidebarEmptyActionState
@@ -1374,16 +1367,6 @@ function FileExplorerTreeComponent({
       )}
 
       {contextMenuElement}
-      <Dropdown
-        isOpen={isFileTreeFilterMenuOpen}
-        anchorRef={filterButtonRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        items={fileTreeFilterMenuItems}
-        onClose={() => setIsFileTreeFilterMenuOpen(false)}
-        closeOnSelect={false}
-        className="w-fit min-w-fit"
-      />
       {alertDialog && (
         <Dialog
           title={alertDialog.title}

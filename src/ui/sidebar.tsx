@@ -10,12 +10,13 @@ import {
   useEffect,
   useState,
   type ComponentProps,
+  type Ref,
   type ReactNode,
   useRef,
 } from "react";
 import { Button, type ButtonProps } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import Input from "@/ui/input";
+import { SearchField } from "@/ui/search";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -137,7 +138,7 @@ export function SidebarComposerBody({
 
 export const SidebarHeaderSearch = forwardRef<
   HTMLInputElement,
-  Omit<ComponentProps<typeof Input>, "onChange" | "value" | "size" | "variant"> & {
+  Omit<ComponentProps<typeof SearchField>, "onChange" | "value" | "size" | "variant"> & {
     value: string;
     onChange: (value: string) => void;
     leftIcon: PhosphorIcon;
@@ -147,10 +148,10 @@ export const SidebarHeaderSearch = forwardRef<
   ref,
 ) {
   return (
-    <Input
+    <SearchField
       ref={ref}
       value={value}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={onChange}
       leftIcon={leftIcon}
       variant="ghost"
       size="xs"
@@ -186,11 +187,13 @@ export function SidebarSearchFilterRow({
   searchAriaLabel,
   searchClassName,
   searchContainerClassName,
+  searchInputRef,
+  searchInputProps,
   leading,
   actions,
-  filterOpen,
+  filterOpen = false,
   onFilterOpenChange,
-  filterItems,
+  filterItems = [],
   filterActive = false,
   filterTooltip = "Filter",
   filterAriaLabel = "Filter",
@@ -208,11 +211,22 @@ export function SidebarSearchFilterRow({
   searchAriaLabel?: string;
   searchClassName?: string;
   searchContainerClassName?: string;
+  searchInputRef?: Ref<HTMLInputElement>;
+  searchInputProps?: Omit<
+    ComponentProps<typeof SidebarHeaderSearch>,
+    | "value"
+    | "onChange"
+    | "leftIcon"
+    | "placeholder"
+    | "aria-label"
+    | "className"
+    | "containerClassName"
+  >;
   leading?: ReactNode;
   actions?: ReactNode;
-  filterOpen: boolean;
-  onFilterOpenChange: (open: boolean) => void;
-  filterItems: MenuItem[];
+  filterOpen?: boolean;
+  onFilterOpenChange?: (open: boolean) => void;
+  filterItems?: MenuItem[];
   filterActive?: boolean;
   filterTooltip?: string;
   filterAriaLabel?: string;
@@ -222,12 +236,14 @@ export function SidebarSearchFilterRow({
   filterButtonClassName?: string;
 }) {
   const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const hasFilter = filterItems.length > 0;
 
   return (
     <>
       <SidebarHeader className={cn("min-w-0 px-0", className)} {...props}>
         {leading}
         <SidebarHeaderSearch
+          ref={searchInputRef}
           value={value}
           onChange={onChange}
           leftIcon={searchIcon}
@@ -235,32 +251,37 @@ export function SidebarSearchFilterRow({
           aria-label={searchAriaLabel ?? placeholder}
           className={searchClassName}
           containerClassName={searchContainerClassName}
+          {...searchInputProps}
         />
         {actions}
-        <SidebarHeaderIconButton
-          ref={filterTriggerRef}
-          active={filterActive}
-          className={cn("shrink-0", filterButtonClassName)}
-          disabled={filterDisabled}
-          tooltip={filterTooltip}
-          tooltipSide="bottom"
-          aria-label={filterAriaLabel}
-          onClick={() => onFilterOpenChange(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
+        {hasFilter ? (
+          <SidebarHeaderIconButton
+            ref={filterTriggerRef}
+            active={filterActive}
+            className={cn("shrink-0", filterButtonClassName)}
+            disabled={filterDisabled}
+            tooltip={filterTooltip}
+            tooltipSide="bottom"
+            aria-label={filterAriaLabel}
+            onClick={() => onFilterOpenChange?.(true)}
+          >
+            <Funnel />
+          </SidebarHeaderIconButton>
+        ) : null}
       </SidebarHeader>
 
-      <Dropdown
-        isOpen={filterOpen}
-        anchorRef={filterTriggerRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        items={filterItems}
-        onClose={() => onFilterOpenChange(false)}
-        closeOnSelect={filterCloseOnSelect}
-        className={filterMenuClassName}
-      />
+      {hasFilter ? (
+        <Dropdown
+          isOpen={filterOpen}
+          anchorRef={filterTriggerRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          items={filterItems}
+          onClose={() => onFilterOpenChange?.(false)}
+          closeOnSelect={filterCloseOnSelect}
+          className={filterMenuClassName}
+        />
+      ) : null}
     </>
   );
 }
