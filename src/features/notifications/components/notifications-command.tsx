@@ -1,5 +1,4 @@
 import {
-  BellIcon as Bell,
   CaretRightIcon as CaretRight,
   CheckIcon as Check,
   ClipboardTextIcon as ClipboardText,
@@ -12,161 +11,28 @@ import {
   XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import type React from "react";
-import { forwardRef, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { NotificationIcon } from "@/features/notifications/components/notification-icon";
+import { NotificationListItem } from "@/features/notifications/components/notification-list-item";
+import type { NotificationFilter } from "@/features/notifications/types/notifications.types";
 import {
-  chromeControl,
-  chromeControlGroup,
-  chromeIcon,
-} from "@/features/layout/components/chrome-control-styles";
-import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+  formatNotificationAge,
+  formatNotificationGroupDate,
+  formatNotificationText,
+} from "@/features/notifications/utils/notification-formatters";
 import { Button } from "@/ui/button";
 import Command, { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from "@/ui/item";
-import { TabsList } from "@/ui/tabs";
+import { ItemGroup } from "@/ui/item";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-
-export const OPEN_NOTIFICATIONS_COMMAND_EVENT = "athas:notifications:show";
-
-interface NotificationsTriggerProps {
-  className?: string;
-}
 
 interface NotificationsCommandProps {
   isVisible: boolean;
   onClose: () => void;
 }
-
-type NotificationFilter = "all" | NotificationEntry["type"];
-type NotificationItemAction = {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  onSelect: () => void;
-  variant?: "default" | "danger";
-};
-
-function getNotificationIcon(type: NotificationEntry["type"]) {
-  switch (type) {
-    case "success":
-      return <Check className="size-3.5 text-success" weight="bold" />;
-    case "warning":
-      return <WarningCircle className="size-3.5 text-warning" weight="duotone" />;
-    case "error":
-      return <XCircle className="size-3.5 text-error" weight="duotone" />;
-    default:
-      return <Info className="size-3.5 text-accent" weight="duotone" />;
-  }
-}
-
-function formatNotificationAge(timestamp: number) {
-  const diffMs = Date.now() - timestamp;
-  const diffMinutes = Math.floor(diffMs / 60000);
-
-  if (diffMinutes < 1) return "Just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
-
-function formatNotificationText(notification: NotificationEntry) {
-  return [
-    notification.message,
-    notification.description,
-    `${notification.type} - ${formatNotificationAge(notification.updatedAt)}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-}
-
-function formatNotificationGroupDate(timestamp: number) {
-  const date = new Date(timestamp);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-
-  const sameDay = (left: Date, right: Date) =>
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate();
-
-  if (sameDay(date, today)) return "Today";
-  if (sameDay(date, yesterday)) return "Yesterday";
-
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
-  });
-}
-
-const NotificationItem = forwardRef<
-  HTMLDivElement,
-  {
-    notification: NotificationEntry;
-    actions: NotificationItemAction[];
-    onContextMenu: (event: React.MouseEvent, notification: NotificationEntry) => void;
-    selected?: boolean;
-    tabIndex?: number;
-    onClick?: () => void;
-    onFocus?: () => void;
-    onKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
-  }
->(function NotificationItem(
-  { notification, actions, onContextMenu, selected = false, tabIndex, onClick, onFocus, onKeyDown },
-  ref,
-) {
-  return (
-    <Item
-      ref={ref}
-      role="button"
-      tabIndex={tabIndex}
-      size="xs"
-      variant={selected ? "muted" : "default"}
-      className="relative h-7 flex-nowrap select-none rounded-md px-2 py-0 hover:bg-hover/45 focus-visible:bg-hover/45 focus-visible:ring-0"
-      onClick={onClick}
-      onFocus={onFocus}
-      onKeyDown={onKeyDown}
-      onContextMenu={(event) => onContextMenu(event, notification)}
-    >
-      <ItemMedia variant="icon">{getNotificationIcon(notification.type)}</ItemMedia>
-      <ItemContent className="min-w-0 overflow-hidden group-hover/item:pr-7 group-focus-within/item:pr-7">
-        <ItemTitle className="ui-font ui-text-sm block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-normal text-text">
-          {notification.message}
-        </ItemTitle>
-      </ItemContent>
-      <ItemActions className="pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 gap-1 opacity-0 transition-opacity group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100">
-        {actions.map((action) => (
-          <Tooltip key={action.id} content={action.label} side="bottom" triggerClassName="size-6">
-            <Button
-              type="button"
-              variant="ghost"
-              compact
-              className={cn(
-                "size-5 min-w-5 rounded bg-transparent p-0 text-text-lighter hover:bg-hover hover:text-text",
-                action.variant === "danger" && "hover:text-error",
-              )}
-              onClick={(event) => {
-                event.stopPropagation();
-                action.onSelect();
-              }}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              {action.icon}
-            </Button>
-          </Tooltip>
-        ))}
-      </ItemActions>
-    </Item>
-  );
-});
 
 export function NotificationsCommand({ isVisible, onClose }: NotificationsCommandProps) {
   const notifications = useToastStore.use.notifications();
@@ -525,7 +391,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                     {!collapsedNotificationGroups.has(group.label) ? (
                       <ItemGroup className="gap-0.5">
                         {group.notifications.map((notification) => (
-                          <NotificationItem
+                          <NotificationListItem
                             key={notification.id}
                             ref={(node) => {
                               if (node) {
@@ -590,7 +456,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         anchorAlign="end"
         items={filterMenuItems}
         onClose={() => setIsFilterMenuOpen(false)}
-        className="w-fit min-w-fit"
+        className="z-[10070] w-fit min-w-fit"
       />
       <Command
         isVisible={activeNotification !== null}
@@ -610,7 +476,9 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
               }}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="shrink-0">{getNotificationIcon(activeNotification.type)}</span>
+                <span className="shrink-0">
+                  <NotificationIcon type={activeNotification.type} />
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="ui-font ui-text-sm truncate font-medium text-text">
                     {activeNotification.message}
@@ -663,58 +531,3 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
     </>
   );
 }
-
-export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) => {
-  const notifications = useToastStore.use.notifications();
-  const [isCommandVisible, setIsCommandVisible] = useState(false);
-  const shortcut = useCommandShortcut("workbench.showNotifications");
-  const unreadCount = useMemo(
-    () =>
-      notifications.filter((notification) => !notification.read && notification.type !== "success")
-        .length,
-    [notifications],
-  );
-
-  useEffect(() => {
-    const handleShowNotifications = () => setIsCommandVisible(true);
-
-    window.addEventListener(OPEN_NOTIFICATIONS_COMMAND_EVENT, handleShowNotifications);
-    return () => {
-      window.removeEventListener(OPEN_NOTIFICATIONS_COMMAND_EVENT, handleShowNotifications);
-    };
-  }, []);
-
-  return (
-    <>
-      <Tooltip content="Notifications" shortcut={shortcut} side="top">
-        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
-          <Button
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
-            }}
-            type="button"
-            variant="ghost"
-            compact
-            active={isCommandVisible}
-            className={cn(
-              chromeControl(),
-              unreadCount > 0 && cn(chromeControl({ shape: "pill" }), "w-auto gap-1.5"),
-            )}
-            aria-label="Notifications"
-          >
-            <Bell className={chromeIcon()} weight="duotone" />
-            {unreadCount > 0 && (
-              <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
-                {unreadCount}
-              </span>
-            )}
-          </Button>
-        </TabsList>
-      </Tooltip>
-      <NotificationsCommand
-        isVisible={isCommandVisible}
-        onClose={() => setIsCommandVisible(false)}
-      />
-    </>
-  );
-};

@@ -37,7 +37,7 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { NotificationsTrigger } from "@/features/window/components/notifications-sidebar";
+import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import {
   FOOTER_TRAILING_ITEM_IDS,
   normalizeItemOrder,
