@@ -67,14 +67,10 @@ import {
   renderChannelIcon,
   saveChannelIcons,
 } from "./collaboration-channel-icons";
+import { CollaborationAvatar, PresenceStatusDot } from "./collaboration-avatar";
 import { CollaborationMediaFooter } from "./collaboration-media-footer";
 import { CollaborationMessageComposer } from "./collaboration-message-composer";
-import {
-  ProfilePicture,
-  RemoteMediaTile,
-  StatusDot,
-  type RemoteMediaShare,
-} from "./collaboration-sidebar-ui";
+import { RemoteMediaTile, type RemoteMediaShare } from "./collaboration-remote-media-tile";
 
 type ShareState = "idle" | "active" | "error";
 type CollaborationSidebarTab = "channels" | "people" | "notes";
@@ -1176,8 +1172,8 @@ export function CollaborationSidebarView() {
                       className="min-h-8 ui-text-xs"
                       onClick={() => openPrivateChat(participant.id)}
                       onContextMenu={(event) => participantContextMenu.open(event, participant)}
-                      leading={<ProfilePicture name={participant.name} />}
-                      trailing={<StatusDot online={participant.online} />}
+                      leading={<CollaborationAvatar name={participant.name} />}
+                      trailing={<PresenceStatusDot online={participant.online} />}
                     >
                       <span className="block truncate font-medium">{participant.name}</span>
                     </SidebarListItem>
@@ -1230,7 +1226,7 @@ export function CollaborationSidebarView() {
               {model.chatGroups.length > 0 ? (
                 model.chatGroups.slice(-10).map((group) => (
                   <div key={group.id} className="flex gap-2">
-                    <ProfilePicture name={group.author} />
+                    <CollaborationAvatar name={group.author} />
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="px-1 text-text-lighter ui-text-xs">{group.author}</div>
                       <div className="space-y-px">
@@ -1293,14 +1289,14 @@ export function CollaborationSidebarView() {
             </Button>
             {openPrivateParticipant ? (
               <>
-                <ProfilePicture
+                <CollaborationAvatar
                   name={openPrivateParticipant.name}
                   online={openPrivateParticipant.online}
                 />
                 <div className="min-w-0 flex-1 truncate text-text ui-text-xs">
                   {openPrivateParticipant.name}
                 </div>
-                <StatusDot online={openPrivateParticipant.online} />
+                <PresenceStatusDot online={openPrivateParticipant.online} />
               </>
             ) : null}
           </div>
@@ -1314,7 +1310,7 @@ export function CollaborationSidebarView() {
                   const authorName = author?.name ?? "Member";
                   return (
                     <div key={entry.id} className="flex gap-2">
-                      <ProfilePicture name={authorName} />
+                      <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="px-1 text-text-lighter ui-text-xs">{authorName}</div>
                         <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-xs leading-5">
@@ -1384,10 +1380,10 @@ export function CollaborationSidebarView() {
                 collaborationActions.setFollowingUser(participant.followableUserId)
               }
               disabled={!participant.followableUserId || participant.followableUserId === user?.id}
-              leading={<ProfilePicture name={participant.name} />}
+              leading={<CollaborationAvatar name={participant.name} />}
               trailing={
                 <span className="flex items-center gap-1">
-                  <StatusDot online={participant.online} />
+                  <PresenceStatusDot online={participant.online} />
                   {participant.microphone ? <Mic className="size-3 shrink-0" /> : null}
                   {participant.screen ? <Monitor className="size-3 shrink-0" /> : null}
                   {participant.activeFilePath ? (
