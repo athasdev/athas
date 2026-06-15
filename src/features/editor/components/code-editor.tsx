@@ -59,7 +59,7 @@ import {
 import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
-import { MonacoBackedEditor } from "./monaco-editor";
+import { MonacoEditor } from "./monaco-editor";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
@@ -139,7 +139,7 @@ function truncateCellOutput(value: string): string {
 
 const AthasEditor = lazy(() =>
   import("@/features/editor/engines/athas/components/editor").then((module) => ({
-    default: module.Editor,
+    default: module.AthasEditor,
   })),
 );
 
@@ -817,7 +817,7 @@ const CodeEditor = ({
                 />
               </Suspense>
             ) : (
-              <MonacoBackedEditor
+              <MonacoEditor
                 bufferId={activeBufferId ?? undefined}
                 viewStateKey={editorViewKey ?? undefined}
                 isActiveSurface={isActiveSurface}

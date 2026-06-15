@@ -3,9 +3,9 @@ import "../monaco/language-contributions";
 import "monaco-editor/min/vs/editor/editor.main.css";
 import "../styles/monaco-editor.css";
 
-import { editor as monacoEditor, KeyCode, KeyMod, Range as MonacoRange, Uri } from "monaco-editor";
+import { editor as monacoEditor, KeyCode, KeyMod, Range as MonacoRange } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import { initVimMode, VimMode, type VimAdapterInstance } from "monaco-vim";
+import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import {
   useCallback,
   useEffect,
@@ -21,12 +21,10 @@ import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
-import { useVimStore, type VimMode as AthasVimMode } from "@/features/vim/stores/vim.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 import { useContextMenu } from "@/ui/context-menu";
 import { formatRelativeTime } from "@/utils/date";
 import EditorContextMenu from "../context-menu/context-menu";
@@ -41,12 +39,24 @@ import type {
   EditorCoordinateResolver,
   EditorModelPositionResolver,
 } from "../view-model/view-layout";
+import { syncContainedEditorFontOptions } from "../monaco/contained-editors";
 import { consumeLocalContentSnapshot, rememberLocalContentSnapshot } from "../monaco/content-sync";
+import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../monaco/hover-widgets";
 import { toMonacoLanguageId } from "../monaco/language";
+import {
+  buildLineOffsets,
+  clampMonacoPosition,
+  createModelUri,
+  toClampedMonacoPosition,
+  toEditorPosition,
+  toEditorRange,
+  toMonacoRange,
+} from "../monaco/position";
 import { defineActiveMonacoTheme, defineMonacoTheme } from "../monaco/theme";
 import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
+import { registerAthasVimCommands, toAthasVimMode } from "../monaco/vim-commands";
 
-interface MonacoBackedEditorProps {
+interface MonacoEditorProps {
   bufferId?: string;
   viewStateKey?: string;
   isActiveSurface?: boolean;
@@ -76,192 +86,7 @@ interface MonacoBackedEditorProps {
   className?: string;
 }
 
-function toEditorPosition(model: Monaco.editor.ITextModel, position: Monaco.IPosition): Position {
-  return {
-    line: position.lineNumber - 1,
-    column: position.column - 1,
-    offset: model.getOffsetAt(position),
-  };
-}
-
-function toMonacoPosition(position: Position): Monaco.IPosition {
-  return {
-    lineNumber: position.line + 1,
-    column: position.column + 1,
-  };
-}
-
-function clampMonacoPosition(
-  model: Monaco.editor.ITextModel,
-  position: Monaco.IPosition,
-): Monaco.IPosition {
-  const lineNumber = Math.max(1, Math.min(model.getLineCount(), position.lineNumber));
-  const maxColumn = model.getLineMaxColumn(lineNumber);
-  const column = Math.max(1, Math.min(maxColumn, position.column));
-  return { lineNumber, column };
-}
-
-function toClampedMonacoPosition(
-  model: Monaco.editor.ITextModel,
-  position: Position,
-): Monaco.IPosition {
-  return clampMonacoPosition(model, toMonacoPosition(position));
-}
-
-function toEditorRange(
-  model: Monaco.editor.ITextModel,
-  selection: Monaco.Selection,
-): Range | undefined {
-  if (selection.isEmpty()) return undefined;
-
-  const start = selection.getStartPosition();
-  const end = selection.getEndPosition();
-  return {
-    start: toEditorPosition(model, start),
-    end: toEditorPosition(model, end),
-  };
-}
-
-function toMonacoRange(model: Monaco.editor.ITextModel, range: Range): Monaco.Range {
-  let start = toClampedMonacoPosition(model, range.start);
-  let end = toClampedMonacoPosition(model, range.end);
-  if (
-    start.lineNumber > end.lineNumber ||
-    (start.lineNumber === end.lineNumber && start.column > end.column)
-  ) {
-    [start, end] = [end, start];
-  }
-
-  return new MonacoRange(start.lineNumber, start.column, end.lineNumber, end.column);
-}
-
-function createModelUri(bufferId: string | undefined, filePath: string): Monaco.Uri {
-  const sanitizedPath = filePath.replace(/^\/+/, "");
-  const path = sanitizedPath.length > 0 ? sanitizedPath : `${bufferId ?? "untitled"}.txt`;
-  return Uri.parse(`athas://editor/${encodeURIComponent(bufferId ?? path)}/${path}`);
-}
-
-function buildLineOffsets(content: string): number[] {
-  const offsets = [0];
-  for (let index = 0; index < content.length; index++) {
-    if (content.charCodeAt(index) === 10) {
-      offsets.push(index + 1);
-    }
-  }
-  return offsets;
-}
-
-let athasVimCommandsRegistered = false;
-
-function registerAthasVimCommands(): void {
-  if (athasVimCommandsRegistered) return;
-  athasVimCommandsRegistered = true;
-
-  const vimApi = (
-    VimMode as unknown as {
-      Vim?: {
-        defineEx: (
-          name: string,
-          prefix: string,
-          callback: (_cm: unknown, params: unknown) => void,
-        ) => void;
-      };
-    }
-  ).Vim;
-  if (!vimApi) return;
-
-  const register = (name: string, prefix: string) => {
-    vimApi.defineEx(name, prefix, (_cm, params) => {
-      const argString =
-        typeof params === "object" && params && "argString" in params
-          ? String((params as { argString?: string }).argString ?? "")
-          : "";
-      const input = `${prefix}${argString ? ` ${argString.trim()}` : ""}`;
-      void parseAndExecuteVimCommand(input);
-    });
-  };
-
-  for (const command of vimCommands) {
-    register(command.name, command.name);
-    for (const alias of command.aliases ?? []) {
-      register(alias, alias);
-    }
-  }
-}
-
-function toAthasVimMode(mode: string): AthasVimMode {
-  if (mode === "insert") return "insert";
-  if (mode === "visual") return "visual";
-  return "normal";
-}
-
-function syncContainedEditorFontOptions(
-  container: HTMLElement,
-  options: Pick<Monaco.editor.IEditorOptions, "fontFamily" | "fontSize" | "lineHeight">,
-) {
-  for (const editor of monacoEditor.getEditors()) {
-    const editorElement = editor.getDomNode();
-    if (!editorElement || !container.contains(editorElement)) continue;
-    editor.updateOptions(options);
-  }
-}
-
-function syncMonacoHoverBounds(container: HTMLElement) {
-  const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-  const maxWidth = Math.max(120, container.clientWidth - margin * 2);
-  container.style.setProperty("--athas-monaco-hover-max-width", `${maxWidth}px`);
-}
-
-function setStyleProperty(
-  element: HTMLElement,
-  property: "left" | "maxWidth" | "width",
-  value: string,
-) {
-  if (element.style[property] === value) return;
-  element.style[property] = value;
-}
-
-function clampMonacoHoverWidgets(container: HTMLElement) {
-  syncMonacoHoverBounds(container);
-
-  const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-  const maxWidth = Math.max(120, container.clientWidth - margin * 2);
-  const widgetNodes = container.querySelectorAll<HTMLElement>(
-    '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]',
-  );
-
-  for (const widgetNode of widgetNodes) {
-    const hoverNode = widgetNode.querySelector<HTMLElement>(".monaco-hover") ?? widgetNode;
-    const scrollNode = hoverNode.querySelector<HTMLElement>(".monaco-scrollable-element");
-    const contentNode = hoverNode.querySelector<HTMLElement>(".monaco-hover-content");
-    const nextWidth = Math.min(maxWidth, Math.max(120, hoverNode.getBoundingClientRect().width));
-
-    for (const node of [widgetNode, hoverNode, scrollNode, contentNode]) {
-      if (!node) continue;
-      setStyleProperty(node, "maxWidth", `${maxWidth}px`);
-      if (node.getBoundingClientRect().width > maxWidth) {
-        setStyleProperty(node, "width", `${nextWidth}px`);
-      }
-    }
-
-    const widgetRect = widgetNode.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const currentLeft = widgetRect.left - containerRect.left;
-    let nextLeft = currentLeft;
-
-    if (currentLeft + nextWidth > container.clientWidth - margin) {
-      nextLeft = container.clientWidth - nextWidth - margin;
-    }
-    if (nextLeft < margin) {
-      nextLeft = margin;
-    }
-    if (nextLeft !== currentLeft) {
-      setStyleProperty(widgetNode, "left", `${nextLeft}px`);
-    }
-  }
-}
-
-export function MonacoBackedEditor({
+export function MonacoEditor({
   bufferId: propBufferId,
   viewStateKey,
   isActiveSurface = true,
@@ -284,7 +109,7 @@ export function MonacoBackedEditor({
   onMouseEnter,
   onClick,
   className,
-}: MonacoBackedEditorProps) {
+}: MonacoEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const modelRef = useRef<Monaco.editor.ITextModel | null>(null);

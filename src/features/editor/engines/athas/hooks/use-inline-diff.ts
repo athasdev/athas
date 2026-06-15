@@ -3,7 +3,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { getFileDiffAgainstContent } from "@/features/git/api/git-diff-api";
 import type { GitDiffLine } from "@/features/git/types/git.types";
 
-interface InlineDiffState {
+export interface InlineDiffState {
   isOpen: boolean;
   lineNumber: number;
   type: "added" | "modified" | "deleted";
