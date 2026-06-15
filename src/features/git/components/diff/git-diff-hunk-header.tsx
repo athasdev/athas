@@ -1,4 +1,5 @@
 import {
+  ArrowsInLineVerticalIcon as ArrowsInLineVertical,
   CaretDownIcon as ChevronDown,
   CaretRightIcon as ChevronRight,
   MinusIcon as Minus,
@@ -9,11 +10,12 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { cn } from "@/utils/cn";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
 import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
-import { createGitHunk } from "../../utils/git-diff-helpers";
+import { createGitHunk, parseDiffHunkRange } from "../../utils/git-diff-helpers";
 
 const DiffHunkHeader = memo(
   ({
     hunk,
+    hiddenLineCount,
     isCollapsed,
     onToggleCollapse,
     isStaged,
@@ -55,69 +57,64 @@ const DiffHunkHeader = memo(
       else if (l.line_type === "removed") deletions++;
     }
 
-    const parseHunkHeader = (content: string) => {
-      const match = content.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)/);
-      if (!match) return { context: content };
-      return {
-        oldStart: match[1],
-        oldCount: match[2] || "1",
-        newStart: match[3],
-        newCount: match[4] || "1",
-        context: match[5]?.trim() || "",
-      };
-    };
-
-    const headerInfo = parseHunkHeader(hunk.header.content);
+    const headerInfo = parseDiffHunkRange(hunk.header.content);
 
     const canStage = !isInMultiFileView && rootFolderPath && filePath;
+    const hiddenLabel =
+      typeof hiddenLineCount === "number"
+        ? `${hiddenLineCount} unchanged line${hiddenLineCount === 1 ? "" : "s"}`
+        : "Changed lines";
 
     return (
       <div
         className={cn(
-          "group flex cursor-pointer items-center justify-between border-border border-b",
-          "bg-primary-bg px-3 py-1 ui-text-sm leading-5 hover:bg-hover",
+          "group grid cursor-pointer grid-cols-[5.5rem_minmax(0,1fr)] items-center",
+          "border-border/70 border-b bg-primary-bg ui-text-sm leading-5 text-text-lighter",
         )}
         onClick={onToggleCollapse}
       >
-        <div className="flex items-center gap-2">
-          {isCollapsed ? (
-            <ChevronRight className="text-text-lighter" />
-          ) : (
-            <ChevronDown className="text-text-lighter" />
-          )}
-
-          <span className="ui-font text-text-lighter">
-            @@ -{headerInfo.oldStart},{headerInfo.oldCount} +{headerInfo.newStart},
-            {headerInfo.newCount} @@
-          </span>
-
-          {headerInfo.context && (
-            <span className="truncate text-text-light">{headerInfo.context}</span>
-          )}
+        <div className="flex min-h-8 items-center justify-center text-text-lighter">
+          <ArrowsInLineVertical size={18} />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="ui-text-sm flex items-center gap-1">
-            {additions > 0 && <span className="text-git-added">+{additions}</span>}
-            {deletions > 0 && <span className="text-git-deleted">-{deletions}</span>}
+        <div className="flex min-w-0 items-center gap-3 pr-3">
+          <div className="h-px flex-1 bg-border/70" />
+
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
+            <span className="flex size-5 items-center justify-center text-text-lighter">
+              {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+            </span>
+            <span className="whitespace-nowrap font-medium text-text-light">{hiddenLabel}</span>
+            {headerInfo?.context ? (
+              <span className="max-w-[24rem] truncate text-text-lighter">{headerInfo.context}</span>
+            ) : null}
           </div>
 
-          {canStage && (
-            <button
-              onClick={handleStageHunk}
-              className={cn(
-                "flex items-center gap-1 rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100",
-                isStaged
-                  ? "bg-git-deleted/20 text-git-deleted hover:bg-git-deleted/30"
-                  : "bg-git-added/20 text-git-added hover:bg-git-added/30",
-              )}
-              title={isStaged ? "Unstage hunk" : "Stage hunk"}
-              aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
-            >
-              {isStaged ? <Minus /> : <Plus />}
-              <span className="ui-text-xs">{isStaged ? "Unstage" : "Stage"}</span>
-            </button>
-          )}
+          <div className="h-px flex-1 bg-border/70" />
+
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="ui-text-xs flex items-center gap-1">
+              {additions > 0 && <span className="text-git-added">+{additions}</span>}
+              {deletions > 0 && <span className="text-git-deleted">-{deletions}</span>}
+            </div>
+
+            {canStage && (
+              <button
+                onClick={handleStageHunk}
+                className={cn(
+                  "flex items-center gap-1 rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100",
+                  isStaged
+                    ? "bg-git-deleted/20 text-git-deleted hover:bg-git-deleted/30"
+                    : "bg-git-added/20 text-git-added hover:bg-git-added/30",
+                )}
+                title={isStaged ? "Unstage hunk" : "Stage hunk"}
+                aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
+              >
+                {isStaged ? <Minus /> : <Plus />}
+                <span className="ui-text-xs">{isStaged ? "Unstage" : "Stage"}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );

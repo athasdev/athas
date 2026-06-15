@@ -1,44 +1,60 @@
 import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git.types";
+export {
+  getDiffLineVisualState,
+  getDiffLineVisualType,
+  type DiffLineVisualState,
+  type DiffLineVisualType,
+} from "./diff-viewer-visuals";
 
-export type DiffLineVisualType = "added" | "removed" | "context";
-
-export interface DiffLineVisualState {
-  lineBackground: string;
-  gutterBackground: string;
-  contentColor: string;
+export interface DiffHunkRange {
+  oldStart: number;
+  oldCount: number;
+  newStart: number;
+  newCount: number;
+  context: string;
 }
 
-const DIFF_LINE_VISUALS: Record<DiffLineVisualType, DiffLineVisualState> = {
-  added: {
-    lineBackground: "bg-git-added/15",
-    gutterBackground: "bg-git-added/25",
-    contentColor: "text-git-added",
-  },
-  removed: {
-    lineBackground: "bg-git-deleted/15",
-    gutterBackground: "bg-git-deleted/25",
-    contentColor: "text-git-deleted",
-  },
-  context: {
-    lineBackground: "",
-    gutterBackground: "bg-primary-bg",
-    contentColor: "text-text",
-  },
-};
+export function parseDiffHunkRange(content: string): DiffHunkRange | null {
+  const match = content.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)/);
+  if (!match) return null;
 
-export function getDiffLineVisualType(lineType: GitDiffLine["line_type"]): DiffLineVisualType {
-  if (lineType === "added" || lineType === "removed") {
-    return lineType;
+  return {
+    oldStart: Number(match[1]),
+    oldCount: Number(match[2] || "1"),
+    newStart: Number(match[3]),
+    newCount: Number(match[4] || "1"),
+    context: match[5]?.trim() || "",
+  };
+}
+
+export function getSkippedUnchangedLineCount(
+  previousHunk: ParsedHunk | undefined,
+  currentHunk: ParsedHunk,
+): number | null {
+  const currentRange = parseDiffHunkRange(currentHunk.header.content);
+  if (!currentRange) return null;
+
+  if (!previousHunk) {
+    const skippedBeforeFirstHunk = Math.min(
+      Math.max(currentRange.oldStart - 1, 0),
+      Math.max(currentRange.newStart - 1, 0),
+    );
+
+    return skippedBeforeFirstHunk > 0 ? skippedBeforeFirstHunk : null;
   }
 
-  return "context";
-}
+  const previousRange = parseDiffHunkRange(previousHunk.header.content);
+  if (!previousRange) return null;
 
-export function getDiffLineVisualState(
-  lineType: GitDiffLine["line_type"] | DiffLineVisualType,
-): DiffLineVisualState {
-  return DIFF_LINE_VISUALS[getDiffLineVisualType(lineType as GitDiffLine["line_type"])];
+  const previousOldEnd = previousRange.oldStart + previousRange.oldCount - 1;
+  const previousNewEnd = previousRange.newStart + previousRange.newCount - 1;
+  const skippedLines = Math.min(
+    currentRange.oldStart - previousOldEnd - 1,
+    currentRange.newStart - previousNewEnd - 1,
+  );
+
+  return skippedLines > 0 ? skippedLines : null;
 }
 
 export const createGitHunk = (
