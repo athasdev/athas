@@ -125,7 +125,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "@voidzero-dev/vite-plus-core": "^0.1.11",
+    "@voidzero-dev/vite-plus-core": "^0.1.24",
     "bun-types": "^1.3.14",
     "code-inspector-plugin": "^1.3.0",
     "concurrently": "^9.2.1",
@@ -164,13 +164,13 @@
     "tree-sitter-typescript": "^0.23.0",
     "typescript": "^5.9.3",
     "typescript-language-server": "^5.2.0",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.11",
-    "vite-plus": "^0.1.11"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.24",
+    "vite-plus": "^0.1.24"
   },
   "overrides": {
     "next": "15.5.19",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.11",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.11"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.24",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.24"
   },
   "simple-git-hooks": {
     "pre-commit": "bun pre-commit",
