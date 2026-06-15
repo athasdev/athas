@@ -321,6 +321,10 @@ export class AcpStreamHandler {
         // Plan updates are surfaced through generic ACP event stream UI for now
         break;
 
+      case "usage_update":
+        this.handleUsageUpdate(event);
+        break;
+
       case "session_info_update":
         break;
 
@@ -346,6 +350,10 @@ export class AcpStreamHandler {
     }
     // Treat all other stop reasons as completion in case no session_complete arrives
     this.handleSessionComplete();
+  }
+
+  private handleUsageUpdate(event: Extract<AcpEvent, { type: "usage_update" }>): void {
+    console.info("ACP usage update:", event.usage);
   }
 
   private handleSessionModeUpdate(event: Extract<AcpEvent, { type: "session_mode_update" }>): void {

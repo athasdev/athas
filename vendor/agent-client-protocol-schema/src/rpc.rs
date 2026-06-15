@@ -2,23 +2,18 @@ use std::sync::Arc;
 
 use derive_more::{Display, From};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use serde_json::value::RawValue;
-
-use crate::{
-    AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, Error, ExtNotification, ExtRequest, Result,
-};
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 /// JSON RPC Request Id
 ///
-/// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts [2]
+/// An identifier established by the Client that MUST contain a String, Number, or NULL value if included. If it is not included it is assumed to be a notification. The value SHOULD normally not be Null \[1\] and Numbers SHOULD NOT contain fractional parts \[2\]
 ///
 /// The Server MUST reply with the same value in the Response object if included. This member is used to correlate the context between the two objects.
 ///
-/// [1] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.
+/// \[1\] The use of Null as a value for the id member in a Request object is discouraged, because this specification uses a value of Null for Responses with an unknown id. Also, because JSON-RPC 1.0 uses an id value of Null for Notifications this could cause confusion in handling.
 ///
-/// [2] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions.
+/// \[2\] Fractional parts may be problematic, since many decimal fractions cannot be represented exactly as binary fractions.
 #[derive(
     Debug,
     PartialEq,
@@ -52,10 +47,10 @@ pub enum RequestId {
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+#[skip_serializing_none]
 pub struct Request<Params> {
     pub id: RequestId,
     pub method: Arc<str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub params: Option<Params>,
 }
 
@@ -66,13 +61,14 @@ pub struct Request<Params> {
 )]
 #[serde(untagged)]
 #[schemars(rename = "{Result}", extend("x-docs-ignore" = true))]
-pub enum Response<Result> {
+pub enum Response<Result, Error> {
     Result { id: RequestId, result: Result },
     Error { id: RequestId, error: Error },
 }
 
-impl<R> Response<R> {
-    pub fn new(id: impl Into<RequestId>, result: Result<R>) -> Self {
+impl<R, E> Response<R, E> {
+    #[must_use]
+    pub fn new(id: impl Into<RequestId>, result: std::result::Result<R, E>) -> Self {
         match result {
             Ok(result) => Self::Result {
                 id: id.into(),
@@ -92,23 +88,10 @@ impl<R> Response<R> {
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[schemars(rename = "{Params}", extend("x-docs-ignore" = true))]
+#[skip_serializing_none]
 pub struct Notification<Params> {
     pub method: Arc<str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub params: Option<Params>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-#[serde(untagged)]
-#[schemars(inline)]
-#[allow(
-    clippy::exhaustive_enums,
-    reason = "This comes from the JSON-RPC specification itself"
-)]
-pub enum OutgoingMessage<Local: Side, Remote: Side> {
-    Request(Request<Remote::InRequest>),
-    Response(Response<Local::OutResponse>),
-    Notification(Notification<Remote::InNotification>),
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -131,8 +114,7 @@ pub struct JsonRpcMessage<M> {
 }
 
 impl<M> JsonRpcMessage<M> {
-    /// Wraps the provided [`OutgoingMessage`] or [`IncomingMessage`] into a versioned
-    /// [`JsonRpcMessage`].
+    /// Wraps the provided message into a versioned [`JsonRpcMessage`].
     #[must_use]
     pub fn wrap(message: M) -> Self {
         Self {
@@ -140,207 +122,79 @@ impl<M> JsonRpcMessage<M> {
             message,
         }
     }
+
+    /// Unwraps the contained message.
+    #[must_use]
+    pub fn into_inner(self) -> M {
+        self.message
+    }
 }
 
-pub trait Side: Clone {
-    type InRequest: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
-    type InNotification: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
-    type OutResponse: Clone + Serialize + DeserializeOwned + JsonSchema + 'static;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[display("JSON-RPC batch must contain at least one message")]
+#[non_exhaustive]
+pub struct EmptyJsonRpcBatch;
 
-    /// Decode a request for a given method. This will encapsulate the knowledge of mapping which
-    /// serialization struct to use for each method.
+impl std::error::Error for EmptyJsonRpcBatch {}
+
+/// A non-empty JSON-RPC 2.0 batch message.
+#[derive(Debug, Serialize, JsonSchema)]
+#[schemars(inline)]
+#[serde(transparent)]
+#[allow(
+    clippy::exhaustive_structs,
+    reason = "This comes from the JSON-RPC specification itself"
+)]
+pub struct JsonRpcBatch<M>(#[schemars(length(min = 1))] Vec<JsonRpcMessage<M>>);
+
+impl<M> JsonRpcBatch<M> {
+    /// Creates a non-empty JSON-RPC batch.
+    ///
+    /// Returns an error if `messages` is empty, because JSON-RPC 2.0 treats an
+    /// empty batch array as an invalid request.
     ///
     /// # Errors
     ///
-    /// This function will return an error if the method is not recognized or if the parameters
-    /// cannot be deserialized into the expected type.
-    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<Self::InRequest>;
-
-    /// Decode a notification for a given method. This will encapsulate the knowledge of mapping which
-    /// serialization struct to use for each method.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the method is not recognized or if the parameters
-    /// cannot be deserialized into the expected type.
-    fn decode_notification(method: &str, params: Option<&RawValue>)
-    -> Result<Self::InNotification>;
-}
-
-/// Marker type representing the client side of an ACP connection.
-///
-/// This type is used by the RPC layer to determine which messages
-/// are incoming vs outgoing from the client's perspective.
-///
-/// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, Default, Debug, JsonSchema)]
-#[non_exhaustive]
-pub struct ClientSide;
-
-impl Side for ClientSide {
-    type InRequest = AgentRequest;
-    type InNotification = AgentNotification;
-    type OutResponse = ClientResponse;
-
-    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<AgentRequest> {
-        let params = params.ok_or_else(Error::invalid_params)?;
-
-        match method {
-            m if m == CLIENT_METHOD_NAMES.session_request_permission => {
-                serde_json::from_str(params.get())
-                    .map(AgentRequest::RequestPermissionRequest)
-                    .map_err(Into::into)
-            }
-            m if m == CLIENT_METHOD_NAMES.fs_write_text_file => serde_json::from_str(params.get())
-                .map(AgentRequest::WriteTextFileRequest)
-                .map_err(Into::into),
-            m if m == CLIENT_METHOD_NAMES.fs_read_text_file => serde_json::from_str(params.get())
-                .map(AgentRequest::ReadTextFileRequest)
-                .map_err(Into::into),
-            m if m == CLIENT_METHOD_NAMES.terminal_create => serde_json::from_str(params.get())
-                .map(AgentRequest::CreateTerminalRequest)
-                .map_err(Into::into),
-            m if m == CLIENT_METHOD_NAMES.terminal_output => serde_json::from_str(params.get())
-                .map(AgentRequest::TerminalOutputRequest)
-                .map_err(Into::into),
-            m if m == CLIENT_METHOD_NAMES.terminal_kill => serde_json::from_str(params.get())
-                .map(AgentRequest::KillTerminalCommandRequest)
-                .map_err(Into::into),
-            m if m == CLIENT_METHOD_NAMES.terminal_release => serde_json::from_str(params.get())
-                .map(AgentRequest::ReleaseTerminalRequest)
-                .map_err(Into::into),
-            m if m == CLIENT_METHOD_NAMES.terminal_wait_for_exit => {
-                serde_json::from_str(params.get())
-                    .map(AgentRequest::WaitForTerminalExitRequest)
-                    .map_err(Into::into)
-            }
-            _ => {
-                if let Some(custom_method) = method.strip_prefix('_') {
-                    Ok(AgentRequest::ExtMethodRequest(ExtRequest {
-                        method: custom_method.into(),
-                        params: params.to_owned().into(),
-                    }))
-                } else {
-                    Err(Error::method_not_found())
-                }
-            }
+    /// Returns [`EmptyJsonRpcBatch`] when `messages` is empty.
+    pub fn new(messages: Vec<JsonRpcMessage<M>>) -> Result<Self, EmptyJsonRpcBatch> {
+        if messages.is_empty() {
+            Err(EmptyJsonRpcBatch)
+        } else {
+            Ok(Self(messages))
         }
     }
 
-    fn decode_notification(method: &str, params: Option<&RawValue>) -> Result<AgentNotification> {
-        let params = params.ok_or_else(Error::invalid_params)?;
+    /// Returns the messages in this batch.
+    #[must_use]
+    pub fn as_slice(&self) -> &[JsonRpcMessage<M>] {
+        &self.0
+    }
 
-        match method {
-            m if m == CLIENT_METHOD_NAMES.session_update => serde_json::from_str(params.get())
-                .map(AgentNotification::SessionNotification)
-                .map_err(Into::into),
-            _ => {
-                if let Some(custom_method) = method.strip_prefix('_') {
-                    Ok(AgentNotification::ExtNotification(ExtNotification {
-                        method: custom_method.into(),
-                        params: RawValue::from_string(params.get().to_string())?.into(),
-                    }))
-                } else {
-                    Err(Error::method_not_found())
-                }
-            }
-        }
+    /// Consumes this batch and returns its messages.
+    #[must_use]
+    pub fn into_vec(self) -> Vec<JsonRpcMessage<M>> {
+        self.0
     }
 }
 
-/// Marker type representing the agent side of an ACP connection.
-///
-/// This type is used by the RPC layer to determine which messages
-/// are incoming vs outgoing from the agent's perspective.
-///
-/// See protocol docs: [Communication Model](https://agentclientprotocol.com/protocol/overview#communication-model)
-#[derive(Clone, Default, Debug, JsonSchema)]
-#[non_exhaustive]
-pub struct AgentSide;
+impl<M> TryFrom<Vec<JsonRpcMessage<M>>> for JsonRpcBatch<M> {
+    type Error = EmptyJsonRpcBatch;
 
-impl Side for AgentSide {
-    type InRequest = ClientRequest;
-    type InNotification = ClientNotification;
-    type OutResponse = AgentResponse;
-
-    fn decode_request(method: &str, params: Option<&RawValue>) -> Result<ClientRequest> {
-        let params = params.ok_or_else(Error::invalid_params)?;
-
-        match method {
-            m if m == AGENT_METHOD_NAMES.initialize => serde_json::from_str(params.get())
-                .map(ClientRequest::InitializeRequest)
-                .map_err(Into::into),
-            m if m == AGENT_METHOD_NAMES.authenticate => serde_json::from_str(params.get())
-                .map(ClientRequest::AuthenticateRequest)
-                .map_err(Into::into),
-            m if m == AGENT_METHOD_NAMES.session_new => serde_json::from_str(params.get())
-                .map(ClientRequest::NewSessionRequest)
-                .map_err(Into::into),
-            m if m == AGENT_METHOD_NAMES.session_load => serde_json::from_str(params.get())
-                .map(ClientRequest::LoadSessionRequest)
-                .map_err(Into::into),
-            #[cfg(feature = "unstable_session_list")]
-            m if m == AGENT_METHOD_NAMES.session_list => serde_json::from_str(params.get())
-                .map(ClientRequest::ListSessionsRequest)
-                .map_err(Into::into),
-            #[cfg(feature = "unstable_session_fork")]
-            m if m == AGENT_METHOD_NAMES.session_fork => serde_json::from_str(params.get())
-                .map(ClientRequest::ForkSessionRequest)
-                .map_err(Into::into),
-            #[cfg(feature = "unstable_session_resume")]
-            m if m == AGENT_METHOD_NAMES.session_resume => serde_json::from_str(params.get())
-                .map(ClientRequest::ResumeSessionRequest)
-                .map_err(Into::into),
-            m if m == AGENT_METHOD_NAMES.session_close => serde_json::from_str(params.get())
-                .map(ClientRequest::CloseSessionRequest)
-                .map_err(Into::into),
-            m if m == AGENT_METHOD_NAMES.session_set_mode => serde_json::from_str(params.get())
-                .map(ClientRequest::SetSessionModeRequest)
-                .map_err(Into::into),
-            #[cfg(feature = "unstable_session_config_options")]
-            m if m == AGENT_METHOD_NAMES.session_set_config_option => {
-                serde_json::from_str(params.get())
-                    .map(ClientRequest::SetSessionConfigOptionRequest)
-                    .map_err(Into::into)
-            }
-            #[cfg(feature = "unstable_session_model")]
-            m if m == AGENT_METHOD_NAMES.session_set_model => serde_json::from_str(params.get())
-                .map(ClientRequest::SetSessionModelRequest)
-                .map_err(Into::into),
-            m if m == AGENT_METHOD_NAMES.session_prompt => serde_json::from_str(params.get())
-                .map(ClientRequest::PromptRequest)
-                .map_err(Into::into),
-            _ => {
-                if let Some(custom_method) = method.strip_prefix('_') {
-                    Ok(ClientRequest::ExtMethodRequest(ExtRequest {
-                        method: custom_method.into(),
-                        params: params.to_owned().into(),
-                    }))
-                } else {
-                    Err(Error::method_not_found())
-                }
-            }
-        }
+    fn try_from(messages: Vec<JsonRpcMessage<M>>) -> Result<Self, Self::Error> {
+        Self::new(messages)
     }
+}
 
-    fn decode_notification(method: &str, params: Option<&RawValue>) -> Result<ClientNotification> {
-        let params = params.ok_or_else(Error::invalid_params)?;
-
-        match method {
-            m if m == AGENT_METHOD_NAMES.session_cancel => serde_json::from_str(params.get())
-                .map(ClientNotification::CancelNotification)
-                .map_err(Into::into),
-            _ => {
-                if let Some(custom_method) = method.strip_prefix('_') {
-                    Ok(ClientNotification::ExtNotification(ExtNotification {
-                        method: custom_method.into(),
-                        params: RawValue::from_string(params.get().to_string())?.into(),
-                    }))
-                } else {
-                    Err(Error::method_not_found())
-                }
-            }
-        }
+impl<'de, M> Deserialize<'de> for JsonRpcBatch<M>
+where
+    M: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let messages = Vec::<JsonRpcMessage<M>>::deserialize(deserializer)?;
+        Self::new(messages).map_err(serde::de::Error::custom)
     }
 }
 
@@ -348,7 +202,11 @@ impl Side for AgentSide {
 mod tests {
     use super::*;
 
-    use serde_json::{Number, Value};
+    use crate::{
+        AgentNotification, CancelNotification, ClientNotification, ContentBlock, ContentChunk,
+        SessionId, SessionNotification, SessionUpdate, TextContent,
+    };
+    use serde_json::{Number, Value, json};
 
     #[test]
     fn id_deserialization() {
@@ -396,40 +254,70 @@ mod tests {
         let id = RequestId::Str("id".to_owned());
         assert_eq!(id.to_string(), "id");
     }
-}
 
-#[test]
-fn test_notification_wire_format() {
-    use super::*;
+    #[test]
+    fn batch_deserialization_requires_at_least_one_message() {
+        let err = serde_json::from_value::<JsonRpcBatch<Notification<ClientNotification>>>(
+            Value::Array(Vec::new()),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("at least one message"));
+    }
 
-    use serde_json::{Value, json};
-
-    // Test client -> agent notification wire format
-    let outgoing_msg = JsonRpcMessage::wrap(
-        OutgoingMessage::<ClientSide, AgentSide>::Notification(Notification {
+    #[test]
+    fn batch_serialization_round_trips_non_empty_messages() {
+        let notification = JsonRpcMessage::wrap(Notification {
             method: "cancel".into(),
             params: Some(ClientNotification::CancelNotification(CancelNotification {
                 session_id: SessionId("test-123".into()),
                 meta: None,
             })),
-        }),
-    );
+        });
 
-    let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
-    assert_eq!(
-        serialized,
-        json!({
-            "jsonrpc": "2.0",
-            "method": "cancel",
-            "params": {
-                "sessionId": "test-123"
-            },
-        })
-    );
+        let batch = JsonRpcBatch::new(vec![notification]).unwrap();
+        let serialized = serde_json::to_value(&batch).unwrap();
+        assert_eq!(
+            serialized,
+            json!([{
+                "jsonrpc": "2.0",
+                "method": "cancel",
+                "params": {
+                    "sessionId": "test-123"
+                },
+            }])
+        );
 
-    // Test agent -> client notification wire format
-    let outgoing_msg = JsonRpcMessage::wrap(
-        OutgoingMessage::<AgentSide, ClientSide>::Notification(Notification {
+        let deserialized =
+            serde_json::from_value::<JsonRpcBatch<Notification<ClientNotification>>>(serialized)
+                .unwrap();
+        assert_eq!(deserialized.as_slice().len(), 1);
+    }
+
+    #[test]
+    fn notification_wire_format() {
+        // Test client -> agent notification wire format
+        let outgoing_msg = JsonRpcMessage::wrap(Notification {
+            method: "cancel".into(),
+            params: Some(ClientNotification::CancelNotification(CancelNotification {
+                session_id: SessionId("test-123".into()),
+                meta: None,
+            })),
+        });
+
+        let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
+        assert_eq!(
+            serialized,
+            json!({
+                "jsonrpc": "2.0",
+                "method": "cancel",
+                "params": {
+                    "sessionId": "test-123"
+                },
+            })
+        );
+
+        // Test agent -> client notification wire format
+        let outgoing_msg = JsonRpcMessage::wrap(Notification {
             method: "sessionUpdate".into(),
             params: Some(AgentNotification::SessionNotification(
                 SessionNotification {
@@ -440,30 +328,31 @@ fn test_notification_wire_format() {
                             text: "Hello".to_string(),
                             meta: None,
                         }),
+                        message_id: None,
                         meta: None,
                     }),
                     meta: None,
                 },
             )),
-        }),
-    );
+        });
 
-    let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
-    assert_eq!(
-        serialized,
-        json!({
-            "jsonrpc": "2.0",
-            "method": "sessionUpdate",
-            "params": {
-                "sessionId": "test-456",
-                "update": {
-                    "sessionUpdate": "agent_message_chunk",
-                    "content": {
-                        "type": "text",
-                        "text": "Hello"
+        let serialized: Value = serde_json::to_value(&outgoing_msg).unwrap();
+        assert_eq!(
+            serialized,
+            json!({
+                "jsonrpc": "2.0",
+                "method": "sessionUpdate",
+                "params": {
+                    "sessionId": "test-456",
+                    "update": {
+                        "sessionUpdate": "agent_message_chunk",
+                        "content": {
+                            "type": "text",
+                            "text": "Hello"
+                        }
                     }
                 }
-            }
-        })
-    );
+            })
+        );
+    }
 }

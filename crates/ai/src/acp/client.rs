@@ -1,15 +1,15 @@
 use super::{
+   AcpConnection,
    terminal_state::AcpTerminalState,
    types::{
       AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
-      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, SessionConfigOption,
+      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
       SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
    workspace_path::{path_to_string, resolve_path_against_workspace},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use agent_client_protocol as acp;
-use async_trait::async_trait;
+use agent_client_protocol::{self as acp_sdk, schema as acp};
 use athas_terminal::{TerminalConfig, TerminalManager};
 use std::{
    collections::HashMap,
@@ -368,14 +368,86 @@ impl AthasAcpClient {
          id: option.id.to_string(),
          name: option.name,
          description: option.description,
-         category: option.category,
+         category: option.category.map(|category| match category {
+            acp::SessionConfigOptionCategory::Mode => "mode".to_string(),
+            acp::SessionConfigOptionCategory::Model => "model".to_string(),
+            acp::SessionConfigOptionCategory::ThoughtLevel => "thought_level".to_string(),
+            acp::SessionConfigOptionCategory::Other(category) => category,
+            _ => "other".to_string(),
+         }),
          kind,
       })
    }
 }
 
-#[async_trait(?Send)]
-impl acp::Client for AthasAcpClient {
+impl AthasAcpClient {
+   pub async fn handle_agent_request(
+      &self,
+      request: acp::AgentRequest,
+   ) -> acp_sdk::Result<acp::ClientResponse> {
+      match request {
+         acp::AgentRequest::WriteTextFileRequest(request) => self
+            .write_text_file(request)
+            .await
+            .map(acp::ClientResponse::WriteTextFileResponse),
+         acp::AgentRequest::ReadTextFileRequest(request) => self
+            .read_text_file(request)
+            .await
+            .map(acp::ClientResponse::ReadTextFileResponse),
+         acp::AgentRequest::RequestPermissionRequest(request) => self
+            .request_permission(request)
+            .await
+            .map(acp::ClientResponse::RequestPermissionResponse),
+         acp::AgentRequest::CreateTerminalRequest(request) => self
+            .create_terminal(request)
+            .await
+            .map(acp::ClientResponse::CreateTerminalResponse),
+         acp::AgentRequest::TerminalOutputRequest(request) => self
+            .terminal_output(request)
+            .await
+            .map(acp::ClientResponse::TerminalOutputResponse),
+         acp::AgentRequest::ReleaseTerminalRequest(request) => self
+            .release_terminal(request)
+            .await
+            .map(acp::ClientResponse::ReleaseTerminalResponse),
+         acp::AgentRequest::WaitForTerminalExitRequest(request) => self
+            .wait_for_terminal_exit(request)
+            .await
+            .map(acp::ClientResponse::WaitForTerminalExitResponse),
+         acp::AgentRequest::KillTerminalRequest(request) => self
+            .kill_terminal_command(request)
+            .await
+            .map(acp::ClientResponse::KillTerminalResponse),
+         acp::AgentRequest::ExtMethodRequest(request) => self
+            .ext_method(request)
+            .await
+            .map(acp::ClientResponse::ExtMethodResponse),
+         request => {
+            log::warn!("Unsupported ACP client request: {}", request.method());
+            Err(acp_sdk::Error::method_not_found())
+         }
+      }
+   }
+
+   pub async fn handle_agent_notification(
+      &self,
+      notification: acp::AgentNotification,
+      _connection: AcpConnection,
+   ) -> acp_sdk::Result<()> {
+      match notification {
+         acp::AgentNotification::SessionNotification(notification) => {
+            self.session_notification(notification).await
+         }
+         acp::AgentNotification::ExtNotification(notification) => {
+            self.ext_notification(notification).await
+         }
+         notification => {
+            log::warn!("Unhandled ACP agent notification: {:?}", notification);
+            Ok(())
+         }
+      }
+   }
+
    async fn request_permission(
       &self,
       args: acp::RequestPermissionRequest,
@@ -724,8 +796,27 @@ impl acp::Client for AthasAcpClient {
                   .collect(),
             });
          }
-         _ => {
-            // Handle other session updates as needed
+         acp::SessionUpdate::UsageUpdate(usage) => {
+            log::info!(
+               "ACP usage update: session={}, used={}, size={}",
+               session_id,
+               usage.used,
+               usage.size
+            );
+            self.emit_event(AcpEvent::UsageUpdate {
+               session_id,
+               usage: AcpUsageUpdate {
+                  used: usage.used,
+                  size: usage.size,
+               },
+            });
+         }
+         update => {
+            log::warn!(
+               "Unhandled ACP session update for {}: {:?}",
+               session_id,
+               update
+            );
          }
       }
       Ok(())
@@ -1040,8 +1131,8 @@ impl acp::Client for AthasAcpClient {
 
    async fn kill_terminal_command(
       &self,
-      args: acp::KillTerminalCommandRequest,
-   ) -> acp::Result<acp::KillTerminalCommandResponse> {
+      args: acp::KillTerminalRequest,
+   ) -> acp::Result<acp::KillTerminalResponse> {
       let terminal_id = args.terminal_id.to_string();
       let athas_id = {
          let states = self
@@ -1069,7 +1160,7 @@ impl acp::Client for AthasAcpClient {
          }
       }
 
-      Ok(acp::KillTerminalCommandResponse::new())
+      Ok(acp::KillTerminalResponse::new())
    }
 
    async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {

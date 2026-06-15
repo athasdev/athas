@@ -875,6 +875,22 @@ details: ${errorDetails || mainError}
               });
               break;
             }
+            case "usage_update": {
+              const usagePercent =
+                event.usage.size > 0
+                  ? Math.round((event.usage.used / event.usage.size) * 100)
+                  : null;
+              appendAcpEvent({
+                kind: "status",
+                label: "Session usage updated",
+                detail:
+                  usagePercent === null
+                    ? `${event.usage.used} used`
+                    : `${event.usage.used}/${event.usage.size} (${usagePercent}%)`,
+                state: "info",
+              });
+              break;
+            }
             case "status_changed":
               useAIChatStore.getState().setAcpStatus(event.status);
               break; // internal state sync

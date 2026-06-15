@@ -61,14 +61,14 @@ pub enum StopReason {
    Cancelled,
 }
 
-impl From<agent_client_protocol::StopReason> for StopReason {
-   fn from(reason: agent_client_protocol::StopReason) -> Self {
+impl From<agent_client_protocol::schema::StopReason> for StopReason {
+   fn from(reason: agent_client_protocol::schema::StopReason) -> Self {
       match reason {
-         agent_client_protocol::StopReason::EndTurn => StopReason::EndTurn,
-         agent_client_protocol::StopReason::MaxTokens => StopReason::MaxTokens,
-         agent_client_protocol::StopReason::MaxTurnRequests => StopReason::MaxTurnRequests,
-         agent_client_protocol::StopReason::Refusal => StopReason::Refusal,
-         agent_client_protocol::StopReason::Cancelled => StopReason::Cancelled,
+         agent_client_protocol::schema::StopReason::EndTurn => StopReason::EndTurn,
+         agent_client_protocol::schema::StopReason::MaxTokens => StopReason::MaxTokens,
+         agent_client_protocol::schema::StopReason::MaxTurnRequests => StopReason::MaxTurnRequests,
+         agent_client_protocol::schema::StopReason::Refusal => StopReason::Refusal,
+         agent_client_protocol::schema::StopReason::Cancelled => StopReason::Cancelled,
          _ => StopReason::EndTurn, // Default for unknown variants
       }
    }
@@ -99,6 +99,13 @@ pub struct AcpPlanEntry {
    pub content: String,
    pub priority: AcpPlanEntryPriority,
    pub status: AcpPlanEntryStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpUsageUpdate {
+   pub used: u64,
+   pub size: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,8 +149,8 @@ pub struct AcpAgentCapabilities {
    pub session_capabilities: serde_json::Value,
 }
 
-impl From<agent_client_protocol::AgentCapabilities> for AcpAgentCapabilities {
-   fn from(capabilities: agent_client_protocol::AgentCapabilities) -> Self {
+impl From<agent_client_protocol::schema::AgentCapabilities> for AcpAgentCapabilities {
+   fn from(capabilities: agent_client_protocol::schema::AgentCapabilities) -> Self {
       let session_capabilities =
          serde_json::to_value(&capabilities.session_capabilities).unwrap_or_default();
 
@@ -461,6 +468,12 @@ pub enum AcpEvent {
    PlanUpdate {
       session_id: String,
       entries: Vec<AcpPlanEntry>,
+   },
+   /// Session token/context usage updated
+   #[serde(rename_all = "camelCase")]
+   UsageUpdate {
+      session_id: String,
+      usage: AcpUsageUpdate,
    },
    /// Session mode state updated (full state with available modes)
    #[serde(rename_all = "camelCase")]
