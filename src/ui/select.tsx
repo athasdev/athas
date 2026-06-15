@@ -268,20 +268,11 @@ export default function Select({
     onOpenChange?.(nextOpen);
   };
 
-  useEffect(() => {
-    if (open && searchable && searchableTrigger === "menu") {
-      window.requestAnimationFrame(() => searchInputRef.current?.focus());
-      return;
-    }
-
-    if (!open) {
-      setSearchQuery("");
-      setHoveredIndex(0);
-    }
-  }, [open, searchable, searchableTrigger]);
-
   const selectedOption = options.find((option) => option.value === value);
-  const filteredOptions = getFilteredOptions(options, searchable, searchQuery);
+  const filteredOptions = useMemo(
+    () => getFilteredOptions(options, searchable, searchQuery),
+    [options, searchable, searchQuery],
+  );
   const triggerIcon = renderTriggerIcon(leftIcon, size);
   const triggerText = useMemo(
     () => getInputTriggerText(open, searchableTrigger, searchQuery, selectedOption, value),
@@ -295,8 +286,27 @@ export default function Select({
   );
 
   useEffect(() => {
-    setHoveredIndex(0);
-  }, [searchQuery]);
+    if (open && searchable && searchableTrigger === "menu") {
+      window.requestAnimationFrame(() => searchInputRef.current?.focus());
+      return;
+    }
+
+    if (!open) {
+      setSearchQuery("");
+      setHoveredIndex(0);
+    }
+  }, [open, searchable, searchableTrigger]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const selectedIndex =
+      searchQuery.length === 0
+        ? filteredOptions.findIndex((option) => option.value === value)
+        : -1;
+
+    setHoveredIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  }, [filteredOptions, open, searchQuery, value]);
 
   useEffect(() => {
     if (!open || hoveredIndex < 0) return;
@@ -346,7 +356,9 @@ export default function Select({
               return;
             }
 
-            handleOpenChange(!open);
+            if (!open) {
+              handleOpenChange(true);
+            }
           }}
           onChange={(event) => {
             setSearchQuery(event.target.value);
@@ -364,7 +376,10 @@ export default function Select({
               return;
             }
 
-            if (!open && (event.key === "ArrowDown" || event.key === "Enter")) {
+            if (
+              !open &&
+              (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ")
+            ) {
               event.preventDefault();
               handleOpenChange(true);
               return;
@@ -380,6 +395,14 @@ export default function Select({
               case "ArrowUp":
                 event.preventDefault();
                 setHoveredIndex((prev) => Math.max(prev - 1, 0));
+                break;
+              case "Home":
+                event.preventDefault();
+                setHoveredIndex(0);
+                break;
+              case "End":
+                event.preventDefault();
+                setHoveredIndex(filteredOptions.length - 1);
                 break;
               case "Enter":
                 event.preventDefault();
