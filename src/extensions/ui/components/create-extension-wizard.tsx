@@ -826,14 +826,14 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "done" && (
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <p className="text-red-400 ui-text-xs">{error}</p>
+            <div className="rounded-lg border border-error/30 bg-error/10 p-3">
+              <p className="text-error ui-text-xs">{error}</p>
             </div>
           ) : generatedExtension ? (
             <>
               <div className="rounded-lg border border-border/60 bg-secondary-bg/40 p-3">
                 <div className="mb-1 flex items-center gap-2">
-                  <Check className="size-4 text-green-500" />
+                  <Check className="size-4 text-success" />
                   <span className="font-medium ui-text-sm text-text">
                     {generatedExtension.name}
                   </span>
@@ -842,9 +842,9 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               </div>
 
               {isInstalled ? (
-                <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
-                  <Check className="size-4 text-green-500" />
-                  <p className="text-green-400 ui-text-sm">
+                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3">
+                  <Check className="size-4 text-success" />
+                  <p className="text-success ui-text-sm">
                     Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}

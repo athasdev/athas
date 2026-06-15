@@ -168,7 +168,7 @@ export function SearchPopover({
           <span
             className={cn(
               "ui-font ui-text-sm shrink-0",
-              matchTone === "warning" ? "text-amber-400" : "text-text-lighter",
+              matchTone === "warning" ? "text-warning" : "text-text-lighter",
             )}
           >
             {matchLabel}

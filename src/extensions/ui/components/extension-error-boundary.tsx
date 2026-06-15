@@ -32,7 +32,7 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
-          <AlertTriangle className="size-8 text-yellow-500" />
+          <AlertTriangle className="size-8 text-warning" />
           <div>
             <p className="font-medium ui-text-sm text-text">{this.props.name} crashed</p>
             <p className="mt-1 text-text-lighter ui-text-xs">

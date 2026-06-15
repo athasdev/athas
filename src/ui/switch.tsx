@@ -13,8 +13,8 @@ const switchTrackVariants = cva(
   [
     "peer rounded border bg-secondary-bg transition-colors duration-200",
     "after:absolute after:rounded after:bg-text after:shadow-sm after:transition-all after:content-['']",
-    "border-border peer-checked:border-blue-500 peer-checked:bg-blue-500 peer-checked:after:bg-white",
-    "peer-focus:ring-1 peer-focus:ring-blue-500/50",
+    "border-border peer-checked:border-accent peer-checked:bg-accent peer-checked:after:bg-primary-bg",
+    "peer-focus:ring-1 peer-focus:ring-border-strong/35",
   ],
   {
     variants: {
