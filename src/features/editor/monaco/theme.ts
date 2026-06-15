@@ -1,5 +1,9 @@
 import { editor as monacoEditor } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
+import {
+  getRequiredAthasDefaultColor,
+  type AthasDefaultThemeType,
+} from "@/extensions/themes/default-theme";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 
@@ -7,13 +11,21 @@ function getThemeId(theme: string): string {
   return theme.includes("light") ? "vs" : "vs-dark";
 }
 
-function colorValue(theme: ThemeDefinition, name: string, fallback: string): string {
+function themeDefaultType(theme: ThemeDefinition): AthasDefaultThemeType {
+  return theme.isDark ? "dark" : "light";
+}
+
+function fallbackColor(theme: ThemeDefinition, name: string): string {
+  return getRequiredAthasDefaultColor(themeDefaultType(theme), name);
+}
+
+function colorValue(theme: ThemeDefinition, name: string): string {
   return (
     theme.cssVariables[`--color-${name}`] ??
     theme.cssVariables[`--${name}`] ??
     theme.syntaxTokens?.[`--color-${name}`] ??
     theme.syntaxTokens?.[`--${name}`] ??
-    fallback
+    fallbackColor(theme, name)
   );
 }
 
@@ -108,31 +120,22 @@ export function defineMonacoTheme(themeId: string): string {
   });
 
   const background = toMonacoColor(
-    colorValue(theme, "primary-bg", theme.isDark ? "#141413" : "#fcfcfd"),
-    theme.isDark ? "#141413" : "#fcfcfd",
+    colorValue(theme, "primary-bg"),
+    fallbackColor(theme, "primary-bg"),
   );
-  const foreground = toMonacoColor(
-    colorValue(theme, "text", theme.isDark ? "#faf9f5" : "#141413"),
-    theme.isDark ? "#faf9f5" : "#141413",
-  );
+  const foreground = toMonacoColor(colorValue(theme, "text"), fallbackColor(theme, "text"));
   const subtleForeground = toMonacoColor(
-    colorValue(theme, "text-lighter", theme.isDark ? "#b0aea5" : "#787d86"),
-    theme.isDark ? "#b0aea5" : "#787d86",
+    colorValue(theme, "text-lighter"),
+    fallbackColor(theme, "text-lighter"),
   );
-  const border = toMonacoColor(
-    colorValue(theme, "border", theme.isDark ? "#2f2d29" : "#e4e7ec"),
-    theme.isDark ? "#2f2d29" : "#e4e7ec",
-  );
-  const selected = toMonacoColor(
-    colorValue(theme, "selected", theme.isDark ? "#2c2925" : "#e7ebf0"),
-    theme.isDark ? "#2c2925" : "#e7ebf0",
-  );
+  const border = toMonacoColor(colorValue(theme, "border"), fallbackColor(theme, "border"));
+  const selected = toMonacoColor(colorValue(theme, "selected"), fallbackColor(theme, "selected"));
   const selection = toMonacoColor(
-    colorValue(theme, "selection-bg", "rgba(106, 155, 204, 0.30)"),
-    "#6a9bcc4d",
+    colorValue(theme, "selection-bg"),
+    fallbackColor(theme, "selection-bg"),
   );
-  const accent = toMonacoColor(colorValue(theme, "accent", "#4f8cff"), "#4f8cff");
-  const cursor = toMonacoColor(colorValue(theme, "cursor", foreground), foreground);
+  const accent = toMonacoColor(colorValue(theme, "accent"), fallbackColor(theme, "accent"));
+  const cursor = toMonacoColor(colorValue(theme, "cursor"), foreground);
 
   const monacoThemeId = toMonacoThemeName(theme.id);
   monacoEditor.defineTheme(monacoThemeId, {
