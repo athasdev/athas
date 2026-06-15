@@ -93,6 +93,75 @@ type SidebarParticipant = NonNullable<
 type SidebarNoteItem = NonNullable<
   ReturnType<typeof buildCollaborationSidebarModel>
 >["notesItems"][number];
+type CollaborationFilterOption<T extends string> = {
+  id: T;
+  label: string;
+};
+
+const COLLABORATION_TABS: Array<{
+  id: CollaborationSidebarTab;
+  label: string;
+  icon: ReactNode;
+}> = [
+  {
+    id: "channels",
+    label: "Channels",
+    icon: <ChatCircleText size={16} weight="duotone" />,
+  },
+  {
+    id: "people",
+    label: "People",
+    icon: <UsersThree size={16} weight="duotone" />,
+  },
+  {
+    id: "notes",
+    label: "Notes",
+    icon: <FileText size={16} weight="duotone" />,
+  },
+];
+
+const CHANNEL_FILTER_OPTIONS: Array<CollaborationFilterOption<CollaborationChannelFilter>> = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "with-guests", label: "With guests" },
+  { id: "empty", label: "Empty" },
+];
+
+const PEOPLE_FILTER_OPTIONS: Array<CollaborationFilterOption<CollaborationPeopleFilter>> = [
+  { id: "all", label: "All" },
+  { id: "online", label: "Online" },
+  { id: "offline", label: "Offline" },
+  { id: "sharing", label: "Sharing" },
+  { id: "has-file", label: "Has file" },
+];
+
+const NOTE_FILTER_OPTIONS: Array<CollaborationFilterOption<CollaborationNotesFilter>> = [
+  { id: "notes", label: "Notes" },
+  { id: "secrets", label: "Secrets" },
+  { id: "all", label: "All" },
+];
+
+function createCollaborationFilterMenuItems<T extends string>({
+  activeId,
+  onClose,
+  onSelect,
+  options,
+}: {
+  activeId: T;
+  onClose: () => void;
+  onSelect: (id: T) => void;
+  options: Array<CollaborationFilterOption<T>>;
+}): MenuItem[] {
+  return options.map((item) => ({
+    id: item.id,
+    label: item.label,
+    keybinding: activeId === item.id ? <Check className="size-3.5 text-accent" /> : null,
+    onClick: () => {
+      onSelect(item.id);
+      onClose();
+    },
+  }));
+}
 
 function stopMediaStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => {
@@ -977,93 +1046,24 @@ export function CollaborationSidebarView() {
       : []),
   ];
 
-  const collaborationTabs: Array<{
-    id: CollaborationSidebarTab;
-    label: string;
-    icon: ReactNode;
-  }> = [
-    {
-      id: "channels",
-      label: "Channels",
-      icon: <ChatCircleText size={16} weight="duotone" />,
-    },
-    {
-      id: "people",
-      label: "People",
-      icon: <UsersThree size={16} weight="duotone" />,
-    },
-    {
-      id: "notes",
-      label: "Notes",
-      icon: <FileText size={16} weight="duotone" />,
-    },
-  ];
-  const channelFilterItems: Array<{
-    id: CollaborationChannelFilter;
-    label: string;
-  }> = [
-    { id: "all", label: "All" },
-    { id: "active", label: "Active" },
-    { id: "with-guests", label: "With guests" },
-    { id: "empty", label: "Empty" },
-  ];
-  const peopleFilterItems: Array<{
-    id: CollaborationPeopleFilter;
-    label: string;
-  }> = [
-    { id: "all", label: "All" },
-    { id: "online", label: "Online" },
-    { id: "offline", label: "Offline" },
-    { id: "sharing", label: "Sharing" },
-    { id: "has-file", label: "Has file" },
-  ];
-  const notesFilterItems: Array<{
-    id: CollaborationNotesFilter;
-    label: string;
-  }> = [
-    { id: "notes", label: "Notes" },
-    { id: "secrets", label: "Secrets" },
-    { id: "all", label: "All" },
-  ];
-  const channelFilterMenuItems = useMemo<MenuItem[]>(
-    () =>
-      channelFilterItems.map((item) => ({
-        id: item.id,
-        label: item.label,
-        keybinding: channelFilter === item.id ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: () => {
-          setChannelFilter(item.id);
-          setIsChannelFilterOpen(false);
-        },
-      })),
-    [channelFilter, channelFilterItems],
-  );
-  const peopleFilterMenuItems = useMemo<MenuItem[]>(
-    () =>
-      peopleFilterItems.map((item) => ({
-        id: item.id,
-        label: item.label,
-        keybinding: peopleFilter === item.id ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: () => {
-          setPeopleFilter(item.id);
-          setIsPeopleFilterOpen(false);
-        },
-      })),
-    [peopleFilter, peopleFilterItems],
-  );
-  const notesFilterMenuItems = useMemo<MenuItem[]>(
-    () =>
-      notesFilterItems.map((item) => ({
-        id: item.id,
-        label: item.label,
-        keybinding: notesFilter === item.id ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: () => {
-          setNotesFilter(item.id);
-          setIsNotesFilterOpen(false);
-        },
-      })),
-    [notesFilter, notesFilterItems],
-  );
+  const channelFilterMenuItems = createCollaborationFilterMenuItems({
+    activeId: channelFilter,
+    onClose: () => setIsChannelFilterOpen(false),
+    onSelect: setChannelFilter,
+    options: CHANNEL_FILTER_OPTIONS,
+  });
+  const peopleFilterMenuItems = createCollaborationFilterMenuItems({
+    activeId: peopleFilter,
+    onClose: () => setIsPeopleFilterOpen(false),
+    onSelect: setPeopleFilter,
+    options: PEOPLE_FILTER_OPTIONS,
+  });
+  const notesFilterMenuItems = createCollaborationFilterMenuItems({
+    activeId: notesFilter,
+    onClose: () => setIsNotesFilterOpen(false),
+    onSelect: setNotesFilter,
+    options: NOTE_FILTER_OPTIONS,
+  });
 
   const channelsContent = (
     <div className="h-full min-h-0 overflow-hidden">
@@ -1502,7 +1502,7 @@ export function CollaborationSidebarView() {
     <SidebarPanel className="gap-1 p-1">
       <SidebarHeader className="relative z-[10020] bg-transparent p-0 backdrop-blur-none">
         <SidebarSectionSwitcher
-          items={collaborationTabs}
+          items={COLLABORATION_TABS}
           value={activeTab}
           onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
         />
