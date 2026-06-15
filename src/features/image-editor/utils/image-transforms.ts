@@ -3,7 +3,7 @@ import type {
   ImageOperationResult,
   ResizeOptions,
   RotationDegrees,
-} from "../models/image-operation.types";
+} from "../types/image-operation.types";
 import {
   calculateAspectRatioDimensions,
   createCanvas,

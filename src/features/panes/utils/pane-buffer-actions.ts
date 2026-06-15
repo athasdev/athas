@@ -1,4 +1,4 @@
-import { usePaneStore } from "../stores/pane-store";
+import { usePaneStore } from "../stores/pane.store";
 
 export function ensureBufferInPane(
   paneId: string,

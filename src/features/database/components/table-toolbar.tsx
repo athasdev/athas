@@ -1,14 +1,14 @@
 import {
-  ArrowClockwise,
-  ClipboardText,
-  Code,
-  Columns,
-  Database,
-  Download,
-  MinusCircle,
-  PlusCircle,
-  RadioButton,
-  Trash,
+  ArrowClockwiseIcon as ArrowClockwise,
+  ClipboardTextIcon as ClipboardText,
+  CodeIcon as Code,
+  ColumnsIcon as Columns,
+  DatabaseIcon as Database,
+  DownloadIcon as Download,
+  MinusCircleIcon as MinusCircle,
+  PlusCircleIcon as PlusCircle,
+  RadioButtonIcon as RadioButton,
+  TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -18,7 +18,7 @@ import type {
   DatabaseObjectKind,
   PostgresSubscriptionInfo,
   ViewMode,
-} from "../models/common.types";
+} from "../types/common.types";
 
 interface TableToolbarProps {
   fileName: string;

@@ -3,7 +3,7 @@
  * Uses compact shortcut syntax, automatically normalized per platform
  */
 
-import type { Keybinding } from "../types";
+import type { Keybinding } from "../types/keymaps.types";
 
 export const defaultKeymaps: Keybinding[] = [
   // File Operations

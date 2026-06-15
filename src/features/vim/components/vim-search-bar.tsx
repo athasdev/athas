@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { useVimSearchStore } from "@/features/vim/stores/vim-search";
-import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 import Input from "@/ui/input";
 
 export const VimSearchBar: React.FC = () => {

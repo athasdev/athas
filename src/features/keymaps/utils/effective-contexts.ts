@@ -1,4 +1,4 @@
-import type { KeymapContext } from "../types";
+import type { KeymapContext } from "../types/keymaps.types";
 
 interface EffectiveKeymapContextOptions {
   isEditorTarget: boolean;

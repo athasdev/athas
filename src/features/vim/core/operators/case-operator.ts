@@ -6,7 +6,7 @@
  */
 
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import type { EditorContext, Operator, VimRange } from "../core/types";
+import type { EditorContext, Operator, VimRange } from "../core/types/core.types";
 
 const applyCaseTransform = (
   range: VimRange,

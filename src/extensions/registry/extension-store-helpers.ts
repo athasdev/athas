@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AvailableExtension } from "./extension-store-types";
 import { extensionRegistry } from "./extension-registry";
 import type { ExtensionManifest } from "../types/extension-manifest";

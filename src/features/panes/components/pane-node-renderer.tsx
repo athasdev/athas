@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
-import { usePaneStore } from "../stores/pane-store";
-import type { PaneNode } from "../types/pane";
+import { usePaneStore } from "../stores/pane.store";
+import type { PaneNode } from "../types/pane.types";
 import { flattenPaneSplit, type FlatPaneEntry } from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
@@ -75,7 +75,7 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
 
   if (node.type === "group") {
     if (hiddenPaneId && node.id === hiddenPaneId) {
-      return <div className="h-full w-full bg-primary-bg" aria-hidden="true" />;
+      return <div className="size-full bg-primary-bg" aria-hidden="true" />;
     }
 
     return <PaneContainer pane={node} />;
@@ -89,7 +89,7 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
 
   return (
     <div
-      className={`flex h-full w-full ${isHorizontal ? "flex-row" : "flex-col"}`}
+      className={`flex size-full ${isHorizontal ? "flex-row" : "flex-col"}`}
       data-pane-split-container="true"
     >
       {flatEntries.map((entry, index) => {
@@ -108,7 +108,7 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
                 <PaneNodeRenderer node={entry.node} hiddenPaneId={hiddenPaneId} />
               ) : entry.node.type === "group" ? (
                 entry.node.id === hiddenPaneId ? (
-                  <div className="h-full w-full bg-primary-bg" aria-hidden="true" />
+                  <div className="size-full bg-primary-bg" aria-hidden="true" />
                 ) : (
                   <PaneContainer pane={entry.node} />
                 )

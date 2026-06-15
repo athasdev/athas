@@ -53,6 +53,8 @@ const CodeLensOverlay = forwardRef(
 
       const byLine = new Map<number, CodeLensItem[]>();
       for (const lens of lenses) {
+        if (!lens.command) continue;
+
         const top =
           resolvedTops.get(lens.line) ??
           EDITOR_CONSTANTS.EDITOR_PADDING_TOP + lens.line * lineHeight;
@@ -67,11 +69,17 @@ const CodeLensOverlay = forwardRef(
     if (visibleGroups.size === 0) return null;
 
     return (
-      <div ref={ref} className="absolute inset-0 overflow-hidden" style={{ zIndex: 4 }}>
+      <div
+        ref={ref}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        style={{ zIndex: 4 }}
+      >
         {Array.from(visibleGroups.entries()).map(([line, items]) => {
-          const top =
+          const top = Math.max(
+            0,
             (resolvedTops.get(line) ?? EDITOR_CONSTANTS.EDITOR_PADDING_TOP + line * lineHeight) -
-            lineHeight * 0.2;
+              lineHeight * 0.2,
+          );
           const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
 
           return (
@@ -89,7 +97,7 @@ const CodeLensOverlay = forwardRef(
                 <button
                   key={`${item.title}-${i}`}
                   type="button"
-                  className="mr-2 cursor-pointer border-none bg-transparent p-0 editor-font text-text-lighter/60 hover:text-text"
+                  className="pointer-events-auto mr-2 cursor-pointer border-none bg-transparent p-0 editor-font text-text-lighter/60 hover:text-text"
                   disabled={!item.command}
                   onClick={(event) => {
                     event.preventDefault();

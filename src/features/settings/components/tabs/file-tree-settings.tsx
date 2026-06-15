@@ -3,7 +3,7 @@ import {
   FILE_TREE_DENSITY_OPTIONS,
   type FileTreeDensity,
 } from "@/features/file-explorer/lib/file-tree-density";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
 import Select from "@/ui/select";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
@@ -93,6 +93,23 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.compactFoldersInFileTree}
             onChange={(checked) => updateSetting("compactFoldersInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Hide Root Folder"
+          description="Show project files directly at the top level"
+          onReset={() =>
+            updateSetting("hideRootFolderInFileTree", getDefaultSetting("hideRootFolderInFileTree"))
+          }
+          canReset={
+            settings.hideRootFolderInFileTree !== getDefaultSetting("hideRootFolderInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.hideRootFolderInFileTree}
+            onChange={(checked) => updateSetting("hideRootFolderInFileTree", checked)}
             size="sm"
           />
         </SettingRow>

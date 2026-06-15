@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
-import type { Decoration } from "@/features/editor/types/editor";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useEditorDecorationsStore } from "@/features/editor/stores/decorations.store";
+import type { Decoration } from "@/features/editor/types/editor.types";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiff, getFileDiffAgainstContent } from "../api/git-diff-api";
-import type { GitDiff } from "../types/git-types";
+import type { GitDiff } from "../types/git.types";
 
 interface GitGutterHookOptions {
   filePath: string;

@@ -1,4 +1,4 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   closeActiveEditorGroup,
   closeOtherEditorGroups,
@@ -7,7 +7,7 @@ import {
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
 } from "@/features/panes/utils/pane-command-actions";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   startGeneratedDebugSession,
   stopDebugSession,
@@ -80,6 +80,7 @@ import {
   openOutlineSidebar,
   promptGoToLine,
 } from "./navigation-command-actions";
+import { restartAllLanguageServers, stopAllLanguageServers } from "./lsp-command-actions";
 import {
   openCommandPalette,
   openDiagnosticsBuffer,
@@ -88,6 +89,7 @@ import {
   resetZoom,
   showFind,
   showFindReplace,
+  showNotifications,
   showThemeSelector,
   showWhatsNew,
   toggleAgentLauncher,
@@ -115,8 +117,8 @@ import {
   toggleFullscreenMac,
   toggleNativeMenuBar,
 } from "./window-command-actions";
-import { useKeymapStore } from "../stores/store";
-import type { Command } from "../types";
+import { useKeymapStore } from "../stores/keymaps.store";
+import type { Command } from "../types/keymaps.types";
 import { keymapRegistry } from "../utils/registry";
 
 const fileCommands: Command[] = [
@@ -252,6 +254,27 @@ const terminalCommands: Command[] = [
     keybinding: "cmd+d",
     execute: () => {
       window.dispatchEvent(new CustomEvent("terminal-split"));
+    },
+  },
+];
+
+const lspCommands: Command[] = [
+  {
+    id: "lsp.restartAllServers",
+    title: "Language Server: Restart All Servers",
+    category: "Language Server",
+    description: "Restart every active language server",
+    execute: () => {
+      void restartAllLanguageServers();
+    },
+  },
+  {
+    id: "lsp.stopAllServers",
+    title: "Language Server: Stop All Servers",
+    category: "Language Server",
+    description: "Stop every active language server",
+    execute: () => {
+      void stopAllLanguageServers();
     },
   },
 ];
@@ -509,6 +532,12 @@ const viewCommands: Command[] = [
     category: "View",
     keybinding: "cmd+shift+p",
     execute: openCommandPalette,
+  },
+  {
+    id: "workbench.showNotifications",
+    title: "Show Notifications",
+    category: "View",
+    execute: showNotifications,
   },
   {
     id: "workbench.agentLauncher",
@@ -998,6 +1027,7 @@ const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
   ...terminalCommands,
+  ...lspCommands,
   ...viewCommands,
   ...navigationCommands,
   ...paneCommands,

@@ -4,7 +4,7 @@ import {
   parseAndExecuteVimCommand,
   type VimCommand,
 } from "@/features/vim/stores/vim-commands";
-import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 import Command, {
   CommandEmpty,
   CommandHeader,

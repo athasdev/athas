@@ -273,6 +273,7 @@ pub struct AcpAgentStatus {
    pub session_active: bool,
    pub initialized: bool,
    pub session_id: Option<String>,
+   pub workspace_path: Option<String>,
    pub agent_capabilities: Option<AcpAgentCapabilities>,
 }
 

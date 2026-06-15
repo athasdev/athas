@@ -1,6 +1,6 @@
-import type { SessionConfigOption } from "@/features/ai/types/acp";
+import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { chatComposerControlClassName } from "../input/chat-composer-control-styles";
@@ -55,7 +55,6 @@ export function AcpConfigSelector({
       menuAnimated={false}
       tooltip={`Select ${option.name}`}
       aria-label={option.name}
-      title={option.description || option.name}
     />
   );
 }

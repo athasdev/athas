@@ -1,4 +1,4 @@
-import type { ImageDimensions } from "../models/image-operation.types";
+import type { ImageDimensions } from "../types/image-operation.types";
 
 /**
  * Load an image from a source URL or data URL

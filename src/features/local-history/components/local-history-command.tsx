@@ -1,15 +1,15 @@
 import {
-  ArrowCounterClockwise,
-  ArrowLeft,
-  ArrowsLeftRight,
-  ClockCounterClockwise,
-  Eye,
-  PencilSimple,
-  Plus,
-  Trash,
+  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowsLeftRightIcon as ArrowsLeftRight,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  EyeIcon as Eye,
+  PencilSimpleIcon as PencilSimple,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   deleteLocalHistoryEntry,
@@ -19,11 +19,11 @@ import {
   renameLocalHistoryEntry,
   type LocalHistoryEntry,
 } from "@/features/local-history/api/local-history-api";
-import { useLocalHistoryStore } from "@/features/local-history/store/local-history-store";
+import { useLocalHistoryStore } from "@/features/local-history/stores/local-history.store";
 import { createLocalHistoryDiff } from "@/features/local-history/utils/local-history-diff";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
@@ -154,7 +154,7 @@ export function LocalHistoryCommandContent({
   const createSnapshot = useCallback(async () => {
     if (!targetPath) return;
 
-    const label = await primitivePrompt("Name this local history entry:", {
+    const label = await showPromptDialog("Name this local history entry:", {
       title: "Create Local History Entry",
       placeholder: "Optional name",
       confirmLabel: "Create",
@@ -321,7 +321,7 @@ export function LocalHistoryCommandContent({
     async (entry: LocalHistoryEntry) => {
       if (!targetPath) return;
 
-      const label = await primitivePrompt("Name this local history entry:", {
+      const label = await showPromptDialog("Name this local history entry:", {
         title: "Rename Local History Entry",
         defaultValue: entry.label ?? "",
         placeholder: "Entry name",

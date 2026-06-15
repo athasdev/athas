@@ -1,15 +1,23 @@
-import { FileText, GitDiff, TerminalWindow as TerminalSquare } from "@phosphor-icons/react";
+import {
+  FileTextIcon as FileText,
+  GitDiffIcon as GitDiff,
+  TerminalWindowIcon as TerminalSquare,
+} from "@phosphor-icons/react";
 import { getAcpDiffOutputs, openAcpDiffOutput } from "@/features/ai/lib/acp-diff-output";
 import {
   getAcpTerminalOutputs,
   openAcpTerminalOutput,
 } from "@/features/ai/lib/acp-terminal-output";
-import type { ToolCall } from "@/features/ai/types/ai-chat";
-import type { AcpToolCallLocation, AcpToolCallStatus, AcpToolKind } from "@/features/ai/types/acp";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import type { ToolCall } from "@/features/ai/types/ai-chat.types";
+import type {
+  AcpToolCallLocation,
+  AcpToolCallStatus,
+  AcpToolKind,
+} from "@/features/ai/types/acp.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
 import { ChatActivityLine } from "../chat/chat-activity-line";
 

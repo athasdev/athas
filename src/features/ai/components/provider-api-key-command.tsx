@@ -1,13 +1,13 @@
 import {
-  CheckCircle,
-  MagnifyingGlass as Search,
-  Trash,
-  WarningCircle,
+  CheckCircleIcon as CheckCircle,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash,
+  WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

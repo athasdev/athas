@@ -1,8 +1,7 @@
-import { CaretLeft, Palette } from "@phosphor-icons/react";
+import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@phosphor-icons/react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
-import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
 import Badge from "@/ui/badge";
@@ -34,33 +33,22 @@ export const IconThemeSelectorContent = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [initialTheme, setInitialTheme] = useState(currentTheme);
   const [previewTheme, setPreviewTheme] = useState<string | null>(null);
-  const [themes, setThemes] = useState<IconThemeInfo[]>([]);
+  const registeredThemes = useRegisteredIconThemes();
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const activeThemeSnapshotRef = useRef<string | undefined>(undefined);
   const didCommitRef = useRef(false);
 
-  // Load icon themes from icon theme registry
-  useEffect(() => {
-    const loadThemes = () => {
-      const registryThemes = iconThemeRegistry.getAllThemes();
-      const themeInfos: IconThemeInfo[] = registryThemes.map(
-        (theme: IconThemeDefinition): IconThemeInfo => ({
-          id: theme.id,
-          name: theme.name,
-          description: theme.description,
-          icon: <Palette />,
-        }),
-      );
-      setThemes(themeInfos);
-    };
-
-    loadThemes();
-
-    // Listen for icon theme registry changes
-    const unsubscribe = iconThemeRegistry.onRegistryChange(loadThemes);
-    return unsubscribe;
-  }, []);
+  const themes = useMemo<IconThemeInfo[]>(
+    () =>
+      registeredThemes.map((theme) => ({
+        id: theme.id,
+        name: theme.name,
+        description: theme.description,
+        icon: <Palette />,
+      })),
+    [registeredThemes],
+  );
 
   // Filter themes based on query
   const filteredThemes = themes.filter(

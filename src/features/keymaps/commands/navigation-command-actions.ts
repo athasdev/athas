@@ -1,17 +1,17 @@
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import {
   calculateOffsetFromContentPosition,
   getLineTextFromContent,
   getLineTextsFromContent,
 } from "@/features/editor/utils/position";
-import { useReferencesStore } from "@/features/references/stores/references-store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
+import { useReferencesStore } from "@/features/references/stores/references.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 
 type LspNavigationLocation = {
@@ -115,7 +115,7 @@ async function goToActiveLspLocation(
 }
 
 export async function promptGoToLine(): Promise<void> {
-  const lineText = await primitivePrompt("Go to line", {
+  const lineText = await showPromptDialog("Go to line", {
     title: "Go to Line",
     placeholder: "Line number",
   });
@@ -211,21 +211,27 @@ export async function goToReferences(): Promise<void> {
     referenceLinesByFile.set(filePath, lineNumbers);
   }
 
-  for (const [filePath, lineNumbers] of referenceLinesByFile) {
-    let content = "";
-    const buffer = bufferStore.buffers.find((b) => b.path === filePath);
+  const lineContextEntries = await Promise.all(
+    Array.from(referenceLinesByFile, async ([filePath, lineNumbers]) => {
+      let content = "";
+      const buffer = bufferStore.buffers.find((b) => b.path === filePath);
 
-    if (buffer && "content" in buffer && typeof buffer.content === "string") {
-      content = buffer.content;
-    } else {
-      try {
-        content = await readFileContent(filePath);
-      } catch {
-        content = "";
+      if (buffer && "content" in buffer && typeof buffer.content === "string") {
+        content = buffer.content;
+      } else {
+        try {
+          content = await readFileContent(filePath);
+        } catch {
+          content = "";
+        }
       }
-    }
 
-    lineContextCache.set(filePath, getLineTextsFromContent(content, lineNumbers));
+      return [filePath, getLineTextsFromContent(content, lineNumbers)] as const;
+    }),
+  );
+
+  for (const [filePath, lines] of lineContextEntries) {
+    lineContextCache.set(filePath, lines);
   }
 
   const converted = references.map((ref) => {

@@ -4,7 +4,7 @@
  */
 
 import { logger } from "../../utils/logger";
-import type { LoadedParser } from "./types";
+import type { LoadedParser } from "../../types/wasm-parser/wasm-parser.types";
 
 interface CacheEntry {
   parser: LoadedParser;

@@ -1,11 +1,15 @@
-import { GlobeHemisphereWest as Globe, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  GlobeHemisphereWestIcon as Globe,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
-import type { GitRemote } from "../types/git-types";
+import type { GitRemote } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
 interface GitRemoteManagerProps {

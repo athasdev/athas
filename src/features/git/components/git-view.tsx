@@ -1,22 +1,22 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  Archive,
-  ClockCounterClockwise,
-  Download,
-  DotsThree as MoreHorizontal,
-  FolderSimpleStar,
-  GitBranch,
-  ArrowClockwise as RefreshCw,
-  Trash as Trash2,
-  Upload,
+  ArchiveIcon as Archive,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  DownloadIcon as Download,
+  DotsThreeIcon as MoreHorizontal,
+  FolderSimpleStarIcon as FolderSimpleStar,
+  GitBranchIcon as GitBranch,
+  ArrowClockwiseIcon as RefreshCw,
+  TrashIcon as Trash2,
+  UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveAlert } from "@/ui/primitive-dialog-service";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,
@@ -32,17 +32,24 @@ import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
 import { getGitLog } from "../api/git-commits-api";
-import { getCommitDiff, getFileDiff, getRefDiff, getStashDiff } from "../api/git-diff-api";
+import {
+  getCommitDiff,
+  getFileDiff,
+  getRefDiff,
+  getStashDiff,
+  getStatusDiffStats,
+} from "../api/git-diff-api";
 import { clearRepositoryDiscoveryCache, resolveRepositoryPath } from "../api/git-repo-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus, initRepository } from "../api/git-status-api";
-import { useRepositoryStore } from "../stores/git-repository-store";
-import { useGitStore } from "../stores/git-store";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitFile } from "../types/git-types";
+import { useRepositoryStore } from "../stores/git-repository.store";
+import { useGitStore } from "../stores/git.store";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitFile } from "../types/git.types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
+import { buildWorkingTreeMultiDiff } from "../utils/working-tree-multi-diff";
 import GitActionsMenu from "./git-actions-menu";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
@@ -73,7 +80,6 @@ type GitPaletteAction =
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
-  const MAX_STATUS_DIFF_STATS_FILES = 40;
   const { gitStatus, isLoadingGitData, isRefreshing, actions } = useGitStore();
   const stashes = useGitStore((state) => state.stashes);
   const { setIsLoadingGitData, setIsRefreshing } = actions;
@@ -125,7 +131,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       if (!resolvedRepoPath) {
         const message = "Selected folder is not inside a Git repository.";
         setRepoSelectionError(message);
-        await primitiveAlert(message, "Select Repository");
+        await showAlertDialog(message, "Select Repository");
         return;
       }
 
@@ -134,7 +140,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       console.error("Failed to select repository:", error);
       const message = "Failed to select repository";
       setRepoSelectionError(message);
-      await primitiveAlert(`${message}:\n${error}`, "Select Repository");
+      await showAlertDialog(`${message}:\n${error}`, "Select Repository");
     } finally {
       setIsSelectingRepo(false);
     }
@@ -364,28 +370,18 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     let isCancelled = false;
 
     const loadFileDiffStats = async () => {
-      const uniqueFiles = Array.from(
-        new Map(
-          visibleGitFiles.map((file) => [
-            `${file.staged ? "staged" : "unstaged"}:${file.path}`,
-            file,
-          ]),
-        ).values(),
+      const visibleFileKeys = new Set(
+        visibleGitFiles.map((file) => `${file.staged ? "staged" : "unstaged"}:${file.path}`),
       );
-      const filesToMeasure = uniqueFiles.slice(0, MAX_STATUS_DIFF_STATS_FILES);
-
-      const statsEntries = await Promise.all(
-        filesToMeasure.map(async (file) => {
-          const diff = await getFileDiff(activeRepoPath, file.path, file.staged);
-          const { additions, deletions } = diff
-            ? countDiffStats([diff])
-            : { additions: 0, deletions: 0 };
-          return [
-            `${file.staged ? "staged" : "unstaged"}:${file.path}`,
-            { additions, deletions },
-          ] as const;
-        }),
-      );
+      const statsEntries = (await getStatusDiffStats(activeRepoPath))
+        .map(
+          (stat) =>
+            [
+              `${stat.staged ? "staged" : "unstaged"}:${stat.file_path}`,
+              { additions: stat.additions, deletions: stat.deletions },
+            ] as const,
+        )
+        .filter(([key]) => visibleFileKeys.has(key));
 
       if (!isCancelled) {
         setFileDiffStats(Object.fromEntries(statsEntries));
@@ -419,7 +415,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       onFileSelect(fullPath, false);
     } catch (error) {
       console.error("Error opening file:", error);
-      await primitiveAlert(`Failed to open file ${filePath}:\n${error}`, "Open File");
+      await showAlertDialog(`Failed to open file ${filePath}:\n${error}`, "Open File");
     }
   };
 
@@ -499,34 +495,26 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         if (diffEntries.length > 0) {
           void (async () => {
-            const accumulatedDiffs = [{ fileKey: selectedFileKey, diff }];
+            const remainingDiffs = await Promise.all(
+              diffEntries.map(async ([fileKey, entry]) => {
+                const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
+                if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
+                  return null;
+                }
 
-            for (const [fileKey, entry] of diffEntries) {
-              const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
-              if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
-                continue;
-              }
+                return {
+                  fileKey,
+                  diff: nextDiff,
+                };
+              }),
+            );
 
-              accumulatedDiffs.push({
-                fileKey,
-                diff: nextDiff,
-              });
-
-              const stats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
-              useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
-                title: "Uncommitted Changes",
-                repoPath,
-                commitHash: "working-tree",
-                files: accumulatedDiffs.map((item) => item.diff),
-                totalFiles: accumulatedDiffs.length,
-                totalAdditions: stats.additions,
-                totalDeletions: stats.deletions,
-                fileKeys: accumulatedDiffs.map((item) => item.fileKey),
-                initiallyExpandedFileKey: selectedFileKey,
-                isLoading: true,
-              } satisfies MultiFileDiff);
-              await Promise.resolve();
-            }
+            const accumulatedDiffs = [
+              { fileKey: selectedFileKey, diff },
+              ...remainingDiffs.filter(
+                (entry): entry is NonNullable<typeof entry> => entry !== null,
+              ),
+            ];
 
             const allStats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
             useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
@@ -554,7 +542,43 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       }
     } catch (error) {
       console.error("Error getting file diff:", error);
-      await primitiveAlert(`Failed to get diff for ${filePath}:\n${error}`, "Git Diff");
+      await showAlertDialog(`Failed to get diff for ${filePath}:\n${error}`, "Git Diff");
+    }
+  };
+
+  const handleViewWorkingTreeDiff = async () => {
+    if (!activeRepoPath || !gitStatus) return;
+
+    try {
+      const multiDiff = await buildWorkingTreeMultiDiff({
+        repoPath: activeRepoPath,
+        status: {
+          ...gitStatus,
+          files: visibleGitFiles,
+        },
+      });
+
+      if (multiDiff.totalFiles === 0) {
+        await showAlertDialog("No diffable uncommitted changes.", "Git Diff");
+        return;
+      }
+
+      const displayName = `Uncommitted Changes (${multiDiff.totalFiles} file${multiDiff.totalFiles === 1 ? "" : "s"})`;
+      useBufferStore
+        .getState()
+        .actions.openBuffer(
+          "diff://working-tree/all-files",
+          displayName,
+          "",
+          false,
+          undefined,
+          true,
+          true,
+          multiDiff,
+        );
+    } catch (error) {
+      console.error("Error getting working tree diff:", error);
+      await showAlertDialog(`Failed to get working tree diff:\n${error}`, "Git Diff");
     }
   };
 
@@ -608,14 +632,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             );
         }
       } else {
-        await primitiveAlert(
+        await showAlertDialog(
           `No changes in this commit${filePath ? ` for file ${filePath}` : ""}.`,
           "Git Diff",
         );
       }
     } catch (error) {
       console.error("Error getting commit diff:", error);
-      await primitiveAlert(`Failed to get diff for commit ${commitHash}:\n${error}`, "Git Diff");
+      await showAlertDialog(`Failed to get diff for commit ${commitHash}:\n${error}`, "Git Diff");
     }
   };
 
@@ -653,11 +677,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             multiDiff,
           );
       } else {
-        await primitiveAlert("No changes in this stash.", "Git Diff");
+        await showAlertDialog("No changes in this stash.", "Git Diff");
       }
     } catch (error) {
       console.error("Error getting stash diff:", error);
-      await primitiveAlert(`Failed to get diff for stash@{${stashIndex}}:\n${error}`, "Git Diff");
+      await showAlertDialog(`Failed to get diff for stash@{${stashIndex}}:\n${error}`, "Git Diff");
     }
   };
 
@@ -694,11 +718,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             multiDiff,
           );
       } else {
-        await primitiveAlert(`No changes between ${baseRef} and ${targetRef}.`, "Git Diff");
+        await showAlertDialog(`No changes between ${baseRef} and ${targetRef}.`, "Git Diff");
       }
     } catch (error) {
       console.error("Error getting tag comparison:", error);
-      await primitiveAlert(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`, "Git Diff");
+      await showAlertDialog(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`, "Git Diff");
     }
   };
 
@@ -760,20 +784,37 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       <Button
         onClick={() => void handleInitializeRepository()}
         disabled={!canInitializeRepository || isInitializingRepo}
-        variant="accent"
+        variant="ghost"
         compact
-        className="mt-1.5 h-6 px-2 ui-text-xs"
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
             : "Open a folder before initializing Git"
         }
       >
-        <GitBranch />
-        {isInitializingRepo ? "Initializing..." : "Initialize Repository"}
+        <GitBranch weight="duotone" />
+        {isInitializingRepo ? "Initializing..." : "Initialize"}
       </Button>
     );
   };
+
+  const renderRepositoryEmptyActions = () => (
+    <div className="mt-1.5 flex items-center justify-center gap-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        compact
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
+        disabled={isSelectingRepo}
+        onClick={() => void handleSelectRepository()}
+      >
+        <FolderSimpleStar weight="duotone" />
+        {isSelectingRepo ? "Selecting..." : "Browse"}
+      </Button>
+      {renderInitializeRepositoryButton()}
+    </div>
+  );
 
   const renderGitActionsMenu = ({
     hasGitRepo,
@@ -851,17 +892,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
-          <SidebarEmptyActionState
-            className="h-full"
-            message="No repository selected"
-            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-            actionDisabled={isSelectingRepo}
-            onAction={() => void handleSelectRepository()}
-          >
-            {renderInitializeRepositoryButton()}
+          <SidebarEmptyActionState className="h-full" message="No repository selected">
+            {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             ) : null}
@@ -876,7 +911,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
           <SidebarEmptyState className="h-full">Loading Git status...</SidebarEmptyState>
@@ -890,17 +925,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return (
       <>
         <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent px-0 py-0 backdrop-blur-none">
+          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
             <div className="flex items-center gap-2">{renderActionsButton()}</div>
           </SidebarHeader>
-          <SidebarEmptyActionState
-            className="h-full"
-            message="Not a Git repository"
-            actionLabel={isSelectingRepo ? "Selecting..." : "Browse Repository"}
-            actionDisabled={isSelectingRepo}
-            onAction={() => void handleSelectRepository()}
-          >
-            {renderInitializeRepositoryButton()}
+          <SidebarEmptyActionState className="h-full" message="Not a Git repository">
+            {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
               <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
             ) : null}
@@ -918,36 +947,36 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
-        <SidebarHeader className="min-w-0 bg-transparent px-0 py-0 backdrop-blur-none">
-          <GitProjectSelector
-            className="min-w-0 flex-1"
-            onRepositoryChange={() => setRepoSelectionError(null)}
-          />
-
-          <div className="flex shrink-0 items-center gap-1">
-            <SidebarHeaderIconButton
-              onClick={handleManualRefresh}
-              disabled={isLoadingGitData || isRefreshing}
-              className="disabled:opacity-50"
-              tooltip="Refresh"
-              aria-label="Refresh git status"
-            >
-              {isLoadingGitData || isRefreshing ? (
-                <LoadingIndicator label="Refreshing git status" compact />
-              ) : (
-                <RefreshCw />
-              )}
-            </SidebarHeaderIconButton>
-            {renderActionsButton()}
-          </div>
-        </SidebarHeader>
-
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <SidebarSectionSwitcher
             items={gitTabs}
             value={activeTab}
             onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
           />
+
+          <SidebarHeader className="min-w-0 justify-between bg-transparent p-0 backdrop-blur-none">
+            <GitProjectSelector
+              className="min-w-0 max-w-[calc(100%-4.5rem)] shrink"
+              onRepositoryChange={() => setRepoSelectionError(null)}
+            />
+
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <SidebarHeaderIconButton
+                onClick={handleManualRefresh}
+                disabled={isLoadingGitData || isRefreshing}
+                className="disabled:opacity-50"
+                tooltip="Refresh"
+                aria-label="Refresh git status"
+              >
+                {isLoadingGitData || isRefreshing ? (
+                  <LoadingIndicator label="Refreshing git status" compact />
+                ) : (
+                  <RefreshCw />
+                )}
+              </SidebarHeaderIconButton>
+              {renderActionsButton()}
+            </div>
+          </SidebarHeader>
 
           <SidebarSectionPager
             className="flex-1"
@@ -972,8 +1001,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     isCollapsed={false}
                     onToggle={() => {}}
                     onViewCommitDiff={handleViewCommitDiff}
+                    onViewWorkingTreeDiff={handleViewWorkingTreeDiff}
                     repoPath={activeRepoPath}
                     showHeader={false}
+                    uncommittedFiles={visibleGitFiles}
+                    currentBranch={gitStatus.branch}
                   />
                 ),
               },

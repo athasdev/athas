@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { FileEntry } from "@/features/file-system/types/app";
-import type { GitFile, GitStatus } from "@/features/git/types/git-types";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { GitFile, GitStatus } from "@/features/git/types/git.types";
 import {
   createFileTreeGitStatusLookup,
   getFileTreeEntryGitStatusDecoration,

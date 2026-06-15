@@ -1,4 +1,4 @@
-import type { SessionConfigOption } from "@/features/ai/types/acp";
+import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 
 export type SessionConfigOptionCategory = "model" | "mode" | "thought_level" | "other";
 

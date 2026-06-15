@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitBlame } from "../types/git-types";
+import type { GitBlame } from "../types/git.types";
 import { isNotGitRepositoryError, resolveRepositoryForFile } from "./git-repo-api";
 
 export const getGitBlame = async (rootPath: string, filePath: string): Promise<GitBlame | null> => {

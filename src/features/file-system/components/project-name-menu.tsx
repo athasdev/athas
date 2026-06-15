@@ -1,15 +1,15 @@
 import {
-  Clock as ClockIcon,
-  FolderPlus,
-  FolderOpen,
-  SidebarSimple as PanelTopClose,
+  ClockIcon,
+  FolderPlusIcon as FolderPlus,
+  FolderOpenIcon as FolderOpen,
+  SidebarSimpleIcon as PanelTopClose,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
-import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { RecentFolder } from "@/features/file-system/types/recent-folders";
+import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
 import { MAX_RECENT_PROJECTS } from "@/features/file-system/utils/recent-folders";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const ProjectNameMenu = () => {

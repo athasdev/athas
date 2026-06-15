@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiff } from "../api/git-diff-api";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff } from "../types/git.types";
 import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
 
 interface UseDiffDataReturn {

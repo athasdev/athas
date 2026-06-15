@@ -8,7 +8,7 @@ import {
   setActivePaneBuffer,
   splitPane,
 } from "../utils/pane-tree";
-import type { PaneGroup, PaneNode } from "../types/pane";
+import type { PaneGroup, PaneNode } from "../types/pane.types";
 
 function createNamedPane(id: string): PaneGroup {
   return {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { useRepositoryStore } from "../stores/git-repository-store";
+import { useRepositoryStore } from "../stores/git-repository.store";
 
 describe("git repository store", () => {
   afterEach(() => {

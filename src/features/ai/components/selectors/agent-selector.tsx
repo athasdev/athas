@@ -1,21 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CaretDown as ChevronDown,
-  Plus,
-  MagnifyingGlass as Search,
-  SlidersHorizontal as Settings2,
+  CaretDownIcon as ChevronDown,
+  PlusIcon as Plus,
+  MagnifyingGlassIcon as Search,
+  SlidersHorizontalIcon as Settings2,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { AgentConfig } from "@/features/ai/types/acp";
-import type { AgentType } from "@/features/ai/types/ai-chat";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { AgentConfig } from "@/features/ai/types/acp.types";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { LoadingIndicator } from "@/ui/loading";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { PaneIconButton } from "@/ui/pane";
+import { PaneIconButton } from "@/features/panes/components/pane-chrome";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import {

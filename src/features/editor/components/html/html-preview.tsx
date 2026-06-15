@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { buildHtmlPreviewDocument } from "./html-preview-document";
 
 export function HtmlPreview() {
@@ -42,11 +42,11 @@ export function HtmlPreview() {
   }
 
   return (
-    <div ref={containerRef} className="html-preview h-full w-full bg-white">
+    <div ref={containerRef} className="html-preview size-full bg-white">
       <iframe
         title="HTML Preview"
         srcDoc={iframeContent}
-        className="h-full w-full border-none"
+        className="size-full border-none"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
       />
     </div>

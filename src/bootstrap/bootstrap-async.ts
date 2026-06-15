@@ -3,7 +3,7 @@ import { initializeExtensionStore } from "@/extensions/registry/extension-store"
 import { initializeThemeSystem } from "@/extensions/themes/theme-initializer";
 import { initializeUIExtensions } from "@/extensions/ui/services/ui-extension-initializer";
 import { initializeWasmTokenizer } from "@/features/editor/lib/wasm-parser/wasm-parser-api";
-import { initializeSettingsStore } from "@/features/settings/store";
+import { initializeSettingsStore } from "@/features/settings/stores/settings.store";
 import { initializeTelemetry } from "@/features/telemetry/services/telemetry";
 import { reportBootstrapResults } from "./bootstrap-errors";
 

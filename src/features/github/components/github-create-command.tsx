@@ -1,12 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, Plus, Sparkle } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  PlusIcon as Plus,
+  SparkleIcon as Sparkle,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { getBranches } from "@/features/git/api/git-branches-api";
 import { getRefDiff } from "@/features/git/api/git-diff-api";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
-import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import Command, {
   CommandEmpty,
   CommandFooter,
@@ -20,7 +24,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import Textarea from "@/ui/textarea";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import type { IssueListItem, Label, PullRequest, WorkflowListItem } from "../types/github";
+import type { IssueListItem, Label, PullRequest, WorkflowListItem } from "../types/github.types";
 
 export type GitHubCreateKind = "pull-request" | "issue" | "action";
 

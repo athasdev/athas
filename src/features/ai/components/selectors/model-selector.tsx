@@ -1,4 +1,8 @@
-import { Check, Lock, WarningCircle } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  LockIcon as Lock,
+  WarningCircleIcon as WarningCircle,
+} from "@phosphor-icons/react";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
@@ -6,10 +10,10 @@ import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { getProviderById } from "@/features/ai/types/providers";
-import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { getProviderById } from "@/features/ai/types/providers.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -18,7 +22,6 @@ import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
 } from "../input/chat-composer-control-styles";
-import { getSelectorDropdownWidth } from "./selector-dropdown-width";
 
 type SelectorModel = {
   id: string;
@@ -209,29 +212,6 @@ export function ModelSelector({
     }
     return indexes;
   }, [canUseCustomQueryModel, filteredModels, isPro]);
-  const dropdownWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: canUseCustomQueryModel
-          ? [...filteredModels.map((model) => model.name), customQueryModelId]
-          : filteredModels.map((model) => model.name),
-        min: isComposer ? 156 : 160,
-        max: isComposer ? 260 : 300,
-        chrome: 58,
-      }),
-    [canUseCustomQueryModel, customQueryModelId, filteredModels, isComposer],
-  );
-  const openTriggerWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: [currentModelName],
-        min: isComposer ? 120 : 180,
-        max: isComposer ? 176 : 260,
-        chrome: isComposer ? 24 : 36,
-      }),
-    [currentModelName, isComposer],
-  );
-
   useEffect(() => {
     if (!isOpen) return;
     const currentIndex = filteredModels.findIndex((model) => model.id === modelId);
@@ -249,7 +229,7 @@ export function ModelSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[176px]")
+      ? chatComposerControlClassName("max-w-[176px]")
       : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
@@ -310,31 +290,36 @@ export function ModelSelector({
   return (
     <div className={className}>
       {isOpen ? (
-        <input
+        <div
           ref={(node) => {
-            triggerInputRef.current = node;
             triggerRef.current = node;
           }}
-          type="text"
-          value={query}
-          disabled={disabled}
-          placeholder={currentModelName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
-          aria-label="Search AI models"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={handleTriggerInputKeyDown}
           onMouseDown={(event) => event.stopPropagation()}
+          onClick={() => triggerInputRef.current?.focus()}
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
               compact: true,
             }),
             triggerClass,
-            "cursor-text text-left outline-none placeholder:text-text",
+            "relative cursor-text",
           )}
-          style={{ width: openTriggerWidth }}
-        />
+        >
+          <span className="invisible block min-w-0 truncate text-text">{currentModelName}</span>
+          <input
+            ref={triggerInputRef}
+            type="text"
+            value={query}
+            disabled={disabled}
+            placeholder={currentModelName}
+            aria-label="Search AI models"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleTriggerInputKeyDown}
+            className="ui-font absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+          />
+        </div>
       ) : (
         <Button
           ref={(node) => {
@@ -351,7 +336,7 @@ export function ModelSelector({
           onClick={() => setOpen(!isOpen)}
           className={triggerClass}
         >
-          <span className="min-w-0 truncate text-text">{currentModelName}</span>
+          <span className="block min-w-0 truncate text-text">{currentModelName}</span>
         </Button>
       )}
 
@@ -366,7 +351,9 @@ export function ModelSelector({
             : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
-        style={{ maxHeight: "280px", minWidth: 0, width: dropdownWidth }}
+        style={{ maxHeight: "280px", minWidth: 0 }}
+        matchAnchorWidth
+        anchorMinWidth={isComposer ? 260 : 0}
         animated={!isComposer}
       >
         <div

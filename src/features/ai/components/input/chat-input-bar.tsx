@@ -1,31 +1,33 @@
 import {
-  BookOpen,
-  Command as CommandIcon,
-  ArrowUp,
-  Key,
-  Microphone as Mic,
-  Stop,
-  X,
+  BookOpenIcon as BookOpen,
+  CommandIcon,
+  ArrowUpIcon as ArrowUp,
+  DatabaseIcon as Database,
+  FileTextIcon as FileText,
+  KeyIcon as Key,
+  MicrophoneIcon as Mic,
+  StopIcon as Stop,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
 import { AI_CHAT_INSERT_SKILL_EVENT } from "@/features/ai/lib/skill-events";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { InlineDropdownPosition } from "@/features/ai/store/types";
-import type { AIChatSkill } from "@/features/ai/types/skills";
-import type { SlashCommand } from "@/features/ai/types/acp";
-import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat";
-import type { FileEntry } from "@/features/file-system/types/app";
-import { getProviderById } from "@/features/ai/types/providers";
-import { openSidebarResourceBuffer } from "@/features/sidebar-drag/open-sidebar-resource";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { InlineDropdownPosition } from "@/features/ai/types/ai-chat-store.types";
+import type { AIChatSkill } from "@/features/ai/types/skills.types";
+import type { SlashCommand } from "@/features/ai/types/acp.types";
+import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
+import type { FileEntry } from "@/features/file-system/types/app.types";
+import { getProviderById } from "@/features/ai/types/providers.types";
+import { openSidebarResourceBuffer } from "@/features/sidebar-drag/utils/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   SIDEBAR_RESOURCE_DROP_ON_AI_EVENT,
   type SidebarDragResource,
-} from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
+} from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
@@ -520,6 +522,27 @@ const AIChatInputBar = memo(function AIChatInputBar({
     () => allProjectFiles.filter((file) => !file.isDir && !shouldIgnoreFile(file.path)),
     [allProjectFiles],
   );
+
+  const selectedContextItems = useMemo(() => {
+    const bufferSelections = buffers
+      .filter((buffer) => buffer.type !== "agent" && selectedBufferIds.has(buffer.id))
+      .map((buffer) => ({
+        type: "buffer" as const,
+        id: buffer.id,
+        name: buffer.name,
+        databaseType: buffer.type === "database" ? buffer.databaseType : undefined,
+        isDirty: buffer.type === "editor" && buffer.isDirty,
+      }));
+
+    const fileSelections = Array.from(selectedFilesPaths).map((filePath) => ({
+      type: "file" as const,
+      id: filePath,
+      name: filePath.split("/").pop() || "Unknown",
+      path: filePath,
+    }));
+
+    return [...bufferSelections, ...fileSelections];
+  }, [buffers, selectedBufferIds, selectedFilesPaths]);
 
   // ResizeObserver to track container size changes
   useEffect(() => {
@@ -1341,17 +1364,16 @@ const AIChatInputBar = memo(function AIChatInputBar({
             <ContextSelector
               buffers={buffers}
               selectedBufferIds={selectedBufferIds}
-              selectedFilesPaths={selectedFilesPaths}
               onToggleBuffer={toggleBufferSelection}
               onToggleFile={toggleFileSelection}
               isOpen={isContextDropdownOpen}
+              anchorRef={contextDropdownRef}
               onToggleOpen={() => {
                 if (!isContextDropdownOpen) {
                   closeInlineMenus();
                 }
                 setIsContextDropdownOpen(!isContextDropdownOpen);
               }}
-              selectedItemsClassName="max-h-14 pr-1"
             />
           </div>
 
@@ -1416,9 +1438,115 @@ const AIChatInputBar = memo(function AIChatInputBar({
             </Button>
           </div>
         </div>
+
+        {selectedContextItems.length > 0 ? (
+          <div
+            className="custom-scrollbar-thin flex max-h-12 min-w-0 flex-wrap items-center gap-1 overflow-y-auto overflow-x-hidden px-2 pb-2"
+            role="list"
+            aria-label="Selected context"
+          >
+            {selectedContextItems.map((item) => (
+              <div
+                key={`selected-${item.type}-${item.id}`}
+                className="group relative ui-font ui-text-xs flex h-6 min-w-0 max-w-[150px] shrink-0 select-none items-center gap-1.5 overflow-hidden rounded-md bg-hover/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:bg-hover/70 focus:bg-hover/70 focus:outline-none focus:ring-1 focus:ring-border-strong/35"
+                data-context-chip
+                role="listitem"
+                tabIndex={0}
+                aria-label={`${item.name}. Press Delete to remove from context.`}
+                title={item.type === "file" ? item.path : item.name}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                    event.preventDefault();
+                    const chips = Array.from(
+                      event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                        "[data-context-chip]",
+                      ) || [],
+                    );
+                    const currentIndex = chips.indexOf(event.currentTarget);
+                    const nextIndex =
+                      event.key === "ArrowLeft"
+                        ? Math.max(currentIndex - 1, 0)
+                        : Math.min(currentIndex + 1, chips.length - 1);
+                    chips[nextIndex]?.focus();
+                    return;
+                  }
+
+                  if (event.key === "Backspace" || event.key === "Delete") {
+                    event.preventDefault();
+                    const chipContainer = event.currentTarget.parentElement;
+                    const chips = Array.from(
+                      chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
+                    );
+                    const currentIndex = chips.indexOf(event.currentTarget);
+                    const nextFocusIndex = Math.max(0, Math.min(currentIndex, chips.length - 2));
+                    if (item.type === "buffer") {
+                      toggleBufferSelection(item.id);
+                    } else {
+                      toggleFileSelection(item.id);
+                    }
+                    requestAnimationFrame(() => {
+                      const nextChips = Array.from(
+                        chipContainer?.querySelectorAll<HTMLElement>("[data-context-chip]") || [],
+                      );
+                      const nextChip = nextChips[nextFocusIndex];
+                      if (nextChip) {
+                        nextChip.focus();
+                        return;
+                      }
+                      contextDropdownRef.current
+                        ?.querySelector<HTMLButtonElement>("button")
+                        ?.focus();
+                    });
+                  }
+                }}
+              >
+                <span className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-hover/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
+                {item.type === "buffer" ? (
+                  item.databaseType ? (
+                    <Database className="size-3 shrink-0 text-text-lighter/80" />
+                  ) : (
+                    <FileText className="size-3 shrink-0 text-text-lighter/80" />
+                  )
+                ) : (
+                  <FileText className="size-3 shrink-0 text-accent" />
+                )}
+                <span
+                  className={cn(
+                    "min-w-0 truncate leading-[1.35]",
+                    item.type === "buffer" ? "text-text/90" : "text-accent",
+                  )}
+                >
+                  {item.name}
+                </span>
+                {item.type === "buffer" && item.isDirty && (
+                  <span
+                    className="size-1.5 shrink-0 rounded-full bg-warning"
+                    title="Unsaved changes"
+                  />
+                )}
+                <Button
+                  onClick={() => {
+                    if (item.type === "buffer") {
+                      toggleBufferSelection(item.id);
+                    } else {
+                      toggleFileSelection(item.id);
+                    }
+                  }}
+                  variant="ghost"
+                  compact
+                  className="absolute right-0.5 size-5 rounded-md bg-hover/80 p-0 text-text opacity-0 shadow-sm hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
+                  aria-label={`Remove ${item.name} from context`}
+                  tabIndex={0}
+                >
+                  <X size={11} weight="bold" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </SidebarComposerBody>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5 pb-0.5">
         {isAcpMetadataLoading ? (
           <ChatLoadingIndicator label="loading session" compact />
         ) : (

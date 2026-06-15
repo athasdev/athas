@@ -1,28 +1,28 @@
 import {
-  CaretDoubleUp,
-  Clipboard,
-  ClockCounterClockwise,
-  Copy,
-  PencilSimple as Edit,
-  Eye,
-  FilePlus,
-  FileText,
-  FolderOpen,
-  FolderPlus,
-  Image as ImageIcon,
-  Info,
-  Link,
-  ArrowClockwise as RefreshCw,
-  Scissors,
-  MagnifyingGlass as Search,
-  TerminalWindow as Terminal,
-  Trash,
-  X,
-  Upload,
-  Warning,
+  CaretDoubleUpIcon as CaretDoubleUp,
+  ClipboardIcon as Clipboard,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  CopyIcon as Copy,
+  PencilSimpleIcon as Edit,
+  EyeIcon as Eye,
+  FilePlusIcon as FilePlus,
+  FileTextIcon as FileText,
+  FolderOpenIcon as FolderOpen,
+  FolderPlusIcon as FolderPlus,
+  ImageIcon,
+  InfoIcon as Info,
+  LinkIcon as Link,
+  ArrowClockwiseIcon as RefreshCw,
+  ScissorsIcon as Scissors,
+  MagnifyingGlassIcon as Search,
+  TerminalWindowIcon as Terminal,
+  TrashIcon as Trash,
+  XIcon as X,
+  UploadIcon as Upload,
+  WarningIcon as Warning,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   buildEnvTemplateContent,
@@ -30,9 +30,9 @@ import {
   isEnvFileName,
 } from "@/features/file-explorer/lib/env-template";
 import { openLocalHistoryForPath } from "@/features/local-history/utils/open-local-history";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
-import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree-store";
-import type { ContextMenuState } from "@/features/file-system/types/app";
+import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
+import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
+import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import Dialog from "@/ui/dialog";
@@ -48,7 +48,7 @@ interface UseFileExplorerContextMenuOptions {
   ) => void | string | Promise<string | undefined>;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onGenerateImage?: (directoryPath: string) => void;
-  onRefreshDirectory?: (path: string) => void;
+  onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
@@ -157,7 +157,7 @@ export function useFileExplorerContextMenu({
           bufferStore.actions.updateBufferContent(createdBuffer.id, templateContent, false);
         }
 
-        onRefreshDirectory?.(directoryPath);
+        onRefreshDirectory?.(directoryPath, { force: true });
         toast.success(`Created ${targetFileName}`);
       } catch (error) {
         console.error("Failed to create env template file:", error);
@@ -223,7 +223,7 @@ export function useFileExplorerContextMenu({
           id: "refresh",
           label: "Refresh",
           icon: <RefreshCw />,
-          onClick: () => onRefreshDirectory?.(contextMenu.path),
+          onClick: () => onRefreshDirectory?.(contextMenu.path, { force: true }),
         },
         {
           id: "add-folder-to-workspace",
@@ -407,7 +407,7 @@ export function useFileExplorerContextMenu({
         icon: <Clipboard />,
         onClick: () => {
           clipboardActions.paste(contextMenu.path).then(() => {
-            onRefreshDirectory?.(contextMenu.path);
+            onRefreshDirectory?.(contextMenu.path, { force: true });
           });
         },
       });

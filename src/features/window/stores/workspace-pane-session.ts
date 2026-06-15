@@ -1,12 +1,12 @@
 import { BOTTOM_PANE_ID, ROOT_PANE_ID } from "@/features/panes/constants/pane";
-import type { PaneLayoutSnapshot } from "@/features/panes/stores/pane-store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import type { PaneGroup, PaneNode, PaneSplit } from "@/features/panes/types/pane";
+import type { PaneLayoutSnapshot } from "@/features/panes/stores/pane.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import type { PaneGroup, PaneNode, PaneSplit } from "@/features/panes/types/pane.types";
 import { findPaneGroup, getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import type {
   ProjectPaneSession,
   ProjectPaneSessionNode,
-} from "@/features/window/stores/session-store";
+} from "@/features/window/stores/session.store";
 
 export const createEmptyPaneNode = (id: string): PaneGroup => ({
   id,

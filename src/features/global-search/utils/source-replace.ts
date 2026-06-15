@@ -1,4 +1,4 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { buildSearchRegex } from "@/features/editor/utils/search";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";
@@ -108,25 +108,30 @@ export async function replaceAllInSources(
   const regex = buildSearchRegex(query, options);
   if (!regex) return 0;
 
-  let replacedCount = 0;
+  const replaceCounts = await Promise.all(
+    filePaths.map(async (filePath) => {
+      const source = await readSource(filePath);
+      let matchCount = 0;
+      const fileRegex = buildSearchRegex(query, options);
+      if (!fileRegex) return 0;
+      const nextContent = source.content.replace(fileRegex, (...args) => {
+        matchCount++;
+        const matchText = args[0] as string;
+        return options.useRegex
+          ? matchText.replace(
+              new RegExp(fileRegex.source, fileRegex.flags.replace(/g/g, "")),
+              replacement,
+            )
+          : replacement;
+      });
 
-  for (const filePath of filePaths) {
-    const source = await readSource(filePath);
-    let matchCount = 0;
-    regex.lastIndex = 0;
-    const nextContent = source.content.replace(regex, (...args) => {
-      matchCount++;
-      const matchText = args[0] as string;
-      return options.useRegex
-        ? matchText.replace(new RegExp(regex.source, regex.flags.replace(/g/g, "")), replacement)
-        : replacement;
-    });
+      if (matchCount > 0 && nextContent !== source.content) {
+        await writeSource(filePath, source.bufferId, nextContent);
+        return matchCount;
+      }
+      return 0;
+    }),
+  );
 
-    if (matchCount > 0 && nextContent !== source.content) {
-      await writeSource(filePath, source.bufferId, nextContent);
-      replacedCount += matchCount;
-    }
-  }
-
-  return replacedCount;
+  return replaceCounts.reduce((total, count) => total + count, 0);
 }

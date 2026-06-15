@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 import { getProviderIdForCommand, invokeDatabaseProvider } from "./database-provider-sidecar";
 
 vi.mock("@tauri-apps/api/core", () => ({

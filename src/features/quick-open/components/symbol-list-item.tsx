@@ -1,13 +1,13 @@
 import {
-  SquaresFour as Blocks,
-  Cube as Box,
-  BracketsCurly as Braces,
-  Code as Code2,
-  Hash,
-  Stack as Layers,
-  TextT as LetterText,
-  PuzzlePiece as Puzzle,
-  Function as Variable,
+  SquaresFourIcon as Blocks,
+  CubeIcon as Box,
+  BracketsCurlyIcon as Braces,
+  CodeIcon as Code2,
+  HashIcon as Hash,
+  StackIcon as Layers,
+  TextTIcon as LetterText,
+  PuzzlePieceIcon as Puzzle,
+  FunctionIcon as Variable,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { CommandItem } from "@/ui/command";

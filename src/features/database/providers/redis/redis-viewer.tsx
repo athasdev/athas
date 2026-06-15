@@ -1,10 +1,10 @@
 import {
-  Clock,
-  Key,
-  ArrowClockwise as RefreshCw,
-  MagnifyingGlass as Search,
-  HardDrives as Server,
-  Trash as Trash2,
+  ClockIcon as Clock,
+  KeyIcon as Key,
+  ArrowClockwiseIcon as RefreshCw,
+  MagnifyingGlassIcon as Search,
+  HardDrivesIcon as Server,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
@@ -12,7 +12,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
-import { useRedisStore } from "./stores/redis-store";
+import { useRedisStore } from "./stores/redis.store";
 
 const TYPE_COLORS: Record<string, string> = {
   string: "text-accent",
@@ -115,7 +115,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
             <Search className="text-text-lighter" />
             <Input
-              className="border-0 bg-transparent px-0 py-0 focus:border-transparent focus:ring-0"
+              className="border-0 bg-transparent p-0 focus:border-transparent focus:ring-0"
               placeholder="Pattern (e.g. user:*)"
               value={patternInput}
               onChange={(e) => setPatternInput(e.target.value)}

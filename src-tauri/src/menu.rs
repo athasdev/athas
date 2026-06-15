@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use tauri::menu::{MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
+use tauri::menu::{
+   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, PredefinedMenuItem, Submenu,
+   SubmenuBuilder, WINDOW_SUBMENU_ID,
+};
 use tauri_plugin_store::StoreExt;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,7 +34,7 @@ pub async fn toggle_menu_bar(
    app: crate::app_runtime::AppHandle,
    toggle: Option<bool>,
 ) -> Result<(), String> {
-   #[cfg(target_os = "windows")]
+   #[cfg(any(target_os = "windows", target_os = "linux"))]
    {
       let _ = toggle;
 
@@ -45,11 +48,11 @@ pub async fn toggle_menu_bar(
          let _ = store.save();
       }
 
-      log::info!("Native menu bar is disabled on Windows");
+      log::info!("Native menu bar is disabled on this platform");
       return Ok(());
    }
 
-   #[cfg(not(target_os = "windows"))]
+   #[cfg(not(any(target_os = "windows", target_os = "linux")))]
    {
       let is_menu_present = app.menu().is_some();
       let should_show_menu = match toggle {
@@ -107,6 +110,58 @@ fn build_theme_submenu<R: tauri::Runtime>(
    theme_builder.build()
 }
 
+#[cfg(target_os = "macos")]
+fn build_app_submenu<R: tauri::Runtime>(
+   app: &tauri::AppHandle<R>,
+) -> Result<Submenu<R>, tauri::Error> {
+   let package_info = app.package_info();
+   let config = app.config();
+   let about_metadata = AboutMetadata {
+      name: Some(package_info.name.clone()),
+      version: Some(package_info.version.to_string()),
+      copyright: config.bundle.copyright.clone(),
+      authors: config
+         .bundle
+         .publisher
+         .clone()
+         .map(|publisher| vec![publisher]),
+      ..Default::default()
+   };
+
+   SubmenuBuilder::new(app, "Athas")
+      .about_with_text("About Athas", Some(about_metadata))
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "open_settings",
+         "Settings...",
+         true,
+         Some("Cmd+,"),
+      )?)
+      .item(&MenuItem::with_id(
+         app,
+         "check_updates",
+         "Check for Updates...",
+         true,
+         None::<String>,
+      )?)
+      .separator()
+      .services()
+      .separator()
+      .hide_with_text("Hide Athas")
+      .hide_others()
+      .show_all()
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "quit_app",
+         "Quit Athas",
+         true,
+         Some("Cmd+Q"),
+      )?)
+      .build()
+}
+
 pub fn create_menu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {
@@ -120,7 +175,7 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
    let close_tab_accelerator = close_tab_accelerator();
 
    // Unified File menu for all platforms - clean and consistent
-   let file_menu = SubmenuBuilder::new(app, "File")
+   let file_menu_builder = SubmenuBuilder::new(app, "File")
       .item(&MenuItem::with_id(
          app,
          "command_new_tab",
@@ -200,7 +255,13 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "Reopen Closed Tab",
          true,
          Some("CmdOrCtrl+Shift+T"),
-      )?)
+      )?);
+
+   #[cfg(target_os = "macos")]
+   let file_menu = file_menu_builder.build()?;
+
+   #[cfg(not(target_os = "macos"))]
+   let file_menu = file_menu_builder
       .separator()
       .item(&MenuItem::with_id(
          app,
@@ -508,7 +569,23 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       )?)
       .build()?;
 
-   // Tools menu
+   #[cfg(target_os = "macos")]
+   let tools_menu = SubmenuBuilder::new(app, "Tools")
+      .text("command_connect_database", "Connect to Database")
+      .separator()
+      .item(&MenuItem::with_id(
+         app,
+         "open_web_inspector",
+         "Web Inspector",
+         cfg!(any(debug_assertions, feature = "devtools")),
+         Some("CmdOrCtrl+Option+I"),
+      )?)
+      .separator()
+      .text("open_extensions", "Extensions")
+      .text("command_keyboard_shortcuts", "Keyboard Shortcuts")
+      .build()?;
+
+   #[cfg(not(target_os = "macos"))]
    let tools_menu = SubmenuBuilder::new(app, "Tools")
       .text("command_connect_database", "Connect to Database")
       .separator()
@@ -525,29 +602,31 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .text("command_keyboard_shortcuts", "Keyboard Shortcuts")
       .build()?;
 
-   // Window menu - cross-platform window management
+   // Window menu
+   #[cfg(target_os = "macos")]
+   let window_menu = SubmenuBuilder::with_id(app, WINDOW_SUBMENU_ID, "Window")
+      .minimize()
+      .maximize()
+      .fullscreen()
+      .separator()
+      .item(&PredefinedMenuItem::close_window(app, None)?)
+      .build()?;
+
+   #[cfg(not(target_os = "macos"))]
    let window_menu = SubmenuBuilder::new(app, "Window")
       .item(&MenuItem::with_id(
          app,
          "minimize_window",
          "Minimize",
          true,
-         if cfg!(target_os = "macos") {
-            Some("Cmd+M")
-         } else {
-            Some("Alt+F9")
-         },
+         Some("Alt+F9"),
       )?)
       .item(&MenuItem::with_id(
          app,
          "maximize_window",
          "Maximize",
          true,
-         if cfg!(target_os = "macos") {
-            Some("Cmd+Option+Z")
-         } else {
-            Some("Alt+F10")
-         },
+         Some("Alt+F10"),
       )?)
       .separator()
       .item(&MenuItem::with_id(
@@ -563,51 +642,75 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "toggle_fullscreen",
          "Toggle Fullscreen",
          true,
-         if cfg!(target_os = "macos") {
-            Some("Cmd+Ctrl+F")
-         } else {
-            Some("F11")
-         },
+         Some("F11"),
       )?)
       .build()?;
 
-   // Help menu
-   let help_menu = SubmenuBuilder::new(app, "Help")
+   let help_menu_builder = SubmenuBuilder::with_id(app, HELP_SUBMENU_ID, "Help")
       .text("documentation", "Documentation")
       .text("command_help_keyboard_shortcuts", "Keyboard Shortcuts")
       .text("whats_new", "What's New")
       .text("changelog", "Changelog")
       .separator()
       .text("report_bug", "Report a Bug")
-      .text("request_feature", "Request a Feature")
+      .text("request_feature", "Request a Feature");
+
+   #[cfg(target_os = "macos")]
+   let help_menu = help_menu_builder.build()?;
+
+   #[cfg(not(target_os = "macos"))]
+   let help_menu = help_menu_builder
       .separator()
       .text("check_updates", "Check for Updates")
       .build()?;
 
-   // Main menu - unified structure for all platforms
-   MenuBuilder::new(app)
-      .items(&[
-         &file_menu,
-         &edit_menu,
-         &view_menu,
-         &go_menu,
-         &terminal_menu,
-         &run_menu,
-         &ai_menu,
-         &tools_menu,
-         &window_menu,
-         &help_menu,
-      ])
-      .build()
+   #[cfg(target_os = "macos")]
+   {
+      let app_menu = build_app_submenu(app)?;
+
+      MenuBuilder::new(app)
+         .items(&[
+            &app_menu,
+            &file_menu,
+            &edit_menu,
+            &view_menu,
+            &go_menu,
+            &terminal_menu,
+            &run_menu,
+            &ai_menu,
+            &tools_menu,
+            &window_menu,
+            &help_menu,
+         ])
+         .build()
+   }
+
+   #[cfg(not(target_os = "macos"))]
+   {
+      MenuBuilder::new(app)
+         .items(&[
+            &file_menu,
+            &edit_menu,
+            &view_menu,
+            &go_menu,
+            &terminal_menu,
+            &run_menu,
+            &ai_menu,
+            &tools_menu,
+            &window_menu,
+            &help_menu,
+         ])
+         .build()
+   }
 }
 
 fn close_tab_accelerator() -> Option<&'static str> {
-   #[cfg(all(target_os = "linux", feature = "linux"))]
+   #[cfg(target_os = "linux")]
    {
       None
    }
 
-   #[cfg(not(all(target_os = "linux", feature = "linux")))]
+   #[cfg(not(target_os = "linux"))]
    {
       Some("CmdOrCtrl+W")
    }

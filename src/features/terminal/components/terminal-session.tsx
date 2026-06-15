@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { Terminal as TerminalType } from "@/features/terminal/types/terminal";
+import type { Terminal as TerminalType } from "@/features/terminal/types/terminal.types";
 import { TerminalErrorBoundary } from "./terminal-error-boundary";
 import { TerminalSlot } from "./terminal-slot";
 

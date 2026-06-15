@@ -10,9 +10,20 @@ interface LineRange {
 }
 
 const LINE_BASED_LANGUAGE_IDS = new Set(["gitignore", "gitattributes", "lockfile"]);
+const LINE_BASED_FALLBACK_LANGUAGE_IDS = new Set([
+  ...LINE_BASED_LANGUAGE_IDS,
+  "typescriptreact",
+  "zig",
+  "elm",
+  "elisp",
+]);
 
 export function hasLineBasedSyntaxHighlighter(languageId: string | null | undefined): boolean {
   return Boolean(languageId && LINE_BASED_LANGUAGE_IDS.has(languageId));
+}
+
+export function hasLineBasedSyntaxFallback(languageId: string | null | undefined): boolean {
+  return Boolean(languageId && LINE_BASED_FALLBACK_LANGUAGE_IDS.has(languageId));
 }
 
 function pushToken(
@@ -23,6 +34,20 @@ function pushToken(
 ): void {
   if (end > start) {
     tokens.push({ start, end, class_name: className });
+  }
+}
+
+function tokenizePatterns(
+  tokens: LineBasedSyntaxToken[],
+  line: string,
+  lineStart: number,
+  patterns: Array<[RegExp, string]>,
+): void {
+  for (const [pattern, className] of patterns) {
+    for (const match of line.matchAll(pattern)) {
+      const start = match.index ?? 0;
+      pushToken(tokens, lineStart + start, lineStart + start + match[0].length, className);
+    }
   }
 }
 
@@ -180,12 +205,99 @@ function tokenizeLockfileLine(
   }
 }
 
+function tokenizeTypeScriptReactLine(
+  tokens: LineBasedSyntaxToken[],
+  line: string,
+  lineStart: number,
+): void {
+  const commentStart = line.indexOf("//");
+  if (commentStart >= 0) {
+    pushToken(tokens, lineStart + commentStart, lineStart + line.length, "token-comment");
+  }
+
+  tokenizePatterns(tokens, line, lineStart, [
+    [/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|`([^`\\]|\\.)*`/g, "token-string"],
+    [/<\/?[A-Za-z][\w.]*/g, "token-tag"],
+    [/\s+[A-Za-z_][\w-]*(?==)/g, "token-attribute"],
+    [
+      /\b(abstract|as|async|await|break|case|catch|class|const|continue|debugger|declare|default|delete|do|else|enum|export|extends|finally|for|from|function|if|implements|import|in|infer|instanceof|interface|is|keyof|let|module|namespace|new|of|package|private|protected|public|readonly|return|satisfies|static|super|switch|this|throw|try|type|typeof|var|void|while|with|yield)\b/g,
+      "token-keyword",
+    ],
+    [
+      /\b(string|number|boolean|unknown|never|any|object|symbol|bigint|null|undefined)\b/g,
+      "token-type",
+    ],
+    [/\b(true|false|null|undefined)\b/g, "token-constant"],
+    [/\b\d+(\.\d+)?\b/g, "token-number"],
+  ]);
+}
+
+function tokenizeZigLine(tokens: LineBasedSyntaxToken[], line: string, lineStart: number): void {
+  const commentStart = line.indexOf("//");
+  if (commentStart >= 0) {
+    pushToken(tokens, lineStart + commentStart, lineStart + line.length, "token-comment");
+  }
+
+  tokenizePatterns(tokens, line, lineStart, [
+    [/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, "token-string"],
+    [
+      /\b(addrspace|align|allowzero|and|anyframe|anytype|asm|async|await|break|callconv|catch|comptime|const|continue|defer|else|enum|errdefer|error|export|extern|fn|for|if|inline|linksection|noalias|noinline|nosuspend|opaque|or|orelse|packed|pub|resume|return|struct|suspend|switch|test|threadlocal|try|union|unreachable|usingnamespace|var|volatile|while)\b/g,
+      "token-keyword",
+    ],
+    [/\b(true|false|null|undefined)\b/g, "token-constant"],
+    [
+      /\b[ui](8|16|32|64|128|size)\b|\b(f16|f32|f64|f80|f128|bool|void|noreturn|type|anyerror|comptime_int|comptime_float)\b/g,
+      "token-type",
+    ],
+    [/@[A-Za-z_][\w]*/g, "token-function"],
+    [/\b0x[0-9a-fA-F_]+\b|\b\d[\d_]*(\.\d[\d_]*)?\b/g, "token-number"],
+  ]);
+}
+
+function tokenizeElmLine(tokens: LineBasedSyntaxToken[], line: string, lineStart: number): void {
+  const commentStart = line.indexOf("--");
+  if (commentStart >= 0) {
+    pushToken(tokens, lineStart + commentStart, lineStart + line.length, "token-comment");
+  }
+
+  tokenizePatterns(tokens, line, lineStart, [
+    [/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, "token-string"],
+    [
+      /\b(alias|as|case|else|exposing|if|import|in|infix|let|module|of|port|then|type|where)\b/g,
+      "token-keyword",
+    ],
+    [/\b(True|False)\b/g, "token-constant"],
+    [/\b[A-Z][\w']*/g, "token-type"],
+    [/\b[a-z_][\w']*(?=\s*=)/g, "token-function"],
+    [/\b\d+(\.\d+)?\b/g, "token-number"],
+  ]);
+}
+
+function tokenizeElispLine(tokens: LineBasedSyntaxToken[], line: string, lineStart: number): void {
+  const commentStart = line.indexOf(";");
+  if (commentStart >= 0) {
+    pushToken(tokens, lineStart + commentStart, lineStart + line.length, "token-comment");
+  }
+
+  tokenizePatterns(tokens, line, lineStart, [
+    [/"([^"\\]|\\.)*"/g, "token-string"],
+    [
+      /\b(defun|defmacro|defvar|defcustom|defgroup|defconst|let|let\*|lambda|if|when|unless|cond|pcase|progn|save-excursion|interactive|setq|setq-local|require|provide|use-package)\b/g,
+      "token-keyword",
+    ],
+    [/\b(nil|t)\b/g, "token-constant"],
+    [/:[A-Za-z0-9_-]+/g, "token-type"],
+    [/\b\d+(\.\d+)?\b/g, "token-number"],
+    [/[()'`,#]/g, "token-punctuation"],
+  ]);
+}
+
 export function tokenizeLineBasedSyntax(
   content: string,
   languageId: string,
   range?: LineRange,
 ): LineBasedSyntaxToken[] {
-  if (!hasLineBasedSyntaxHighlighter(languageId)) return [];
+  if (!hasLineBasedSyntaxFallback(languageId)) return [];
 
   const tokens: LineBasedSyntaxToken[] = [];
   const lines = content.split("\n");
@@ -203,11 +315,19 @@ export function tokenizeLineBasedSyntax(
         tokenizeGitAttributesLine(tokens, line, offset);
       } else if (languageId === "lockfile") {
         tokenizeLockfileLine(tokens, line, offset);
+      } else if (languageId === "typescriptreact") {
+        tokenizeTypeScriptReactLine(tokens, line, offset);
+      } else if (languageId === "zig") {
+        tokenizeZigLine(tokens, line, offset);
+      } else if (languageId === "elm") {
+        tokenizeElmLine(tokens, line, offset);
+      } else if (languageId === "elisp") {
+        tokenizeElispLine(tokens, line, offset);
       }
     }
 
     offset += line.length + 1;
   }
 
-  return tokens;
+  return tokens.sort((a, b) => a.start - b.start || a.end - b.end);
 }

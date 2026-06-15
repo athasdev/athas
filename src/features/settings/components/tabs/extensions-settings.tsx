@@ -1,13 +1,13 @@
 import {
-  Brain,
-  Database,
-  Package,
-  PaintBrush,
-  Plus,
-  Robot,
-  MagnifyingGlass as Search,
-  TextT,
-  WarningCircle,
+  BrainIcon as Brain,
+  DatabaseIcon as Database,
+  PackageIcon as Package,
+  PaintBrushIcon as PaintBrush,
+  PlusIcon as Plus,
+  RobotIcon as Robot,
+  MagnifyingGlassIcon as Search,
+  TextTIcon as TextT,
+  WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
@@ -29,11 +29,11 @@ import {
   resetSkillLocalOverride,
   updateSkillFromMarketplace,
 } from "@/features/ai/lib/skill-library";
-import type { AgentConfig } from "@/features/ai/types/acp";
-import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
+import type { AgentConfig } from "@/features/ai/types/acp.types";
+import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

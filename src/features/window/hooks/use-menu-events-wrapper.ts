@@ -3,20 +3,20 @@ import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { splitActiveEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { useUpdater } from "@/features/settings/hooks/use-updater";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
-import { primitiveAlert } from "@/ui/primitive-dialog-service";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
@@ -164,7 +164,7 @@ export function useMenuEventsWrapper() {
             // This would require updating the buffer store with the new file path
           } catch (writeError) {
             console.error("Failed to save file:", writeError);
-            await primitiveAlert("Failed to save file. Please try again.", "Save As");
+            await showAlertDialog("Failed to save file. Please try again.", "Save As");
           }
         }
       } catch (error) {
@@ -253,7 +253,7 @@ export function useMenuEventsWrapper() {
     onToggleVim: async () => {
       // For now, we'll show a notification about vim mode
       console.log("Toggle Vim keybindings");
-      await primitiveAlert(
+      await showAlertDialog(
         "Vim mode is coming soon!\n\nThis will enable vim-style keybindings in the editor for power users.",
         "Vim Mode",
       );
@@ -269,7 +269,15 @@ export function useMenuEventsWrapper() {
     onPrevTab: () => {
       void keymapRegistry.executeCommand("workbench.previousTab");
     },
-    onThemeChange: (theme: string) => updateSetting("theme", theme),
+    onThemeChange: (theme: string) => {
+      const { settings } = useSettingsStore.getState();
+      if (settings.syncSystemTheme) {
+        void updateSetting("syncSystemTheme", false).then(() => updateSetting("theme", theme));
+        return;
+      }
+
+      updateSetting("theme", theme);
+    },
     onExecuteCommand: (commandId: string) => {
       void keymapRegistry.executeCommand(commandId);
     },

@@ -4,8 +4,8 @@ import {
   type UndoEditDelta,
   type UndoEditOperation,
 } from "./undo-grouping";
-import type { HistoryEntry } from "./types";
-import type { Position, Range } from "../types/editor";
+import type { HistoryEntry } from "../types/history.types";
+import type { Position, Range } from "../types/editor.types";
 
 interface PendingUndoGroup {
   baseEntry: HistoryEntry;

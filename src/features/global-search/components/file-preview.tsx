@@ -1,9 +1,9 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { File as FileIcon } from "@phosphor-icons/react";
+import { FileIcon } from "@phosphor-icons/react";
 import { memo, useEffect, useMemo, useState } from "react";
-import type { Token } from "@/features/editor/extensions/types";
-import type { LineToken } from "@/features/editor/types/editor";
+import type { Token } from "@/features/editor/types/editor-extension.types";
+import type { LineToken } from "@/features/editor/types/editor.types";
 import {
   getDatabaseTypeFromPath,
   isBinaryFile,

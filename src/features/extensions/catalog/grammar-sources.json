@@ -95,6 +95,10 @@
     "repository": "tree-sitter/tree-sitter-python",
     "path": "."
   },
+  "r": {
+    "repository": "r-lib/tree-sitter-r",
+    "path": "."
+  },
   "ruby": {
     "repository": "tree-sitter/tree-sitter-ruby",
     "path": "."

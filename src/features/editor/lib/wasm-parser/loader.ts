@@ -7,7 +7,7 @@ import { Language, Parser, Query } from "web-tree-sitter";
 import { logger } from "../../utils/logger";
 import { indexedDBParserCache } from "./cache-indexeddb";
 import { fetchHighlightQuery } from "./extension-assets";
-import type { LoadedParser, ParserConfig } from "./types";
+import type { LoadedParser, ParserConfig } from "../../types/wasm-parser/wasm-parser.types";
 
 class WasmParserLoader {
   private static instance: WasmParserLoader;

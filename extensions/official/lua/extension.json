@@ -27,7 +27,7 @@
     },
     "linter": {
       "name": "luacheck",
-      "runtime": "binary",
+      "runtime": "system",
       "args": ["--formatter", "plain"]
     }
   }

@@ -1,15 +1,15 @@
 import {
-  Bell,
-  CaretRight,
-  Check,
-  ClipboardText,
-  Copy,
-  Funnel,
-  Info,
-  MagnifyingGlass as Search,
-  Trash,
-  WarningCircle,
-  XCircle,
+  BellIcon as Bell,
+  CaretRightIcon as CaretRight,
+  CheckIcon as Check,
+  ClipboardTextIcon as ClipboardText,
+  CopyIcon as Copy,
+  FunnelIcon as Funnel,
+  InfoIcon as Info,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash,
+  WarningCircleIcon as WarningCircle,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { forwardRef, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -18,26 +18,26 @@ import {
   chromeControlGroup,
   chromeIcon,
 } from "@/features/layout/components/chrome-control-styles";
-import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { Button } from "@/ui/button";
-import Command, { CommandHeader, CommandList } from "@/ui/command";
+import Command, { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle } from "@/ui/item";
-import {
-  SidebarEmptyState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarHeaderSearch,
-} from "@/ui/sidebar";
 import { TabsList } from "@/ui/tabs";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
+export const OPEN_NOTIFICATIONS_COMMAND_EVENT = "athas:notifications:show";
+
 interface NotificationsTriggerProps {
   className?: string;
+}
+
+interface NotificationsCommandProps {
+  isVisible: boolean;
+  onClose: () => void;
 }
 
 type NotificationFilter = "all" | NotificationEntry["type"];
@@ -168,7 +168,7 @@ const NotificationItem = forwardRef<
   );
 });
 
-export function NotificationsPane() {
+export function NotificationsCommand({ isVisible, onClose }: NotificationsCommandProps) {
   const notifications = useToastStore.use.notifications();
   const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
   const removeNotification = useToastStore((state) => state.actions.removeNotification);
@@ -196,9 +196,14 @@ export function NotificationsPane() {
   );
 
   useEffect(() => {
-    if (unreadCount === 0) return;
+    if (!isVisible || unreadCount === 0) return;
     markAllNotificationsRead();
-  }, [unreadCount, markAllNotificationsRead]);
+  }, [isVisible, unreadCount, markAllNotificationsRead]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    focusNotificationSearch();
+  }, [isVisible]);
 
   const copyText = async (text: string) => {
     await navigator.clipboard.writeText(text);
@@ -345,6 +350,7 @@ export function NotificationsPane() {
   const focusedNotificationIndex = focusedNotificationId
     ? visibleNotifications.findIndex((notification) => notification.id === focusedNotificationId)
     : -1;
+  const hasNotificationRows = filteredNotifications.length > 0;
 
   useEffect(() => {
     if (visibleNotifications.length === 0) {
@@ -445,107 +451,124 @@ export function NotificationsPane() {
 
   return (
     <>
-      <div
-        className="flex h-full min-h-0 flex-col"
-        onKeyDownCapture={handleNotificationsKeyDown}
-        onContextMenu={(event) => {
-          if (notifications.length === 0) return;
-          panelContextMenu.open(event);
-        }}
+      <Command
+        isVisible={isVisible}
+        onClose={onClose}
+        title="Notifications"
+        className={cn("max-h-[calc(100vh-8rem)] w-[520px]", hasNotificationRows && "h-[480px]")}
       >
-        <SidebarHeader>
-          <SidebarHeaderSearch
-            ref={searchInputRef}
-            value={searchQuery}
-            onChange={setSearchQuery}
-            leftIcon={Search}
-            placeholder="Search"
-            onKeyDown={(event) => {
-              if (event.key === "ArrowDown" && visibleNotifications.length > 0) {
-                event.preventDefault();
-                focusNotificationAtIndex(0);
-              }
-            }}
-          />
-          <SidebarHeaderIconButton
-            ref={filterButtonRef}
-            active={notificationFilter !== "all"}
-            className="shrink-0"
-            tooltip="Filter Notifications"
-            tooltipSide="bottom"
-            onClick={() => setIsFilterMenuOpen(true)}
-          >
-            <Funnel />
-          </SidebarHeaderIconButton>
-        </SidebarHeader>
-        {notifications.length === 0 ? (
-          <SidebarEmptyState>No notifications yet.</SidebarEmptyState>
-        ) : filteredNotifications.length === 0 ? (
-          <SidebarEmptyState>No matching notifications.</SidebarEmptyState>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-1">
-            {groupedNotifications.map((group) => (
-              <div key={group.label} className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  className="ui-font ui-text-xs flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter hover:bg-hover/50 hover:text-text"
-                  aria-expanded={!collapsedNotificationGroups.has(group.label)}
-                  onClick={() => toggleNotificationGroup(group.label)}
-                >
-                  <CaretRight
-                    className={cn(
-                      "size-3.5 shrink-0 transition-transform",
-                      !collapsedNotificationGroups.has(group.label) && "rotate-90",
-                    )}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                  <span className="shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
-                    {group.notifications.length}
-                  </span>
-                </button>
-                {!collapsedNotificationGroups.has(group.label) ? (
-                  <ItemGroup className="gap-0.5">
-                    {group.notifications.map((notification) => (
-                      <NotificationItem
-                        key={notification.id}
-                        ref={(node) => {
-                          if (node) {
-                            notificationRefs.current.set(notification.id, node);
-                          } else {
-                            notificationRefs.current.delete(notification.id);
-                          }
-                        }}
-                        notification={notification}
-                        actions={[
-                          {
-                            id: "delete-notification",
-                            label: "Delete Notification",
-                            icon: <Trash className="size-3.5" />,
-                            onSelect: () => removeNotification(notification.id),
-                            variant: "danger",
-                          },
-                        ]}
-                        selected={notification.id === focusedNotificationId}
-                        onClick={() => openNotificationDetails(notification)}
-                        onContextMenu={notificationContextMenu.open}
-                        onFocus={() => setFocusedNotificationId(notification.id)}
-                        onKeyDown={(event) => handleNotificationItemKeyDown(event, notification)}
-                        tabIndex={
-                          notification.id === focusedNotificationId ||
-                          (focusedNotificationIndex === -1 &&
-                            notification === visibleNotifications[0])
-                            ? 0
-                            : -1
-                        }
+        <div
+          className="flex h-full min-h-0 flex-col"
+          onKeyDownCapture={handleNotificationsKeyDown}
+          onContextMenu={(event) => {
+            if (notifications.length === 0) return;
+            panelContextMenu.open(event);
+          }}
+        >
+          <CommandHeader onClose={onClose}>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Search className="size-3.5 shrink-0 text-text-lighter" />
+              <CommandInput
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search notifications"
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowDown" && visibleNotifications.length > 0) {
+                    event.preventDefault();
+                    focusNotificationAtIndex(0);
+                  }
+                }}
+              />
+            </div>
+            <Tooltip content="Filter Notifications" side="bottom" triggerClassName="size-6">
+              <Button
+                ref={filterButtonRef}
+                type="button"
+                variant="ghost"
+                compact
+                active={notificationFilter !== "all"}
+                className="shrink-0 rounded"
+                aria-label="Filter Notifications"
+                onClick={() => setIsFilterMenuOpen(true)}
+              >
+                <Funnel />
+              </Button>
+            </Tooltip>
+          </CommandHeader>
+          {notifications.length === 0 ? (
+            <CommandEmpty>No notifications yet.</CommandEmpty>
+          ) : filteredNotifications.length === 0 ? (
+            <CommandEmpty>No matching notifications.</CommandEmpty>
+          ) : (
+            <CommandList>
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                {groupedNotifications.map((group) => (
+                  <div key={group.label} className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      className="ui-font ui-text-xs flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter hover:bg-hover/50 hover:text-text"
+                      aria-expanded={!collapsedNotificationGroups.has(group.label)}
+                      onClick={() => toggleNotificationGroup(group.label)}
+                    >
+                      <CaretRight
+                        className={cn(
+                          "size-3.5 shrink-0 transition-transform",
+                          !collapsedNotificationGroups.has(group.label) && "rotate-90",
+                        )}
                       />
-                    ))}
-                  </ItemGroup>
-                ) : null}
+                      <span className="min-w-0 flex-1 truncate">{group.label}</span>
+                      <span className="shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
+                        {group.notifications.length}
+                      </span>
+                    </button>
+                    {!collapsedNotificationGroups.has(group.label) ? (
+                      <ItemGroup className="gap-0.5">
+                        {group.notifications.map((notification) => (
+                          <NotificationItem
+                            key={notification.id}
+                            ref={(node) => {
+                              if (node) {
+                                notificationRefs.current.set(notification.id, node);
+                              } else {
+                                notificationRefs.current.delete(notification.id);
+                              }
+                            }}
+                            notification={notification}
+                            actions={[
+                              {
+                                id: "delete-notification",
+                                label: "Delete Notification",
+                                icon: <Trash className="size-3.5" />,
+                                onSelect: () => removeNotification(notification.id),
+                                variant: "danger",
+                              },
+                            ]}
+                            selected={notification.id === focusedNotificationId}
+                            onClick={() => openNotificationDetails(notification)}
+                            onContextMenu={notificationContextMenu.open}
+                            onFocus={() => setFocusedNotificationId(notification.id)}
+                            onKeyDown={(event) =>
+                              handleNotificationItemKeyDown(event, notification)
+                            }
+                            tabIndex={
+                              notification.id === focusedNotificationId ||
+                              (focusedNotificationIndex === -1 &&
+                                notification === visibleNotifications[0])
+                                ? 0
+                                : -1
+                            }
+                          />
+                        ))}
+                      </ItemGroup>
+                    ) : null}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </CommandList>
+          )}
+        </div>
+      </Command>
       <ContextMenu
         isOpen={notificationContextMenu.isOpen}
         position={notificationContextMenu.position}
@@ -643,41 +666,55 @@ export function NotificationsPane() {
 
 export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) => {
   const notifications = useToastStore.use.notifications();
-  const { isRightSidebarVisible, activeRightSidebarView } = useUIState();
-  const { openSidebarView } = useSidebarPaneController();
+  const [isCommandVisible, setIsCommandVisible] = useState(false);
+  const shortcut = useCommandShortcut("workbench.showNotifications");
   const unreadCount = useMemo(
     () =>
       notifications.filter((notification) => !notification.read && notification.type !== "success")
         .length,
     [notifications],
   );
-  const isActive = isRightSidebarVisible && activeRightSidebarView === "notifications";
+
+  useEffect(() => {
+    const handleShowNotifications = () => setIsCommandVisible(true);
+
+    window.addEventListener(OPEN_NOTIFICATIONS_COMMAND_EVENT, handleShowNotifications);
+    return () => {
+      window.removeEventListener(OPEN_NOTIFICATIONS_COMMAND_EVENT, handleShowNotifications);
+    };
+  }, []);
 
   return (
-    <Tooltip content="Notifications" side="top">
-      <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
-        <Button
-          onClick={() => {
-            openSidebarView("notifications", { triggerSide: "right" });
-          }}
-          type="button"
-          variant="ghost"
-          compact
-          active={isActive}
-          className={cn(
-            chromeControl(),
-            unreadCount > 0 && cn(chromeControl({ shape: "pill" }), "w-auto gap-1.5"),
-          )}
-          aria-label="Notifications"
-        >
-          <Bell className={chromeIcon()} weight="duotone" />
-          {unreadCount > 0 && (
-            <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
-              {unreadCount}
-            </span>
-          )}
-        </Button>
-      </TabsList>
-    </Tooltip>
+    <>
+      <Tooltip content="Notifications" shortcut={shortcut} side="top">
+        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
+          <Button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
+            }}
+            type="button"
+            variant="ghost"
+            compact
+            active={isCommandVisible}
+            className={cn(
+              chromeControl(),
+              unreadCount > 0 && cn(chromeControl({ shape: "pill" }), "w-auto gap-1.5"),
+            )}
+            aria-label="Notifications"
+          >
+            <Bell className={chromeIcon()} weight="duotone" />
+            {unreadCount > 0 && (
+              <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
+                {unreadCount}
+              </span>
+            )}
+          </Button>
+        </TabsList>
+      </Tooltip>
+      <NotificationsCommand
+        isVisible={isCommandVisible}
+        onClose={() => setIsCommandVisible(false)}
+      />
+    </>
   );
 };

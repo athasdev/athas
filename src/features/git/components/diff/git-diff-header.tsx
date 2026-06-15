@@ -1,18 +1,19 @@
 import {
-  Check,
-  CaretDown as ChevronDown,
-  CaretUp as ChevronUp,
-  Columns as Columns2,
-  Rows as Rows3,
-  Trash as Trash2,
-  X,
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  CaretUpIcon as ChevronUp,
+  ColumnsIcon as Columns2,
+  RowsIcon as Rows3,
+  TrashIcon as Trash2,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { memo } from "react";
-import Breadcrumb from "@/features/editor/components/toolbar/breadcrumb";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { Button } from "@/ui/button";
+import Breadcrumb, {
+  BreadcrumbActionButton,
+} from "@/features/editor/components/toolbar/breadcrumb";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { cn } from "@/utils/cn";
-import type { DiffHeaderProps } from "../../types/git-diff-types";
+import type { DiffHeaderProps } from "../../types/git-diff.types";
 import { getFileStatus } from "../../utils/git-diff-helpers";
 
 const DiffHeader = memo(
@@ -32,10 +33,6 @@ const DiffHeader = memo(
   }: DiffHeaderProps) => {
     const { closeBuffer } = useBufferStore.use.actions();
     const activeBufferId = useBufferStore.use.activeBufferId();
-    const iconButtonClass =
-      "flex size-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text";
-    const segmentedButtonClass =
-      "flex size-5 items-center justify-center rounded text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
     const handleClose = () => {
       if (onClose) {
@@ -112,75 +109,55 @@ const DiffHeader = memo(
             <div className="flex items-center gap-1.5 leading-none">
               {isMultiFileView && (
                 <>
-                  <Button
+                  <BreadcrumbActionButton
                     onClick={onExpandAll}
-                    variant="ghost"
-                    className={iconButtonClass}
                     tooltip="Expand all"
                     aria-label="Expand all files"
-                    compact
                   >
-                    <ChevronDown />
-                  </Button>
-                  <Button
+                    <ChevronDown weight="duotone" />
+                  </BreadcrumbActionButton>
+                  <BreadcrumbActionButton
                     onClick={onCollapseAll}
-                    variant="ghost"
-                    className={iconButtonClass}
                     tooltip="Collapse all"
                     aria-label="Collapse all files"
-                    compact
                   >
-                    <ChevronUp />
-                  </Button>
+                    <ChevronUp weight="duotone" />
+                  </BreadcrumbActionButton>
                   <div className="mx-1 h-4 w-px bg-border" />
                 </>
               )}
 
               {showDisplayControls && (
                 <>
-                  <Button
+                  <BreadcrumbActionButton
                     onClick={() => onShowWhitespaceChange?.(!showWhitespace)}
-                    variant="ghost"
-                    compact
-                    className={cn(
-                      "flex h-5 items-center gap-1 rounded px-1.5 transition-colors hover:bg-hover hover:text-text",
-                      showWhitespace ? "bg-hover text-text" : "text-text-lighter",
-                    )}
+                    active={showWhitespace}
+                    className="gap-1"
                     tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                     aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
                   >
-                    <Trash2 />
-                    {showWhitespace && <Check />}
-                  </Button>
+                    <Trash2 weight="duotone" />
+                    {showWhitespace && <Check weight="duotone" />}
+                  </BreadcrumbActionButton>
 
                   {onViewModeChange && (
                     <div className="flex items-center gap-0.5">
-                      <Button
+                      <BreadcrumbActionButton
                         onClick={() => onViewModeChange("unified")}
-                        variant="ghost"
-                        compact
-                        className={cn(
-                          segmentedButtonClass,
-                          viewMode === "unified" && "bg-hover text-text",
-                        )}
+                        active={viewMode === "unified"}
                         tooltip="Unified view"
                         aria-label="Unified diff view"
                       >
-                        <Rows3 />
-                      </Button>
-                      <Button
+                        <Rows3 weight="duotone" />
+                      </BreadcrumbActionButton>
+                      <BreadcrumbActionButton
                         onClick={() => onViewModeChange("split")}
-                        variant="ghost"
-                        compact
-                        className={cn(
-                          segmentedButtonClass,
-                          viewMode === "split" && "bg-hover text-text",
-                        )}
+                        active={viewMode === "split"}
                         tooltip="Split view"
                         aria-label="Split diff view"
                       >
-                        <Columns2 />
-                      </Button>
+                        <Columns2 weight="duotone" />
+                      </BreadcrumbActionButton>
                     </div>
                   )}
 
@@ -188,17 +165,14 @@ const DiffHeader = memo(
                 </>
               )}
 
-              <Button
+              <BreadcrumbActionButton
                 onClick={handleClose}
-                variant="ghost"
-                className={iconButtonClass}
                 tooltip="Close"
                 shortcut="escape"
                 aria-label="Close diff view"
-                compact
               >
-                <X />
-              </Button>
+                <X weight="duotone" />
+              </BreadcrumbActionButton>
             </div>
           }
         />

@@ -1,20 +1,20 @@
 import {
-  Archive,
-  Download,
-  FolderOpen,
-  GitPullRequest,
-  ArrowClockwise as RefreshCw,
-  ArrowCounterClockwise as RotateCcw,
-  HardDrives as Server,
-  GearSix as Settings,
-  Tag,
-  Upload,
+  ArchiveIcon as Archive,
+  DownloadIcon as Download,
+  FolderOpenIcon as FolderOpen,
+  GitPullRequestIcon as GitPullRequest,
+  ArrowClockwiseIcon as RefreshCw,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  HardDrivesIcon as Server,
+  GearSixIcon as Settings,
+  TagIcon as Tag,
+  UploadIcon as Upload,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import {
   fetchChanges,
@@ -23,7 +23,7 @@ import {
   type GitRemoteActionResult,
 } from "../api/git-remotes-api";
 import { discardAllChanges, initRepository } from "../api/git-status-api";
-import { useGitStore } from "../stores/git-store";
+import { useGitStore } from "../stores/git.store";
 import { type GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 
 interface GitActionsMenuProps {
@@ -136,7 +136,7 @@ const GitActionsMenu = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !(await primitiveConfirm("Discard all unstaged changes? This cannot be undone.", {
+      !(await showConfirmDialog("Discard all unstaged changes? This cannot be undone.", {
         title: "Discard Changes",
         confirmLabel: "Discard",
       }))

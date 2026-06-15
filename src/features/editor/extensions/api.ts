@@ -1,16 +1,16 @@
-import { useBufferStore } from "../stores/buffer-store";
-import { useEditorDecorationsStore } from "../stores/decorations-store";
+import { useBufferStore } from "../stores/buffer.store";
+import { useEditorDecorationsStore } from "../stores/decorations.store";
 import {
   flushPendingBufferHistory,
   syncBufferHistoryContent,
 } from "../stores/buffer-history-tracking";
-import { useHistoryStore } from "../stores/history-store";
-import { useEditorSettingsStore } from "../stores/settings-store";
-import { useEditorStateStore } from "../stores/state-store";
-import { useEditorViewStore } from "../stores/view-store";
-import type { HistoryEntry } from "../history/types";
-import { isEditorContent } from "@/features/panes/types/pane-content";
-import type { Decoration, Position, Range } from "../types/editor";
+import { useHistoryStore } from "../stores/history.store";
+import { useEditorSettingsStore } from "../stores/settings.store";
+import { useEditorStateStore } from "../stores/state.store";
+import { useEditorViewStore } from "../stores/view.store";
+import type { HistoryEntry } from "../types/history.types";
+import { isEditorContent } from "@/features/panes/types/pane-content.types";
+import type { Decoration, Position, Range } from "../types/editor.types";
 import {
   findBracketJumpTarget,
   findBracketSelectionRange,
@@ -44,7 +44,7 @@ import type {
   EditorEventPayload,
   EditorSettings,
   EventHandler,
-} from "./types";
+} from "../types/editor-extension.types";
 import { calculateLineHeight } from "../utils/lines";
 
 interface ActiveEditorAdapter {
@@ -53,6 +53,9 @@ interface ActiveEditorAdapter {
   deleteRange: (range: Range) => void;
   replaceRange: (range: Range, text: string) => void;
   selectAll: () => void;
+  addSelectionToNextFindMatch?: () => void;
+  addSelectionToPreviousFindMatch?: () => void;
+  selectAllFindMatches?: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -225,6 +228,27 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     this.syncSelectionFromOffsets(content, 0, content.length);
+  }
+
+  addSelectionToNextFindMatch(): boolean {
+    if (!this.activeEditorAdapter?.addSelectionToNextFindMatch) return false;
+
+    this.activeEditorAdapter.addSelectionToNextFindMatch();
+    return true;
+  }
+
+  addSelectionToPreviousFindMatch(): boolean {
+    if (!this.activeEditorAdapter?.addSelectionToPreviousFindMatch) return false;
+
+    this.activeEditorAdapter.addSelectionToPreviousFindMatch();
+    return true;
+  }
+
+  selectAllFindMatches(): boolean {
+    if (!this.activeEditorAdapter?.selectAllFindMatches) return false;
+
+    this.activeEditorAdapter.selectAllFindMatches();
+    return true;
   }
 
   // Internal method to update cursor and selection from external changes

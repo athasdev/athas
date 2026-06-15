@@ -14,6 +14,39 @@ const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/e
  */
 export const fullExtensions: ExtensionManifest[] = [
   {
+    id: "athas.r",
+    name: "R",
+    displayName: "R",
+    description:
+      "R language support with diagnostics, completions, hover, and symbols via languageserver",
+    version: "1.0.0",
+    publisher: "Athas",
+    categories: ["Language"],
+    languages: [
+      {
+        id: "r",
+        extensions: [".R", ".r"],
+        aliases: ["R", "r"],
+      },
+    ],
+    activationEvents: ["onLanguage:r"],
+    lsp: {
+      name: "r-languageserver",
+      runtime: "r",
+      package: "languageserver",
+      server: { default: "r-languageserver" },
+      args: [],
+      fileExtensions: [".R", ".r"],
+      languageIds: ["r"],
+    },
+    installation: {
+      downloadUrl: "/tree-sitter/parsers/r/parser.wasm",
+      size: 1,
+      checksum: "",
+      minEditorVersion: "0.2.0",
+    },
+  },
+  {
     id: "athas.php",
     name: "PHP",
     displayName: "PHP",

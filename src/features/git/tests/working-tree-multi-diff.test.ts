@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { GitDiff, GitFile, GitStatus } from "../types/git-types";
+import type { GitDiff, GitFile, GitStatus } from "../types/git.types";
 import {
   buildWorkingTreeMultiDiff,
   getDiffableWorkingTreeFiles,

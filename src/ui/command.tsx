@@ -1,9 +1,10 @@
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowClockwise as RefreshCwIcon, X } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
+import { useCallback, useRef } from "react";
 import type React from "react";
-import { useActionsStore } from "@/features/command-palette/store";
+import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -14,7 +15,10 @@ interface CommandProps {
   onClose?: () => void;
   placement?: "top" | "bottom";
   title?: string;
+  autoFocus?: boolean;
 }
+
+const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
   "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl focus:outline-none",
@@ -69,12 +73,18 @@ const Command = ({
   onClose,
   placement = "top",
   title = "Command palette",
+  autoFocus = true,
 }: CommandProps) => {
+  const popupRef = useRef<HTMLDivElement>(null);
   const containerClassName =
     placement === "bottom"
       ? "fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
       : "fixed inset-0 z-[10060] flex items-start justify-center pt-16";
   const motionY = placement === "bottom" ? 8 : -8;
+  const getInitialFocusTarget = useCallback(
+    () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
+    [],
+  );
 
   return (
     <AnimatePresence>
@@ -82,30 +92,37 @@ const Command = ({
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
             <div className={containerClassName}>
-              <DialogPrimitive.Overlay asChild>
-                <motion.button
-                  type="button"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-0 z-0 cursor-default bg-black/20"
-                  aria-label="Close command palette"
-                  tabIndex={-1}
-                />
-              </DialogPrimitive.Overlay>
-              <DialogPrimitive.Content asChild aria-describedby={undefined}>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: motionY }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: motionY }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className={cn(commandContentVariants(), className)}
-                >
-                  <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-                  {children}
-                </motion.div>
-              </DialogPrimitive.Content>
+              <DialogPrimitive.Backdrop
+                render={
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  />
+                }
+                className="absolute inset-0 z-0 cursor-default bg-black/20"
+                aria-label="Close command palette"
+                tabIndex={-1}
+              />
+              <DialogPrimitive.Popup
+                ref={popupRef}
+                aria-describedby={undefined}
+                initialFocus={autoFocus ? getInitialFocusTarget : false}
+                render={
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: motionY }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: motionY }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                  />
+                }
+                className={cn(commandContentVariants(), className)}
+              >
+                <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+                {children}
+              </DialogPrimitive.Popup>
             </div>
           </DialogPrimitive.Portal>
         </DialogPrimitive.Root>
@@ -219,6 +236,7 @@ export const CommandInput = ({
     onKeyDown={onKeyDown}
     placeholder={placeholder}
     className={cn(commandInputVariants({ size }), className)}
+    data-command-input=""
   />
 );
 

@@ -1,14 +1,19 @@
-import { Folder, GitBranch, GitPullRequest, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  FolderIcon as Folder,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  MagnifyingGlassIcon as MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
   chromeControl,
   chromeControlGroup,
 } from "@/features/layout/components/chrome-control-styles";
-import type { CoreFeaturesState } from "@/features/settings/types/feature";
+import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";

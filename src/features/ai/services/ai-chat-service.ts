@@ -1,27 +1,33 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { ChatMode, OutputStyle } from "@/features/ai/store/types";
-import type { AcpEvent } from "@/features/ai/types/acp";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import type { AgentType } from "@/features/ai/types/ai-chat";
-import type { AIMessage } from "@/features/ai/types/messages";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat-store.types";
+import type { AcpEvent } from "@/features/ai/types/acp.types";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
+import type { AIMessage } from "@/features/ai/types/messages.types";
 import {
   getAvailableProviders,
   getModelById,
   getProviderById,
-} from "@/features/ai/types/providers";
+} from "@/features/ai/types/providers.types";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
-import { useSettingsStore } from "@/features/settings/store";
+import {
+  getCustomProviderApiToken,
+  resolveCustomProviderBaseUrl,
+  resolveCustomProviderModelId,
+} from "@/features/ai/lib/custom-provider-config";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { getAuthToken } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "../lib/claude-code";
+import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
@@ -68,7 +74,10 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
   }
 
   if (requestedProvider?.id === "custom") {
-    const customModelId = useSettingsStore.getState().settings.aiCustomModelId || modelId;
+    const customModelId = resolveCustomProviderModelId(
+      useSettingsStore.getState().settings,
+      modelId,
+    );
     if (customModelId.trim().length > 0) {
       return {
         providerId,
@@ -180,15 +189,24 @@ export const getChatCompletionStream = async (
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
 
-    const apiKey = await getProviderApiToken(providerId);
+    const settings = useSettingsStore.getState().settings;
+    const customProviderBaseUrl =
+      providerId === "custom" ? resolveCustomProviderBaseUrl(settings) : "";
+    const apiKey =
+      providerId === "custom"
+        ? await getCustomProviderApiToken()
+        : await getProviderApiToken(providerId);
     const subscription = useAuthStore.getState().subscription;
     const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
     if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
       throw new Error(`${provider.name} API key not found`);
     }
 
-    if (providerId === "custom" && !useSettingsStore.getState().settings.aiCustomBaseUrl) {
+    if (providerId === "custom" && !customProviderBaseUrl) {
       throw new Error("Custom provider base URL is required. Add one in Settings → AI.");
+    }
+    if (providerId === "custom") {
+      setCustomProviderBaseUrl(customProviderBaseUrl);
     }
 
     // Ollama Cloud requires auth even though the provider config marks the

@@ -1,17 +1,17 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  Calendar,
-  CaretDown,
-  CaretRight,
-  ClockCounterClockwise,
-  Copy,
-  GitBranch,
-  GitCommit,
-  Plus,
-  Tag,
-  Trash as Trash2,
-  Upload,
-  X,
+  CalendarIcon as Calendar,
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  ClockCounterClockwiseIcon as ClockCounterClockwise,
+  CopyIcon as Copy,
+  GitBranchIcon as GitBranch,
+  GitCommitIcon as GitCommit,
+  PlusIcon as Plus,
+  TagIcon as Tag,
+  TrashIcon as Trash2,
+  UploadIcon as Upload,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
@@ -19,7 +19,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import Select from "@/ui/select";
 import { toast } from "@/ui/toast";
 import { formatShortDate } from "@/utils/date";
@@ -33,7 +33,7 @@ import {
   getTags,
   pushTag,
 } from "../api/git-tags-api";
-import type { GitRemote, GitTag } from "../types/git-types";
+import type { GitRemote, GitTag } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
 interface GitTagManagerProps {
@@ -160,7 +160,7 @@ const GitTagManager = ({
   const handleCheckoutTag = async (tagName: string) => {
     if (!repoPath) return;
     if (
-      !(await primitiveConfirm(`Checkout ${tagName} in detached HEAD?`, {
+      !(await showConfirmDialog(`Checkout ${tagName} in detached HEAD?`, {
         title: "Checkout Tag",
         confirmLabel: "Checkout",
       }))
@@ -483,7 +483,7 @@ const GitTagManager = ({
                     onClick={(event) => {
                       event.stopPropagation();
                       if (!repoPath || !selectedRemoteName) return;
-                      void primitiveConfirm(`Delete ${tag.name} from ${selectedRemoteName}?`, {
+                      void showConfirmDialog(`Delete ${tag.name} from ${selectedRemoteName}?`, {
                         title: "Delete Remote Tag",
                         confirmLabel: "Delete",
                       }).then((confirmed) => {

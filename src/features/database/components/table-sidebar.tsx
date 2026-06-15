@@ -1,8 +1,15 @@
-import { Database, Eye, Hash, Plus, RadioButton as Radio, Table } from "@phosphor-icons/react";
+import {
+  DatabaseIcon as Database,
+  EyeIcon as Eye,
+  HashIcon as Hash,
+  PlusIcon as Plus,
+  RadioButtonIcon as Radio,
+  TableIcon as Table,
+} from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
-import type { DatabaseObjectKind, TableInfo } from "../models/common.types";
+import type { DatabaseObjectKind, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
 
 interface TableSidebarProps {

@@ -12,7 +12,7 @@ use athas_project::FileWatcher;
 use log::{debug, info};
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Emitter, Manager};
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
@@ -34,14 +34,14 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
 fn configure_menu(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    let store = app.store("settings.json")?;
 
-   #[cfg(target_os = "windows")]
+   #[cfg(any(target_os = "windows", target_os = "linux"))]
    {
       store.set("nativeMenuBar", false);
       let _ = store.save();
       return Ok(());
    }
 
-   #[cfg(not(target_os = "windows"))]
+   #[cfg(target_os = "macos")]
    {
       let native_menu_bar = store
          .get("nativeMenuBar")
@@ -288,32 +288,44 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                   let _ = window.emit("menu_split_editor", ());
                }
                "toggle_menu_bar" => {
-                  let current_menu = app_handle.menu();
-                  if current_menu.is_some() {
-                     if let Err(e) = app_handle.remove_menu() {
-                        log::error!("Failed to hide menu: {}", e);
-                     } else {
-                        if let Ok(store) = app_handle.store("settings.json") {
-                           store.set("nativeMenuBar", false);
-                           let _ = store.save();
-                        }
-                        log::info!("Menu bar hidden");
+                  #[cfg(target_os = "linux")]
+                  {
+                     if let Ok(store) = app_handle.store("settings.json") {
+                        store.set("nativeMenuBar", false);
+                        let _ = store.save();
                      }
-                  } else {
-                     match menu::create_menu(app_handle) {
-                        Ok(new_menu) => {
-                           if let Err(e) = app_handle.set_menu(new_menu) {
-                              log::error!("Failed to show menu: {}", e);
-                           } else {
-                              if let Ok(store) = app_handle.store("settings.json") {
-                                 store.set("nativeMenuBar", true);
-                                 let _ = store.save();
-                              }
-                              log::info!("Menu bar shown");
+                     log::info!("Native menu bar is disabled on Linux");
+                  }
+
+                  #[cfg(not(target_os = "linux"))]
+                  {
+                     let current_menu = app_handle.menu();
+                     if current_menu.is_some() {
+                        if let Err(e) = app_handle.remove_menu() {
+                           log::error!("Failed to hide menu: {}", e);
+                        } else {
+                           if let Ok(store) = app_handle.store("settings.json") {
+                              store.set("nativeMenuBar", false);
+                              let _ = store.save();
                            }
+                           log::info!("Menu bar hidden");
                         }
-                        Err(e) => {
-                           log::error!("Failed to create menu: {}", e);
+                     } else {
+                        match menu::create_menu(app_handle) {
+                           Ok(new_menu) => {
+                              if let Err(e) = app_handle.set_menu(new_menu) {
+                                 log::error!("Failed to show menu: {}", e);
+                              } else {
+                                 if let Ok(store) = app_handle.store("settings.json") {
+                                    store.set("nativeMenuBar", true);
+                                    let _ = store.save();
+                                 }
+                                 log::info!("Menu bar shown");
+                              }
+                           }
+                           Err(e) => {
+                              log::error!("Failed to create menu: {}", e);
+                           }
                         }
                      }
                   }

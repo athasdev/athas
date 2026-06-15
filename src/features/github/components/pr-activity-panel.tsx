@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
-import type { Commit } from "../types/github-pr-viewer";
+import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
 import { CommitItem } from "./commit-item";
 import GitHubMarkdown from "./github-markdown";

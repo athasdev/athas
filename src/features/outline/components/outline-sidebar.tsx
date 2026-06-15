@@ -1,23 +1,23 @@
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
-  ArrowSquareOut,
-  BracketsCurly as Braces,
-  CaretDown,
-  CaretRight,
-  Check,
-  Code,
-  Copy,
-  Funnel,
-  Function as FunctionIcon,
-  MagnifyingGlass as Search,
-  SquaresFour,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  BracketsCurlyIcon as Braces,
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  CheckIcon as Check,
+  CodeIcon as Code,
+  CopyIcon as Copy,
+  FunnelIcon as Funnel,
+  FunctionIcon,
+  MagnifyingGlassIcon as Search,
+  SquaresFourIcon as SquaresFour,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,
@@ -26,7 +26,7 @@ import {
   SidebarHeaderSearch,
 } from "@/ui/sidebar";
 import { useDocumentOutline } from "../hooks/use-document-outline";
-import type { OutlineSymbol } from "../types/outline-symbol";
+import type { OutlineSymbol } from "../types/outline-symbol.types";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 

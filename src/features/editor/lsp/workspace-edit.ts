@@ -152,7 +152,7 @@ export function collectWorkspaceTextEdits(edit: WorkspaceEdit): Map<string, LspT
 async function readEditableSource(
   filePath: string,
 ): Promise<{ bufferId: string | null; content: string }> {
-  const { useBufferStore } = await import("../stores/buffer-store");
+  const { useBufferStore } = await import("../stores/buffer.store");
   const { readFile } = await import("@/features/file-system/controllers/platform");
   const { buffers } = useBufferStore.getState();
   const openBuffer = buffers.find(
@@ -167,7 +167,7 @@ async function readEditableSource(
 }
 
 async function writeEditableSource(filePath: string, bufferId: string | null, content: string) {
-  const { useBufferStore } = await import("../stores/buffer-store");
+  const { useBufferStore } = await import("../stores/buffer.store");
   const { writeFile } = await import("@/features/file-system/controllers/platform");
 
   if (bufferId) {
@@ -181,11 +181,13 @@ async function writeEditableSource(filePath: string, bufferId: string | null, co
 export async function applyWorkspaceEdit(edit: WorkspaceEdit): Promise<WorkspaceEditApplyResult> {
   const editsByFile = collectWorkspaceTextEdits(edit);
 
-  for (const [filePath, edits] of editsByFile) {
-    const source = await readEditableSource(filePath);
-    const nextContent = applyTextEditsToContent(source.content, edits);
-    await writeEditableSource(filePath, source.bufferId, nextContent);
-  }
+  await Promise.all(
+    Array.from(editsByFile, async ([filePath, edits]) => {
+      const source = await readEditableSource(filePath);
+      const nextContent = applyTextEditsToContent(source.content, edits);
+      await writeEditableSource(filePath, source.bufferId, nextContent);
+    }),
+  );
 
   return { editedFiles: editsByFile.size };
 }

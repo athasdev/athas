@@ -1,14 +1,14 @@
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  Minus,
-  Plus,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
 } from "@phosphor-icons/react";
 import { memo, useCallback } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { cn } from "@/utils/cn";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
-import type { DiffHunkHeaderProps } from "../../types/git-diff-types";
+import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
 import { createGitHunk } from "../../utils/git-diff-helpers";
 
 const DiffHunkHeader = memo(

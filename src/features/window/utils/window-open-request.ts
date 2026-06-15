@@ -1,5 +1,5 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 export interface WindowOpenRequest {
   type?: "path" | "remote" | "web" | "terminal" | "settings";
@@ -132,8 +132,8 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
 
   if (request.type === "terminal") {
     if (shouldConfirmTerminalCommand(request)) {
-      const { primitiveConfirm } = await import("@/ui/primitive-dialog-service");
-      const confirmed = await primitiveConfirm(getTerminalCommandConfirmationMessage(request), {
+      const { showConfirmDialog } = await import("@/features/dialogs/services/dialog-service");
+      const confirmed = await showConfirmDialog(getTerminalCommandConfirmationMessage(request), {
         title: "Run Terminal Command",
         confirmLabel: "Run Command",
       });

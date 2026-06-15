@@ -1,10 +1,10 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { HistoryEntry } from "@/features/editor/history/types";
-import { useHistoryStore } from "@/features/editor/stores/history-store";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { HistoryEntry } from "@/features/editor/types/history.types";
+import { useHistoryStore } from "@/features/editor/stores/history.store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 
 export interface VimEditingCommands {
   deleteLine: () => void;

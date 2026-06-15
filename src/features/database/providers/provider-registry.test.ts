@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 import { PROVIDER_REGISTRY } from "./provider-registry";
 
 const DATABASE_TYPES: DatabaseType[] = [

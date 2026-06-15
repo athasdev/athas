@@ -1,7 +1,7 @@
-import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import { getRelativePath, normalizePath } from "@/utils/path-helpers";
-import type { DatabaseType } from "../models/provider.types";
-import type { SavedConnection } from "../stores/connection-store";
+import type { DatabaseType } from "../types/provider.types";
+import type { SavedConnection } from "../stores/connection.store";
 import { getDatabaseTypeForFilePath } from "./database-file-drop";
 
 export interface WorkspaceDatabaseFile {

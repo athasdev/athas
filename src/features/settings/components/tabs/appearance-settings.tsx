@@ -1,30 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Upload } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { UploadIcon as Upload } from "@phosphor-icons/react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
-import type { IconThemeDefinition } from "@/extensions/icon-themes/types";
+import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import type { ThemeDefinition } from "@/extensions/themes/types";
+import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
+import { useMemo } from "react";
 import {
   formatUiFontSize,
   UI_FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_STEP,
 } from "@/features/settings/lib/ui-font-size";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 
 export const AppearanceSettings = () => {
   const { settings, updateSetting } = useSettingsStore();
-  const [themeOptions, setThemeOptions] = useState<{ value: string; label: string }[]>([]);
-  const [iconThemeOptions, setIconThemeOptions] = useState<{ value: string; label: string }[]>([]);
+  const registeredThemes = useRegisteredThemes();
+  const registeredIconThemes = useRegisteredIconThemes();
 
   const sidebarOptions = [
     { value: "left", label: "Left" },
@@ -39,22 +39,14 @@ export const AppearanceSettings = () => {
     { value: "left", label: "Left" },
   ];
 
-  // Load themes from theme registry
-  useEffect(() => {
-    const loadThemes = () => {
-      const registryThemes = themeRegistry.getAllThemes();
-      const options = registryThemes.map((theme: ThemeDefinition) => ({
+  const themeOptions = useMemo(
+    () =>
+      registeredThemes.map((theme) => ({
         value: theme.id,
         label: theme.name,
-      }));
-      setThemeOptions(options);
-    };
-
-    loadThemes();
-
-    const unsubscribe = themeRegistry.onRegistryChange(loadThemes);
-    return unsubscribe;
-  }, []);
+      })),
+    [registeredThemes],
+  );
 
   const normalizedThemeOptions = useMemo(() => {
     if (themeOptions.some((option) => option.value === settings.theme)) {
@@ -87,22 +79,14 @@ export const AppearanceSettings = () => {
     [normalizedThemeOptions],
   );
 
-  // Load icon themes from icon theme registry
-  useEffect(() => {
-    const loadIconThemes = () => {
-      const registryThemes = iconThemeRegistry.getAllThemes();
-      const options = registryThemes.map((theme: IconThemeDefinition) => ({
+  const iconThemeOptions = useMemo(
+    () =>
+      registeredIconThemes.map((theme) => ({
         value: theme.id,
         label: theme.name,
-      }));
-      setIconThemeOptions(options);
-    };
-
-    loadIconThemes();
-
-    const unsubscribe = iconThemeRegistry.onRegistryChange(loadIconThemes);
-    return unsubscribe;
-  }, []);
+      })),
+    [registeredIconThemes],
+  );
 
   const normalizedIconThemeOptions = useMemo(() => {
     if (iconThemeOptions.some((option) => option.value === settings.iconTheme)) {
@@ -344,7 +328,7 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
 
-        {!IS_MAC && !IS_WINDOWS && (
+        {!IS_MAC && !IS_WINDOWS && !IS_LINUX && (
           <SettingRow
             label="Native Menu Bar"
             description="Use the native menu bar or a custom UI menu bar"

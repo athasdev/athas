@@ -1,9 +1,18 @@
 import DOMPurify from "dompurify";
-import { normalizeLanguage } from "./language-map";
+import { normalizeCodeFenceLanguage } from "./language-map";
 
 interface Footnote {
   id: string;
   text: string;
+}
+
+interface FrontMatterEntry {
+  key: string;
+  value: string;
+}
+
+export interface ParseMarkdownOptions {
+  frontMatter?: "preserve" | "render" | "strip";
 }
 
 function escapeHtml(text: string): string {
@@ -59,8 +68,88 @@ function processTable(lines: string[], footnotes: Footnote[]): string {
   return tableHtml.join("");
 }
 
-export function parseMarkdown(content: string): string {
+function extractYamlFrontMatter(content: string): { frontMatter: string[]; body: string } {
   const lines = content.split("\n");
+  const firstLine = lines[0]?.replace(/^\uFEFF/, "").trim();
+
+  if (firstLine !== "---") {
+    return { frontMatter: [], body: content };
+  }
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line === "---" || line === "...") {
+      return { frontMatter: lines.slice(1, i), body: lines.slice(i + 1).join("\n") };
+    }
+  }
+
+  return { frontMatter: [], body: content };
+}
+
+function parseFrontMatterEntries(frontMatter: string[]): FrontMatterEntry[] {
+  const entries: FrontMatterEntry[] = [];
+  const stack: Array<{ indent: number; key: string }> = [];
+
+  for (const rawLine of frontMatter) {
+    if (!rawLine.trim() || rawLine.trim().startsWith("#")) continue;
+
+    const match = rawLine.match(/^(\s*)([^:]+):\s*(.*)$/);
+    if (!match) continue;
+
+    const indent = match[1].length;
+    const key = match[2].trim();
+    const value = match[3].trim();
+
+    while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+      stack.pop();
+    }
+
+    const propertyPath = [...stack.map((item) => item.key), key].join(".");
+    entries.push({ key: propertyPath, value });
+
+    if (!value) {
+      stack.push({ indent, key });
+    }
+  }
+
+  return entries;
+}
+
+function renderFrontMatter(frontMatter: string[]): string | null {
+  const entries = parseFrontMatterEntries(frontMatter);
+  if (entries.length === 0) return null;
+
+  const title = entries.find((entry) => entry.key === "title" && entry.value)?.value;
+  const description = entries.find((entry) => entry.key === "description" && entry.value)?.value;
+  const propertyEntries = entries.filter(
+    (entry) => entry.value && entry.key !== "title" && entry.key !== "description",
+  );
+
+  const headerParts = [
+    title ? `<div class="markdown-front-matter-heading">${escapeHtml(title)}</div>` : "",
+    description
+      ? `<p class="markdown-front-matter-description">${escapeHtml(description)}</p>`
+      : "",
+  ].join("");
+
+  const rows = propertyEntries
+    .map(
+      (entry) =>
+        `<div class="markdown-front-matter-item"><dt>${escapeHtml(entry.key)}</dt><dd>${escapeHtml(entry.value)}</dd></div>`,
+    )
+    .join("");
+
+  const propertyGrid = rows ? `<dl class="markdown-front-matter-grid">${rows}</dl>` : "";
+  return `<section class="markdown-front-matter" aria-label="Document properties">${headerParts}${propertyGrid}</section>`;
+}
+
+export function parseMarkdown(content: string, options: ParseMarkdownOptions = {}): string {
+  const frontMatterMode = options.frontMatter ?? "preserve";
+  const { frontMatter, body } =
+    frontMatterMode === "preserve"
+      ? { frontMatter: [], body: content }
+      : extractYamlFrontMatter(content);
+  const lines = body.split("\n");
   const processedLines: string[] = [];
   const footnotes: Footnote[] = [];
   let inUnorderedList = false;
@@ -81,8 +170,7 @@ export function parseMarkdown(content: string): string {
 
     if (line.match(/^```/)) {
       if (inCodeBlock) {
-        const rawLang = codeBlockLanguage || "plaintext";
-        const lang = normalizeLanguage(rawLang);
+        const lang = normalizeCodeFenceLanguage(codeBlockLanguage || "plaintext");
         const escaped = escapeHtml(codeBlockContent.trim());
         processedLines.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
         codeBlockContent = "";
@@ -194,8 +282,7 @@ export function parseMarkdown(content: string): string {
   if (inOrderedList) processedLines.push("</ol>");
   if (inBlockquote) processedLines.push("</blockquote>");
   if (inCodeBlock) {
-    const rawLang = codeBlockLanguage || "plaintext";
-    const lang = normalizeLanguage(rawLang);
+    const lang = normalizeCodeFenceLanguage(codeBlockLanguage || "plaintext");
     const escaped = escapeHtml(codeBlockContent.trim());
     processedLines.push(`<pre><code class="language-${lang}">${escaped}</code></pre>`);
   }
@@ -211,6 +298,13 @@ export function parseMarkdown(content: string): string {
     }
     processedLines.push("</ol>");
     processedLines.push("</div>");
+  }
+
+  if (frontMatterMode === "render") {
+    const frontMatterHtml = renderFrontMatter(frontMatter);
+    if (frontMatterHtml) {
+      processedLines.unshift(frontMatterHtml);
+    }
   }
 
   const rawHtml = processedLines.join("\n");

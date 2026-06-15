@@ -7,7 +7,7 @@
 import { getActionKeys } from "../actions/action-registry";
 import { getOperatorKeys } from "../operators/operator-registry";
 import { getMotionKeys } from "./motion-registry";
-import type { VimCommand } from "./types";
+import type { VimCommand } from "./types/core.types";
 
 interface ParseState {
   count1?: number; // Count before operator/action

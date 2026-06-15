@@ -1,9 +1,9 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Copy, ArrowSquareOut as ExternalLink } from "@phosphor-icons/react";
+import { CopyIcon as Copy, ArrowSquareOutIcon as ExternalLink } from "@phosphor-icons/react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import type { Commit } from "../types/github-pr-viewer";
+import type { Commit } from "../types/github-pr-viewer.types";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import GitHubMarkdown from "./github-markdown";
 

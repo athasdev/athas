@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getAllLanguages } from "@/features/editor/utils/language-id";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
@@ -25,11 +25,6 @@ export const EditorSettings = () => {
     { value: "trailing", label: "Trailing" },
     { value: "all", label: "All" },
   ];
-  const editorEngineOptions = [
-    { value: "monaco", label: "Monaco" },
-    { value: "athas", label: "Athas" },
-  ];
-
   return (
     <div className="space-y-4">
       <Section title="Editor">
@@ -44,26 +39,6 @@ export const EditorSettings = () => {
             onChange={(fontFamily) => updateSetting("fontFamily", fontFamily)}
             className={SETTINGS_CONTROL_WIDTHS.text}
             monospaceOnly={true}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Editor Engine"
-          description="Choose the editor rendering engine"
-          onReset={() => updateSetting("editorEngine", getDefaultSetting("editorEngine"))}
-          canReset={settings.editorEngine !== getDefaultSetting("editorEngine")}
-        >
-          <Select
-            value={settings.editorEngine}
-            options={editorEngineOptions}
-            onChange={(value) =>
-              updateSetting("editorEngine", value as typeof settings.editorEngine)
-            }
-            className={SETTINGS_CONTROL_WIDTHS.text}
-            size="xs"
-            variant="default"
-            searchable
-            searchableTrigger="input"
           />
         </SettingRow>
 

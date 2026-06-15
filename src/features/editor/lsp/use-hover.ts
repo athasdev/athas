@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { Hover } from "vscode-languageserver-types";
-import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics-store";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import {
   formatDiagnosticMessage,
   getDiagnosticAtPosition,
 } from "@/features/editor/decorations/diagnostic-decorations";
-import { useEditorUIStore } from "../stores/ui-store";
+import { useEditorUIStore } from "../stores/ui.store";
 import { logger } from "../utils/logger";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
 import { formatHoverContents } from "./hover-content";
@@ -78,6 +78,12 @@ export const useHover = ({
         if (!editor) return;
         const textarea = editor.querySelector("textarea");
         const rect = editor.getBoundingClientRect();
+        const bounds = {
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          left: rect.left,
+        };
         const x = clientX - rect.left;
         const y = clientY - rect.top;
 
@@ -131,6 +137,7 @@ export const useHover = ({
             actions.setHoverInfo({
               content: formatDiagnosticMessage(diagnostic),
               position: { top: Math.max(margin, tooltipY), left: tooltipX },
+              bounds,
               opensUpward,
             });
             return;
@@ -179,6 +186,7 @@ export const useHover = ({
                 actions.setHoverInfo({
                   content: content.trim(),
                   position: { top: tooltipY, left: tooltipX },
+                  bounds,
                   opensUpward,
                 });
               }

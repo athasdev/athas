@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 
 export function useProFeature() {
   const user = useAuthStore((state) => state.user);

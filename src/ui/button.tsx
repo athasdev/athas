@@ -1,7 +1,7 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
+import { Slot } from "@/ui/slot";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 

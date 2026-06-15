@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { useFoldStore } from "../stores/fold-store";
+import { useFoldStore } from "../stores/fold.store";
 
 describe("fold store", () => {
   afterEach(() => {

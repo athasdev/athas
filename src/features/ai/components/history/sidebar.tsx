@@ -1,7 +1,11 @@
-import { Check, MagnifyingGlass as Search, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash2,
+} from "@phosphor-icons/react";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
-import type { Chat } from "@/features/ai/types/ai-chat";
+import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,

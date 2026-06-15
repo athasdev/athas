@@ -1,5 +1,5 @@
-import { useSettingsStore } from "@/features/settings/store";
-import { useVimStore } from "@/features/vim/stores/vim-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
 import { cn } from "@/utils/cn";
 
 interface VimStatusIndicatorProps {

@@ -1,4 +1,10 @@
-import { CaretRight, Circle, Pause, Stack, Trash } from "@phosphor-icons/react";
+import {
+  CaretRightIcon as CaretRight,
+  CircleIcon as Circle,
+  PauseIcon as Pause,
+  StackIcon as Stack,
+  TrashIcon as Trash,
+} from "@phosphor-icons/react";
 import { cva } from "class-variance-authority";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -7,7 +13,7 @@ import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
-import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger";
+import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger.types";
 
 export const EMPTY_DEBUG_SECTION_MESSAGES = {
   stack: "Start a session to see frames.",

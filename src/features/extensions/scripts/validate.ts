@@ -20,6 +20,38 @@ interface ValidationError {
 const verifyLocalPackages = process.argv.includes("--verify-local-packages");
 const errors: ValidationError[] = [];
 const warnings: ValidationError[] = [];
+const validToolRuntimes = new Set([
+  "bun",
+  "node",
+  "python",
+  "go",
+  "rust",
+  "ruby",
+  "r",
+  "system",
+  "binary",
+]);
+const knownBinaryInstallStrategyTools = new Set([
+  "clangd",
+  "dart",
+  "elixir-ls",
+  "jdtls",
+  "kotlin-language-server",
+  "lua-language-server",
+  "marksman",
+  "omnisharp",
+  "rust-analyzer",
+  "stylua",
+  "terraform-ls",
+  "zig",
+  "zls",
+]);
+const knownRuntimeRewriteTools = new Set([
+  "elm-language-server",
+  "rescript-language-server",
+  "solargraph",
+  "solidity-language-server",
+]);
 
 function error(extension: string, message: string) {
   errors.push({ extension, message });
@@ -143,9 +175,69 @@ async function validateInstallPackage(
     await validatePackageEntry(
       folder,
       `Installation package for ${platformArch}`,
-      packageEntry as { downloadUrl?: unknown; size?: unknown; checksum?: unknown },
+      packageEntry as {
+        downloadUrl?: unknown;
+        size?: unknown;
+        checksum?: unknown;
+      },
     );
   }
+}
+
+function validateLanguageToolConfig(folder: string, label: string, toolConfig: unknown): void {
+  if (!toolConfig || typeof toolConfig !== "object" || Array.isArray(toolConfig)) {
+    return;
+  }
+
+  const tool = toolConfig as {
+    name?: unknown;
+    runtime?: unknown;
+    downloadUrl?: unknown;
+  };
+  const name = typeof tool.name === "string" ? tool.name : undefined;
+  const runtime = typeof tool.runtime === "string" ? tool.runtime : undefined;
+
+  if (!name) {
+    error(folder, `${label} tool missing 'name'`);
+    return;
+  }
+
+  if (!runtime) {
+    error(folder, `${label} tool '${name}' missing 'runtime'`);
+    return;
+  }
+
+  if (!validToolRuntimes.has(runtime)) {
+    error(folder, `${label} tool '${name}' has invalid runtime '${runtime}'`);
+    return;
+  }
+
+  if (runtime === "system" && tool.downloadUrl !== undefined) {
+    error(folder, `${label} system tool '${name}' must not declare 'downloadUrl'`);
+  }
+
+  if (
+    runtime === "binary" &&
+    typeof tool.downloadUrl !== "string" &&
+    !knownBinaryInstallStrategyTools.has(name) &&
+    !knownRuntimeRewriteTools.has(name)
+  ) {
+    error(
+      folder,
+      `${label} binary tool '${name}' needs 'downloadUrl', a known install strategy, or runtime 'system'`,
+    );
+  }
+}
+
+function validateLanguageToolConfigs(folder: string, manifest: Record<string, unknown>): void {
+  const capabilities =
+    typeof manifest.capabilities === "object" && manifest.capabilities !== null
+      ? (manifest.capabilities as Record<string, unknown>)
+      : {};
+
+  validateLanguageToolConfig(folder, "LSP", capabilities.lsp);
+  validateLanguageToolConfig(folder, "Formatter", capabilities.formatter);
+  validateLanguageToolConfig(folder, "Linter", capabilities.linter);
 }
 
 async function validateExtension(folder: string): Promise<void> {
@@ -238,6 +330,7 @@ async function validateExtension(folder: string): Promise<void> {
   }
 
   await validateInstallPackage(folder, manifest);
+  validateLanguageToolConfigs(folder, manifest);
 
   const capabilities = manifest.capabilities as Record<string, unknown> | undefined;
   if (capabilities?.grammar) {

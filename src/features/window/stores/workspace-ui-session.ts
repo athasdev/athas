@@ -1,11 +1,11 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
-import { useSessionStore, type ProjectUiSession } from "@/features/window/stores/session-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { useSessionStore, type ProjectUiSession } from "@/features/window/stores/session.store";
 import {
   buildCurrentProjectPaneSession,
   buildPaneLayoutFromSession,
 } from "@/features/window/stores/workspace-pane-session";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 
 export const DEFAULT_PROJECT_UI_STATE: ProjectUiSession = {
   isSidebarVisible: true,

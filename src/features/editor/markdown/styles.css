@@ -1,6 +1,7 @@
 .markdown-preview {
   color: var(--color-text);
   line-height: 1.68;
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
 }
 
 .markdown-content {
@@ -64,6 +65,53 @@
 
 .markdown-preview :is(h1, h2, h3, h4, h5, h6) + :is(p, ul, ol, pre, blockquote, table) {
   margin-top: 0;
+}
+
+.markdown-preview .markdown-front-matter {
+  margin: 0 0 1.1em;
+  padding: 0.75em 0;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+.markdown-preview .markdown-front-matter-heading {
+  margin: 0 0 0.25em;
+  color: var(--color-text);
+  font-size: 1.45em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.markdown-preview .markdown-front-matter-description {
+  margin: 0 0 0.8em;
+  color: var(--color-text-light);
+  line-height: 1.5;
+}
+
+.markdown-preview .markdown-front-matter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.65em 1.25em;
+  margin: 0.8em 0 0;
+}
+
+.markdown-preview .markdown-front-matter dt {
+  margin: 0 0 0.16em;
+  color: var(--color-text-lighter);
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.78em;
+}
+
+.markdown-preview .markdown-front-matter dd {
+  margin: 0;
+  color: var(--color-text);
+  font-family:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+  font-size: 0.92em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 /* Paragraphs */

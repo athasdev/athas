@@ -1,19 +1,19 @@
 import {
-  ArrowLeft,
-  Database,
-  FilePlus,
-  FolderOpen,
-  MagnifyingGlass,
-  PlugsConnected,
-  Plus,
-  Trash,
+  ArrowLeftIcon as ArrowLeft,
+  DatabaseIcon as Database,
+  FilePlusIcon as FilePlus,
+  FolderOpenIcon as FolderOpen,
+  MagnifyingGlassIcon as MagnifyingGlass,
+  PlugsConnectedIcon as PlugsConnected,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import {
@@ -34,9 +34,9 @@ import {
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { normalizeDatabaseError } from "../lib/database-errors";
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 import { PROVIDER_REGISTRY } from "../providers/provider-registry";
-import { type SavedConnection, useConnectionStore } from "../stores/connection-store";
+import { type SavedConnection, useConnectionStore } from "../stores/connection.store";
 import {
   DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
   getDatabaseTypeForFilePath,

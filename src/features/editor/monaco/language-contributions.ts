@@ -19,6 +19,8 @@ import "monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution";
 import "monaco-editor/esm/vs/basic-languages/objective-c/objective-c.contribution";
 import "monaco-editor/esm/vs/basic-languages/php/php.contribution";
 import "monaco-editor/esm/vs/basic-languages/protobuf/protobuf.contribution";
+import "monaco-editor/esm/vs/basic-languages/python/python.contribution";
+import "monaco-editor/esm/vs/basic-languages/r/r.contribution";
 import "monaco-editor/esm/vs/basic-languages/ruby/ruby.contribution";
 import "monaco-editor/esm/vs/basic-languages/rust/rust.contribution";
 import "monaco-editor/esm/vs/basic-languages/scala/scala.contribution";
@@ -76,6 +78,10 @@ languages.setMonarchTokensProvider("diff", {
     ],
   },
 });
+
+ensureLanguage("r", [".r", ".R"], ["R", "r"], [".Rprofile"]);
+ensureLanguage("rmarkdown", [".rmd", ".Rmd"], ["R Markdown", "rmd"]);
+ensureLanguage("jupyter-notebook", [".ipynb"], ["Jupyter Notebook", "ipynb"]);
 
 ensureLanguage(
   "gitignore",

@@ -1,10 +1,15 @@
-import { Check, GitBranch, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  GitBranchIcon as GitBranch,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
+} from "@phosphor-icons/react";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { checkoutBranch, createBranch, deleteBranch, getBranches } from "../api/git-branches-api";
@@ -191,7 +196,7 @@ const GitBranchManager = ({
   const handleDeleteBranch = async (branchName: string) => {
     if (!repoPath || !branchName || branchName === currentBranch) return;
 
-    const confirmed = await primitiveConfirm(
+    const confirmed = await showConfirmDialog(
       `Are you sure you want to delete branch "${branchName}"?`,
       { title: "Delete Branch", confirmLabel: "Delete" },
     );

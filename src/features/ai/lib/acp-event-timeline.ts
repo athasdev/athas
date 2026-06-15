@@ -1,15 +1,10 @@
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 
-const MAX_EVENTS = 40;
 const DEDUPE_WINDOW_MS = 1200;
-const MAX_DETAIL_LENGTH = 220;
 
 export type ChatAcpEventInput = Omit<ChatAcpEvent, "id" | "timestamp"> & {
   id?: string;
 };
-
-export const truncateDetail = (value: string, maxLength = MAX_DETAIL_LENGTH): string =>
-  value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
 
 export const appendChatAcpEvent = (
   previousEvents: ChatAcpEvent[],
@@ -19,7 +14,6 @@ export const appendChatAcpEvent = (
   const eventId = event.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const nextEvent: ChatAcpEvent = {
     ...event,
-    detail: event.detail ? truncateDetail(event.detail) : undefined,
     id: eventId,
     timestamp: now,
   };
@@ -36,7 +30,7 @@ export const appendChatAcpEvent = (
     return [...previousEvents.slice(0, -1), { ...last, timestamp: now }];
   }
 
-  return [...previousEvents.slice(-(MAX_EVENTS - 1)), nextEvent];
+  return [...previousEvents, nextEvent];
 };
 
 export const completeThinkingAcpEvents = (previousEvents: ChatAcpEvent[]): ChatAcpEvent[] => {

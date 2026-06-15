@@ -1,13 +1,13 @@
 import {
-  BracketsCurly as Braces,
-  CaretLeft as ChevronLeft,
-  CaretRight as ChevronRight,
-  CaretDoubleLeft as ChevronsLeft,
-  CaretDoubleRight as ChevronsRight,
-  Database,
-  Stack as Layers,
-  ArrowClockwise as RefreshCw,
-  Trash as Trash2,
+  BracketsCurlyIcon as Braces,
+  CaretLeftIcon as ChevronLeft,
+  CaretRightIcon as ChevronRight,
+  CaretDoubleLeftIcon as ChevronsLeft,
+  CaretDoubleRightIcon as ChevronsRight,
+  DatabaseIcon as Database,
+  StackIcon as Layers,
+  ArrowClockwiseIcon as RefreshCw,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
@@ -16,7 +16,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { getMongoDocumentDisplayIndex } from "./mongodb-pagination";
-import { useMongoDbStore } from "./stores/mongodb-store";
+import { useMongoDbStore } from "./stores/mongodb.store";
 
 interface MongoDBViewerProps {
   connectionId: string;

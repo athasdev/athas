@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff } from "../types/git.types";
 import {
   LARGE_DIFF_EDITOR_LINE_THRESHOLD,
   getInitialExpandedDiffFileKeys,

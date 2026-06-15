@@ -92,6 +92,13 @@ pub fn git_diff_file_with_content(
 }
 
 #[tauri::command]
+pub async fn git_status_diff_stats(
+   repo_path: String,
+) -> Result<Vec<git_backend::GitDiffStat>, String> {
+   run_blocking(move || git_backend::git_status_diff_stats(repo_path)).await
+}
+
+#[tauri::command]
 pub async fn git_commit_diff(
    repo_path: String,
    commit_hash: String,

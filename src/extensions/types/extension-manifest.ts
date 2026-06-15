@@ -12,7 +12,18 @@ export type PlatformArch =
   | "linux-arm64"
   | "win32-x64";
 
-export type ToolRuntime = "bun" | "node" | "python" | "go" | "rust" | "binary";
+export type ToolRuntime =
+  | "bun"
+  | "node"
+  | "python"
+  | "go"
+  | "rust"
+  | "ruby"
+  | "r"
+  // Uses a system executable from PATH or known toolchain locations.
+  | "system"
+  // Uses a system executable when present, otherwise an Athas-managed binary.
+  | "binary";
 export type ExtensionKind = "ui" | "workspace" | "web";
 
 export interface ExtensionManifest {

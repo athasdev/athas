@@ -1,15 +1,15 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  FileText,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  FileTextIcon as FileText,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
-import type { FileDiffSummary, MultiFileDiffViewerProps } from "../../types/git-diff-types";
-import type { GitDiff } from "../../types/git-types";
+import type { FileDiffSummary, MultiFileDiffViewerProps } from "../../types/git-diff.types";
+import type { GitDiff } from "../../types/git.types";
 import { getFileStatus } from "../../utils/git-diff-helpers";
 import DiffHeader from "./git-diff-header";
 import ImageDiffViewer from "./git-diff-image";

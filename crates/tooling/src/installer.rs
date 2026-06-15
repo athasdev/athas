@@ -4,7 +4,7 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use serde_json::Value;
 use std::{
-   fs,
+   env, fs,
    io::Cursor,
    path::{Component, Path, PathBuf},
    process::Command,
@@ -51,6 +51,150 @@ impl ToolInstaller {
 
    fn configured_command_name(config: &ToolConfig) -> &str {
       config.command.as_deref().unwrap_or(&config.name)
+   }
+
+   fn platform_binary_names(name: &str) -> Vec<String> {
+      if cfg!(windows) {
+         vec![
+            format!("{}.exe", name),
+            format!("{}.cmd", name),
+            format!("{}.bat", name),
+            name.to_string(),
+         ]
+      } else {
+         vec![name.to_string()]
+      }
+   }
+
+   fn common_system_tool_dirs() -> Vec<PathBuf> {
+      let mut dirs = Vec::new();
+
+      if let Some(home) = env::var_os("HOME").map(PathBuf::from) {
+         dirs.extend([
+            home.join(".local").join("bin"),
+            home.join(".cargo").join("bin"),
+            home.join("go").join("bin"),
+            home.join(".bun").join("bin"),
+            home.join(".opam").join("default").join("bin"),
+            home
+               .join(".local")
+               .join("share")
+               .join("coursier")
+               .join("bin"),
+         ]);
+
+         if cfg!(target_os = "macos") {
+            dirs.push(
+               home
+                  .join("Library")
+                  .join("Application Support")
+                  .join("Coursier")
+                  .join("bin"),
+            );
+         }
+      }
+
+      if cfg!(target_os = "macos") {
+         dirs.extend([
+            PathBuf::from("/opt/homebrew/bin"),
+            PathBuf::from("/usr/local/bin"),
+            PathBuf::from("/opt/local/bin"),
+            PathBuf::from("/Library/Developer/CommandLineTools/usr/bin"),
+            PathBuf::from(
+               "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/\
+                usr/bin",
+            ),
+         ]);
+      }
+
+      if cfg!(target_os = "linux") {
+         dirs.extend([
+            PathBuf::from("/usr/local/bin"),
+            PathBuf::from("/usr/bin"),
+            PathBuf::from("/bin"),
+            PathBuf::from("/snap/bin"),
+         ]);
+      }
+
+      if cfg!(windows) {
+         if let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from) {
+            dirs.push(local_app_data.join("Coursier").join("data").join("bin"));
+         }
+      }
+
+      dirs
+   }
+
+   fn find_binary_in_dirs(
+      command_name: &str,
+      dirs: impl IntoIterator<Item = PathBuf>,
+   ) -> Option<PathBuf> {
+      dirs
+         .into_iter()
+         .flat_map(|dir| {
+            Self::platform_binary_names(command_name)
+               .into_iter()
+               .map(move |name| dir.join(name))
+         })
+         .find(|path| path.exists())
+   }
+
+   fn command_stdout_path(command_name: &str, args: &[&str]) -> Option<PathBuf> {
+      let command_path = which::which(command_name)
+         .ok()
+         .or_else(|| Self::find_binary_in_dirs(command_name, Self::common_system_tool_dirs()))?;
+      let mut command = Command::new(command_path);
+      let output = configure_background_command(&mut command)
+         .args(args)
+         .output()
+         .ok()?;
+
+      if !output.status.success() {
+         return None;
+      }
+
+      let path = PathBuf::from(String::from_utf8_lossy(&output.stdout).trim());
+      path.exists().then_some(path)
+   }
+
+   fn find_sourcekit_lsp() -> Option<PathBuf> {
+      if !cfg!(target_os = "macos") {
+         return None;
+      }
+
+      Self::command_stdout_path("xcrun", &["--find", "sourcekit-lsp"])
+   }
+
+   fn find_opam_tool(command_name: &str) -> Option<PathBuf> {
+      let bin_dir = Self::command_stdout_path("opam", &["var", "bin"])?;
+      Self::find_binary_in_dirs(command_name, [bin_dir])
+   }
+
+   fn find_system_tool(command_name: &str) -> Result<PathBuf, ToolError> {
+      if let Ok(path) = which::which(command_name) {
+         return Ok(path);
+      }
+
+      if command_name == "sourcekit-lsp"
+         && let Some(path) = Self::find_sourcekit_lsp()
+      {
+         return Ok(path);
+      }
+
+      if command_name == "ocamllsp"
+         && let Some(path) = Self::find_opam_tool(command_name)
+      {
+         return Ok(path);
+      }
+
+      if let Some(path) = Self::find_binary_in_dirs(command_name, Self::common_system_tool_dirs()) {
+         return Ok(path);
+      }
+
+      Err(ToolError::NotFound(format!(
+         "{} (system tool not found in PATH or known toolchain locations)",
+         command_name
+      )))
    }
 
    fn default_node_bin_name(name: &str) -> String {
@@ -598,6 +742,30 @@ impl ToolInstaller {
       Ok(Self::get_tools_dir(app_handle)?.join("binary").join(name))
    }
 
+   fn existing_managed_binary(
+      app_handle: &AppHandle,
+      config: &ToolConfig,
+      command_name: &str,
+   ) -> Result<Option<PathBuf>, ToolError> {
+      let install_dir = Self::binary_install_dir(app_handle, &config.name)?;
+      if install_dir.exists()
+         && let Ok(path) = Self::pick_binary(&install_dir, command_name)
+      {
+         Self::validate_existing_binary(&path, config)?;
+         return Ok(Some(path));
+      }
+
+      let legacy_path = Self::get_tools_dir(app_handle)?
+         .join("bin")
+         .join(Self::bin_file_name(command_name));
+      if legacy_path.exists() {
+         Self::validate_existing_binary(&legacy_path, config)?;
+         return Ok(Some(legacy_path));
+      }
+
+      Ok(None)
+   }
+
    fn install_extracted_binary(
       staging_dir: &Path,
       install_dir: &Path,
@@ -696,23 +864,36 @@ impl ToolInstaller {
                .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
             Self::install_via_gem(app_handle, package, Self::configured_command_name(config)).await
          }
-         ToolRuntime::Binary => {
-            if let Some(url) = config.download_url.as_ref() {
-               Self::download_binary(
-                  app_handle,
-                  &config.name,
-                  Self::configured_command_name(config),
-                  url,
-               )
+         ToolRuntime::R => {
+            let package = config
+               .package
+               .as_ref()
+               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
+            Self::install_via_r_package(app_handle, package, Self::configured_command_name(config))
                .await
+         }
+         ToolRuntime::System => {
+            let command_name = Self::configured_command_name(config);
+            Self::find_system_tool(command_name)
+         }
+         ToolRuntime::Binary => {
+            let command_name = Self::configured_command_name(config);
+            if let Ok(system_path) = Self::find_system_tool(command_name) {
+               return Ok(system_path);
+            }
+
+            if let Some(path) = Self::existing_managed_binary(app_handle, config, command_name)? {
+               return Ok(path);
+            }
+
+            if let Some(url) = config.download_url.as_ref() {
+               Self::download_binary(app_handle, &config.name, command_name, url).await
             } else {
-               let command_name = Self::configured_command_name(config);
-               which::which(command_name).map_err(|_| {
-                  ToolError::NotFound(format!(
-                     "{} (not found on PATH and no download URL configured)",
-                     command_name
-                  ))
-               })
+               Err(ToolError::NotFound(format!(
+                  "{} (not found in system locations and no managed binary download URL \
+                   configured)",
+                  command_name
+               )))
             }
          }
       }
@@ -980,6 +1161,12 @@ impl ToolInstaller {
          .join(Self::script_bin_name(command_name))
    }
 
+   fn r_wrapper_path(package_dir: &Path, command_name: &str) -> PathBuf {
+      package_dir
+         .join("bin")
+         .join(Self::script_bin_name(command_name))
+   }
+
    #[cfg(windows)]
    fn batch_escape_path(path: &Path) -> String {
       path.to_string_lossy().replace('%', "%%")
@@ -1051,7 +1238,7 @@ impl ToolInstaller {
       package: &str,
       command_name: &str,
    ) -> Result<PathBuf, ToolError> {
-      let gem_path = which::which("gem").map_err(|_| {
+      let gem_path = Self::find_system_tool("gem").map_err(|_| {
          ToolError::RuntimeNotAvailable(
             "RubyGems 'gem' was not found. Install Ruby to use Ruby language tools.".to_string(),
          )
@@ -1091,6 +1278,92 @@ impl ToolInstaller {
       }
 
       Self::write_ruby_wrapper(&package_dir, command_name, &gem_home, &gem_bin_dir)
+   }
+
+   fn write_r_wrapper(
+      package_dir: &Path,
+      command_name: &str,
+      rscript_path: &Path,
+      r_library_dir: &Path,
+   ) -> Result<PathBuf, ToolError> {
+      let wrapper_path = Self::r_wrapper_path(package_dir, command_name);
+      if let Some(parent) = wrapper_path.parent() {
+         fs::create_dir_all(parent)?;
+      }
+
+      #[cfg(windows)]
+      {
+         fs::write(
+            &wrapper_path,
+            format!(
+               "@echo off\r\nset \"R_LIBS_USER={}\"\r\n\"{}\" --vanilla -e \
+                \"library(\\\"languageserver\\\", lib.loc=Sys.getenv(\\\"R_LIBS_USER\\\")); \
+                languageserver::run()\" %*\r\n",
+               Self::batch_escape_path(r_library_dir),
+               Self::batch_escape_path(rscript_path)
+            ),
+         )?;
+      }
+
+      #[cfg(not(windows))]
+      {
+         fs::write(
+            &wrapper_path,
+            format!(
+               "#!/bin/sh\nexport R_LIBS_USER={}\nexec {} --vanilla -e \
+                'library(\"languageserver\", lib.loc=Sys.getenv(\"R_LIBS_USER\")); \
+                languageserver::run()' \"$@\"\n",
+               Self::shell_quote_path(r_library_dir),
+               Self::shell_quote_path(rscript_path)
+            ),
+         )?;
+      }
+
+      Self::validate_and_prepare(&wrapper_path)
+   }
+
+   /// Install an R package into an Athas-managed R library and write an LSP wrapper.
+   async fn install_via_r_package(
+      app_handle: &AppHandle,
+      package: &str,
+      command_name: &str,
+   ) -> Result<PathBuf, ToolError> {
+      let rscript_path = Self::find_system_tool("Rscript").map_err(|_| {
+         ToolError::RuntimeNotAvailable(
+            "Rscript was not found. Install R to use R language tools.".to_string(),
+         )
+      })?;
+
+      let tools_dir = Self::get_tools_dir(app_handle)?;
+      let package_dir = tools_dir.join("r").join(package);
+      let r_library_dir = package_dir.join("library");
+      std::fs::create_dir_all(&r_library_dir)?;
+
+      log::info!("Installing {} via Rscript to {:?}", package, r_library_dir);
+
+      let package_literal = serde_json::to_string(package)
+         .map_err(|error| ToolError::ConfigError(error.to_string()))?;
+      let install_expr = format!(
+         "local({{ lib <- Sys.getenv('R_LIBS_USER'); dir.create(lib, recursive = TRUE, showWarnings = FALSE); repos <- getOption('repos'); if (is.null(repos) || identical(unname(repos['CRAN']), '@CRAN@')) repos <- c(CRAN = 'https://cloud.r-project.org'); install.packages({}, lib = lib, repos = repos) }})",
+         package_literal
+      );
+
+      let mut command = Command::new(&rscript_path);
+      let output = configure_background_command(&mut command)
+         .args(["--vanilla", "-e", install_expr.as_str()])
+         .env("R_LIBS_USER", &r_library_dir)
+         .output()
+         .map_err(|e| ToolError::InstallationFailed(e.to_string()))?;
+
+      if !output.status.success() {
+         let stderr = String::from_utf8_lossy(&output.stderr);
+         return Err(ToolError::InstallationFailed(format!(
+            "R package install failed: {}",
+            stderr
+         )));
+      }
+
+      Self::write_r_wrapper(&package_dir, command_name, &rscript_path, &r_library_dir)
    }
 
    /// Download a binary directly.
@@ -1234,27 +1507,34 @@ impl ToolInstaller {
                Self::configured_command_name(config),
             ))
          }
+         ToolRuntime::R => {
+            let package = config
+               .package
+               .as_ref()
+               .ok_or_else(|| ToolError::ConfigError("No package specified".to_string()))?;
+            Ok(Self::r_wrapper_path(
+               &tools_dir.join("r").join(package),
+               Self::configured_command_name(config),
+            ))
+         }
+         ToolRuntime::System => {
+            let command_name = Self::configured_command_name(config);
+            Self::find_system_tool(command_name)
+         }
          ToolRuntime::Binary => {
             let command_name = Self::configured_command_name(config);
-            let bin_name = Self::bin_file_name(command_name);
-            if config.download_url.is_none()
-               && let Ok(system_path) = which::which(command_name)
-            {
-               Self::validate_existing_binary(&system_path, config)?;
+            if let Ok(system_path) = Self::find_system_tool(command_name) {
                return Ok(system_path);
             }
 
-            let install_dir = tools_dir.join("binary").join(&config.name);
-            if install_dir.exists()
-               && let Ok(path) = Self::pick_binary(&install_dir, command_name)
-            {
-               Self::validate_existing_binary(&path, config)?;
+            if let Some(path) = Self::existing_managed_binary(app_handle, config, command_name)? {
                return Ok(path);
             }
 
-            let legacy_path = tools_dir.join("bin").join(bin_name);
-            Self::validate_existing_binary(&legacy_path, config)?;
-            Ok(legacy_path)
+            Ok(tools_dir
+               .join("binary")
+               .join(&config.name)
+               .join(Self::bin_file_name(command_name)))
          }
       }
    }
@@ -1352,6 +1632,32 @@ mod tests {
          assert!(validate_binary_download_url("http://localhost:3000/tool.tar.gz").is_ok());
          assert!(validate_binary_download_url("http://127.0.0.1:8080/tool.tar.gz").is_ok());
       }
+   }
+
+   #[test]
+   fn finds_system_tool_in_candidate_dirs() {
+      let temp = tempfile::tempdir().unwrap();
+      let bin_dir = temp.path().join("bin");
+      fs::create_dir_all(&bin_dir).unwrap();
+      let binary = bin_dir.join(ToolInstaller::bin_file_name("test-language-server"));
+      fs::write(&binary, "").unwrap();
+
+      let resolved = ToolInstaller::find_binary_in_dirs("test-language-server", [bin_dir]);
+
+      assert_eq!(resolved.as_deref(), Some(binary.as_path()));
+   }
+
+   #[test]
+   fn detects_existing_managed_binary_installation() {
+      let temp = tempfile::tempdir().unwrap();
+      let tools_dir = temp.path().join("binary").join("marksman");
+      fs::create_dir_all(&tools_dir).unwrap();
+      let binary = tools_dir.join(ToolInstaller::bin_file_name("marksman"));
+      fs::write(&binary, "").unwrap();
+
+      let picked = ToolInstaller::pick_binary(&tools_dir, "marksman").unwrap();
+
+      assert_eq!(picked, binary);
    }
 
    #[test]
@@ -1570,6 +1876,35 @@ mod tests {
       );
 
       assert!(matches!(result, Err(ToolError::InstallationFailed(_))));
+   }
+
+   #[test]
+   fn writes_r_wrapper_for_managed_r_package() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp.path().join("r").join("languageserver");
+      let rscript_path = temp.path().join(ToolInstaller::bin_file_name("Rscript"));
+      let r_library_dir = package_dir.join("library");
+      fs::create_dir_all(&r_library_dir).unwrap();
+      fs::write(&rscript_path, "").unwrap();
+
+      let wrapper = ToolInstaller::write_r_wrapper(
+         &package_dir,
+         "r-languageserver",
+         &rscript_path,
+         &r_library_dir,
+      )
+      .unwrap();
+
+      assert_eq!(
+         wrapper,
+         package_dir
+            .join("bin")
+            .join(ToolInstaller::script_bin_name("r-languageserver"))
+      );
+      let content = fs::read_to_string(wrapper).unwrap();
+      assert!(content.contains("R_LIBS_USER"));
+      assert!(content.contains("languageserver::run()"));
+      assert!(content.contains(rscript_path.to_string_lossy().as_ref()));
    }
 
    #[test]

@@ -1,22 +1,24 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  Copy,
-  TerminalWindow as Terminal,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  CopyIcon as Copy,
+  TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { Button } from "@/ui/button";
+import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
-  fetchHighlightQuery,
-  getDefaultParserWasmUrl,
-} from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizeCodeWithTree } from "@/features/editor/lib/wasm-parser/tokenizer";
-import { normalizeLanguage } from "@/features/editor/markdown/language-map";
+  type CodeHighlightSegment,
+  getCodeHighlightSegments,
+} from "@/features/editor/markdown/code-highlight";
+import {
+  normalizeCodeFenceLanguage,
+  normalizeLanguage,
+} from "@/features/editor/markdown/language-map";
+import { Button } from "@/ui/button";
 
 const LANGUAGE_HINTS = new Set([
   "bash",
@@ -152,15 +154,6 @@ function inferCodeLanguage(code: string): string {
   return "clike";
 }
 
-type HighlightSegment = {
-  start: number;
-  end: number;
-  className: string;
-};
-
-const TREE_SITTER_QUERY_CACHE = new Map<string, string>();
-const TREE_SITTER_TOKEN_CACHE = new Map<string, HighlightSegment[]>();
-
 async function copyTextToClipboard(text: string) {
   try {
     const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
@@ -170,49 +163,7 @@ async function copyTextToClipboard(text: string) {
   }
 }
 
-const TREE_SITTER_LANGUAGE_ALIASES: Record<string, string> = {
-  csharp: "csharp",
-  jsx: "tsx",
-  shell: "bash",
-  markup: "html",
-  xml: "html",
-  objectivec: "objc",
-};
-
-function resolveTreeSitterLanguage(language: string): string | null {
-  const normalized = normalizeLanguage(language);
-  if (normalized === "clike") return null;
-  return TREE_SITTER_LANGUAGE_ALIASES[normalized] || normalized;
-}
-
-function normalizeSegments(tokens: HighlightSegment[], maxLength: number): HighlightSegment[] {
-  if (tokens.length === 0) return [];
-
-  const sorted = [...tokens].sort((a, b) => a.start - b.start || a.end - b.end);
-  const normalized: HighlightSegment[] = [];
-  let cursor = 0;
-
-  for (const token of sorted) {
-    const start = Math.max(0, Math.min(maxLength, token.start));
-    const end = Math.max(0, Math.min(maxLength, token.end));
-    if (end <= start) continue;
-
-    const clampedStart = Math.max(start, cursor);
-    if (end <= clampedStart) continue;
-
-    normalized.push({
-      ...token,
-      start: clampedStart,
-      end,
-    });
-
-    cursor = end;
-  }
-
-  return normalized;
-}
-
-function renderHighlightedCode(code: string, segments: HighlightSegment[]): React.ReactNode {
+function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {
   if (segments.length === 0) {
     return code;
   }
@@ -250,74 +201,20 @@ function CodeBlock({
   languageHint: string;
   onApplyCode?: (code: string, language?: string) => void;
 }) {
-  const explicitLanguage = languageHint ? normalizeLanguage(languageHint) : "";
+  const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
-  const treeSitterLanguage = resolveTreeSitterLanguage(inferredLanguage);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
 
-  const [segments, setSegments] = useState<HighlightSegment[] | null>(null);
+  const [segments, setSegments] = useState<CodeHighlightSegment[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setSegments(null);
 
-    if (!treeSitterLanguage) {
-      setSegments([]);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const cacheKey = `${treeSitterLanguage}:${code}`;
-    const cached = TREE_SITTER_TOKEN_CACHE.get(cacheKey);
-    if (cached) {
-      setSegments(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
     const loadHighlighting = async () => {
-      try {
-        const wasmPath = getDefaultParserWasmUrl(treeSitterLanguage);
-        let highlightQuery = TREE_SITTER_QUERY_CACHE.get(treeSitterLanguage);
-
-        if (!highlightQuery) {
-          const resolved = await fetchHighlightQuery(treeSitterLanguage, {
-            wasmUrl: wasmPath,
-            cacheMode: "no-store",
-          });
-          highlightQuery = resolved.query || "";
-          TREE_SITTER_QUERY_CACHE.set(treeSitterLanguage, highlightQuery);
-        }
-
-        const result = await tokenizeCodeWithTree(code, treeSitterLanguage, {
-          languageId: treeSitterLanguage,
-          wasmPath,
-          highlightQuery,
-        });
-
-        const tokenSegments = normalizeSegments(
-          result.tokens.map((token) => ({
-            start: token.startIndex,
-            end: token.endIndex,
-            className: token.type,
-          })),
-          code.length,
-        );
-
-        try {
-          result.tree.delete();
-        } catch {}
-
-        if (cancelled) return;
-
-        TREE_SITTER_TOKEN_CACHE.set(cacheKey, tokenSegments);
-        setSegments(tokenSegments);
-      } catch {
-        if (!cancelled) {
-          setSegments([]);
-        }
+      const nextSegments = await getCodeHighlightSegments(code, inferredLanguage);
+      if (!cancelled) {
+        setSegments(nextSegments);
       }
     };
 
@@ -326,7 +223,7 @@ function CodeBlock({
     return () => {
       cancelled = true;
     };
-  }, [code, treeSitterLanguage]);
+  }, [code, inferredLanguage]);
 
   const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
 

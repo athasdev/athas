@@ -1,14 +1,14 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  ArrowClockwise as RefreshCw,
-  GitPullRequest,
-  Lightning,
-  Link,
-  WarningCircle,
+  ArrowClockwiseIcon as RefreshCw,
+  GitPullRequestIcon as GitPullRequest,
+  LightningIcon as Lightning,
+  LinkIcon as Link,
+  WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
-import type { Action } from "../models/action.types";
+import type { Action } from "../types/action.types";
 
 type GitHubSidebarSection = "pull-requests" | "issues" | "actions";
 

@@ -1,9 +1,8 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { parseMarkdown } from "@/features/editor/markdown/parser";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { highlightCodeBlock } from "./hover-tooltip-highlight";
+import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import "./hover-tooltip.css";
 
 export const HoverTooltip = memo(() => {
@@ -12,10 +11,10 @@ export const HoverTooltip = memo(() => {
   const fontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { hoverInfo, actions } = useEditorUIStore();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
   const [resolvedPosition, setResolvedPosition] = useState<{ top: number; left: number } | null>(
     null,
   );
+  const displayHtml = useHighlightedMarkdown(hoverInfo?.content);
 
   const handleMouseEnter = () => actions.setIsHovering(true);
   const handleMouseLeave = () => {
@@ -58,17 +57,6 @@ export const HoverTooltip = memo(() => {
     };
   }, [actions]);
 
-  const renderedContent = useMemo(() => {
-    if (!hoverInfo?.content) return null;
-    return parseMarkdown(hoverInfo.content);
-  }, [hoverInfo?.content]);
-
-  // Apply syntax highlighting to code blocks after initial render
-  const applyHighlighting = useCallback(async (html: string) => {
-    const highlighted = await highlightCodeBlock(html);
-    setHighlightedHtml(highlighted);
-  }, []);
-
   useLayoutEffect(() => {
     if (!hoverInfo || !containerRef.current) {
       setResolvedPosition(null);
@@ -77,22 +65,28 @@ export const HoverTooltip = memo(() => {
 
     const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
     const rect = containerRef.current.getBoundingClientRect();
+    const bounds = hoverInfo.bounds ?? {
+      top: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      left: 0,
+    };
 
     let left = hoverInfo.position.left;
     let top = hoverInfo.opensUpward ? hoverInfo.position.top - rect.height : hoverInfo.position.top;
 
-    if (left + rect.width > window.innerWidth - margin) {
-      left = window.innerWidth - rect.width - margin;
+    if (left + rect.width > bounds.right - margin) {
+      left = bounds.right - rect.width - margin;
     }
-    if (left < margin) {
-      left = margin;
+    if (left < bounds.left + margin) {
+      left = bounds.left + margin;
     }
 
-    if (top + rect.height > window.innerHeight - margin) {
-      top = window.innerHeight - rect.height - margin;
+    if (top + rect.height > bounds.bottom - margin) {
+      top = bounds.bottom - rect.height - margin;
     }
-    if (top < margin) {
-      top = margin;
+    if (top < bounds.top + margin) {
+      top = bounds.top + margin;
     }
 
     setResolvedPosition((current) => {
@@ -101,26 +95,22 @@ export const HoverTooltip = memo(() => {
       }
       return { top, left };
     });
-  }, [hoverInfo, highlightedHtml, renderedContent]);
-
-  useEffect(() => {
-    if (renderedContent) {
-      setHighlightedHtml(null);
-      applyHighlighting(renderedContent);
-    }
-  }, [renderedContent, applyHighlighting]);
+  }, [hoverInfo, displayHtml]);
 
   if (!hoverInfo) return null;
 
-  const displayHtml = highlightedHtml ?? renderedContent;
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-  const maxWidth = Math.min(
-    EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH,
-    Math.max(220, window.innerWidth - margin * 2),
-  );
+  const bounds = hoverInfo.bounds ?? {
+    top: 0,
+    right: window.innerWidth,
+    bottom: window.innerHeight,
+    left: 0,
+  };
+  const boundedWidth = Math.max(0, bounds.right - bounds.left - margin * 2);
+  const maxWidth = Math.min(EDITOR_CONSTANTS.DROPDOWN_MAX_WIDTH, boundedWidth);
   const availableHeight = hoverInfo.opensUpward
-    ? Math.max(140, hoverInfo.position.top - margin)
-    : Math.max(140, window.innerHeight - hoverInfo.position.top - margin);
+    ? Math.max(0, hoverInfo.position.top - bounds.top - margin)
+    : Math.max(0, bounds.bottom - hoverInfo.position.top - margin);
   const maxHeight = Math.min(EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT, availableHeight);
 
   const positionStyle = resolvedPosition ?? {
@@ -150,7 +140,10 @@ export const HoverTooltip = memo(() => {
       onMouseLeave={handleMouseLeave}
     >
       {displayHtml && (
-        <div className="hover-tooltip-body custom-scrollbar" style={{ maxHeight: maxHeight - 4 }}>
+        <div
+          className="hover-tooltip-body custom-scrollbar"
+          style={{ maxHeight: Math.max(0, maxHeight - 4) }}
+        >
           <div
             className="markdown-preview hover-tooltip-content text-text"
             dangerouslySetInnerHTML={{ __html: displayHtml }}

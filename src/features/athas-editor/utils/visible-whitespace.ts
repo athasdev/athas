@@ -1,6 +1,4 @@
-import type { RenderWhitespaceMode } from "@/features/settings/types/settings";
-
-const MAX_VISIBLE_WHITESPACE_LINE_LENGTH = 20_000;
+import type { RenderWhitespaceMode } from "@/features/settings/types/settings.types";
 
 export type VisibleWhitespaceKind = "space" | "tab";
 
@@ -14,108 +12,86 @@ function isVisibleWhitespaceCandidate(char: string): boolean {
   return char === " " || char === "\t";
 }
 
-function markRun(mask: Uint8Array, line: string, start: number, end: number): void {
-  for (let index = start; index < end; index++) {
-    mask[index] = line[index] === "\t" ? 2 : 1;
-  }
-}
-
-function markTrailingWhitespace(mask: Uint8Array, line: string): void {
+function getTrailingWhitespaceStart(line: string): number {
   let start = line.length;
   while (start > 0 && isVisibleWhitespaceCandidate(line[start - 1])) {
     start--;
   }
-
-  if (start < line.length) {
-    markRun(mask, line, start, line.length);
-  }
+  return start;
 }
 
-export function createVisibleWhitespaceMask(
-  line: string,
-  mode: RenderWhitespaceMode,
-): Uint8Array | null {
-  if (mode === "none" || line.length === 0 || line.length > MAX_VISIBLE_WHITESPACE_LINE_LENGTH) {
-    return null;
+function getWhitespaceRun(line: string, index: number): { start: number; end: number } {
+  let start = index;
+  while (start > 0 && isVisibleWhitespaceCandidate(line[start - 1])) {
+    start--;
   }
 
-  const mask = new Uint8Array(line.length);
-
-  if (mode === "all") {
-    for (let index = 0; index < line.length; index++) {
-      if (isVisibleWhitespaceCandidate(line[index])) {
-        mask[index] = line[index] === "\t" ? 2 : 1;
-      }
-    }
-    return mask;
+  let end = index + 1;
+  while (end < line.length && isVisibleWhitespaceCandidate(line[end])) {
+    end++;
   }
 
-  if (mode === "trailing") {
-    markTrailingWhitespace(mask, line);
-    return mask;
-  }
-
-  let index = 0;
-  while (index < line.length) {
-    if (!isVisibleWhitespaceCandidate(line[index])) {
-      index++;
-      continue;
-    }
-
-    const runStart = index;
-    let containsTab = false;
-    while (index < line.length && isVisibleWhitespaceCandidate(line[index])) {
-      containsTab ||= line[index] === "\t";
-      index++;
-    }
-
-    const runEnd = index;
-    const isLeading = runStart === 0;
-    const isTrailing = runEnd === line.length;
-    const isBoundaryRun = isLeading || isTrailing || containsTab || runEnd - runStart > 1;
-
-    if (isBoundaryRun) {
-      markRun(mask, line, runStart, runEnd);
-    }
-  }
-
-  return mask;
+  return { start, end };
 }
 
 export function splitVisibleWhitespaceSegments(
   line: string,
   start: number,
   end: number,
-  mask: Uint8Array | null,
+  mode: RenderWhitespaceMode,
 ): VisibleWhitespaceSegment[] {
-  if (!mask) {
+  if (mode === "none") {
     return [{ text: line.slice(start, end), kind: null, start }];
   }
 
   const segments: VisibleWhitespaceSegment[] = [];
+  const trailingWhitespaceStart =
+    mode === "trailing" ? getTrailingWhitespaceStart(line) : line.length;
   let cursor = start;
 
   while (cursor < end) {
-    const marker = mask[cursor];
-    if (marker) {
+    if (!isVisibleWhitespaceCandidate(line[cursor])) {
+      const textStart = cursor;
+      while (cursor < end && !isVisibleWhitespaceCandidate(line[cursor])) {
+        cursor++;
+      }
       segments.push({
-        text: line[cursor],
-        kind: marker === 2 ? "tab" : "space",
-        start: cursor,
+        text: line.slice(textStart, cursor),
+        kind: null,
+        start: textStart,
       });
-      cursor++;
       continue;
     }
 
-    const textStart = cursor;
-    while (cursor < end && !mask[cursor]) {
-      cursor++;
+    const run = getWhitespaceRun(line, cursor);
+    const segmentRunStart = Math.max(run.start, start);
+    const segmentRunEnd = Math.min(run.end, end);
+    const containsTab = line.slice(run.start, run.end).includes("\t");
+    const isVisibleRun =
+      mode === "all" ||
+      (mode === "trailing" && run.start >= trailingWhitespaceStart) ||
+      (mode === "boundary" &&
+        (run.start === 0 || run.end === line.length || containsTab || run.end - run.start > 1));
+
+    if (!isVisibleRun) {
+      segments.push({
+        text: line.slice(segmentRunStart, segmentRunEnd),
+        kind: null,
+        start: segmentRunStart,
+      });
+      cursor = segmentRunEnd;
+      continue;
     }
-    segments.push({
-      text: line.slice(textStart, cursor),
-      kind: null,
-      start: textStart,
-    });
+
+    for (let index = segmentRunStart; index < segmentRunEnd; index++) {
+      const char = line[index];
+      segments.push({
+        text: char,
+        kind: char === "\t" ? "tab" : "space",
+        start: index,
+      });
+    }
+    cursor = segmentRunEnd;
   }
 
   return segments;

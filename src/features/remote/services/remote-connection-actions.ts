@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { toast } from "@/ui/toast";
-import { connectionStore } from "./remote-connection-store";
-import type { RemoteConnection } from "../types";
+import { connectionStore } from "../stores/remote-connection.store";
+import type { RemoteConnection } from "../types/remote.types";
 import { getFriendlyRemoteError } from "../utils/remote-errors";
 
 export async function loadRemoteConnections(): Promise<RemoteConnection[]> {

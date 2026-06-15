@@ -1,9 +1,9 @@
-import { ArrowBendDownLeft as CornerDownLeft, X } from "@phosphor-icons/react";
+import { ArrowBendDownLeftIcon as CornerDownLeft, XIcon as X } from "@phosphor-icons/react";
 import { forwardRef } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import type { useInlineEdit } from "@/features/athas-editor/hooks/use-inline-edit";
-import type { Range } from "@/features/editor/types/editor";
+import type { Range } from "@/features/editor/types/editor.types";
 import { InlineEditModelSelector } from "./inline-edit-model-selector";
 
 type InlineEditState = ReturnType<typeof useInlineEdit>;

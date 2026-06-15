@@ -1,6 +1,6 @@
-import { Eye } from "@phosphor-icons/react";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import type { Action } from "../models/action.types";
+import { EyeIcon as Eye } from "@phosphor-icons/react";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import type { Action } from "../types/action.types";
 
 interface MarkdownActionsParams {
   isMarkdownFile: boolean;

@@ -1,5 +1,5 @@
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
-import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content";
+import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 
 export const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
   const base = {

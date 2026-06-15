@@ -104,8 +104,9 @@ impl TerminalConnection {
 
    #[cfg(target_os = "windows")]
    fn get_user_environment() -> HashMap<String, String> {
-      // On Windows, inherit current process environment
-      std::env::vars().collect()
+      let mut env_map: HashMap<String, String> = std::env::vars().collect();
+      Self::ensure_windows_profile_environment(&mut env_map);
+      env_map
    }
 
    fn build_command(config: &TerminalConfig) -> Result<CommandBuilder> {
@@ -125,6 +126,7 @@ impl TerminalConnection {
          }
       };
 
+      let selected_shell_id = config.shell.as_deref();
       let (mut cmd, shell_path): (CommandBuilder, Option<String>) =
          if let Some(command) = &config.command {
             let mut builder = CommandBuilder::new(command);
@@ -134,21 +136,11 @@ impl TerminalConnection {
             (builder, None)
          } else {
             let default_shell = default_shell();
-            let shell_path = if let Some(shell_id) = &config.shell {
-               if let Some(shell) = get_shell_by_id(shell_id) {
-                  if cfg!(target_os = "windows") {
-                     shell.exec_win.unwrap_or(default_shell.clone())
-                  } else {
-                     shell.exec_unix.unwrap_or(default_shell.clone())
-                  }
-               } else {
-                  default_shell.clone()
-               }
-            } else {
-               default_shell.clone()
-            };
+            let shell_path = Self::resolve_shell_path(selected_shell_id, &default_shell);
+            let mut builder = CommandBuilder::new(&shell_path);
+            Self::configure_shell_startup(&mut builder, selected_shell_id, &shell_path);
 
-            (CommandBuilder::new(&shell_path), Some(shell_path))
+            (builder, Some(shell_path))
          };
 
       if let Some(working_dir) = &config.working_directory {
@@ -189,6 +181,113 @@ impl TerminalConnection {
       }
 
       Ok(cmd)
+   }
+
+   fn resolve_shell_path(shell_id: Option<&str>, default_shell: &str) -> String {
+      let Some(shell_id) = shell_id else {
+         return default_shell.to_string();
+      };
+
+      if let Some(shell) = get_shell_by_id(shell_id) {
+         if cfg!(target_os = "windows") {
+            return shell
+               .exec_win
+               .or_else(|| Self::windows_builtin_shell_executable(shell_id).map(str::to_string))
+               .unwrap_or_else(|| default_shell.to_string());
+         }
+
+         return shell.exec_unix.unwrap_or_else(|| default_shell.to_string());
+      }
+
+      if cfg!(target_os = "windows")
+         && let Some(executable) = Self::windows_builtin_shell_executable(shell_id)
+      {
+         return executable.to_string();
+      }
+
+      default_shell.to_string()
+   }
+
+   fn configure_shell_startup(cmd: &mut CommandBuilder, shell_id: Option<&str>, shell_path: &str) {
+      if cfg!(target_os = "windows") {
+         cmd.args(Self::shell_startup_args(shell_id, shell_path));
+      }
+   }
+
+   fn shell_startup_args(shell_id: Option<&str>, shell_path: &str) -> &'static [&'static str] {
+      if Self::is_powershell_shell(shell_id, shell_path) {
+         &["-NoLogo"]
+      } else {
+         &[]
+      }
+   }
+
+   fn is_powershell_shell(shell_id: Option<&str>, shell_path: &str) -> bool {
+      shell_id
+         .is_some_and(|id| id.eq_ignore_ascii_case("powershell") || id.eq_ignore_ascii_case("pwsh"))
+         || Self::executable_name(shell_path).is_some_and(|name| {
+            name.eq_ignore_ascii_case("powershell.exe") || name.eq_ignore_ascii_case("pwsh.exe")
+         })
+   }
+
+   fn executable_name(path: &str) -> Option<&str> {
+      path
+         .rsplit(['/', '\\'])
+         .next()
+         .filter(|name| !name.is_empty())
+         .or_else(|| Path::new(path).file_name().and_then(|name| name.to_str()))
+   }
+
+   fn windows_builtin_shell_executable(shell_id: &str) -> Option<&'static str> {
+      if shell_id.eq_ignore_ascii_case("cmd") {
+         Some("cmd.exe")
+      } else if shell_id.eq_ignore_ascii_case("powershell") {
+         Some("powershell.exe")
+      } else if shell_id.eq_ignore_ascii_case("pwsh") {
+         Some("pwsh.exe")
+      } else if shell_id.eq_ignore_ascii_case("nu") {
+         Some("nu.exe")
+      } else if shell_id.eq_ignore_ascii_case("wsl") {
+         Some("wsl.exe")
+      } else if shell_id.eq_ignore_ascii_case("bash") {
+         Some("bash.exe")
+      } else {
+         None
+      }
+   }
+
+   #[cfg(target_os = "windows")]
+   fn ensure_windows_profile_environment(env_map: &mut HashMap<String, String>) {
+      if !Self::has_env_key(env_map, "USERPROFILE")
+         && let Some(home_dir) = dirs::home_dir()
+      {
+         env_map.insert(
+            "USERPROFILE".to_string(),
+            home_dir.to_string_lossy().to_string(),
+         );
+      }
+
+      let user_profile = env_map
+         .iter()
+         .find(|(key, _)| key.eq_ignore_ascii_case("USERPROFILE"))
+         .map(|(_, value)| value.clone());
+
+      if !Self::has_env_key(env_map, "HOME")
+         && let Some(user_profile) = &user_profile
+      {
+         env_map.insert("HOME".to_string(), user_profile.clone());
+      }
+
+      if let Some(user_profile) = user_profile
+         && !Self::has_env_key(env_map, "HOMEDRIVE")
+         && !Self::has_env_key(env_map, "HOMEPATH")
+         && user_profile.len() > 2
+         && user_profile.as_bytes().get(1) == Some(&b':')
+      {
+         let (drive, path) = user_profile.split_at(2);
+         env_map.insert("HOMEDRIVE".to_string(), drive.to_string());
+         env_map.insert("HOMEPATH".to_string(), path.to_string());
+      }
    }
 
    fn custom_env_has_key(config: &TerminalConfig, key: &str) -> bool {
@@ -423,6 +522,84 @@ mod tests {
          rows: 24,
          cols: 80,
       }
+   }
+
+   #[test]
+   fn powershell_startup_args_keep_profiles_enabled() {
+      let args = TerminalConnection::shell_startup_args(Some("powershell"), "powershell.exe");
+
+      assert_eq!(args, ["-NoLogo"]);
+      assert!(
+         !args
+            .iter()
+            .any(|arg| arg.eq_ignore_ascii_case("-NoProfile"))
+      );
+      assert!(
+         !args
+            .iter()
+            .any(|arg| arg.eq_ignore_ascii_case("-NonInteractive"))
+      );
+   }
+
+   #[test]
+   fn pwsh_startup_args_keep_profiles_enabled() {
+      let args = TerminalConnection::shell_startup_args(Some("pwsh"), "pwsh.exe");
+
+      assert_eq!(args, ["-NoLogo"]);
+      assert!(
+         !args
+            .iter()
+            .any(|arg| arg.eq_ignore_ascii_case("-NoProfile"))
+      );
+      assert!(
+         !args
+            .iter()
+            .any(|arg| arg.eq_ignore_ascii_case("-NonInteractive"))
+      );
+   }
+
+   #[test]
+   fn powershell_detection_accepts_shell_id_and_executable_name() {
+      assert!(TerminalConnection::is_powershell_shell(
+         Some("PowerShell"),
+         "cmd.exe"
+      ));
+      assert!(TerminalConnection::is_powershell_shell(
+         None,
+         r"C:\Program Files\PowerShell\7\pwsh.exe"
+      ));
+      assert!(TerminalConnection::is_powershell_shell(
+         None,
+         r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+      ));
+   }
+
+   #[test]
+   fn non_powershell_shells_do_not_get_powershell_args() {
+      assert_eq!(
+         TerminalConnection::shell_startup_args(Some("cmd"), "cmd.exe"),
+         [] as [&str; 0]
+      );
+      assert_eq!(
+         TerminalConnection::shell_startup_args(Some("bash"), "bash.exe"),
+         [] as [&str; 0]
+      );
+   }
+
+   #[test]
+   fn windows_builtin_shell_fallbacks_preserve_selected_shell() {
+      assert_eq!(
+         TerminalConnection::windows_builtin_shell_executable("powershell"),
+         Some("powershell.exe")
+      );
+      assert_eq!(
+         TerminalConnection::windows_builtin_shell_executable("PWSH"),
+         Some("pwsh.exe")
+      );
+      assert_eq!(
+         TerminalConnection::windows_builtin_shell_executable("unknown"),
+         None
+      );
    }
 
    #[test]

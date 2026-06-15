@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { create } from "zustand";
 import {
-  Warning as AlertTriangle,
-  CheckCircle as CheckCircle2,
-  Info,
-  X,
+  WarningIcon as AlertTriangle,
+  CheckCircleIcon as CheckCircle2,
+  InfoIcon as Info,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
 import { LoadingIndicator } from "@/ui/loading";

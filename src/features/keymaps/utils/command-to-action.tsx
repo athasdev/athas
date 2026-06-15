@@ -1,6 +1,6 @@
-import { TerminalWindow as Terminal } from "@phosphor-icons/react";
-import type { Action } from "@/features/command-palette/models/action.types";
-import type { Command } from "../types";
+import { TerminalWindowIcon as Terminal } from "@phosphor-icons/react";
+import type { Action } from "@/features/command-palette/types/action.types";
+import type { Command } from "../types/keymaps.types";
 
 /**
  * Convert a Command from the keymaps registry to an Action for the command palette

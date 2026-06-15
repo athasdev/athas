@@ -1,18 +1,18 @@
 import {
-  Check,
-  CheckCircle as CheckCircle2,
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  FileCode as FileCode2,
-  GitBranch,
-  GitPullRequest,
-  ArrowClockwise as RefreshCw,
+  CheckIcon as Check,
+  CheckCircleIcon as CheckCircle2,
+  CopyIcon as Copy,
+  ArrowSquareOutIcon as ExternalLink,
+  FileCodeIcon as FileCode2,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
-import type { PullRequestDetails } from "../types/github";
+import type { PullRequestDetails } from "../types/github.types";
 import {
   AssigneesList,
   CIStatusIndicator,

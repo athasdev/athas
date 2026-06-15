@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   appendCollaborationDocumentUpdate,
   getCollaborationClientId,
@@ -10,7 +10,7 @@ import {
   streamCollaborationDocumentUpdates,
   updateCollaborationPresence,
 } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 
 const PRESENCE_HEARTBEAT_MS = 60_000;
 const DOCUMENT_STREAM_RECONNECT_MS = 2_000;

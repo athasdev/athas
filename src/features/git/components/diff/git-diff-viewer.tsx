@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react";
 import { useDiffData } from "../../hooks/use-git-diff-data";
-import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff-types";
+import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff.types";
 import GitDiffEditorStack from "./git-diff-editor-stack";
 import GitDiffEditorSurface from "./git-diff-editor-surface";
 import ImageDiffViewer from "./git-diff-image";

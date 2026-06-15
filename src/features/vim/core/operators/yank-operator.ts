@@ -2,8 +2,8 @@
  * Yank operator (y)
  */
 
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import type { EditorContext, Operator, VimRange } from "../core/types";
+import { useVimStore } from "@/features/vim/stores/vim.store";
+import type { EditorContext, Operator, VimRange } from "../core/types/core.types";
 
 /**
  * Vim clipboard for yanked content (legacy interface kept for compatibility)

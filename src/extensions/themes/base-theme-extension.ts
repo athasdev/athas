@@ -1,4 +1,4 @@
-import type { EditorAPI } from "@/features/editor/extensions/types";
+import type { EditorAPI } from "@/features/editor/types/editor-extension.types";
 import { themeRegistry } from "./theme-registry";
 import type { ThemeDefinition, ThemeExtension } from "./types";
 

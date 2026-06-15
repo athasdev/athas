@@ -4,6 +4,8 @@ export const LANGUAGE_ALIASES: Record<string, string> = {
   jsx: "jsx",
   tsx: "tsx",
   py: "python",
+  r: "r",
+  rmd: "r",
   rb: "ruby",
   rs: "rust",
   sh: "bash",
@@ -47,4 +49,16 @@ export const LANGUAGE_ALIASES: Record<string, string> = {
 export function normalizeLanguage(lang: string): string {
   const normalized = lang.toLowerCase().trim();
   return LANGUAGE_ALIASES[normalized] || normalized;
+}
+
+export function normalizeCodeFenceLanguage(infoString: string): string {
+  const normalized = infoString.trim();
+  const bracedLanguage = normalized.match(/^\{\s*([A-Za-z0-9_+-]+)(?:\s+[^}]*)?\}$/);
+
+  if (bracedLanguage?.[1]) {
+    return normalizeLanguage(bracedLanguage[1]);
+  }
+
+  const [language] = normalized.split(/\s+/);
+  return normalizeLanguage(language || "plaintext");
 }

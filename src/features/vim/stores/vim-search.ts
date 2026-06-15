@@ -1,9 +1,9 @@
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import { useEditorViewStore } from "@/features/editor/stores/view-store";
+import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface SearchMatch {

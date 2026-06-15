@@ -1,10 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CheckCircle as CheckCircle2,
-  Clock,
-  Pulse as Activity,
-  WarningCircle as AlertCircle,
-  XCircle,
+  CheckCircleIcon as CheckCircle2,
+  ClockIcon as Clock,
+  PulseIcon as Activity,
+  WarningCircleIcon as AlertCircle,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarState } from "./github-sidebar-state";
@@ -17,12 +17,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useGitHubStore } from "../stores/github-store";
-import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useGitHubStore } from "../stores/github.store";
+import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github.types";
 import { GITHUB_ACTION_LIST_TTL_MS, githubActionListCache } from "../utils/github-data-cache";
 import { LoadingIndicator } from "@/ui/loading";
 import { SidebarListItem } from "@/ui/sidebar";

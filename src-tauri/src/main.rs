@@ -78,6 +78,7 @@ fn main() {
          git_log,
          git_diff_file,
          git_diff_file_with_content,
+         git_status_diff_stats,
          git_commit_diff,
          git_ref_diff,
          git_branches,
@@ -293,6 +294,9 @@ fn main() {
          format_code,
          // Lint commands
          lint_code,
+         // Notebook commands
+         notebook_run_python_cell,
+         notebook_run_r_cell,
          // CLI commands
          check_cli_installed,
          install_cli_command,

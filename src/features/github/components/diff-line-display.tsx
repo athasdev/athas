@@ -1,5 +1,8 @@
 import { memo } from "react";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
+import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { cn } from "@/utils/cn";
 import { renderTokenizedContent } from "../utils/github-pr-viewer-utils";
 
@@ -10,6 +13,13 @@ interface DiffLineDisplayProps {
 }
 
 export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayProps) => {
+  const editorFontSize = useEditorSettingsStore.use.fontSize();
+  const editorFontFamily = useEditorSettingsStore.use.fontFamily();
+  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
+  const editorTabSize = useEditorSettingsStore.use.tabSize();
+  const zoomLevel = useZoomStore.use.editorZoomLevel();
+  const fontSize = editorFontSize * zoomLevel;
+  const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
   let bgClass = "";
   let textClass = "text-text";
   let content = line;
@@ -35,7 +45,15 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
   };
 
   return (
-    <div className={cn("ui-text-sm px-3 py-0.5 editor-font leading-5", bgClass, textClass)}>
+    <div
+      className={cn("px-3 editor-font", bgClass, textClass)}
+      style={{
+        fontSize: `${fontSize}px`,
+        fontFamily: editorFontFamily,
+        lineHeight: `${lineHeight}px`,
+        tabSize: editorTabSize,
+      }}
+    >
       <span className="mr-3 inline-block w-10 select-none text-right text-text-lighter/50">
         {index + 1}
       </span>

@@ -2,8 +2,12 @@ import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
+import {
+  resolveEffectiveTheme,
+  subscribeSystemThemePreference,
+} from "@/features/settings/lib/theme-resolution";
 import { invoke } from "@tauri-apps/api/core";
-import type { Settings, Theme } from "@/features/settings/types/settings";
+import type { Settings, Theme } from "@/features/settings/types/settings.types";
 
 const ALL_THEME_CLASSES = [
   "force-athas-light",
@@ -18,15 +22,8 @@ function applyFallbackTheme(theme: Theme) {
   document.documentElement.classList.add(`force-${theme}`);
 }
 
-type SystemThemePreference = "light" | "dark";
-
-interface LegacyMediaQueryList extends MediaQueryList {
-  addListener(listener: (event: MediaQueryListEvent) => void): void;
-  removeListener(listener: (event: MediaQueryListEvent) => void): void;
-}
-
-let currentThemeSyncQuery: MediaQueryList | null = null;
 let removeThemeSyncListener: (() => void) | null = null;
+let latestThemeSyncSettings: Settings | null = null;
 
 function applyWindowTransparency(enabled: boolean) {
   if (typeof document === "undefined") return;
@@ -41,60 +38,25 @@ function applyWindowTransparency(enabled: boolean) {
   });
 }
 
-function getSystemThemePreference(): SystemThemePreference {
-  if (typeof window !== "undefined" && window.matchMedia) {
-    try {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    } catch (error) {
-      console.warn("matchMedia not available:", error);
-    }
-  }
-
-  return "dark";
-}
-
-function getEffectiveTheme(
-  settings: Pick<Settings, "theme" | "syncSystemTheme" | "autoThemeLight" | "autoThemeDark">,
-): Theme {
-  if (!settings.syncSystemTheme) {
-    return settings.theme;
-  }
-
-  return getSystemThemePreference() === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
-}
-
 function stopSystemThemeSync() {
   removeThemeSyncListener?.();
   removeThemeSyncListener = null;
-  currentThemeSyncQuery = null;
+  latestThemeSyncSettings = null;
 }
 
 function syncThemeWithSystem(settings: Settings) {
-  if (typeof window === "undefined" || !window.matchMedia) {
-    return;
-  }
-
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  latestThemeSyncSettings = settings;
   const handleChange = () => {
-    void applyTheme(getEffectiveTheme(settings));
+    if (latestThemeSyncSettings) {
+      void applyTheme(resolveEffectiveTheme(latestThemeSyncSettings));
+    }
   };
 
-  if (currentThemeSyncQuery === mediaQuery && removeThemeSyncListener) {
+  if (removeThemeSyncListener) {
     return;
   }
 
-  stopSystemThemeSync();
-
-  if ("addEventListener" in mediaQuery) {
-    mediaQuery.addEventListener("change", handleChange);
-    removeThemeSyncListener = () => mediaQuery.removeEventListener("change", handleChange);
-  } else {
-    const legacyMediaQuery = mediaQuery as LegacyMediaQueryList;
-    legacyMediaQuery.addListener(handleChange);
-    removeThemeSyncListener = () => legacyMediaQuery.removeListener(handleChange);
-  }
-
-  currentThemeSyncQuery = mediaQuery;
+  removeThemeSyncListener = subscribeSystemThemePreference(handleChange);
 }
 
 export async function applyTheme(theme: Theme) {
@@ -181,7 +143,7 @@ export async function syncOllamaApiKey() {
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
   applyWindowTransparency(settings.windowTransparency);
-  void applyTheme(getEffectiveTheme(settings));
+  void applyTheme(resolveEffectiveTheme(settings));
   if (settings.syncSystemTheme) {
     syncThemeWithSystem(settings);
   } else {
@@ -198,12 +160,12 @@ export function applySettingSideEffect<K extends keyof Settings>(
   getSettings: () => Settings,
 ) {
   if (key === "theme") {
-    void applyTheme(getEffectiveTheme(getSettings()));
+    void applyTheme(resolveEffectiveTheme(getSettings()));
   }
 
   if (key === "syncSystemTheme" || key === "autoThemeLight" || key === "autoThemeDark") {
     const settings = getSettings();
-    void applyTheme(getEffectiveTheme(settings));
+    void applyTheme(resolveEffectiveTheme(settings));
 
     if (settings.syncSystemTheme) {
       syncThemeWithSystem(settings);

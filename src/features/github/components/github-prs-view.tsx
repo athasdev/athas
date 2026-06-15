@@ -1,18 +1,21 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
-  ArrowSquareOut,
-  ChatCircleText,
-  Check,
-  Copy,
-  Funnel,
-  GitBranch,
-  GitPullRequest,
-  Lightning,
-  MagnifyingGlass as Search,
-  Plus,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  ChatCircleTextIcon as ChatCircleText,
+  CheckIcon as Check,
+  CopyIcon as Copy,
+  FunnelIcon as Funnel,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  LightningIcon as Lightning,
+  MagnifyingGlassIcon as Search,
+  PlusIcon as Plus,
 } from "@phosphor-icons/react";
-import { WarningCircle as AlertCircle, ArrowClockwise as RefreshCw } from "@phosphor-icons/react";
+import {
+  WarningCircleIcon as AlertCircle,
+  ArrowClockwiseIcon as RefreshCw,
+} from "@phosphor-icons/react";
 import {
   memo,
   type ReactNode,
@@ -24,14 +27,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import GitProjectSelector from "@/features/git/components/git-project-selector";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
@@ -46,8 +50,8 @@ import {
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
-import { useGitHubStore } from "../stores/github-store";
-import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github";
+import { useGitHubStore } from "../stores/github.store";
+import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubCreateCommand, type GitHubCreateKind } from "./github-create-command";
 import GitHubIssuesView from "./github-issues-view";
@@ -513,7 +517,7 @@ const GitHubPRsView = memo(() => {
   if (!isAuthenticated) {
     return (
       <SidebarPanel className="gap-2 p-2">
-        <SidebarHeader className="bg-transparent px-0 py-0 backdrop-blur-none">
+        <SidebarHeader className="bg-transparent p-0 backdrop-blur-none">
           <span className="ui-text-sm font-medium text-text">GitHub</span>
         </SidebarHeader>
         <GitHubAuthStatusMessage />
@@ -542,13 +546,17 @@ const GitHubPRsView = memo(() => {
               onChange={(section) => setActiveSection(section as GitHubSidebarSection)}
             />
 
-            <SidebarHeader className="px-0">
+            <SidebarHeader className="min-w-0 px-0">
+              <GitProjectSelector
+                className="min-w-0 max-w-[34%] shrink-0"
+                onRepositoryChange={() => setRepoSelectionError(null)}
+              />
               <SidebarHeaderSearch
                 value={searchQuery}
                 onChange={setSearchQuery}
                 leftIcon={Search}
                 placeholder="Search"
-                containerClassName="pl-4"
+                containerClassName="min-w-0 flex-1 pl-1"
               />
               <SidebarHeaderIconButton
                 className="shrink-0"

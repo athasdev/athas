@@ -1,5 +1,5 @@
-import { useSettingsStore } from "@/features/settings/store";
-import { isMac } from "@/utils/platform";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { isLinux, isMac } from "@/utils/platform";
 
 export function toggleFullscreen(): void {
   window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
@@ -41,7 +41,7 @@ export async function quitApplication(): Promise<void> {
 }
 
 export async function toggleNativeMenuBar(): Promise<void> {
-  if (isMac()) return;
+  if (isMac() || isLinux()) return;
 
   const { settings } = useSettingsStore.getState();
   if (!settings.nativeMenuBar) return;

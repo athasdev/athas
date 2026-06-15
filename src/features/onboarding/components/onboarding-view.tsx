@@ -1,8 +1,8 @@
-import { FolderOpen } from "@phosphor-icons/react";
+import { FolderOpenIcon as FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   type KeybindingPreset,
   keybindingPresetDefinitions,
@@ -11,15 +11,15 @@ import {
 import { markOnboardingCompleted } from "@/features/onboarding/lib/onboarding-state";
 import type { OnboardingContext } from "@/features/onboarding/lib/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
-import {
-  TELEMETRY_DESCRIPTION,
-  TELEMETRY_LEARN_MORE_URL,
-} from "@/features/settings/lib/telemetry-copy";
-import { useSettingsStore } from "@/features/settings/store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+
+const telemetryDescription =
+  "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, extensions, and crashes; it never sends file paths, project names, prompts, or editor content.";
+const telemetryLearnMoreUrl = "https://athas.dev/docs/telemetry";
 
 interface OnboardingViewProps {
   bufferId: string;
@@ -139,9 +139,9 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
               title="Share anonymous telemetry"
               description={
                 <>
-                  {TELEMETRY_DESCRIPTION}{" "}
+                  {telemetryDescription}{" "}
                   <a
-                    href={TELEMETRY_LEARN_MORE_URL}
+                    href={telemetryLearnMoreUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-link hover:underline"

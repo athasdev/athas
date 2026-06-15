@@ -20,7 +20,7 @@ import type {
   LoadedParser,
   ParserConfig,
   TokenizeResult,
-} from "./types";
+} from "../../types/wasm-parser/wasm-parser.types";
 
 /**
  * Tokenize code using a WASM parser with optional incremental parsing support.
@@ -122,50 +122,57 @@ export async function tokenizeCodeWithTree(
     if (injectionRules) {
       const injectionNodes = findInjectionNodes(tree.rootNode, injectionRules);
 
-      for (const { rule, node, parentNode } of injectionNodes) {
-        try {
-          const embeddedContent = content.substring(node.startIndex, node.endIndex);
-          if (!embeddedContent.trim()) continue;
+      const embeddedTokenGroups = await Promise.all(
+        injectionNodes.map(async ({ rule, node, parentNode }) => {
+          try {
+            const embeddedContent = content.substring(node.startIndex, node.endIndex);
+            if (!embeddedContent.trim()) return [];
 
-          const embeddedLanguageId = resolveInjectedLanguage(
-            content,
-            languageId,
-            rule,
-            node,
-            parentNode,
-          );
-          const assets = getLanguageAssetConfig(embeddedLanguageId);
-          const subTokens = await tokenizeCode(embeddedContent, embeddedLanguageId, {
-            languageId: embeddedLanguageId,
-            wasmPath: assets.wasmPath,
-            highlightQueryUrl: assets.highlightQueryUrl,
-          });
+            const embeddedLanguageId = resolveInjectedLanguage(
+              content,
+              languageId,
+              rule,
+              node,
+              parentNode,
+            );
+            const assets = getLanguageAssetConfig(embeddedLanguageId);
+            const subTokens = await tokenizeCode(embeddedContent, embeddedLanguageId, {
+              languageId: embeddedLanguageId,
+              wasmPath: assets.wasmPath,
+              highlightQueryUrl: assets.highlightQueryUrl,
+            });
 
-          const startOffset = node.startIndex;
-          const startRow = node.startPosition.row;
-          const startCol = node.startPosition.column;
+            const startOffset = node.startIndex;
+            const startRow = node.startPosition.row;
+            const startCol = node.startPosition.column;
 
-          for (const token of subTokens) {
-            if (token.startPosition.row === 0) {
-              token.startPosition.column += startCol;
+            for (const token of subTokens) {
+              if (token.startPosition.row === 0) {
+                token.startPosition.column += startCol;
+              }
+              if (token.endPosition.row === 0) {
+                token.endPosition.column += startCol;
+              }
+              token.startPosition.row += startRow;
+              token.endPosition.row += startRow;
+              token.startIndex += startOffset;
+              token.endIndex += startOffset;
             }
-            if (token.endPosition.row === 0) {
-              token.endPosition.column += startCol;
-            }
-            token.startPosition.row += startRow;
-            token.endPosition.row += startRow;
-            token.startIndex += startOffset;
-            token.endIndex += startOffset;
+
+            return subTokens;
+          } catch (error) {
+            logger.warn(
+              "WasmTokenizer",
+              `Failed to tokenize embedded ${rule.language} in ${languageId}`,
+              error,
+            );
+            return [];
           }
+        }),
+      );
 
-          tokens.push(...subTokens);
-        } catch (error) {
-          logger.warn(
-            "WasmTokenizer",
-            `Failed to tokenize embedded ${rule.language} in ${languageId}`,
-            error,
-          );
-        }
+      for (const subTokens of embeddedTokenGroups) {
+        tokens.push(...subTokens);
       }
     }
 

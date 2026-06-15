@@ -4,7 +4,7 @@ import { scan } from "react-scan";
 import App from "./App.tsx";
 import { initializeAppBootstrap } from "./bootstrap/initialize-app-bootstrap";
 import { ToastProvider } from "./features/layout/contexts/toast-context.tsx";
-import { PrimitiveDialogProvider } from "./ui/primitive-dialog-service.tsx";
+import { DialogServiceProvider } from "./features/dialogs/services/dialog-service.tsx";
 
 scan({
   enabled: import.meta.env.VITE_REACT_SCAN === "true",
@@ -14,8 +14,8 @@ void initializeAppBootstrap();
 
 createRoot(document.getElementById("root")!).render(
   <ToastProvider>
-    <PrimitiveDialogProvider>
+    <DialogServiceProvider>
       <App />
-    </PrimitiveDialogProvider>
+    </DialogServiceProvider>
   </ToastProvider>,
 );

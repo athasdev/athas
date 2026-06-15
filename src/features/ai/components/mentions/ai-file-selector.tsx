@@ -1,4 +1,4 @@
-import { MagnifyingGlass as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import {
   Fragment,
   useEffect,
@@ -13,8 +13,8 @@ import { useDebounce } from "use-debounce";
 import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
 import { FileListItem } from "@/features/global-search/components/file-list-item";
-import type { FileCategory, FileItem } from "@/features/global-search/models/types";
-import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileCategory, FileItem } from "@/features/global-search/types/global-search.types";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";

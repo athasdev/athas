@@ -17,7 +17,7 @@
   "capabilities": {
     "lsp": {
       "name": "ocamllsp",
-      "runtime": "binary",
+      "runtime": "system",
       "args": []
     }
   }

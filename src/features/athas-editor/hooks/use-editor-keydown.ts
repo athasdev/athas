@@ -1,19 +1,24 @@
 import { type RefObject, useCallback } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
-import { useLspStore } from "@/features/editor/lsp/lsp-store";
-import { useEditorDecorationsStore } from "@/features/editor/stores/decorations-store";
-import { useFoldStore } from "@/features/editor/stores/fold-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useSettingsStore } from "@/features/settings/store";
-import { useKeymapStore } from "@/features/keymaps/stores/store";
+import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
+import { useEditorDecorationsStore } from "@/features/editor/stores/decorations.store";
+import { useFoldStore } from "@/features/editor/stores/fold.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import { evaluateWhenClause } from "@/features/keymaps/utils/context";
 import { getEffectiveKeybindings } from "@/features/keymaps/utils/effective-keymaps";
 import { matchKeybinding } from "@/features/keymaps/utils/matcher";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
-import type { Decoration, MultiCursorState, Position, Range } from "@/features/editor/types/editor";
+import type {
+  Decoration,
+  MultiCursorState,
+  Position,
+  Range,
+} from "@/features/editor/types/editor.types";
 import { calculateLineOffset } from "@/features/athas-editor/utils/lines";
 import { resolveMultiCursorKeyEdit } from "@/features/athas-editor/utils/multi-cursor";
 import { calculateCursorPositionFromLineOffsets } from "@/features/athas-editor/utils/position";

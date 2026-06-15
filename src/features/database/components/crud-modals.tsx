@@ -1,11 +1,11 @@
-import { Plus as PlusIcon, X as XIcon } from "@phosphor-icons/react";
+import { PlusIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import type { ColumnInfo, DatabaseRow } from "../models/common.types";
+import type { ColumnInfo, DatabaseRow } from "../types/common.types";
 import {
   getInitialCreateTableColumn,
   normalizeCreateTableColumns,

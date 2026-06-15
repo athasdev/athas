@@ -5,6 +5,7 @@ use super::{
       AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, SessionConfigOption,
       SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
+   workspace_path::{path_to_string, resolve_path_against_workspace},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol as acp;
@@ -30,7 +31,7 @@ pub struct PermissionResponse {
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
    app_handle: AppHandle,
-   workspace_path: Option<String>,
+   workspace_path: Option<PathBuf>,
    permission_tx: mpsc::Sender<PermissionResponse>,
    permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
    current_session_id: Arc<Mutex<Option<String>>>,
@@ -42,7 +43,7 @@ pub struct AthasAcpClient {
 impl AthasAcpClient {
    pub fn new(
       app_handle: AppHandle,
-      workspace_path: Option<String>,
+      workspace_path: Option<PathBuf>,
       terminal_manager: Arc<TerminalManager>,
    ) -> Self {
       let (permission_tx, permission_rx) = mpsc::channel(32);
@@ -73,16 +74,7 @@ impl AthasAcpClient {
    }
 
    fn resolve_path(&self, path: &str) -> PathBuf {
-      let candidate = PathBuf::from(path);
-      if candidate.is_absolute() {
-         return candidate;
-      }
-
-      if let Some(ref workspace) = self.workspace_path {
-         return PathBuf::from(workspace).join(candidate);
-      }
-
-      std::env::current_dir().unwrap_or_default().join(candidate)
+      resolve_path_against_workspace(self.workspace_path.as_deref(), path)
    }
 
    fn extract_first_url(text: &str) -> Option<String> {
@@ -816,7 +808,7 @@ impl acp::Client for AthasAcpClient {
          .cwd
          .as_ref()
          .map(|p| p.to_string_lossy().to_string())
-         .or_else(|| self.workspace_path.clone());
+         .or_else(|| self.workspace_path.as_deref().map(path_to_string));
 
       let env_map: Option<HashMap<String, String>> = if args.env.is_empty() {
          None

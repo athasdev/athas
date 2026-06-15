@@ -1,11 +1,11 @@
-import { MagnifyingGlass as Search, X } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search, XIcon as X } from "@phosphor-icons/react";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenizer } from "@/features/editor/hooks/use-tokenizer";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
-import type { ColumnInfo, TableInfo } from "../models/common.types";
+import type { ColumnInfo, TableInfo } from "../types/common.types";
 import {
   applySqlCompletion,
   getSqlCompletions,

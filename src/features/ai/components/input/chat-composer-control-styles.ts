@@ -2,7 +2,7 @@ import { cn } from "@/utils/cn";
 
 export function chatComposerControlClassName(className?: string) {
   return cn(
-    "h-6 min-w-0 gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-none text-text-lighter shadow-none [&_svg]:size-3",
+    "inline-flex h-7 w-fit min-w-0 justify-start gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-normal text-text-lighter shadow-none [&_svg]:size-3",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-[state=open]:bg-hover data-[state=open]:text-text",
@@ -12,7 +12,7 @@ export function chatComposerControlClassName(className?: string) {
 
 export function chatComposerIconButtonClassName(className?: string) {
   return cn(
-    "size-6 rounded-md border-transparent bg-transparent p-0 ui-text-xs leading-none text-text-lighter shadow-none [&_svg]:size-3",
+    "size-7 rounded-md border-transparent bg-transparent p-0 ui-text-xs leading-normal text-text-lighter shadow-none [&_svg]:size-3",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-[active=true]:bg-hover data-[active=true]:text-text data-[state=open]:bg-hover data-[state=open]:text-text",

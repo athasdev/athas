@@ -1,4 +1,8 @@
-import { Minus, Plus, ArrowCounterClockwise as RotateCcw } from "@phosphor-icons/react";
+import {
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  ArrowCounterClockwiseIcon as RotateCcw,
+} from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 

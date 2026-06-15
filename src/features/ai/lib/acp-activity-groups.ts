@@ -1,4 +1,4 @@
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 
 export interface GroupedAcpActivity {
   running: ChatAcpEvent[];

@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { cn } from "@/utils/cn";
-import type { DiffLineProps } from "../../types/git-diff-types";
+import type { DiffLineProps } from "../../types/git-diff.types";
 import { getDiffLineVisualState, getDiffLineVisualType } from "../../utils/git-diff-helpers";
 
 export const getLineBackground = (type: string) => {

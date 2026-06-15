@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { normalizeOutlineSymbols } from "../utils/outline-symbols";
 
 const OUTLINE_REFRESH_DELAY_MS = 250;

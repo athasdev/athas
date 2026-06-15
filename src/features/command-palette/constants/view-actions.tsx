@@ -1,23 +1,23 @@
 import {
-  WarningCircle as AlertCircle,
-  ArrowsLeftRight as ArrowLeftRight,
-  GlobeHemisphereWest as Globe,
-  List as Menu,
-  ChatCircleText as MessageSquare,
-  SidebarSimple as PanelBottom,
-  SidebarSimple as PanelLeft,
-  ArrowCounterClockwise as RotateCcw,
-  MagnifyingGlass as Search,
-  TerminalWindow as Terminal,
-  MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut,
+  WarningCircleIcon as AlertCircle,
+  ArrowsLeftRightIcon as ArrowLeftRight,
+  GlobeHemisphereWestIcon as Globe,
+  ListIcon as Menu,
+  ChatCircleTextIcon as MessageSquare,
+  SidebarSimpleIcon as PanelBottom,
+  SidebarSimpleIcon as PanelLeft,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  MagnifyingGlassIcon as Search,
+  TerminalWindowIcon as Terminal,
+  MagnifyingGlassPlusIcon as ZoomIn,
+  MagnifyingGlassMinusIcon as ZoomOut,
 } from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
-import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
-import type { Action } from "../models/action.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import type { Action } from "../types/action.types";
 
 interface ViewActionsParams {
   isSidebarVisible: boolean;
@@ -158,7 +158,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    ...(!IS_MAC && !IS_WINDOWS
+    ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
       ? [
           {
             id: "toggle-native-menu-bar",
@@ -288,7 +288,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
             icon: <Globe />,
             category: "View",
             action: async () => {
-              const url = await primitivePrompt("Enter URL:", {
+              const url = await showPromptDialog("Enter URL:", {
                 title: "Open URL",
                 defaultValue: "https://",
                 placeholder: "https://",

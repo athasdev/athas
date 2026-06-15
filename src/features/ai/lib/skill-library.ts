@@ -1,4 +1,4 @@
-import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills";
+import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 
 const SKILLS_REGISTRY_URL =
   import.meta.env.VITE_SKILLS_REGISTRY_URL || "https://athas.dev/skills/index.json";

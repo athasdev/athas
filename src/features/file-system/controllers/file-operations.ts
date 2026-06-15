@@ -1,4 +1,4 @@
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../types/app.types";
 import { joinPath } from "@/utils/path-helpers";
 import {
   getSymlinkInfo,
@@ -8,7 +8,7 @@ import {
   readFile as platformReadFile,
   writeFile as platformWriteFile,
 } from "./platform";
-import { useFileSystemStore } from "./store";
+import { useFileSystemStore } from "../stores/file-system.store";
 import { shouldHideFromFileTree } from "./utils";
 
 export async function readFileContent(path: string): Promise<string> {

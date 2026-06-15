@@ -1,14 +1,18 @@
-import { CaretLeft, Copy, Sparkle as Sparkles } from "@phosphor-icons/react";
+import {
+  CaretLeftIcon as CaretLeft,
+  CopyIcon as Copy,
+  SparkleIcon as Sparkles,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getQuickQuestionCompletionStream } from "@/features/ai/services/ai-chat-service";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
-import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
 

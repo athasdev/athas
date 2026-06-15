@@ -1,4 +1,4 @@
-import type { ColumnInfo, ForeignKeyInfo } from "../models/common.types";
+import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
 
 export function getColumnConstraintLabels(column: ColumnInfo): string[] {
   const labels: string[] = [];

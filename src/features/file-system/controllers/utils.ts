@@ -1,4 +1,4 @@
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../types/app.types";
 import { sortFileEntries } from "./file-tree-utils";
 
 const OS_GENERATED_FILE_PATTERNS: string[] = [

@@ -13,8 +13,6 @@ const NOT_REPO_PATTERNS = [
 ];
 
 const WORKSPACE_REPO_CACHE_TTL_MS = 5 * 60_000;
-const WORKSPACE_REPO_SCAN_MAX_DEPTH = 5;
-const WORKSPACE_REPO_SCAN_MAX_DIRS = 1200;
 const REPO_SCAN_SKIP_DIRS = new Set([
   ".git",
   ".svn",
@@ -137,6 +135,14 @@ export async function resolveRepositoryPath(repoPath: string): Promise<string | 
   return discoverRepo(repoPath);
 }
 
+export async function resolveRepositoryPathOrThrow(repoPath: string): Promise<string> {
+  const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+  if (!resolvedRepoPath) {
+    throw new Error("Not a Git repository");
+  }
+  return resolvedRepoPath;
+}
+
 export async function resolveRepositoryForFile(
   repoPath: string,
   filePath: string,
@@ -178,62 +184,71 @@ export async function discoverWorkspaceRepositories(
 
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
-  const queue: Array<{ path: string; depth: number }> = [
-    { path: normalizedWorkspacePath, depth: 0 },
-  ];
-  let scannedDirectories = 0;
+  const queue: string[] = [normalizedWorkspacePath];
+  const containingRepoPath = await discoverRepo(normalizedWorkspacePath);
 
-  while (queue.length > 0 && scannedDirectories < WORKSPACE_REPO_SCAN_MAX_DIRS) {
-    const current = queue.shift();
-    if (!current) break;
+  if (containingRepoPath) {
+    discoveredRepos.add(containingRepoPath);
+  }
 
-    const directoryPath = normalizePath(current.path);
-    if (visitedDirectories.has(directoryPath)) {
-      continue;
-    }
-    visitedDirectories.add(directoryPath);
-    scannedDirectories += 1;
+  while (queue.length > 0) {
+    const batch = queue.splice(0, 8);
+    const directoryResults = await Promise.all(
+      batch.map(async (currentPath) => {
+        const directoryPath = normalizePath(currentPath);
+        if (visitedDirectories.has(directoryPath)) {
+          return null;
+        }
+        visitedDirectories.add(directoryPath);
 
-    let entries: Awaited<ReturnType<typeof readDir>>;
-    try {
-      entries = await readDir(directoryPath);
-    } catch {
-      continue;
-    }
+        try {
+          return { directoryPath, entries: await readDir(directoryPath) };
+        } catch {
+          return null;
+        }
+      }),
+    );
 
-    const hasGitMetadata = entries.some((entry) => entry?.name === ".git");
-    if (hasGitMetadata) {
-      discoveredRepos.add(directoryPath);
-    }
-
-    if (current.depth >= WORKSPACE_REPO_SCAN_MAX_DEPTH) {
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (!entry?.isDirectory || !entry.name) {
+    for (const result of directoryResults) {
+      if (!result) {
         continue;
       }
 
-      const directoryName = entry.name.toLowerCase();
-      if (REPO_SCAN_SKIP_DIRS.has(directoryName)) {
-        continue;
+      const hasGitMetadata = result.entries.some((entry) => entry?.name === ".git");
+      if (hasGitMetadata) {
+        discoveredRepos.add(result.directoryPath);
       }
 
-      const childPath = normalizePath(`${directoryPath}/${entry.name}`);
+      for (const entry of result.entries) {
+        if (!entry?.isDirectory || !entry.name) {
+          continue;
+        }
 
-      if (visitedDirectories.has(childPath)) {
-        continue;
+        const directoryName = entry.name.toLowerCase();
+        if (REPO_SCAN_SKIP_DIRS.has(directoryName)) {
+          continue;
+        }
+
+        const childPath = normalizePath(`${result.directoryPath}/${entry.name}`);
+
+        if (!visitedDirectories.has(childPath)) {
+          queue.push(childPath);
+        }
       }
-
-      queue.push({ path: childPath, depth: current.depth + 1 });
     }
   }
 
-  const repositories = sortWorkspaceRepositories(
+  let repositories = sortWorkspaceRepositories(
     Array.from(discoveredRepos),
     normalizedWorkspacePath,
   );
+
+  if (containingRepoPath) {
+    repositories = [
+      containingRepoPath,
+      ...repositories.filter((repoPath) => repoPath !== containingRepoPath),
+    ];
+  }
 
   workspaceRepoDiscoveryCache.set(normalizedWorkspacePath, {
     discoveredAt: Date.now(),

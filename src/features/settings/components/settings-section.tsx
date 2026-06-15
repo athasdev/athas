@@ -1,12 +1,20 @@
-import { ArrowCounterClockwise as RotateCcw } from "@phosphor-icons/react";
-import React from "react";
+import { ArrowCounterClockwiseIcon as RotateCcw } from "@phosphor-icons/react";
+import {
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { getSettingSearchTargetKey } from "../lib/settings-search";
 
 interface SectionProps {
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
@@ -26,6 +34,7 @@ export default function Section({ title, description, children, className }: Sec
     <section
       className={cn("px-1 py-0.5 first:[&>.settings-section-header]:hidden", className)}
       data-settings-section={title}
+      data-settings-section-key={getSettingSearchTargetKey(title)}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
         <h4 className="ui-font ui-text-base text-text">{title}</h4>
@@ -38,9 +47,9 @@ export default function Section({ title, description, children, className }: Sec
 
 interface SettingRowProps {
   label: string;
-  labelAccessory?: React.ReactNode;
-  description?: React.ReactNode;
-  children: React.ReactNode;
+  labelAccessory?: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
   className?: string;
   onReset?: () => void;
   canReset?: boolean;
@@ -57,8 +66,8 @@ export function SettingRow({
   canReset = !!onReset,
   resetLabel,
 }: SettingRowProps) {
-  const controlRef = React.useRef<HTMLDivElement>(null);
-  const rowId = React.useId();
+  const controlRef = useRef<HTMLDivElement>(null);
+  const rowId = useId();
   const labelId = `${rowId}-label`;
   const descriptionId = `${rowId}-description`;
 
@@ -67,7 +76,7 @@ export function SettingRow({
   const passthroughSelector =
     "button, input, select, textarea, a, label, [role='button'], [role='switch'], [data-slot='button'], [data-setting-interactive-root='true']";
 
-  const getPrimaryInteractive = React.useCallback(() => {
+  const getPrimaryInteractive = useCallback(() => {
     const controlRoot = controlRef.current;
     if (!controlRoot) return null;
 
@@ -83,7 +92,7 @@ export function SettingRow({
       : primaryInteractive.querySelector<HTMLElement>(interactiveSelector);
   }, [interactiveSelector]);
 
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     const control = getPrimaryInteractive();
     if (!control) return;
 
@@ -96,7 +105,7 @@ export function SettingRow({
     }
   }, [description, descriptionId, getPrimaryInteractive, labelId]);
 
-  const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleRowClick = (event: MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
 
     if (target.closest(passthroughSelector)) {
@@ -104,14 +113,14 @@ export function SettingRow({
     }
 
     const segmentedControl = controlRef.current?.querySelector<HTMLElement>(
-      "[data-setting-segmented-control='true']",
+      "[data-slot='segmented-control']",
     );
     if (segmentedControl) {
       const segmentedItems = Array.from(
         segmentedControl.querySelectorAll<HTMLElement>("[role='button']"),
       ).filter((item) => !item.hasAttribute("disabled"));
       const activeIndex = segmentedItems.findIndex(
-        (item) => item.getAttribute("data-setting-segmented-active") === "true",
+        (item) => item.getAttribute("data-active") === "true",
       );
 
       if (segmentedItems.length > 0) {
@@ -157,8 +166,11 @@ export function SettingRow({
       role="group"
       aria-labelledby={labelId}
       aria-describedby={description ? descriptionId : undefined}
+      data-setting-row-key={getSettingSearchTargetKey(label)}
+      data-setting-row-label={label}
+      tabIndex={-1}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
+        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 focus:outline-none data-[settings-search-active=true]:bg-accent/10 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-accent/35 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
         className,
       )}
       onClick={handleRowClick}

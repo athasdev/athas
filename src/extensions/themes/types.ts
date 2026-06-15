@@ -1,4 +1,4 @@
-import type { EditorExtension } from "@/features/editor/extensions/types";
+import type { EditorExtension } from "@/features/editor/types/editor-extension.types";
 
 /**
  * Internal theme definition used by the registry
@@ -30,6 +30,7 @@ export interface ThemeRegistryAPI {
   getTheme(id: string): ThemeDefinition | undefined;
   getThemeSource(id: string): ThemeSource | undefined;
   getAllThemes(): ThemeDefinition[];
+  getVersion(): number;
   getThemesByCategory(category: ThemeDefinition["category"]): ThemeDefinition[];
   applyTheme(id: string): void;
   getCurrentTheme(): string | null;

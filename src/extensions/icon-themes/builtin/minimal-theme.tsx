@@ -1,4 +1,8 @@
-import { File, Folder, FolderOpen } from "@phosphor-icons/react";
+import {
+  FileIcon as File,
+  FolderIcon as Folder,
+  FolderOpenIcon as FolderOpen,
+} from "@phosphor-icons/react";
 import type { IconThemeDefinition } from "../types";
 
 export const minimalIconTheme: IconThemeDefinition = {

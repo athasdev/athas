@@ -1,14 +1,14 @@
 import { cva } from "class-variance-authority";
 import {
-  TextAa as CaseSensitive,
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  CaretUp as ChevronUp,
-  BracketsCurly as Regex,
-  ArrowsLeftRight as Replace,
-  MagnifyingGlass as Search,
-  TextT as WholeWord,
-  X,
+  TextAaIcon as CaseSensitive,
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  CaretUpIcon as ChevronUp,
+  BracketsCurlyIcon as Regex,
+  ArrowsLeftRightIcon as Replace,
+  MagnifyingGlassIcon as Search,
+  TextTIcon as WholeWord,
+  XIcon as X,
 } from "@phosphor-icons/react";
 import type { ReactNode, RefObject } from "react";
 import { Button } from "@/ui/button";
@@ -279,7 +279,7 @@ export function SearchReplaceRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
         <Replace />
       </span>
 

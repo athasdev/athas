@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { Diagnostic } from "@/features/diagnostics/types/diagnostics";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import {
   buildDiagnosticDecorations,
   buildDiagnosticDecorationsByLine,

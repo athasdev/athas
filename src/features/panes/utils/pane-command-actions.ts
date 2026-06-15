@@ -1,7 +1,7 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "../constants/pane";
-import { usePaneStore } from "../stores/pane-store";
-import type { PaneNode } from "../types/pane";
+import { usePaneStore } from "../stores/pane.store";
+import type { PaneNode } from "../types/pane.types";
 import { getPaneScopeForPaneId } from "./pane-routing";
 import { createPaneBeside } from "./pane-split-actions";
 import { getAllPaneGroups } from "./pane-tree";

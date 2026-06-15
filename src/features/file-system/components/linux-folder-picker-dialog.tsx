@@ -1,8 +1,13 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { readDir } from "@tauri-apps/plugin-fs";
-import { ArrowUp, Folder, House, Warning } from "@phosphor-icons/react";
+import {
+  ArrowUpIcon as ArrowUp,
+  FolderIcon as Folder,
+  HouseIcon as House,
+  WarningIcon as Warning,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLinuxFolderPickerStore } from "@/features/file-system/controllers/linux-folder-picker-store";
+import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";

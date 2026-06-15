@@ -8,17 +8,17 @@ import type {
 import {
   convertLSPDiagnostic,
   useDiagnosticsStore,
-} from "@/features/diagnostics/stores/diagnostics-store";
+} from "@/features/diagnostics/stores/diagnostics.store";
 import type {
   ApplyDiagnosticCodeActionResult,
   Diagnostic,
   DiagnosticCodeAction,
-} from "@/features/diagnostics/types/diagnostics";
+} from "@/features/diagnostics/types/diagnostics.types";
 import type { BackendLanguageToolConfigSet } from "@/extensions/registry/extension-store-runtime";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useBufferStore } from "../stores/buffer-store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useBufferStore } from "../stores/buffer.store";
 import { logger } from "../utils/logger";
-import { useLspStore } from "./lsp-store";
+import { useLspStore } from "./stores/lsp.store";
 import {
   applyWorkspaceEdit,
   applyTextEditsToContent,
@@ -528,8 +528,7 @@ export class LspClient {
       for (const server of serversToRemove) {
         this.activeLanguageServers.delete(server);
         this.activeServerFiles.delete(server);
-        // Extract language from server key and remove from active languages
-        const language = server.split(":")[1];
+        const { languageId: language } = this.parseServerKey(server);
         if (language) {
           const displayName = this.getLanguageDisplayName(language);
           this.activeLanguages.delete(displayName);
@@ -792,17 +791,13 @@ export class LspClient {
 
   async restartAllTrackedServers(): Promise<void> {
     const serverKeys = this.getActiveServerEntries().map((entry) => entry.key);
-    for (const serverKey of serverKeys) {
-      await this.restartTrackedServer(serverKey);
-    }
+    await Promise.all(serverKeys.map((serverKey) => this.restartTrackedServer(serverKey)));
   }
 
   async stopAll(): Promise<void> {
-    // Get unique workspace paths from all active language servers
     const workspaces = new Set<string>();
     for (const key of this.activeLanguageServers) {
-      const workspace = key.split(":")[0];
-      workspaces.add(workspace);
+      workspaces.add(this.parseServerKey(key).workspacePath);
     }
     await Promise.all(Array.from(workspaces).map((ws) => this.stop(ws)));
   }

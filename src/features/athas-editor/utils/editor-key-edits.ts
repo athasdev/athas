@@ -125,6 +125,7 @@ export function resolvePreCompletionKeyEdit({
     !keyState.metaKey &&
     !keyState.ctrlKey &&
     !keyState.altKey &&
+    !keyState.shiftKey &&
     start === end &&
     start === autocompleteCompletion.cursorOffset
   ) {

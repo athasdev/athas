@@ -1,5 +1,5 @@
-import type { DatabaseType } from "../../models/provider.types";
-import type { SqlDatabaseActions, SqlDatabaseState } from "./create-sql-store";
+import type { DatabaseType } from "../../types/provider.types";
+import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
 import SqlDatabaseViewer from "./sql-database-viewer";
 
 type SqlStoreHook = () => SqlDatabaseState & { actions: SqlDatabaseActions };

@@ -1,15 +1,15 @@
 import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  CaretDown as ChevronDown,
-  WarningCircle as AlertCircle,
-  Sparkle as Sparkles,
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  WarningCircleIcon as AlertCircle,
+  SparkleIcon as Sparkles,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { SidebarComposerBody } from "@/ui/sidebar";
@@ -24,7 +24,7 @@ import {
 import { getFileDiff } from "../api/git-diff-api";
 import { commitChanges, getGitLog } from "../api/git-commits-api";
 import { pullChanges, pushChanges, type GitRemoteActionResult } from "../api/git-remotes-api";
-import type { GitDiff, GitFile } from "../types/git-types";
+import type { GitDiff, GitFile } from "../types/git.types";
 
 interface GitCommitPanelProps {
   stagedFilesCount: number;

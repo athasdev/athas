@@ -1,20 +1,19 @@
 import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  RowsPlusTop as Columns3,
-  SignIn as LogIn,
-  CursorClick as MousePointerClick,
-  PuzzlePiece as Puzzle,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  CheckIcon as Check,
+  RowsPlusTopIcon as Columns3,
+  SignInIcon as LogIn,
+  CursorClickIcon as MousePointerClick,
+  PuzzlePieceIcon as Puzzle,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { requestUIExtensionGeneration } from "../services/ui-extension-generation-service";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
@@ -69,8 +68,6 @@ interface GeneratedExtension {
 export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
   const { isAuthenticated, isPro } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
-  const setActiveView = useUIState((state) => state.setActiveView);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const [step, setStep] = useState<WizardStep>("type");
   const [selectedType, setSelectedType] = useState<ContributionType | null>(null);
   const [description, setDescription] = useState("");
@@ -630,20 +627,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         },
       };
 
-      const fn = new Function("api", generatedExtension.code);
-      fn(api);
-
-      store.updateExtensionState(extensionId, "active");
-      if (generatedExtension.contributionType === "sidebar") {
-        const generatedView = Array.from(store.sidebarViews.values()).find(
-          (view) => view.extensionId === extensionId,
-        );
-        if (generatedView) {
-          setActiveView(generatedView.id);
-          setIsSidebarVisible(true);
-        }
-      }
-      setIsInstalled(true);
+      void api;
+      throw new Error(
+        "Generated extension installation is disabled until generated code runs in a sandbox.",
+      );
     } catch (err) {
       store.updateExtensionState(
         extensionId,
@@ -652,7 +639,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       );
       setError(`Installation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
-  }, [generatedExtension, setActiveView, setIsSidebarVisible]);
+  }, [generatedExtension]);
 
   const renderLockedState = () => {
     const title = isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue";

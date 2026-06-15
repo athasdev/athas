@@ -1,11 +1,11 @@
 import {
-  Calendar,
-  FileText,
-  Funnel as Filter,
-  Hash,
-  Key,
-  Link,
-  TextT as Type,
+  CalendarIcon as Calendar,
+  FileTextIcon as FileText,
+  FunnelIcon as Filter,
+  HashIcon as Hash,
+  KeyIcon as Key,
+  LinkIcon as Link,
+  TextTIcon as Type,
 } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
   getColumnConstraintLabels,
   mapForeignKeysByColumn,
 } from "../lib/database-schema";
-import type { ColumnInfo, ForeignKeyInfo } from "../models/common.types";
+import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },

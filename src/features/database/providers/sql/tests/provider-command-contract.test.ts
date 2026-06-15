@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { DatabaseType } from "../../../models/provider.types";
+import type { DatabaseType } from "../../../types/provider.types";
 import { getProviderIdForCommand } from "../../../services/database-provider-sidecar";
-import { MONGODB_PROVIDER_COMMANDS } from "../../mongodb/stores/mongodb-store";
-import { REDIS_PROVIDER_COMMANDS } from "../../redis/stores/redis-store";
+import { MONGODB_PROVIDER_COMMANDS } from "../../mongodb/stores/mongodb.store";
+import { REDIS_PROVIDER_COMMANDS } from "../../redis/stores/redis.store";
 import {
   getSqlProviderCommandMap,
   getSqlTableSchemaCommand,
   POSTGRES_SUBSCRIPTION_PROVIDER_COMMANDS,
-} from "../create-sql-store";
+} from "../stores/create-sql.store";
 
 const SQL_PROVIDERS = [
   "sqlite",

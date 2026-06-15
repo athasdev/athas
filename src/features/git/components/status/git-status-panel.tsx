@@ -1,24 +1,27 @@
 import {
-  Archive,
-  CaretDown,
-  CaretRight,
-  Check,
-  FileText,
-  Minus,
-  Plus,
-  Trash as Trash2,
+  ArchiveIcon as Archive,
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  CheckIcon as Check,
+  FileTextIcon as FileText,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import type React from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarEmptyActionState } from "@/ui/sidebar";
-import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
+import {
+  SIDEBAR_TREE_ICON_SIZE,
+  SidebarTreeRow,
+} from "@/features/sidebar-tree/components/sidebar-tree";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
@@ -27,13 +30,12 @@ import {
   unstageAllFiles,
   unstageFile,
 } from "../../api/git-status-api";
-import type { GitFile } from "../../types/git-types";
+import type { GitFile } from "../../types/git.types";
 import GitSidebarSectionHeader, {
   gitSidebarSectionActionButtonClassName,
 } from "../git-sidebar-section-header";
 import { StashMessageModal } from "../stash/git-stash-modal";
 import { GitFileItem } from "./git-status-file-item";
-import "@/features/file-explorer/styles/file-explorer-tree.css";
 
 interface GitFileDiffStats {
   additions: number;
@@ -162,9 +164,6 @@ const GitStatusPanel = ({
 }: GitStatusPanelProps) => {
   const gitChangesFolderView = useSettingsStore((state) => state.settings.gitChangesFolderView);
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
-  const collapseEmptyGitSections = useSettingsStore(
-    (state) => state.settings.collapseEmptyGitSections,
-  );
   const contextMenu = useContextMenu<ContextMenuState>();
   const [isLoading, setIsLoading] = useState(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
@@ -284,7 +283,7 @@ const GitStatusPanel = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !(await primitiveConfirm(`Discard changes for "${filePath}"? This cannot be undone.`, {
+      !(await showConfirmDialog(`Discard changes for "${filePath}"? This cannot be undone.`, {
         title: "Discard File Changes",
         confirmLabel: "Discard",
       }))
@@ -535,84 +534,83 @@ const GitStatusPanel = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col select-none">
-      <div className="shrink-0">
-        <GitSidebarSectionHeader
-          title="Changes"
-          actions={
-            <>
-              {unstagedFiles.length > 0 && (
-                <Button
-                  onClick={handleStashAllUnstaged}
-                  disabled={isLoading}
-                  variant="ghost"
-                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                  tooltip="Stash all unstaged changes"
-                  tooltipSide="bottom"
-                  aria-label="Stash all unstaged changes"
-                  compact
-                >
-                  <Archive />
-                </Button>
-              )}
-              {unstagedFiles.length > 0 && (
-                <Button
-                  onClick={handleStageAll}
-                  disabled={isLoading}
-                  variant="ghost"
-                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                  tooltip="Stage all changes"
-                  tooltipSide="bottom"
-                  aria-label="Stage all changes"
-                  compact
-                >
-                  <Plus />
-                </Button>
-              )}
-              {stagedFiles.length > 0 && (
-                <Button
-                  onClick={handleUnstageAll}
-                  disabled={isLoading}
-                  variant="ghost"
-                  className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
-                  tooltip="Unstage all changes"
-                  tooltipSide="bottom"
-                  aria-label="Unstage all changes"
-                  compact
-                >
-                  <Minus />
-                </Button>
-              )}
-            </>
-          }
-        />
-      </div>
-
       {hasFiles ? (
-        <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
-          {trackedFiles.length > 0 && (
-            <>
-              {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
-              {!collapsedSections.has("tracked") &&
-                (gitChangesFolderView
-                  ? renderFolderTree(trackedFiles, "changes")
-                  : renderFlatFileList(groupedTrackedFiles))}
-            </>
-          )}
-          {untrackedFiles.length > 0 && (
-            <>
-              {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
-              {!collapsedSections.has("untracked") &&
-                (gitChangesFolderView
-                  ? renderFolderTree(untrackedFiles, "changes")
-                  : renderFlatFileList(groupedUntrackedFiles))}
-            </>
-          )}
-        </div>
-      ) : null}
-
-      {collapseEmptyGitSections && !hasFiles && (
+        <>
+          <div className="shrink-0">
+            <GitSidebarSectionHeader
+              title="Changes"
+              actions={
+                <>
+                  {unstagedFiles.length > 0 && (
+                    <Button
+                      onClick={handleStashAllUnstaged}
+                      disabled={isLoading}
+                      variant="ghost"
+                      className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                      tooltip="Stash all unstaged changes"
+                      tooltipSide="bottom"
+                      aria-label="Stash all unstaged changes"
+                      compact
+                    >
+                      <Archive />
+                    </Button>
+                  )}
+                  {unstagedFiles.length > 0 && (
+                    <Button
+                      onClick={handleStageAll}
+                      disabled={isLoading}
+                      variant="ghost"
+                      className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                      tooltip="Stage all changes"
+                      tooltipSide="bottom"
+                      aria-label="Stage all changes"
+                      compact
+                    >
+                      <Plus />
+                    </Button>
+                  )}
+                  {stagedFiles.length > 0 && (
+                    <Button
+                      onClick={handleUnstageAll}
+                      disabled={isLoading}
+                      variant="ghost"
+                      className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                      tooltip="Unstage all changes"
+                      tooltipSide="bottom"
+                      aria-label="Unstage all changes"
+                      compact
+                    >
+                      <Minus />
+                    </Button>
+                  )}
+                </>
+              }
+            />
+          </div>
+          <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
+            {trackedFiles.length > 0 && (
+              <>
+                {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
+                {!collapsedSections.has("tracked") &&
+                  (gitChangesFolderView
+                    ? renderFolderTree(trackedFiles, "changes")
+                    : renderFlatFileList(groupedTrackedFiles))}
+              </>
+            )}
+            {untrackedFiles.length > 0 && (
+              <>
+                {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
+                {!collapsedSections.has("untracked") &&
+                  (gitChangesFolderView
+                    ? renderFolderTree(untrackedFiles, "changes")
+                    : renderFlatFileList(groupedUntrackedFiles))}
+              </>
+            )}
+          </div>
+        </>
+      ) : (
         <SidebarEmptyActionState
-          className="min-h-24"
+          className="min-h-24 flex-1"
           icon={<Check />}
           message="Working tree clean"
           tone="success"

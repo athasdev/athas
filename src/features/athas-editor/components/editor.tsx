@@ -13,11 +13,11 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { useGitGutter } from "@/features/git/hooks/use-git-gutter";
-import { isEditorContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { isEditorContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import EditorContextMenu from "@/features/editor/context-menu/context-menu";
@@ -50,7 +50,6 @@ import { useTokenizationScheduler } from "@/features/athas-editor/hooks/use-toke
 import {
   getLanguageId,
   resolveSyntaxTokensForContent,
-  retargetTokensForContentEdit,
   useTokenizer,
   type SyntaxTokenSnapshot,
 } from "@/features/athas-editor/hooks/use-tokenizer";
@@ -60,14 +59,14 @@ import {
 } from "@/features/athas-editor/hooks/use-viewport-lines";
 import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
 import type { SemanticTokenState } from "@/features/editor/lsp/use-semantic-tokens";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFoldStore } from "@/features/editor/stores/fold-store";
-import { useMinimapStore } from "@/features/editor/stores/minimap-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar-store";
-import type { Position, Range } from "@/features/editor/types/editor";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFoldStore } from "@/features/editor/stores/fold.store";
+import { useMinimapStore } from "@/features/editor/stores/minimap.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
+import type { Position, Range } from "@/features/editor/types/editor.types";
 import {
   applyVirtualEdit,
   calculateActualOffset,
@@ -709,19 +708,15 @@ export function Editor({
     if (!canApplySemanticTokenState(semanticTokens, filePath)) return [];
 
     const semanticContent = semanticTokens.content || normalizedEditorContent;
+    if (semanticContent !== normalizedEditorContent) return [];
+
     const tokensForSemanticContent = semanticTokensToEditorTokens(
       semanticTokens.tokens,
       buildLineOffsetMap(semanticContent),
       semanticContent.length,
     );
 
-    if (semanticContent === normalizedEditorContent) return tokensForSemanticContent;
-
-    return retargetTokensForContentEdit(
-      tokensForSemanticContent,
-      semanticContent,
-      normalizedEditorContent,
-    );
+    return tokensForSemanticContent;
   }, [filePath, largeContentMode, normalizedEditorContent, semanticTokens]);
   const layeredTokens = useMemo(
     () => mergeTokenLayers(baseTokens, semanticEditorTokens),
@@ -739,7 +734,7 @@ export function Editor({
   const deferredMinimapLines = useDeferredValue(lines);
   const deferredMinimapLineOffsets = useDeferredValue(displayLineOffsets);
   const deferredMinimapTokens = useDeferredValue(effectiveTokens);
-  const useCustomInsertCaret = largeContentMode;
+  const useCustomInsertCaret = useGlobalEditorState && !readOnly;
 
   useEffect(() => {
     if (!isActiveSurface) return;
@@ -1575,10 +1570,8 @@ export function Editor({
                 : (lines[visualCursorLine] ?? "")
             }
             textareaRef={largeContentMode ? largeEditorScrollRef : inputRef}
-            hidden={
-              !!largeSelectionOffsets ||
-              (vimModeEnabled && (vimMode === "normal" || vimMode === "visual"))
-            }
+            hasSelection={largeContentMode ? !!largeSelectionOffsets : !!selection}
+            hidden={vimModeEnabled && (vimMode === "normal" || vimMode === "visual")}
           />
         )}
         {useGlobalEditorState && (
@@ -1824,6 +1817,12 @@ export function Editor({
             onDuplicate={() => {
               void keymapRegistry.executeCommand("editor.duplicateLine");
             }}
+            onSelectNextOccurrence={() => {
+              void keymapRegistry.executeCommand("editor.selectNextOccurrence");
+            }}
+            onSelectAllOccurrences={() => {
+              void keymapRegistry.executeCommand("editor.selectAllOccurrences");
+            }}
             onIndent={largeContentMode ? largeEditorInput.handleIndent : editorOps.indent}
             onOutdent={largeContentMode ? largeEditorInput.handleOutdent : editorOps.outdent}
             onToggleComment={() => {
@@ -1831,6 +1830,9 @@ export function Editor({
             }}
             onFormat={() => {
               void keymapRegistry.executeCommand("editor.formatDocument");
+            }}
+            onFormatSelection={() => {
+              void keymapRegistry.executeCommand("editor.formatSelection");
             }}
             onToggleCase={
               largeContentMode ? largeEditorInput.handleToggleCase : editorOps.toggleCase
@@ -1849,6 +1851,15 @@ export function Editor({
             }}
             onRenameSymbol={() => {
               void keymapRegistry.executeCommand("editor.renameSymbol");
+            }}
+            onQuickFix={() => {
+              void keymapRegistry.executeCommand("editor.quickFix");
+            }}
+            onShowHover={() => {
+              void keymapRegistry.executeCommand("editor.showHover");
+            }}
+            onTriggerSuggest={() => {
+              void keymapRegistry.executeCommand("editor.triggerSuggest");
             }}
           />,
           document.body,

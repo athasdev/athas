@@ -2,9 +2,9 @@
  * File-level motions (gg, G)
  */
 
-import type { Position } from "@/features/editor/types/editor";
+import type { Position } from "@/features/editor/types/editor.types";
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import type { Motion, MotionCalculateMeta, VimRange } from "../core/types";
+import type { Motion, MotionCalculateMeta, VimRange } from "../core/types/core.types";
 
 const firstNonBlankColumn = (line: string): number => {
   for (let i = 0; i < line.length; i++) {

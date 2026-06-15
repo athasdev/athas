@@ -7,8 +7,8 @@ import {
   getPrimaryFontFamily,
   resolveAvailableFontFamily,
 } from "@/features/settings/lib/font-family-resolution";
-import { useFontStore } from "@/features/settings/stores/font-store";
-import type { FontInfo } from "@/features/settings/stores/types/font";
+import { useFontStore } from "@/features/settings/stores/font.store";
+import type { FontInfo } from "@/features/settings/types/font.types";
 import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";

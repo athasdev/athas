@@ -6,7 +6,7 @@
  */
 
 import { calculateOffsetFromPosition } from "@/features/editor/utils/position";
-import type { Action, EditorContext } from "../core/types";
+import type { Action, EditorContext } from "../core/types/core.types";
 
 export const joinLinesNoSpaceAction: Action = {
   name: "joinLinesNoSpace",

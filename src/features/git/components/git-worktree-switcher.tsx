@@ -1,4 +1,9 @@
-import { Check, GitBranch, GitFork, Plus } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  GitBranchIcon as GitBranch,
+  GitForkIcon as GitFork,
+  PlusIcon as Plus,
+} from "@phosphor-icons/react";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
@@ -6,7 +11,7 @@ import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { getFolderName } from "@/utils/path-helpers";
 import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
-import type { GitWorktree } from "../types/git-types";
+import type { GitWorktree } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
 interface GitWorktreeSwitcherProps {

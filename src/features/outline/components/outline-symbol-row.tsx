@@ -1,19 +1,23 @@
 import {
-  BracketsCurly as Braces,
-  Code,
-  Cube,
-  Function as FunctionIcon,
-  Hash,
+  BracketsCurlyIcon as Braces,
+  CodeIcon as Code,
+  CubeIcon as Cube,
+  FunctionIcon,
+  HashIcon as Hash,
   IconContext,
-  Package,
-  PuzzlePiece,
-  SquaresFour,
-  Stack,
-  TextT,
+  PackageIcon as Package,
+  PuzzlePieceIcon as PuzzlePiece,
+  SquaresFourIcon as SquaresFour,
+  StackIcon as Stack,
+  TextTIcon as TextT,
 } from "@phosphor-icons/react";
 import { forwardRef } from "react";
-import { SidebarTreeDisclosure, SidebarTreeIcon, SidebarTreeRow } from "@/ui/sidebar-tree";
-import type { OutlineSymbol } from "../types/outline-symbol";
+import {
+  SidebarTreeDisclosure,
+  SidebarTreeIcon,
+  SidebarTreeRow,
+} from "@/features/sidebar-tree/components/sidebar-tree";
+import type { OutlineSymbol } from "../types/outline-symbol.types";
 
 function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; className?: string }) {
   return (

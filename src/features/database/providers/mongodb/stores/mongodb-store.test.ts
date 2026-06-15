@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invokeDatabaseProvider } from "@/features/database/services/database-provider-sidecar";
-import { useMongoDbStore } from "./mongodb-store";
+import { useMongoDbStore } from "./mongodb.store";
 
 vi.mock("@/features/database/services/database-provider-sidecar", () => ({
   invokeDatabaseProvider: vi.fn(),

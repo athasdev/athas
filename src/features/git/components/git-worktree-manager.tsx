@@ -1,12 +1,12 @@
 import {
-  Copy,
-  GitBranch,
-  GitCommit,
-  GitFork,
-  ArrowSquareOut,
-  Plus,
-  ArrowClockwise as RefreshCw,
-  Trash as Trash2,
+  CopyIcon as Copy,
+  GitBranchIcon as GitBranch,
+  GitCommitIcon as GitCommit,
+  GitForkIcon as GitFork,
+  ArrowSquareOutIcon as ArrowSquareOut,
+  PlusIcon as Plus,
+  ArrowClockwiseIcon as RefreshCw,
+  TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
@@ -15,7 +15,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -25,8 +25,8 @@ import {
   pruneWorktrees,
   removeWorktree,
 } from "../api/git-worktrees-api";
-import type { GitWorktree } from "../types/git-types";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
+import type { GitWorktree } from "../types/git.types";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import GitSidebarSectionHeader, {
   gitSidebarSectionActionButtonClassName,
 } from "./git-sidebar-section-header";
@@ -114,7 +114,7 @@ const GitWorktreeManager = ({
 
   const handleRemoveWorktree = async (worktreePath: string, force = false) => {
     if (!repoPath) return;
-    const confirmed = await primitiveConfirm(
+    const confirmed = await showConfirmDialog(
       force
         ? `Force remove worktree at "${worktreePath}"? This can discard uncommitted changes in that checkout.`
         : `Remove worktree at "${worktreePath}"?`,

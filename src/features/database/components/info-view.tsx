@@ -1,6 +1,6 @@
 import { Button } from "@/ui/button";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
-import type { ColumnFilter, DatabaseInfo, TableInfo } from "../models/common.types";
+import type { ColumnFilter, DatabaseInfo, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
 
 interface InfoViewProps {

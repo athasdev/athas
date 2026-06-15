@@ -1,10 +1,10 @@
-import { Clock as ClockIcon } from "@phosphor-icons/react";
+import { ClockIcon } from "@phosphor-icons/react";
 import { memo } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
-import type { FileCategory, FileItem } from "../models/types";
+import type { FileCategory, FileItem } from "../types/global-search.types";
 
 interface FileListItemProps {
   id?: string;
@@ -45,7 +45,7 @@ export const FileListItem = memo(
         isSelected={isSelected}
         className={
           compact
-            ? "ui-font !h-auto min-h-6 !min-w-0 gap-1.5 rounded-md px-1.5 py-0.5 leading-[1.35]"
+            ? "ui-font !h-auto min-h-7 !min-w-0 gap-2 rounded-md px-2 py-1 leading-[1.35]"
             : "ui-font leading-[1.35]"
         }
       >
@@ -56,12 +56,17 @@ export const FileListItem = memo(
           className="shrink-0"
         />
         <div className="min-w-0 flex-1 overflow-hidden">
-          <div className={cn("truncate leading-[1.35]", compact ? "ui-text-xs" : "ui-text-sm")}>
-            <span className="text-text">{file.name}</span>
+          <div
+            className={cn(
+              "flex min-w-0 items-baseline truncate leading-[1.35]",
+              compact ? "ui-text-xs gap-2" : "ui-text-sm gap-1.5",
+            )}
+          >
+            <span className="min-w-0 max-w-[45%] shrink truncate text-text">{file.name}</span>
             {directoryPath && (
               <span
                 className={cn(
-                  "ml-1.5 text-text-lighter leading-[1.35] opacity-60",
+                  "min-w-0 flex-1 truncate text-text-lighter leading-[1.35] opacity-60",
                   compact ? "ui-text-xs" : "ui-text-sm",
                 )}
               >

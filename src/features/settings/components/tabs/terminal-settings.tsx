@@ -1,9 +1,9 @@
-import { Info, Plus, Trash as Trash2 } from "@phosphor-icons/react";
+import { InfoIcon as Info, PlusIcon as Plus, TrashIcon as Trash2 } from "@phosphor-icons/react";
 import { useEffect } from "react";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
-import { useFontStore } from "@/features/settings/stores/font-store";
-import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
-import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useFontStore } from "@/features/settings/stores/font.store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import { COMMON_TERMINAL_NERD_FONTS } from "@/features/terminal/utils/terminal-fonts";
 import {
   DEFAULT_SHELL_OPTION_VALUE,

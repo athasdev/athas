@@ -1,7 +1,8 @@
 import "../styles/github-markdown.css";
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/code-highlight";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { parseGitHubEntityLink } from "../utils/github-link-utils";
 
 interface GitHubMarkdownProps {
@@ -24,11 +25,11 @@ function getRenderedMarkdownSnapshot(content: string): string | null {
   return cached;
 }
 
-function getCachedRenderedMarkdown(content: string): string {
+async function getCachedRenderedMarkdown(content: string): Promise<string> {
   const cached = getRenderedMarkdownSnapshot(content);
   if (cached) return cached;
 
-  const rendered = stripRedundantBreaks(parseMarkdown(content));
+  const rendered = await highlightMarkdownCodeBlocks(stripRedundantBreaks(parseMarkdown(content)));
   markdownRenderCache.set(content, rendered);
 
   if (markdownRenderCache.size > MARKDOWN_RENDER_CACHE_LIMIT) {
@@ -77,22 +78,22 @@ const GitHubMarkdown = memo(
       };
       const schedule = idleApi.requestIdleCallback;
 
-      const render = () => {
-        const nextHtml = getCachedRenderedMarkdown(normalizedContent);
+      const render = async () => {
+        const nextHtml = await getCachedRenderedMarkdown(normalizedContent);
         if (!cancelled) {
           setRenderedHtml(nextHtml);
         }
       };
 
       if (typeof schedule === "function") {
-        const idleId = schedule(render, { timeout: 200 });
+        const idleId = schedule(() => void render(), { timeout: 200 });
         return () => {
           cancelled = true;
           idleApi.cancelIdleCallback?.(idleId);
         };
       }
 
-      const timeoutId = window.setTimeout(render, 0);
+      const timeoutId = window.setTimeout(() => void render(), 0);
       return () => {
         cancelled = true;
         window.clearTimeout(timeoutId);

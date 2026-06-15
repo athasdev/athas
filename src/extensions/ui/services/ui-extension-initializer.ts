@@ -8,13 +8,11 @@ export async function initializeUIExtensions(): Promise<void> {
     (ext) => ext.manifest.categories.includes("UI") && installedExtensions.has(ext.manifest.id),
   );
 
-  const loadPromises = uiExtensions.map(async (ext) => {
-    try {
-      await uiExtensionHost.loadExtension(ext.manifest, "");
-    } catch (error) {
+  const loadPromises = uiExtensions.map((ext) =>
+    uiExtensionHost.loadExtension(ext.manifest, "").catch((error) => {
       console.error(`Failed to initialize UI extension ${ext.manifest.id}:`, error);
-    }
-  });
+    }),
+  );
 
   await Promise.allSettled(loadPromises);
 }

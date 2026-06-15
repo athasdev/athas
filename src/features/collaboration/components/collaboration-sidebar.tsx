@@ -1,16 +1,16 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
-  CaretLeft,
-  Check,
-  ChatCircleText,
-  FileText,
-  Funnel,
-  Folder,
-  Hash,
-  Microphone as Mic,
-  Monitor,
-  MagnifyingGlass as Search,
-  UsersThree,
+  CaretLeftIcon as CaretLeft,
+  CheckIcon as Check,
+  ChatCircleTextIcon as ChatCircleText,
+  FileTextIcon as FileText,
+  FunnelIcon as Funnel,
+  FolderIcon as Folder,
+  HashIcon as Hash,
+  MicrophoneIcon as Mic,
+  MonitorIcon as Monitor,
+  MagnifyingGlassIcon as Search,
+  UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
 import {
   type ReactNode,
@@ -31,8 +31,8 @@ import {
   deleteCollaborationNoteItem,
   renameCollaborationNoteItem,
 } from "@/features/collaboration/lib/collaboration-sidebar-model";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import {
   appendCollaborationPrivateChatMessage,
@@ -43,7 +43,7 @@ import {
   updateCollaborationChannelNote,
   type CollaborationMediaSignal,
 } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown } from "@/ui/dropdown";
@@ -870,7 +870,7 @@ export function CollaborationSidebarView() {
     setOpenConversation({ type: "private", participantId });
   };
 
-  const updateChannelIcon = useCallback((channelId: number, icon: string | null) => {
+  const updateChannelIcon = (channelId: number, icon: string | null) => {
     setChannelIcons((current) => {
       const next = { ...current };
       if (icon) {
@@ -881,7 +881,7 @@ export function CollaborationSidebarView() {
       saveChannelIcons(next);
       return next;
     });
-  }, []);
+  };
 
   const selectTab = (tab: CollaborationSidebarTab) => {
     setActiveTab(tab);
@@ -890,109 +890,97 @@ export function CollaborationSidebarView() {
     }
   };
 
-  const channelMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const channel = channelsContextMenu.data;
-    return [
-      ...(channel
-        ? [
-            {
-              id: "open",
-              label: "Open Channel",
-              icon: <ChatCircleText />,
-              onClick: () => openChannelChat(channel.id),
-            },
-            {
-              id: "change-icon",
-              label: "Change Icon",
-              icon: <Hash />,
-              onClick: () => channelContextMenu.openAt(channelsContextMenu.position, channel),
-            },
-          ]
-        : []),
-      {
-        id: "new-channel",
-        label: "New Channel",
-        icon: <Hash />,
-        disabled: !collaboration?.capabilities.canCreateChannels,
-        onClick: beginCreateChannel,
-      },
-    ];
-  }, [
-    channelContextMenu,
-    channelsContextMenu.data,
-    channelsContextMenu.position,
-    collaboration?.capabilities.canCreateChannels,
-    beginCreateChannel,
-  ]);
+  const channel = channelsContextMenu.data;
+  const channelMenuItems: ContextMenuItem[] = [
+    ...(channel
+      ? [
+          {
+            id: "open",
+            label: "Open Channel",
+            icon: <ChatCircleText />,
+            onClick: () => openChannelChat(channel.id),
+          },
+          {
+            id: "change-icon",
+            label: "Change Icon",
+            icon: <Hash />,
+            onClick: () => channelContextMenu.openAt(channelsContextMenu.position, channel),
+          },
+        ]
+      : []),
+    {
+      id: "new-channel",
+      label: "New Channel",
+      icon: <Hash />,
+      disabled: !collaboration?.capabilities.canCreateChannels,
+      onClick: beginCreateChannel,
+    },
+  ];
 
-  const participantMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const participant = participantContextMenu.data;
-    if (!participant) return [];
+  const participant = participantContextMenu.data;
+  const participantMenuItems: ContextMenuItem[] = participant
+    ? [
+        {
+          id: "message",
+          label: "Message",
+          icon: <ChatCircleText />,
+          onClick: () => openPrivateChat(participant.id),
+        },
+        {
+          id: "follow",
+          label: "Follow",
+          icon: <UsersThree />,
+          disabled: !participant.followableUserId || participant.followableUserId === user?.id,
+          onClick: () =>
+            participant.followableUserId &&
+            collaborationActions.setFollowingUser(participant.followableUserId),
+        },
+        {
+          id: "open-file",
+          label: "Open Active File",
+          icon: <FileText />,
+          disabled: !participant.activeFilePath,
+          onClick: () =>
+            participant.activeFilePath && void openParticipantFile(participant.activeFilePath),
+        },
+      ]
+    : [];
 
-    return [
-      {
-        id: "message",
-        label: "Message",
-        icon: <ChatCircleText />,
-        onClick: () => openPrivateChat(participant.id),
-      },
-      {
-        id: "follow",
-        label: "Follow",
-        icon: <UsersThree />,
-        disabled: !participant.followableUserId || participant.followableUserId === user?.id,
-        onClick: () =>
-          participant.followableUserId &&
-          collaborationActions.setFollowingUser(participant.followableUserId),
-      },
-      {
-        id: "open-file",
-        label: "Open Active File",
-        icon: <FileText />,
-        disabled: !participant.activeFilePath,
-        onClick: () =>
-          participant.activeFilePath && void openParticipantFile(participant.activeFilePath),
-      },
-    ];
-  }, [collaborationActions, participantContextMenu.data, user?.id]);
-
-  const noteMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const item = notesContextMenu.data;
-    return [
-      {
-        id: "new-file",
-        label: "New Markdown File",
-        icon: <FileText />,
-        disabled: !model.canEditNotes,
-        onClick: () => void createNoteFile(item?.type === "folder" ? item.path : null),
-      },
-      {
-        id: "new-folder",
-        label: "New Folder",
-        icon: <Folder />,
-        disabled: !model.canEditNotes,
-        onClick: () => void createNoteFolder(),
-      },
-      ...(item
-        ? [
-            {
-              id: "rename",
-              label: "Rename",
-              icon: <FileText />,
-              disabled: !model.canEditNotes,
-              onClick: () => void renameNoteItem(item),
-            },
-            {
-              id: "delete",
-              label: "Delete",
-              icon: <FileText />,
-              disabled: !model.canEditNotes,
-              onClick: () => void deleteNoteItem(item),
-            },
-          ]
-        : []),
-    ];
-  }, [model.canEditNotes, notesContextMenu.data]);
+  const item = notesContextMenu.data;
+  const noteMenuItems: ContextMenuItem[] = [
+    {
+      id: "new-file",
+      label: "New Markdown File",
+      icon: <FileText />,
+      disabled: !model.canEditNotes,
+      onClick: () => void createNoteFile(item?.type === "folder" ? item.path : null),
+    },
+    {
+      id: "new-folder",
+      label: "New Folder",
+      icon: <Folder />,
+      disabled: !model.canEditNotes,
+      onClick: () => void createNoteFolder(),
+    },
+    ...(item
+      ? [
+          {
+            id: "rename",
+            label: "Rename",
+            icon: <FileText />,
+            disabled: !model.canEditNotes,
+            onClick: () => void renameNoteItem(item),
+          },
+          {
+            id: "delete",
+            label: "Delete",
+            icon: <FileText />,
+            disabled: !model.canEditNotes,
+            onClick: () => void deleteNoteItem(item),
+          },
+        ]
+      : []),
+  ];
 
   const collaborationTabs: Array<{
     id: CollaborationSidebarTab;
@@ -1568,7 +1556,7 @@ export function CollaborationSidebarView() {
 
   return (
     <SidebarPanel className="gap-1 p-1">
-      <SidebarHeader className="relative z-[10020] bg-transparent px-0 py-0 backdrop-blur-none">
+      <SidebarHeader className="relative z-[10020] bg-transparent p-0 backdrop-blur-none">
         <SidebarSectionSwitcher
           items={collaborationTabs}
           value={activeTab}

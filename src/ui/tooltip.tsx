@@ -1,4 +1,4 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { Tooltip as TooltipPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import Keybinding from "@/ui/keybinding";
@@ -19,7 +19,7 @@ const tooltipContentVariants = cva(
 
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
   return (
-    <TooltipPrimitive.Provider delayDuration={150} skipDelayDuration={100} disableHoverableContent>
+    <TooltipPrimitive.Provider delay={150} timeout={100} closeDelay={0}>
       {children}
     </TooltipPrimitive.Provider>
   );
@@ -34,20 +34,30 @@ export default function Tooltip({
   triggerClassName,
 }: TooltipProps) {
   return (
-    <TooltipPrimitive.Root>
-      <TooltipPrimitive.Trigger asChild>
-        <span className={cn("inline-flex items-center", triggerClassName)}>{children}</span>
+    <TooltipPrimitive.Root disableHoverablePopup>
+      <TooltipPrimitive.Trigger
+        render={<span className={cn("inline-flex items-center", triggerClassName)} />}
+      >
+        {children}
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Content
+        <TooltipPrimitive.Positioner
           side={side}
           sideOffset={6}
           collisionPadding={8}
-          className={cn(tooltipContentVariants(), shortcut && "flex items-center gap-2", className)}
+          className="z-[99999]"
         >
-          {content}
-          {shortcut && <Keybinding binding={shortcut} />}
-        </TooltipPrimitive.Content>
+          <TooltipPrimitive.Popup
+            className={cn(
+              tooltipContentVariants(),
+              shortcut && "flex items-center gap-2",
+              className,
+            )}
+          >
+            {content}
+            {shortcut && <Keybinding binding={shortcut} />}
+          </TooltipPrimitive.Popup>
+        </TooltipPrimitive.Positioner>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>
   );

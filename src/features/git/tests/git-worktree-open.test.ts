@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   selectRepository: vi.fn(),
 }));
 
-vi.mock("@/features/file-system/controllers/store", () => ({
+vi.mock("@/features/file-system/stores/file-system.store", () => ({
   useFileSystemStore: {
     getState: () => ({
       handleOpenFolderByPath: mocks.handleOpenFolderByPath,
@@ -15,7 +15,7 @@ vi.mock("@/features/file-system/controllers/store", () => ({
   },
 }));
 
-vi.mock("@/features/git/stores/git-repository-store", () => ({
+vi.mock("@/features/git/stores/git-repository.store", () => ({
   useRepositoryStore: {
     getState: () => ({
       actions: {

@@ -1,4 +1,4 @@
-import type { DatabaseObjectKind, TableInfo } from "../models/common.types";
+import type { DatabaseObjectKind, TableInfo } from "../types/common.types";
 
 export const DATABASE_OBJECT_GROUPS: Array<{
   kind: DatabaseObjectKind;

@@ -1,5 +1,9 @@
 import { cva } from "class-variance-authority";
-import { Check, CaretDown as ChevronDown, MagnifyingGlass as Search } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  CaretDownIcon as ChevronDown,
+  MagnifyingGlassIcon as Search,
+} from "@phosphor-icons/react";
 import type {
   AriaAttributes,
   ComponentType,

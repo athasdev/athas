@@ -1,13 +1,13 @@
 import {
-  Minus,
-  Plus,
-  MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  MagnifyingGlassPlusIcon as ZoomIn,
+  MagnifyingGlassMinusIcon as ZoomOut,
 } from "@phosphor-icons/react";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff-types";
+import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff.types";
 import { getFileStatus, getImgSrc } from "../../utils/git-diff-helpers";
 import DiffHeader from "./git-diff-header";
 

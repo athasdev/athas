@@ -98,9 +98,9 @@ describe("search replace store actions", () => {
   });
 
   afterEach(async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const { useEditorStateStore } = await import("../stores/state.store");
+    const { useEditorUIStore } = await import("../stores/ui.store");
 
     useBufferStore.setState({
       activeBufferId: null,
@@ -124,8 +124,8 @@ describe("search replace store actions", () => {
   });
 
   it("does not replace all when the match list is limited", async () => {
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+    const { useEditorStateStore } = await import("../stores/state.store");
+    const { useEditorUIStore } = await import("../stores/ui.store");
     const onChange = vi.fn();
     const limitedMatches = [{ start: 0, end: 4 }];
 
@@ -144,9 +144,25 @@ describe("search replace store actions", () => {
     expect(useEditorUIStore.getState().searchResultsLimited).toBe(true);
   });
 
+  it("only marks search navigation for explicit match reveals", async () => {
+    const { useEditorUIStore } = await import("../stores/ui.store");
+
+    const actions = useEditorUIStore.getState().actions;
+    actions.setSearchResults([{ start: 4, end: 8 }], 0, false, true);
+    const initialRevision = useEditorUIStore.getState().searchNavigationRevision;
+
+    actions.setSearchResults([{ start: 5, end: 9 }], 0);
+
+    expect(useEditorUIStore.getState().searchNavigationRevision).toBe(initialRevision);
+
+    actions.searchNext();
+
+    expect(useEditorUIStore.getState().searchNavigationRevision).toBe(initialRevision + 1);
+  });
+
   it("preserves replacement case through store replace all", async () => {
-    const { useEditorStateStore } = await import("../stores/state-store");
-    const { useEditorUIStore } = await import("../stores/ui-store");
+    const { useEditorStateStore } = await import("../stores/state.store");
+    const { useEditorUIStore } = await import("../stores/ui.store");
     const onChange = vi.fn();
 
     useEditorStateStore.setState({ onChange });
@@ -167,7 +183,7 @@ describe("search replace store actions", () => {
       },
     });
 
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       activeBufferId: "active",
       buffers: [

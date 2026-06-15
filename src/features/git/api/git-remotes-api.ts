@@ -1,5 +1,10 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitRemote } from "../types/git-types";
+import type { GitRemote } from "../types/git.types";
+import {
+  isNotGitRepositoryError,
+  resolveRepositoryPath,
+  resolveRepositoryPathOrThrow,
+} from "./git-repo-api";
 
 export interface GitRemoteActionResult {
   success: boolean;
@@ -8,19 +13,27 @@ export interface GitRemoteActionResult {
 
 export const getRemotes = async (repoPath: string): Promise<GitRemote[]> => {
   try {
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return [];
+    }
+
     const remotes = await tauriInvoke<GitRemote[]>("git_get_remotes", {
-      repoPath,
+      repoPath: resolvedRepoPath,
     });
     return remotes;
   } catch (error) {
-    console.error("Failed to get remotes:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get remotes:", error);
+    }
     return [];
   }
 };
 
 export const addRemote = async (repoPath: string, name: string, url: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_add_remote", { repoPath, name, url });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_add_remote", { repoPath: resolvedRepoPath, name, url });
     return true;
   } catch (error) {
     console.error("Failed to add remote:", error);
@@ -30,7 +43,8 @@ export const addRemote = async (repoPath: string, name: string, url: string): Pr
 
 export const removeRemote = async (repoPath: string, name: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_remove_remote", { repoPath, name });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_remove_remote", { repoPath: resolvedRepoPath, name });
     return true;
   } catch (error) {
     console.error("Failed to remove remote:", error);
@@ -44,7 +58,8 @@ export const pushChanges = async (
   remote: string = "origin",
 ): Promise<GitRemoteActionResult> => {
   try {
-    await tauriInvoke("git_push", { repoPath, branch, remote });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_push", { repoPath: resolvedRepoPath, branch, remote });
     return { success: true };
   } catch (error) {
     console.error("Failed to push changes:", error);
@@ -61,7 +76,8 @@ export const pullChanges = async (
   remote: string = "origin",
 ): Promise<GitRemoteActionResult> => {
   try {
-    await tauriInvoke("git_pull", { repoPath, branch, remote });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_pull", { repoPath: resolvedRepoPath, branch, remote });
     return { success: true };
   } catch (error) {
     console.error("Failed to pull changes:", error);
@@ -77,7 +93,8 @@ export const fetchChanges = async (
   remote?: string,
 ): Promise<GitRemoteActionResult> => {
   try {
-    await tauriInvoke("git_fetch", { repoPath, remote });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_fetch", { repoPath: resolvedRepoPath, remote });
     return { success: true };
   } catch (error) {
     console.error("Failed to fetch changes:", error);
