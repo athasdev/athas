@@ -49,7 +49,6 @@ import type { GitFile } from "../types/git.types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
-import { buildWorkingTreeMultiDiff } from "../utils/working-tree-multi-diff";
 import GitActionsMenu from "./git-actions-menu";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
@@ -546,42 +545,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
-  const handleViewWorkingTreeDiff = async () => {
-    if (!activeRepoPath || !gitStatus) return;
-
-    try {
-      const multiDiff = await buildWorkingTreeMultiDiff({
-        repoPath: activeRepoPath,
-        status: {
-          ...gitStatus,
-          files: visibleGitFiles,
-        },
-      });
-
-      if (multiDiff.totalFiles === 0) {
-        await showAlertDialog("No diffable uncommitted changes.", "Git Diff");
-        return;
-      }
-
-      const displayName = `Uncommitted Changes (${multiDiff.totalFiles} file${multiDiff.totalFiles === 1 ? "" : "s"})`;
-      useBufferStore
-        .getState()
-        .actions.openBuffer(
-          "diff://working-tree/all-files",
-          displayName,
-          "",
-          false,
-          undefined,
-          true,
-          true,
-          multiDiff,
-        );
-    } catch (error) {
-      console.error("Error getting working tree diff:", error);
-      await showAlertDialog(`Failed to get working tree diff:\n${error}`, "Git Diff");
-    }
-  };
-
   const handleViewCommitDiff = async (commitHash: string, filePath?: string) => {
     if (!activeRepoPath || !onFileSelect) return;
 
@@ -1001,11 +964,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     isCollapsed={false}
                     onToggle={() => {}}
                     onViewCommitDiff={handleViewCommitDiff}
-                    onViewWorkingTreeDiff={handleViewWorkingTreeDiff}
                     repoPath={activeRepoPath}
                     showHeader={false}
-                    uncommittedFiles={visibleGitFiles}
-                    currentBranch={gitStatus.branch}
                   />
                 ),
               },
