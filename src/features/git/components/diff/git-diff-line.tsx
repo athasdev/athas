@@ -125,6 +125,11 @@ export function getSplitLineMeta(line: DiffLineProps["line"], splitSide: "left" 
   };
 }
 
+function getUnifiedLineGutterLabel(line: DiffLineProps["line"]) {
+  if (line.line_type === "removed") return "-";
+  return line.new_line_number ?? line.old_line_number ?? "";
+}
+
 const DiffLine = memo(
   ({
     line,
@@ -281,18 +286,7 @@ const DiffLine = memo(
           )}
           style={gutterStyle}
         >
-          {line.old_line_number}
-        </div>
-        <div
-          className={cn(
-            "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-            "editor-font code-editor-font-override tabular-nums",
-            getGutterBackground(line.line_type),
-            getGutterTextColor(line.line_type),
-          )}
-          style={gutterStyle}
-        >
-          {line.new_line_number}
+          {getUnifiedLineGutterLabel(line)}
         </div>
 
         <div

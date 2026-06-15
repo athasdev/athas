@@ -59,9 +59,9 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
           <ArrowsInLineVertical size={18} />
         </div>
         <div className="flex min-w-0 items-center gap-3 pr-3">
-          <div className="h-px flex-1 bg-border/70" />
+          <div className="h-px w-16 shrink-0 bg-border/70" />
           <span className="min-w-0 truncate ui-text-xs text-text-lighter">{line}</span>
-          <div className="h-px flex-1 bg-border/70" />
+          <div className="h-px min-w-8 flex-1 bg-border/70" />
         </div>
       </div>
     );

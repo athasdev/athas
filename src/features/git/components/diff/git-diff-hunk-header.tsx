@@ -68,7 +68,7 @@ const DiffHunkHeader = memo(
     return (
       <div
         className={cn(
-          "group grid cursor-pointer grid-cols-[5.5rem_minmax(0,1fr)] items-center",
+          "group grid cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-center",
           "border-border/70 border-b bg-primary-bg ui-text-sm leading-5 text-text-lighter",
         )}
         onClick={onToggleCollapse}
@@ -78,19 +78,21 @@ const DiffHunkHeader = memo(
         </div>
 
         <div className="flex min-w-0 items-center gap-3 pr-3">
-          <div className="h-px flex-1 bg-border/70" />
+          <div className="h-px w-16 shrink-0 bg-border/70" />
 
-          <div className="flex min-w-0 shrink-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <span className="flex size-5 items-center justify-center text-text-lighter">
               {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
             </span>
-            <span className="whitespace-nowrap font-medium text-text-light">{hiddenLabel}</span>
+            <span className="shrink-0 whitespace-nowrap font-medium text-text-light">
+              {hiddenLabel}
+            </span>
             {headerInfo?.context ? (
-              <span className="max-w-[24rem] truncate text-text-lighter">{headerInfo.context}</span>
+              <span className="min-w-0 truncate text-text-lighter">{headerInfo.context}</span>
             ) : null}
           </div>
 
-          <div className="h-px flex-1 bg-border/70" />
+          <div className="h-px min-w-8 flex-1 bg-border/70" />
 
           <div className="flex shrink-0 items-center gap-2">
             <div className="ui-text-xs flex items-center gap-1">
