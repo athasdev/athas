@@ -196,14 +196,14 @@ const BottomPane = () => {
           onMouseDown={handleMouseDown}
           className={cn(
             "group absolute inset-x-0 top-0 z-10 h-1",
-            "cursor-ns-resize transition-colors duration-150 hover:bg-blue-500/30",
-            isResizing && "bg-blue-500/50",
+            "cursor-ns-resize transition-colors duration-150 hover:bg-accent/30",
+            isResizing && "bg-accent/50",
           )}
         >
           <div
             className={cn(
               "-translate-y-[1px] absolute inset-x-0 top-0 h-[3px]",
-              "bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
+              "bg-accent opacity-0 transition-opacity duration-150 group-hover:opacity-100",
             )}
           />
         </div>

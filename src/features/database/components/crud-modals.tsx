@@ -280,7 +280,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   onClick={() => removeColumn(index)}
                   variant="ghost"
                   compact
-                  className="rounded-md text-red-400"
+                  className="rounded-md text-error"
                 >
                   <XIcon size="14" />
                 </Button>

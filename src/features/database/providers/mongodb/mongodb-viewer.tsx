@@ -158,7 +158,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {store.error && (
-            <div className="mx-3 mt-3 mb-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 ui-text-xs">
+            <div className="mx-3 mt-3 mb-2 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-xs">
               {store.error}
             </div>
           )}
@@ -202,7 +202,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
                           compact
-                          className="rounded-full text-red-400 opacity-0 transition-all hover:bg-red-500/10 group-hover:opacity-100"
+                          className="rounded-full text-error opacity-0 transition-all hover:bg-error/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
                           <Trash2 />

@@ -861,7 +861,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -894,7 +894,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -1094,7 +1094,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       disabled={isActionLoading}
                       variant="ghost"
                       compact
-                      className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+                      className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
                       tooltip="Drop stash"
                     >
                       <Trash2 />

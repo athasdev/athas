@@ -510,7 +510,7 @@ const GitTagManager = ({
                     }
                     variant="ghost"
                     compact
-                    className="text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                    className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
                     tooltip={
                       selectedRemoteName ? `Delete tag from ${selectedRemoteName}` : "No remote"
                     }
@@ -527,7 +527,7 @@ const GitTagManager = ({
                     disabled={isActionLoading}
                     variant="ghost"
                     compact
-                    className="text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                    className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
                     tooltip="Delete tag"
                     aria-label={`Delete ${tag.name}`}
                   >

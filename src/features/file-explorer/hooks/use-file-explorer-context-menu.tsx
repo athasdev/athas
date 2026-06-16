@@ -440,7 +440,7 @@ export function useFileExplorerContextMenu({
           id: "delete",
           label: "Delete",
           icon: <Trash />,
-          className: "text-red-400",
+          className: "text-error",
           onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
         },
       );

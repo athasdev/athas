@@ -178,19 +178,19 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       case "connected":
         return {
           icon: <Zap weight="duotone" />,
-          color: "text-green-400",
+          color: "text-success",
           title: "Language Servers Active",
         };
       case "connecting":
         return {
           icon: <LoadingIndicator label="Connecting" compact />,
-          color: "text-yellow-400",
+          color: "text-warning",
           title: "Connecting to Language Server...",
         };
       case "error":
         return {
           icon: <ZapOff weight="duotone" />,
-          color: "text-red-400",
+          color: "text-error",
           title: "Language server issue",
         };
       default:
@@ -572,7 +572,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap className="shrink-0 text-green-400" weight="duotone" />
+                        <Zap className="shrink-0 text-success" weight="duotone" />
                         <span className="truncate text-text ui-text-xs">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -630,7 +630,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               </div>
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">
-                <div className="flex items-center gap-2 text-red-400">
+                <div className="flex items-center gap-2 text-error">
                   <ZapOff weight="duotone" />
                   <span className="ui-text-xs">Language server issue</span>
                 </div>

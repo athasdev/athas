@@ -331,11 +331,11 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className={cn(chromeControl({ shape: "pill" }), "text-blue-400 hover:text-blue-300")}
+              className={cn(chromeControl({ shape: "pill" }), "text-accent hover:text-accent")}
               onClick={() => uiState.openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className={cn(footerCountPill(), "bg-blue-400 text-primary-bg")}>
+              <span className={cn(footerCountPill(), "bg-accent text-primary-bg")}>
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
               </span>
             </FooterTabControl>

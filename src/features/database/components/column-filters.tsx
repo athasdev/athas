@@ -112,7 +112,7 @@ export default function ColumnFilters({
               onClick={() => onRemove(index)}
               variant="ghost"
               compact
-              className="text-text-lighter hover:text-red-500"
+              className="text-text-lighter hover:text-error"
               aria-label="Remove filter"
             >
               <X />

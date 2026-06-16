@@ -259,7 +259,7 @@ export default function SqlDatabaseViewer({
           )}
 
           {store.error && (
-            <div className="mx-3 mb-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 ui-font ui-text-sm text-red-300">
+            <div className="mx-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 ui-font ui-text-sm text-error">
               {store.error}
             </div>
           )}

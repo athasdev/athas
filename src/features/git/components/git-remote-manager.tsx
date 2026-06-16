@@ -167,7 +167,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                   disabled={isActionLoading}
                   variant="ghost"
                   compact
-                  className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  className="shrink-0 text-error hover:bg-error/10 hover:text-error"
                   aria-label={`Remove ${remote.name}`}
                 >
                   <Trash2 className="size-3.5" />

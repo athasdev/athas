@@ -55,6 +55,14 @@
   --color-syntax-jsx: var(--syntax-jsx);
   --color-syntax-jsx-attribute: var(--syntax-jsx-attribute);
 
+  --color-symbol-function: var(--symbol-function);
+  --color-symbol-type: var(--symbol-type);
+  --color-symbol-interface: var(--symbol-interface);
+  --color-symbol-enum: var(--symbol-enum);
+  --color-symbol-variable: var(--symbol-variable);
+  --color-symbol-property: var(--symbol-property);
+  --color-symbol-type-parameter: var(--symbol-type-parameter);
+
   --color-terminal-black: var(--terminal-black);
   --color-terminal-red: var(--terminal-red);
   --color-terminal-green: var(--terminal-green);
@@ -142,6 +150,14 @@
     --syntax-tag: #22863a;
     --syntax-attribute: #6f42c1;
     --syntax-punctuation: #24292e;
+
+    --symbol-function: var(--syntax-function);
+    --symbol-type: var(--syntax-type, var(--syntax-tag));
+    --symbol-interface: var(--syntax-regex, var(--syntax-operator, var(--syntax-attribute)));
+    --symbol-enum: var(--syntax-number);
+    --symbol-variable: var(--syntax-property, var(--syntax-variable));
+    --symbol-property: var(--syntax-string);
+    --symbol-type-parameter: var(--syntax-operator, var(--syntax-attribute));
 
     --terminal-black: #24292e;
     --terminal-red: #d73a49;

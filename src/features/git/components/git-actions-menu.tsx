@@ -253,7 +253,7 @@ const GitActionsMenu = ({
           label: "Discard All Changes",
           icon: <RotateCcw />,
           disabled: isLoading,
-          className: "text-red-400",
+          className: "text-error",
           onClick: () => void handleDiscardAllChanges(),
         },
       ]

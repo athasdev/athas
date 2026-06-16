@@ -346,7 +346,7 @@ export const InlineGitBlame = ({
                   tooltip="Copy commit hash"
                   compact
                 >
-                  {isCopied ? <Check className="text-green-500" /> : <Copy />}
+                  {isCopied ? <Check className="text-success" /> : <Copy />}
                 </Button>
               </div>
             </div>

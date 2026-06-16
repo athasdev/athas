@@ -117,7 +117,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               id="inline-edit-error"
               role="alert"
               aria-live="assertive"
-              className="ui-font border-t border-border/50 bg-red-500/10 px-2 py-1 ui-text-xs text-red-300"
+              className="ui-font border-t border-border/50 bg-error/10 px-2 py-1 ui-text-xs text-error"
             >
               {state.inlineEditError}
             </div>

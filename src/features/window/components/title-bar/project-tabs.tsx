@@ -220,7 +220,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           className: cn(
             "border border-transparent px-6",
             isRemote &&
-              (tab.isActive ? "bg-sky-500/15 text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
+              (tab.isActive ? "bg-accent/15 text-accent" : "text-accent/85 hover:text-accent"),
             isSwitchingProject && "cursor-wait",
           ),
           style: { fontSize: "var(--ui-text-sm)" },
