@@ -392,7 +392,7 @@ const GitTagManager = ({
                     </div>
                   </div>
                 </div>
-                <div className="pointer-events-none absolute top-6 right-2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-all group-hover/tag:pointer-events-auto group-hover/tag:translate-x-0 group-hover/tag:opacity-100 group-focus-within/tag:pointer-events-auto group-focus-within/tag:translate-x-0 group-focus-within/tag:opacity-100">
+                <div className="pointer-events-none absolute top-6 right-2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-[opacity,transform] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover/tag:pointer-events-auto group-hover/tag:translate-x-0 group-hover/tag:opacity-100 group-focus-within/tag:pointer-events-auto group-focus-within/tag:translate-x-0 group-focus-within/tag:opacity-100">
                   <Button
                     type="button"
                     onClick={(event) => {

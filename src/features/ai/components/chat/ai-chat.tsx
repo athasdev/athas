@@ -1070,7 +1070,7 @@ details: ${errorDetails || mainError}
 
           {currentPermission && (
             <div className="bg-transparent px-3 pt-2 ui-text-xs">
-              <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-sm">
+              <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-[var(--shadow-card)]">
                 <KeyRound className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
                 <div
                   className="min-w-0 flex-1 truncate text-text"

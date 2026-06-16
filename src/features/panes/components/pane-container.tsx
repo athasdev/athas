@@ -993,7 +993,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     data-buffer-card-id={buffer.id}
                     className={cn(
-                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-200",
+                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
                       isActiveBuffer
                         ? "border-accent/50 bg-primary-bg shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
                         : "border-border/70 bg-primary-bg hover:border-border/90",

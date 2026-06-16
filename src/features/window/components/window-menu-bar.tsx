@@ -451,7 +451,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         className={cn(
           settings.compactMenuBar &&
             compactFloating &&
-            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
+            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
           settings.compactMenuBar &&
             !compactFloating &&
             "h-full rounded-none border-none bg-transparent px-2 py-0",

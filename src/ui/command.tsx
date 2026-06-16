@@ -1,11 +1,12 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
+import { instantTransition, overlayTransition, motionEase, motionDuration } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -21,7 +22,7 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl focus:outline-none",
+  "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
 );
 
 const commandItemVariants = cva(
@@ -76,6 +77,7 @@ const Command = ({
   autoFocus = true,
 }: CommandProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
   const containerClassName =
     placement === "bottom"
       ? "fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
@@ -99,7 +101,7 @@ const Command = ({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
+                    transition={prefersReducedMotion ? instantTransition : overlayTransition}
                   />
                 }
                 className="absolute inset-0 z-0 cursor-default bg-black/20"
@@ -112,10 +114,22 @@ const Command = ({
                 initialFocus={autoFocus ? getInitialFocusTarget : false}
                 render={
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: motionY }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: motionY }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    initial={
+                      prefersReducedMotion
+                        ? false
+                        : { opacity: 0, scale: 0.98, y: motionY, filter: "blur(2px)" }
+                    }
+                    animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+                    exit={
+                      prefersReducedMotion
+                        ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
+                        : { opacity: 0, scale: 0.98, y: motionY, filter: "blur(2px)" }
+                    }
+                    transition={
+                      prefersReducedMotion
+                        ? instantTransition
+                        : { duration: motionDuration.fast, ease: motionEase.smooth }
+                    }
                   />
                 }
                 className={cn(commandContentVariants(), className)}

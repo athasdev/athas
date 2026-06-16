@@ -1,9 +1,10 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { instantTransition, overlayEntrance, overlayTransition } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 
 interface StashMessageModalProps {
@@ -43,6 +44,7 @@ const StashMessageModalContent = ({
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useOnClickOutside(modalRef as RefObject<HTMLElement>, onClose);
 
@@ -65,17 +67,17 @@ const StashMessageModalContent = ({
 
   return createPortal(
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={prefersReducedMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.15 }}
+      transition={prefersReducedMotion ? instantTransition : overlayTransition}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
       <motion.div
         ref={modalRef}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="w-80 rounded-lg border border-border bg-secondary-bg p-4"
+        initial={prefersReducedMotion ? false : overlayEntrance.initial}
+        animate={overlayEntrance.animate}
+        transition={prefersReducedMotion ? instantTransition : overlayEntrance.transition}
+        className="w-80 rounded-lg border border-border bg-secondary-bg p-4 shadow-[var(--shadow-dialog)]"
       >
         <h3 className="mb-3 font-medium ui-text-sm text-text">{title}</h3>
         <Input

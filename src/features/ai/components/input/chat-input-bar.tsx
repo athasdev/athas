@@ -1542,7 +1542,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   }}
                   variant="ghost"
                   compact
-                  className="absolute right-0.5 size-5 rounded-md bg-hover/80 p-0 text-text opacity-0 shadow-sm hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
+                  className="absolute right-0.5 size-5 rounded-md bg-hover/80 p-0 text-text opacity-0 shadow-[var(--shadow-card)] hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${item.name} from context`}
                   tabIndex={0}
                 >

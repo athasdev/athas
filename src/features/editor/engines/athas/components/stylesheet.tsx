@@ -187,7 +187,7 @@ export function EditorStylesheet() {
         .gutter-decoration.git-gutter-modified,
         .gutter-decoration.git-gutter-deleted {
           pointer-events: none;
-          transition: all 0.15s ease-out;
+          transition: opacity var(--app-duration-fast) var(--app-ease-smooth), background-color var(--app-duration-fast) var(--app-ease-smooth);
           opacity: 0.9;
         }
 
@@ -283,7 +283,7 @@ export function EditorStylesheet() {
         .gutter-decoration.git-gutter-added,
         .gutter-decoration.git-gutter-modified,
         .gutter-decoration.git-gutter-deleted {
-          animation: gitGutterFadeIn 0.15s ease-out;
+          animation: gitGutterFadeIn var(--app-duration-fast) var(--app-ease-out);
         }
 
         /* Ensure proper spacing between git indicators and content */

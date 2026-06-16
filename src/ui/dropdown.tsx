@@ -11,6 +11,7 @@ import {
 } from "react";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
+import { motionDuration, motionEase } from "@/ui/motion";
 import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -561,10 +562,20 @@ export function Dropdown(props: DropdownProps) {
       className={className}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
       animated={animated}
-      initial={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      initial={{
+        opacity: 0,
+        scale: 0.98,
+        y: resolvedSide === "top" ? 4 : -4,
+        filter: "blur(2px)",
+      }}
+      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={{
+        opacity: 0,
+        scale: 0.98,
+        y: resolvedSide === "top" ? 4 : -4,
+        filter: "blur(2px)",
+      }}
+      transition={{ duration: motionDuration.fast, ease: motionEase.smooth }}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (

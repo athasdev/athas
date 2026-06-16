@@ -38,6 +38,7 @@ import { SegmentedControl } from "@/ui/segmented-control";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
+import { motionDuration, motionEase } from "@/ui/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingRow } from "../settings-section";
@@ -48,14 +49,14 @@ const editorStepTransition = {
   initial: { opacity: 0, x: 14 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: -14 },
-  transition: { duration: 0.16, ease: "easeOut" as const },
+  transition: { duration: motionDuration.fast, ease: motionEase.smooth },
 };
 
 const summaryStepTransition = {
   initial: { opacity: 0, x: -14 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: 14 },
-  transition: { duration: 0.16, ease: "easeOut" as const },
+  transition: { duration: motionDuration.fast, ease: motionEase.smooth },
 };
 
 export const KeyboardSettings = () => {

@@ -160,7 +160,7 @@ export function ResizablePane({
         <div
           onMouseDown={handleMouseDown}
           className={cn(
-            "absolute top-0 z-50 h-full w-4 cursor-col-resize transition-colors duration-150",
+            "absolute top-0 z-50 h-full w-4 cursor-col-resize transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
             handlePosition,
           )}
           role="separator"

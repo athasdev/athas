@@ -1,10 +1,11 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { dropdownItemClassName } from "@/ui/dropdown";
+import { instantTransition, motionDuration, motionEase } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 import {
   chatComposerDropdownClassName,
@@ -22,6 +23,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   onSelect,
 }: SlashCommandDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const slashCommandState = useAIChatStore((state) => state.slashCommandState);
   const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
@@ -118,9 +120,20 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   return createPortal(
     <motion.div
       ref={dropdownRef}
-      initial={false}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0 }}
+      initial={
+        prefersReducedMotion ? false : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
+      }
+      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={
+        prefersReducedMotion
+          ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
+          : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
+      }
+      transition={
+        prefersReducedMotion
+          ? instantTransition
+          : { duration: motionDuration.fast, ease: motionEase.smooth }
+      }
       className={chatComposerDropdownClassName(
         "scrollbar-hidden fixed select-none overflow-y-auto p-1.5",
       )}

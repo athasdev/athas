@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, type Transition } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import {
   type CSSProperties,
   type ReactNode,
@@ -7,10 +7,11 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { instantTransition, overlayEntrance } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(
-  "pointer-events-auto fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
@@ -50,9 +51,9 @@ interface PopoverContentProps {
   portalContainer?: Element | DocumentFragment | null;
   style?: CSSProperties;
   animated?: boolean;
-  initial?: { opacity: number; scale: number; y?: number };
-  animate?: { opacity: number; scale: number; y?: number };
-  exit?: { opacity: number; scale: number; y?: number };
+  initial?: { opacity: number; scale: number; y?: number; filter?: string };
+  animate?: { opacity: number; scale: number; y?: number; filter?: string };
+  exit?: { opacity: number; scale: number; y?: number; filter?: string };
   transition?: Transition;
 }
 
@@ -64,13 +65,16 @@ export function PopoverContent({
   portalContainer,
   style,
   animated = true,
-  initial = { opacity: 0, scale: 0.95 },
-  animate = { opacity: 1, scale: 1 },
-  exit = { opacity: 0, scale: 0.95 },
-  transition = { duration: 0.12, ease: "easeOut" as const },
+  initial = overlayEntrance.initial,
+  animate = overlayEntrance.animate,
+  exit = overlayEntrance.exit,
+  transition = overlayEntrance.transition,
 }: PopoverContentProps) {
+  const prefersReducedMotion = useReducedMotion();
+
   if (typeof document === "undefined") return null;
 
+  const shouldAnimate = animated && !prefersReducedMotion;
   const node = isOpen ? (
     <motion.div
       ref={contentRef}
@@ -78,10 +82,10 @@ export function PopoverContent({
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       onWheelCapture={containScrollChain}
-      initial={animated ? initial : false}
-      animate={animated ? animate : { opacity: 1, scale: 1, y: 0 }}
-      exit={animated ? exit : { opacity: 1, scale: 1, y: 0 }}
-      transition={animated ? transition : { duration: 0 }}
+      initial={shouldAnimate ? initial : false}
+      animate={shouldAnimate ? animate : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={shouldAnimate ? exit : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      transition={shouldAnimate ? transition : instantTransition}
       className={cn(popoverContentVariants(), className)}
       style={style}
     >

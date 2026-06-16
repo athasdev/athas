@@ -68,11 +68,11 @@ export const SearchField = forwardRef<
 });
 
 const searchSurfaceVariants = cva(
-  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.55)] backdrop-blur-sm",
+  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm",
 );
 
 const searchIconButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
+  "flex size-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
   {
     variants: {
       disabled: {
@@ -87,7 +87,7 @@ const searchIconButtonVariants = cva(
 );
 
 const searchToggleButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-border/70 hover:bg-hover",
+  "flex size-6 items-center justify-center rounded-lg border border-transparent transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover active:scale-[var(--app-press-scale)]",
   {
     variants: {
       active: {
@@ -102,7 +102,7 @@ const searchToggleButtonVariants = cva(
 );
 
 const searchActionButtonVariants = cva(
-  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
+  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
   {
     variants: {
       disabled: {

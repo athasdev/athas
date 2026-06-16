@@ -153,7 +153,7 @@ export const AccountSettings = () => {
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
                   <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-200"
+                    className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
                     style={{ width: `${usageProgress}%` }}
                   />
                 </div>

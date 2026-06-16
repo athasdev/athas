@@ -202,7 +202,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
                           compact
-                          className="rounded-full text-error opacity-0 transition-all hover:bg-error/10 group-hover:opacity-100"
+                          className="rounded-full text-error opacity-0 transition-[opacity,background-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-error/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
                           <Trash2 />

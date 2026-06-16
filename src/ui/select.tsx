@@ -76,11 +76,11 @@ const selectTriggerVariants = cva(
 );
 
 const selectContentVariants = cva(
-  "z-[10040] max-h-96 min-w-0 overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 ease-out",
+  "z-[10040] max-h-96 min-w-0 overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
 );
 
 const selectItemVariants = cva(
-  "ui-font ui-text-sm flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-text outline-none transition-colors hover:bg-hover",
+  "ui-font ui-text-sm flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
 );
 
 const selectSearchInputVariants = cva(

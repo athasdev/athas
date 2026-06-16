@@ -26,7 +26,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
           aria-modal="false"
           aria-labelledby="inline-edit-title"
           aria-describedby="inline-edit-description"
-          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-primary-bg shadow-lg"
+          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-primary-bg shadow-[var(--shadow-popover)]"
           style={{
             top: `${zoneTop ?? state.popoverPosition.top}px`,
             left: `${state.popoverPosition.left}px`,

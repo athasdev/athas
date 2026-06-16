@@ -15,7 +15,7 @@ type ComboboxSize = "xs" | "sm" | "md";
 type ComboboxVariant = "default" | "ghost";
 
 const comboboxInputGroupVariants = cva(
-  "group/combobox-input relative flex min-w-0 items-center transition-[border-color,box-shadow,background-color,color] outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+  "group/combobox-input relative flex min-w-0 items-center transition-[border-color,box-shadow,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] outline-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -84,7 +84,7 @@ const comboboxIconPositionVariants = cva(
 );
 
 const comboboxItemVariants = cva(
-  "ui-font ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-colors select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
+  "ui-font ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
   {
     variants: {
       highlighted: {
@@ -117,7 +117,7 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)] disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -132,7 +132,7 @@ function ComboboxClear({ className, children, ...props }: ComboboxPrimitive.Clea
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter transition-colors hover:bg-hover hover:text-text disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)] disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -242,8 +242,8 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={Boolean(anchor)}
           className={cn(
-            "group/combobox-content relative max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-[240px] origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 text-text shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
-            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "group/combobox-content relative max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-[240px] origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] [filter:blur(0)] data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]",
             className,
           )}
           {...props}
@@ -277,7 +277,7 @@ function ComboboxActionItem({
       type={type}
       className={cn(
         comboboxItemVariants({ indicator: false }),
-        "cursor-pointer hover:bg-hover",
+        "cursor-pointer hover:bg-hover active:scale-[var(--app-press-scale)]",
         className,
       )}
       {...props}

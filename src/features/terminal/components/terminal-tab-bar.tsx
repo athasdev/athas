@@ -871,7 +871,7 @@ const TerminalTabBar = ({
 
           <DragOverlay dropAnimation={null}>
             {draggedTerminal ? (
-              <div className="ui-font ui-text-sm flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 opacity-95 shadow-sm">
+              <div className="ui-font ui-text-sm flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 opacity-95 shadow-[var(--shadow-drag)]">
                 <span className="shrink-0">
                   <TerminalIcon className="text-text-lighter" />
                 </span>

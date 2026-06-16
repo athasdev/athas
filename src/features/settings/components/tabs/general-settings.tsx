@@ -212,7 +212,7 @@ export const GeneralSettings = () => {
         <div className="px-3">
           <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
             <div
-              className="h-full bg-accent transition-all duration-300"
+              className="h-full bg-accent transition-[width] duration-[var(--app-duration-slow)] ease-[var(--app-ease-smooth)]"
               style={{ width: `${downloadProgress.percentage}%` }}
             />
           </div>

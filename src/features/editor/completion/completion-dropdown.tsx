@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { CompletionItem } from "vscode-languageserver-protocol";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
@@ -10,6 +10,7 @@ import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
 import { getAccurateCursorX } from "@/features/editor/utils/position";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { instantTransition, motionDuration, motionEase } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 import { highlightMatches } from "@/utils/fuzzy-matcher";
 import { useOverlayManager } from "../hooks/use-overlay-manager";
@@ -33,6 +34,7 @@ function CompletionDropdownContent({ onApplyCompletion }: CompletionDropdownProp
   const tabSize = useEditorSettingsStore.use.tabSize();
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const lineContent = useEditorViewStore((state) => state.lines[cursorPosition.line] ?? "");
+  const prefersReducedMotion = useReducedMotion();
 
   const fontSize = baseFontSize * zoomLevel;
   const lineHeight = Math.ceil(fontSize * lineHeightMultiplier);
@@ -126,10 +128,20 @@ function CompletionDropdownContent({ onApplyCompletion }: CompletionDropdownProp
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: -4 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      initial={
+        prefersReducedMotion ? false : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
+      }
+      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={
+        prefersReducedMotion
+          ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
+          : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
+      }
+      transition={
+        prefersReducedMotion
+          ? instantTransition
+          : { duration: motionDuration.fast, ease: motionEase.smooth }
+      }
       className="editor-completion-dropdown absolute flex items-start"
       style={{
         left: `${x}px`,

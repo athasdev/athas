@@ -202,7 +202,7 @@ function MinimapComponent({
           backgroundColor: "color-mix(in srgb, var(--accent) 14%, transparent)",
           border: "1px solid color-mix(in srgb, var(--accent) 32%, transparent)",
           pointerEvents: "none",
-          transition: isDragging ? "none" : "top 0.05s ease-out",
+          transition: isDragging ? "none" : "top var(--app-duration-fast) var(--app-ease-smooth)",
         }}
       />
     </div>

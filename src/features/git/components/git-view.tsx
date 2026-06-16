@@ -1044,7 +1044,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       </span>
                     </div>
                   </div>
-                  <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-all group-hover/stash:pointer-events-auto group-hover/stash:translate-x-0 group-hover/stash:opacity-100 group-focus-within/stash:pointer-events-auto group-focus-within/stash:translate-x-0 group-focus-within/stash:opacity-100">
+                  <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-[opacity,transform] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover/stash:pointer-events-auto group-hover/stash:translate-x-0 group-hover/stash:opacity-100 group-focus-within/stash:pointer-events-auto group-focus-within/stash:translate-x-0 group-focus-within/stash:opacity-100">
                     <Button
                       type="button"
                       onClick={(event) => {

@@ -40,7 +40,7 @@ export function SplitViewRoot() {
             bottom: `${footerHeight + 8}px`,
           }}
         >
-          <div className="h-full overflow-hidden rounded-xl border border-border/80 bg-primary-bg shadow-2xl">
+          <div className="h-full overflow-hidden rounded-xl border border-border/80 bg-primary-bg shadow-[var(--shadow-dialog)]">
             <PaneContainer pane={fullscreenPane} />
           </div>
         </div>
