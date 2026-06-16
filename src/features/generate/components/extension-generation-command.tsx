@@ -1,19 +1,20 @@
 import {
   ArrowLeftIcon as ArrowLeft,
   CheckIcon as Check,
-  ClipboardTextIcon as ClipboardText,
   CursorClickIcon as CursorClick,
   PackageIcon as Package,
   RowsPlusTopIcon as Sidebar,
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
+import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   requestUIExtensionGeneration,
   type UIExtensionContributionType,
   type UIExtensionGenerationResult,
 } from "@/extensions/ui/services/ui-extension-generation-service";
+import { installGeneratedUIExtension } from "@/extensions/ui/services/generated-ui-extension-installer";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
@@ -33,81 +34,196 @@ import Command, {
 } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
 import Textarea from "@/ui/textarea";
-import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
 
-type GenerationStep = "type" | "prompt" | "generating" | "result";
+type GenerationStep = "type" | "intent" | "details" | "generating" | "preview" | "installed";
 
 interface ContributionOption {
   id: UIExtensionContributionType;
   label: string;
   description: string;
-  placeholder: string;
+  detailPrompt: string;
   icon: typeof Sidebar;
+}
+
+interface IntentOption {
+  id: string;
+  label: string;
+  description: string;
+  detailPrompt: string;
 }
 
 const CONTRIBUTION_OPTIONS: ContributionOption[] = [
   {
     id: "sidebar",
     label: "Sidebar view",
-    description: "Generate a panel for dashboards, tools, and workspace data.",
-    placeholder: "Project release dashboard with build status and quick rollback actions",
+    description: "Panel",
+    detailPrompt: "Project release dashboard with build status and rollback actions",
     icon: Sidebar,
   },
   {
     id: "toolbar",
     label: "Toolbar action",
-    description: "Generate an editor action users can trigger from the toolbar.",
-    placeholder: "Summarize the current file and show a short review checklist",
+    description: "Editor button",
+    detailPrompt: "Summarize the current file and show a short review checklist",
     icon: CursorClick,
   },
   {
     id: "command",
     label: "Command",
-    description: "Generate a command palette action for a focused workflow.",
-    placeholder: "Create a changelog draft from the current git diff",
+    description: "Palette action",
+    detailPrompt: "Create a changelog draft from the current git diff",
     icon: Terminal,
   },
 ];
 
+const INTENT_OPTIONS: Record<UIExtensionContributionType, IntentOption[]> = {
+  sidebar: [
+    {
+      id: "status",
+      label: "Track project status",
+      description: "Metrics, lists, and next actions",
+      detailPrompt: "What status should the panel track?",
+    },
+    {
+      id: "review",
+      label: "Review work",
+      description: "Queues, checks, and decisions",
+      detailPrompt: "What should the review surface help decide?",
+    },
+    {
+      id: "reference",
+      label: "Keep reference nearby",
+      description: "Docs, notes, and shortcuts",
+      detailPrompt: "What reference content should stay visible?",
+    },
+  ],
+  toolbar: [
+    {
+      id: "analyze",
+      label: "Analyze current file",
+      description: "Inspect, summarize, or check",
+      detailPrompt: "What should the toolbar action analyze?",
+    },
+    {
+      id: "transform",
+      label: "Transform selection",
+      description: "Rewrite or prepare output",
+      detailPrompt: "What should it transform and where should the result go?",
+    },
+    {
+      id: "open-helper",
+      label: "Open a helper",
+      description: "Launch a small focused tool",
+      detailPrompt: "What helper should open from the toolbar?",
+    },
+  ],
+  command: [
+    {
+      id: "draft",
+      label: "Draft something",
+      description: "Generate useful text",
+      detailPrompt: "What should the command draft?",
+    },
+    {
+      id: "inspect",
+      label: "Inspect workspace",
+      description: "Read context and report",
+      detailPrompt: "What should the command inspect?",
+    },
+    {
+      id: "workflow",
+      label: "Run a workflow",
+      description: "Do one repeatable task",
+      detailPrompt: "What workflow should the command run?",
+    },
+  ],
+};
+
 const GENERATING_MESSAGES = [
-  "Reading the prompt",
-  "Choosing the extension surface",
-  "Drafting the contribution",
-  "Preparing generated code",
+  "Reading your selections",
+  "Designing the extension surface",
+  "Preparing an installable extension",
+  "Building the preview",
 ];
 
 function getOption(id: UIExtensionContributionType | null) {
   return CONTRIBUTION_OPTIONS.find((option) => option.id === id) ?? CONTRIBUTION_OPTIONS[0];
 }
 
+function getIntent(
+  contributionType: UIExtensionContributionType | null,
+  intentId: string | null,
+): IntentOption | null {
+  if (!contributionType) return null;
+  return INTENT_OPTIONS[contributionType].find((option) => option.id === intentId) ?? null;
+}
+
+function getPreviewHighlights(
+  result: UIExtensionGenerationResult,
+  selectedOption: ContributionOption,
+  selectedIntent: IntentOption | null,
+) {
+  const previewHighlights = result.preview?.highlights?.filter(Boolean) ?? [];
+  if (previewHighlights.length > 0) return previewHighlights.slice(0, 3);
+
+  return [
+    `${selectedOption.label} contribution`,
+    selectedIntent?.description ?? selectedOption.description,
+    result.description,
+  ].filter(Boolean);
+}
+
 export function ExtensionGenerationCommand() {
   const isVisible = useGenerateStore.use.isExtensionGenerationVisible();
   const { closeExtensionGeneration } = useGenerateStore.use.actions();
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const setActiveView = useUIState((state) => state.setActiveView);
+  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const { isAuthenticated, isPro } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const [step, setStep] = useState<GenerationStep>("type");
   const [query, setQuery] = useState("");
   const [selectedType, setSelectedType] = useState<UIExtensionContributionType | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [selectedIntentId, setSelectedIntentId] = useState<string | null>(null);
+  const [details, setDetails] = useState("");
   const [result, setResult] = useState<UIExtensionGenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTypeIndex, setSelectedTypeIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [generationMessageIndex, setGenerationMessageIndex] = useState(0);
+  const [isInstalling, setIsInstalling] = useState(false);
   const generationRunRef = useRef(0);
   const isVisibleRef = useRef(isVisible);
 
   const selectedOption = getOption(selectedType);
-  const filteredOptions = useMemo(
+  const selectedIntent = getIntent(selectedType, selectedIntentId);
+  const intentOptions = selectedType ? INTENT_OPTIONS[selectedType] : [];
+  const filteredTypeOptions = useMemo(
     () =>
       CONTRIBUTION_OPTIONS.filter((option) =>
         matchesSearchQuery(query, [option.label, option.description]),
       ),
     [query],
   );
-  const activeTypeOption = filteredOptions[selectedTypeIndex] ?? filteredOptions[0] ?? null;
+  const filteredIntentOptions = useMemo(
+    () =>
+      intentOptions.filter((option) =>
+        matchesSearchQuery(query, [option.label, option.description]),
+      ),
+    [intentOptions, query],
+  );
+  const visibleOptionCount =
+    step === "type"
+      ? filteredTypeOptions.length
+      : step === "intent"
+        ? filteredIntentOptions.length
+        : 0;
+  const activeTypeOption = filteredTypeOptions[selectedIndex] ?? filteredTypeOptions[0] ?? null;
+  const activeIntentOption =
+    filteredIntentOptions[selectedIndex] ?? filteredIntentOptions[0] ?? null;
+  const canGenerate = Boolean(selectedType && selectedIntent && details.trim());
+  const locked = !isAuthenticated || !isPro;
 
   useEffect(() => {
     isVisibleRef.current = isVisible;
@@ -119,23 +235,25 @@ export function ExtensionGenerationCommand() {
       setStep("type");
       setQuery("");
       setSelectedType(null);
-      setPrompt("");
+      setSelectedIntentId(null);
+      setDetails("");
       setResult(null);
       setError(null);
-      setSelectedTypeIndex(0);
+      setSelectedIndex(0);
       setGenerationMessageIndex(0);
+      setIsInstalling(false);
     }
   }, [isVisible]);
 
   useEffect(() => {
-    setSelectedTypeIndex(0);
-  }, [query]);
+    setSelectedIndex(0);
+  }, [query, step]);
 
   useEffect(() => {
-    setSelectedTypeIndex((currentIndex) =>
-      filteredOptions.length === 0 ? 0 : Math.min(currentIndex, filteredOptions.length - 1),
+    setSelectedIndex((currentIndex) =>
+      visibleOptionCount === 0 ? 0 : Math.min(currentIndex, visibleOptionCount - 1),
     );
-  }, [filteredOptions.length]);
+  }, [visibleOptionCount]);
 
   useEffect(() => {
     if (step !== "generating") {
@@ -155,16 +273,34 @@ export function ExtensionGenerationCommand() {
     closeExtensionGeneration();
   };
 
+  const goToType = () => {
+    setStep("type");
+    setQuery("");
+    setSelectedType(null);
+    setSelectedIntentId(null);
+    setDetails("");
+    setResult(null);
+    setError(null);
+  };
+
   const chooseType = (type: UIExtensionContributionType) => {
     setSelectedType(type);
-    setPrompt("");
+    setSelectedIntentId(null);
     setQuery("");
     setError(null);
-    setStep("prompt");
+    setStep("intent");
+  };
+
+  const chooseIntent = (intent: IntentOption) => {
+    setSelectedIntentId(intent.id);
+    setQuery("");
+    setDetails("");
+    setError(null);
+    setStep("details");
   };
 
   const generate = async () => {
-    if (!selectedType || !prompt.trim()) return;
+    if (!selectedType || !selectedIntent || !details.trim()) return;
 
     const runId = generationRunRef.current + 1;
     generationRunRef.current = runId;
@@ -173,10 +309,17 @@ export function ExtensionGenerationCommand() {
     setResult(null);
     setGenerationMessageIndex(0);
 
+    const description = [
+      `Surface: ${selectedOption.label}`,
+      `User choice: ${selectedIntent.label}`,
+      `Intent: ${selectedIntent.description}`,
+      `Details: ${details.trim()}`,
+    ].join("\n");
+
     try {
       const generated = await requestUIExtensionGeneration({
         contributionType: selectedType,
-        description: prompt.trim(),
+        description,
       });
 
       if (generationRunRef.current !== runId || !isVisibleRef.current) return;
@@ -190,14 +333,32 @@ export function ExtensionGenerationCommand() {
 
     if (generationRunRef.current !== runId || !isVisibleRef.current) return;
 
-    setStep("result");
+    setStep("preview");
   };
 
-  const copyCode = async () => {
-    if (!result?.code) return;
+  const install = () => {
+    if (!result || !selectedType) return;
 
-    await writeClipboardText(result.code);
-    showToast({ message: "Generated extension code copied", type: "success" });
+    setIsInstalling(true);
+    setError(null);
+
+    try {
+      const installed = installGeneratedUIExtension({
+        ...result,
+        contributionType: selectedType,
+      });
+
+      if (selectedType === "sidebar") {
+        setActiveView(installed.extensionId);
+        setIsSidebarVisible(true);
+      }
+      setStep("installed");
+      showToast({ message: "Extension installed", type: "success" });
+    } catch (installError) {
+      setError(installError instanceof Error ? installError.message : "Install failed.");
+    } finally {
+      setIsInstalling(false);
+    }
   };
 
   const openExtensions = () => {
@@ -205,8 +366,54 @@ export function ExtensionGenerationCommand() {
     openSettingsDialog("extensions");
   };
 
-  const canGenerate = Boolean(selectedType && prompt.trim());
-  const locked = !isAuthenticated || !isPro;
+  const moveSelection = (delta: number) => {
+    setSelectedIndex((currentIndex) => {
+      if (visibleOptionCount === 0) return 0;
+      return Math.min(Math.max(currentIndex + delta, 0), visibleOptionCount - 1);
+    });
+  };
+
+  const handlePickerKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      moveSelection(1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      moveSelection(-1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (step === "type" && activeTypeOption) {
+        chooseType(activeTypeOption.id);
+      } else if (step === "intent" && activeIntentOption) {
+        chooseIntent(activeIntentOption);
+      }
+    }
+  };
+
+  const renderPickerItem = (
+    option: ContributionOption | IntentOption,
+    index: number,
+    onSelect: () => void,
+    Icon?: ContributionOption["icon"],
+  ) => (
+    <CommandItem
+      key={option.id}
+      isSelected={index === selectedIndex}
+      onClick={onSelect}
+      onMouseEnter={() => setSelectedIndex(index)}
+      className="h-8 px-3 py-1"
+    >
+      {Icon ? <Icon className="size-4 shrink-0 text-text-lighter" /> : null}
+      <CommandItemTitle className="flex-1">{option.label}</CommandItemTitle>
+      <CommandItemMeta className="ml-auto max-w-44 truncate">{option.description}</CommandItemMeta>
+    </CommandItem>
+  );
 
   return (
     <Command
@@ -270,87 +477,86 @@ export function ExtensionGenerationCommand() {
             <CommandInput
               value={query}
               onChange={setQuery}
-              onKeyDown={(event) => {
-                if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  setSelectedTypeIndex((currentIndex) =>
-                    filteredOptions.length === 0
-                      ? 0
-                      : Math.min(currentIndex + 1, filteredOptions.length - 1),
-                  );
-                  return;
-                }
-
-                if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  setSelectedTypeIndex((currentIndex) => Math.max(currentIndex - 1, 0));
-                  return;
-                }
-
-                if (event.key === "Enter" && activeTypeOption) {
-                  event.preventDefault();
-                  chooseType(activeTypeOption.id);
-                }
-              }}
-              placeholder="What kind of extension?"
+              onKeyDown={handlePickerKeyDown}
+              placeholder="What should I generate?"
               size="md"
             />
           </CommandHeader>
           <CommandList>
-            {filteredOptions.length === 0 ? (
+            {filteredTypeOptions.length === 0 ? (
               <CommandEmpty>No extension types found</CommandEmpty>
             ) : (
-              filteredOptions.map((option, index) => {
-                const Icon = option.icon;
-
-                return (
-                  <CommandItem
-                    key={option.id}
-                    isSelected={index === selectedTypeIndex}
-                    onClick={() => chooseType(option.id)}
-                    onMouseEnter={() => setSelectedTypeIndex(index)}
-                    className="px-3 py-2"
-                  >
-                    <Icon className="size-4 shrink-0 text-text-lighter" />
-                    <div className="min-w-0 flex-1">
-                      <CommandItemTitle>{option.label}</CommandItemTitle>
-                      <CommandItemMeta className="ml-0 block">{option.description}</CommandItemMeta>
-                    </div>
-                  </CommandItem>
-                );
-              })
+              filteredTypeOptions.map((option, index) =>
+                renderPickerItem(option, index, () => chooseType(option.id), option.icon),
+              )
             )}
           </CommandList>
         </>
-      ) : step === "prompt" ? (
+      ) : step === "intent" ? (
+        <>
+          <CommandHeader onClose={close}>
+            <CommandInput
+              value={query}
+              onChange={setQuery}
+              onKeyDown={handlePickerKeyDown}
+              placeholder="What should it help with?"
+              size="md"
+            />
+          </CommandHeader>
+          <CommandList>
+            {filteredIntentOptions.length === 0 ? (
+              <CommandEmpty>No matching choices</CommandEmpty>
+            ) : (
+              filteredIntentOptions.map((option, index) =>
+                renderPickerItem(option, index, () => chooseIntent(option)),
+              )
+            )}
+          </CommandList>
+          <CommandFooter>
+            <CommandFooterAction onClick={goToType}>
+              <ArrowLeft />
+              Type
+            </CommandFooterAction>
+          </CommandFooter>
+        </>
+      ) : step === "details" ? (
         <>
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Package className="size-4 shrink-0 text-accent" />
               <div className="min-w-0 truncate ui-font ui-text-sm text-text">
-                {selectedOption.label}
+                {selectedIntent?.detailPrompt ?? selectedOption.detailPrompt}
               </div>
             </div>
           </CommandHeader>
           <CommandList>
             <div className="space-y-2 p-2">
-              <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">
-                <p className="ui-font ui-text-xs leading-[1.45] text-text-lighter">
-                  Describe the workflow, data it should show, and the action a user should take.
-                </p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
+                  <div className="ui-font ui-text-xs text-text-lighter">Surface</div>
+                  <div className="mt-0.5 truncate ui-font ui-text-sm text-text">
+                    {selectedOption.label}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
+                  <div className="ui-font ui-text-xs text-text-lighter">Behavior</div>
+                  <div className="mt-0.5 truncate ui-font ui-text-sm text-text">
+                    {selectedIntent?.label}
+                  </div>
+                </div>
               </div>
               <Textarea
-                aria-label="Extension prompt"
+                aria-label="Extension details"
                 data-command-input=""
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
+                value={details}
+                onChange={(event) => setDetails(event.target.value)}
                 onKeyDown={(event) => {
                   if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && canGenerate) {
                     event.preventDefault();
                     void generate();
                   }
                 }}
-                placeholder={selectedOption.placeholder}
+                placeholder={selectedOption.detailPrompt}
                 className="min-h-28 resize-none bg-primary-bg/70 ui-text-sm leading-[1.45]"
               />
             </div>
@@ -358,12 +564,12 @@ export function ExtensionGenerationCommand() {
           <CommandFooter>
             <CommandFooterAction
               onClick={() => {
-                setStep("type");
-                setPrompt("");
+                setStep("intent");
+                setQuery("");
               }}
             >
               <ArrowLeft />
-              Type
+              Choice
             </CommandFooterAction>
             <CommandFooterAction
               variant="accent"
@@ -386,9 +592,38 @@ export function ExtensionGenerationCommand() {
           <div className="flex min-h-40 flex-col items-center justify-center gap-2">
             <LoadingIndicator label={GENERATING_MESSAGES[generationMessageIndex]} showLabel />
             <div className="ui-font ui-text-xs text-text-lighter">
-              {selectedOption.label} from your prompt
+              {selectedIntent?.label ?? selectedOption.label}
             </div>
           </div>
+        </>
+      ) : step === "installed" ? (
+        <>
+          <CommandHeader onClose={close}>
+            <div className="flex min-w-0 flex-1 items-center gap-2 ui-font ui-text-sm text-text">
+              <Check className="size-4 shrink-0 text-success" />
+              Extension installed
+            </div>
+          </CommandHeader>
+          <CommandList>
+            <div className="space-y-2 p-2">
+              <div className="rounded-lg border border-success/30 bg-success/10 p-3">
+                <div className="ui-font ui-text-sm font-medium text-text">{result?.name}</div>
+                <div className="mt-1 ui-font ui-text-xs leading-[1.45] text-text-lighter">
+                  {selectedType === "sidebar"
+                    ? "The new sidebar view is open now."
+                    : selectedType === "toolbar"
+                      ? "The new toolbar action is active in the editor."
+                      : "The new command is available from the command palette."}
+                </div>
+              </div>
+            </div>
+          </CommandList>
+          <CommandFooter>
+            <CommandFooterAction onClick={close} variant="accent">
+              Done
+            </CommandFooterAction>
+            <CommandFooterAction onClick={openExtensions}>Extensions</CommandFooterAction>
+          </CommandFooter>
         </>
       ) : (
         <>
@@ -399,7 +634,7 @@ export function ExtensionGenerationCommand() {
               ) : (
                 <Check className="size-4 shrink-0 text-success" />
               )}
-              {error ? "Generation failed" : "Extension generated"}
+              {error ? "Generation failed" : "Preview extension"}
             </div>
           </CommandHeader>
           <CommandList>
@@ -411,15 +646,28 @@ export function ExtensionGenerationCommand() {
               ) : result ? (
                 <>
                   <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">
-                    <div className="ui-font ui-text-sm font-medium text-text">{result.name}</div>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Package className="size-4 shrink-0 text-accent" />
+                      <div className="min-w-0 truncate ui-font ui-text-sm font-medium text-text">
+                        {result.preview?.title ?? result.name}
+                      </div>
+                    </div>
                     <div className="mt-1 ui-font ui-text-xs leading-[1.45] text-text-lighter">
-                      {result.description}
+                      {result.preview?.summary ?? result.description}
                     </div>
                   </div>
-                  <div className="max-h-40 overflow-hidden rounded-lg border border-border/60 bg-primary-bg/70">
-                    <pre className="custom-scrollbar-thin max-h-40 overflow-auto p-3 editor-font text-[length:var(--ui-text-xs)] leading-[1.45] text-text-lighter">
-                      {result.code}
-                    </pre>
+                  <div className="grid gap-1.5">
+                    {getPreviewHighlights(result, selectedOption, selectedIntent).map(
+                      (highlight) => (
+                        <div
+                          key={highlight}
+                          className="flex h-8 items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/70 px-3 ui-font ui-text-xs text-text"
+                        >
+                          <Check className="size-3.5 shrink-0 text-success" />
+                          <span className="min-w-0 truncate">{highlight}</span>
+                        </div>
+                      ),
+                    )}
                   </div>
                 </>
               ) : null}
@@ -428,25 +676,26 @@ export function ExtensionGenerationCommand() {
           <CommandFooter>
             <CommandFooterAction
               onClick={() => {
-                setStep("prompt");
+                setStep("details");
                 setError(null);
               }}
             >
               <ArrowLeft />
-              Prompt
+              Details
             </CommandFooterAction>
-            {result?.code ? (
-              <CommandFooterAction onClick={() => void copyCode()}>
-                <ClipboardText />
-                Copy code
+            {error ? (
+              <CommandFooterAction variant="danger" onClick={() => void generate()}>
+                Try again
               </CommandFooterAction>
-            ) : null}
-            <CommandFooterAction
-              variant={error ? "danger" : "accent"}
-              onClick={error ? () => void generate() : openExtensions}
-            >
-              {error ? "Try again" : "Extensions"}
-            </CommandFooterAction>
+            ) : (
+              <CommandFooterAction
+                variant="accent"
+                onClick={install}
+                disabled={!result || isInstalling}
+              >
+                {isInstalling ? "Installing..." : result?.preview?.primaryAction || "Install"}
+              </CommandFooterAction>
+            )}
           </CommandFooter>
         </>
       )}

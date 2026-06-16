@@ -1,6 +1,10 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import { ClockCounterClockwiseIcon as History } from "@phosphor-icons/react";
+import {
+  ClockCounterClockwiseIcon as History,
+  PuzzlePieceIcon as Puzzle,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
@@ -136,6 +140,7 @@ const CommandPalette = () => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const gitStore = useGitStore();
   const { checkAuth: checkGitHubAuth } = useGitHubStore().actions;
+  const extensionCommands = useUIExtensionStore.use.commands();
   const { showToast } = useToast();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
   const openOnboarding = useOnboardingStore((state) => state.openPreview);
@@ -233,6 +238,24 @@ const CommandPalette = () => {
     ...createGenerateActions({
       onClose,
     }),
+    ...Array.from(extensionCommands.values()).map(
+      (command): Action => ({
+        id: `extension-command:${command.id}`,
+        label: command.title,
+        description: command.category ?? "Installed extension command",
+        icon: <Puzzle />,
+        category: "Extensions",
+        action: () => {
+          onClose();
+          void Promise.resolve(command.execute()).catch((error) => {
+            showToast({
+              message: error instanceof Error ? error.message : "Extension command failed",
+              type: "error",
+            });
+          });
+        },
+      }),
+    ),
     ...createWindowActions({
       onClose,
     }),
