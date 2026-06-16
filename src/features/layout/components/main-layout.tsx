@@ -13,6 +13,7 @@ import { initializeDebuggerEventBridge } from "@/features/debugger/services/debu
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
+import { ExtensionGenerationCommand } from "@/features/generate/components/extension-generation-command";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -344,6 +345,7 @@ export function MainLayout() {
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />
+      <ExtensionGenerationCommand />
       <AgentLauncher />
       <ProjectNameMenu />
 

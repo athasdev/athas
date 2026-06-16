@@ -43,6 +43,7 @@ import { matchesSearchQuery } from "@/utils/search-match";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";
 import { createFileActions } from "../constants/file-actions";
+import { createGenerateActions } from "../constants/generate-actions";
 import { createGitActions } from "../constants/git-actions";
 import { createGitHubActions } from "../constants/github-actions";
 import { createMarkdownActions } from "../constants/markdown-actions";
@@ -227,6 +228,9 @@ const CommandPalette = () => {
       switchToPreviousBuffer,
       setActiveBuffer,
       reopenClosedTab,
+      onClose,
+    }),
+    ...createGenerateActions({
       onClose,
     }),
     ...createWindowActions({
