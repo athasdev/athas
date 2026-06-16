@@ -8,7 +8,7 @@ import {
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   requestUIExtensionGeneration,
   type UIExtensionContributionType,
@@ -32,6 +32,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
+import Textarea from "@/ui/textarea";
 import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -69,6 +70,13 @@ const CONTRIBUTION_OPTIONS: ContributionOption[] = [
   },
 ];
 
+const GENERATING_MESSAGES = [
+  "Reading the prompt",
+  "Choosing the extension surface",
+  "Drafting the contribution",
+  "Preparing generated code",
+];
+
 function getOption(id: UIExtensionContributionType | null) {
   return CONTRIBUTION_OPTIONS.find((option) => option.id === id) ?? CONTRIBUTION_OPTIONS[0];
 }
@@ -86,6 +94,10 @@ export function ExtensionGenerationCommand() {
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState<UIExtensionGenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTypeIndex, setSelectedTypeIndex] = useState(0);
+  const [generationMessageIndex, setGenerationMessageIndex] = useState(0);
+  const generationRunRef = useRef(0);
+  const isVisibleRef = useRef(isVisible);
 
   const selectedOption = getOption(selectedType);
   const filteredOptions = useMemo(
@@ -95,19 +107,51 @@ export function ExtensionGenerationCommand() {
       ),
     [query],
   );
+  const activeTypeOption = filteredOptions[selectedTypeIndex] ?? filteredOptions[0] ?? null;
+
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+  }, [isVisible]);
 
   useEffect(() => {
     if (!isVisible) {
+      generationRunRef.current += 1;
       setStep("type");
       setQuery("");
       setSelectedType(null);
       setPrompt("");
       setResult(null);
       setError(null);
+      setSelectedTypeIndex(0);
+      setGenerationMessageIndex(0);
     }
   }, [isVisible]);
 
+  useEffect(() => {
+    setSelectedTypeIndex(0);
+  }, [query]);
+
+  useEffect(() => {
+    setSelectedTypeIndex((currentIndex) =>
+      filteredOptions.length === 0 ? 0 : Math.min(currentIndex, filteredOptions.length - 1),
+    );
+  }, [filteredOptions.length]);
+
+  useEffect(() => {
+    if (step !== "generating") {
+      setGenerationMessageIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setGenerationMessageIndex((currentIndex) => (currentIndex + 1) % GENERATING_MESSAGES.length);
+    }, 1600);
+
+    return () => window.clearInterval(intervalId);
+  }, [step]);
+
   const close = () => {
+    generationRunRef.current += 1;
     closeExtensionGeneration();
   };
 
@@ -122,8 +166,12 @@ export function ExtensionGenerationCommand() {
   const generate = async () => {
     if (!selectedType || !prompt.trim()) return;
 
+    const runId = generationRunRef.current + 1;
+    generationRunRef.current = runId;
     setStep("generating");
     setError(null);
+    setResult(null);
+    setGenerationMessageIndex(0);
 
     try {
       const generated = await requestUIExtensionGeneration({
@@ -131,12 +179,18 @@ export function ExtensionGenerationCommand() {
         description: prompt.trim(),
       });
 
+      if (generationRunRef.current !== runId || !isVisibleRef.current) return;
+
       setResult(generated);
     } catch (generationError) {
+      if (generationRunRef.current !== runId || !isVisibleRef.current) return;
+
       setError(generationError instanceof Error ? generationError.message : "Generation failed.");
-    } finally {
-      setStep("result");
     }
+
+    if (generationRunRef.current !== runId || !isVisibleRef.current) return;
+
+    setStep("result");
   };
 
   const copyCode = async () => {
@@ -217,9 +271,25 @@ export function ExtensionGenerationCommand() {
               value={query}
               onChange={setQuery}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && filteredOptions[0]) {
+                if (event.key === "ArrowDown") {
                   event.preventDefault();
-                  chooseType(filteredOptions[0].id);
+                  setSelectedTypeIndex((currentIndex) =>
+                    filteredOptions.length === 0
+                      ? 0
+                      : Math.min(currentIndex + 1, filteredOptions.length - 1),
+                  );
+                  return;
+                }
+
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setSelectedTypeIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+                  return;
+                }
+
+                if (event.key === "Enter" && activeTypeOption) {
+                  event.preventDefault();
+                  chooseType(activeTypeOption.id);
                 }
               }}
               placeholder="What kind of extension?"
@@ -236,8 +306,9 @@ export function ExtensionGenerationCommand() {
                 return (
                   <CommandItem
                     key={option.id}
-                    isSelected={index === 0}
+                    isSelected={index === selectedTypeIndex}
                     onClick={() => chooseType(option.id)}
+                    onMouseEnter={() => setSelectedTypeIndex(index)}
                     className="px-3 py-2"
                   >
                     <Icon className="size-4 shrink-0 text-text-lighter" />
@@ -254,37 +325,34 @@ export function ExtensionGenerationCommand() {
       ) : step === "prompt" ? (
         <>
           <CommandHeader onClose={close}>
-            <CommandInput
-              value={prompt}
-              onChange={setPrompt}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && canGenerate) {
-                  event.preventDefault();
-                  void generate();
-                }
-              }}
-              placeholder={selectedOption.placeholder}
-              size="md"
-            />
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Package className="size-4 shrink-0 text-accent" />
+              <div className="min-w-0 truncate ui-font ui-text-sm text-text">
+                {selectedOption.label}
+              </div>
+            </div>
           </CommandHeader>
           <CommandList>
             <div className="space-y-2 p-2">
               <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">
-                <div className="mb-1 flex items-center gap-2">
-                  <Package className="size-4 text-accent" />
-                  <span className="ui-font ui-text-sm font-medium text-text">
-                    {selectedOption.label}
-                  </span>
-                </div>
                 <p className="ui-font ui-text-xs leading-[1.45] text-text-lighter">
                   Describe the workflow, data it should show, and the action a user should take.
                 </p>
               </div>
-              {prompt.trim() ? (
-                <div className="rounded-lg border border-border/60 bg-primary-bg/60 p-3 ui-font ui-text-xs leading-[1.45] text-text">
-                  {prompt}
-                </div>
-              ) : null}
+              <Textarea
+                aria-label="Extension prompt"
+                data-command-input=""
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && canGenerate) {
+                    event.preventDefault();
+                    void generate();
+                  }
+                }}
+                placeholder={selectedOption.placeholder}
+                className="min-h-28 resize-none bg-primary-bg/70 ui-text-sm leading-[1.45]"
+              />
             </div>
           </CommandList>
           <CommandFooter>
@@ -315,8 +383,11 @@ export function ExtensionGenerationCommand() {
               Generating {selectedOption.label.toLowerCase()}
             </div>
           </CommandHeader>
-          <div className="flex min-h-40 items-center justify-center">
-            <LoadingIndicator label="Generating" showLabel />
+          <div className="flex min-h-40 flex-col items-center justify-center gap-2">
+            <LoadingIndicator label={GENERATING_MESSAGES[generationMessageIndex]} showLabel />
+            <div className="ui-font ui-text-xs text-text-lighter">
+              {selectedOption.label} from your prompt
+            </div>
           </div>
         </>
       ) : (
