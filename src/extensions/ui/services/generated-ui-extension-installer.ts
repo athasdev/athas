@@ -6,7 +6,7 @@ import type { Disposable, UIExtensionRegistration } from "../types/ui-extension"
 
 type GeneratedContributionType = NonNullable<UIExtensionRegistration["contributionType"]>;
 
-interface GeneratedUIExtension {
+export interface GeneratedUIExtension {
   id: string;
   name: string;
   description: string;
@@ -15,6 +15,7 @@ interface GeneratedUIExtension {
 }
 
 type UIStyle = Record<string, unknown>;
+const GENERATED_EXTENSIONS_STORAGE_KEY = "athas.generated-ui-extensions";
 
 function toChildrenArray(children: unknown[] | unknown): ReactNode[] {
   return (Array.isArray(children) ? children : [children]).filter(
@@ -30,6 +31,39 @@ function normalizeGeneratedExtensionId(id: string) {
     .replace(/^-+|-+$/g, "");
 
   return `generated.${normalized || Date.now().toString(36)}`;
+}
+
+function readStoredGeneratedExtensions(): GeneratedUIExtension[] {
+  const raw = localStorage.getItem(GENERATED_EXTENSIONS_STORAGE_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter(
+      (extension): extension is GeneratedUIExtension =>
+        extension &&
+        typeof extension === "object" &&
+        typeof extension.id === "string" &&
+        typeof extension.name === "string" &&
+        typeof extension.description === "string" &&
+        typeof extension.code === "string" &&
+        ["sidebar", "toolbar", "command"].includes(extension.contributionType),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function storeGeneratedExtension(extension: GeneratedUIExtension) {
+  const storedExtensions = readStoredGeneratedExtensions();
+  const nextExtensions = [
+    ...storedExtensions.filter((storedExtension) => storedExtension.id !== extension.id),
+    extension,
+  ];
+
+  localStorage.setItem(GENERATED_EXTENSIONS_STORAGE_KEY, JSON.stringify(nextExtensions));
 }
 
 function createGeneratedExtensionAPI(extensionId: string) {
@@ -516,7 +550,10 @@ function createGeneratedExtensionAPI(extensionId: string) {
   };
 }
 
-export function installGeneratedUIExtension(extension: GeneratedUIExtension) {
+export function installGeneratedUIExtension(
+  extension: GeneratedUIExtension,
+  options: { persist?: boolean } = {},
+) {
   const store = useUIExtensionStore.getState();
   const extensionId = normalizeGeneratedExtensionId(extension.id);
 
@@ -538,10 +575,25 @@ export function installGeneratedUIExtension(extension: GeneratedUIExtension) {
     const activate = Function("api", `"use strict";\n${extension.code}`);
     activate(api);
     store.updateExtensionState(extensionId, "active");
+    if (options.persist !== false) {
+      storeGeneratedExtension(extension);
+    }
     return { extensionId };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Install failed";
     store.updateExtensionState(extensionId, "error", message);
     throw new Error(message);
+  }
+}
+
+export function initializeGeneratedUIExtensions() {
+  const storedExtensions = readStoredGeneratedExtensions();
+
+  for (const extension of storedExtensions) {
+    try {
+      installGeneratedUIExtension(extension, { persist: false });
+    } catch (error) {
+      console.error("Failed to initialize generated UI extension:", error);
+    }
   }
 }
