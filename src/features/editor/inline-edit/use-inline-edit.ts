@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   canUseHostedProvider,
   canUseProviderWithoutApiKey,
@@ -26,6 +26,7 @@ type InlineEditModelPositionResolver = (
   line: number,
   column: number,
 ) => { top: number; left: number } | null;
+type InlineEditAnchor = { line: number; column: number };
 
 const DEFAULT_INLINE_EDIT_INSTRUCTION = "Improve this code while preserving behavior.";
 const INLINE_EDIT_POPOVER_WIDTH = 380;
@@ -93,6 +94,7 @@ export function useInlineEdit({
 }: UseInlineEditOptions) {
   const inlineEditRequested = useInlineEditToolbarStore.use.isVisible();
   const inlineEditTargetViewKey = useInlineEditToolbarStore.use.targetViewKey();
+  const inlineEditRequestId = useInlineEditToolbarStore.use.requestId();
   const inlineEditVisible =
     enabled &&
     inlineEditRequested &&
@@ -102,13 +104,22 @@ export function useInlineEdit({
   const inlineEditInstructionRef = useRef<HTMLInputElement>(null);
   const focusRestoreRef = useRef<HTMLElement | null>(null);
 
-  const [inlineEditInstruction, setInlineEditInstruction] = useState("");
+  const inlineEditSessionKey = inlineEditVisible
+    ? `${inlineEditRequestId}:${inlineEditTargetViewKey ?? ""}:${viewKey ?? ""}`
+    : null;
+  const [inlineEditInstructionState, setInlineEditInstructionState] = useState<{
+    sessionKey: string | null;
+    value: string;
+  }>({ sessionKey: null, value: "" });
   const [isInlineEditRunning, setIsInlineEditRunning] = useState(false);
-  const [inlineEditError, setInlineEditError] = useState<string | null>(null);
-  const [inlineEditSelectionAnchor, setInlineEditSelectionAnchor] = useState<{
-    line: number;
-    column: number;
-  } | null>(null);
+  const [inlineEditErrorState, setInlineEditErrorState] = useState<{
+    sessionKey: string | null;
+    value: string | null;
+  }>({ sessionKey: null, value: null });
+  const [inlineEditSelectionAnchorState, setInlineEditSelectionAnchorState] = useState<{
+    sessionKey: string | null;
+    value: InlineEditAnchor | null;
+  }>({ sessionKey: null, value: null });
 
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
@@ -136,15 +147,97 @@ export function useInlineEdit({
     };
   }, [selection]);
 
-  useEffect(() => {
-    if (!enabled) {
-      setInlineEditError(null);
-      setInlineEditSelectionAnchor(null);
-      return;
-    }
+  const defaultInlineEditSelectionAnchor = useMemo<InlineEditAnchor | null>(() => {
+    if (!enabled || !inlineEditVisible) return null;
 
-    if (!inlineEditVisible) {
-      setInlineEditError(null);
+    const providedAnchor = getSelectionAnchorPosition() ?? getSelectionAnchor?.();
+    if (providedAnchor) return providedAnchor;
+
+    const cursorOffset =
+      getCursorOffset?.() ?? (inputRef?.current ? inputRef.current.selectionStart : null);
+    if (cursorOffset === null || cursorOffset === undefined) return null;
+
+    const anchorPos = calculateCursorPositionFromLineOffsets(cursorOffset, lines, lineOffsets);
+    return { line: anchorPos.line, column: anchorPos.column };
+  }, [
+    enabled,
+    getCursorOffset,
+    getSelectionAnchor,
+    getSelectionAnchorPosition,
+    inlineEditVisible,
+    inputRef,
+    lineOffsets,
+    lines,
+  ]);
+
+  const inlineEditInstruction =
+    inlineEditInstructionState.sessionKey === inlineEditSessionKey
+      ? inlineEditInstructionState.value
+      : "";
+  const inlineEditError =
+    inlineEditErrorState.sessionKey === inlineEditSessionKey ? inlineEditErrorState.value : null;
+  const inlineEditSelectionAnchor =
+    inlineEditSelectionAnchorState.sessionKey === inlineEditSessionKey
+      ? inlineEditSelectionAnchorState.value
+      : defaultInlineEditSelectionAnchor;
+
+  const setInlineEditInstruction = useCallback(
+    (nextValue: SetStateAction<string>) => {
+      setInlineEditInstructionState((currentState) => {
+        const currentValue =
+          currentState.sessionKey === inlineEditSessionKey ? currentState.value : "";
+        return {
+          sessionKey: inlineEditSessionKey,
+          value:
+            typeof nextValue === "function"
+              ? (nextValue as (currentValue: string) => string)(currentValue)
+              : nextValue,
+        };
+      });
+    },
+    [inlineEditSessionKey],
+  );
+
+  const setInlineEditError = useCallback(
+    (nextValue: SetStateAction<string | null>) => {
+      setInlineEditErrorState((currentState) => {
+        const currentValue =
+          currentState.sessionKey === inlineEditSessionKey ? currentState.value : null;
+        return {
+          sessionKey: inlineEditSessionKey,
+          value:
+            typeof nextValue === "function"
+              ? (nextValue as (currentValue: string | null) => string | null)(currentValue)
+              : nextValue,
+        };
+      });
+    },
+    [inlineEditSessionKey],
+  );
+
+  const setInlineEditSelectionAnchor = useCallback(
+    (nextValue: SetStateAction<InlineEditAnchor | null>) => {
+      setInlineEditSelectionAnchorState((currentState) => {
+        const currentValue =
+          currentState.sessionKey === inlineEditSessionKey
+            ? currentState.value
+            : defaultInlineEditSelectionAnchor;
+        return {
+          sessionKey: inlineEditSessionKey,
+          value:
+            typeof nextValue === "function"
+              ? (nextValue as (currentValue: InlineEditAnchor | null) => InlineEditAnchor | null)(
+                  currentValue,
+                )
+              : nextValue,
+        };
+      });
+    },
+    [defaultInlineEditSelectionAnchor, inlineEditSessionKey],
+  );
+
+  useEffect(() => {
+    if (!enabled || !inlineEditVisible) {
       const restoreTarget = focusRestoreRef.current;
       focusRestoreRef.current = null;
       if (restoreTarget && document.contains(restoreTarget)) {
@@ -154,8 +247,6 @@ export function useInlineEdit({
     }
 
     focusRestoreRef.current = document.activeElement as HTMLElement | null;
-    setInlineEditInstruction("");
-    setInlineEditError(null);
 
     let cancelled = false;
     let attempt = 0;
@@ -193,40 +284,6 @@ export function useInlineEdit({
     if (!inlineEditVisible) return;
     void checkAllProviderApiKeys();
   }, [enabled, inlineEditVisible, checkAllProviderApiKeys]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setInlineEditSelectionAnchor(null);
-      return;
-    }
-    if (!inlineEditVisible) {
-      setInlineEditSelectionAnchor(null);
-      return;
-    }
-    if (inlineEditSelectionAnchor) return;
-    const providedAnchor = getSelectionAnchorPosition() ?? getSelectionAnchor?.();
-    if (providedAnchor) {
-      setInlineEditSelectionAnchor(providedAnchor);
-      return;
-    }
-
-    const cursorOffset =
-      getCursorOffset?.() ?? (inputRef?.current ? inputRef.current.selectionStart : null);
-    if (cursorOffset === null || cursorOffset === undefined) return;
-
-    const anchorPos = calculateCursorPositionFromLineOffsets(cursorOffset, lines, lineOffsets);
-    setInlineEditSelectionAnchor({ line: anchorPos.line, column: anchorPos.column });
-  }, [
-    enabled,
-    inlineEditVisible,
-    inlineEditSelectionAnchor,
-    lineOffsets,
-    lines,
-    inputRef,
-    getCursorOffset,
-    getSelectionAnchor,
-    getSelectionAnchorPosition,
-  ]);
 
   const resolveInlineEditRange = useCallback((): Range | null => {
     if (!enabled) return null;
