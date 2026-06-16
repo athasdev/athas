@@ -103,6 +103,42 @@ export function GitHubCreateCommand({
   onWorkflowDispatched,
 }: GitHubCreateCommandProps) {
   const isVisible = Boolean(kind && repoPath);
+
+  if (!isVisible || !kind || !repoPath) {
+    return <Command isVisible={false} onClose={onClose} title="GitHub" />;
+  }
+
+  return (
+    <GitHubCreateCommandContent
+      key={`${kind}:${repoPath}:${defaultHead ?? ""}`}
+      kind={kind}
+      repoPath={repoPath}
+      defaultHead={defaultHead}
+      onClose={onClose}
+      onIssueCreated={onIssueCreated}
+      onPullRequestCreated={onPullRequestCreated}
+      onWorkflowDispatched={onWorkflowDispatched}
+    />
+  );
+}
+
+interface GitHubCreateCommandContentProps extends Omit<
+  GitHubCreateCommandProps,
+  "kind" | "repoPath"
+> {
+  kind: GitHubCreateKind;
+  repoPath: string;
+}
+
+function GitHubCreateCommandContent({
+  kind,
+  repoPath,
+  defaultHead,
+  onClose,
+  onIssueCreated,
+  onPullRequestCreated,
+  onWorkflowDispatched,
+}: GitHubCreateCommandContentProps) {
   const [mode, setMode] = useState<PickerMode>("form");
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
@@ -117,7 +153,7 @@ export function GitHubCreateCommand({
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [workflowId, setWorkflowId] = useState("");
   const [workflowRef, setWorkflowRef] = useState(defaultHead || "master");
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,29 +161,7 @@ export function GitHubCreateCommand({
   const subscription = useAuthStore((state) => state.subscription);
 
   useEffect(() => {
-    if (!isVisible) {
-      setMode("form");
-      setQuery("");
-      setTitle("");
-      setBody("");
-      setHead(defaultHead ?? "");
-      setBase("master");
-      setDraft(false);
-      setAssignees("");
-      setSelectedLabels(new Set());
-      setWorkflowId("");
-      setWorkflowRef(defaultHead || "master");
-      setIsGenerating(false);
-      setError(null);
-    }
-  }, [defaultHead, isVisible]);
-
-  useEffect(() => {
-    if (!isVisible || !repoPath) return;
-
     let cancelled = false;
-    setIsLoadingMetadata(true);
-    setError(null);
 
     Promise.all([
       getBranches(repoPath),
@@ -168,9 +182,11 @@ export function GitHubCreateCommand({
           setHead(cleanBranches[0]);
           setWorkflowRef(cleanBranches[0]);
         }
-        if (!cleanBranches.includes(base) && cleanBranches.includes("main")) {
-          setBase("main");
-        }
+        setBase((currentBase) =>
+          !cleanBranches.includes(currentBase) && cleanBranches.includes("main")
+            ? "main"
+            : currentBase,
+        );
       })
       .catch((nextError) => {
         if (!cancelled) {
@@ -186,7 +202,7 @@ export function GitHubCreateCommand({
     return () => {
       cancelled = true;
     };
-  }, [base, defaultHead, isVisible, kind, repoPath]);
+  }, [defaultHead, kind, repoPath]);
 
   const selectedWorkflow = workflows.find((workflow) => workflow.id.toString() === workflowId);
   const selectedLabelNames = Array.from(selectedLabels);
@@ -358,12 +374,7 @@ ${statusSummary}`;
   };
 
   return (
-    <Command
-      isVisible={isVisible}
-      onClose={onClose}
-      title={kind ? titleByKind[kind] : "GitHub"}
-      className="max-h-[540px]"
-    >
+    <Command isVisible onClose={onClose} title={titleByKind[kind]} className="max-h-[540px]">
       <CommandHeader onClose={mode === "form" ? onClose : closePicker}>
         {mode === "form" && kind === "action" ? (
           <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">Run workflow</span>
@@ -573,7 +584,7 @@ ${statusSummary}`;
         ) : (
           <>
             <span className="min-w-0 flex-1 truncate px-1 ui-text-xs text-text-lighter">
-              {mode === "form" ? (repoPath ?? "") : titleByKind[kind ?? "issue"]}
+              {mode === "form" ? repoPath : titleByKind[kind]}
             </span>
             {kind !== "action" ? (
               <CommandFooterAction
