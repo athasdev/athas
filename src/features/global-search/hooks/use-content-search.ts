@@ -38,7 +38,7 @@ const mergeSearchResults = (
   return Array.from(resultsByPath.values());
 };
 
-export const useContentSearch = (isVisible: boolean) => {
+export const useContentSearch = () => {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
@@ -195,27 +195,8 @@ export const useContentSearch = (isVisible: boolean) => {
   );
 
   useEffect(() => {
-    if (isVisible) {
-      performSearch();
-    }
-  }, [debouncedQuery, isVisible, performSearch]);
-
-  // Reset when visibility changes
-  useEffect(() => {
-    if (!isVisible) {
-      setQuery("");
-      setRawResults([]);
-      setNextFileOffset(0);
-      setHasMoreResults(false);
-      setSearchedFiles(0);
-      setSearchableFiles(0);
-      setError(null);
-      setSearchWarning(null);
-      setIncludeQuery("");
-      setExcludeQuery("");
-      setContextLines(2);
-    }
-  }, [isVisible]);
+    performSearch();
+  }, [debouncedQuery, performSearch]);
 
   return {
     query,

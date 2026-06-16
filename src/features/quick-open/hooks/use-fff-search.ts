@@ -10,35 +10,47 @@ export const useFffSearch = (
   enabled: boolean,
   rootPath: string | null | undefined,
 ) => {
-  const [hits, setHits] = useState<FffSearchHit[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const trimmedQuery = query.trim();
+  const searchRootPath = canUseFffSearch(rootPath) ? rootPath : null;
+  const searchKey =
+    enabled && trimmedQuery && searchRootPath
+      ? JSON.stringify([searchRootPath, trimmedQuery])
+      : null;
+  const [searchState, setSearchState] = useState<{
+    key: string | null;
+    hits: FffSearchHit[];
+    error: string | null;
+  }>({
+    key: null,
+    hits: [],
+    error: null,
+  });
 
   useEffect(() => {
-    if (!enabled || !query.trim() || !canUseFffSearch(rootPath)) {
-      setHits([]);
-      setError(null);
-      return;
-    }
+    if (!searchKey || !searchRootPath) return;
 
     let cancelled = false;
 
-    fffSearchFiles(query, MAX_RESULTS, rootPath)
+    fffSearchFiles(trimmedQuery, MAX_RESULTS, searchRootPath)
       .then((results) => {
         if (cancelled) return;
-        setHits(results);
-        setError(null);
+        setSearchState({ key: searchKey, hits: results, error: null });
       })
       .catch((err) => {
         if (cancelled) return;
         console.error("[fff] search failed:", err);
-        setError(String(err));
-        setHits([]);
+        setSearchState({ key: searchKey, hits: [], error: String(err) });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [query, enabled, rootPath]);
+  }, [searchKey, searchRootPath, trimmedQuery]);
 
-  return { hits, error };
+  const hasCurrentResult = searchKey !== null && searchState.key === searchKey;
+
+  return {
+    hits: hasCurrentResult ? searchState.hits : [],
+    error: hasCurrentResult ? searchState.error : null,
+  };
 };
