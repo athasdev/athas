@@ -1,5 +1,8 @@
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import {
+  ArrowClockwiseIcon as RefreshCw,
   CaretLeftIcon as CaretLeft,
+  GlobeHemisphereWestIcon as Globe,
   PaletteIcon as Palette,
   PlusIcon as Plus,
   TrashIcon as Trash,
@@ -7,8 +10,13 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  buildV0DesignSystemProfileFromRegistry,
   createV0DesignSystemId,
   normalizeV0DesignSystems,
+  parseV0DesignSystemDirectory,
+  SHADCN_REGISTRY_DIRECTORY_URL,
+  SUGGESTED_V0_DESIGN_SYSTEMS,
+  type V0DesignSystemSuggestion,
 } from "@/features/ai/lib/v0-design-systems";
 import type { V0DesignSystemProfile } from "@/features/ai/types/v0-design-system.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -42,7 +50,8 @@ type DesignSystemRow =
       description: string;
       registryUrl: string;
     }
-  | (V0DesignSystemProfile & { kind: "profile" });
+  | (V0DesignSystemProfile & { kind: "profile" })
+  | (V0DesignSystemSuggestion & { kind: "suggestion" });
 
 const NO_DESIGN_SYSTEM_ROW: DesignSystemRow = {
   kind: "none",
@@ -86,6 +95,20 @@ const clampSelectedIndex = (index: number, size: number): number => {
   return Math.min(Math.max(index, 0), size - 1);
 };
 
+function getUniqueSuggestions(
+  suggestions: V0DesignSystemSuggestion[],
+  savedRegistryUrls: Set<string>,
+): V0DesignSystemSuggestion[] {
+  const seenRegistryUrls = new Set<string>();
+
+  return suggestions.filter((suggestion) => {
+    if (savedRegistryUrls.has(suggestion.registryUrl)) return false;
+    if (seenRegistryUrls.has(suggestion.registryUrl)) return false;
+    seenRegistryUrls.add(suggestion.registryUrl);
+    return true;
+  });
+}
+
 export function V0DesignSystemCommandContent({
   isActive,
   onBack,
@@ -99,16 +122,37 @@ export function V0DesignSystemCommandContent({
   const [registryUrlInput, setRegistryUrlInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [formError, setFormError] = useState("");
+  const [directorySuggestions, setDirectorySuggestions] = useState<V0DesignSystemSuggestion[]>([]);
+  const [directoryStatus, setDirectoryStatus] = useState<"idle" | "loading" | "loaded" | "error">(
+    "idle",
+  );
+  const [directoryError, setDirectoryError] = useState("");
+  const [savingRegistryUrl, setSavingRegistryUrl] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const registryInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  const savedRegistryUrls = useMemo(
+    () => new Set(settings.v0DesignSystems.map((profile) => profile.registryUrl)),
+    [settings.v0DesignSystems],
+  );
+
+  const visibleSuggestions = useMemo(
+    () =>
+      getUniqueSuggestions(
+        [...SUGGESTED_V0_DESIGN_SYSTEMS, ...directorySuggestions],
+        savedRegistryUrls,
+      ),
+    [directorySuggestions, savedRegistryUrls],
+  );
 
   const rows = useMemo<DesignSystemRow[]>(
     () => [
       NO_DESIGN_SYSTEM_ROW,
       ...settings.v0DesignSystems.map((profile) => ({ ...profile, kind: "profile" as const })),
+      ...visibleSuggestions.map((suggestion) => ({ ...suggestion, kind: "suggestion" as const })),
     ],
-    [settings.v0DesignSystems],
+    [settings.v0DesignSystems, visibleSuggestions],
   );
 
   const filteredRows = useMemo(
@@ -119,7 +163,11 @@ export function V0DesignSystemCommandContent({
           row.name,
           row.description ?? "",
           row.registryUrl,
-          row.kind === "none" ? "default none shadcn v0" : "registry design system shadcn v0",
+          row.kind === "none"
+            ? "default none shadcn v0"
+            : row.kind === "profile"
+              ? "saved registry design system shadcn v0"
+              : "public registry directory design system shadcn v0",
         ]);
       }),
     [query, rows],
@@ -149,12 +197,103 @@ export function V0DesignSystemCommandContent({
     selectedElement?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selectedIndex]);
 
+  const loadDirectorySuggestions = useCallback(async () => {
+    setDirectoryStatus("loading");
+    setDirectoryError("");
+
+    try {
+      const response = await tauriFetch(SHADCN_REGISTRY_DIRECTORY_URL, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(`Registry directory returned ${response.status}`);
+      }
+
+      const directory = await response.json();
+      setDirectorySuggestions(parseV0DesignSystemDirectory(directory));
+      setDirectoryStatus("loaded");
+    } catch (error) {
+      setDirectoryStatus("error");
+      setDirectoryError(
+        error instanceof Error ? error.message : "Could not load public registries",
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isActive || directoryStatus !== "idle") return;
+    void loadDirectorySuggestions();
+  }, [directoryStatus, isActive, loadDirectorySuggestions]);
+
+  const persistProfile = useCallback(
+    async (profile: V0DesignSystemProfile) => {
+      const nextProfiles = normalizeV0DesignSystems([
+        ...settings.v0DesignSystems.filter((savedProfile) => savedProfile.id !== profile.id),
+        profile,
+      ]);
+      await updateSetting("v0DesignSystems", nextProfiles);
+      await updateSetting("activeV0DesignSystemId", profile.id);
+    },
+    [settings.v0DesignSystems, updateSetting],
+  );
+
+  const getProfileWithRegistryMetadata = useCallback(
+    async (profile: V0DesignSystemProfile): Promise<V0DesignSystemProfile> => {
+      try {
+        const response = await tauriFetch(profile.registryUrl, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) return profile;
+
+        const registry = await response.json();
+        return buildV0DesignSystemProfileFromRegistry(registry, profile.registryUrl, profile);
+      } catch {
+        return profile;
+      }
+    },
+    [],
+  );
+
+  const saveSuggestion = useCallback(
+    async (suggestion: V0DesignSystemSuggestion) => {
+      const id = getUniqueProfileId(
+        settings.v0DesignSystems,
+        suggestion.name,
+        suggestion.registryUrl,
+      );
+      const fallbackProfile: V0DesignSystemProfile = {
+        id,
+        name: suggestion.name,
+        registryUrl: suggestion.registryUrl,
+        ...(suggestion.description ? { description: suggestion.description } : {}),
+        ...(suggestion.homepage ? { homepage: suggestion.homepage } : {}),
+      };
+
+      setSavingRegistryUrl(suggestion.registryUrl);
+      try {
+        const profile = await getProfileWithRegistryMetadata(fallbackProfile);
+        await persistProfile(profile);
+        onClose();
+      } finally {
+        setSavingRegistryUrl("");
+      }
+    },
+    [getProfileWithRegistryMetadata, onClose, persistProfile, settings.v0DesignSystems],
+  );
+
   const selectRow = useCallback(
     (row: DesignSystemRow) => {
+      if (row.kind === "suggestion") {
+        void saveSuggestion(row);
+        return;
+      }
+
       void updateSetting("activeV0DesignSystemId", row.id);
       onClose();
     },
-    [onClose, updateSetting],
+    [onClose, saveSuggestion, updateSetting],
   );
 
   const openAddForm = useCallback(() => {
@@ -166,7 +305,7 @@ export function V0DesignSystemCommandContent({
     requestAnimationFrame(() => registryInputRef.current?.focus());
   }, []);
 
-  const saveProfile = useCallback(() => {
+  const saveProfile = useCallback(async () => {
     const registryUrl = registryUrlInput.trim();
     if (!registryUrl) {
       setFormError("Registry URL is required.");
@@ -175,26 +314,29 @@ export function V0DesignSystemCommandContent({
 
     const name = nameInput.trim() || getNameFromRegistryUrl(registryUrl);
     const id = getUniqueProfileId(settings.v0DesignSystems, name, registryUrl);
-    const nextProfiles = normalizeV0DesignSystems([
-      ...settings.v0DesignSystems.filter((profile) => profile.id !== id),
-      {
-        id,
-        name,
-        registryUrl,
-        ...(descriptionInput.trim() ? { description: descriptionInput.trim() } : {}),
-      },
-    ]);
+    const fallbackProfile: V0DesignSystemProfile = {
+      id,
+      name,
+      registryUrl,
+      ...(descriptionInput.trim() ? { description: descriptionInput.trim() } : {}),
+    };
+    setSavingRegistryUrl(registryUrl);
 
-    void updateSetting("v0DesignSystems", nextProfiles);
-    void updateSetting("activeV0DesignSystemId", id);
-    onClose();
+    try {
+      const profile = await getProfileWithRegistryMetadata(fallbackProfile);
+      await persistProfile(profile);
+      onClose();
+    } finally {
+      setSavingRegistryUrl("");
+    }
   }, [
     descriptionInput,
+    getProfileWithRegistryMetadata,
     nameInput,
     onClose,
+    persistProfile,
     registryUrlInput,
     settings.v0DesignSystems,
-    updateSetting,
   ]);
 
   const removeSelectedProfile = useCallback(() => {
@@ -246,7 +388,7 @@ export function V0DesignSystemCommandContent({
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Enter" && !event.nativeEvent.isComposing) {
         event.preventDefault();
-        saveProfile();
+        void saveProfile();
       }
     },
     [saveProfile],
@@ -303,8 +445,12 @@ export function V0DesignSystemCommandContent({
         </CommandList>
 
         <CommandFooter>
-          <CommandFooterAction onClick={saveProfile} variant="accent">
-            Save and use
+          <CommandFooterAction
+            onClick={() => void saveProfile()}
+            variant="accent"
+            disabled={Boolean(savingRegistryUrl)}
+          >
+            {savingRegistryUrl ? "Saving..." : "Save and use"}
           </CommandFooterAction>
           <CommandFooterAction onClick={() => setMode("list")}>Cancel</CommandFooterAction>
         </CommandFooter>
@@ -339,6 +485,16 @@ export function V0DesignSystemCommandContent({
             type="button"
             variant="ghost"
             className="rounded"
+            onClick={() => void loadDirectorySuggestions()}
+            tooltip="Refresh public registries"
+            compact
+          >
+            <RefreshCw className="text-text-lighter" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="rounded"
             onClick={openAddForm}
             tooltip="Add registry"
             compact
@@ -354,6 +510,7 @@ export function V0DesignSystemCommandContent({
         ) : (
           filteredRows.map((row, index) => {
             const isCurrent = row.id === settings.activeV0DesignSystemId;
+            const isAdding = Boolean(savingRegistryUrl) && savingRegistryUrl === row.registryUrl;
 
             return (
               <CommandItem
@@ -362,20 +519,37 @@ export function V0DesignSystemCommandContent({
                 onClick={() => selectRow(row)}
                 onMouseEnter={() => setSelectedIndex(index)}
                 isSelected={index === selectedIndex}
+                disabled={Boolean(savingRegistryUrl)}
                 className="h-8 gap-2 px-2 py-0"
               >
-                <Palette className="shrink-0 text-text-lighter" />
+                {row.kind === "suggestion" ? (
+                  <Globe className="shrink-0 text-text-lighter" />
+                ) : (
+                  <Palette className="shrink-0 text-text-lighter" />
+                )}
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <CommandItemTitle>{row.name}</CommandItemTitle>
                   <CommandItemMeta>
-                    {row.kind === "none" ? row.description : row.registryUrl}
+                    {row.kind === "none" ? row.description : row.description || row.registryUrl}
                   </CommandItemMeta>
                 </div>
-                {isCurrent && (
+                {isAdding ? (
+                  <Badge variant="accent" className="shrink-0 px-1 py-0.5">
+                    adding
+                  </Badge>
+                ) : isCurrent ? (
                   <Badge variant="accent" className="shrink-0 px-1 py-0.5">
                     active
                   </Badge>
-                )}
+                ) : row.kind === "profile" ? (
+                  <Badge variant="muted" className="shrink-0 px-1 py-0.5">
+                    saved
+                  </Badge>
+                ) : row.kind === "suggestion" ? (
+                  <Badge variant="muted" className="shrink-0 px-1 py-0.5">
+                    add
+                  </Badge>
+                ) : null}
               </CommandItem>
             );
           })
@@ -387,6 +561,10 @@ export function V0DesignSystemCommandContent({
           <Plus />
           <span>Add registry</span>
         </CommandFooterAction>
+        <CommandFooterAction onClick={() => void loadDirectorySuggestions()}>
+          <RefreshCw />
+          <span>Refresh</span>
+        </CommandFooterAction>
         <CommandFooterAction
           onClick={removeSelectedProfile}
           disabled={!selectedRow || selectedRow.kind !== "profile"}
@@ -394,6 +572,13 @@ export function V0DesignSystemCommandContent({
           <Trash />
           <span>Remove selected</span>
         </CommandFooterAction>
+        <span className="ml-auto min-w-0 truncate px-1 ui-text-xs text-text-lighter">
+          {directoryStatus === "loading"
+            ? "Loading..."
+            : directoryStatus === "error"
+              ? directoryError
+              : `${visibleSuggestions.length} public`}
+        </span>
       </CommandFooter>
     </>
   );

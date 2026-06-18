@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  buildV0DesignSystemProfileFromRegistry,
   buildV0DesignSystemPrompt,
   createV0DesignSystemId,
   getActiveV0DesignSystem,
+  inferRegistryIndexUrl,
   normalizeV0DesignSystems,
+  parseV0DesignSystemDirectory,
 } from "@/features/ai/lib/v0-design-systems";
 
 describe("v0 design systems", () => {
@@ -14,6 +17,7 @@ describe("v0 design systems", () => {
         name: " Product UI ",
         registryUrl: " https://example.com/r/registry.json ",
         description: " shadcn-compatible components ",
+        homepage: " https://example.com ",
         tailwindConfigPath: " tailwind.config.ts ",
         globalsCssPath: " src/app/globals.css ",
         componentsJsonPath: " components.json ",
@@ -36,6 +40,7 @@ describe("v0 design systems", () => {
         name: "Product UI",
         registryUrl: "https://example.com/r/registry.json",
         description: "shadcn-compatible components",
+        homepage: "https://example.com",
         tailwindConfigPath: "tailwind.config.ts",
         globalsCssPath: "src/app/globals.css",
         componentsJsonPath: "components.json",
@@ -47,6 +52,65 @@ describe("v0 design systems", () => {
     expect(createV0DesignSystemId("Product UI", "https://example.com/r/registry.json")).toBe(
       "product-ui-example-com-r-registry-json",
     );
+  });
+
+  it("infers registry index URLs from shadcn registry directory templates", () => {
+    expect(inferRegistryIndexUrl("https://example.com/r/{name}.json")).toBe(
+      "https://example.com/r/registry.json",
+    );
+    expect(inferRegistryIndexUrl("https://example.com/r/{style}/{name}.json")).toBeNull();
+  });
+
+  it("parses public shadcn registry directory entries into clickable suggestions", () => {
+    expect(
+      parseV0DesignSystemDirectory([
+        {
+          name: "@acme",
+          homepage: "https://acme.test",
+          url: "https://acme.test/r/{name}.json",
+          description: "Acme components",
+        },
+        {
+          name: "@styled",
+          homepage: "https://styled.test",
+          url: "https://styled.test/r/{style}/{name}.json",
+          description: "Needs style segment",
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "directory-acme",
+        name: "@acme",
+        homepage: "https://acme.test",
+        registryUrl: "https://acme.test/r/registry.json",
+        description: "Acme components",
+        source: "directory",
+      },
+    ]);
+  });
+
+  it("builds saved profiles from fetched registry metadata", () => {
+    expect(
+      buildV0DesignSystemProfileFromRegistry(
+        {
+          name: "Acme Registry",
+          homepage: "https://acme.test",
+          items: [{ name: "button" }],
+        },
+        "https://acme.test/r/registry.json",
+        {
+          id: "acme",
+          name: "@acme",
+          registryUrl: "https://acme.test/r/registry.json",
+        },
+      ),
+    ).toEqual({
+      id: "acme",
+      name: "Acme Registry",
+      registryUrl: "https://acme.test/r/registry.json",
+      description: "1 registry items",
+      homepage: "https://acme.test",
+    });
   });
 
   it("resolves the active profile and builds v0 prompt context", () => {
