@@ -49,6 +49,19 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
   } = params;
   const repoPath = activeRepoPath ?? rootFolderPath;
 
+  const openBranchManager = () => {
+    setIsSidebarVisible(true);
+    setActiveView("git");
+    onClose();
+    window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("athas:git-palette-action", {
+          detail: { type: "manage-branches" },
+        }),
+      );
+    }, 0);
+  };
+
   const openGitAction = (detail: unknown) => {
     setIsSidebarVisible(true);
     setActiveView("git");
@@ -72,14 +85,39 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       description: "Open branch manager dropdown",
       icon: <GitBranch />,
       category: "Git",
-      action: () => {
-        setIsSidebarVisible(true);
-        setActiveView("git");
-        onClose();
-        window.setTimeout(() => {
-          window.dispatchEvent(new Event("athas:open-branch-manager"));
-        }, 0);
-      },
+      action: openBranchManager,
+    },
+    {
+      id: "git-checkout-branch",
+      label: "Git: Checkout Branch",
+      description: "Open branch manager to switch branches",
+      icon: <GitBranch />,
+      category: "Git",
+      action: openBranchManager,
+    },
+    {
+      id: "git-create-branch",
+      label: "Git: Create Branch",
+      description: "Open branch manager and type a new branch name",
+      icon: <GitBranch />,
+      category: "Git",
+      action: openBranchManager,
+    },
+    {
+      id: "git-delete-branch",
+      label: "Git: Delete Branch",
+      description: "Open branch manager to remove a branch",
+      icon: <GitBranch />,
+      category: "Git",
+      action: openBranchManager,
+    },
+    {
+      id: "git-show-branch-diff",
+      label: "Git: Show Branch Diff",
+      description: "Compare the current branch with another branch",
+      icon: <GitBranch />,
+      category: "Git",
+      action: () => openGitAction({ type: "show-branch-diff" }),
     },
     {
       id: "git-select-repository",
@@ -88,6 +126,14 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       icon: <FolderOpen />,
       category: "Git",
       action: () => openGitAction({ type: "select-repository" }),
+    },
+    {
+      id: "git-initialize-repository",
+      label: "Git: Initialize Repository",
+      description: "Initialize Git in the current folder",
+      icon: <GitBranch />,
+      category: "Git",
+      action: () => openGitAction({ type: "initialize-repository" }),
     },
     {
       id: "git-show-changes",
@@ -115,6 +161,22 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       action: () => openGitAction({ type: "manage-remotes" }),
     },
     {
+      id: "git-add-remote",
+      label: "Git: Add Remote",
+      description: "Open remote manager to add a remote",
+      icon: <Server />,
+      category: "Git",
+      action: () => openGitAction({ type: "manage-remotes" }),
+    },
+    {
+      id: "git-remove-remote",
+      label: "Git: Remove Remote",
+      description: "Open remote manager to remove a remote",
+      icon: <Server />,
+      category: "Git",
+      action: () => openGitAction({ type: "manage-remotes" }),
+    },
+    {
       id: "git-manage-tags",
       label: "Git: Manage Tags",
       description: "Open tag manager",
@@ -123,9 +185,57 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       action: () => openGitAction({ type: "manage-tags" }),
     },
     {
+      id: "git-create-tag",
+      label: "Git: Create Tag",
+      description: "Open tag manager to create a tag",
+      icon: <Tag />,
+      category: "Git",
+      action: () => openGitAction({ type: "manage-tags" }),
+    },
+    {
+      id: "git-delete-tag",
+      label: "Git: Delete Tag",
+      description: "Open tag manager to delete a tag",
+      icon: <Tag />,
+      category: "Git",
+      action: () => openGitAction({ type: "manage-tags" }),
+    },
+    {
+      id: "git-compare-tags",
+      label: "Git: Compare Tags",
+      description: "Open tag manager for tag comparisons",
+      icon: <Tag />,
+      category: "Git",
+      action: () => openGitAction({ type: "manage-tags" }),
+    },
+    {
       id: "git-view-stashes",
       label: "Git: View Stashes",
       description: "Open stash list",
+      icon: <Archive />,
+      category: "Git",
+      action: () => openGitCommandSurface({ type: "view-stashes" }),
+    },
+    {
+      id: "git-apply-stash",
+      label: "Git: Apply Stash",
+      description: "Open stash list to apply a stash",
+      icon: <Archive />,
+      category: "Git",
+      action: () => openGitCommandSurface({ type: "view-stashes" }),
+    },
+    {
+      id: "git-pop-stash",
+      label: "Git: Pop Stash",
+      description: "Open stash list to pop a stash",
+      icon: <Archive />,
+      category: "Git",
+      action: () => openGitCommandSurface({ type: "view-stashes" }),
+    },
+    {
+      id: "git-drop-stash",
+      label: "Git: Drop Stash",
+      description: "Open stash list to drop a stash",
       icon: <Archive />,
       category: "Git",
       action: () => openGitCommandSurface({ type: "view-stashes" }),

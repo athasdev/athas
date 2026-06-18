@@ -8,7 +8,7 @@ const paneHeaderVariants = cva("flex min-h-7 items-center gap-1.5 bg-primary-bg 
 const paneTitleVariants = cva("ui-font ui-text-sm font-medium text-text");
 
 const paneChipVariants = cva(
-  "ui-font ui-text-sm inline-flex h-5 items-center rounded-md border border-border/70 bg-primary-bg px-1.5 text-text-lighter",
+  "ui-font ui-text-sm inline-flex h-5 items-center rounded-full border border-border/70 bg-primary-bg px-1.5 text-text-lighter",
 );
 
 const paneGroupVariants = cva("flex items-center gap-1");

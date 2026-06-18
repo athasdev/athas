@@ -29,7 +29,7 @@ export default function CellRenderer({
   if (value === null || value === undefined) {
     return (
       <span
-        className="rounded bg-hover px-1 py-0.5 ui-font ui-text-xs text-text-lighter"
+        className="rounded-full bg-hover px-1 py-0.5 ui-font ui-text-xs text-text-lighter"
         onContextMenu={handleContextMenu}
       >
         NULL

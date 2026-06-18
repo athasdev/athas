@@ -347,7 +347,7 @@ const GlobalSearchBuffer = () => {
             ))}
           </TabsList>
           {resultLabel ? (
-            <span className="ui-font ui-text-xs shrink-0 rounded-md border border-border/60 bg-primary-bg/65 px-2 py-1 text-text-lighter">
+            <span className="ui-font ui-text-xs shrink-0 rounded-full border border-border/60 bg-primary-bg/65 px-2 py-1 text-text-lighter">
               {resultLabel}
             </span>
           ) : null}

@@ -377,7 +377,7 @@ function ComboboxChip({
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
       className={cn(
-        "flex h-5 w-fit items-center justify-center gap-1 rounded bg-hover px-1.5 text-text ui-text-sm has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+        "flex h-5 w-fit items-center justify-center gap-1 rounded-full bg-hover px-1.5 text-text ui-text-sm has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
         className,
       )}
       {...props}

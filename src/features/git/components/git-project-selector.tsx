@@ -18,6 +18,7 @@ import { useRepositoryStore } from "../stores/git-repository.store";
 
 interface GitProjectSelectorProps {
   className?: string;
+  triggerClassName?: string;
   onRepositoryChange?: (repoPath: string | null) => void;
 }
 
@@ -41,7 +42,11 @@ function getFilteredRepositoryPaths(
   });
 }
 
-const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelectorProps) => {
+const GitProjectSelector = ({
+  className,
+  triggerClassName,
+  onRepositoryChange,
+}: GitProjectSelectorProps) => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
@@ -114,7 +119,10 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
       <button
         ref={triggerRef}
         type="button"
-        className="ui-font flex h-7 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-accent/80 transition-colors hover:text-accent focus-visible:text-accent focus-visible:outline-none"
+        className={cn(
+          "ui-font flex h-7 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md px-2.5 text-left text-accent/80 transition-colors hover:text-accent focus-visible:text-accent focus-visible:outline-none",
+          triggerClassName,
+        )}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         title={activeRepoTitle ?? undefined}

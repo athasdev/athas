@@ -44,7 +44,7 @@ export const FileListItem = ({
         </div>
       </div>
       {category === "open" && (
-        <span className="rounded bg-accent/20 px-1 py-0.5 font-medium ui-text-xs text-accent">
+        <span className="rounded-full bg-accent/20 px-1 py-0.5 font-medium ui-text-xs text-accent">
           open
         </span>
       )}

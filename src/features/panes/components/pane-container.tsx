@@ -192,7 +192,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
+              <span className="rounded-full border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
                 #{buffer.prNumber ?? "--"}
               </span>
               <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
@@ -206,13 +206,13 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <span>{commentCount ?? "--"} comments</span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-xs">
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
+              <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
                 Description
               </span>
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
+              <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
                 Files
               </span>
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
+              <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
                 Comments
               </span>
             </div>

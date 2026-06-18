@@ -14,7 +14,7 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandList } from "@/ui/command";
+import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
@@ -45,17 +45,20 @@ import { getGitStatus, initRepository } from "../api/git-status-api";
 import { useRepositoryStore } from "../stores/git-repository.store";
 import { useGitStore } from "../stores/git.store";
 import type { MultiFileDiff } from "../types/git-diff.types";
-import type { GitFile } from "../types/git.types";
+import type { GitDiff, GitFile } from "../types/git.types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
+import { openGitWorktreeWorkspace } from "../utils/git-worktree-open";
 import GitActionsMenu from "./git-actions-menu";
+import GitBranchManager from "./git-branch-manager";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
 import GitCommandSurface from "./git-command-surface";
 import GitProjectSelector from "./git-project-selector";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
+import GitWorktreeSwitcher from "./git-worktree-switcher";
 import GitStatusPanel from "./status/git-status-panel";
 
 interface GitViewProps {
@@ -70,19 +73,31 @@ interface GitFileDiffStats {
 }
 
 type GitSidebarTab = "changes" | "history";
+const GIT_VIEW_BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
+type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
+
 type GitPaletteAction =
   | { type: "select-repository" }
   | { type: "show-tab"; tab: GitSidebarTab }
+  | { type: "manage-branches" }
+  | { type: "show-branch-diff" }
   | { type: "manage-remotes" }
   | { type: "manage-tags" }
   | { type: "view-stashes" }
+  | { type: "initialize-repository" }
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const { gitStatus, isLoadingGitData, isRefreshing, actions } = useGitStore();
+  const commits = useGitStore((state) => state.commits);
+  const branches = useGitStore((state) => state.branches);
   const stashes = useGitStore((state) => state.stashes);
   const { setIsLoadingGitData, setIsRefreshing } = actions;
-  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
+  const repositoryHeaderState = useRepositoryStore(
+    (state) => `${state.availableRepoPaths.length > 1 ? "1" : "0"}:${state.activeRepoPath ?? ""}`,
+  );
+  const showRepositorySelector = repositoryHeaderState.startsWith("1:");
+  const activeRepoPath = repositoryHeaderState.slice(2) || null;
   const { syncWorkspaceRepositories, setManualRepository, refreshWorkspaceRepositories } =
     useRepositoryStore.use.actions();
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
@@ -102,6 +117,12 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
 
   const wasActiveRef = useRef(isActive);
+  const [showCommitDiffList, setShowCommitDiffList] = useState(false);
+  const [commitDiffSearchQuery, setCommitDiffSearchQuery] = useState("");
+  const [isLoadingCommitDiff, setIsLoadingCommitDiff] = useState(false);
+  const [showBranchDiffList, setShowBranchDiffList] = useState(false);
+  const [branchDiffSearchQuery, setBranchDiffSearchQuery] = useState("");
+  const [isLoadingBranchDiff, setIsLoadingBranchDiff] = useState(false);
   const [stashSearchQuery, setStashSearchQuery] = useState("");
   const [stashActionLoading, setStashActionLoading] = useState<Set<number>>(new Set());
 
@@ -318,6 +339,28 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   }, [activeTab, settings.rememberLastGitPanelMode, settings.gitLastPanelMode, updateSetting]);
 
+  const handleOpenBranchManager = useCallback(() => {
+    window.dispatchEvent(new Event(GIT_VIEW_BRANCH_MANAGER_EVENT));
+  }, []);
+
+  const handleShowBranchDiffList = useCallback(async () => {
+    setShowBranchDiffList(true);
+    setBranchDiffSearchQuery("");
+
+    if (!activeRepoPath) return;
+
+    try {
+      actions.setBranches(await getBranches(activeRepoPath));
+    } catch (error) {
+      console.error("Failed to load branches for diff:", error);
+    }
+  }, [activeRepoPath, actions]);
+
+  const handleShowCommitDiffList = useCallback(() => {
+    setShowCommitDiffList(true);
+    setCommitDiffSearchQuery("");
+  }, []);
+
   useEffect(() => {
     const handlePaletteAction = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -332,6 +375,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
       if (detail.type === "show-tab") {
         setActiveTab(detail.tab);
+        return;
+      }
+
+      if (detail.type === "manage-branches") {
+        handleOpenBranchManager();
+        return;
+      }
+
+      if (detail.type === "show-branch-diff") {
+        void handleShowBranchDiffList();
         return;
       }
 
@@ -351,6 +404,11 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         return;
       }
 
+      if (detail.type === "initialize-repository") {
+        void handleInitializeRepository();
+        return;
+      }
+
       if (detail.type === "refresh") {
         void handleManualRefresh();
       }
@@ -358,7 +416,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
     window.addEventListener("athas:git-palette-action", handlePaletteAction);
     return () => window.removeEventListener("athas:git-palette-action", handlePaletteAction);
-  }, [handleManualRefresh, handleSelectRepository]);
+  }, [
+    handleInitializeRepository,
+    handleManualRefresh,
+    handleOpenBranchManager,
+    handleSelectRepository,
+    handleShowBranchDiffList,
+  ]);
 
   useEffect(() => {
     if (!activeRepoPath || !visibleGitFiles.length) {
@@ -545,9 +609,92 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     }
   };
 
+  const handleViewWorkingTreeDiff = async (scope: WorkingTreeDiffScope = "all") => {
+    if (!activeRepoPath) return;
+
+    try {
+      const titleByScope: Record<WorkingTreeDiffScope, string> = {
+        all: "Uncommitted Changes",
+        unstaged: "Unstaged Changes",
+        staged: "Staged Changes",
+      };
+      const emptyLabelByScope: Record<WorkingTreeDiffScope, string> = {
+        all: "tracked changes",
+        unstaged: "unstaged tracked changes",
+        staged: "staged changes",
+      };
+      const diffEntries = Array.from(
+        new Map(
+          (visibleGitFiles ?? [])
+            .filter((entry) => entry.status !== "untracked")
+            .filter((entry) => {
+              if (scope === "all") return true;
+              return entry.staged === (scope === "staged");
+            })
+            .map((entry) => [`${entry.staged ? "staged" : "unstaged"}:${entry.path}`, entry]),
+        ).entries(),
+      );
+
+      if (diffEntries.length === 0) {
+        await showAlertDialog(`No ${emptyLabelByScope[scope]} with diffs.`, "Git Diff");
+        return;
+      }
+
+      const diffItems = (
+        await Promise.all(
+          diffEntries.map(async ([fileKey, entry]) => {
+            const diff = await getFileDiff(activeRepoPath, entry.path, entry.staged);
+            if (!diff || (diff.lines.length === 0 && diff.is_image !== true)) {
+              return null;
+            }
+
+            return { fileKey, diff };
+          }),
+        )
+      ).filter((entry): entry is { fileKey: string; diff: GitDiff } => Boolean(entry));
+
+      if (diffItems.length === 0) {
+        await showAlertDialog("No changes to show.", "Git Diff");
+        return;
+      }
+
+      const allStats = countDiffStats(diffItems.map((item) => item.diff));
+      const title = titleByScope[scope];
+      const multiDiff: MultiFileDiff = {
+        title,
+        repoPath: activeRepoPath,
+        commitHash: "working-tree",
+        files: diffItems.map((item) => item.diff),
+        totalFiles: diffItems.length,
+        totalAdditions: allStats.additions,
+        totalDeletions: allStats.deletions,
+        fileKeys: diffItems.map((item) => item.fileKey),
+        initiallyExpandedFileKey: diffItems[0]?.fileKey,
+        isLoading: false,
+      };
+
+      useBufferStore
+        .getState()
+        .actions.openBuffer(
+          "diff://working-tree/all-files",
+          `${title} (${diffItems.length} files)`,
+          "",
+          false,
+          undefined,
+          true,
+          true,
+          multiDiff,
+        );
+    } catch (error) {
+      console.error("Error getting working tree diff:", error);
+      await showAlertDialog(`Failed to get working tree diff:\n${error}`, "Git Diff");
+    }
+  };
+
   const handleViewCommitDiff = async (commitHash: string, filePath?: string) => {
     if (!activeRepoPath || !onFileSelect) return;
 
+    setIsLoadingCommitDiff(true);
     try {
       const diffs = await getCommitDiff(activeRepoPath, commitHash);
       const commit = useGitStore.getState().commits.find((entry) => entry.hash === commitHash);
@@ -603,6 +750,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     } catch (error) {
       console.error("Error getting commit diff:", error);
       await showAlertDialog(`Failed to get diff for commit ${commitHash}:\n${error}`, "Git Diff");
+    } finally {
+      setIsLoadingCommitDiff(false);
     }
   };
 
@@ -688,6 +837,69 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       await showAlertDialog(`Failed to compare ${baseRef} and ${targetRef}:\n${error}`, "Git Diff");
     }
   };
+
+  const handleViewBranchDiff = async (baseBranch: string) => {
+    const targetBranch = gitStatus?.branch ?? "HEAD";
+    if (!activeRepoPath || !onFileSelect || !baseBranch || baseBranch === targetBranch) return;
+
+    const title = `${baseBranch}..${targetBranch}`;
+
+    setIsLoadingBranchDiff(true);
+    try {
+      const diffs = await getRefDiff(activeRepoPath, baseBranch, targetBranch);
+
+      if (diffs && diffs.length > 0) {
+        const { additions, deletions } = countDiffStats(diffs);
+        const multiDiff: MultiFileDiff = {
+          title,
+          repoPath: activeRepoPath,
+          commitHash: title,
+          files: diffs,
+          totalFiles: diffs.length,
+          totalAdditions: additions,
+          totalDeletions: deletions,
+        };
+
+        const encodedTitle = encodeURIComponent(title);
+        useBufferStore
+          .getState()
+          .actions.openBuffer(
+            `diff://branch/${encodedTitle}/all-files`,
+            `${title} (${diffs.length} files)`,
+            "",
+            false,
+            undefined,
+            true,
+            true,
+            multiDiff,
+          );
+        setShowBranchDiffList(false);
+        setBranchDiffSearchQuery("");
+      } else {
+        await showAlertDialog(`No changes between ${baseBranch} and ${targetBranch}.`, "Git Diff");
+      }
+    } catch (error) {
+      console.error("Error getting branch comparison:", error);
+      await showAlertDialog(
+        `Failed to compare ${baseBranch} and ${targetBranch}:\n${error}`,
+        "Git Diff",
+      );
+    } finally {
+      setIsLoadingBranchDiff(false);
+    }
+  };
+
+  const handleGitViewWorktreeChange = useCallback(
+    async (worktreePath: string) => {
+      const opened = await openGitWorktreeWorkspace(worktreePath);
+      if (!opened) return;
+
+      const status = await getGitStatus(worktreePath);
+      actions.setWorkspaceGitStatus(status, worktreePath);
+      actions.setGitStatus(status);
+    },
+    [actions],
+  );
 
   const handleStashListAction = async (
     action: () => Promise<boolean>,
@@ -796,6 +1008,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       hasGitRepo={hasGitRepo}
       repoPath={activeRepoPath ?? repoPath}
       onRefresh={onRefresh}
+      onOpenBranchManager={handleOpenBranchManager}
+      onShowBranchDiff={() => void handleShowBranchDiffList()}
       onOpenRemoteManager={() => setShowRemoteManager(true)}
       onOpenTagManager={() => setShowTagManager(true)}
       onViewStashes={() => {
@@ -824,6 +1038,35 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       ]),
     );
   }, [stashSearchQuery, stashes]);
+  const filteredDiffCommits = useMemo(() => {
+    const query = commitDiffSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return commits;
+    }
+
+    return commits.filter((commit) =>
+      matchesSearchQuery(query, [
+        commit.message,
+        commit.description ?? "",
+        commit.author,
+        commit.email ?? "",
+        commit.hash,
+        commit.hash.substring(0, 7),
+      ]),
+    );
+  }, [commitDiffSearchQuery, commits]);
+  const branchDiffBranches = useMemo(
+    () => branches.filter((branch) => branch !== gitStatus?.branch),
+    [branches, gitStatus?.branch],
+  );
+  const filteredBranchDiffBranches = useMemo(() => {
+    const query = branchDiffSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return branchDiffBranches;
+    }
+
+    return branchDiffBranches.filter((branch) => matchesSearchQuery(query, [branch]));
+  }, [branchDiffBranches, branchDiffSearchQuery]);
 
   const gitTabOrder: GitSidebarTab[] = ["changes", "history"];
   const gitTabs: Array<{
@@ -917,13 +1160,46 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
           />
 
-          <SidebarHeader className="min-w-0 justify-between bg-transparent p-0 backdrop-blur-none">
-            <GitProjectSelector
-              className="min-w-0 max-w-[calc(100%-4.5rem)] shrink"
-              onRepositoryChange={() => setRepoSelectionError(null)}
-            />
+          <div className="flex min-w-0 shrink-0 items-end gap-2 overflow-hidden">
+            {showRepositorySelector ? (
+              <div className="flex min-w-0 shrink flex-col gap-0.5">
+                <span className="ui-text-xs px-1 text-text-lighter">Repository</span>
+                <GitProjectSelector
+                  className="w-fit min-w-0 max-w-[9rem] shrink"
+                  triggerClassName="w-fit"
+                  onRepositoryChange={() => setRepoSelectionError(null)}
+                />
+              </div>
+            ) : null}
 
-            <div className="ml-auto flex shrink-0 items-center gap-1">
+            <div className="flex min-w-0 shrink flex-col gap-0.5">
+              <span className="ui-text-xs px-1 text-text-lighter">Branch</span>
+              <GitBranchManager
+                currentBranch={gitStatus.branch}
+                repoPath={activeRepoPath}
+                paletteTarget
+                openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
+                placement="up"
+                triggerIconSize={14}
+                triggerClassName="h-7 w-fit min-w-0 max-w-[8rem] justify-start px-2"
+                triggerInputClassName="max-w-full"
+                onBranchChange={() => void handleManualRefresh()}
+              />
+            </div>
+
+            <div className="flex min-w-0 shrink flex-col gap-0.5">
+              <span className="ui-text-xs px-1 text-text-lighter">Worktree</span>
+              <GitWorktreeSwitcher
+                repoPath={activeRepoPath}
+                placement="up"
+                triggerIconSize={14}
+                triggerClassName="h-7 w-fit min-w-0 max-w-[8rem] justify-start px-2"
+                triggerInputClassName="max-w-full"
+                onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
+              />
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-1 pb-0.5">
               <SidebarHeaderIconButton
                 onClick={handleManualRefresh}
                 disabled={isLoadingGitData || isRefreshing}
@@ -939,7 +1215,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               </SidebarHeaderIconButton>
               {renderActionsButton()}
             </div>
-          </SidebarHeader>
+          </div>
 
           <SidebarSectionPager
             className="flex-1"
@@ -952,6 +1228,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     fileDiffStats={fileDiffStats}
                     onFileSelect={handleGitFileClick}
                     onOpenFile={handleOpenOriginalFile}
+                    onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
+                    onShowCommitDiffPicker={handleShowCommitDiffList}
+                    onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
+                    onShowStashDiffPicker={() => {
+                      setShowStashList(true);
+                      setStashSearchQuery("");
+                    }}
                     onRefresh={refreshAfterAction}
                     repoPath={activeRepoPath}
                   />
@@ -989,6 +1272,90 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       </SidebarPanel>
 
       {renderGitActionsMenu({ hasGitRepo: !!gitStatus, onRefresh: refreshAfterAction })}
+      <GitCommandSurface
+        isOpen={showCommitDiffList}
+        onClose={() => {
+          setShowCommitDiffList(false);
+          setCommitDiffSearchQuery("");
+        }}
+        query={commitDiffSearchQuery}
+        onQueryChange={setCommitDiffSearchQuery}
+        placeholder="Search commits..."
+        meta={`${commits.length} commit${commits.length === 1 ? "" : "s"}`}
+      >
+        <CommandList>
+          {filteredDiffCommits.length === 0 ? (
+            <CommandEmpty>
+              {commitDiffSearchQuery.trim() ? "No matching commits" : "No commits"}
+            </CommandEmpty>
+          ) : (
+            <div className="space-y-1">
+              {filteredDiffCommits.map((commit) => {
+                const shortHash = commit.hash.substring(0, 7);
+
+                return (
+                  <CommandItem
+                    key={commit.hash}
+                    type="button"
+                    onClick={() => {
+                      void handleViewCommitDiff(commit.hash);
+                      setShowCommitDiffList(false);
+                      setCommitDiffSearchQuery("");
+                    }}
+                    disabled={isLoadingCommitDiff}
+                    className="ui-font"
+                  >
+                    <ClockCounterClockwise size={14} className="shrink-0 text-text-lighter" />
+                    <span className="ui-text-xs min-w-0 flex-1 truncate text-text">
+                      {commit.message}
+                    </span>
+                    <span className="ui-text-xs shrink-0 editor-font text-text-lighter">
+                      {shortHash}
+                    </span>
+                  </CommandItem>
+                );
+              })}
+            </div>
+          )}
+        </CommandList>
+      </GitCommandSurface>
+      <GitCommandSurface
+        isOpen={showBranchDiffList}
+        onClose={() => {
+          setShowBranchDiffList(false);
+          setBranchDiffSearchQuery("");
+        }}
+        query={branchDiffSearchQuery}
+        onQueryChange={setBranchDiffSearchQuery}
+        placeholder="Compare current branch with..."
+        meta={`${branchDiffBranches.length} branch${branchDiffBranches.length === 1 ? "" : "es"}`}
+      >
+        <CommandList>
+          {filteredBranchDiffBranches.length === 0 ? (
+            <CommandEmpty>
+              {branchDiffSearchQuery.trim() ? "No matching branches" : "No other branches"}
+            </CommandEmpty>
+          ) : (
+            <div className="space-y-1">
+              {filteredBranchDiffBranches.map((branch) => (
+                <CommandItem
+                  key={branch}
+                  type="button"
+                  onClick={() => void handleViewBranchDiff(branch)}
+                  disabled={isLoadingBranchDiff}
+                  className="ui-font"
+                >
+                  <GitBranch size={14} className="shrink-0 text-text-lighter" />
+                  <span className="ui-text-xs min-w-0 flex-1 truncate text-text">{branch}</span>
+                  <span className="ui-text-xs shrink-0 text-text-lighter">
+                    compare with {gitStatus.branch}
+                  </span>
+                </CommandItem>
+              ))}
+            </div>
+          )}
+        </CommandList>
+      </GitCommandSurface>
       <GitCommandSurface
         isOpen={showStashList}
         onClose={() => {

@@ -1,6 +1,7 @@
 import {
   ArchiveIcon as Archive,
   DownloadIcon as Download,
+  GitBranchIcon as GitBranch,
   FolderOpenIcon as FolderOpen,
   GitPullRequestIcon as GitPullRequest,
   ArrowClockwiseIcon as RefreshCw,
@@ -33,6 +34,8 @@ interface GitActionsMenuProps {
   hasGitRepo: boolean;
   repoPath?: string;
   onRefresh?: () => void;
+  onOpenBranchManager?: () => void;
+  onShowBranchDiff?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
   onViewStashes?: () => void;
@@ -49,6 +52,8 @@ const GitActionsMenu = ({
   hasGitRepo,
   repoPath,
   onRefresh,
+  onOpenBranchManager,
+  onShowBranchDiff,
   onOpenRemoteManager,
   onOpenTagManager,
   onViewStashes,
@@ -165,6 +170,16 @@ const GitActionsMenu = ({
     onClose();
   };
 
+  const handleBranchManager = () => {
+    onOpenBranchManager?.();
+    onClose();
+  };
+
+  const handleShowBranchDiff = () => {
+    onShowBranchDiff?.();
+    onClose();
+  };
+
   const handleTagManager = () => {
     onOpenTagManager?.();
     onClose();
@@ -194,6 +209,19 @@ const GitActionsMenu = ({
           onClick: () => void handleSelectRepository(),
         },
         { id: "sep-1", label: "", separator: true, onClick: () => {} },
+        {
+          id: "manage-branches",
+          label: "Manage Branches",
+          icon: <GitBranch />,
+          onClick: handleBranchManager,
+        },
+        {
+          id: "show-branch-diff",
+          label: "Show Branch Diff",
+          icon: <GitPullRequest />,
+          onClick: handleShowBranchDiff,
+        },
+        { id: "sep-branches", label: "", separator: true, onClick: () => {} },
         {
           id: "push",
           label: "Push Changes",

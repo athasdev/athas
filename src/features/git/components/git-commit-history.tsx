@@ -58,7 +58,7 @@ const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: Com
   const shortHash = commit.hash.substring(0, 7);
 
   return (
-    <div className="mx-1 mb-1.5">
+    <div className="mb-1.5">
       <button
         type="button"
         onClick={handleCommitClick}
@@ -240,7 +240,7 @@ const GitCommitHistory = ({
           showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
         )}
       >
-        <div className="shrink-0 px-1 py-1">
+        <div className="shrink-0 py-1">
           {showHeader ? (
             <GitSidebarSectionHeader
               title="History"
@@ -269,12 +269,12 @@ const GitCommitHistory = ({
               filterAriaLabel="Filter history"
               filterCloseOnSelect={false}
               filterMenuClassName="w-fit min-w-fit"
-              className="px-2 pb-1 pt-0"
+              className="px-1 pb-1 pt-0"
             />
 
             <div
               className={cn(
-                "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll px-1 pb-1",
+                "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll pb-1",
                 showHeader ? "bg-primary-bg/70" : "bg-transparent",
               )}
               ref={scrollContainerRef}

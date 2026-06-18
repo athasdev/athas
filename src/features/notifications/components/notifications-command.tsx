@@ -385,7 +385,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                         )}
                       />
                       <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                      <span className="shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
+                      <span className="shrink-0 rounded-full bg-hover/70 px-1.5 py-0.5">
                         {group.notifications.length}
                       </span>
                     </button>

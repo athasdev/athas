@@ -471,7 +471,7 @@ const DiffFileSection = memo(function DiffFileSection({
                 <Badge
                   size="compact"
                   variant="muted"
-                  className={`rounded px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
+                  className={`rounded-full px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
                 >
                   {status}
                 </Badge>

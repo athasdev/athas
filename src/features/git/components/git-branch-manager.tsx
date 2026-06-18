@@ -21,6 +21,7 @@ interface GitBranchManagerProps {
   repoPath?: string;
   onBranchChange?: () => void;
   paletteTarget?: boolean;
+  openEventName?: string;
   placement?: "up" | "down";
   triggerIconSize?: number;
   triggerClassName?: string;
@@ -55,6 +56,7 @@ const GitBranchManager = ({
   repoPath,
   onBranchChange,
   paletteTarget = false,
+  openEventName = "athas:open-branch-manager",
   placement = "down",
   triggerIconSize,
   triggerClassName,
@@ -111,9 +113,9 @@ const GitBranchManager = ({
       void loadBranches();
     };
 
-    window.addEventListener("athas:open-branch-manager", handleOpenFromPalette);
-    return () => window.removeEventListener("athas:open-branch-manager", handleOpenFromPalette);
-  }, [paletteTarget, repoPath, loadBranches]);
+    window.addEventListener(openEventName, handleOpenFromPalette);
+    return () => window.removeEventListener(openEventName, handleOpenFromPalette);
+  }, [openEventName, paletteTarget, repoPath, loadBranches]);
 
   useEffect(() => {
     if (!isDropdownOpen) {
@@ -358,13 +360,31 @@ function BranchRow({
   onSelect: () => void;
   onDelete: () => void;
 }) {
+  const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isLoading) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect();
+  };
+
   return (
-    <CommandItem
-      disabled={isLoading}
-      isSelected={isSelected}
+    <div
+      role="button"
+      tabIndex={isLoading ? -1 : 0}
+      aria-disabled={isLoading}
       onMouseEnter={onMouseEnter}
-      onClick={onSelect}
-      className={cn("group ui-font", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      onClick={() => {
+        if (!isLoading) {
+          onSelect();
+        }
+      }}
+      onKeyDown={handleSelectKeyDown}
+      className={cn(
+        "group ui-font ui-text-xs mb-1 flex min-h-7 w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left leading-[1.35] transition-colors",
+        isSelected ? "bg-selected text-text" : "bg-transparent text-text hover:bg-hover",
+        isCurrent ? "text-text" : "text-text-lighter hover:text-text",
+        isLoading && "cursor-not-allowed opacity-50",
+      )}
     >
       {isCurrent ? (
         <Check size={14} className="shrink-0 text-success" />
@@ -399,7 +419,7 @@ function BranchRow({
           <Trash2 />
         </Button>
       ) : null}
-    </CommandItem>
+    </div>
   );
 }
 

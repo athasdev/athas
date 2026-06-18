@@ -689,7 +689,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                           {(job.labels ?? []).slice(0, 3).map((label) => (
                             <span
                               key={label}
-                              className="rounded bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter"
+                              className="rounded-full bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter"
                             >
                               {label}
                             </span>

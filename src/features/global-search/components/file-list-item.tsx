@@ -78,7 +78,7 @@ export const FileListItem = memo(
         {category === "open" && (
           <span
             className={cn(
-              "rounded bg-accent/20 px-1 font-medium leading-[1.35] text-accent",
+              "rounded-full bg-accent/20 px-1 font-medium leading-[1.35] text-accent",
               compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
             )}
           >

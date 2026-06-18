@@ -280,7 +280,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       <PushPin className="shrink-0 fill-current text-accent" />
                     ) : null}
                     {folder.missing ? (
-                      <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium ui-text-xs text-warning">
+                      <span className="shrink-0 rounded-full bg-warning/10 px-1 py-0.5 font-medium ui-text-xs text-warning">
                         Missing
                       </span>
                     ) : null}
