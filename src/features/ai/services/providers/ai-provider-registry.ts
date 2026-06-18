@@ -33,9 +33,9 @@ function initializeProviders(): void {
   const v0Config: ProviderConfig = {
     id: "v0",
     name: "v0",
-    apiUrl: "https://api.v0.dev/v1/chat/completions",
+    apiUrl: "https://api.v0.dev/v1/chats",
     requiresApiKey: true,
-    maxTokens: 32768,
+    maxTokens: 50000,
   };
   providers.set("v0", new V0Provider(v0Config));
 

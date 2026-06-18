@@ -3,5 +3,6 @@ export type CommandPaletteViewId =
   | "quick-question"
   | "color-theme"
   | "icon-theme"
+  | "v0-design-systems"
   | "local-history"
   | "outline";

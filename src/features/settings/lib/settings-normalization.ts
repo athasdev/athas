@@ -1,4 +1,5 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
+import { normalizeV0DesignSystems } from "@/features/ai/lib/v0-design-systems";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import { normalizeFileTreeDensity } from "@/features/file-explorer/lib/file-tree-density";
 import {
@@ -318,6 +319,20 @@ function normalizeAISettings(settings: Settings): Settings {
   normalizedSettings.aiAutocompleteCustomModelId =
     normalizedSettings.aiAutocompleteCustomModelId?.trim() || "";
   normalizedSettings.aiSkills = normalizeAISkills(normalizedSettings.aiSkills);
+  normalizedSettings.v0DesignSystems = normalizeV0DesignSystems(
+    (normalizedSettings as { v0DesignSystems?: unknown }).v0DesignSystems,
+  );
+  normalizedSettings.activeV0DesignSystemId =
+    typeof normalizedSettings.activeV0DesignSystemId === "string"
+      ? normalizedSettings.activeV0DesignSystemId.trim()
+      : "";
+  if (
+    !normalizedSettings.v0DesignSystems.some(
+      (profile) => profile.id === normalizedSettings.activeV0DesignSystemId,
+    )
+  ) {
+    normalizedSettings.activeV0DesignSystemId = "";
+  }
 
   return normalizedSettings;
 }
@@ -471,6 +486,14 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "aiSkills") {
     return normalizeAISkills(value as Settings["aiSkills"]) as Settings[K];
+  }
+
+  if (key === "v0DesignSystems") {
+    return normalizeV0DesignSystems(value) as Settings[K];
+  }
+
+  if (key === "activeV0DesignSystemId") {
+    return ((value as string)?.trim() || "") as Settings[K];
   }
 
   if (key === "aiCustomBaseUrl") {

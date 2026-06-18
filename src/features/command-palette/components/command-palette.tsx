@@ -9,6 +9,7 @@ import { IconThemeSelectorContent } from "@/features/command-palette/components/
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
+import { V0DesignSystemCommandContent } from "@/features/ai/components/v0-design-system-command";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
@@ -416,6 +417,12 @@ const CommandPalette = () => {
           onClose={onClose}
           onThemeChange={handleIconThemeChange}
           currentTheme={settings.iconTheme}
+        />
+      ) : currentView === "v0-design-systems" ? (
+        <V0DesignSystemCommandContent
+          isActive={currentView === "v0-design-systems"}
+          onBack={popView}
+          onClose={onClose}
         />
       ) : currentView === "local-history" ? (
         <LocalHistoryCommandContent

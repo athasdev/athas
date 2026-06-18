@@ -7,6 +7,7 @@ import {
   GlobeHemisphereWestIcon as Globe,
   KeyIcon as Key,
   LaptopIcon as Laptop,
+  PaletteIcon as Palette,
   ArrowClockwiseIcon as RefreshCw,
   ArrowCounterClockwiseIcon as RotateCcw,
   TrashIcon as Trash2,
@@ -23,6 +24,7 @@ import { TypedConfirmAction } from "@/features/settings/components/typed-confirm
 import { LoadingIndicator } from "@/ui/loading";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -63,6 +65,7 @@ function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: str
 
 export const AISettings = () => {
   const { settings, updateSetting } = useSettingsStore();
+  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
   const enterprisePolicy = subscription?.enterprise?.policy;
@@ -351,6 +354,9 @@ export const AISettings = () => {
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
   const isCustomProviderSelected = settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID;
+  const activeV0DesignSystem = settings.v0DesignSystems.find(
+    (profile) => profile.id === settings.activeV0DesignSystemId,
+  );
   const showCustomProviderSettings =
     isCustomProviderSelected || Boolean(settings.aiCustomBaseUrl || settings.aiCustomModelId);
   const hasAutocompleteModels = autocompleteModels.length > 0;
@@ -424,6 +430,21 @@ export const AISettings = () => {
           >
             <Key />
             <span>Manage keys</span>
+          </Button>
+        </SettingRow>
+
+        <SettingRow
+          label="v0 Design System"
+          description={activeV0DesignSystem?.name || "Use v0 defaults"}
+        >
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => openCommandPaletteView("v0-design-systems")}
+            className="w-fit"
+          >
+            <Palette />
+            <span>Select</span>
           </Button>
         </SettingRow>
       </Section>

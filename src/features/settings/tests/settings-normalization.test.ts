@@ -235,4 +235,55 @@ describe("settings normalization", () => {
       upstreamUpdatedAt: "2026-04-01T00:00:00.000Z",
     });
   });
+
+  it("normalizes v0 design system settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      activeV0DesignSystemId: "registry-one",
+      v0DesignSystems: [
+        {
+          id: " registry-one ",
+          name: " Registry One ",
+          registryUrl: " https://example.com/r/registry.json ",
+          description: " Shared UI ",
+        },
+        {
+          id: "registry-one",
+          name: "Duplicate",
+          registryUrl: "https://duplicate.test/r/registry.json",
+        },
+        {
+          id: "missing-url",
+          name: "Missing URL",
+          registryUrl: "",
+        },
+      ],
+    });
+
+    expect(normalized.activeV0DesignSystemId).toBe("registry-one");
+    expect(normalized.v0DesignSystems).toEqual([
+      {
+        id: "registry-one",
+        name: "Registry One",
+        registryUrl: "https://example.com/r/registry.json",
+        description: "Shared UI",
+      },
+    ]);
+  });
+
+  it("clears stale active v0 design system settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      activeV0DesignSystemId: "missing",
+      v0DesignSystems: [
+        {
+          id: "registry-one",
+          name: "Registry One",
+          registryUrl: "https://example.com/r/registry.json",
+        },
+      ],
+    });
+
+    expect(normalized.activeV0DesignSystemId).toBe("");
+  });
 });

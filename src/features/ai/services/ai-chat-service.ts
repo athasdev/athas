@@ -20,6 +20,10 @@ import {
   resolveCustomProviderBaseUrl,
   resolveCustomProviderModelId,
 } from "@/features/ai/lib/custom-provider-config";
+import {
+  buildV0DesignSystemPrompt,
+  getActiveV0DesignSystem,
+} from "@/features/ai/lib/v0-design-systems";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -219,8 +223,13 @@ export const getChatCompletionStream = async (
     }
 
     const contextPrompt = buildContextPrompt(context);
-    const systemPrompt =
-      systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
+    let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
+    if (providerId === "v0") {
+      const designSystemPrompt = buildV0DesignSystemPrompt(getActiveV0DesignSystem(settings));
+      if (designSystemPrompt) {
+        systemPrompt = `${systemPrompt}\n\n${designSystemPrompt}`;
+      }
+    }
 
     // Build messages array with conversation history
     const messages: AIMessage[] = [
@@ -291,7 +300,10 @@ export const getChatCompletionStream = async (
 
     // Use Tauri's fetch for providers that don't support browser CORS
     const needsTauriFetch =
-      providerId === "gemini" || providerId === "ollama" || providerId === "anthropic";
+      providerId === "gemini" ||
+      providerId === "ollama" ||
+      providerId === "anthropic" ||
+      providerId === "v0";
     const fetchFn = needsTauriFetch ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",

@@ -1,4 +1,5 @@
 import type { CoreFeaturesState } from "./feature.types";
+import type { V0DesignSystemProfile } from "@/features/ai/types/v0-design-system.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type {
   FooterLeadingItemId,
@@ -88,6 +89,8 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiSkills: AIChatSkill[];
+  v0DesignSystems: V0DesignSystemProfile[];
+  activeV0DesignSystemId: string;
   ollamaBaseUrl: string;
   // Layout
   sidebarWidth: number;

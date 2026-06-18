@@ -105,23 +105,33 @@ export const AI_PROVIDERS: ModelProvider[] = [
   {
     id: "v0",
     name: "v0",
-    apiUrl: "https://api.v0.dev/v1/chat/completions",
+    apiUrl: "https://api.v0.dev/v1/chats",
     requiresApiKey: true,
     models: [
       {
-        id: "v0-1.5-lg",
-        name: "v0 1.5 Large",
-        maxTokens: 512000,
+        id: "v0-auto",
+        name: "v0 Auto",
+        maxTokens: 50000,
       },
       {
-        id: "v0-1.5-md",
-        name: "v0 1.5 Medium",
-        maxTokens: 128000,
+        id: "v0-mini",
+        name: "v0 Mini",
+        maxTokens: 50000,
       },
       {
-        id: "v0-1.0-md",
-        name: "v0 1.0 Medium",
-        maxTokens: 128000,
+        id: "v0-pro",
+        name: "v0 Pro",
+        maxTokens: 50000,
+      },
+      {
+        id: "v0-max",
+        name: "v0 Max",
+        maxTokens: 50000,
+      },
+      {
+        id: "v0-max-fast",
+        name: "v0 Max Fast",
+        maxTokens: 50000,
       },
     ],
   },

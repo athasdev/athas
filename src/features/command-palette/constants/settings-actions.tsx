@@ -364,6 +364,16 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       },
     },
     {
+      id: "v0-design-systems",
+      label: "AI: v0 Design System",
+      description: "Choose the registry context v0 should use",
+      icon: <Sparkles />,
+      category: "AI",
+      action: () => {
+        pushPaletteView("v0-design-systems");
+      },
+    },
+    {
       id: "toggle-ai-completion",
       label: settings.aiCompletion ? "AI: Disable AI Completion" : "AI: Enable AI Completion",
       description: settings.aiCompletion
