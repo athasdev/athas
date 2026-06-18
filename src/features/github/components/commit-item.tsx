@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CopyIcon as Copy, ArrowSquareOutIcon as ExternalLink } from "@phosphor-icons/react";
+import { CopyIcon as Copy, GithubLogoIcon as GithubLogo } from "@phosphor-icons/react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
@@ -68,7 +68,7 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
                 className="rounded text-text-lighter"
                 aria-label="Open commit in browser"
               >
-                <ExternalLink />
+                <GithubLogo />
               </Button>
             </Tooltip>
           )}

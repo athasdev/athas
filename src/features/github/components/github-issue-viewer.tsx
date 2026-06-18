@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   CopyIcon as Copy,
-  ArrowSquareOutIcon as ExternalLink,
+  GithubLogoIcon as GithubLogo,
   ChatCircleTextIcon as MessageSquare,
   ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
@@ -233,7 +233,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                   aria-label="Open issue on GitHub"
                   compact
                 >
-                  <ExternalLink />
+                  <GithubLogo />
                 </Button>
               </Tooltip>
               <Tooltip content="Copy issue link" side="bottom">

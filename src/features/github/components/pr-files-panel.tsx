@@ -148,7 +148,7 @@ export const PRFilesPanel = memo(
     }
 
     return (
-      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden rounded-md border border-border/70 bg-primary-bg">
+      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden bg-primary-bg">
         {isFileTreeVisible ? (
           <FileNavigatorSidebar
             items={fileTreeItems}
@@ -157,6 +157,8 @@ export const PRFilesPanel = memo(
             ariaLabel="Changed files"
             viewMode={fileNavigatorViewMode}
             onViewModeChange={setFileNavigatorViewMode}
+            borderless
+            searchMode="fuzzy"
           />
         ) : null}
 

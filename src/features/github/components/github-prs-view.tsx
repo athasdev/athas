@@ -1,11 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
-  ArrowSquareOutIcon as ArrowSquareOut,
   ChatCircleTextIcon as ChatCircleText,
   CheckIcon as Check,
   CopyIcon as Copy,
   GitBranchIcon as GitBranch,
+  GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
   LightningIcon as Lightning,
   MagnifyingGlassIcon as Search,
@@ -373,7 +373,7 @@ const GitHubPRsView = memo(() => {
         {
           id: "open-on-github",
           label: "Open on GitHub",
-          icon: <ArrowSquareOut />,
+          icon: <GithubLogo />,
           onClick: () => {
             if (effectiveRepoPath) {
               void openPRInBrowser(effectiveRepoPath, selectedPR.number);

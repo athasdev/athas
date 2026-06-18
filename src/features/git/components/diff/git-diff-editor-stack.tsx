@@ -3,7 +3,7 @@ import {
   CaretDownIcon as ChevronDown,
   CaretRightIcon as ChevronRight,
   ColumnsIcon as Columns2,
-  ArrowSquareOutIcon as ExternalLink,
+  GithubLogoIcon as GithubLogo,
   ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
   TrashIcon as Trash2,
@@ -771,7 +771,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 tooltipSide="bottom"
                 aria-label="View on GitHub"
               >
-                <ExternalLink weight="duotone" />
+                <GithubLogo weight="duotone" />
                 View on GitHub
               </BreadcrumbActionButton>
             ) : null}
@@ -847,6 +847,8 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             ariaLabel="Changed files"
             viewMode={fileNavigatorViewMode}
             onViewModeChange={setFileNavigatorViewMode}
+            borderless
+            searchMode="fuzzy"
           />
         ) : null}
 

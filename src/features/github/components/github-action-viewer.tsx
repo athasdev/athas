@@ -5,7 +5,7 @@ import {
   ClockIcon as Clock,
   PulseIcon as Activity,
   CopyIcon as Copy,
-  ArrowSquareOutIcon as ExternalLink,
+  GithubLogoIcon as GithubLogo,
   MagnifyingGlassIcon as Search,
   ArrowClockwiseIcon as RefreshCw,
   XCircleIcon as XCircle,
@@ -597,7 +597,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                   aria-label="Open action run on GitHub"
                   compact
                 >
-                  <ExternalLink />
+                  <GithubLogo />
                 </Button>
               </Tooltip>
               <Tooltip content="Copy run link" side="bottom">

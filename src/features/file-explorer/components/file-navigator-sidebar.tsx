@@ -12,6 +12,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import {
   SidebarHeaderIconButton,
   SidebarListItem,
@@ -23,6 +24,7 @@ import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { FileExplorerIcon } from "./file-explorer-icon";
 
 export type FileNavigatorViewMode = "flat" | "tree";
+export type FileNavigatorSearchMode = "substring" | "fuzzy";
 
 const DEFAULT_NAVIGATOR_WIDTH = 224;
 const MIN_NAVIGATOR_WIDTH = 176;
@@ -58,6 +60,8 @@ interface FileNavigatorSidebarProps {
   ariaLabel?: string;
   viewMode?: FileNavigatorViewMode;
   onViewModeChange?: (viewMode: FileNavigatorViewMode) => void;
+  borderless?: boolean;
+  searchMode?: FileNavigatorSearchMode;
 }
 
 function createDirectoryNode(name: string, path: string): FileNavigatorNode {
@@ -76,6 +80,15 @@ function clampNavigatorWidth(width: number) {
 
 function getItemSearchText(item: FileNavigatorItem) {
   return [item.label, item.path, item.key, item.iconPath].filter(Boolean).join(" ").toLowerCase();
+}
+
+function getFuzzyItemSearchScore(item: FileNavigatorItem, query: string) {
+  const { fileName, directoryPath } = getFlatItemParts(item);
+  const fields = [item.label, fileName, item.path, directoryPath, item.key, item.iconPath].filter(
+    (value): value is string => Boolean(value),
+  );
+
+  return Math.max(...fields.map((field) => fuzzyScore(field, query)));
 }
 
 function getFlatItemParts(item: FileNavigatorItem) {
@@ -245,7 +258,9 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
       onClick={() => onSelect(item.key)}
       aria-current={isSelected ? "true" : undefined}
       active={isSelected}
+      title={item.path}
       className="h-7 min-h-0 gap-1.5 rounded px-2 py-0 ui-text-xs hover:bg-hover/40"
+      contentClassName="truncate"
       leading={
         <FileExplorerIcon
           fileName={item.iconPath ?? node.name}
@@ -269,20 +284,41 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   ariaLabel = "Files",
   viewMode = "tree",
   onViewModeChange,
+  borderless = false,
+  searchMode = "substring",
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const filteredItems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return items;
+
+    if (searchMode === "fuzzy") {
+      return items
+        .map((item) => ({
+          item,
+          score: getFuzzyItemSearchScore(item, trimmedQuery),
+        }))
+        .filter(({ score }) => score > 0)
+        .sort(
+          (left, right) => right.score - left.score || left.item.path.localeCompare(right.item.path),
+        )
+        .map(({ item }) => item);
+    }
+
+    const query = trimmedQuery.toLowerCase();
     if (!query) return items;
 
     return items.filter((item) => getItemSearchText(item).includes(query));
-  }, [items, searchQuery]);
+  }, [items, searchMode, searchQuery]);
   const tree = useMemo(() => buildFileTree(filteredItems), [filteredItems]);
   const flatItems = useMemo(
-    () => [...filteredItems].sort((left, right) => left.path.localeCompare(right.path)),
-    [filteredItems],
+    () =>
+      searchMode === "fuzzy" && searchQuery.trim()
+        ? filteredItems
+        : [...filteredItems].sort((left, right) => left.path.localeCompare(right.path)),
+    [filteredItems, searchMode, searchQuery],
   );
 
   const resizeTo = useCallback((nextWidth: number) => {
@@ -329,7 +365,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   return (
     <aside
       className={cn(
-        "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-border/70 bg-secondary-bg/20",
+        "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden",
+        borderless ? "bg-transparent" : "border-r border-border/70 bg-secondary-bg/20",
         className,
       )}
       style={{ width }}
@@ -342,9 +379,14 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           searchIcon={Search}
           placeholder="Search"
           searchAriaLabel="Search files"
-          className="border-b border-border/60"
+          className={cn(borderless ? "px-1" : "border-b border-border/60")}
           actions={
-            <div className="inline-flex shrink-0 rounded border border-border/70 bg-primary-bg p-0.5">
+            <div
+              className={cn(
+                "inline-flex shrink-0 rounded bg-primary-bg p-0.5",
+                !borderless && "border border-border/70",
+              )}
+            >
               <SidebarHeaderIconButton
                 className={cn("size-5 rounded", viewMode === "flat" && "bg-selected text-text")}
                 onClick={() => onViewModeChange("flat")}

@@ -73,13 +73,11 @@ const DiffHunkHeader = memo(
         )}
         onClick={onToggleCollapse}
       >
-        <div className="flex min-h-8 items-center justify-center text-text-lighter">
-          <ArrowsInLineVertical size={18} />
+        <div className="flex min-h-8 items-center justify-center border-border border-r text-text-lighter">
+          <ArrowsInLineVertical size={16} />
         </div>
 
-        <div className="flex min-w-0 items-center gap-3 pr-3">
-          <div className="h-px w-16 shrink-0 bg-border/70" />
-
+        <div className="flex min-w-0 items-center gap-2 px-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex size-5 items-center justify-center text-text-lighter">
               {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}

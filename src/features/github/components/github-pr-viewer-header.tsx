@@ -2,9 +2,9 @@ import {
   CheckIcon as Check,
   CheckCircleIcon as CheckCircle2,
   CopyIcon as Copy,
-  ArrowSquareOutIcon as ExternalLink,
   FileCodeIcon as FileCode2,
   GitBranchIcon as GitBranch,
+  GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
   ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
@@ -116,7 +116,7 @@ export function GitHubPRViewerHeader({
               aria-label="Open pull request in browser"
               compact
             >
-              <ExternalLink />
+              <GithubLogo />
             </Button>
           </Tooltip>
           <Tooltip content="Copy PR link" side="bottom">
