@@ -6,6 +6,7 @@ import {
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
@@ -73,7 +74,7 @@ export function ModelSelector({
     (state) => state.settings.aiAutocompleteCustomModelId,
   );
 
-  const provider = getProviderById(providerId);
+  const provider = useProviderById(providerId);
   const isComposer = appearance === "composer";
   const isCustomProvider = providerId === "custom";
 

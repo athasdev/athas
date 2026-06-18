@@ -6,6 +6,7 @@ import {
   PlusIcon as Plus,
   RobotIcon as Robot,
   MagnifyingGlassIcon as Search,
+  SparkleIcon as Sparkles,
   TextTIcon as TextT,
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
@@ -16,6 +17,7 @@ import { useExtensionStore } from "@/extensions/registry/extension-store";
 import type { ExtensionRuntimeIssue } from "@/extensions/registry/extension-store-types";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import {
+  getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
 } from "@/extensions/types/extension-contributions";
@@ -45,7 +47,7 @@ interface UnifiedExtension {
   id: string;
   name: string;
   description: string;
-  category: "language" | "theme" | "icon-theme" | "database" | "skill" | "agent";
+  category: "language" | "theme" | "icon-theme" | "database" | "ai" | "skill" | "agent";
   isInstalled: boolean;
   version?: string;
   extensions?: string[];
@@ -67,6 +69,7 @@ const FILTER_TABS = [
   { id: "theme", label: "Themes", icon: PaintBrush },
   { id: "icon-theme", label: "Icon Themes", icon: Package },
   { id: "database", label: "Databases", icon: Database },
+  { id: "ai", label: "AI", icon: Sparkles },
   { id: "skill", label: "Skills", icon: Brain },
   { id: "agent", label: "Agents", icon: Robot },
 ] as const;
@@ -118,6 +121,8 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
       return "Icon Theme";
     case "database":
       return "Database";
+    case "ai":
+      return "AI";
     case "skill":
       return "Skill";
     case "agent":
@@ -397,6 +402,24 @@ export const ExtensionsSettings = () => {
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
           contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
+        });
+      }
+
+      const aiProviderContributions = getManifestAIProviderContributions(ext.manifest);
+      if (aiProviderContributions.length > 0) {
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "ai",
+          isInstalled: ext.isInstalled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          runtimeIssues: ext.runtimeIssues,
+          packageSize: resolvePackageSize(ext.manifest),
+          contributionSummary: aiProviderContributions.map((provider) => `provider:${provider.id}`),
         });
       }
     }

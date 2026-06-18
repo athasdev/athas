@@ -6,8 +6,11 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
+import {
+  useAvailableProviders,
+  useProviderById,
+} from "@/features/ai/hooks/use-available-providers";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
@@ -27,7 +30,6 @@ interface ProviderApiKeyCommandProps {
 
 const DASHBOARD_LINKS: Partial<Record<string, string>> = {
   openrouter: "https://openrouter.ai/keys",
-  v0: "https://v0.dev/chat/settings/keys",
   grok: "https://console.x.ai",
   openai: "https://platform.openai.com/api-keys",
   anthropic: "https://console.anthropic.com/settings/keys",
@@ -37,7 +39,6 @@ const DASHBOARD_LINKS: Partial<Record<string, string>> = {
 
 const PLACEHOLDERS: Partial<Record<string, string>> = {
   openrouter: "sk-or-v1-xxxxxxxxxxxxxxxxxxxx",
-  v0: "v0_xxxxxxxxxxxxxxxxxxxx",
   grok: "xai-xxxxxxxxxxxxxxxxxxxx",
   openai: "sk-xxxxxxxxxxxxxxxxxxxx",
   mistral: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -74,9 +75,10 @@ function ProviderApiKeyCommandContent({
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
 
+  const availableProviders = useAvailableProviders();
   const providers = useMemo(
-    () => getAvailableProviders().filter((provider) => provider.requiresApiKey),
-    [],
+    () => availableProviders.filter((provider) => provider.requiresApiKey),
+    [availableProviders],
   );
   const initialProvider = initialProviderId
     ? providers.find((provider) => provider.id === initialProviderId)
@@ -91,13 +93,17 @@ function ProviderApiKeyCommandContent({
   const [status, setStatus] = useState<"idle" | "valid" | "invalid">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const selectedProvider = getProviderById(selectedProviderId);
+  const selectedProvider = useProviderById(selectedProviderId);
   const hasExistingKey = selectedProviderId ? hasProviderApiKey(selectedProviderId) : false;
-  const dashboardLink = selectedProviderId ? DASHBOARD_LINKS[selectedProviderId] : undefined;
+  const dashboardLink =
+    selectedProvider?.apiKeyUrl ||
+    (selectedProviderId ? DASHBOARD_LINKS[selectedProviderId] : undefined);
   const placeholder =
-    selectedProviderId && PLACEHOLDERS[selectedProviderId]
+    selectedProvider?.apiKeyPlaceholder ||
+    (selectedProviderId && PLACEHOLDERS[selectedProviderId]
       ? PLACEHOLDERS[selectedProviderId]
-      : "Enter API key...";
+      : undefined) ||
+    "Enter API key...";
 
   const filteredProviders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

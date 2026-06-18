@@ -14,7 +14,7 @@ import {
   storeProviderApiToken,
   validateProviderApiKey,
 } from "@/features/ai/services/ai-token-service";
-import { AI_PROVIDERS } from "@/features/ai/types/providers.types";
+import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   deleteChatFromDb,
@@ -33,7 +33,7 @@ async function buildProviderApiKeyMap(
   subscription: ReturnType<typeof useAuthStore.getState>["subscription"],
 ) {
   const entries = await Promise.all(
-    AI_PROVIDERS.map(async (provider) => {
+    getAvailableProviders().map(async (provider) => {
       try {
         if (!provider.requiresApiKey) {
           return [provider.id, true] as const;
@@ -59,7 +59,7 @@ async function buildProviderApiKeyMap(
 }
 
 function getProviderAccessFromMap(providerId: string, providerApiKeys: Map<string, boolean>) {
-  const provider = AI_PROVIDERS.find((item) => item.id === providerId);
+  const provider = getProviderById(providerId);
   if (!provider) return false;
   if (!provider.requiresApiKey) return true;
   return providerApiKeys.get(providerId) || false;
@@ -539,7 +539,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkApiKey: async (providerId) => {
           try {
-            const provider = AI_PROVIDERS.find((p) => p.id === providerId);
+            const provider = getProviderById(providerId);
             const subscription = useAuthStore.getState().subscription;
 
             // If provider doesn't require an API key, set hasApiKey to true

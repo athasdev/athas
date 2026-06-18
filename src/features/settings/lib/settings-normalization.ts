@@ -1,5 +1,5 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
-import { normalizeV0DesignSystems } from "@/features/ai/lib/v0-design-systems";
+import { normalizeV0DesignSystems } from "@/extensions/v0/lib/v0-design-systems";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
 import { normalizeFileTreeDensity } from "@/features/file-explorer/lib/file-tree-density";
 import {
@@ -276,36 +276,31 @@ function normalizeAISkills(skills: Settings["aiSkills"]): Settings["aiSkills"] {
 
 function normalizeAISettings(settings: Settings): Settings {
   const normalizedSettings = { ...settings };
-  const provider =
-    getProviderById(normalizedSettings.aiProviderId) || getProviderById(DEFAULT_AI_PROVIDER_ID);
-
-  if (!provider) {
-    return {
-      ...normalizedSettings,
-      aiProviderId: DEFAULT_AI_PROVIDER_ID,
-      aiModelId: DEFAULT_AI_MODEL_ID,
-      aiAutocompleteModelId:
-        AI_AUTOCOMPLETE_MODEL_MIGRATIONS[normalizedSettings.aiAutocompleteModelId] ||
-        normalizedSettings.aiAutocompleteModelId ||
-        DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
-    };
-  }
-
-  normalizedSettings.aiProviderId = provider.id;
-  normalizedSettings.aiModelId =
-    AI_MODEL_MIGRATIONS[provider.id]?.[normalizedSettings.aiModelId] ||
-    normalizedSettings.aiModelId;
-
+  const requestedProviderId =
+    typeof normalizedSettings.aiProviderId === "string"
+      ? normalizedSettings.aiProviderId.trim()
+      : "";
+  const provider = requestedProviderId ? getProviderById(requestedProviderId) : undefined;
   normalizedSettings.aiCustomBaseUrl = normalizeBaseUrl(normalizedSettings.aiCustomBaseUrl);
   normalizedSettings.aiCustomModelId = normalizedSettings.aiCustomModelId?.trim() || "";
 
-  if (provider.id === "custom") {
-    normalizedSettings.aiModelId = normalizedSettings.aiCustomModelId;
-  } else if (
-    provider.models.length > 0 &&
-    !provider.models.some((model) => model.id === normalizedSettings.aiModelId)
-  ) {
-    normalizedSettings.aiModelId = provider.models[0].id;
+  if (!provider) {
+    normalizedSettings.aiProviderId = requestedProviderId || DEFAULT_AI_PROVIDER_ID;
+    normalizedSettings.aiModelId = normalizedSettings.aiModelId?.trim() || DEFAULT_AI_MODEL_ID;
+  } else {
+    normalizedSettings.aiProviderId = provider.id;
+    normalizedSettings.aiModelId =
+      AI_MODEL_MIGRATIONS[provider.id]?.[normalizedSettings.aiModelId] ||
+      normalizedSettings.aiModelId;
+
+    if (provider.id === "custom") {
+      normalizedSettings.aiModelId = normalizedSettings.aiCustomModelId;
+    } else if (
+      provider.models.length > 0 &&
+      !provider.models.some((model) => model.id === normalizedSettings.aiModelId)
+    ) {
+      normalizedSettings.aiModelId = provider.models[0].id;
+    }
   }
 
   normalizedSettings.aiAutocompleteModelId =

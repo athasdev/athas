@@ -196,6 +196,17 @@ describe("settings normalization", () => {
     ).toBe("grok-build-0.1");
   });
 
+  it("preserves unknown AI provider selections for extension providers loaded later", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      aiProviderId: "extension-provider",
+      aiModelId: "extension-model",
+    });
+
+    expect(normalized.aiProviderId).toBe("extension-provider");
+    expect(normalized.aiModelId).toBe("extension-model");
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [

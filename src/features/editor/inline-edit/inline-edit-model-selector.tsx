@@ -6,11 +6,12 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
+import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
+import { getProviderById } from "@/features/ai/types/providers.types";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import Command, {
@@ -49,7 +50,7 @@ export const InlineEditModelSelector = ({
   const subscription = useAuthStore((state) => state.subscription);
   const { dynamicModels, setDynamicModels, hasProviderApiKey } = useAIChatStore();
 
-  const providers = useMemo(() => getAvailableProviders(), []);
+  const providers = useAvailableProviders();
   const currentProvider = getProviderById(providerId);
   const currentProviderName = currentProvider?.name ?? providerId;
   const selectedProvider = selectedProviderId ? getProviderById(selectedProviderId) : null;

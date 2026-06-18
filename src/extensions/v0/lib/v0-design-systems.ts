@@ -1,5 +1,5 @@
 import type { Settings } from "@/features/settings/types/settings.types";
-import type { V0DesignSystemProfile } from "@/features/ai/types/v0-design-system.types";
+import type { V0DesignSystemProfile } from "@/extensions/v0/types/v0-design-system.types";
 
 const MAX_V0_DESIGN_SYSTEMS = 50;
 const MAX_FIELD_LENGTH = 500;

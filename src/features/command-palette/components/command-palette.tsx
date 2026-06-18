@@ -9,7 +9,6 @@ import { IconThemeSelectorContent } from "@/features/command-palette/components/
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
-import { V0DesignSystemCommandContent } from "@/features/ai/components/v0-design-system-command";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
@@ -60,6 +59,7 @@ import { createWindowActions } from "../constants/window-actions";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";
 import { useActionsStore } from "../stores/action-history.store";
+import { useCommandPaletteViews } from "../services/command-palette-view-registry";
 
 const CommandPalette = () => {
   // Get data from stores
@@ -142,6 +142,7 @@ const CommandPalette = () => {
   const gitStore = useGitStore();
   const { checkAuth: checkGitHubAuth } = useGitHubStore().actions;
   const extensionCommands = useUIExtensionStore.use.commands();
+  const extensionViews = useCommandPaletteViews();
   const { showToast } = useToast();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
   const openOnboarding = useOnboardingStore((state) => state.openPreview);
@@ -243,9 +244,11 @@ const CommandPalette = () => {
       (command): Action => ({
         id: `extension-command:${command.id}`,
         label: command.title,
-        description: command.category ?? "Installed extension command",
+        description: command.category
+          ? `${command.category} extension command`
+          : "Installed extension command",
         icon: <Puzzle />,
-        category: "Extensions",
+        category: command.category ?? "Extensions",
         action: () => {
           onClose();
           void Promise.resolve(command.execute()).catch((error) => {
@@ -392,6 +395,8 @@ const CommandPalette = () => {
 
   if (!isVisible) return null;
 
+  const extensionView = extensionViews.get(currentView);
+
   return (
     <Command isVisible={isVisible} onClose={onClose}>
       {currentView === "quick-question" ? (
@@ -418,12 +423,6 @@ const CommandPalette = () => {
           onThemeChange={handleIconThemeChange}
           currentTheme={settings.iconTheme}
         />
-      ) : currentView === "v0-design-systems" ? (
-        <V0DesignSystemCommandContent
-          isActive={currentView === "v0-design-systems"}
-          onBack={popView}
-          onClose={onClose}
-        />
       ) : currentView === "local-history" ? (
         <LocalHistoryCommandContent
           isActive={currentView === "local-history"}
@@ -439,6 +438,12 @@ const CommandPalette = () => {
           onBack={popView}
           onClose={onClose}
         />
+      ) : extensionView ? (
+        extensionView.render({
+          isActive: true,
+          onBack: popView,
+          onClose,
+        })
       ) : (
         <>
           <CommandHeader

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { V0Provider } from "@/features/ai/services/providers/v0-provider";
+import { V0Provider } from "@/extensions/v0/providers/v0-provider";
 
 const provider = new V0Provider({
   id: "v0",

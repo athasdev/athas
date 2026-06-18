@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
+import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
   activateExtensionContributions,
@@ -12,6 +13,10 @@ import {
   matchesLanguageContribution,
 } from "../types/extension-contributions";
 import type { PlatformPackage } from "../types/extension-manifest";
+import {
+  markBundledContributionExtensionInstalled,
+  markBundledContributionExtensionUninstalled,
+} from "./bundled-contribution-install-state";
 import { extensionRegistry } from "./extension-registry";
 import {
   buildRuntimeManifest,
@@ -121,7 +126,7 @@ function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage
 }
 
 function isCompleteExtensionPackage(
-  extensionPackage: PlatformPackage | undefined,
+  extensionPackage: Partial<PlatformPackage> | undefined,
 ): extensionPackage is PlatformPackage {
   return (
     typeof extensionPackage?.downloadUrl === "string" &&
@@ -195,6 +200,18 @@ export async function installExtensionLifecycle(params: {
     return;
   }
 
+  if (isBundledContributionExtension(extension.manifest)) {
+    markBundledContributionExtensionInstalled(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "installed",
+    });
+    await activateExtensionContributions(extensionId, extension.manifest);
+    onNonLanguageInstalled();
+    return;
+  }
+
   const extensionPackage = resolveExtensionPackage(extension);
 
   await invoke("install_extension_from_url", {
@@ -236,6 +253,18 @@ export async function uninstallExtensionLifecycle(params: {
       state: "not-installed",
     });
     onLanguageUninstalled();
+    return;
+  }
+
+  if (isBundledContributionExtension(extension.manifest)) {
+    await deactivateExtensionContributions(extensionId, extension.manifest);
+    markBundledContributionExtensionUninstalled(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "not-installed",
+    });
+    onNonLanguageUninstalled();
     return;
   }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { ExtensionManifest } from "./extension-manifest";
 import {
+  getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
   getManifestActivationEvents,
@@ -113,5 +114,26 @@ describe("extension contribution normalization", () => {
     });
 
     expect(getManifestIconContributions(manifest).map((icon) => icon.id)).toEqual(["market"]);
+  });
+
+  it("reads AI provider contributions", () => {
+    const manifest = createManifest({
+      categories: ["AI"],
+      contributes: {
+        aiProviders: [
+          {
+            id: "v0",
+            name: "v0",
+            apiUrl: "https://api.v0.dev/v1/chats",
+            requiresApiKey: true,
+            models: [{ id: "v0-auto", name: "v0 Auto", maxTokens: 50000 }],
+          },
+        ],
+      },
+    });
+
+    expect(getManifestAIProviderContributions(manifest).map((provider) => provider.id)).toEqual([
+      "v0",
+    ]);
   });
 });

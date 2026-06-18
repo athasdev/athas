@@ -1,13 +1,16 @@
-interface ModelProvider {
+export interface ModelProvider {
   id: string;
   name: string;
   apiUrl: string;
   requiresApiKey: boolean;
   requiresAuth?: boolean;
+  apiKeyUrl?: string;
+  apiKeyPlaceholder?: string;
+  maxTokens?: number;
   models: Model[];
 }
 
-interface Model {
+export interface Model {
   id: string;
   name: string;
   maxTokens: number;
@@ -99,39 +102,6 @@ export const AI_PROVIDERS: ModelProvider[] = [
         id: "gpt-5.4-nano",
         name: "GPT-5.4 Nano",
         maxTokens: 400000,
-      },
-    ],
-  },
-  {
-    id: "v0",
-    name: "v0",
-    apiUrl: "https://api.v0.dev/v1/chats",
-    requiresApiKey: true,
-    models: [
-      {
-        id: "v0-auto",
-        name: "v0 Auto",
-        maxTokens: 50000,
-      },
-      {
-        id: "v0-mini",
-        name: "v0 Mini",
-        maxTokens: 50000,
-      },
-      {
-        id: "v0-pro",
-        name: "v0 Pro",
-        maxTokens: 50000,
-      },
-      {
-        id: "v0-max",
-        name: "v0 Max",
-        maxTokens: 50000,
-      },
-      {
-        id: "v0-max-fast",
-        name: "v0 Max Fast",
-        maxTokens: 50000,
       },
     ],
   },
@@ -283,9 +253,47 @@ export const AI_PROVIDERS: ModelProvider[] = [
   },
 ];
 
+const extensionProviders = new Map<string, ModelProvider>();
+const providerIdsByExtension = new Map<string, Set<string>>();
+const providerListeners = new Set<() => void>();
+let availableProvidersSnapshot: ModelProvider[] | null = null;
+
+function emitProvidersChanged() {
+  availableProvidersSnapshot = null;
+  providerListeners.forEach((listener) => listener());
+}
+
+export function subscribeToAvailableProviders(listener: () => void): () => void {
+  providerListeners.add(listener);
+  return () => providerListeners.delete(listener);
+}
+
+export function registerModelProviderExtension(extensionId: string, provider: ModelProvider): void {
+  extensionProviders.set(provider.id, provider);
+
+  const extensionProviderIds = providerIdsByExtension.get(extensionId) ?? new Set<string>();
+  extensionProviderIds.add(provider.id);
+  providerIdsByExtension.set(extensionId, extensionProviderIds);
+
+  emitProvidersChanged();
+}
+
+export function unregisterModelProviderExtensions(extensionId: string): void {
+  const providerIds = providerIdsByExtension.get(extensionId);
+  if (!providerIds) return;
+
+  providerIds.forEach((providerId) => extensionProviders.delete(providerId));
+  providerIdsByExtension.delete(extensionId);
+  emitProvidersChanged();
+}
+
 // Get all API providers. CLI agents are handled by the agent selector.
 export const getAvailableProviders = (): ModelProvider[] => {
-  return AI_PROVIDERS;
+  if (!availableProvidersSnapshot) {
+    availableProvidersSnapshot = [...AI_PROVIDERS, ...extensionProviders.values()];
+  }
+
+  return availableProvidersSnapshot;
 };
 
 // Get installed agents only
@@ -294,7 +302,7 @@ export const getInstalledAgents = (): AIAgent[] => {
 };
 
 export const getProviderById = (id: string): ModelProvider | undefined => {
-  return AI_PROVIDERS.find((provider) => provider.id === id);
+  return getAvailableProviders().find((provider) => provider.id === id);
 };
 
 export const getModelById = (providerId: string, modelId: string): Model | undefined => {

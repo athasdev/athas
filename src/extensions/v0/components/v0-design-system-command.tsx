@@ -17,8 +17,8 @@ import {
   SHADCN_REGISTRY_DIRECTORY_URL,
   SUGGESTED_V0_DESIGN_SYSTEMS,
   type V0DesignSystemSuggestion,
-} from "@/features/ai/lib/v0-design-systems";
-import type { V0DesignSystemProfile } from "@/features/ai/types/v0-design-system.types";
+} from "@/extensions/v0/lib/v0-design-systems";
+import type { V0DesignSystemProfile } from "@/extensions/v0/types/v0-design-system.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

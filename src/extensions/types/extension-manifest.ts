@@ -55,6 +55,9 @@ export interface ExtensionManifest {
   // ACP agent contributions
   agents?: AgentContribution[];
 
+  // AI provider contributions
+  aiProviders?: AIProviderContribution[];
+
   // Color theme contributions
   themes?: ThemeContribution[];
 
@@ -122,6 +125,7 @@ export interface ExtensionManifest {
 export type ExtensionCategory =
   | "Language"
   | "Database"
+  | "AI"
   | "Agent"
   | "Icon Theme"
   | "Linter"
@@ -228,6 +232,25 @@ export interface AgentContribution {
     downloadUrl?: string;
     downloadUrls?: Partial<Record<PlatformArch | "win32-arm64", string>>;
   };
+}
+
+export interface AIProviderModelContribution {
+  id: string;
+  name: string;
+  maxTokens: number;
+  proOnly?: boolean;
+}
+
+export interface AIProviderContribution {
+  id: string;
+  name: string;
+  apiUrl: string;
+  requiresApiKey: boolean;
+  requiresAuth?: boolean;
+  maxTokens?: number;
+  apiKeyUrl?: string;
+  apiKeyPlaceholder?: string;
+  models: AIProviderModelContribution[];
 }
 
 export interface ThemeContribution {
@@ -420,14 +443,16 @@ export interface Snippet {
 }
 
 export interface InstallationMetadata {
+  type?: "download" | "bundled";
+
   // Download URL for the extension package (used when no platform-specific packages)
-  downloadUrl: string;
+  downloadUrl?: string;
 
   // Package size in bytes
-  size: number;
+  size?: number;
 
   // SHA256 checksum for verification
-  checksum: string;
+  checksum?: string;
 
   // Minimum editor version required
   minEditorVersion?: string;
@@ -462,6 +487,7 @@ export interface UIContributions {
   databases?: DatabaseProviderContribution[];
   databaseProviders?: DatabaseProviderContribution[];
   agents?: AgentContribution[];
+  aiProviders?: AIProviderContribution[];
   grammars?: GrammarConfiguration[];
   snippets?: SnippetContribution[];
   themes?: ThemeContribution[];

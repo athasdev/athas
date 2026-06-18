@@ -1,5 +1,9 @@
-import { AIProvider, type ProviderHeaders, type StreamRequest } from "./ai-provider-interface";
-import { providerFetch } from "./provider-fetch";
+import {
+  AIProvider,
+  type ProviderHeaders,
+  type StreamRequest,
+} from "@/features/ai/services/providers/ai-provider-interface";
+import { providerFetch } from "@/features/ai/services/providers/provider-fetch";
 
 const V0_API_BASE_URL = "https://api.v0.dev/v1";
 const V0_MODEL_CONFIGURATION_IDS = new Set([

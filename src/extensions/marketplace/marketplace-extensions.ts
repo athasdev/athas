@@ -1,5 +1,6 @@
 import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
 import {
+  getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
 } from "../types/extension-contributions";
@@ -32,6 +33,7 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
   return rawCategories.map((category) => {
     const normalized = category.trim().toLowerCase();
     if (normalized === "database") return "Database";
+    if (normalized === "ai") return "AI";
     if (normalized === "agent") return "Agent";
     if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
       return "Icon Theme";
@@ -52,6 +54,7 @@ function isContributionExtension(manifest: ExtensionManifest): boolean {
     getManifestDatabaseContributions(manifest).length ||
     manifest.agents?.length ||
     manifest.contributes?.agents?.length ||
+    getManifestAIProviderContributions(manifest).length ||
     manifest.themes?.length ||
     manifest.contributes?.themes?.length ||
     getManifestIconContributions(manifest).length,

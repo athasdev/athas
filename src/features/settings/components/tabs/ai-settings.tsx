@@ -8,6 +8,7 @@ import {
   KeyIcon as Key,
   LaptopIcon as Laptop,
   PaletteIcon as Palette,
+  SparkleIcon as Sparkles,
   ArrowClockwiseIcon as RefreshCw,
   ArrowCounterClockwiseIcon as RotateCcw,
   TrashIcon as Trash2,
@@ -16,9 +17,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { ModelSelector } from "@/features/ai/components/selectors/model-selector";
 import { ProviderSelector } from "@/features/ai/components/selectors/provider-selector";
+import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
+import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp.types";
-import { getAvailableProviders } from "@/features/ai/types/providers.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { LoadingIndicator } from "@/ui/loading";
@@ -107,6 +109,8 @@ export const AISettings = () => {
 
   const isOllamaCloud = isOllamaCloudUrl(ollamaUrl);
   const needsApiKey = isOllamaCloud;
+  const providers = useAvailableProviders();
+  const providerSettingsActions = useAIProviderSettingsActions(settings.aiProviderId);
 
   useEffect(() => {
     const detectAgents = async () => {
@@ -210,8 +214,6 @@ export const AISettings = () => {
       showToast({ message: "Failed to remove Ollama API key", type: "error" });
     }
   };
-
-  const providers = getAvailableProviders();
 
   const handleProviderChange = (newProviderId: string) => {
     const provider = providers.find((p) => p.id === newProviderId);
@@ -348,15 +350,10 @@ export const AISettings = () => {
     updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
   };
 
-  const providersNeedingAuth = getAvailableProviders().filter(
-    (p) => p.requiresAuth && !p.requiresApiKey,
-  );
+  const providersNeedingAuth = providers.filter((p) => p.requiresAuth && !p.requiresApiKey);
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
   const isCustomProviderSelected = settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID;
-  const activeV0DesignSystem = settings.v0DesignSystems.find(
-    (profile) => profile.id === settings.activeV0DesignSystemId,
-  );
   const showCustomProviderSettings =
     isCustomProviderSelected || Boolean(settings.aiCustomBaseUrl || settings.aiCustomModelId);
   const hasAutocompleteModels = autocompleteModels.length > 0;
@@ -433,20 +430,27 @@ export const AISettings = () => {
           </Button>
         </SettingRow>
 
-        <SettingRow
-          label="v0 Design System"
-          description={activeV0DesignSystem?.name || "Use v0 defaults"}
-        >
-          <Button
-            type="button"
-            variant="default"
-            onClick={() => openCommandPaletteView("v0-design-systems")}
-            className="w-fit"
-          >
-            <Palette />
-            <span>Select</span>
-          </Button>
-        </SettingRow>
+        {providerSettingsActions.map((action) => {
+          const Icon = action.icon === "sparkles" ? Sparkles : Palette;
+
+          return (
+            <SettingRow
+              key={action.id}
+              label={action.label}
+              description={action.getDescription?.() || "Configure provider extension"}
+            >
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => openCommandPaletteView(action.commandPaletteViewId)}
+                className="w-fit"
+              >
+                <Icon />
+                <span>{action.buttonLabel}</span>
+              </Button>
+            </SettingRow>
+          );
+        })}
       </Section>
 
       {showCustomProviderSettings && (

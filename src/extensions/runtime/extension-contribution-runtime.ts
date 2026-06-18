@@ -7,6 +7,10 @@ import { themeRegistry } from "../themes/theme-registry";
 import type { ThemeDefinition } from "../themes/types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
+import {
+  activateBundledContributionModule,
+  deactivateBundledContributionModule,
+} from "../bundled/bundled-contribution-modules";
 
 function getThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
   return [...(manifest.themes ?? []), ...(manifest.contributes?.themes ?? [])];
@@ -216,12 +220,15 @@ export async function activateExtensionContributions(
       extensionId,
     });
   }
+
+  await activateBundledContributionModule(extensionId, manifest);
 }
 
 export async function deactivateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
+  await deactivateBundledContributionModule(extensionId, manifest);
   fallbackThemeIfNeeded(getThemeContributions(manifest));
   fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
   themeRegistry.unregisterThemesByExtension(extensionId);

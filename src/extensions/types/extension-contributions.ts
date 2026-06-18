@@ -2,6 +2,7 @@ import type {
   CommandContribution,
   DatabaseProviderContribution,
   ExtensionManifest,
+  AIProviderContribution,
   IconThemeContribution,
   KeybindingContribution,
   LanguageContribution,
@@ -84,6 +85,12 @@ export function getManifestDatabaseContributions(
     ...(manifest.contributes?.databases || []),
     ...(manifest.contributes?.databaseProviders || []),
   ];
+}
+
+export function getManifestAIProviderContributions(
+  manifest: ExtensionManifest,
+): AIProviderContribution[] {
+  return [...(manifest.aiProviders || []), ...(manifest.contributes?.aiProviders || [])];
 }
 
 export function getManifestIconContributions(manifest: ExtensionManifest): IconThemeContribution[] {

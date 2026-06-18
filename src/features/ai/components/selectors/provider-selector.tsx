@@ -1,7 +1,10 @@
 import { CheckIcon as Check } from "@phosphor-icons/react";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
+import {
+  useAvailableProviders,
+  useProviderById,
+} from "@/features/ai/hooks/use-available-providers";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -43,8 +46,8 @@ export function ProviderSelector({
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const providers = useMemo(() => getAvailableProviders(), []);
-  const currentProvider = getProviderById(providerId);
+  const providers = useAvailableProviders();
+  const currentProvider = useProviderById(providerId);
   const isComposer = appearance === "composer";
 
   const setOpen = (nextOpen: boolean) => {

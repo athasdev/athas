@@ -10,7 +10,11 @@ import {
   getModelById,
   getProviderById,
 } from "@/features/ai/types/providers.types";
-import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
+import {
+  buildProviderSystemPromptContext,
+  getProvider,
+  shouldUseTauriFetchForProvider,
+} from "@/features/ai/services/providers/ai-provider-registry";
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
@@ -20,10 +24,6 @@ import {
   resolveCustomProviderBaseUrl,
   resolveCustomProviderModelId,
 } from "@/features/ai/lib/custom-provider-config";
-import {
-  buildV0DesignSystemPrompt,
-  getActiveV0DesignSystem,
-} from "@/features/ai/lib/v0-design-systems";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -224,11 +224,9 @@ export const getChatCompletionStream = async (
 
     const contextPrompt = buildContextPrompt(context);
     let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
-    if (providerId === "v0") {
-      const designSystemPrompt = buildV0DesignSystemPrompt(getActiveV0DesignSystem(settings));
-      if (designSystemPrompt) {
-        systemPrompt = `${systemPrompt}\n\n${designSystemPrompt}`;
-      }
+    const providerSystemPromptContext = buildProviderSystemPromptContext(providerId, settings);
+    if (providerSystemPromptContext) {
+      systemPrompt = `${systemPrompt}\n\n${providerSystemPromptContext}`;
     }
 
     // Build messages array with conversation history
@@ -299,11 +297,7 @@ export const getChatCompletionStream = async (
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
     // Use Tauri's fetch for providers that don't support browser CORS
-    const needsTauriFetch =
-      providerId === "gemini" ||
-      providerId === "ollama" ||
-      providerId === "anthropic" ||
-      providerId === "v0";
+    const needsTauriFetch = shouldUseTauriFetchForProvider(providerId);
     const fetchFn = needsTauriFetch ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",

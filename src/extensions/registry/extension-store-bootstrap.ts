@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { extensionInstaller } from "../installer/extension-installer";
+import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
+import { readInstalledBundledContributionExtensionIds } from "./bundled-contribution-install-state";
 import { initializeLanguagePackager } from "../languages/language-packager";
 import { extensionRegistry } from "./extension-registry";
 import {
@@ -28,6 +30,7 @@ export async function loadInstalledExtensionsSnapshot(
 ): Promise<{
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
+  bundledContributionInstalled: string[];
   runtimeIssues: Map<string, ExtensionRuntimeIssue[]>;
 }> {
   let backendInstalled: ExtensionInstallationMetadata[] = [];
@@ -42,6 +45,7 @@ export async function loadInstalledExtensionsSnapshot(
   }
 
   const indexedDBInstalled = await extensionInstaller.listInstalled();
+  const bundledContributionInstalled = Array.from(readInstalledBundledContributionExtensionIds());
 
   await Promise.all(
     indexedDBInstalled.map(async (installed) => {
@@ -87,6 +91,7 @@ export async function loadInstalledExtensionsSnapshot(
   return {
     backendInstalled,
     indexedDBInstalled,
+    bundledContributionInstalled,
     runtimeIssues,
   };
 }
@@ -94,12 +99,33 @@ export async function loadInstalledExtensionsSnapshot(
 export function buildInstalledExtensionsMap(params: {
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
+  bundledContributionInstalled: string[];
   availableExtensions: Map<string, AvailableExtension>;
 }): Map<string, ExtensionInstallationMetadata> {
-  const { backendInstalled, indexedDBInstalled, availableExtensions } = params;
+  const {
+    backendInstalled,
+    indexedDBInstalled,
+    bundledContributionInstalled,
+    availableExtensions,
+  } = params;
   const installedExtensions = new Map(
     backendInstalled.map((extension) => [extension.id, extension]),
   );
+
+  for (const extensionId of bundledContributionInstalled) {
+    const extension = availableExtensions.get(extensionId);
+    if (!extension || !isBundledContributionExtension(extension.manifest)) {
+      continue;
+    }
+
+    installedExtensions.set(extensionId, {
+      id: extensionId,
+      name: extension.manifest.displayName,
+      version: extension.manifest.version,
+      installed_at: new Date().toISOString(),
+      enabled: true,
+    });
+  }
 
   for (const installed of indexedDBInstalled) {
     const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
