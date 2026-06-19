@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   buildVisibleFileTreeRows,
+  collectFileTreeSearchHits,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
   getStickyAncestorRow,
@@ -175,6 +176,18 @@ describe("buildVisibleFileTreeRows", () => {
       "/root/src/features",
       "/root/src/features/file-explorer",
     ]);
+  });
+});
+
+describe("collectFileTreeSearchHits", () => {
+  test("collects matching file-tree paths in display order", () => {
+    expect(collectFileTreeSearchHits(tree, "file-tree", 10)).toEqual([
+      { path: "/root/src/features/file-explorer/file-tree.tsx" },
+    ]);
+  });
+
+  test("limits collected matches", () => {
+    expect(collectFileTreeSearchHits(tree, "src", 1)).toEqual([{ path: "/root/src" }]);
   });
 });
 

@@ -99,6 +99,7 @@ export function getEditorWorkspaceScope(
 ): "workspace" | "external" | undefined {
   if (
     filePath.startsWith("remote://") ||
+    filePath.startsWith("wsl://") ||
     filePath.startsWith("diff://") ||
     filePath.startsWith("terminal://") ||
     filePath.startsWith("webview://")

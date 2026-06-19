@@ -54,6 +54,7 @@ athas-runtime = { path = "../crates/runtime" }
 athas-tooling = { path = "../crates/tooling", default-features = false }
 athas-lsp = { path = "../crates/lsp", default-features = false }
 athas-remote = { path = "../crates/remote", default-features = false }
+athas-wsl = { path = "../crates/wsl" }
 athas-project = { path = "../crates/project" }
 athas-version-control = { path = "../crates/version-control" }
 athas-extensions = { path = "../crates/extensions", default-features = false }

@@ -138,12 +138,21 @@ impl TerminalConnection {
             let default_shell = default_shell();
             let shell_path = Self::resolve_shell_path(selected_shell_id, &default_shell);
             let mut builder = CommandBuilder::new(&shell_path);
-            Self::configure_shell_startup(&mut builder, selected_shell_id, &shell_path);
+            Self::configure_shell_startup(&mut builder, config, selected_shell_id, &shell_path);
 
             (builder, Some(shell_path))
          };
 
-      if let Some(working_dir) = &config.working_directory {
+      let selected_shell_path = shell_path.as_deref();
+      let should_set_host_cwd = !Self::is_wsl_shell(selected_shell_id, selected_shell_path)
+         || config
+            .working_directory
+            .as_deref()
+            .is_some_and(|path| !athas_wsl::is_wsl_path(path));
+
+      if let Some(working_dir) = &config.working_directory
+         && should_set_host_cwd
+      {
          Self::ensure_working_directory_access(working_dir)?;
          cmd.cwd(working_dir);
       }
@@ -208,17 +217,75 @@ impl TerminalConnection {
       default_shell.to_string()
    }
 
-   fn configure_shell_startup(cmd: &mut CommandBuilder, shell_id: Option<&str>, shell_path: &str) {
+   fn configure_shell_startup(
+      cmd: &mut CommandBuilder,
+      config: &TerminalConfig,
+      shell_id: Option<&str>,
+      shell_path: &str,
+   ) {
       if cfg!(target_os = "windows") {
-         cmd.args(Self::shell_startup_args(shell_id, shell_path));
+         cmd.args(Self::shell_startup_args(config, shell_id, shell_path));
       }
    }
 
-   fn shell_startup_args(shell_id: Option<&str>, shell_path: &str) -> &'static [&'static str] {
+   fn shell_startup_args(
+      config: &TerminalConfig,
+      shell_id: Option<&str>,
+      shell_path: &str,
+   ) -> Vec<String> {
       if Self::is_powershell_shell(shell_id, shell_path) {
-         &["-NoLogo"]
+         return vec!["-NoLogo".to_string()];
+      }
+
+      if Self::is_wsl_shell(shell_id, Some(shell_path)) {
+         return Self::wsl_startup_args(config, shell_id);
+      }
+
+      Vec::new()
+   }
+
+   fn wsl_startup_args(config: &TerminalConfig, shell_id: Option<&str>) -> Vec<String> {
+      let mut args = Vec::new();
+      let mut distribution = config.wsl_distribution.clone().or_else(|| {
+         shell_id
+            .and_then(athas_wsl::parse_wsl_shell_id)
+            .map(str::to_string)
+      });
+      let mut working_directory = config.wsl_working_directory.clone();
+
+      if let Some(working_dir) = config.working_directory.as_deref() {
+         if athas_wsl::is_wsl_path(working_dir) {
+            if let Ok(parsed) = athas_wsl::parse_wsl_uri(working_dir) {
+               distribution = Some(parsed.distro);
+               working_directory = Some(parsed.linux_path);
+            }
+         } else if working_directory.is_none() {
+            working_directory = athas_wsl::windows_path_to_wsl_path(working_dir);
+         }
+      }
+
+      if let Some(distribution) = distribution.filter(|value| !value.trim().is_empty()) {
+         args.push("--distribution".to_string());
+         args.push(distribution);
+      }
+
+      if let Some(working_directory) = working_directory.filter(|value| !value.trim().is_empty()) {
+         args.push("--cd".to_string());
+         args.push(working_directory);
+      }
+
+      args
+   }
+
+   fn is_wsl_shell(shell_id: Option<&str>, shell_path: Option<&str>) -> bool {
+      if shell_id.is_some_and(|id| {
+         id.eq_ignore_ascii_case("wsl") || athas_wsl::parse_wsl_shell_id(id).is_some()
+      }) {
+         true
       } else {
-         &[]
+         shell_path.is_some_and(|path| {
+            Self::executable_name(path).is_some_and(|name| name.eq_ignore_ascii_case("wsl.exe"))
+         })
       }
    }
 
@@ -248,6 +315,8 @@ impl TerminalConnection {
       } else if shell_id.eq_ignore_ascii_case("nu") {
          Some("nu.exe")
       } else if shell_id.eq_ignore_ascii_case("wsl") {
+         Some("wsl.exe")
+      } else if athas_wsl::parse_wsl_shell_id(shell_id).is_some() {
          Some("wsl.exe")
       } else if shell_id.eq_ignore_ascii_case("bash") {
          Some("bash.exe")
@@ -516,6 +585,8 @@ mod tests {
       TerminalConfig {
          working_directory: None,
          shell: None,
+         wsl_distribution: None,
+         wsl_working_directory: None,
          environment: Some(environment),
          command: Some("node".to_string()),
          args: None,
@@ -526,9 +597,13 @@ mod tests {
 
    #[test]
    fn powershell_startup_args_keep_profiles_enabled() {
-      let args = TerminalConnection::shell_startup_args(Some("powershell"), "powershell.exe");
+      let args = TerminalConnection::shell_startup_args(
+         &config_with_env(HashMap::new()),
+         Some("powershell"),
+         "powershell.exe",
+      );
 
-      assert_eq!(args, ["-NoLogo"]);
+      assert_eq!(args, vec!["-NoLogo".to_string()]);
       assert!(
          !args
             .iter()
@@ -543,9 +618,13 @@ mod tests {
 
    #[test]
    fn pwsh_startup_args_keep_profiles_enabled() {
-      let args = TerminalConnection::shell_startup_args(Some("pwsh"), "pwsh.exe");
+      let args = TerminalConnection::shell_startup_args(
+         &config_with_env(HashMap::new()),
+         Some("pwsh"),
+         "pwsh.exe",
+      );
 
-      assert_eq!(args, ["-NoLogo"]);
+      assert_eq!(args, vec!["-NoLogo".to_string()]);
       assert!(
          !args
             .iter()
@@ -577,12 +656,20 @@ mod tests {
    #[test]
    fn non_powershell_shells_do_not_get_powershell_args() {
       assert_eq!(
-         TerminalConnection::shell_startup_args(Some("cmd"), "cmd.exe"),
-         [] as [&str; 0]
+         TerminalConnection::shell_startup_args(
+            &config_with_env(HashMap::new()),
+            Some("cmd"),
+            "cmd.exe"
+         ),
+         Vec::<String>::new()
       );
       assert_eq!(
-         TerminalConnection::shell_startup_args(Some("bash"), "bash.exe"),
-         [] as [&str; 0]
+         TerminalConnection::shell_startup_args(
+            &config_with_env(HashMap::new()),
+            Some("bash"),
+            "bash.exe"
+         ),
+         Vec::<String>::new()
       );
    }
 
@@ -599,6 +686,46 @@ mod tests {
       assert_eq!(
          TerminalConnection::windows_builtin_shell_executable("unknown"),
          None
+      );
+   }
+
+   #[test]
+   fn wsl_startup_args_include_distribution_and_linux_cwd() {
+      let mut config = config_with_env(HashMap::new());
+      config.command = None;
+      config.shell = Some("wsl:Ubuntu".to_string());
+      config.working_directory = Some("wsl://Ubuntu/home/me/project".to_string());
+
+      let args = TerminalConnection::shell_startup_args(&config, Some("wsl:Ubuntu"), "wsl.exe");
+
+      assert_eq!(
+         args,
+         vec![
+            "--distribution".to_string(),
+            "Ubuntu".to_string(),
+            "--cd".to_string(),
+            "/home/me/project".to_string()
+         ]
+      );
+   }
+
+   #[test]
+   fn wsl_startup_args_convert_windows_cwd_to_mount_path() {
+      let mut config = config_with_env(HashMap::new());
+      config.command = None;
+      config.shell = Some("wsl:Ubuntu".to_string());
+      config.working_directory = Some(r"C:\Users\me\project".to_string());
+
+      let args = TerminalConnection::shell_startup_args(&config, Some("wsl:Ubuntu"), "wsl.exe");
+
+      assert_eq!(
+         args,
+         vec![
+            "--distribution".to_string(),
+            "Ubuntu".to_string(),
+            "--cd".to_string(),
+            "/mnt/c/Users/me/project".to_string()
+         ]
       );
    }
 

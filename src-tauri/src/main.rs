@@ -197,6 +197,20 @@ fn main() {
          remote_terminal_write,
          remote_terminal_resize,
          close_remote_terminal,
+         // WSL commands
+         wsl_list_distributions,
+         wsl_get_home_dir,
+         wsl_read_directory,
+         wsl_read_file,
+         wsl_read_file_bytes,
+         wsl_write_file,
+         wsl_create_file,
+         wsl_create_directory,
+         wsl_delete_path,
+         wsl_rename_path,
+         wsl_copy_path,
+         wsl_get_symlink_info,
+         wsl_resolve_windows_path,
          // ACP agent commands (new)
          get_available_agents,
          install_acp_agent,
@@ -209,6 +223,8 @@ fn main() {
          set_acp_session_mode,
          set_acp_session_config_option,
          list_acp_sessions,
+         delete_acp_session,
+         logout_acp_agent,
          cancel_acp_prompt,
          // Theme commands
          get_system_theme,
@@ -285,6 +301,7 @@ fn main() {
          filter_completions,
          fff_set_workspace,
          fff_search_files,
+         fff_scan_status,
          fff_track_access,
          // Search commands
          search_files_content,

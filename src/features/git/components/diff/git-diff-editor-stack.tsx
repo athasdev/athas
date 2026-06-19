@@ -224,7 +224,13 @@ function EmbeddedDiffSectionEditor({
     [fontSize, editorLineHeight, zoomLevel],
   );
   const resolveAbsolutePath = useCallback(() => {
-    if (sourcePath.startsWith("/") || sourcePath.startsWith("remote://")) return sourcePath;
+    const isAbsoluteProviderPath =
+      sourcePath.startsWith("/") ||
+      sourcePath.startsWith("remote://") ||
+      sourcePath.startsWith("wsl://");
+    if (isAbsoluteProviderPath) {
+      return sourcePath;
+    }
     if (!rootFolderPath) return sourcePath;
     return `${rootFolderPath.replace(/\/$/, "")}/${sourcePath.replace(/^\//, "")}`;
   }, [rootFolderPath, sourcePath]);
@@ -541,12 +547,15 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const handleOpenFile = useCallback(
     async (filePath: string) => {
       const repoPath = multiDiff.repoPath ?? rootFolderPath;
-      const targetPath =
-        filePath.startsWith("/") || filePath.startsWith("remote://")
-          ? filePath
-          : repoPath
-            ? joinPath(repoPath, filePath)
-            : filePath;
+      const isAbsoluteProviderPath =
+        filePath.startsWith("/") ||
+        filePath.startsWith("remote://") ||
+        filePath.startsWith("wsl://");
+      const targetPath = isAbsoluteProviderPath
+        ? filePath
+        : repoPath
+          ? joinPath(repoPath, filePath)
+          : filePath;
 
       await useFileSystemStore
         .getState()

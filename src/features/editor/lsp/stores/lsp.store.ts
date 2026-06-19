@@ -270,6 +270,7 @@ export const useLspStore = createSelectors(
           !filePath ||
           !isLanguageSupported?.(filePath) ||
           filePath.startsWith("remote://") ||
+          filePath.startsWith("wsl://") ||
           !editorRef.current
         ) {
           return;

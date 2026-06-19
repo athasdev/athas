@@ -5,6 +5,8 @@ use std::collections::HashMap;
 pub struct TerminalConfig {
    pub working_directory: Option<String>,
    pub shell: Option<String>,
+   pub wsl_distribution: Option<String>,
+   pub wsl_working_directory: Option<String>,
    pub environment: Option<HashMap<String, String>>,
    pub command: Option<String>,
    pub args: Option<Vec<String>>,

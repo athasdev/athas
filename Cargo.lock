@@ -586,6 +586,7 @@ dependencies = [
  "athas-terminal",
  "athas-tooling",
  "athas-version-control",
+ "athas-wsl",
  "base64 0.21.7",
  "chrono",
  "colored",
@@ -792,6 +793,7 @@ name = "athas-terminal"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "athas-wsl",
  "dirs 5.0.1",
  "log",
  "portable-pty",
@@ -834,6 +836,13 @@ dependencies = [
  "log",
  "serde",
  "tempfile",
+]
+
+[[package]]
+name = "athas-wsl"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

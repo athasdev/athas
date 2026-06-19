@@ -440,6 +440,11 @@ export class LspClient {
     try {
       logger.debug("LSPClient", "Starting LSP with workspace:", workspacePath);
 
+      if (workspacePath.startsWith("wsl://") || filePath?.startsWith("wsl://")) {
+        logger.debug("LSPClient", `Skipping host LSP for WSL workspace ${workspacePath}`);
+        return;
+      }
+
       // Get LSP server info from extension registry if file path is provided
       let serverPath: string | undefined;
       let serverArgs: string[] | undefined;
@@ -552,6 +557,11 @@ export class LspClient {
   ): Promise<boolean> {
     try {
       logger.debug("LSPClient", "Starting LSP for file:", filePath);
+
+      if (workspacePath.startsWith("wsl://") || filePath.startsWith("wsl://")) {
+        logger.debug("LSPClient", `Skipping host LSP for WSL file ${filePath}`);
+        return false;
+      }
 
       // Get LSP server info from extension registry
       const [{ extensionRegistry }, { getLanguageToolConfigSet }] = await Promise.all([

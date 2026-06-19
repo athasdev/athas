@@ -86,6 +86,12 @@ import {
   buildRemoteWorkspaceTree,
   type RemoteDirectoryEntry,
 } from "../controllers/remote-workspace";
+import {
+  buildWslWorkspaceTree,
+  getWslProjectName,
+  type WslDirectoryEntry,
+} from "@/features/wsl/controllers/wsl-workspace";
+import { buildWslPath, parseWslPath, resolveWslTargetPath } from "@/features/wsl/utils/wsl-path";
 import { shouldIgnore, updateDirectoryContents } from "../controllers/utils";
 import { switchToNextAvailableProjectAfterClose } from "../controllers/workspace-project-tabs";
 import { prepareProjectTransitionWithUnsavedBuffers } from "../controllers/workspace-project-transition";
@@ -147,9 +153,54 @@ const getWorkspaceFolderPaths = (get: FileSystemGet) =>
 
 const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
   const projectName = getFolderName(path);
-  const entries = await readDirectoryContents(path);
+  const entries = await readProviderDirectoryEntries(path);
   const fileTree = sortFileEntries(entries);
   return wrapWithRootFolder(fileTree, path, projectName)[0];
+};
+
+const toRemoteFileEntries = (
+  connectionId: string,
+  entries: Array<{ name: string; path: string; is_dir: boolean }>,
+): FileEntry[] =>
+  entries.map((entry) => ({
+    name: entry.name,
+    path: `remote://${connectionId}${entry.path}`,
+    isDir: entry.is_dir,
+    children: entry.is_dir ? [] : undefined,
+  }));
+
+const toWslFileEntries = (entries: WslDirectoryEntry[]): FileEntry[] =>
+  entries.map((entry) => ({
+    name: entry.name,
+    path: entry.path,
+    isDir: entry.is_dir,
+    children: entry.is_dir ? [] : undefined,
+    isSymlink: entry.is_symlink,
+    symlinkTarget: entry.target ?? undefined,
+  }));
+
+const readProviderDirectoryEntries = async (path: string): Promise<FileEntry[]> => {
+  const remoteInfo = parseRemotePath(path);
+  if (remoteInfo) {
+    const entries = await invoke<
+      Array<{ name: string; path: string; is_dir: boolean; size: number }>
+    >("ssh_read_directory", {
+      connectionId: remoteInfo.connectionId,
+      path: remoteInfo.remotePath,
+    });
+    return toRemoteFileEntries(remoteInfo.connectionId, entries);
+  }
+
+  const wslInfo = parseWslPath(path);
+  if (wslInfo) {
+    const entries = await invoke<WslDirectoryEntry[]>("wsl_read_directory", {
+      distro: wslInfo.distro,
+      path: wslInfo.linuxPath,
+    });
+    return toWslFileEntries(entries);
+  }
+
+  return sortFileEntries(await readDirectoryContents(path));
 };
 
 let latestFileOpenRequestId = 0;
@@ -177,7 +228,7 @@ const recordLocalFileAccess = (
   workspaceRootPath: string | undefined,
   workspaceFolderPaths: string[] = [],
 ) => {
-  if (path.startsWith("remote://") || path.startsWith("diff://")) {
+  if (path.startsWith("remote://") || path.startsWith("wsl://") || path.startsWith("diff://")) {
     return;
   }
 
@@ -446,6 +497,26 @@ const initializeRemoteWorkspaceSession = async (remotePath: string, get: FileSys
     toast.warning("Remote workspace opened, but saved tabs could not be restored.");
     frontendTrace("warn", "workspace-open", "remoteWorkspace:restoreSession:error", {
       path: remotePath,
+      error: getErrorMessage(error),
+    });
+  }
+};
+
+const initializeWslWorkspaceSession = async (wslPath: string, get: FileSystemGet) => {
+  await useFileWatcherStore.getState().setProjectRoot("");
+  useGitStore.getState().actions.setWorkspaceGitStatus(null, null);
+
+  try {
+    const restoreStartedAt = performance.now();
+    logWorkspaceOpenStep("start", "wslWorkspace:restoreSession", wslPath);
+    await get().restoreSession(wslPath);
+    logWorkspaceOpenStep("end", "wslWorkspace:restoreSession", wslPath, restoreStartedAt);
+  } catch (error) {
+    logWorkspaceOpenStep("error", "wslWorkspace:restoreSession", wslPath);
+    console.error("Failed to restore WSL workspace session:", error);
+    toast.warning("WSL workspace opened, but saved tabs could not be restored.");
+    frontendTrace("warn", "workspace-open", "wslWorkspace:restoreSession:error", {
+      path: wslPath,
       error: getErrorMessage(error),
     });
   }
@@ -770,6 +841,11 @@ export const useFileSystemStore = createSelectors(
       },
 
       handleOpenFolderByPath: async (path: string) => {
+        const wslInfo = parseWslPath(path);
+        if (wslInfo) {
+          return await get().handleOpenWslProject(wslInfo.distro, wslInfo.linuxPath);
+        }
+
         return await openLocalWorkspace(
           {
             path,
@@ -791,7 +867,7 @@ export const useFileSystemStore = createSelectors(
           return await get().handleOpenFolderByPath(selectedPath);
         }
 
-        if (selectedPath.startsWith("remote://")) {
+        if (selectedPath.startsWith("remote://") || selectedPath.startsWith("wsl://")) {
           toast.warning("Add Folder to Workspace is only available for local folders.");
           return false;
         }
@@ -934,6 +1010,64 @@ export const useFileSystemStore = createSelectors(
         }
       },
 
+      handleOpenWslProject: async (distro: string, linuxPath: string) => {
+        persistCurrentProjectUiState(get().rootFolderPath);
+
+        set((state) => {
+          state.isFileTreeLoading = true;
+        });
+
+        try {
+          const normalizedLinuxPath = linuxPath || "/";
+          const entries = await invoke<WslDirectoryEntry[]>("wsl_read_directory", {
+            distro,
+            path: normalizedLinuxPath,
+          });
+          const { wslPath, wrappedFileTree } = buildWslWorkspaceTree(
+            distro,
+            normalizedLinuxPath,
+            entries,
+          );
+          const projectName = getWslProjectName(distro, normalizedLinuxPath);
+
+          useWorkspaceTabsStore.getState().addProjectTab(wslPath, projectName);
+          const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
+          useFileTreeStore.getState().setExpandedPaths(new Set([wslPath]));
+
+          const { setRootFolderPath, setProjectName, setActiveProjectId } =
+            useProjectStore.getState();
+          setRootFolderPath(wslPath);
+          setProjectName(projectName);
+          setActiveProjectId(activeProjectTab?.id);
+          restoreProjectUiState(wslPath);
+
+          set((state) => {
+            state.isFileTreeLoading = false;
+            state.files = wrappedFileTree;
+            state.rootFolderPath = wslPath;
+            state.workspaceFolders = [{ path: wslPath, name: projectName, isPrimary: true }];
+            state.filesVersion++;
+            state.projectFilesCache = undefined;
+          });
+
+          useRecentFoldersStore.getState().addToRecents(wslPath, {
+            activeProjectTabId: activeProjectTab?.id,
+            missing: false,
+          });
+
+          await initializeWslWorkspaceSession(wslPath, get);
+
+          return true;
+        } catch (error) {
+          console.error("Failed to open WSL project:", error);
+          toast.error(error instanceof Error ? error.message : "Failed to open WSL project.");
+          set((state) => {
+            state.isFileTreeLoading = false;
+          });
+          return false;
+        }
+      },
+
       handleFileSelect: async (
         path: string,
         isDir: boolean,
@@ -947,7 +1081,9 @@ export const useFileSystemStore = createSelectors(
           return;
         }
 
-        if (!isPreview) {
+        const selectedWslInfo = parseWslPath(path);
+
+        if (!isPreview && !selectedWslInfo) {
           fffTrackAccess(path).catch((error) => {
             console.error("[fff] track_access failed:", error);
           });
@@ -1006,20 +1142,25 @@ export const useFileSystemStore = createSelectors(
             const symlinkInfo = await getSymlinkInfo(path, workspaceRoot);
 
             if (symlinkInfo.is_symlink && symlinkInfo.target) {
-              const pathSeparator = path.includes("\\") ? "\\" : "/";
-              const pathParts = path.split(pathSeparator);
-              pathParts.pop();
-              const parentDir = pathParts.join(pathSeparator);
-
-              if (
-                symlinkInfo.target.startsWith(pathSeparator) ||
-                symlinkInfo.target.match(/^[a-zA-Z]:/)
-              ) {
-                resolvedPath = symlinkInfo.target;
+              const wslTargetPath = resolveWslTargetPath(path, symlinkInfo.target);
+              if (wslTargetPath) {
+                resolvedPath = wslTargetPath;
               } else {
-                resolvedPath = workspaceRoot
-                  ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
-                  : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
+                const pathSeparator = path.includes("\\") ? "\\" : "/";
+                const pathParts = path.split(pathSeparator);
+                pathParts.pop();
+                const parentDir = pathParts.join(pathSeparator);
+
+                if (
+                  symlinkInfo.target.startsWith(pathSeparator) ||
+                  symlinkInfo.target.match(/^[a-zA-Z]:/)
+                ) {
+                  resolvedPath = symlinkInfo.target;
+                } else {
+                  resolvedPath = workspaceRoot
+                    ? `${workspaceRoot}${pathSeparator}${symlinkInfo.target}`
+                    : `${parentDir}${pathSeparator}${symlinkInfo.target}`;
+                }
               }
             }
           } catch (error) {
@@ -1113,7 +1254,9 @@ export const useFileSystemStore = createSelectors(
         } else {
           let preloadedLocalText: string | null = null;
 
-          if (!path.startsWith("remote://") && !isKnownTextFile(resolvedPath)) {
+          const wslInfo = parseWslPath(path);
+
+          if (!path.startsWith("remote://") && !wslInfo && !isKnownTextFile(resolvedPath)) {
             try {
               const fileData = await readFile(resolvedPath);
 
@@ -1151,6 +1294,42 @@ export const useFileSystemStore = createSelectors(
             } catch (error) {
               console.error("Failed to inspect file bytes before opening:", error);
             }
+          } else if (wslInfo && !isKnownTextFile(resolvedPath)) {
+            try {
+              const fileData = await invoke<number[]>("wsl_read_file_bytes", {
+                distro: wslInfo.distro,
+                filePath: wslInfo.linuxPath,
+              });
+
+              if (isStaleRequest()) return;
+
+              const bytes = new Uint8Array(fileData);
+              if (isBinaryContent(bytes)) {
+                openBuffer(
+                  path,
+                  fileName,
+                  "",
+                  false,
+                  undefined,
+                  false,
+                  false,
+                  undefined,
+                  false,
+                  false,
+                  false,
+                  undefined,
+                  false,
+                  false,
+                  true,
+                );
+                fileOpenBenchmark.finish(path, "binary-sniff-buffer-opened");
+                return;
+              }
+
+              preloadedLocalText = textFileDecoder.decode(bytes);
+            } catch (error) {
+              console.error("Failed to inspect WSL file bytes before opening:", error);
+            }
           }
 
           // Check if external editor is enabled for text files
@@ -1162,7 +1341,7 @@ export const useFileSystemStore = createSelectors(
           const hasExternalEditorCommand =
             settings.editorEngine !== "custom" || settings.customEditorCommand.trim().length > 0;
 
-          if (usesExternalEditor && hasExternalEditorCommand) {
+          if (usesExternalEditor && hasExternalEditorCommand && !wslInfo) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
@@ -1207,6 +1386,13 @@ export const useFileSystemStore = createSelectors(
               connectionId,
               filePath: remotePath,
             });
+          } else if (wslInfo) {
+            content =
+              preloadedLocalText ??
+              (await invoke<string>("wsl_read_file", {
+                distro: wslInfo.distro,
+                filePath: wslInfo.linuxPath,
+              }));
           } else {
             content = preloadedLocalText ?? (await readFileContent(resolvedPath));
           }
@@ -1292,34 +1478,7 @@ export const useFileSystemStore = createSelectors(
         if (!isCurrentlyExpanded) {
           // Expand: load children if not present
           if (!folder.children || folder.children.length === 0) {
-            let childEntries: FileEntry[];
-            const isRemotePath = path.startsWith("remote://");
-            if (isRemotePath) {
-              const match = path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
-              if (!match) return;
-              const connectionId = match[1];
-              const remotePath = match[2] || "/";
-              const entries = await invoke<
-                Array<{
-                  name: string;
-                  path: string;
-                  is_dir: boolean;
-                  size: number;
-                }>
-              >("ssh_read_directory", {
-                connectionId,
-                path: remotePath,
-              });
-              childEntries = entries.map((entry) => ({
-                name: entry.name,
-                path: `remote://${connectionId}${entry.path}`,
-                isDir: entry.is_dir,
-                children: entry.is_dir ? [] : undefined,
-              }));
-            } else {
-              const entries = await readDirectoryContents(folder.path);
-              childEntries = sortFileEntries(entries);
-            }
+            const childEntries = await readProviderDirectoryEntries(folder.path);
 
             const updatedFiles = updateFileInTree(get().files, path, (item) => ({
               ...item,
@@ -1352,33 +1511,7 @@ export const useFileSystemStore = createSelectors(
           if (!useFileTreeStore.getState().isExpanded(ancestorPath)) {
             await get().toggleFolder(ancestorPath);
           } else if (!node.children || node.children.length === 0) {
-            let childEntries: FileEntry[];
-            const isRemotePath = ancestorPath.startsWith("remote://");
-            if (isRemotePath) {
-              const match = ancestorPath.match(/^remote:\/\/([^/]+)(\/.*)?$/);
-              if (!match) continue;
-              const connectionId = match[1];
-              const remotePath = match[2] || "/";
-              const entries = await invoke<
-                Array<{
-                  name: string;
-                  path: string;
-                  is_dir: boolean;
-                  size: number;
-                }>
-              >("ssh_read_directory", {
-                connectionId,
-                path: remotePath,
-              });
-              childEntries = entries.map((entry) => ({
-                name: entry.name,
-                path: `remote://${connectionId}${entry.path}`,
-                isDir: entry.is_dir,
-                children: entry.is_dir ? [] : undefined,
-              }));
-            } else {
-              childEntries = sortFileEntries(await readDirectoryContents(ancestorPath));
-            }
+            const childEntries = await readProviderDirectoryEntries(ancestorPath);
 
             set((state) => {
               state.files = updateFileInTree(state.files, ancestorPath, (item) => ({
@@ -1397,29 +1530,12 @@ export const useFileSystemStore = createSelectors(
         type QueueItem = {
           path: string;
           depth: number;
-          isRemote: boolean;
-          connectionId?: string;
-          remotePath?: string;
         };
         const q: QueueItem[] = [];
-
-        const isRemote = rootPath.startsWith("remote://");
-        let connectionId: string | undefined;
-        let remoteRoot: string | undefined;
-        if (isRemote) {
-          const match = rootPath.match(/^remote:\/\/([^/]+)(\/.*)?$/);
-          if (match) {
-            connectionId = match[1];
-            remoteRoot = match[2] || "/";
-          }
-        }
 
         q.push({
           path: rootPath,
           depth: 0,
-          isRemote,
-          connectionId,
-          remotePath: remoteRoot,
         });
         let processed = 0;
 
@@ -1443,54 +1559,12 @@ export const useFileSystemStore = createSelectors(
                       q.push({
                         path: c.path,
                         depth: item.depth + 1,
-                        isRemote: c.path.startsWith("remote://"),
-                        connectionId: item.connectionId,
-                        remotePath: c.path.replace(/^remote:\/\/[^/]+/, ""),
                       }),
                     );
                   return;
                 }
 
-                let entries: Array<{
-                  name: string;
-                  path: string;
-                  is_dir: boolean;
-                }>;
-                if (item.isRemote && item.connectionId) {
-                  const rp = item.remotePath || "/";
-                  const res = await invoke<
-                    Array<{
-                      name: string;
-                      path: string;
-                      is_dir: boolean;
-                      size: number;
-                    }>
-                  >("ssh_read_directory", {
-                    connectionId: item.connectionId,
-                    path: rp,
-                  });
-                  entries = res.map((e) => ({
-                    name: e.name,
-                    path: `remote://${item.connectionId}${e.path}`,
-                    is_dir: e.is_dir,
-                  }));
-                } else {
-                  const res = await readDirectoryContents(item.path);
-                  entries = res.map((e) => ({
-                    name: e.name,
-                    path: e.path,
-                    is_dir: e.isDir,
-                  }));
-                }
-
-                const children: FileEntry[] = sortFileEntries(
-                  entries.map((e) => ({
-                    name: e.name,
-                    path: e.path,
-                    isDir: e.is_dir,
-                    children: e.is_dir ? [] : undefined,
-                  })) as any,
-                );
+                const children = await readProviderDirectoryEntries(item.path);
 
                 set((state) => {
                   state.files = updateFileInTree(state.files, item.path, (it) => ({
@@ -1507,9 +1581,6 @@ export const useFileSystemStore = createSelectors(
                     q.push({
                       path: c.path,
                       depth: item.depth + 1,
-                      isRemote: c.path.startsWith("remote://"),
-                      connectionId: item.connectionId,
-                      remotePath: c.path.replace(/^remote:\/\/[^/]+/, ""),
                     }),
                   );
               } catch {}
@@ -1698,23 +1769,13 @@ export const useFileSystemStore = createSelectors(
           return;
         }
 
-        const remoteInfo = parseRemotePath(directoryPath);
-        let entries: any[];
-        if (remoteInfo) {
-          const remoteEntries = await invoke<
-            Array<{ name: string; path: string; is_dir: boolean; size: number }>
-          >("ssh_read_directory", {
-            connectionId: remoteInfo.connectionId,
-            path: remoteInfo.remotePath,
-          });
-          entries = remoteEntries.map((entry) => ({
-            name: entry.name,
-            path: `remote://${remoteInfo.connectionId}${entry.path}`,
-            is_dir: entry.is_dir,
-          }));
-        } else {
-          entries = await readDirectory(directoryPath);
-        }
+        const entries = (await readProviderDirectoryEntries(directoryPath)).map((entry) => ({
+          name: entry.name,
+          path: entry.path,
+          is_dir: entry.isDir,
+          is_symlink: entry.isSymlink,
+          target: entry.symlinkTarget,
+        }));
 
         set((state) => {
           const updated = updateDirectoryContents(state.files, directoryPath, entries as any[]);
@@ -1738,6 +1799,8 @@ export const useFileSystemStore = createSelectors(
 
         const remoteSource = parseRemotePath(oldPath);
         const remoteTarget = parseRemotePath(newPath);
+        const wslSource = parseWslPath(oldPath);
+        const wslTarget = parseWslPath(newPath);
         if (
           remoteSource &&
           remoteTarget &&
@@ -1747,6 +1810,19 @@ export const useFileSystemStore = createSelectors(
             connectionId: remoteSource.connectionId,
             sourcePath: remoteSource.remotePath,
             targetPath: remoteTarget.remotePath,
+          });
+        } else if (wslSource || wslTarget) {
+          if (!wslSource || !wslTarget || wslSource.distro !== wslTarget.distro) {
+            toast.error(
+              "Moving files between WSL distributions or local folders is not supported.",
+            );
+            return;
+          }
+
+          await invoke("wsl_rename_path", {
+            distro: wslSource.distro,
+            sourcePath: wslSource.linuxPath,
+            targetPath: wslTarget.linuxPath,
           });
         }
 
@@ -2022,6 +2098,14 @@ export const useFileSystemStore = createSelectors(
           toast.info("Reveal in folder is only available for local workspaces.");
           return;
         }
+
+        const wslInfo = parseWslPath(path);
+        if (wslInfo) {
+          const windowsPath = await invoke<string>("wsl_resolve_windows_path", { path });
+          await revealItemInDir(windowsPath);
+          return;
+        }
+
         await revealItemInDir(path);
       },
 
@@ -2077,6 +2161,56 @@ export const useFileSystemStore = createSelectors(
           return;
         }
 
+        const wslInfo = parseWslPath(path);
+        if (wslInfo) {
+          const fileEntry = findFileInTree(get().files, path);
+          if (!fileEntry) return;
+
+          const pathParts = wslInfo.linuxPath.split("/");
+          const base = pathParts.pop() || "";
+          const dir = pathParts.join("/") || "/";
+          const extMatch = base.match(/(\.[^.]*)$/);
+          const ext = extMatch?.[1] ?? "";
+          const nameWithoutExt = ext ? base.slice(0, -ext.length) : base;
+
+          let counter = 0;
+          let finalName = "";
+          let finalLinuxPath = "";
+          let finalPath = "";
+
+          do {
+            finalName =
+              counter === 0
+                ? `${nameWithoutExt}_copy${ext}`
+                : `${nameWithoutExt}_copy_${counter}${ext}`;
+            finalLinuxPath = dir === "/" ? `/${finalName}` : `${dir}/${finalName}`;
+            finalPath = buildWslPath(wslInfo.distro, finalLinuxPath);
+            counter++;
+          } while (findFileInTree(get().files, finalPath));
+
+          await invoke("wsl_copy_path", {
+            distro: wslInfo.distro,
+            sourcePath: wslInfo.linuxPath,
+            targetPath: finalLinuxPath,
+            isDirectory: fileEntry.isDir,
+          });
+
+          const newEntry: FileEntry = {
+            name: finalName,
+            path: finalPath,
+            isDir: fileEntry.isDir,
+            children: fileEntry.isDir ? [] : undefined,
+            isSymlink: fileEntry.isSymlink,
+            symlinkTarget: fileEntry.symlinkTarget,
+          };
+
+          set((state) => {
+            state.files = addFileToTree(state.files, buildWslPath(wslInfo.distro, dir), newEntry);
+            state.filesVersion++;
+          });
+          return;
+        }
+
         const dir = await dirname(path);
         const base = await basename(path);
         const ext = await extname(path);
@@ -2119,6 +2253,7 @@ export const useFileSystemStore = createSelectors(
       handleRenamePath: async (path: string, newName?: string) => {
         if (newName) {
           const remoteInfo = parseRemotePath(path);
+          const wslInfo = parseWslPath(path);
 
           try {
             let targetPath: string;
@@ -2133,6 +2268,17 @@ export const useFileSystemStore = createSelectors(
                 connectionId: remoteInfo.connectionId,
                 sourcePath: remoteInfo.remotePath,
                 targetPath: nextRemotePath,
+              });
+            } else if (wslInfo) {
+              const segments = wslInfo.linuxPath.split("/");
+              segments.pop();
+              const wslDir = segments.join("/") || "/";
+              const nextLinuxPath = wslDir === "/" ? `/${newName}` : `${wslDir}/${newName}`;
+              targetPath = buildWslPath(wslInfo.distro, nextLinuxPath);
+              await invoke("wsl_rename_path", {
+                distro: wslInfo.distro,
+                sourcePath: wslInfo.linuxPath,
+                targetPath: nextLinuxPath,
               });
             } else {
               const dir = await dirname(path);
@@ -2214,6 +2360,7 @@ export const useFileSystemStore = createSelectors(
           return true;
         }
         const remoteTabInfo = parseRemotePath(tab.path);
+        const wslTabInfo = parseWslPath(tab.path);
 
         const { buffers, actions: bufferActions } = useBufferStore.getState();
         const currentBuffers = [...buffers];
@@ -2235,7 +2382,7 @@ export const useFileSystemStore = createSelectors(
         });
 
         try {
-          if (!remoteTabInfo) {
+          if (!remoteTabInfo && !wslTabInfo) {
             const symlinkInfo = await getSymlinkInfo(tab.path);
             if (!symlinkInfo.is_dir) {
               throw new Error(`Project path is not a folder: ${tab.path}`);
@@ -2255,6 +2402,15 @@ export const useFileSystemStore = createSelectors(
             );
             if (!reconnected) {
               throw new Error(`Failed to reconnect remote workspace "${tab.name}".`);
+            }
+            useProjectStore.getState().setActiveProjectId(projectId);
+          } else if (wslTabInfo) {
+            const reopened = await get().handleOpenWslProject(
+              wslTabInfo.distro,
+              wslTabInfo.linuxPath,
+            );
+            if (!reopened) {
+              throw new Error(`Failed to reopen WSL workspace "${tab.name}".`);
             }
             useProjectStore.getState().setActiveProjectId(projectId);
           } else {
@@ -2428,7 +2584,7 @@ export const useFileSystemStore = createSelectors(
 
           const nextWorkspaceTabsStore = useWorkspaceTabsStore.getState();
 
-          if (!remoteTabInfo) {
+          if (!remoteTabInfo && !wslTabInfo) {
             nextWorkspaceTabsStore.removeProjectTab(tab.id);
           }
 

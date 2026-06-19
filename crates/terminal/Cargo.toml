@@ -10,6 +10,7 @@ linux = ["tauri/cef"]
 
 [dependencies]
 anyhow = "1.0"
+athas-wsl = { path = "../wsl" }
 dirs = "5.0"
 log = "0.4"
 portable-pty = "0.9"

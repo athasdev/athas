@@ -3,7 +3,10 @@ import { fffSearchFiles, type FffSearchHit } from "../lib/rust-api/search";
 import { MAX_RESULTS } from "../constants/limits";
 
 const canUseFffSearch = (rootPath: string | null | undefined): rootPath is string =>
-  Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
+  Boolean(rootPath) &&
+  !rootPath?.startsWith("remote://") &&
+  !rootPath?.startsWith("wsl://") &&
+  !rootPath?.startsWith("diff://");
 
 export const useFffSearch = (
   query: string,

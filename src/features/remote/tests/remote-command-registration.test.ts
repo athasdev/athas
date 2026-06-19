@@ -25,11 +25,35 @@ const remoteInvokeCommands = [
   "close_remote_terminal",
 ];
 
+const wslInvokeCommands = [
+  "wsl_list_distributions",
+  "wsl_get_home_dir",
+  "wsl_read_directory",
+  "wsl_read_file",
+  "wsl_read_file_bytes",
+  "wsl_write_file",
+  "wsl_create_file",
+  "wsl_create_directory",
+  "wsl_delete_path",
+  "wsl_rename_path",
+  "wsl_copy_path",
+  "wsl_get_symlink_info",
+  "wsl_resolve_windows_path",
+];
+
 describe("remote tauri command registration", () => {
   it("registers the full SSH remote command surface", () => {
     const mainRs = readFileSync(mainRsPath, "utf8");
 
     for (const command of remoteInvokeCommands) {
+      expect(mainRs).toContain(command);
+    }
+  });
+
+  it("registers the full WSL command surface", () => {
+    const mainRs = readFileSync(mainRsPath, "utf8");
+
+    for (const command of wslInvokeCommands) {
       expect(mainRs).toContain(command);
     }
   });

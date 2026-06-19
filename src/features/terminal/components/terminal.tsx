@@ -11,6 +11,7 @@ import {
 } from "react";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
+import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -298,6 +299,7 @@ export const XtermTerminal = ({
         const targetDirectory =
           workingDirectory || existingSession?.currentDirectory || rootFolderPath;
         const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
+        const wslInfo = targetDirectory ? parseWslPath(targetDirectory) : null;
         const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
 
         activeConnectionId = effectiveRemoteConnectionId
@@ -321,7 +323,10 @@ export const XtermTerminal = ({
           : await invoke<string>("create_terminal", {
               config: {
                 working_directory: targetDirectory || undefined,
-                shell: existingSession?.shell || undefined,
+                shell:
+                  existingSession?.shell || (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
+                wsl_distribution: wslInfo?.distro,
+                wsl_working_directory: wslInfo?.linuxPath,
                 rows: terminal.rows,
                 cols: terminal.cols,
               },

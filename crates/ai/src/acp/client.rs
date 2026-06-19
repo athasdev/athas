@@ -922,6 +922,8 @@ impl AthasAcpClient {
       let config = TerminalConfig {
          working_directory: working_dir,
          shell: None,
+         wsl_distribution: None,
+         wsl_working_directory: None,
          environment: env_map,
          command: Some(command),
          args: command_args,

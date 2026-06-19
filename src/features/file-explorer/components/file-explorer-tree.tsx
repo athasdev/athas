@@ -13,6 +13,7 @@ import { useEventListener } from "usehooks-ts";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import {
+  collectFileTreeSearchHits,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
   getStickyAncestorRows,
@@ -377,9 +378,20 @@ function FileExplorerTreeComponent({
     isTreeSearchActive && treeSearchQuery.trim() !== debouncedTreeSearchQuery.trim();
   const isTreeSearchSearching =
     isTreeSearchActive && (isTreeSearchSettling || isFffTreeSearchSearching);
+  const effectiveTreeSearchHits = useMemo(
+    () =>
+      rootFolderPath?.startsWith("wsl://")
+        ? collectFileTreeSearchHits(
+            filteredFiles,
+            debouncedTreeSearchQuery,
+            FILE_TREE_SEARCH_RESULT_LIMIT,
+          )
+        : treeSearchHits,
+    [debouncedTreeSearchQuery, filteredFiles, rootFolderPath, treeSearchHits],
+  );
   const treeSearchResult = useMemo(
-    () => filterFileTreeForFffHits(filteredFiles, treeSearchHits),
-    [filteredFiles, treeSearchHits],
+    () => filterFileTreeForFffHits(filteredFiles, effectiveTreeSearchHits),
+    [effectiveTreeSearchHits, filteredFiles],
   );
   const displayedFiles =
     isTreeSearchActive && !isTreeSearchSearching

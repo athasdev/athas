@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   FolderIcon as Folder,
@@ -12,6 +12,7 @@ import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-s
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import ConnectionDialog from "@/features/remote/components/connection-dialog";
 import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
 import {
@@ -22,6 +23,7 @@ import type {
   RemoteConnection,
   RemoteConnectionFormData,
 } from "@/features/remote/types/remote.types";
+import type { WslDistribution } from "@/features/wsl/controllers/wsl-workspace";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
 import Command, {
   CommandEmpty,
@@ -46,6 +48,7 @@ interface ProjectPickerProps {
 const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
+  const [wslDistributions, setWslDistributions] = useState<WslDistribution[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
@@ -59,7 +62,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const { openRecentFolder } = useRecentFoldersStore();
-  const { handleOpenFolder } = useFileSystemStore();
+  const { handleOpenFolder, handleOpenWslProject } = useFileSystemStore();
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
   // Load connections
@@ -71,14 +74,23 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     }
   }, []);
 
+  const loadWslDistributions = useCallback(async () => {
+    try {
+      setWslDistributions(await invoke<WslDistribution[]>("wsl_list_distributions"));
+    } catch {
+      setWslDistributions([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       setQuery("");
       setSelectedIndex(0);
       loadConnections();
+      loadWslDistributions();
       window.setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [isOpen, loadConnections]);
+  }, [isOpen, loadConnections, loadWslDistributions]);
 
   // Listen for connection status changes
   useEffect(() => {
@@ -153,6 +165,30 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     }
   };
 
+  const handleOpenWslDistribution = useCallback(
+    async (distribution: WslDistribution) => {
+      try {
+        const home = await invoke<string>("wsl_get_home_dir", { distro: distribution.name }).catch(
+          () => "/",
+        );
+        const selectedPath = await showPromptDialog("Linux project path", {
+          title: `Open ${distribution.name}`,
+          defaultValue: home,
+          placeholder: "/home/me/project",
+          confirmLabel: "Open",
+        });
+        if (!selectedPath) return;
+
+        onClose();
+        await handleOpenWslProject(distribution.name, selectedPath);
+      } catch (error) {
+        console.error("Failed to open WSL project:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to open WSL project.");
+      }
+    },
+    [handleOpenWslProject, onClose],
+  );
+
   const handleSaveConnection = async (formData: RemoteConnectionFormData): Promise<boolean> => {
     try {
       const connectionId = editingConnection?.id || `conn-${Date.now()}`;
@@ -187,6 +223,15 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     );
   }, [connections, normalizedQuery]);
 
+  const filteredWslDistributions = useMemo(() => {
+    if (!normalizedQuery) return wslDistributions;
+    return wslDistributions.filter((distribution) =>
+      ["wsl", distribution.name, distribution.state ?? "", String(distribution.version ?? "")].some(
+        (value) => value.toLowerCase().includes(normalizedQuery),
+      ),
+    );
+  }, [normalizedQuery, wslDistributions]);
+
   const commandEntries = useMemo(
     () => [
       ...filteredRecentFolders.map((folder) => ({
@@ -197,8 +242,17 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
         id: `remote:${connection.id}`,
         onSelect: () => void handleConnect(connection.id),
       })),
+      ...filteredWslDistributions.map((distribution) => ({
+        id: `wsl:${distribution.name}`,
+        onSelect: () => void handleOpenWslDistribution(distribution),
+      })),
     ],
-    [filteredConnections, filteredRecentFolders],
+    [
+      filteredConnections,
+      filteredRecentFolders,
+      filteredWslDistributions,
+      handleOpenWslDistribution,
+    ],
   );
 
   useEffect(() => {
@@ -334,7 +388,42 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             </div>
           ) : null}
 
-          {filteredRecentFolders.length === 0 && filteredConnections.length === 0 ? (
+          {filteredWslDistributions.length > 0 ? (
+            <div className="p-0">
+              {filteredWslDistributions.map((distribution) => {
+                const entryIndex = getEntryIndex(`wsl:${distribution.name}`);
+
+                return (
+                  <CommandItem
+                    key={distribution.name}
+                    isSelected={selectedIndex === entryIndex}
+                    onMouseEnter={() => setSelectedIndex(entryIndex)}
+                    onClick={() => handleOpenWslDistribution(distribution)}
+                    className="px-3 py-1.5"
+                  >
+                    <Server className="shrink-0 text-text-lighter" />
+                    <div className="flex min-w-0 flex-1 items-baseline">
+                      <CommandItemTitle>{distribution.name}</CommandItemTitle>
+                      <CommandItemMeta>WSL</CommandItemMeta>
+                      <CommandItemMeta>
+                        {distribution.state ?? "Installed"}
+                        {distribution.version ? `, WSL ${distribution.version}` : ""}
+                      </CommandItemMeta>
+                    </div>
+                    {distribution.is_default ? (
+                      <span className="shrink-0 rounded-full bg-accent/10 px-1 py-0.5 font-medium ui-text-xs text-accent">
+                        Default
+                      </span>
+                    ) : null}
+                  </CommandItem>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {filteredRecentFolders.length === 0 &&
+          filteredConnections.length === 0 &&
+          filteredWslDistributions.length === 0 ? (
             <CommandEmpty>
               {normalizedQuery ? `No projects match "${query}".` : "No recent projects"}
             </CommandEmpty>

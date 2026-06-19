@@ -95,6 +95,7 @@ describe("workspace file scope", () => {
 
   it("does not classify remote or virtual editor paths as local external files", () => {
     expect(getEditorWorkspaceScope("remote://conn/src/app.ts", "/workspace")).toBeUndefined();
+    expect(getEditorWorkspaceScope("wsl://Ubuntu/home/me/app.ts", "/workspace")).toBeUndefined();
     expect(getEditorWorkspaceScope("diff://unstaged/src%2Fapp.ts", "/workspace")).toBeUndefined();
   });
 

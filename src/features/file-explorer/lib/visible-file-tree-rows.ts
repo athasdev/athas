@@ -24,6 +24,34 @@ export interface FileTreeSearchHit {
   path: string;
 }
 
+export function collectFileTreeSearchHits(
+  files: FileEntry[],
+  query: string,
+  limit: number,
+): FileTreeSearchHit[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [];
+
+  const hits: FileTreeSearchHit[] = [];
+  const walk = (items: FileEntry[]) => {
+    for (const item of items) {
+      if (hits.length >= limit) return;
+
+      const searchableText = `${item.name} ${item.path}`.toLowerCase();
+      if (searchableText.includes(normalizedQuery)) {
+        hits.push({ path: item.path });
+      }
+
+      if (item.children) {
+        walk(item.children);
+      }
+    }
+  };
+
+  walk(files);
+  return hits;
+}
+
 function getCompactFolderChild(item: FileEntry): FileEntry | null {
   if (!item.isDir || item.isEditing || item.isRenaming || item.isNewItem || !item.children) {
     return null;

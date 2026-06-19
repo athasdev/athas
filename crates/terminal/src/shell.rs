@@ -7,6 +7,8 @@ pub struct Shell {
    pub name: String,
    pub exec_win: Option<String>,
    pub exec_unix: Option<String>,
+   pub kind: Option<String>,
+   pub wsl_distribution: Option<String>,
 }
 
 // Helper function to find appropriate executable for specific os
@@ -99,44 +101,72 @@ impl Shell {
    // Returns a list of shells and paths for each shell and respective OS exe type
    pub fn get_shell_list() -> Vec<Shell> {
       if cfg!(windows) {
-         vec![
+         let wsl_executable = shell_exe_in_path("wsl.exe");
+         let mut shells = vec![
             Shell {
                id: "cmd".into(),
                name: "Command Prompt".into(),
                exec_win: shell_exe_in_path("cmd.exe"),
                exec_unix: None,
+               kind: Some("windows".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "powershell".into(),
                name: "Windows PowerShell".into(),
                exec_win: shell_exe_in_path("powershell.exe"),
                exec_unix: None,
+               kind: Some("windows".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "pwsh".into(),
                name: "PowerShell Core".into(),
                exec_win: shell_exe_in_path("pwsh.exe"),
                exec_unix: None,
+               kind: Some("windows".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "nu".into(),
                name: "Nushell".into(),
                exec_win: shell_exe_in_path("nu.exe"),
                exec_unix: None,
+               kind: Some("windows".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "wsl".into(),
-               name: "Windows Subsystem for Linux".into(),
-               exec_win: shell_exe_in_path("wsl.exe"),
+               name: "WSL Default".into(),
+               exec_win: wsl_executable.clone(),
                exec_unix: None,
+               kind: Some("wsl".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "bash".into(),
                name: "Git Bash".into(),
                exec_win: shell_exe_in_path("bash.exe"),
                exec_unix: None,
+               kind: Some("windows".into()),
+               wsl_distribution: None,
             },
-         ]
+         ];
+
+         if wsl_executable.is_some()
+            && let Ok(distributions) = athas_wsl::list_distributions()
+         {
+            shells.extend(distributions.into_iter().map(|distribution| Shell {
+               id: athas_wsl::wsl_shell_id(&distribution.name),
+               name: format!("WSL: {}", distribution.name),
+               exec_win: wsl_executable.clone(),
+               exec_unix: None,
+               kind: Some("wsl".into()),
+               wsl_distribution: Some(distribution.name),
+            }));
+         }
+
+         shells
       } else {
          vec![
             Shell {
@@ -144,24 +174,32 @@ impl Shell {
                name: "Bash".into(),
                exec_win: None,
                exec_unix: shell_exe_in_path("bash"),
+               kind: Some("unix".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "nu".into(),
                name: "Nushell".into(),
                exec_win: None,
                exec_unix: shell_exe_in_path("nu"),
+               kind: Some("unix".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "zsh".into(),
                name: "Zsh".into(),
                exec_win: None,
                exec_unix: shell_exe_in_path("zsh"),
+               kind: Some("unix".into()),
+               wsl_distribution: None,
             },
             Shell {
                id: "fish".into(),
                name: "Fish".into(),
                exec_win: None,
                exec_unix: shell_exe_in_path("fish"),
+               kind: Some("unix".into()),
+               wsl_distribution: None,
             },
          ]
       }
