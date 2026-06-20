@@ -1,4 +1,4 @@
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "@/ui/toast";
@@ -19,6 +19,15 @@ import {
  */
 export function useDeepLink() {
   useEffect(() => {
+    let disposed = false;
+
+    void getCurrent().then((urls) => {
+      if (disposed || !urls) return;
+      for (const url of urls) {
+        handleDeepLink(url);
+      }
+    });
+
     const unlisten = onOpenUrl((urls: string[]) => {
       for (const url of urls) {
         handleDeepLink(url);
@@ -26,6 +35,7 @@ export function useDeepLink() {
     });
 
     return () => {
+      disposed = true;
       unlisten.then((fn: () => void) => fn());
     };
   }, []);
