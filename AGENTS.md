@@ -58,6 +58,9 @@
 - Avoid unnecessary comments in UI components; prefer self-explanatory code.
 - Avoid unnecessary `cn(...)` calls; use it only for conditional or merged class names.
 - Use Tailwind utilities for normal component styling.
+- Keep app-wide CSS in `src/styles/` for base reset, fonts, scrollbars, theme tokens, shared syntax tokens, and platform/window overrides only.
+- Keep feature CSS next to the feature and import it from the owning component entrypoint; use it only for generated markup, third-party DOM, editor layers, or selectors Tailwind cannot express clearly.
+- Prefer `src/ui` primitives and CVA variants for reusable UI styling instead of feature-specific wrapper classes or new global CSS selectors.
 - Do not add exported Tailwind class string constants such as `*_CLASS_NAME`; use CVA variants or UI primitives for reusable styling.
 - Use CSS variables for theme colors; do not hardcode hex values in UI code.
 - Keep font size, font family, theme colors, keymaps, and shortcuts in their existing system-level homes instead of redefining them ad hoc in feature components.

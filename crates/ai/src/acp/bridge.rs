@@ -1,4 +1,5 @@
 use super::{
+   AcpConnection,
    bridge_commands::{AcpCommand, run_worker_loop},
    bridge_init::initialize_worker,
    bridge_prompt::run_prompt,
@@ -9,13 +10,13 @@ use super::{
       AcpAgentCapabilities, AcpAgentStatus, AcpEvent, AcpSessionInfo, AcpSessionList, AgentConfig,
       SessionConfigOption,
    },
+   workspace_path::{path_to_string, resolve_workspace_path},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use acp::Agent;
-use agent_client_protocol as acp;
+use agent_client_protocol::schema as acp;
 use anyhow::{Context, Result, bail};
 use athas_terminal::TerminalManager;
-use std::{sync::Arc, thread};
+use std::{path::PathBuf, sync::Arc, thread};
 use tauri::Emitter;
 use tokio::{
    process::Child,
@@ -26,13 +27,14 @@ use tokio::{
 
 /// Worker state running on the LocalSet thread
 pub(super) struct AcpWorker {
-   connection: Option<Arc<acp::ClientSideConnection>>,
+   connection: Option<Arc<AcpConnection>>,
    session_id: Option<acp::SessionId>,
    auth_method_id: Option<String>,
    process: Option<Child>,
    process_group_id: Option<u32>,
    io_handle: Option<tokio::task::JoinHandle<()>>,
    client: Option<Arc<AthasAcpClient>>,
+   workspace_path: Option<PathBuf>,
    agent_id: Option<String>,
    agent_capabilities: Option<AcpAgentCapabilities>,
    app_handle: Option<AppHandle>,
@@ -48,6 +50,7 @@ impl AcpWorker {
          process_group_id: None,
          io_handle: None,
          client: None,
+         workspace_path: None,
          agent_id: None,
          agent_capabilities: None,
          app_handle: None,
@@ -87,6 +90,7 @@ impl AcpWorker {
             self.process = None;
             self.process_group_id = None;
             self.client = None;
+            self.workspace_path = None;
             self.agent_id = None;
             self.agent_capabilities = None;
             self.app_handle = None;
@@ -141,6 +145,7 @@ impl AcpWorker {
       self.process = Some(initialized.process);
       self.io_handle = Some(initialized.io_handle);
       self.client = Some(initialized.client);
+      self.workspace_path = initialized.workspace_path;
       self.agent_id = Some(agent_id.clone());
       self.agent_capabilities = Some(initialized.agent_capabilities);
       self.app_handle = Some(app_handle.clone());
@@ -151,6 +156,7 @@ impl AcpWorker {
          session_active: self.session_id.is_some(),
          initialized: true,
          session_id: self.session_id.as_ref().map(ToString::to_string),
+         workspace_path: self.workspace_path.as_deref().map(path_to_string),
          agent_capabilities: self.agent_capabilities.clone(),
       };
 
@@ -210,8 +216,7 @@ impl AcpWorker {
       let cancel_notification = acp::CancelNotification::new(session_id.clone());
 
       connection
-         .cancel(cancel_notification)
-         .await
+         .send_notification(cancel_notification)
          .context("Failed to cancel prompt")?;
 
       Ok(())
@@ -227,7 +232,8 @@ impl AcpWorker {
       let request = acp::SetSessionModeRequest::new(session_id.clone(), mode_id.to_string());
 
       connection
-         .set_session_mode(request)
+         .send_request(request)
+         .block_task()
          .await
          .context("Failed to set session mode")?;
 
@@ -244,14 +250,12 @@ impl AcpWorker {
          .as_ref()
          .context("No app handle available")?;
 
-      let request = acp::SetSessionConfigOptionRequest::new(
-         session_id.clone(),
-         config_id.to_string(),
-         value.to_string(),
-      );
+      let request =
+         acp::SetSessionConfigOptionRequest::new(session_id.clone(), config_id.to_string(), value);
 
       let response = connection
-         .set_session_config_option(request)
+         .send_request(request)
+         .block_task()
          .await
          .context("Failed to set session config option")?;
       let config_options = Self::map_config_options(response.config_options);
@@ -281,14 +285,17 @@ impl AcpWorker {
       let connection = self.connection.as_ref().context("No active connection")?;
       let mut request = acp::ListSessionsRequest::new();
       if let Some(cwd) = cwd {
-         request = request.cwd(std::path::PathBuf::from(cwd));
+         let cwd = resolve_workspace_path(Some(cwd))?
+            .context("Workspace path is required to list ACP sessions by cwd")?;
+         request = request.cwd(cwd);
       }
       if let Some(cursor) = cursor {
          request = request.cursor(cursor);
       }
 
       let response = connection
-         .list_sessions(request)
+         .send_request(request)
+         .block_task()
          .await
          .context("Failed to list ACP sessions")?;
 
@@ -329,7 +336,8 @@ impl AcpWorker {
          && let (Some(connection), Some(session_id)) =
             (self.connection.as_ref(), self.session_id.as_ref())
          && let Err(error) = connection
-            .close_session(acp::CloseSessionRequest::new(session_id.clone()))
+            .send_request(acp::CloseSessionRequest::new(session_id.clone()))
+            .block_task()
             .await
       {
          log::warn!(
@@ -350,6 +358,7 @@ impl AcpWorker {
       self.session_id = None;
       self.auth_method_id = None;
       self.client = None;
+      self.workspace_path = None;
       self.agent_id = None;
       self.agent_capabilities = None;
       self.app_handle = None;
@@ -366,6 +375,7 @@ impl AcpWorker {
             session_active: self.session_id.is_some(),
             initialized: self.connection.is_some(),
             session_id: self.session_id.as_ref().map(ToString::to_string),
+            workspace_path: self.workspace_path.as_deref().map(path_to_string),
             agent_capabilities: self.agent_capabilities.clone(),
          },
          None => AcpAgentStatus::default(),

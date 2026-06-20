@@ -37,7 +37,7 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { NotificationsTrigger } from "@/features/window/components/notifications-sidebar";
+import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import {
   FOOTER_TRAILING_ITEM_IDS,
   normalizeItemOrder,
@@ -331,11 +331,11 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className={cn(chromeControl({ shape: "pill" }), "text-blue-400 hover:text-blue-300")}
+              className={cn(chromeControl({ shape: "pill" }), "text-accent hover:text-accent")}
               onClick={() => uiState.openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className={cn(footerCountPill(), "bg-blue-400 text-primary-bg")}>
+              <span className={cn(footerCountPill(), "bg-accent text-primary-bg")}>
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
               </span>
             </FooterTabControl>

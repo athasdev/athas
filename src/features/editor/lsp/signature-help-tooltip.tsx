@@ -248,7 +248,7 @@ export const SignatureHelpTooltip = ({
 
   return (
     <div
-      className="absolute z-50 max-w-md rounded-md border border-border/70 bg-secondary-bg px-2.5 py-1.5 shadow-lg"
+      className="absolute z-50 max-w-md rounded-md border border-border/70 bg-secondary-bg px-2.5 py-1.5 shadow-[var(--shadow-popover)]"
       style={{
         top: `${Math.max(4, position.top)}px`,
         left: `${Math.max(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT, position.left)}px`,

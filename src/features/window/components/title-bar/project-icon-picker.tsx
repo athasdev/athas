@@ -35,6 +35,7 @@ async function scanIcoFiles(projectPath: string): Promise<IcoFile[]> {
 
     try {
       const entries = await readDir(dirPath);
+      const childDirectories: string[] = [];
 
       for (const entry of entries) {
         const entryPath = `${dirPath}${separator}${entry.name}`;
@@ -62,9 +63,11 @@ async function scanIcoFiles(projectPath: string): Promise<IcoFile[]> {
           entry.name !== "target" &&
           entry.name !== "vendor"
         ) {
-          await scanDirectory(entryPath, depth + 1);
+          childDirectories.push(entryPath);
         }
       }
+
+      await Promise.all(childDirectories.map((childPath) => scanDirectory(childPath, depth + 1)));
     } catch {
       // Skip directories we can't read
     }

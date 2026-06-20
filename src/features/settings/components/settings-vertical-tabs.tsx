@@ -16,8 +16,7 @@ import {
   UserCircleIcon as UserCircle,
   UsersThreeIcon as UsersThree,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef, type ComponentType, type WheelEvent } from "react";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useCallback, useRef, type ComponentType, type WheelEvent } from "react";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
@@ -126,8 +125,6 @@ export const SettingsVerticalTabs = ({
   onTabChange,
   panelIdForTab = (tab) => `settings-panel-${tab}`,
 }: SettingsVerticalTabsProps) => {
-  const searchQuery = useSettingsStore((state) => state.search.query);
-  const searchResults = useSettingsStore((state) => state.search.results);
   const subscription = useAuthStore((state) => state.subscription);
   const { isPro } = useProFeature();
   const { promptUpgrade } = useUpgradeToPro();
@@ -135,21 +132,10 @@ export const SettingsVerticalTabs = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
-
   const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
     ...settingsAccess,
-    matchingTabs,
+    matchingTabs: null,
   });
-
-  useEffect(() => {
-    if (searchQuery && visibleTabs.length > 0) {
-      const firstVisibleTab = visibleTabs[0].id;
-      if (firstVisibleTab !== activeTab) {
-        onTabChange(firstVisibleTab);
-      }
-    }
-  }, [searchQuery, visibleTabs, activeTab, onTabChange]);
 
   const handleSidebarWheel = (event: WheelEvent<HTMLDivElement>) => {
     const container = scrollContainerRef.current;

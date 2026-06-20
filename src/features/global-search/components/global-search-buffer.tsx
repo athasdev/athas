@@ -47,7 +47,7 @@ const GlobalSearchBuffer = () => {
     excludeQuery,
     setExcludeQuery,
     refreshSearch,
-  } = useContentSearch(true);
+  } = useContentSearch();
 
   const handleFileClick = useCallback(
     (filePath: string, lineNumber?: number, columnNumber?: number) => {

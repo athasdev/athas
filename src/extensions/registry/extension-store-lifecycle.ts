@@ -178,16 +178,18 @@ export async function installExtensionLifecycle(params: {
 
     onLanguageInstalled(runtimeManifest, resolvedTools.issues);
 
-    for (const languageConfig of languageConfigs) {
-      await registerLanguageProvider({
-        extensionId,
-        languageId: languageConfig.id,
-        displayName: extension.manifest.displayName,
-        version: extension.manifest.version,
-        extensions: languageConfig.extensions,
-        aliases: languageConfig.aliases,
-      });
-    }
+    await Promise.all(
+      languageConfigs.map((languageConfig) =>
+        registerLanguageProvider({
+          extensionId,
+          languageId: languageConfig.id,
+          displayName: extension.manifest.displayName,
+          version: extension.manifest.version,
+          extensions: languageConfig.extensions,
+          aliases: languageConfig.aliases,
+        }),
+      ),
+    );
 
     await refreshSyntaxHighlightingForActiveBuffer(extension);
     return;

@@ -159,7 +159,7 @@ export const MainSidebar = memo(
 
             {isFileTreeLoading && !isSwitchingProject && (
               <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-3">
-                <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+                <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
                   <LoadingIndicator label="Loading files" showLabel compact />
                 </div>
               </div>

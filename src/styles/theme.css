@@ -55,6 +55,14 @@
   --color-syntax-jsx: var(--syntax-jsx);
   --color-syntax-jsx-attribute: var(--syntax-jsx-attribute);
 
+  --color-symbol-function: var(--symbol-function);
+  --color-symbol-type: var(--symbol-type);
+  --color-symbol-interface: var(--symbol-interface);
+  --color-symbol-enum: var(--symbol-enum);
+  --color-symbol-variable: var(--symbol-variable);
+  --color-symbol-property: var(--symbol-property);
+  --color-symbol-type-parameter: var(--symbol-type-parameter);
+
   --color-terminal-black: var(--terminal-black);
   --color-terminal-red: var(--terminal-red);
   --color-terminal-green: var(--terminal-green);
@@ -87,6 +95,28 @@
     --app-ui-icon-size-xs: calc(10px * var(--app-ui-scale));
     --app-ui-icon-size-sm: calc(12px * var(--app-ui-scale));
     --app-ui-icon-size-md: calc(14px * var(--app-ui-scale));
+    --app-radius-sm: 6px;
+    --app-radius-md: 8px;
+    --app-radius-lg: 12px;
+    --app-radius-xl: 16px;
+    --app-duration-fast: 150ms;
+    --app-duration-normal: 200ms;
+    --app-duration-slow: 280ms;
+    --app-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+    --app-ease-out: cubic-bezier(0.17, 1, 0.32, 1);
+    --app-ease-spring: cubic-bezier(0.35, 1.55, 0.65, 1);
+    --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
+    --app-press-scale: 0.98;
+    --shadow-card:
+      0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+    --shadow-popover:
+      0 8px 16px rgb(0 0 0 / 0.04), 0 16px 32px rgb(0 0 0 / 0.03), 0 2px 4px rgb(0 0 0 / 0.04),
+      0 0 0 0.5px rgb(0 0 0 / 0.1);
+    --shadow-dialog:
+      0 8px 16px rgb(0 0 0 / 0.04), 0 24px 56px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04),
+      0 0 0 0.5px rgb(0 0 0 / 0.12);
+    --shadow-drag:
+      0 8px 18px rgb(0 0 0 / 0.12), 0 18px 44px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.12);
 
     --primary-bg: #ffffff;
     --secondary-bg: #f8f8f8;
@@ -142,6 +172,14 @@
     --syntax-tag: #22863a;
     --syntax-attribute: #6f42c1;
     --syntax-punctuation: #24292e;
+
+    --symbol-function: var(--syntax-function);
+    --symbol-type: var(--syntax-type, var(--syntax-tag));
+    --symbol-interface: var(--syntax-regex, var(--syntax-operator, var(--syntax-attribute)));
+    --symbol-enum: var(--syntax-number);
+    --symbol-variable: var(--syntax-property, var(--syntax-variable));
+    --symbol-property: var(--syntax-string);
+    --symbol-type-parameter: var(--syntax-operator, var(--syntax-attribute));
 
     --terminal-black: #24292e;
     --terminal-red: #d73a49;
@@ -234,6 +272,17 @@
       --terminal-bright-magenta: #c084fc;
       --terminal-bright-cyan: #67e8f9;
       --terminal-bright-white: #e5e5e5;
+      --shadow-card:
+        0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);
+      --shadow-popover:
+        0 8px 16px rgb(0 0 0 / 0.26), 0 16px 32px rgb(0 0 0 / 0.22), 0 2px 4px rgb(0 0 0 / 0.22),
+        0 0 0 0.5px rgb(255 255 255 / 0.1);
+      --shadow-dialog:
+        0 8px 16px rgb(0 0 0 / 0.3), 0 24px 56px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24),
+        0 0 0 0.5px rgb(255 255 255 / 0.12);
+      --shadow-drag:
+        0 8px 18px rgb(0 0 0 / 0.36), 0 18px 44px rgb(0 0 0 / 0.34),
+        0 0 0 0.5px rgb(255 255 255 / 0.12);
     }
   }
 

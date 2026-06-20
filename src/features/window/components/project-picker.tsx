@@ -322,7 +322,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                     <span
                       className={cn(
                         "size-2 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
+                        connection.isConnected ? "bg-success" : "bg-text-lighter/40",
                       )}
                     />
                     <span className="sr-only">

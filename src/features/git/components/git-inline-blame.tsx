@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   CheckIcon as Check,
   ClockIcon as Clock,
@@ -13,10 +12,12 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useOverlayManager } from "@/features/editor/hooks/use-overlay-manager";
 import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
+import "@/features/editor/styles/overlay-card.css";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
 import { getCommitDiff } from "../api/git-diff-api";
@@ -128,7 +129,7 @@ export const InlineGitBlame = ({
   const handleCopyCommitHash = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
-      await writeText(blameLine.commit_hash.substring(0, 7));
+      await writeClipboardText(blameLine.commit_hash.substring(0, 7));
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 1500);
     },
@@ -345,7 +346,7 @@ export const InlineGitBlame = ({
                   tooltip="Copy commit hash"
                   compact
                 >
-                  {isCopied ? <Check className="text-green-500" /> : <Copy />}
+                  {isCopied ? <Check className="text-success" /> : <Copy />}
                 </Button>
               </div>
             </div>

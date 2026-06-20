@@ -1,4 +1,5 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
+import { isMarkdownPreviewableFile } from "../markdown/previewable";
 
 export function splitLines(content: string): string[] {
   return content.split(/\r?\n/);
@@ -18,6 +19,5 @@ export function calculateLineOffset(lines: string[], lineIndex: number): number 
 }
 
 export function isMarkdownFile(filePath: string): boolean {
-  const extension = filePath.split(".").pop()?.toLowerCase();
-  return extension === "md" || extension === "markdown";
+  return isMarkdownPreviewableFile(filePath);
 }

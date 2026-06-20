@@ -15,6 +15,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
 import type { ImageFormat } from "@/features/image-editor/types/image-operation.types";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { writeClipboardText } from "@/utils/clipboard";
 
 interface ImageContextMenuProps {
   x: number;
@@ -80,8 +81,7 @@ export function ImageContextMenu({
 
   const handleCopyPath = async () => {
     try {
-      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-      await writeText(filePath);
+      await writeClipboardText(filePath);
     } catch (error) {
       console.error("Failed to copy path:", error);
     }

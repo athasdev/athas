@@ -39,7 +39,7 @@ jobs:
           )
 
   deploy:
-    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/master' && github.event_name == 'workflow_dispatch'
+    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: validate
     runs-on: ubuntu-latest
     steps:
@@ -53,6 +53,15 @@ jobs:
         run: bun run extensions:prepare
 
       - name: Deploy extensions CDN
-        env:
-          EXTENSIONS_CDN_ROOT: ${{ secrets.EXTENSIONS_CDN_ROOT }}
-        run: bun run extensions:deploy
+        uses: burnett01/rsync-deployments@7.0.2
+        with:
+          switches: -avz
+          path: extensions/generated/cdn/
+          remote_path: ${{ secrets.EXTENSIONS_CDN_ROOT }}/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_SSH_KEY }}
+          remote_port: ${{ secrets.VPS_PORT || 22 }}
+
+      - name: Verify installable packages on CDN
+        run: bun run extensions:verify-cdn

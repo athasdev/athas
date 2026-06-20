@@ -73,6 +73,9 @@ export const initializeThemeSystem = async () => {
       redo: () => {},
       canUndo: () => false,
       canRedo: () => false,
+      addSelectionToNextFindMatch: () => false,
+      addSelectionToPreviousFindMatch: () => false,
+      selectAllFindMatches: () => false,
       getSettings: () => ({
         fontSize: 14,
         lineHeight: 1.4,

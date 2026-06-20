@@ -1,4 +1,4 @@
-use agent_client_protocol as acp;
+use agent_client_protocol::schema as acp;
 use tauri::EventId;
 use tokio::sync::oneshot;
 

@@ -9,6 +9,7 @@ export interface VisibleFileTreeRow {
 
 export interface BuildVisibleFileTreeRowsOptions {
   compactFolders?: boolean;
+  hiddenRootPath?: string;
 }
 
 export interface FilterFileTreeForSearchResult {
@@ -47,6 +48,11 @@ export function buildVisibleFileTreeRows(
 ): VisibleFileTreeRow[] {
   const rows: VisibleFileTreeRow[] = [];
   const compactFolders = options.compactFolders === true;
+  const hiddenRootPath = options.hiddenRootPath;
+  const rootItems =
+    hiddenRootPath && files.length === 1 && files[0]?.path === hiddenRootPath && files[0]?.isDir
+      ? (files[0].children ?? [])
+      : files;
 
   const walk = (items: FileEntry[], depth: number) => {
     for (const item of items) {
@@ -77,7 +83,7 @@ export function buildVisibleFileTreeRows(
     }
   };
 
-  walk(files, 0);
+  walk(rootItems, 0);
   return rows;
 }
 

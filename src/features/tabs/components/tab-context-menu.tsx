@@ -18,6 +18,7 @@ import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
@@ -146,7 +147,7 @@ const TabContextMenu = ({
         }
 
         try {
-          await navigator.clipboard.writeText(buffer.path);
+          await writeClipboardText(buffer.path);
         } catch (error) {
           console.error("Failed to copy path:", error);
         }

@@ -181,11 +181,13 @@ async function writeEditableSource(filePath: string, bufferId: string | null, co
 export async function applyWorkspaceEdit(edit: WorkspaceEdit): Promise<WorkspaceEditApplyResult> {
   const editsByFile = collectWorkspaceTextEdits(edit);
 
-  for (const [filePath, edits] of editsByFile) {
-    const source = await readEditableSource(filePath);
-    const nextContent = applyTextEditsToContent(source.content, edits);
-    await writeEditableSource(filePath, source.bufferId, nextContent);
-  }
+  await Promise.all(
+    Array.from(editsByFile, async ([filePath, edits]) => {
+      const source = await readEditableSource(filePath);
+      const nextContent = applyTextEditsToContent(source.content, edits);
+      await writeEditableSource(filePath, source.bufferId, nextContent);
+    }),
+  );
 
   return { editedFiles: editsByFile.size };
 }

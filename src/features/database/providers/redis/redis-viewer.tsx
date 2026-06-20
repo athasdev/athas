@@ -184,7 +184,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           {store.error && (
-            <div className="mx-3 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 ui-text-xs">
+            <div className="mx-3 mt-3 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-xs">
               {store.error}
             </div>
           )}
@@ -231,7 +231,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                   onClick={() => actions.deleteKey(store.selectedKey!)}
                   variant="ghost"
                   compact
-                  className="text-red-400 hover:bg-red-500/10 hover:text-red-400"
+                  className="text-error hover:bg-error/10 hover:text-error"
                   aria-label="Delete key"
                 >
                   <Trash2 />

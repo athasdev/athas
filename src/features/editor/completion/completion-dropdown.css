@@ -1,5 +1,5 @@
 .editor-completion-dropdown {
-  filter: drop-shadow(0 14px 32px rgba(0, 0, 0, 0.22));
+  filter: drop-shadow(0 14px 32px color-mix(in srgb, var(--color-text) 18%, transparent));
 }
 
 .editor-completion-list,
@@ -25,7 +25,7 @@
   position: relative;
   border-radius: 8px;
   margin: 2px;
-  transition: background-color 0.14s ease;
+  transition: background-color var(--app-duration-fast) var(--app-ease-smooth);
 }
 
 .editor-completion-item-selected {
@@ -45,6 +45,6 @@
 
 .editor-completion-docs {
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.18),
+    var(--shadow-card),
     inset 0 1px 0 color-mix(in srgb, var(--color-hover) 42%, transparent);
 }

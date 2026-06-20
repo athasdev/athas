@@ -1,8 +1,6 @@
 import type React from "react";
-import { CaretRightIcon as ChevronRight } from "@phosphor-icons/react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 interface PathBreadcrumbProps {
@@ -25,15 +23,10 @@ export function PathBreadcrumb({
   if (segments.length === 0) return null;
 
   const fileName = segments[segments.length - 1] || fullPath || "";
-  const getSegmentPath = (index: number) => {
-    const path = segments.slice(0, index + 1).join("/");
-    return fullPath?.includes("://") ? path : path;
-  };
 
   return (
     <div
       className={cn("flex min-w-0 items-center gap-0.5 overflow-x-auto scrollbar-none", className)}
-      title={fullPath}
     >
       <span className="flex size-5 shrink-0 items-center justify-center rounded text-text-lighter">
         <FileExplorerIcon
@@ -50,7 +43,9 @@ export function PathBreadcrumb({
         return (
           <div key={`${segment}-${index}`} className="flex shrink-0 items-center gap-0.5">
             {index > 0 && (
-              <ChevronRight className="mx-0.5 shrink-0 text-text-lighter" weight="duotone" />
+              <span aria-hidden="true" className="mx-0.5 shrink-0 text-text-lighter ui-text-xs">
+                /
+              </span>
             )}
             {interactive ? (
               <Button
@@ -64,22 +59,18 @@ export function PathBreadcrumb({
                     ? "font-medium text-text hover:text-text"
                     : "text-text-lighter hover:text-text",
                 )}
-                tooltip={getSegmentPath(index)}
-                tooltipSide="bottom"
               >
                 {segment}
               </Button>
             ) : (
-              <Tooltip content={getSegmentPath(index)} side="bottom">
-                <span
-                  className={cn(
-                    "truncate rounded px-1 py-0.5 ui-text-xs",
-                    isLast ? "font-medium text-text" : "text-text-lighter",
-                  )}
-                >
-                  {segment}
-                </span>
-              </Tooltip>
+              <span
+                className={cn(
+                  "truncate rounded px-1 py-0.5 ui-text-xs",
+                  isLast ? "font-medium text-text" : "text-text-lighter",
+                )}
+              >
+                {segment}
+              </span>
             )}
           </div>
         );

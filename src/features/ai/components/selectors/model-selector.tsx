@@ -79,6 +79,10 @@ export function ModelSelector({
 
   const setOpen = (nextOpen: boolean) => {
     if (disabled && nextOpen) return;
+    if (!nextOpen) {
+      setQuery("");
+      setActiveIndex(0);
+    }
     if (open === undefined) {
       setUncontrolledOpen(nextOpen);
     }
@@ -174,11 +178,9 @@ export function ModelSelector({
   }, [availableModels, modelId, onChange]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      return;
-    }
-    requestAnimationFrame(() => triggerInputRef.current?.focus());
+    if (!isOpen) return;
+    const frame = requestAnimationFrame(() => triggerInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
   const currentModelName = useMemo(() => {
@@ -229,7 +231,7 @@ export function ModelSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[176px]")
+      ? chatComposerControlClassName("max-w-[176px]")
       : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
     triggerClassName,
   );
@@ -290,30 +292,36 @@ export function ModelSelector({
   return (
     <div className={className}>
       {isOpen ? (
-        <input
+        <div
           ref={(node) => {
-            triggerInputRef.current = node;
             triggerRef.current = node;
           }}
-          type="text"
-          value={query}
-          disabled={disabled}
-          placeholder={currentModelName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
-          aria-label="Search AI models"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={handleTriggerInputKeyDown}
           onMouseDown={(event) => event.stopPropagation()}
+          onClick={() => triggerInputRef.current?.focus()}
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
               compact: true,
             }),
             triggerClass,
-            "cursor-text text-left outline-none placeholder:text-text",
+            "relative cursor-text",
           )}
-        />
+        >
+          <span className="invisible block min-w-0 truncate text-text">{currentModelName}</span>
+          <input
+            ref={triggerInputRef}
+            type="text"
+            value={query}
+            disabled={disabled}
+            placeholder={currentModelName}
+            aria-label="Search AI models"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleTriggerInputKeyDown}
+            className="ui-font absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+          />
+        </div>
       ) : (
         <Button
           ref={(node) => {
@@ -330,7 +338,7 @@ export function ModelSelector({
           onClick={() => setOpen(!isOpen)}
           className={triggerClass}
         >
-          <span className="min-w-0 truncate text-text">{currentModelName}</span>
+          <span className="block min-w-0 truncate text-text">{currentModelName}</span>
         </Button>
       )}
 

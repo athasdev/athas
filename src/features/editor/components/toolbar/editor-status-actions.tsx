@@ -79,6 +79,9 @@ type LanguageOption = ReturnType<typeof getAllLanguages>[number];
 function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }) {
   const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
   const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftPosition, setDraftPosition] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const displayedCursorPosition = useMemo<Position>(() => {
     if (!editorViewKey || activeEditorViewKey === editorViewKey) {
       return cursorPosition;
@@ -87,11 +90,71 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
     const cachedCursor = useEditorStateStore.getState().actions.getCachedPosition(editorViewKey);
     return cachedCursor ?? { line: 0, column: 0, offset: 0 };
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
+  const displayPosition = `${displayedCursorPosition.line + 1}:${displayedCursorPosition.column + 1}`;
+
+  useEffect(() => {
+    if (!isEditing) return;
+    setDraftPosition(displayPosition);
+    const frameId = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [displayPosition, isEditing]);
+
+  const submitPosition = () => {
+    const match = draftPosition.trim().match(/^(\d+)(?::(\d+))?$/);
+    if (!match) {
+      setIsEditing(false);
+      return;
+    }
+
+    const line = Number(match[1]);
+    const column = match[2] ? Number(match[2]) : 1;
+
+    if (!Number.isFinite(line) || !Number.isFinite(column) || line < 1 || column < 1) {
+      setIsEditing(false);
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent("menu-go-to-line", { detail: { line, column } }));
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        aria-label="Go to line and column"
+        value={draftPosition}
+        onChange={(event) => setDraftPosition(event.target.value)}
+        onBlur={submitPosition}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            submitPosition();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            setIsEditing(false);
+          }
+        }}
+        className={cn(
+          statusChipClass,
+          "w-14 bg-hover text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+        )}
+      />
+    );
+  }
 
   return (
-    <span className={statusChipClass}>
-      {displayedCursorPosition.line + 1}:{displayedCursorPosition.column + 1}
-    </span>
+    <button
+      type="button"
+      className={statusChipClass}
+      onClick={() => setIsEditing(true)}
+      aria-label="Go to line and column"
+    >
+      {displayPosition}
+    </button>
   );
 }
 
@@ -106,6 +169,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const [isCurrentFileLspAvailable, setIsCurrentFileLspAvailable] = useState(false);
   const [isRestartingCurrent, setIsRestartingCurrent] = useState(false);
   const [busyServerKey, setBusyServerKey] = useState<string | null>(null);
+  const [bulkLspAction, setBulkLspAction] = useState<"restart" | "stop" | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const viewButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -114,19 +178,19 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       case "connected":
         return {
           icon: <Zap weight="duotone" />,
-          color: "text-green-400",
+          color: "text-success",
           title: "Language Servers Active",
         };
       case "connecting":
         return {
           icon: <LoadingIndicator label="Connecting" compact />,
-          color: "text-yellow-400",
+          color: "text-warning",
           title: "Connecting to Language Server...",
         };
       case "error":
         return {
           icon: <ZapOff weight="duotone" />,
-          color: "text-red-400",
+          color: "text-error",
           title: "Language server issue",
         };
       default:
@@ -159,6 +223,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   );
   const lspClient = LspClient.getInstance();
   const activeServerEntries = lspClient.getActiveServerEntries();
+  const isBulkLspBusy = bulkLspAction !== null;
+  const canRunBulkLspAction =
+    activeServerEntries.length > 0 && !isBulkLspBusy && !isRestartingCurrent && !busyServerKey;
   const currentFileLanguageId =
     activeBuffer?.type === "editor" && activeBuffer.languageOverride
       ? activeBuffer.languageOverride
@@ -199,6 +266,32 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       toast.error(error instanceof Error ? error.message : "Failed to stop language server");
     } finally {
       setBusyServerKey(null);
+    }
+  };
+
+  const handleRestartAllServers = async () => {
+    if (activeServerEntries.length === 0) return;
+
+    setBulkLspAction("restart");
+    try {
+      await lspClient.restartAllTrackedServers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to restart language servers");
+    } finally {
+      setBulkLspAction(null);
+    }
+  };
+
+  const handleStopAllServers = async () => {
+    if (activeServerEntries.length === 0) return;
+
+    setBulkLspAction("stop");
+    try {
+      await lspClient.stopAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to stop language servers");
+    } finally {
+      setBulkLspAction(null);
     }
   };
 
@@ -389,9 +482,15 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               size="xs"
               variant="ghost"
               showClear={false}
-              inputClassName="ui-text-xs"
-              className={cn(statusChipClass, "h-5 w-[112px] rounded-md px-0")}
-              inputStyle={{ width: `${Math.max(currentFileDisplayName?.length ?? 10, 10)}ch` }}
+              showTrigger={false}
+              inputClassName="truncate ui-text-xs text-text-lighter group-hover/combobox-input:text-text"
+              className={cn(
+                statusChipClass,
+                "h-5 w-fit max-w-[240px] rounded-md bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
+              )}
+              inputStyle={{
+                width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
+              }}
             />
             <ComboboxContent align="end" className="w-[220px] min-w-[220px] rounded-lg">
               <ComboboxList className="max-h-[220px] p-1.5">
@@ -441,6 +540,30 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
             </div>
             {hasActiveServers || isCurrentFileLspAvailable ? (
               <div className="space-y-1">
+                {activeServerEntries.length > 0 && (
+                  <div className="flex gap-1 px-1 pb-1">
+                    <Button
+                      type="button"
+                      onClick={() => void handleRestartAllServers()}
+                      disabled={!canRunBulkLspAction}
+                      variant="default"
+                      compact
+                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                    >
+                      {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void handleStopAllServers()}
+                      disabled={!canRunBulkLspAction}
+                      variant="default"
+                      compact
+                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                    >
+                      {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
+                    </Button>
+                  </div>
+                )}
                 {activeServerEntries.map((entry) => {
                   const isBusy = busyServerKey === entry.key;
                   return (
@@ -449,14 +572,14 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap className="shrink-0 text-green-400" weight="duotone" />
+                        <Zap className="shrink-0 text-success" weight="duotone" />
                         <span className="truncate text-text ui-text-xs">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
                           type="button"
                           onClick={() => void handleRestartServer(entry.key)}
-                          disabled={isBusy || isRestartingCurrent}
+                          disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
                           className="rounded-md px-2 ui-text-xs text-text-lighter"
@@ -466,10 +589,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         <Button
                           type="button"
                           onClick={() => void handleStopServer(entry.key)}
-                          disabled={isBusy || isRestartingCurrent}
+                          disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
                           className="rounded-md px-2 ui-text-xs text-text-lighter"
+                          aria-label={`Stop ${entry.displayName} language server`}
                         >
                           <Square weight="duotone" />
                         </Button>
@@ -489,7 +613,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       <Button
                         type="button"
                         onClick={() => void handleStartCurrent()}
-                        disabled={isRestartingCurrent}
+                        disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
                         compact
                         className="rounded-md px-2 ui-text-xs text-text-lighter"
@@ -506,7 +630,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               </div>
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">
-                <div className="flex items-center gap-2 text-red-400">
+                <div className="flex items-center gap-2 text-error">
                   <ZapOff weight="duotone" />
                   <span className="ui-text-xs">Language server issue</span>
                 </div>

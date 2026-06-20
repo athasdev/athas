@@ -77,6 +77,16 @@ describe("settings normalization", () => {
     expect(normalized.editorEngine).toBe("monaco");
   });
 
+  it("migrates legacy Athas editor engine selections to Monaco", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorEngine: "athas",
+    });
+
+    expect(normalized.editorEngine).toBe("monaco");
+    expect(normalizeSettingValue("editorEngine", "athas")).toBe("monaco");
+  });
+
   it("normalizes unsupported remembered settings tabs", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
@@ -107,6 +117,7 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.coreFeatures.webViewer).toBe(false);
+    expect(normalized.coreFeatures.athasEditorEngine).toBe(false);
   });
 
   it("migrates legacy icon theme aliases to Symbols", () => {
@@ -157,6 +168,32 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("aiCustomBaseUrl", " https://example.test/v1/ ")).toBe(
       "https://example.test/v1",
     );
+  });
+
+  it("migrates stale built-in AI model selections to supported models", () => {
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiProviderId: "deepseek",
+        aiModelId: "deepseek-reasoner",
+      }).aiModelId,
+    ).toBe("deepseek-v4-pro");
+
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiProviderId: "mistral",
+        aiModelId: "mistral-medium-3-1-25-08",
+      }).aiModelId,
+    ).toBe("mistral-medium-2604");
+
+    expect(
+      normalizeSettings({
+        ...getDefaultSettingsSnapshot(),
+        aiProviderId: "grok",
+        aiModelId: "grok-code-fast-1",
+      }).aiModelId,
+    ).toBe("grok-build-0.1");
   });
 
   it("preserves supported marketplace skill metadata", () => {

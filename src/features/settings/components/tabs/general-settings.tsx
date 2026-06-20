@@ -1,6 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -14,6 +13,7 @@ import Command, {
   CommandItem,
   CommandList,
 } from "@/ui/command";
+import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { SettingRow } from "../settings-section";
 
@@ -118,7 +118,7 @@ export const GeneralSettings = () => {
   const handleCopyInstallCommand = async () => {
     try {
       const command = await invoke<string>("get_cli_install_command");
-      await writeText(command);
+      await writeClipboardText(command);
       showToast({ message: "Install command copied to clipboard", type: "success" });
     } catch (error) {
       showToast({ message: `Failed to copy command: ${error}`, type: "error" });
@@ -151,7 +151,7 @@ export const GeneralSettings = () => {
           `${channel.url}?subject=${encodeURIComponent("Athas bug report")}&body=${encodeURIComponent(report)}`,
         );
       } else {
-        await writeText(report);
+        await writeClipboardText(report);
         await openUrl(channel.url);
         showToast({ message: "Report template copied", type: "success" });
       }
@@ -212,7 +212,7 @@ export const GeneralSettings = () => {
         <div className="px-3">
           <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
             <div
-              className="h-full bg-accent transition-all duration-300"
+              className="h-full bg-accent transition-[width] duration-[var(--app-duration-slow)] ease-[var(--app-ease-smooth)]"
               style={{ width: `${downloadProgress.percentage}%` }}
             />
           </div>

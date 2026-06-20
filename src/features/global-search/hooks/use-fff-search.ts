@@ -11,40 +11,48 @@ export const useFffSearch = (
   rootPath: string | null | undefined,
   limit = MAX_RESULTS,
 ) => {
-  const [hits, setHits] = useState<FffSearchHit[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const trimmedQuery = query.trim();
+  const searchRootPath = canUseFffSearch(rootPath) ? rootPath : null;
+  const searchKey =
+    enabled && trimmedQuery && searchRootPath
+      ? JSON.stringify([searchRootPath, trimmedQuery, limit])
+      : null;
+  const [searchState, setSearchState] = useState<{
+    key: string | null;
+    hits: FffSearchHit[];
+    error: string | null;
+  }>({
+    key: null,
+    hits: [],
+    error: null,
+  });
 
   useEffect(() => {
-    if (!enabled || !query.trim() || !canUseFffSearch(rootPath)) {
-      setHits([]);
-      setError(null);
-      setIsSearching(false);
-      return;
-    }
+    if (!searchKey || !searchRootPath) return;
 
     let cancelled = false;
-    setIsSearching(true);
 
-    fffSearchFiles(query, limit, rootPath)
+    fffSearchFiles(trimmedQuery, limit, searchRootPath)
       .then((results) => {
         if (cancelled) return;
-        setHits(results);
-        setError(null);
-        setIsSearching(false);
+        setSearchState({ key: searchKey, hits: results, error: null });
       })
       .catch((err) => {
         if (cancelled) return;
         console.error("[fff] search failed:", err);
-        setError(String(err));
-        setHits([]);
-        setIsSearching(false);
+        setSearchState({ key: searchKey, hits: [], error: String(err) });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [query, enabled, rootPath, limit]);
+  }, [searchKey, searchRootPath, trimmedQuery, limit]);
 
-  return { hits, error, isSearching };
+  const hasCurrentResult = searchKey !== null && searchState.key === searchKey;
+
+  return {
+    hits: hasCurrentResult ? searchState.hits : [],
+    error: hasCurrentResult ? searchState.error : null,
+    isSearching: searchKey !== null && searchState.key !== searchKey,
+  };
 };

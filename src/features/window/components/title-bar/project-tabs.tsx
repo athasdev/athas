@@ -1,5 +1,4 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   CopyIcon as Copy,
   DotsThreeVerticalIcon as DotsThreeVertical,
@@ -22,6 +21,7 @@ import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Tabs } from "@/ui/tabs";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import ProjectIconPicker from "./project-icon-picker";
 
@@ -90,7 +90,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           label: "Copy Path",
           icon: <Copy />,
           onClick: async () => {
-            await writeText(tab.path);
+            await writeClipboardText(tab.path);
           },
         },
         {
@@ -220,7 +220,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           className: cn(
             "border border-transparent px-6",
             isRemote &&
-              (tab.isActive ? "bg-sky-500/15 text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
+              (tab.isActive ? "bg-accent/15 text-accent" : "text-accent/85 hover:text-accent"),
             isSwitchingProject && "cursor-wait",
           ),
           style: { fontSize: "var(--ui-text-sm)" },

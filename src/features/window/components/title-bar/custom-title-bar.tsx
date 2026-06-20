@@ -30,7 +30,7 @@ import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "../account-menu";
 import ProjectPicker from "../project-picker";
 import RunActionsButton from "../run-actions-button";
@@ -62,9 +62,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
   const isMacOS = IS_MAC;
   const isWindows = IS_WINDOWS;
+  const isLinux = IS_LINUX;
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
-  const shouldUseNativeMenuBar = !isWindows && settings.nativeMenuBar;
+  const shouldUseNativeMenuBar = !isWindows && !isLinux && settings.nativeMenuBar;
   const titleBarProjectMode = settings.titleBarProjectMode;
   const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
   useEffect(() => {

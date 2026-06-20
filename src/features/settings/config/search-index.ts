@@ -1,5 +1,5 @@
 import type { SettingSearchRecord } from "../types/search.types";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 
 export const settingsSearchIndex: SettingSearchRecord[] = [
   // Enterprise Settings
@@ -134,14 +134,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["highlight", "occurrences", "matches", "word", "symbol", "cursor"],
   },
   {
-    id: "editor-engine",
-    tab: "editor",
-    section: "Editor",
-    label: "Editor Engine",
-    description: "Choose Monaco or Athas",
-    keywords: ["engine", "monaco", "athas", "editor"],
-  },
-  {
     id: "editor-show-minimap",
     tab: "editor",
     section: "Display",
@@ -198,6 +190,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Compact Folders",
     description: "Collapse single-child folder chains in the file tree",
     keywords: ["compact", "folders", "directories", "single child", "collapse", "nested"],
+  },
+  {
+    id: "file-tree-hide-root-folder",
+    tab: "file-explorer",
+    section: "Display",
+    label: "Hide Root Folder",
+    description: "Show project files directly at the top level",
+    keywords: ["root", "folder", "project", "workspace", "top level", "file explorer"],
   },
   {
     id: "file-tree-density",
@@ -410,7 +410,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show sidebar activity tabs across the top or in a left rail",
     keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
   },
-  ...(!IS_MAC && !IS_WINDOWS
+  ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {
           id: "appearance-native-menu-bar",
@@ -823,6 +823,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Web Viewer",
     description: "Open URLs in embedded editor tabs",
     keywords: ["web", "viewer", "browser", "url", "embedded", "experimental"],
+  },
+  {
+    id: "features-athas-editor-engine",
+    tab: "features",
+    section: "Features",
+    label: "Athas Editor Engine",
+    description: "Use the experimental Athas editor engine instead of Monaco",
+    keywords: ["athas", "editor", "engine", "monaco", "experimental"],
   },
 
   // Terminal Settings

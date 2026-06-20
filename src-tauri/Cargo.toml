@@ -1,6 +1,6 @@
 [package]
 name = "athas"
-version = "0.7.2"
+version = "0.8.0"
 description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
@@ -116,7 +116,7 @@ nucleo-matcher = "0.3.1"
 toml = "0.8"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-deep-link = "2"
-agent-client-protocol = "0.9"
+agent-client-protocol = "0.14"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }
 

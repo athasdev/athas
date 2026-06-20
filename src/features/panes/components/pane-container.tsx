@@ -189,7 +189,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="shrink-0 bg-secondary-bg/60 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-green-500/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
@@ -993,7 +993,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     data-buffer-card-id={buffer.id}
                     className={cn(
-                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-200",
+                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
                       isActiveBuffer
                         ? "border-accent/50 bg-primary-bg shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
                         : "border-border/70 bg-primary-bg hover:border-border/90",

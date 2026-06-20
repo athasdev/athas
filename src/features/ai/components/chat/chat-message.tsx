@@ -5,6 +5,7 @@ import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
 import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import MarkdownRenderer from "../messages/markdown-renderer";
@@ -19,12 +20,7 @@ interface ChatMessageProps {
 }
 
 async function copyText(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 }
 
 export const ChatMessage = memo(function ChatMessage({ message, onApplyCode }: ChatMessageProps) {

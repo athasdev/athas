@@ -220,7 +220,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             {Array.from({ length: numPages }, (_el, index) => (
               <div
                 key={`page_${index + 1}`}
-                className="pdf-page-container bg-white shadow-lg"
+                className="pdf-page-container bg-white shadow-[var(--shadow-card)]"
                 data-page-number={index + 1}
               >
                 <Page

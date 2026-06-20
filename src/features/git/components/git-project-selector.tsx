@@ -110,23 +110,22 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
   };
 
   return (
-    <div className={cn("min-w-0 max-w-full shrink-0", className)}>
+    <div className={cn("min-w-0 max-w-full", className)}>
       <button
         ref={triggerRef}
         type="button"
-        className="ui-font flex h-7 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-secondary-bg/45 px-2 text-left text-text-lighter transition-colors hover:bg-hover/60 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none"
+        className="ui-font flex h-7 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-accent/80 transition-colors hover:text-accent focus-visible:text-accent focus-visible:outline-none"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         title={activeRepoTitle ?? undefined}
         onClick={() => setIsOpen((open) => !open)}
       >
-        <FolderOpen className="size-3.5 shrink-0" />
-        <span className="ui-text-sm min-w-0 flex-1 truncate text-text">{activeRepoLabel}</span>
-        <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">
-          {availableRepoPaths.length}
-        </span>
+        <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
         <CaretDown
-          className={cn("size-3.5 shrink-0 transition-transform", isOpen && "rotate-180")}
+          className={cn(
+            "size-3.5 shrink-0 text-accent/65 transition-transform",
+            isOpen && "rotate-180 text-accent",
+          )}
         />
       </button>
 
@@ -243,7 +242,7 @@ function RepositoryRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left transition-colors",
+        "ui-font flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-2 text-left transition-colors",
         isCurrent ? "bg-hover/70 text-text" : "text-text-lighter hover:bg-hover/50 hover:text-text",
       )}
     >
@@ -252,17 +251,15 @@ function RepositoryRow({
       ) : (
         <FolderOpen className="size-3.5 shrink-0" />
       )}
-      <span className="min-w-0 flex-1">
-        <span className="ui-text-sm block truncate">{getFolderName(repoPath)}</span>
-        <span className="ui-text-xs block truncate text-text-lighter/80">
+      <span className="min-w-0 flex flex-1 items-baseline gap-1.5">
+        <span className="ui-text-sm min-w-0 shrink-0 max-w-[45%] truncate text-text">
+          {getFolderName(repoPath)}
+        </span>
+        <span className="ui-text-xs min-w-0 flex-1 truncate text-text-lighter/75">
           {relativePath === "." ? repoPath : relativePath}
         </span>
       </span>
-      {isAdded ? (
-        <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 text-text-lighter">
-          added
-        </span>
-      ) : null}
+      {isAdded ? <span className="ui-text-xs shrink-0 text-text-lighter/75">added</span> : null}
     </button>
   );
 }

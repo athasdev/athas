@@ -17,6 +17,7 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import { writeClipboardText } from "@/utils/clipboard";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
@@ -269,7 +270,15 @@ export function useMenuEventsWrapper() {
     onPrevTab: () => {
       void keymapRegistry.executeCommand("workbench.previousTab");
     },
-    onThemeChange: (theme: string) => updateSetting("theme", theme),
+    onThemeChange: (theme: string) => {
+      const { settings } = useSettingsStore.getState();
+      if (settings.syncSystemTheme) {
+        void updateSetting("syncSystemTheme", false).then(() => updateSetting("theme", theme));
+        return;
+      }
+
+      updateSetting("theme", theme);
+    },
     onExecuteCommand: (commandId: string) => {
       void keymapRegistry.executeCommand(commandId);
     },
@@ -299,13 +308,7 @@ export function useMenuEventsWrapper() {
         }
 
         const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
-        try {
-          const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-          await writeText(text);
-        } catch {
-          // Fallback to browser clipboard
-          await navigator.clipboard.writeText(text);
-        }
+        await writeClipboardText(text);
 
         const { openUrl } = await import("@tauri-apps/plugin-opener");
         await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");

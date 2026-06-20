@@ -14,7 +14,6 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { requestUIExtensionGeneration } from "../services/ui-extension-generation-service";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
@@ -69,8 +68,6 @@ interface GeneratedExtension {
 export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
   const { isAuthenticated, isPro } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
-  const setActiveView = useUIState((state) => state.setActiveView);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const [step, setStep] = useState<WizardStep>("type");
   const [selectedType, setSelectedType] = useState<ContributionType | null>(null);
   const [description, setDescription] = useState("");
@@ -630,20 +627,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         },
       };
 
-      const fn = new Function("api", generatedExtension.code);
-      fn(api);
-
-      store.updateExtensionState(extensionId, "active");
-      if (generatedExtension.contributionType === "sidebar") {
-        const generatedView = Array.from(store.sidebarViews.values()).find(
-          (view) => view.extensionId === extensionId,
-        );
-        if (generatedView) {
-          setActiveView(generatedView.id);
-          setIsSidebarVisible(true);
-        }
-      }
-      setIsInstalled(true);
+      void api;
+      throw new Error(
+        "Generated extension installation is disabled until generated code runs in a sandbox.",
+      );
     } catch (err) {
       store.updateExtensionState(
         extensionId,
@@ -652,7 +639,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       );
       setError(`Installation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
-  }, [generatedExtension, setActiveView, setIsSidebarVisible]);
+  }, [generatedExtension]);
 
   const renderLockedState = () => {
     const title = isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue";
@@ -839,14 +826,14 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "done" && (
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <p className="text-red-400 ui-text-xs">{error}</p>
+            <div className="rounded-lg border border-error/30 bg-error/10 p-3">
+              <p className="text-error ui-text-xs">{error}</p>
             </div>
           ) : generatedExtension ? (
             <>
               <div className="rounded-lg border border-border/60 bg-secondary-bg/40 p-3">
                 <div className="mb-1 flex items-center gap-2">
-                  <Check className="size-4 text-green-500" />
+                  <Check className="size-4 text-success" />
                   <span className="font-medium ui-text-sm text-text">
                     {generatedExtension.name}
                   </span>
@@ -855,9 +842,9 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               </div>
 
               {isInstalled ? (
-                <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
-                  <Check className="size-4 text-green-500" />
-                  <p className="text-green-400 ui-text-sm">
+                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3">
+                  <Check className="size-4 text-success" />
+                  <p className="text-success ui-text-sm">
                     Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}

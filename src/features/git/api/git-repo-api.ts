@@ -135,6 +135,14 @@ export async function resolveRepositoryPath(repoPath: string): Promise<string | 
   return discoverRepo(repoPath);
 }
 
+export async function resolveRepositoryPathOrThrow(repoPath: string): Promise<string> {
+  const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+  if (!resolvedRepoPath) {
+    throw new Error("Not a Git repository");
+  }
+  return resolvedRepoPath;
+}
+
 export async function resolveRepositoryForFile(
   repoPath: string,
   filePath: string,
@@ -177,53 +185,70 @@ export async function discoverWorkspaceRepositories(
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
   const queue: string[] = [normalizedWorkspacePath];
+  const containingRepoPath = await discoverRepo(normalizedWorkspacePath);
+
+  if (containingRepoPath) {
+    discoveredRepos.add(containingRepoPath);
+  }
 
   while (queue.length > 0) {
-    const currentPath = queue.shift();
-    if (!currentPath) break;
+    const batch = queue.splice(0, 8);
+    const directoryResults = await Promise.all(
+      batch.map(async (currentPath) => {
+        const directoryPath = normalizePath(currentPath);
+        if (visitedDirectories.has(directoryPath)) {
+          return null;
+        }
+        visitedDirectories.add(directoryPath);
 
-    const directoryPath = normalizePath(currentPath);
-    if (visitedDirectories.has(directoryPath)) {
-      continue;
-    }
-    visitedDirectories.add(directoryPath);
+        try {
+          return { directoryPath, entries: await readDir(directoryPath) };
+        } catch {
+          return null;
+        }
+      }),
+    );
 
-    let entries: Awaited<ReturnType<typeof readDir>>;
-    try {
-      entries = await readDir(directoryPath);
-    } catch {
-      continue;
-    }
-
-    const hasGitMetadata = entries.some((entry) => entry?.name === ".git");
-    if (hasGitMetadata) {
-      discoveredRepos.add(directoryPath);
-    }
-
-    for (const entry of entries) {
-      if (!entry?.isDirectory || !entry.name) {
+    for (const result of directoryResults) {
+      if (!result) {
         continue;
       }
 
-      const directoryName = entry.name.toLowerCase();
-      if (REPO_SCAN_SKIP_DIRS.has(directoryName)) {
-        continue;
+      const hasGitMetadata = result.entries.some((entry) => entry?.name === ".git");
+      if (hasGitMetadata) {
+        discoveredRepos.add(result.directoryPath);
       }
 
-      const childPath = normalizePath(`${directoryPath}/${entry.name}`);
+      for (const entry of result.entries) {
+        if (!entry?.isDirectory || !entry.name) {
+          continue;
+        }
 
-      if (visitedDirectories.has(childPath)) {
-        continue;
+        const directoryName = entry.name.toLowerCase();
+        if (REPO_SCAN_SKIP_DIRS.has(directoryName)) {
+          continue;
+        }
+
+        const childPath = normalizePath(`${result.directoryPath}/${entry.name}`);
+
+        if (!visitedDirectories.has(childPath)) {
+          queue.push(childPath);
+        }
       }
-
-      queue.push(childPath);
     }
   }
 
-  const repositories = sortWorkspaceRepositories(
+  let repositories = sortWorkspaceRepositories(
     Array.from(discoveredRepos),
     normalizedWorkspacePath,
   );
+
+  if (containingRepoPath) {
+    repositories = [
+      containingRepoPath,
+      ...repositories.filter((repoPath) => repoPath !== containingRepoPath),
+    ];
+  }
 
   workspaceRepoDiscoveryCache.set(normalizedWorkspacePath, {
     discoveredAt: Date.now(),

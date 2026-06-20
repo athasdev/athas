@@ -1,4 +1,5 @@
 import type React from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   lazy,
   Suspense,
@@ -28,6 +29,7 @@ import type {
 } from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { toast } from "@/ui/toast";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
@@ -38,15 +40,26 @@ import { HoverTooltip } from "../lsp/hover-tooltip";
 import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
-import { useCodeLens } from "../lsp/use-code-lens";
+import type { CodeLensItem } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { useSemanticTokens } from "../lsp/use-semantic-tokens";
 import { MarkdownPreview } from "../markdown/markdown-preview";
+import { NotebookEditor } from "../notebook/notebook-editor";
+import { getPythonScriptCells } from "../notebook/python-script-cells";
+import {
+  applyRMarkdownChunkOptionSemantics,
+  clearRMarkdownChunkOutput,
+  formatRMarkdownChunkOutput,
+  getRMarkdownChunks,
+  rMarkdownChunkShouldEvaluate,
+  rMarkdownChunkShouldPersistOutput,
+  updateRMarkdownChunkOutput,
+} from "../notebook/rmarkdown-chunks";
 import type { Position, Range } from "../types/editor.types";
 import { ScrollDebugOverlay } from "./debug/scroll-debug-overlay";
 import { HtmlPreview } from "./html/html-preview";
-import { MonacoBackedEditor } from "./monaco-editor";
+import { MonacoEditor } from "./monaco-editor";
 import { EditorStylesheet } from "./stylesheet";
 import Breadcrumb, { type BreadcrumbProps } from "./toolbar/breadcrumb";
 import FindBar from "./toolbar/find-bar";
@@ -91,9 +104,42 @@ interface GoToLineEventDetail {
 
 const SEARCH_DEBOUNCE_MS = 300; // Debounce search regex matching
 const LSP_VIEWPORT_LINE_BUFFER = 30;
+const PYTHON_SCRIPT_CELL_COMMAND = "athas.runPythonScriptCell";
+const R_MARKDOWN_CHUNK_COMMAND = "athas.runRMarkdownChunk";
+
+interface NotebookRunResult {
+  stdout: string;
+  stderr: string;
+  status: number | null;
+  timedOut: boolean;
+  displayData?: Array<unknown>;
+}
+
+function isPythonScriptFile(filePath: string): boolean {
+  const normalized = filePath.toLowerCase();
+  return normalized.endsWith(".py") || normalized.endsWith(".ipy");
+}
+
+function isRMarkdownFile(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith(".rmd");
+}
+
+function editorWorkingDirectory(path: string): string | null {
+  if (!path || path.startsWith("remote://") || path.includes("://")) return null;
+  const lastSlash = path.lastIndexOf("/");
+  if (lastSlash <= 0) return null;
+  return path.slice(0, lastSlash);
+}
+
+function truncateCellOutput(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= 180) return trimmed;
+  return `${trimmed.slice(0, 177)}...`;
+}
+
 const AthasEditor = lazy(() =>
-  import("@/features/athas-editor/components/editor").then((module) => ({
-    default: module.Editor,
+  import("@/features/editor/engines/athas/components/editor").then((module) => ({
+    default: module.AthasEditor,
   })),
 );
 
@@ -117,6 +163,9 @@ const CodeEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchRunIdRef = useRef(0);
+  const previousSearchInputSignatureRef = useRef<string | null>(null);
+  const wasFindVisibleForSearchRef = useRef(false);
+  const handledSearchNavigationRevisionRef = useRef(0);
   const codeLensRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLDivElement>(null);
   const valueRef = useRef("");
@@ -147,11 +196,22 @@ const CodeEditor = ({
   const searchQuery = useEditorUIStore.use.searchQuery();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentMatchIndex = useEditorUIStore.use.currentMatchIndex();
+  const searchNavigationRevision = useEditorUIStore.use.searchNavigationRevision();
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchResults } = useEditorUIStore.use.actions();
   const { settings } = useSettingsStore();
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const lspClient = useMemo(() => LspClient.getInstance(), []);
+  const searchInputSignature = useMemo(
+    () =>
+      [
+        searchQuery,
+        Number(searchOptions.caseSensitive),
+        Number(searchOptions.wholeWord),
+        Number(searchOptions.useRegex),
+      ].join("\u0000"),
+    [searchOptions.caseSensitive, searchOptions.useRegex, searchOptions.wholeWord, searchQuery],
+  );
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
   const zoomedFontSize = settings.fontSize * zoomLevel;
@@ -165,9 +225,11 @@ const CodeEditor = ({
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
-  const editorEngine = settings.editorEngine ?? "monaco";
-  const useAthasEditor = editorEngine === "athas";
-  const enableInteractiveServices = isActiveSurface && !isPreviewBuffer && !readOnly;
+  const useAthasEditor = settings.coreFeatures.athasEditorEngine;
+  const showNotebookEditor =
+    activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
+  const enableInteractiveServices =
+    isActiveSurface && !isPreviewBuffer && !readOnly && !showNotebookEditor;
   const largeEditorModeInfo = useLargeEditorModeInfo(value);
   const largeContentMode = useAthasEditor && largeEditorModeInfo.largeContentMode;
   const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
@@ -205,9 +267,11 @@ const CodeEditor = ({
     if (!focusTarget) return;
 
     // Small delay to ensure the editor surface is mounted.
-    setTimeout(() => {
+    const focusTimer = setTimeout(() => {
       focusTarget.focus();
     }, 0);
+
+    return () => clearTimeout(focusTimer);
   }, [activeBufferId, enableInteractiveServices, largeContentMode]);
 
   // Sync content and file info with editor instance store
@@ -274,15 +338,143 @@ const CodeEditor = ({
     value,
   );
 
-  // Code lens
-  const codeLenses = useCodeLens(
-    enableRichEditorServices ? filePath : undefined,
-    enableRichEditorServices,
+  // Inline lenses are reserved for Athas-owned actions that do not require LSP layout support.
+  const pythonScriptCells = useMemo(
+    () =>
+      enableInteractiveServices && isPythonScriptFile(filePath) ? getPythonScriptCells(value) : [],
+    [enableInteractiveServices, filePath, value],
+  );
+  const pythonScriptCellLenses = useMemo<CodeLensItem[]>(
+    () =>
+      pythonScriptCells.map((cell) => ({
+        line: cell.markerLine,
+        title: "Run cell",
+        command: PYTHON_SCRIPT_CELL_COMMAND,
+        arguments: [cell.index],
+      })),
+    [pythonScriptCells],
+  );
+  const rMarkdownChunks = useMemo(
+    () => (enableInteractiveServices && isRMarkdownFile(filePath) ? getRMarkdownChunks(value) : []),
+    [enableInteractiveServices, filePath, value],
+  );
+  const rMarkdownChunkLenses = useMemo<CodeLensItem[]>(
+    () =>
+      rMarkdownChunks.map((chunk) => ({
+        line: chunk.markerLine,
+        title: "Run chunk",
+        command: R_MARKDOWN_CHUNK_COMMAND,
+        arguments: [chunk.index],
+      })),
+    [rMarkdownChunks],
+  );
+  const visibleCodeLenses = useMemo(
+    () => [...pythonScriptCellLenses, ...rMarkdownChunkLenses],
+    [pythonScriptCellLenses, rMarkdownChunkLenses],
   );
 
   const handleCodeLensExecute = useCallback(
     (lens: { title: string; command?: string; arguments?: unknown[] }) => {
       if (!filePath || !lens.command) return;
+
+      if (lens.command === PYTHON_SCRIPT_CELL_COMMAND) {
+        const cellIndex = typeof lens.arguments?.[0] === "number" ? lens.arguments[0] : -1;
+        const cell = pythonScriptCells[cellIndex];
+        if (!cell) return;
+
+        void invoke<NotebookRunResult>("notebook_run_python_cell", {
+          code: cell.code,
+          setupCode: cell.setupCode,
+          cwd: editorWorkingDirectory(filePath),
+        })
+          .then((result) => {
+            if (result.timedOut) {
+              toast.error("Python cell timed out.");
+              return;
+            }
+            if (result.status !== 0 || result.stderr.trim()) {
+              toast.error(
+                truncateCellOutput(result.stderr || `Python exited with status ${result.status}.`),
+              );
+              return;
+            }
+            const stdout = truncateCellOutput(result.stdout);
+            if (stdout) {
+              toast.success(`Python cell output: ${stdout}`);
+              return;
+            }
+            if (result.displayData?.length) {
+              toast.success(`Python cell produced ${result.displayData.length} display output(s).`);
+              return;
+            }
+            toast.success("Python cell ran.");
+          })
+          .catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to run Python cell");
+          });
+        return;
+      }
+
+      if (lens.command === R_MARKDOWN_CHUNK_COMMAND) {
+        const chunkIndex = typeof lens.arguments?.[0] === "number" ? lens.arguments[0] : -1;
+        const chunk = rMarkdownChunks[chunkIndex];
+        if (!chunk) return;
+
+        if (!rMarkdownChunkShouldEvaluate(chunk)) {
+          onChange(clearRMarkdownChunkOutput(valueRef.current, chunk));
+          toast.success("R chunk skipped because eval=FALSE.");
+          return;
+        }
+
+        void invoke<NotebookRunResult>("notebook_run_r_cell", {
+          code: chunk.code,
+          setupCode: chunk.setupCode,
+          cwd: editorWorkingDirectory(filePath),
+        })
+          .then((result) => {
+            const currentValue = valueRef.current;
+            const currentChunk = getRMarkdownChunks(currentValue)[chunkIndex] ?? chunk;
+            const semanticResult = applyRMarkdownChunkOptionSemantics(result, currentChunk);
+            if (rMarkdownChunkShouldPersistOutput(currentChunk)) {
+              onChange(
+                updateRMarkdownChunkOutput(
+                  currentValue,
+                  currentChunk,
+                  formatRMarkdownChunkOutput(semanticResult),
+                ),
+              );
+            } else {
+              onChange(clearRMarkdownChunkOutput(currentValue, currentChunk));
+            }
+
+            if (result.timedOut) {
+              toast.error("R chunk timed out.");
+              return;
+            }
+            const allowCapturedError = currentChunk.options.error === true;
+            if (
+              !allowCapturedError &&
+              (semanticResult.status !== 0 || semanticResult.stderr.trim())
+            ) {
+              toast.error(
+                truncateCellOutput(
+                  semanticResult.stderr || `R exited with status ${semanticResult.status}.`,
+                ),
+              );
+              return;
+            }
+            const stdout = truncateCellOutput(semanticResult.stdout);
+            if (allowCapturedError && semanticResult.stderr.trim()) {
+              toast.success("R chunk completed with captured error output.");
+              return;
+            }
+            toast.success(stdout ? `R chunk output: ${stdout}` : "R chunk ran.");
+          })
+          .catch((error) => {
+            toast.error(error instanceof Error ? error.message : "Failed to run R chunk");
+          });
+        return;
+      }
 
       void lspClient.applyCodeAction(filePath, {
         title: lens.title,
@@ -290,7 +482,7 @@ const CodeEditor = ({
         arguments: lens.arguments ?? [],
       });
     },
-    [filePath, lspClient],
+    [filePath, lspClient, onChange, pythonScriptCells, rMarkdownChunks],
   );
 
   const updateLspVisibleLineRange = useCallback(
@@ -354,14 +546,18 @@ const CodeEditor = ({
   // Combine mouse move handlers for hover and definition link
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!enableInteractiveServices) return;
-    hoverHandlers.handleHover(e);
+    if (useAthasEditor) {
+      hoverHandlers.handleHover(e);
+    }
     definitionLinkHandlers.handleMouseMove(e);
   };
 
   // Combine mouse leave handlers
   const handleMouseLeave = () => {
     if (!enableInteractiveServices) return;
-    hoverHandlers.handleMouseLeave();
+    if (useAthasEditor) {
+      hoverHandlers.handleMouseLeave();
+    }
     definitionLinkHandlers.handleMouseLeave();
   };
 
@@ -419,6 +615,15 @@ const CodeEditor = ({
       clearTimeout(searchTimerRef.current);
     }
 
+    const previousSearchInputSignature = previousSearchInputSignatureRef.current;
+    const searchInputChanged =
+      previousSearchInputSignature !== null &&
+      previousSearchInputSignature !== searchInputSignature;
+    const searchJustOpened = isFindVisible && !wasFindVisibleForSearchRef.current;
+    const shouldRevealSearchResult = searchJustOpened || searchInputChanged;
+    previousSearchInputSignatureRef.current = searchInputSignature;
+    wasFindVisibleForSearchRef.current = isFindVisible;
+
     if (!enableInteractiveServices || !isFindVisible) {
       searchRunIdRef.current += 1;
       setSearchResults([], -1);
@@ -447,7 +652,12 @@ const CodeEditor = ({
         shouldCancel: () => searchRunIdRef.current !== searchRunId,
       }).then((result) => {
         if (!result || searchRunIdRef.current !== searchRunId) return;
-        setSearchResults(result.matches, result.matches.length > 0 ? 0 : -1, result.limited);
+        setSearchResults(
+          result.matches,
+          result.matches.length > 0 ? 0 : -1,
+          result.limited,
+          shouldRevealSearchResult,
+        );
       });
     }, SEARCH_DEBOUNCE_MS);
 
@@ -461,14 +671,18 @@ const CodeEditor = ({
     enableInteractiveServices,
     isFindVisible,
     searchQuery,
+    searchInputSignature,
     searchOptions,
     value,
     setSearchResults,
   ]);
 
-  // Effect to handle search navigation - scroll to current match and move cursor
+  // Effect to handle explicit search navigation - scroll to current match and move cursor
   useEffect(() => {
     if (!enableInteractiveServices) return;
+    if (searchNavigationRevision === handledSearchNavigationRevisionRef.current) return;
+    handledSearchNavigationRevisionRef.current = searchNavigationRevision;
+
     if (searchMatches.length > 0 && currentMatchIndex >= 0) {
       const match = searchMatches[currentMatchIndex];
       if (!match) return;
@@ -479,7 +693,7 @@ const CodeEditor = ({
       editorAPI.setSelection({ start: startPosition, end: endPosition });
       editorAPI.setCursorPosition(endPosition);
     }
-  }, [currentMatchIndex, enableInteractiveServices, searchMatches]);
+  }, [currentMatchIndex, enableInteractiveServices, searchMatches, searchNavigationRevision]);
 
   if (!activeBuffer) {
     return <div className="flex flex-1 items-center justify-center text-text"></div>;
@@ -514,16 +728,16 @@ const CodeEditor = ({
           }}
         >
           {/* Hover Tooltip */}
-          {enableRichEditorServices && <HoverTooltip />}
+          {enableRichEditorServices && useAthasEditor && <HoverTooltip />}
 
           {/* Completion Dropdown */}
           {enableRichEditorServices && useAthasEditor && <CompletionDropdown />}
 
           {/* Code Lens */}
-          {enableRichEditorServices && codeLenses.length > 0 && (
+          {enableRichEditorServices && visibleCodeLenses.length > 0 && (
             <CodeLensOverlay
               ref={codeLensRef}
-              lenses={codeLenses}
+              lenses={visibleCodeLenses}
               fontSize={zoomedFontSize}
               lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
@@ -567,6 +781,8 @@ const CodeEditor = ({
               <HtmlPreview />
             ) : showCsvPreview ? (
               <CsvPreview />
+            ) : showNotebookEditor ? (
+              <NotebookEditor />
             ) : useAthasEditor ? (
               <Suspense fallback={<div className="absolute inset-0 bg-primary-bg" />}>
                 <AthasEditor
@@ -593,7 +809,9 @@ const CodeEditor = ({
                   onMouseMove={handleMouseMove}
                   onMouseLeave={handleMouseLeave}
                   onMouseEnter={
-                    enableRichEditorServices ? hoverHandlers.handleMouseEnter : undefined
+                    enableRichEditorServices && useAthasEditor
+                      ? hoverHandlers.handleMouseEnter
+                      : undefined
                   }
                   onClick={
                     enableRichEditorServices ? goToDefinitionHandlers.handleClick : undefined
@@ -601,7 +819,7 @@ const CodeEditor = ({
                 />
               </Suspense>
             ) : (
-              <MonacoBackedEditor
+              <MonacoEditor
                 bufferId={activeBufferId ?? undefined}
                 viewStateKey={editorViewKey ?? undefined}
                 isActiveSurface={isActiveSurface}
@@ -621,7 +839,6 @@ const CodeEditor = ({
                 onModelPositionResolverChange={handleModelPositionResolverChange}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                onMouseEnter={enableRichEditorServices ? hoverHandlers.handleMouseEnter : undefined}
                 onClick={enableRichEditorServices ? goToDefinitionHandlers.handleClick : undefined}
               />
             )}

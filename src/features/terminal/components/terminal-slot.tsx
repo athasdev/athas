@@ -80,5 +80,7 @@ export function TerminalSlot({
     return () => el.removeEventListener("mousedown", handler, true);
   }, [onActivate]);
 
-  return <div ref={ref} data-terminal-slot={sessionId} className="flex size-full flex-col" />;
+  return (
+    <div ref={ref} data-terminal-slot={sessionId} className="flex size-full min-w-0 flex-col" />
+  );
 }

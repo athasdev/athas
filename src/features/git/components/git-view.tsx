@@ -49,7 +49,6 @@ import type { GitFile } from "../types/git.types";
 import type { GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 import { countDiffStats } from "../utils/git-diff-helpers";
 import { getStashDisplayTitle, getStashPositionLabel } from "../utils/git-stash-format";
-import { buildWorkingTreeMultiDiff } from "../utils/working-tree-multi-diff";
 import GitActionsMenu from "./git-actions-menu";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
@@ -495,34 +494,26 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         if (diffEntries.length > 0) {
           void (async () => {
-            const accumulatedDiffs = [{ fileKey: selectedFileKey, diff }];
+            const remainingDiffs = await Promise.all(
+              diffEntries.map(async ([fileKey, entry]) => {
+                const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
+                if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
+                  return null;
+                }
 
-            for (const [fileKey, entry] of diffEntries) {
-              const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
-              if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
-                continue;
-              }
+                return {
+                  fileKey,
+                  diff: nextDiff,
+                };
+              }),
+            );
 
-              accumulatedDiffs.push({
-                fileKey,
-                diff: nextDiff,
-              });
-
-              const stats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
-              useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
-                title: "Uncommitted Changes",
-                repoPath,
-                commitHash: "working-tree",
-                files: accumulatedDiffs.map((item) => item.diff),
-                totalFiles: accumulatedDiffs.length,
-                totalAdditions: stats.additions,
-                totalDeletions: stats.deletions,
-                fileKeys: accumulatedDiffs.map((item) => item.fileKey),
-                initiallyExpandedFileKey: selectedFileKey,
-                isLoading: true,
-              } satisfies MultiFileDiff);
-              await Promise.resolve();
-            }
+            const accumulatedDiffs = [
+              { fileKey: selectedFileKey, diff },
+              ...remainingDiffs.filter(
+                (entry): entry is NonNullable<typeof entry> => entry !== null,
+              ),
+            ];
 
             const allStats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
             useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
@@ -551,42 +542,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     } catch (error) {
       console.error("Error getting file diff:", error);
       await showAlertDialog(`Failed to get diff for ${filePath}:\n${error}`, "Git Diff");
-    }
-  };
-
-  const handleViewWorkingTreeDiff = async () => {
-    if (!activeRepoPath || !gitStatus) return;
-
-    try {
-      const multiDiff = await buildWorkingTreeMultiDiff({
-        repoPath: activeRepoPath,
-        status: {
-          ...gitStatus,
-          files: visibleGitFiles,
-        },
-      });
-
-      if (multiDiff.totalFiles === 0) {
-        await showAlertDialog("No diffable uncommitted changes.", "Git Diff");
-        return;
-      }
-
-      const displayName = `Uncommitted Changes (${multiDiff.totalFiles} file${multiDiff.totalFiles === 1 ? "" : "s"})`;
-      useBufferStore
-        .getState()
-        .actions.openBuffer(
-          "diff://working-tree/all-files",
-          displayName,
-          "",
-          false,
-          undefined,
-          true,
-          true,
-          multiDiff,
-        );
-    } catch (error) {
-      console.error("Error getting working tree diff:", error);
-      await showAlertDialog(`Failed to get working tree diff:\n${error}`, "Git Diff");
     }
   };
 
@@ -906,7 +861,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -939,7 +894,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-red-400">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -955,36 +910,36 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   return (
     <>
       <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
-        <SidebarHeader className="min-w-0 bg-transparent p-0 backdrop-blur-none">
-          <GitProjectSelector
-            className="w-fit max-w-[calc(100%-4.5rem)]"
-            onRepositoryChange={() => setRepoSelectionError(null)}
-          />
-
-          <div className="flex shrink-0 items-center gap-1">
-            <SidebarHeaderIconButton
-              onClick={handleManualRefresh}
-              disabled={isLoadingGitData || isRefreshing}
-              className="disabled:opacity-50"
-              tooltip="Refresh"
-              aria-label="Refresh git status"
-            >
-              {isLoadingGitData || isRefreshing ? (
-                <LoadingIndicator label="Refreshing git status" compact />
-              ) : (
-                <RefreshCw />
-              )}
-            </SidebarHeaderIconButton>
-            {renderActionsButton()}
-          </div>
-        </SidebarHeader>
-
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <SidebarSectionSwitcher
             items={gitTabs}
             value={activeTab}
             onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
           />
+
+          <SidebarHeader className="min-w-0 justify-between bg-transparent p-0 backdrop-blur-none">
+            <GitProjectSelector
+              className="min-w-0 max-w-[calc(100%-4.5rem)] shrink"
+              onRepositoryChange={() => setRepoSelectionError(null)}
+            />
+
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              <SidebarHeaderIconButton
+                onClick={handleManualRefresh}
+                disabled={isLoadingGitData || isRefreshing}
+                className="disabled:opacity-50"
+                tooltip="Refresh"
+                aria-label="Refresh git status"
+              >
+                {isLoadingGitData || isRefreshing ? (
+                  <LoadingIndicator label="Refreshing git status" compact />
+                ) : (
+                  <RefreshCw />
+                )}
+              </SidebarHeaderIconButton>
+              {renderActionsButton()}
+            </div>
+          </SidebarHeader>
 
           <SidebarSectionPager
             className="flex-1"
@@ -1009,11 +964,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     isCollapsed={false}
                     onToggle={() => {}}
                     onViewCommitDiff={handleViewCommitDiff}
-                    onViewWorkingTreeDiff={handleViewWorkingTreeDiff}
                     repoPath={activeRepoPath}
                     showHeader={false}
-                    uncommittedFiles={visibleGitFiles}
-                    currentBranch={gitStatus.branch}
                   />
                 ),
               },
@@ -1092,7 +1044,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       </span>
                     </div>
                   </div>
-                  <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-all group-hover/stash:pointer-events-auto group-hover/stash:translate-x-0 group-hover/stash:opacity-100 group-focus-within/stash:pointer-events-auto group-focus-within/stash:translate-x-0 group-focus-within/stash:opacity-100">
+                  <div className="pointer-events-none absolute right-2 top-1/2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-[opacity,transform] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover/stash:pointer-events-auto group-hover/stash:translate-x-0 group-hover/stash:opacity-100 group-focus-within/stash:pointer-events-auto group-focus-within/stash:translate-x-0 group-focus-within/stash:opacity-100">
                     <Button
                       type="button"
                       onClick={(event) => {
@@ -1142,7 +1094,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                       disabled={isActionLoading}
                       variant="ghost"
                       compact
-                      className="text-red-400 hover:bg-red-900/20 hover:text-red-300 disabled:opacity-50"
+                      className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
                       tooltip="Drop stash"
                     >
                       <Trash2 />

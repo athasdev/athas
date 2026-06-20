@@ -194,7 +194,7 @@ export function ImageFormatDialog({
                   <span
                     className={cn(
                       "ui-font ui-text-xs",
-                      sizeDiff < 0 ? "text-green-500" : "text-orange-500",
+                      sizeDiff < 0 ? "text-success" : "text-warning",
                     )}
                   >
                     {sizeDiff > 0 ? "+" : ""}

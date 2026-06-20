@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolvePreCompletionKeyEdit } from "@/features/athas-editor/utils/editor-key-edits";
+import { resolvePreCompletionKeyEdit } from "@/features/editor/engines/athas/utils/editor-key-edits";
 
 describe("Athas editor key edits", () => {
   it.each(["Backspace", "Delete"])("collapses the selection after deleting it with %s", (key) => {
@@ -44,5 +44,23 @@ describe("Athas editor key edits", () => {
       selectionStart: 6,
       selectionEnd: 6,
     });
+  });
+
+  it("does not accept inline completion on Shift+Tab", () => {
+    const result = resolvePreCompletionKeyEdit({
+      keyState: {
+        key: "Tab",
+        shiftKey: true,
+        content: "const value",
+        selectionStart: 5,
+        selectionEnd: 5,
+        tabSize: 2,
+      },
+      hasBlockedModifier: false,
+      autocompleteCompletion: { text: " extra", cursorOffset: 5 },
+      isLspCompletionVisible: false,
+    });
+
+    expect(result).toBeNull();
   });
 });

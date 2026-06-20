@@ -21,6 +21,7 @@ export interface AcpAgentStatus {
   sessionActive: boolean;
   initialized: boolean;
   sessionId?: string | null;
+  workspacePath?: string | null;
   agentCapabilities?: AcpAgentCapabilities | null;
 }
 
@@ -125,6 +126,11 @@ export interface AcpPlanEntry {
   content: string;
   priority: AcpPlanEntryPriority;
   status: AcpPlanEntryStatus;
+}
+
+export interface AcpUsageUpdate {
+  used: number;
+  size: number;
 }
 
 export type AcpPermissionOptionKind =
@@ -246,6 +252,11 @@ export type AcpEvent =
       type: "plan_update";
       sessionId: string;
       entries: AcpPlanEntry[];
+    }
+  | {
+      type: "usage_update";
+      sessionId: string;
+      usage: AcpUsageUpdate;
     }
   | {
       type: "session_mode_update";

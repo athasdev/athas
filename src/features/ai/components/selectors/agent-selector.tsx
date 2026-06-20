@@ -39,7 +39,6 @@ interface AgentSelectorProps {
   portalContainer?: Element | DocumentFragment | null;
   triggerClassName?: string;
   triggerTooltip?: string;
-  openSignal?: number;
 }
 
 export function AgentSelector({
@@ -50,7 +49,6 @@ export function AgentSelector({
   portalContainer,
   triggerClassName,
   triggerTooltip,
-  openSignal,
 }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -65,7 +63,6 @@ export function AgentSelector({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const previousOpenSignalRef = useRef(openSignal);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
   const currentAgent =
@@ -149,43 +146,46 @@ export function AgentSelector({
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (openSignal === undefined || openSignal === previousOpenSignalRef.current) return;
-    previousOpenSignalRef.current = openSignal;
-    setIsOpen(true);
-  }, [openSignal]);
-
-  useEffect(() => {
+  const resetSelection = useCallback(() => {
     setSelectedIndex(0);
-  }, [search]);
+  }, []);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSearch("");
-      setSelectedIndex(0);
+  const closeAgentSelector = useCallback(() => {
+    setSearch("");
+    setSelectedIndex(0);
+    setIsOpen(false);
+  }, []);
+
+  const toggleAgentSelector = useCallback(() => {
+    if (isOpen) {
+      closeAgentSelector();
+      return;
     }
-  }, [isOpen]);
+    setSearch("");
+    setSelectedIndex(0);
+    setIsOpen(true);
+  }, [closeAgentSelector, isOpen]);
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
       if (onSelectAgent) {
-        setIsOpen(false);
+        closeAgentSelector();
         onSelectAgent(agentId);
         return;
       }
 
       if (agentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
-        setIsOpen(false);
+        closeAgentSelector();
         openClaudeCodeTerminal();
         return;
       }
 
       if (variant !== "header" && agentId === currentAgentId) {
-        setIsOpen(false);
+        closeAgentSelector();
         return;
       }
 
-      setIsOpen(false);
+      closeAgentSelector();
       setSelectedAgentId(agentId);
 
       if (currentAgentId !== "custom") {
@@ -208,6 +208,7 @@ export function AgentSelector({
       }
     },
     [
+      closeAgentSelector,
       onSelectAgent,
       variant,
       currentAgentId,
@@ -270,11 +271,18 @@ export function AgentSelector({
           break;
         case "Escape":
           e.preventDefault();
-          setIsOpen(false);
+          closeAgentSelector();
           break;
       }
     },
-    [isOpen, selectableItems, selectedIndex, handleAgentChange, handleInstallAgent],
+    [
+      isOpen,
+      selectableItems,
+      selectedIndex,
+      handleAgentChange,
+      handleInstallAgent,
+      closeAgentSelector,
+    ],
   );
 
   let selectableIndex = -1;
@@ -284,7 +292,7 @@ export function AgentSelector({
       {variant === "header" ? (
         <PaneIconButton
           ref={triggerRef}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleAgentSelector}
           type="button"
           tooltip={triggerTooltip ?? "New chat"}
           className={triggerClassName}
@@ -294,7 +302,7 @@ export function AgentSelector({
       ) : (
         <Button
           ref={triggerRef}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleAgentSelector}
           type="button"
           variant="ghost"
           compact
@@ -313,7 +321,7 @@ export function AgentSelector({
         anchorRef={triggerRef}
         anchorSide="bottom"
         anchorAlign="end"
-        onClose={() => setIsOpen(false)}
+        onClose={closeAgentSelector}
         portalContainer={portalContainer}
         className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
         style={{ maxHeight: "240px" }}
@@ -323,7 +331,10 @@ export function AgentSelector({
             ref={inputRef}
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              resetSelection();
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Search agents..."
             variant="ghost"
@@ -402,7 +413,7 @@ export function AgentSelector({
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
-                          setIsOpen(false);
+                          closeAgentSelector();
                           onOpenSettings();
                         }}
                         variant="ghost"

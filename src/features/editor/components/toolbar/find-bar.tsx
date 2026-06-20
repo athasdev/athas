@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -51,14 +51,14 @@ const FindBar = () => {
   } = useEditorUIStore.use.actions();
 
   const isVisible = isFindVisible;
-  const onClose = () => {
+  const onClose = useCallback(() => {
     setIsFindVisible(false);
     const { editorRef } = useEditorStateStore.getState();
     const textarea = editorRef?.current?.querySelector("[data-monaco-editor-scroll] textarea");
     if (textarea instanceof HTMLTextAreaElement) {
       textarea.focus();
     }
-  };
+  }, [setIsFindVisible]);
   const currentMatch = currentMatchIndex + 1;
   const totalMatches = searchMatches.length;
   const hasNoResults = Boolean(searchQuery) && totalMatches === 0;

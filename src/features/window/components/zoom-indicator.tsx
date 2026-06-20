@@ -14,7 +14,7 @@ export function ZoomIndicator() {
   const label = zoomIndicatorType === "editor" ? "Editor" : "Terminal";
 
   return (
-    <div className="fade-in-0 fade-out-0 fixed top-4 right-4 z-50 animate-out rounded bg-black/80 px-2 py-1 text-white ui-text-xs backdrop-blur-sm duration-200">
+    <div className="fade-in-0 fade-out-0 fixed top-4 right-4 z-50 animate-out rounded bg-black/80 px-2 py-1 text-white ui-text-xs backdrop-blur-sm duration-[var(--app-duration-normal)]">
       {label}: {Math.round(zoomLevel * 100)}%
     </div>
   );

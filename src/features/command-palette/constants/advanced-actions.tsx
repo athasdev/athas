@@ -2,8 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowClockwiseIcon as RefreshCw,
   SparkleIcon as Sparkles,
+  SquareIcon as Square,
   TerminalWindowIcon as Terminal,
 } from "@phosphor-icons/react";
+import {
+  restartAllLanguageServers,
+  stopAllLanguageServers,
+} from "@/features/keymaps/commands/lsp-command-actions";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import type { Action } from "../types/action.types";
@@ -15,14 +20,6 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
-  updateLspStatus: (
-    status: string,
-    workspaces?: string[],
-    error?: string,
-    languages?: string[],
-  ) => void;
-  clearLspError: () => void;
-  rootFolderPath: string | null | undefined;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -39,9 +36,6 @@ interface AdvancedActionsParams {
 export const createAdvancedActions = (params: AdvancedActionsParams): Action[] => {
   const {
     lspStatus,
-    updateLspStatus,
-    clearLspError,
-    rootFolderPath,
     vimMode,
     vimCommands,
     setMode,
@@ -107,17 +101,26 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       },
     },
     {
-      id: "lsp-restart",
-      label: "LSP: Restart Server",
-      description: "Restart the LSP server",
+      id: "lsp.restartAllServers",
+      label: "Language Server: Restart All Servers",
+      description: "Restart every active language server",
       icon: <RefreshCw />,
-      category: "LSP",
-      action: () => {
-        updateLspStatus("connecting");
-        clearLspError();
-        setTimeout(() => {
-          updateLspStatus("connected", [rootFolderPath || ""]);
-        }, 1000);
+      category: "Language Server",
+      commandId: "lsp.restartAllServers",
+      action: async () => {
+        await restartAllLanguageServers();
+        onClose();
+      },
+    },
+    {
+      id: "lsp.stopAllServers",
+      label: "Language Server: Stop All Servers",
+      description: "Stop every active language server",
+      icon: <Square />,
+      category: "Language Server",
+      commandId: "lsp.stopAllServers",
+      action: async () => {
+        await stopAllLanguageServers();
         onClose();
       },
     },

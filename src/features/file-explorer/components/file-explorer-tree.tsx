@@ -2,7 +2,6 @@ import ignore from "ignore";
 import {
   CheckIcon as Check,
   EyeIcon as Eye,
-  FunnelIcon as Funnel,
   GitBranchIcon as GitBranch,
   MagnifyingGlassIcon as Search,
   WarningIcon as AlertTriangle,
@@ -42,13 +41,8 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import {
-  SidebarEmptyActionState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarHeaderSearch,
-} from "@/ui/sidebar";
+import type { MenuItem } from "@/ui/dropdown";
+import { SidebarEmptyActionState, SidebarSearchFilterRow } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
@@ -98,7 +92,7 @@ interface FileExplorerTreeProps {
   onUpdateFiles?: (files: FileEntry[]) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onDuplicatePath?: (path: string) => void;
-  onRefreshDirectory?: (path: string) => void;
+  onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
   onFileMove?: (oldPath: string, newPath: string) => void;
@@ -157,7 +151,6 @@ function FileExplorerTreeComponent({
   const [isFileTreeFilterMenuOpen, setIsFileTreeFilterMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const documentRef = useRef<Document>(document);
 
   const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
@@ -450,6 +443,7 @@ function FileExplorerTreeComponent({
     activePath,
     containerRef,
     expandedPathsOverride: displayedExpandedPaths,
+    rootFolderPath,
   });
   const keyboardPath = focusedPath || activePath;
   const highlightedPath = hasTreeFocus ? keyboardPath : activePath;
@@ -694,38 +688,41 @@ function FileExplorerTreeComponent({
       const stack: string[] = [directoryPath];
 
       while (stack.length > 0) {
-        const currentPath = stack.pop();
-        if (!currentPath) continue;
+        const currentBatch = stack.splice(0, 8);
+        const directoryEntries = await Promise.all(
+          currentBatch.map((currentPath) => readDirectory(currentPath)),
+        );
 
-        const entries = await readDirectory(currentPath);
-        for (const entry of entries as Array<{
-          path: string;
-          is_dir?: boolean;
-        }>) {
-          if (!entry.path) continue;
-          const isDir = !!entry.is_dir;
-          const entryName = getPathBaseName(entry.path);
+        for (const entries of directoryEntries) {
+          for (const entry of entries as Array<{
+            path: string;
+            is_dir?: boolean;
+          }>) {
+            if (!entry.path) continue;
+            const isDir = !!entry.is_dir;
+            const entryName = getPathBaseName(entry.path);
 
-          if (isAlwaysHiddenFileName(entryName)) {
-            continue;
-          }
+            if (isAlwaysHiddenFileName(entryName)) {
+              continue;
+            }
 
-          if (isUserHidden(entry.path, isDir)) {
-            continue;
-          }
+            if (isUserHidden(entry.path, isDir)) {
+              continue;
+            }
 
-          if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
-            continue;
-          }
+            if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
+              continue;
+            }
 
-          if (!settings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
-            continue;
-          }
+            if (!settings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
+              continue;
+            }
 
-          if (isDir) {
-            stack.push(entry.path);
-          } else {
-            collected.push(entry.path);
+            if (isDir) {
+              stack.push(entry.path);
+            } else {
+              collected.push(entry.path);
+            }
           }
         }
       }
@@ -1064,7 +1061,7 @@ function FileExplorerTreeComponent({
             const targetDir = isDir ? current.path : current.path.split(sep).slice(0, -1).join(sep);
             if (targetDir) {
               clipboardActions.paste(targetDir).then(() => {
-                onRefreshDirectory?.(targetDir);
+                onRefreshDirectory?.(targetDir, { force: true });
               });
             }
             return;
@@ -1180,20 +1177,20 @@ function FileExplorerTreeComponent({
       onMouseUp={handleContainerMouseUp}
       onMouseLeave={handleContainerMouseLeave}
     >
-      <SidebarHeader onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-        <SidebarHeaderSearch
-          ref={searchInputRef}
-          value={treeSearchQuery}
-          onChange={setTreeSearchQuery}
-          leftIcon={Search}
-          placeholder="Search"
-          aria-label="Filter files in tree"
-          aria-controls="file-tree-results"
-          autoCapitalize="none"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck="false"
-          onKeyDown={(e) => {
+      <SidebarSearchFilterRow
+        value={treeSearchQuery}
+        onChange={setTreeSearchQuery}
+        searchIcon={Search}
+        placeholder="Search"
+        searchAriaLabel="Filter files in tree"
+        searchInputRef={searchInputRef}
+        searchInputProps={{
+          "aria-controls": "file-tree-results",
+          autoCapitalize: "none",
+          autoComplete: "off",
+          autoCorrect: "off",
+          spellCheck: "false",
+          onKeyDown: (e) => {
             if (e.key === "Escape") {
               e.preventDefault();
               e.stopPropagation();
@@ -1206,19 +1203,19 @@ function FileExplorerTreeComponent({
               e.stopPropagation();
               navigateTreeSearchMatch(e.shiftKey ? -1 : 1);
             }
-          }}
-        />
-        <SidebarHeaderIconButton
-          ref={filterButtonRef}
-          active={hasActiveFileTreeFilters}
-          className="shrink-0"
-          tooltip="Filter Files"
-          tooltipSide="bottom"
-          onClick={() => setIsFileTreeFilterMenuOpen(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
+          },
+        }}
+        filterOpen={isFileTreeFilterMenuOpen}
+        onFilterOpenChange={setIsFileTreeFilterMenuOpen}
+        filterItems={fileTreeFilterMenuItems}
+        filterActive={hasActiveFileTreeFilters}
+        filterTooltip="Filter Files"
+        filterAriaLabel="Filter files"
+        filterCloseOnSelect={false}
+        filterMenuClassName="w-fit min-w-fit"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      />
       {!rootFolderPath ? (
         <div className="file-tree-empty-state absolute inset-0 flex items-center justify-center">
           <SidebarEmptyActionState
@@ -1370,16 +1367,6 @@ function FileExplorerTreeComponent({
       )}
 
       {contextMenuElement}
-      <Dropdown
-        isOpen={isFileTreeFilterMenuOpen}
-        anchorRef={filterButtonRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        items={fileTreeFilterMenuItems}
-        onClose={() => setIsFileTreeFilterMenuOpen(false)}
-        closeOnSelect={false}
-        className="w-fit min-w-fit"
-      />
       {alertDialog && (
         <Dialog
           title={alertDialog.title}

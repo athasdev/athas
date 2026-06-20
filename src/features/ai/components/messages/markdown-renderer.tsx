@@ -10,13 +10,16 @@ import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { Button } from "@/ui/button";
 import {
-  fetchHighlightQuery,
-  getDefaultParserWasmUrl,
-} from "@/features/editor/lib/wasm-parser/extension-assets";
-import { tokenizeCodeWithTree } from "@/features/editor/lib/wasm-parser/tokenizer";
-import { normalizeLanguage } from "@/features/editor/markdown/language-map";
+  type CodeHighlightSegment,
+  getCodeHighlightSegments,
+} from "@/features/editor/markdown/code-highlight";
+import {
+  normalizeCodeFenceLanguage,
+  normalizeLanguage,
+} from "@/features/editor/markdown/language-map";
+import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
 
 const LANGUAGE_HINTS = new Set([
   "bash",
@@ -152,67 +155,11 @@ function inferCodeLanguage(code: string): string {
   return "clike";
 }
 
-type HighlightSegment = {
-  start: number;
-  end: number;
-  className: string;
-};
-
-const TREE_SITTER_QUERY_CACHE = new Map<string, string>();
-const TREE_SITTER_TOKEN_CACHE = new Map<string, HighlightSegment[]>();
-
 async function copyTextToClipboard(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 }
 
-const TREE_SITTER_LANGUAGE_ALIASES: Record<string, string> = {
-  csharp: "csharp",
-  jsx: "tsx",
-  shell: "bash",
-  markup: "html",
-  xml: "html",
-  objectivec: "objc",
-};
-
-function resolveTreeSitterLanguage(language: string): string | null {
-  const normalized = normalizeLanguage(language);
-  if (normalized === "clike") return null;
-  return TREE_SITTER_LANGUAGE_ALIASES[normalized] || normalized;
-}
-
-function normalizeSegments(tokens: HighlightSegment[], maxLength: number): HighlightSegment[] {
-  if (tokens.length === 0) return [];
-
-  const sorted = [...tokens].sort((a, b) => a.start - b.start || a.end - b.end);
-  const normalized: HighlightSegment[] = [];
-  let cursor = 0;
-
-  for (const token of sorted) {
-    const start = Math.max(0, Math.min(maxLength, token.start));
-    const end = Math.max(0, Math.min(maxLength, token.end));
-    if (end <= start) continue;
-
-    const clampedStart = Math.max(start, cursor);
-    if (end <= clampedStart) continue;
-
-    normalized.push({
-      ...token,
-      start: clampedStart,
-      end,
-    });
-
-    cursor = end;
-  }
-
-  return normalized;
-}
-
-function renderHighlightedCode(code: string, segments: HighlightSegment[]): React.ReactNode {
+function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {
   if (segments.length === 0) {
     return code;
   }
@@ -250,74 +197,20 @@ function CodeBlock({
   languageHint: string;
   onApplyCode?: (code: string, language?: string) => void;
 }) {
-  const explicitLanguage = languageHint ? normalizeLanguage(languageHint) : "";
+  const explicitLanguage = languageHint ? normalizeCodeFenceLanguage(languageHint) : "";
   const inferredLanguage = explicitLanguage || inferCodeLanguage(code);
-  const treeSitterLanguage = resolveTreeSitterLanguage(inferredLanguage);
   const languageLabel = explicitLanguage || (inferredLanguage !== "clike" ? inferredLanguage : "");
 
-  const [segments, setSegments] = useState<HighlightSegment[] | null>(null);
+  const [segments, setSegments] = useState<CodeHighlightSegment[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setSegments(null);
 
-    if (!treeSitterLanguage) {
-      setSegments([]);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const cacheKey = `${treeSitterLanguage}:${code}`;
-    const cached = TREE_SITTER_TOKEN_CACHE.get(cacheKey);
-    if (cached) {
-      setSegments(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
     const loadHighlighting = async () => {
-      try {
-        const wasmPath = getDefaultParserWasmUrl(treeSitterLanguage);
-        let highlightQuery = TREE_SITTER_QUERY_CACHE.get(treeSitterLanguage);
-
-        if (!highlightQuery) {
-          const resolved = await fetchHighlightQuery(treeSitterLanguage, {
-            wasmUrl: wasmPath,
-            cacheMode: "no-store",
-          });
-          highlightQuery = resolved.query || "";
-          TREE_SITTER_QUERY_CACHE.set(treeSitterLanguage, highlightQuery);
-        }
-
-        const result = await tokenizeCodeWithTree(code, treeSitterLanguage, {
-          languageId: treeSitterLanguage,
-          wasmPath,
-          highlightQuery,
-        });
-
-        const tokenSegments = normalizeSegments(
-          result.tokens.map((token) => ({
-            start: token.startIndex,
-            end: token.endIndex,
-            className: token.type,
-          })),
-          code.length,
-        );
-
-        try {
-          result.tree.delete();
-        } catch {}
-
-        if (cancelled) return;
-
-        TREE_SITTER_TOKEN_CACHE.set(cacheKey, tokenSegments);
-        setSegments(tokenSegments);
-      } catch {
-        if (!cancelled) {
-          setSegments([]);
-        }
+      const nextSegments = await getCodeHighlightSegments(code, inferredLanguage);
+      if (!cancelled) {
+        setSegments(nextSegments);
       }
     };
 
@@ -326,7 +219,7 @@ function CodeBlock({
     return () => {
       cancelled = true;
     };
-  }, [code, treeSitterLanguage]);
+  }, [code, inferredLanguage]);
 
   const renderedCode = useMemo(() => renderHighlightedCode(code, segments || []), [code, segments]);
 
@@ -535,7 +428,7 @@ const headerClasses: Record<number, string> = {
   6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-xs",
 };
 
-function renderHeader(level: number, text: string, key: number): React.ReactNode {
+function renderHeader(level: number, text: string, key: string): React.ReactNode {
   const className = headerClasses[level] || headerClasses[6];
   const content = renderInlineFormatting(text);
 
@@ -689,7 +582,7 @@ function getTableAlignmentClass(alignment: TableAlignment): string {
   }
 }
 
-function renderTable(table: MarkdownTable, key: number): React.ReactNode {
+function renderTable(table: MarkdownTable, key: string): React.ReactNode {
   return (
     <div key={key} className="my-2 max-w-full overflow-x-auto">
       <table className="w-full min-w-max border-collapse ui-text-xs">
@@ -728,14 +621,17 @@ function renderTable(table: MarkdownTable, key: number): React.ReactNode {
 function renderInlineFormatting(text: string): React.ReactNode {
   const elements: React.ReactNode[] = [];
   let remaining = text;
-  let key = 0;
+  const getInlineKey = (kind: string, value: string) => {
+    const offset = text.length - remaining.length;
+    return `${kind}-${offset}-${value.length}`;
+  };
 
   while (remaining.length > 0) {
     // Inline code
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
       elements.push(
-        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+        <code key={getInlineKey("code", codeMatch[0])} className={INLINE_CODE_CLASS_NAME}>
           {codeMatch[1]}
         </code>,
       );
@@ -746,7 +642,10 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
     if (pendingCodeMatch) {
       elements.push(
-        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+        <code
+          key={getInlineKey("pending-code", pendingCodeMatch[0])}
+          className={INLINE_CODE_CLASS_NAME}
+        >
           {pendingCodeMatch[1]}
         </code>,
       );
@@ -757,7 +656,10 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const strikeMatch = remaining.match(/^~~([^~]+)~~/);
     if (strikeMatch) {
       elements.push(
-        <del key={key++} className="text-text-lighter line-through">
+        <del
+          key={getInlineKey("strike", strikeMatch[0])}
+          className="text-text-lighter line-through"
+        >
           {strikeMatch[1]}
         </del>,
       );
@@ -769,7 +671,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
     if (boldMatch) {
       elements.push(
-        <strong key={key++} className="font-semibold">
+        <strong key={getInlineKey("bold", boldMatch[0])} className="font-semibold">
           {boldMatch[1]}
         </strong>,
       );
@@ -781,7 +683,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const italicMatch = remaining.match(/^\*([^*]+)\*/);
     if (italicMatch) {
       elements.push(
-        <em key={key++} className="italic">
+        <em key={getInlineKey("italic", italicMatch[0])} className="italic">
           {italicMatch[1]}
         </em>,
       );
@@ -795,7 +697,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       const url = linkMatch[2];
       elements.push(
         <a
-          key={key++}
+          key={getInlineKey("link", linkMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
@@ -816,7 +718,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       const url = urlMatch[1];
       elements.push(
         <a
-          key={key++}
+          key={getInlineKey("url", urlMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
@@ -834,15 +736,16 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Find next special character or consume all remaining text
     const nextSpecial = remaining.search(/[`~*[\]]|https?:\/\//);
     if (nextSpecial === -1) {
-      elements.push(<span key={key++}>{remaining}</span>);
+      elements.push(<span key={getInlineKey("text", remaining)}>{remaining}</span>);
       break;
     }
     if (nextSpecial === 0) {
       // Special char at start didn't match any pattern — treat as plain text
-      elements.push(<span key={key++}>{remaining[0]}</span>);
+      elements.push(<span key={getInlineKey("char", remaining[0])}>{remaining[0]}</span>);
       remaining = remaining.slice(1);
     } else {
-      elements.push(<span key={key++}>{remaining.slice(0, nextSpecial)}</span>);
+      const textChunk = remaining.slice(0, nextSpecial);
+      elements.push(<span key={getInlineKey("text", textChunk)}>{textChunk}</span>);
       remaining = remaining.slice(nextSpecial);
     }
   }
@@ -860,16 +763,18 @@ function renderContent(
   let inCodeBlock = false;
   let codeBlockLanguage = "";
   let codeBlockContent: string[] = [];
+  let codeBlockStartLine = 0;
   let currentList: { type: "ol" | "ul"; items: string[] } | null = null;
+  let currentListStartLine = 0;
   let currentParagraph: string[] = [];
-  let key = 0;
+  let currentParagraphStartLine = 0;
 
   const flushCodeBlock = () => {
     if (codeBlockContent.length > 0) {
       const code = codeBlockContent.join("\n");
       elements.push(
         <CodeBlock
-          key={key++}
+          key={`code-${codeBlockStartLine}-${code.length}`}
           code={code}
           languageHint={codeBlockLanguage}
           onApplyCode={onApplyCode}
@@ -884,7 +789,10 @@ function renderContent(
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol key={key++} className="my-2 ml-5 list-decimal space-y-0.5">
+          <ol
+            key={`ol-${currentListStartLine}-${currentList.items.length}`}
+            className="my-2 ml-5 list-decimal space-y-0.5"
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx} className="pl-1 text-text">
                 {renderInlineFormatting(item)}
@@ -894,7 +802,10 @@ function renderContent(
         );
       } else {
         elements.push(
-          <ul key={key++} className="my-2 ml-5 list-disc space-y-0.5">
+          <ul
+            key={`ul-${currentListStartLine}-${currentList.items.length}`}
+            className="my-2 ml-5 list-disc space-y-0.5"
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx} className="pl-1 text-text">
                 {renderInlineFormatting(item)}
@@ -912,7 +823,10 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="my-1.5 leading-[1.6]">
+          <p
+            key={`p-${currentParagraphStartLine}-${paragraphText.length}`}
+            className="my-1.5 leading-[1.6]"
+          >
             {renderInlineFormatting(paragraphText)}
           </p>,
         );
@@ -932,6 +846,7 @@ function renderContent(
         flushList();
         flushParagraph();
         inCodeBlock = true;
+        codeBlockStartLine = i;
         codeBlockLanguage = line.trimStart().slice(3).trim();
       }
       continue;
@@ -949,7 +864,7 @@ function renderContent(
     if (parsedTable) {
       flushList();
       flushParagraph();
-      elements.push(renderTable(parsedTable.table, key++));
+      elements.push(renderTable(parsedTable.table, `table-${i}-${parsedTable.endIndex}`));
       i = parsedTable.endIndex - 1;
       continue;
     }
@@ -960,7 +875,7 @@ function renderContent(
       flushList();
       flushParagraph();
       const level = headerMatch[1].length;
-      elements.push(renderHeader(level, headerMatch[2], key++));
+      elements.push(renderHeader(level, headerMatch[2], `h${level}-${i}`));
       continue;
     }
 
@@ -968,7 +883,7 @@ function renderContent(
     if (trimmedLine.match(/^[-*_]{3,}$/) && trimmedLine.length >= 3) {
       flushList();
       flushParagraph();
-      elements.push(<hr key={key++} className="my-3 border-border" />);
+      elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />);
       continue;
     }
 
@@ -979,7 +894,7 @@ function renderContent(
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
         <blockquote
-          key={key++}
+          key={`quote-${i}-${quoteContent.length}`}
           className="my-2 border-border border-l-2 pl-3 text-text-light italic"
         >
           {renderInlineFormatting(quoteContent)}
@@ -995,6 +910,7 @@ function renderContent(
       if (currentList?.type !== "ol") {
         flushList();
         currentList = { type: "ol", items: [] };
+        currentListStartLine = i;
       }
       currentList.items.push(numberedMatch[2]);
       continue;
@@ -1007,6 +923,7 @@ function renderContent(
       if (currentList?.type !== "ul") {
         flushList();
         currentList = { type: "ul", items: [] };
+        currentListStartLine = i;
       }
       currentList.items.push(bulletMatch[1]);
       continue;
@@ -1021,6 +938,9 @@ function renderContent(
 
     // Regular text — accumulate into paragraph
     flushList();
+    if (currentParagraph.length === 0) {
+      currentParagraphStartLine = i;
+    }
     currentParagraph.push(trimmedLine);
   }
 

@@ -101,6 +101,32 @@ describe("buildVisibleFileTreeRows", () => {
     expect(rows.map((row) => row.depth)).toEqual([0]);
   });
 
+  test("hides a matching single project root folder", () => {
+    const rows = buildVisibleFileTreeRows(tree, new Set(), { hiddenRootPath: "/root" });
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root/src"]);
+    expect(rows.map((row) => row.depth)).toEqual([0]);
+  });
+
+  test("does not hide roots in a multi-root tree", () => {
+    const rows = buildVisibleFileTreeRows(
+      [
+        ...tree,
+        {
+          name: "other",
+          path: "/other",
+          isDir: true,
+          children: [],
+        },
+      ],
+      new Set(),
+      { hiddenRootPath: "/root" },
+    );
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root", "/other"]);
+    expect(rows.map((row) => row.depth)).toEqual([0, 0]);
+  });
+
   test("stops compacting at the collapsed folder", () => {
     const rows = buildVisibleFileTreeRows(tree, new Set(["/root", "/root/src"]), {
       compactFolders: true,

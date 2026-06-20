@@ -89,7 +89,7 @@ export const IconThemeSelectorContent = ({
   }, [onThemeChange]);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!filteredThemes.length) return;
 
       let nextIndex = selectedIndex;
@@ -99,6 +99,12 @@ export const IconThemeSelectorContent = ({
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = filteredThemes.length - 1;
       } else if (e.key === "Enter") {
         e.preventDefault();
         didCommitRef.current = true;
@@ -126,14 +132,6 @@ export const IconThemeSelectorContent = ({
     },
     [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme],
   );
-
-  // Reset state when visibility changes
-  useEffect(() => {
-    if (isActive) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isActive, handleKeyDown]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -180,6 +178,7 @@ export const IconThemeSelectorContent = ({
             ref={inputRef}
             value={query}
             onChange={setQuery}
+            onKeyDown={handleKeyDown}
             placeholder="Search icon themes..."
             className="flex-1"
           />

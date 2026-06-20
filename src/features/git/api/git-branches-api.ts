@@ -1,5 +1,9 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import { isNotGitRepositoryError, resolveRepositoryPath } from "./git-repo-api";
+import {
+  isNotGitRepositoryError,
+  resolveRepositoryPath,
+  resolveRepositoryPathOrThrow,
+} from "./git-repo-api";
 
 interface CheckoutResult {
   success: boolean;
@@ -29,8 +33,9 @@ export const checkoutBranch = async (
   branchName: string,
 ): Promise<CheckoutResult> => {
   try {
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     const result = await tauriInvoke<CheckoutResult>("git_checkout", {
-      repoPath,
+      repoPath: resolvedRepoPath,
       branchName,
     });
     return result;
@@ -50,8 +55,9 @@ export const createBranch = async (
   fromBranch?: string,
 ): Promise<boolean> => {
   try {
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_create_branch", {
-      repoPath,
+      repoPath: resolvedRepoPath,
       branchName,
       fromBranch,
     });
@@ -64,7 +70,8 @@ export const createBranch = async (
 
 export const deleteBranch = async (repoPath: string, branchName: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_delete_branch", { repoPath, branchName });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_delete_branch", { repoPath: resolvedRepoPath, branchName });
     return true;
   } catch (error) {
     console.error("Failed to delete branch:", error);

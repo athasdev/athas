@@ -16,6 +16,39 @@
   outline: 1px solid color-mix(in srgb, var(--color-accent, #4f8cff) 72%, white 8%);
 }
 
+.monaco-editor-shell .monaco-inline-git-blame {
+  color: var(--color-text-lighter, var(--text-lighter, rgba(128, 128, 128, 0.78)));
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.monaco-editor-shell .monaco-resizable-hover,
+.monaco-editor-shell .monaco-hover,
+.monaco-editor-shell .monaco-hover .monaco-scrollable-element,
+.monaco-editor-shell .monaco-hover .monaco-hover-content {
+  max-width: var(--athas-monaco-hover-max-width, 500px) !important;
+  box-sizing: border-box;
+}
+
+.monaco-editor-shell .monaco-hover .hover-row,
+.monaco-editor-shell .monaco-hover .hover-row-contents,
+.monaco-editor-shell .monaco-hover .markdown-hover,
+.monaco-editor-shell .monaco-hover .hover-contents {
+  max-width: 100% !important;
+  min-width: 0;
+}
+
+.monaco-editor-shell .monaco-hover .hover-contents,
+.monaco-editor-shell .monaco-hover .hover-contents span,
+.monaco-editor-shell .monaco-hover .hover-contents code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.monaco-editor-shell .monaco-hover .marker.hover-contents span {
+  white-space: pre-wrap;
+}
+
 .monaco-editor-shell .peekview-widget .head .peekview-title,
 .monaco-editor-shell .reference-zone-widget .ref-tree,
 .monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list-row,

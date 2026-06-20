@@ -12,6 +12,7 @@ import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useExtensionActions } from "@/extensions/ui/hooks/use-extension-actions";
 import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-toolbar-action";
+import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
@@ -87,8 +88,7 @@ export default function Breadcrumb({
 
   const isMarkdownFile = () => {
     if (!activeBuffer) return false;
-    const extension = activeBuffer.path.split(".").pop()?.toLowerCase();
-    return extension === "md" || extension === "markdown";
+    return isMarkdownPreviewableFile(activeBuffer.path);
   };
 
   const isHtmlFile = () => {

@@ -55,7 +55,6 @@ export function AcpConfigSelector({
       menuAnimated={false}
       tooltip={`Select ${option.name}`}
       aria-label={option.name}
-      title={option.description || option.name}
     />
   );
 }

@@ -77,6 +77,8 @@ export function getUsageProgress(usage: AutocompleteUsageSummary | null): number
   return Math.min(100, Math.max(0, (usage.spendCents / usage.budgetCents) * 100));
 }
 
+import { formatShortDate } from "@/utils/date";
+
 export function formatUsdFromCents(cents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -87,12 +89,5 @@ export function formatUsdFromCents(cents: number): string {
 }
 
 export function formatUsageDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  return formatShortDate(value);
 }

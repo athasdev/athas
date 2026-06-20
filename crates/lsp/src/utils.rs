@@ -163,7 +163,7 @@ pub fn find_managed_binary(tools_dir: &Path, binary_name: &str) -> Option<PathBu
       return Some(path);
    }
 
-   for runtime_root in ["bun", "npm", "python", "ruby"] {
+   for runtime_root in ["bun", "npm", "python", "ruby", "r"] {
       if let Some(path) =
          find_managed_binary_in_runtime_tree(&tools_dir.join(runtime_root), binary_name)
       {

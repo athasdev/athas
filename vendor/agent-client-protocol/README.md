@@ -2,27 +2,53 @@
   <img alt="Agent Client Protocol" src="https://zed.dev/img/acp/banner-dark.webp">
 </a>
 
-# Agent Client Protocol
+# agent-client-protocol
 
-The Agent Client Protocol (ACP) standardizes communication between _code editors_ (interactive programs for viewing and editing source code) and _coding agents_ (programs that use generative AI to autonomously modify code).
+Core protocol types and traits for the [Agent Client Protocol (ACP)](https://agentclientprotocol.com/).
 
-Learn more at [agentclientprotocol.com](https://agentclientprotocol.com/).
+ACP is a protocol for communication between AI agents and their clients (IDEs, CLIs, etc.),
+enabling features like tool use, permission requests, and streaming responses.
 
-## Integrations
+## What can you build with this crate?
 
-- [Schema](./schema/schema.json)
-- [Agents](https://agentclientprotocol.com/overview/agents)
-- [Clients](https://agentclientprotocol.com/overview/clients)
-- Official Libraries
-  - **Kotlin**: [`acp-kotlin`](https://github.com/agentclientprotocol/kotlin-sdk) - Supports JVM, other targets are in progress, see [samples](https://github.com/agentclientprotocol/kotlin-sdk/tree/master/samples/kotlin-acp-client-sample/src/main/kotlin/com/agentclientprotocol/samples)
-  - **Python**: [`python-sdk`](https://github.com/agentclientprotocol/python-sdk) - See [examples](https://github.com/agentclientprotocol/python-sdk/tree/main/examples)
-  - **Rust**: [`agent-client-protocol`](https://crates.io/crates/agent-client-protocol) - See [examples/agent.rs](https://github.com/agentclientprotocol/rust-sdk/blob/main/examples/agent.rs) and [examples/client.rs](https://github.com/agentclientprotocol/rust-sdk/blob/main/examples/client.rs)
-  - **TypeScript**: [`@agentclientprotocol/sdk`](https://www.npmjs.com/package/@agentclientprotocol/sdk) - See [examples/](https://github.com/agentclientprotocol/typescript-sdk/tree/main/src/examples)
-- [Community Libraries](https://agentclientprotocol.com/libraries/community)
+- **Clients** that talk to ACP agents (like building your own Claude Code interface)
+- **Proxies** that add capabilities to existing agents (like adding custom tools via MCP)
+- **Agents** that respond to prompts with AI-powered responses
 
-## Contributing
+## Quick Start: Connecting to an Agent
 
-ACP is a protocol intended for broad adoption across the ecosystem; we follow a structured process to ensure changes are well-considered. Read the [Contributing Guide](./CONTRIBUTING.md) for more information.
+The most common use case is connecting to an existing ACP agent as a client:
+
+```rust
+use agent_client_protocol::{Client, Agent, ConnectTo};
+use agent_client_protocol::schema::{InitializeRequest, ProtocolVersion};
+
+Client.builder()
+    .name("my-client")
+    .connect_with(transport, async |cx| {
+        // Initialize the connection
+        cx.send_request(InitializeRequest::new(ProtocolVersion::V1))
+            .block_task()
+            .await?;
+
+        Ok(())
+    })
+    .await?;
+```
+
+## Learning More
+
+See the [crate documentation](https://docs.rs/agent-client-protocol) for:
+
+- **[Cookbook](https://docs.rs/agent-client-protocol/latest/agent_client_protocol/cookbook/)** — Patterns for building clients, proxies, and agents
+- **[Examples](https://github.com/agentclientprotocol/rust-sdk/tree/main/src/agent-client-protocol/examples)** — Working code you can run
+
+## Related Crates
+
+- **[agent-client-protocol-tokio](../agent-client-protocol-tokio/)** — Tokio utilities for spawning agent processes
+- **[agent-client-protocol-rmcp](../agent-client-protocol-rmcp/)** — MCP tool builders and `rmcp` integration
+- **[agent-client-protocol-derive](../agent-client-protocol-derive/)** — Derive macros for JSON-RPC traits
+- **[agent-client-protocol-trace-viewer](../agent-client-protocol-trace-viewer/)** — Interactive trace visualization
 
 ## Contribution Policy
 

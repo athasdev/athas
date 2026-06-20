@@ -64,6 +64,7 @@ function XtermPortal({ sessionId }: { sessionId: string }) {
     wrapper.style.height = "100%";
     wrapper.style.width = "100%";
     wrapper.style.minHeight = "0";
+    wrapper.style.minWidth = "0";
     wrapper.setAttribute("data-terminal-wrapper", sessionId);
     wrapperRef.current = wrapper;
   }

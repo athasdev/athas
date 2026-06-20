@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   WarningCircleIcon as AlertCircle,
   WarningIcon as AlertTriangle,
@@ -23,10 +22,13 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
+  type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { writeClipboardText } from "@/utils/clipboard";
 import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -37,6 +39,7 @@ import {
 } from "@/features/panes/components/pane-chrome";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
+import { getBaseName, getRelativePath, normalizePath } from "@/utils/path-helpers";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 
 interface DiagnosticsPaneProps {
@@ -59,6 +62,7 @@ interface PanePreferences {
   sortBy: SortBy;
   onlyCurrentFile: boolean;
   wrapMessages: boolean;
+  fileNavigatorViewMode: FileNavigatorViewMode;
 }
 
 interface DiagnosticGroup {
@@ -75,6 +79,7 @@ const DEFAULT_PREFERENCES: PanePreferences = {
   sortBy: "severity",
   onlyCurrentFile: false,
   wrapMessages: true,
+  fileNavigatorViewMode: "flat",
 };
 
 const GROUP_OPTIONS: Array<{ value: GroupBy; label: string }> = [
@@ -126,6 +131,17 @@ const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
 const getFileName = (filePath: string) => {
   const parts = filePath.split(/[\\/]/);
   return parts[parts.length - 1] || filePath;
+};
+
+const isAbsolutePath = (filePath: string) => {
+  return filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath);
+};
+
+const getDiagnosticNavigatorPath = (filePath: string, rootFolderPath: string | undefined) => {
+  const relativePath = getRelativePath(filePath, rootFolderPath);
+  if (relativePath && relativePath !== filePath) return relativePath;
+  if (isAbsolutePath(filePath)) return getBaseName(filePath, filePath);
+  return normalizePath(filePath);
 };
 
 const getHighestSeverity = (
@@ -189,11 +205,7 @@ const loadPreferences = (): PanePreferences => {
 };
 
 const copyToClipboard = async (text: string) => {
-  try {
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 };
 
 const DiagnosticsPane = ({
@@ -209,6 +221,7 @@ const DiagnosticsPane = ({
   const lspClient = useMemo(() => LspClient.getInstance(), []);
   const widthMode = useTerminalStore((state) => state.widthMode);
   const setWidthMode = useTerminalStore((state) => state.setWidthMode);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const diagnosticContextMenu = useContextMenu<Diagnostic>();
   const filterContextMenu = useContextMenu<FilterMenuType>();
@@ -447,10 +460,12 @@ const DiagnosticsPane = ({
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([filePath, summary]) => {
         const severity = getHighestSeverity(summary.counts);
+        const navigatorPath = getDiagnosticNavigatorPath(filePath, rootFolderPath);
 
         return {
           key: filePath,
-          path: filePath,
+          path: navigatorPath,
+          label: navigatorPath,
           iconPath: filePath,
           iconClassName: SEVERITY_TEXT_CLASS[severity],
           metadata: [
@@ -461,7 +476,7 @@ const DiagnosticsPane = ({
           ],
         };
       });
-  }, [filteredDiagnostics]);
+  }, [filteredDiagnostics, rootFolderPath]);
 
   const selectedFileNavigatorKey = useMemo(() => {
     if (
@@ -500,7 +515,10 @@ const DiagnosticsPane = ({
       warning: true,
       info: true,
     });
-    setPreferences(DEFAULT_PREFERENCES);
+    setPreferences((prev) => ({
+      ...DEFAULT_PREFERENCES,
+      fileNavigatorViewMode: prev.fileNavigatorViewMode,
+    }));
   }, []);
 
   const toggleGroupCollapse = useCallback((groupId: string) => {
@@ -995,6 +1013,13 @@ const DiagnosticsPane = ({
             selectedKey={selectedFileNavigatorKey}
             onSelect={selectDiagnosticFile}
             ariaLabel="Diagnostic files"
+            viewMode={preferences.fileNavigatorViewMode}
+            onViewModeChange={(fileNavigatorViewMode) =>
+              setPreferences((prev) => ({
+                ...prev,
+                fileNavigatorViewMode,
+              }))
+            }
           />
         ) : null}
 

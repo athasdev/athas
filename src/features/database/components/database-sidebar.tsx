@@ -30,7 +30,7 @@ import {
   SidebarEmptyState,
   SidebarHeader,
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
+  SidebarSearchFilterRow,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { normalizeDatabaseError } from "../lib/database-errors";
@@ -410,16 +410,25 @@ export function DatabaseSidebar() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <SidebarHeader>
-        {mode === "list" ? (
-          <SidebarHeaderSearch
-            value={query}
-            onChange={setQuery}
-            leftIcon={MagnifyingGlass}
-            placeholder="Search"
-            aria-label="Search databases"
-          />
-        ) : (
+      {mode === "list" ? (
+        <SidebarSearchFilterRow
+          value={query}
+          onChange={setQuery}
+          searchIcon={MagnifyingGlass}
+          placeholder="Search"
+          searchAriaLabel="Search databases"
+          actions={
+            <SidebarHeaderIconButton
+              tooltip="Add Database"
+              tooltipSide="bottom"
+              onClick={showProviderStep}
+            >
+              <Plus />
+            </SidebarHeaderIconButton>
+          }
+        />
+      ) : (
+        <SidebarHeader>
           <Button
             type="button"
             variant="ghost"
@@ -430,15 +439,15 @@ export function DatabaseSidebar() {
             <ArrowLeft />
             <span className="ui-font truncate ui-text-xs">Databases</span>
           </Button>
-        )}
-        <SidebarHeaderIconButton
-          tooltip="Add Database"
-          tooltipSide="bottom"
-          onClick={showProviderStep}
-        >
-          <Plus />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
+          <SidebarHeaderIconButton
+            tooltip="Add Database"
+            tooltipSide="bottom"
+            onClick={showProviderStep}
+          >
+            <Plus />
+          </SidebarHeaderIconButton>
+        </SidebarHeader>
+      )}
 
       <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
         {mode === "choose-provider" ? (

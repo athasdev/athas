@@ -6,6 +6,10 @@ import {
 } from "@/features/settings/config/typography-defaults";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  resolveEffectiveTheme,
+  subscribeSystemThemePreference,
+} from "@/features/settings/lib/theme-resolution";
 import type { RenderWhitespaceMode } from "@/features/settings/types/settings.types";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -69,8 +73,7 @@ export const useEditorSettingsStore = createSelectors(
   ),
 );
 
-// Subscribe to settings store and sync all editor settings
-useSettingsStore.subscribe((state) => {
+const syncEditorSettings = (state: ReturnType<typeof useSettingsStore.getState>) => {
   const {
     fontSize,
     fontFamily,
@@ -82,7 +85,6 @@ useSettingsStore.subscribe((state) => {
     renderIndentGuides,
     highlightOccurrences,
     horizontalTabScroll,
-    theme,
   } = state.settings;
   const actions = useEditorSettingsStore.getState().actions;
 
@@ -95,5 +97,13 @@ useSettingsStore.subscribe((state) => {
   actions.setRenderWhitespace(renderWhitespace);
   actions.setRenderIndentGuides(renderIndentGuides);
   actions.setHighlightOccurrences(highlightOccurrences);
-  actions.setTheme(theme);
+  actions.setTheme(resolveEffectiveTheme(state.settings));
+};
+
+// Subscribe to settings store and sync all editor settings
+useSettingsStore.subscribe(syncEditorSettings);
+syncEditorSettings(useSettingsStore.getState());
+
+subscribeSystemThemePreference(() => {
+  syncEditorSettings(useSettingsStore.getState());
 });

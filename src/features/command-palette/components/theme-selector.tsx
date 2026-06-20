@@ -124,7 +124,7 @@ export const ThemeSelectorContent = ({
   }, [applyPreviewTheme]);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!filteredThemes.length) return;
 
       let nextIndex = selectedIndex;
@@ -134,6 +134,12 @@ export const ThemeSelectorContent = ({
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = filteredThemes.length - 1;
       } else if (e.key === "Enter") {
         e.preventDefault();
         const selectedTheme = filteredThemes[selectedIndex];
@@ -161,14 +167,6 @@ export const ThemeSelectorContent = ({
     },
     [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme, applyPreviewTheme],
   );
-
-  // Reset state when visibility changes
-  useEffect(() => {
-    if (isActive) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isActive, handleKeyDown]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -245,6 +243,7 @@ export const ThemeSelectorContent = ({
             ref={inputRef}
             value={query}
             onChange={setQuery}
+            onKeyDown={handleKeyDown}
             placeholder="Search themes..."
             className="flex-1"
           />

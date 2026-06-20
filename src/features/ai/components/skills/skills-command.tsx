@@ -1,6 +1,8 @@
 import {
   CloudArrowDownIcon as CloudArrowDown,
-  FloppyDiskIcon as FloppyDisk,
+  CloudCheckIcon as CloudCheck,
+  CloudSlashIcon as CloudSlash,
+  CloudWarningIcon as CloudWarning,
   MagnifyingGlassIcon as Search,
   PencilSimpleIcon as PencilSimple,
   PlusIcon as Plus,
@@ -20,11 +22,14 @@ import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.t
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
+  CommandFooter,
+  CommandFooterAction,
   CommandHeader,
   CommandInput,
   CommandItem,
   CommandList,
 } from "@/ui/command";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
@@ -43,10 +48,16 @@ function createSkillId() {
 }
 
 function getSyncLabel(enabled: boolean, status: string) {
-  if (!enabled) return "Local only";
+  if (!enabled) return "Not synced";
   if (status === "syncing") return "Syncing";
   if (status === "error") return "Sync paused";
-  return "Account sync";
+  return "Synced";
+}
+
+function getSyncIcon(enabled: boolean, status: string) {
+  if (!enabled) return CloudSlash;
+  if (status === "error") return CloudWarning;
+  return CloudCheck;
 }
 
 export function SkillsCommand({
@@ -72,6 +83,7 @@ export function SkillsCommand({
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const syncEnabled = useSettingsSyncStore((state) => state.enabled);
   const syncStatus = useSettingsSyncStore((state) => state.status);
+  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
 
   const filteredSkills = useMemo(() => {
     const normalizedQuery = deferredQuery.trim();
@@ -151,6 +163,11 @@ export function SkillsCommand({
     resetEditor();
     onClose();
   }, [onClose, resetEditor]);
+
+  const openAccountSyncSettings = useCallback(() => {
+    handleClose();
+    openSettingsDialog("account");
+  }, [handleClose, openSettingsDialog]);
 
   const handleInstallMarketplaceSkill = useCallback(
     async (skill: MarketplaceSkill) => {
@@ -310,6 +327,7 @@ export function SkillsCommand({
   }, [filteredMarketplaceSkills.length, filteredSkills.length, selectedIndex, view]);
 
   const canSave = title.trim().length > 0;
+  const SyncIcon = getSyncIcon(syncEnabled, syncStatus);
 
   return (
     <Command isVisible={isOpen} onClose={handleClose}>
@@ -328,18 +346,19 @@ export function SkillsCommand({
                 type="button"
                 variant="ghost"
                 onClick={openNewSkill}
-                className="shrink-0 ui-text-sm"
+                className="w-20 shrink-0 ui-text-sm"
                 compact
               >
                 <Plus />
-                <span>New skill</span>
+                <span>New</span>
               </Button>
             ) : (
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setView("list")}
-                className="shrink-0 ui-text-sm"
+                className="w-20 shrink-0 ui-text-sm"
+                compact
               >
                 <span>My skills</span>
               </Button>
@@ -348,7 +367,7 @@ export function SkillsCommand({
               type="button"
               variant="ghost"
               onClick={openBrowseSkills}
-              className="shrink-0 ui-text-sm"
+              className="w-20 shrink-0 ui-text-sm"
               active={view === "browse"}
               compact
             >
@@ -429,17 +448,7 @@ export function SkillsCommand({
                 })
               )
             ) : skills.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
-                <CommandEmpty>No skills yet</CommandEmpty>
-                <Button type="button" variant="default" onClick={openNewSkill} compact>
-                  <Plus />
-                  <span>New skill</span>
-                </Button>
-                <Button type="button" variant="ghost" onClick={openBrowseSkills} compact>
-                  <CloudArrowDown />
-                  <span>Browse skills</span>
-                </Button>
-              </div>
+              <CommandEmpty>No skills yet</CommandEmpty>
             ) : filteredSkills.length === 0 ? (
               <CommandEmpty>No skills match "{query}"</CommandEmpty>
             ) : (
@@ -507,9 +516,16 @@ export function SkillsCommand({
             )}
           </CommandList>
 
-          <div className="ui-text-xs border-border border-t px-4 py-2 text-text-lighter">
-            {getSyncLabel(syncEnabled, syncStatus)}
-          </div>
+          <CommandFooter>
+            <CommandFooterAction
+              type="button"
+              onClick={openAccountSyncSettings}
+              className="mr-auto max-w-[180px]"
+            >
+              <SyncIcon />
+              <span className="truncate">{getSyncLabel(syncEnabled, syncStatus)}</span>
+            </CommandFooterAction>
+          </CommandFooter>
         </>
       ) : (
         <>
@@ -563,21 +579,20 @@ export function SkillsCommand({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 border-border border-t px-3 py-2">
-            <Button type="button" variant="ghost" onClick={closeEditor} compact>
+          <CommandFooter>
+            <CommandFooterAction type="button" onClick={closeEditor} className="ml-auto">
               Cancel
-            </Button>
-            <Button
+            </CommandFooterAction>
+            <CommandFooterAction
               type="button"
               variant="accent"
               onClick={() => void handleSave()}
               disabled={!canSave}
               className={cn(!canSave && "opacity-50")}
             >
-              <FloppyDisk />
-              <span>Save skill</span>
-            </Button>
-          </div>
+              Save
+            </CommandFooterAction>
+          </CommandFooter>
         </>
       )}
     </Command>

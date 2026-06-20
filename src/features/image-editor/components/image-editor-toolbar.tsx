@@ -98,7 +98,7 @@ export function ImageEditorToolbar({
             <div
               className={cn(
                 "absolute top-full left-0 z-50 mt-1",
-                "w-48 rounded border border-border bg-secondary-bg shadow-lg",
+                "w-48 rounded border border-border bg-secondary-bg shadow-[var(--shadow-popover)]",
               )}
             >
               <div className="py-1">
@@ -193,7 +193,7 @@ export function ImageEditorToolbar({
             <div
               className={cn(
                 "absolute top-full left-0 z-50 mt-1",
-                "w-40 rounded border border-border bg-secondary-bg shadow-lg",
+                "w-40 rounded border border-border bg-secondary-bg shadow-[var(--shadow-popover)]",
               )}
             >
               <div className="py-1">

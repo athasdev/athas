@@ -359,6 +359,13 @@ impl LspManager {
          .get_client_for_file(&PathBuf::from(file_path))
    }
 
+   pub fn get_semantic_token_type_names(&self, file_path: &str) -> Vec<String> {
+      self
+         .get_client_for_file(file_path)
+         .map(|client| client.semantic_token_type_names())
+         .unwrap_or_default()
+   }
+
    pub async fn get_completions(
       &self,
       file_path: &str,

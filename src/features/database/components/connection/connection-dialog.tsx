@@ -427,13 +427,13 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 ui-text-xs">
+        <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-xs">
           {error}
         </div>
       )}
 
       {testResult === true && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-green-400 ui-text-xs">
+        <div className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-success ui-text-xs">
           Connection test successful
         </div>
       )}

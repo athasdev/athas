@@ -294,6 +294,9 @@ fn main() {
          format_code,
          // Lint commands
          lint_code,
+         // Notebook commands
+         notebook_run_python_cell,
+         notebook_run_r_cell,
          // CLI commands
          check_cli_installed,
          install_cli_command,

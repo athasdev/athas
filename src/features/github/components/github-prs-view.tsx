@@ -5,7 +5,6 @@ import {
   ChatCircleTextIcon as ChatCircleText,
   CheckIcon as Check,
   CopyIcon as Copy,
-  FunnelIcon as Funnel,
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
   LightningIcon as Lightning,
@@ -24,30 +23,31 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
+import GitProjectSelector from "@/features/git/components/git-project-selector";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import type { MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import {
   SidebarEmptyActionState,
   SidebarHeader,
   SidebarHeaderIconButton,
-  SidebarHeaderSearch,
   SidebarListItem,
   SidebarPanel,
+  SidebarSearchFilterRow,
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueFilter, PRFilter, PullRequest, WorkflowRunFilter } from "../types/github.types";
@@ -164,7 +164,6 @@ const GitHubPRsView = memo(() => {
   const [actionFilter, setActionFilter] = useState<WorkflowRunFilter>("all");
   const [createKind, setCreateKind] = useState<GitHubCreateKind | null>(null);
   const [currentBranch, setCurrentBranch] = useState("");
-  const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const prContextMenu = useContextMenu<PullRequest>();
   const sectionContextMenu = useContextMenu<null>();
 
@@ -396,7 +395,7 @@ const GitHubPRsView = memo(() => {
           label: "Copy Title",
           icon: <Copy />,
           onClick: () => {
-            void navigator.clipboard.writeText(selectedPR.title);
+            void writeClipboardText(selectedPR.title);
           },
         },
       ]
@@ -545,58 +544,50 @@ const GitHubPRsView = memo(() => {
               onChange={(section) => setActiveSection(section as GitHubSidebarSection)}
             />
 
-            <SidebarHeader className="px-0">
-              <SidebarHeaderSearch
-                value={searchQuery}
-                onChange={setSearchQuery}
-                leftIcon={Search}
-                placeholder="Search"
-                containerClassName="pl-4"
-              />
-              <SidebarHeaderIconButton
-                className="shrink-0"
-                disabled={!effectiveRepoPath}
-                tooltip={
-                  activeSection === "pull-requests"
-                    ? "New Pull Request"
-                    : activeSection === "issues"
-                      ? "New Issue"
-                      : "Run Workflow"
-                }
-                tooltipSide="bottom"
-                onClick={() => {
-                  const nextKind =
+            <SidebarSearchFilterRow
+              value={searchQuery}
+              onChange={setSearchQuery}
+              searchIcon={Search}
+              placeholder="Search"
+              searchContainerClassName="min-w-0 flex-1 pl-1"
+              filterOpen={isFilterOpen}
+              onFilterOpenChange={setIsFilterOpen}
+              filterItems={filterMenuItems}
+              filterActive={!isActiveFilterDefault}
+              filterTooltip={`Filter: ${activeFilterLabel}`}
+              filterCloseOnSelect={false}
+              filterMenuClassName="w-fit min-w-fit"
+              leading={
+                <GitProjectSelector
+                  className="min-w-0 max-w-[34%] shrink-0"
+                  onRepositoryChange={() => setRepoSelectionError(null)}
+                />
+              }
+              actions={
+                <SidebarHeaderIconButton
+                  className="shrink-0"
+                  disabled={!effectiveRepoPath}
+                  tooltip={
                     activeSection === "pull-requests"
-                      ? "pull-request"
+                      ? "New Pull Request"
                       : activeSection === "issues"
-                        ? "issue"
-                        : "action";
-                  setCreateKind(nextKind);
-                }}
-              >
-                <Plus />
-              </SidebarHeaderIconButton>
-              <SidebarHeaderIconButton
-                ref={filterTriggerRef}
-                active={!isActiveFilterDefault}
-                className="shrink-0"
-                tooltip={`Filter: ${activeFilterLabel}`}
-                tooltipSide="bottom"
-                onClick={() => setIsFilterOpen(true)}
-              >
-                <Funnel />
-              </SidebarHeaderIconButton>
-            </SidebarHeader>
-
-            <Dropdown
-              isOpen={isFilterOpen}
-              anchorRef={filterTriggerRef}
-              anchorSide="bottom"
-              anchorAlign="end"
-              items={filterMenuItems}
-              onClose={() => setIsFilterOpen(false)}
-              closeOnSelect={false}
-              className="w-fit min-w-fit"
+                        ? "New Issue"
+                        : "Run Workflow"
+                  }
+                  tooltipSide="bottom"
+                  onClick={() => {
+                    const nextKind =
+                      activeSection === "pull-requests"
+                        ? "pull-request"
+                        : activeSection === "issues"
+                          ? "issue"
+                          : "action";
+                    setCreateKind(nextKind);
+                  }}
+                >
+                  <Plus />
+                </SidebarHeaderIconButton>
+              }
             />
 
             <SidebarSectionPager

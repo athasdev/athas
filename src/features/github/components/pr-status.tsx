@@ -90,7 +90,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
       </Button>
 
       {isExpanded && (
-        <div className="absolute top-full left-0 z-20 mt-2 min-w-[320px] rounded-2xl border border-border/70 bg-secondary-bg/95 p-2 shadow-xl backdrop-blur-sm">
+        <div className="absolute top-full left-0 z-20 mt-2 min-w-[320px] rounded-2xl border border-border/70 bg-secondary-bg/95 p-2 shadow-[var(--shadow-popover)] backdrop-blur-sm">
           {checks.map((check, idx) => (
             <div
               key={idx}

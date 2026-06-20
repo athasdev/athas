@@ -17,6 +17,7 @@ import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useCliOpen } from "@/features/window/hooks/use-cli-open";
 import { useContextMenuPrevention } from "@/features/window/hooks/use-context-menu-prevention";
 import { useDeepLink } from "@/features/window/hooks/use-deep-link";
+import { useExternalNavigationGuard } from "@/features/window/hooks/use-external-navigation-guard";
 import { useFontLoading } from "@/features/window/hooks/use-font-loading";
 import { usePlatformSetup } from "@/features/window/hooks/use-platform-setup";
 import { useSettingsSync } from "@/features/window/hooks/use-settings-sync";
@@ -35,6 +36,7 @@ export function useAppBootstrap() {
   useFontLoading();
   useDeepLink();
   useCliOpen();
+  useExternalNavigationGuard();
   useExtensionInstallPrompt();
   useKeymapContext();
   useKeymaps();

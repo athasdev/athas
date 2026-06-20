@@ -20,6 +20,7 @@ export function PaneResizeHandle({
   const containerRef = useRef<HTMLDivElement>(null);
   const startPositionRef = useRef(0);
   const startSizesRef = useRef(initialSizes);
+  const availableSizeRef = useRef(0);
 
   const isHorizontal = direction === "horizontal";
 
@@ -29,26 +30,28 @@ export function PaneResizeHandle({
       setIsDragging(true);
       startPositionRef.current = isHorizontal ? e.clientX : e.clientY;
       startSizesRef.current = initialSizes;
+
+      const handle = containerRef.current;
+      const splitContainer = handle?.closest<HTMLElement>("[data-pane-split-container='true']");
+      const containerRect = splitContainer?.getBoundingClientRect();
+      const containerSize = isHorizontal ? containerRect?.width : containerRect?.height;
+      const handleSize = isHorizontal ? (handle?.offsetWidth ?? 0) : (handle?.offsetHeight ?? 0);
+      availableSizeRef.current =
+        typeof containerSize === "number" ? containerSize - handleSize * resizeHandleCount : 0;
+
+      document.body.style.cursor = isHorizontal ? "col-resize" : "row-resize";
+      document.body.style.userSelect = "none";
     },
-    [isHorizontal, initialSizes],
+    [isHorizontal, initialSizes, resizeHandleCount],
   );
 
   useEffect(() => {
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const handle = containerRef.current;
-      if (!handle) return;
-
-      const handleSize = isHorizontal ? handle.offsetWidth : handle.offsetHeight;
-      const splitContainer = handle.closest<HTMLElement>("[data-pane-split-container='true']");
-      const containerRect = splitContainer?.getBoundingClientRect();
-      const containerSize = isHorizontal ? containerRect?.width : containerRect?.height;
-
       const currentPosition = isHorizontal ? e.clientX : e.clientY;
       const delta = currentPosition - startPositionRef.current;
-      const availableSize =
-        typeof containerSize === "number" ? containerSize - handleSize * resizeHandleCount : 0;
+      const availableSize = availableSizeRef.current;
       if (availableSize <= 0) return;
 
       const pairTotal = startSizesRef.current[0] + startSizesRef.current[1];
@@ -71,6 +74,9 @@ export function PaneResizeHandle({
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      availableSizeRef.current = 0;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -79,8 +85,10 @@ export function PaneResizeHandle({
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
-  }, [isDragging, isHorizontal, onResize, resizeHandleCount]);
+  }, [isDragging, isHorizontal, onResize]);
 
   return (
     <div

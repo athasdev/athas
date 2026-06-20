@@ -30,12 +30,18 @@ export interface EditorContextMenuHandlers {
   onGoToDefinition?: () => void;
   onFindReferences?: () => void;
   onRenameSymbol?: () => void;
+  onSelectNextOccurrence?: () => void;
+  onSelectAllOccurrences?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
   onIndent?: () => void;
   onOutdent?: () => void;
   onToggleComment?: () => void;
   onFormat?: () => void;
+  onFormatSelection?: () => void;
+  onTriggerSuggest?: () => void;
+  onShowHover?: () => void;
+  onQuickFix?: () => void;
   onToggleCase?: () => void;
   onMoveLineUp?: () => void;
   onMoveLineDown?: () => void;
@@ -71,12 +77,18 @@ export function buildEditorContextMenuItems({
   onGoToDefinition,
   onFindReferences,
   onRenameSymbol,
+  onSelectNextOccurrence,
+  onSelectAllOccurrences,
   onDelete,
   onDuplicate,
   onIndent,
   onOutdent,
   onToggleComment,
   onFormat,
+  onFormatSelection,
+  onTriggerSuggest,
+  onShowHover,
+  onQuickFix,
   onToggleCase,
   onMoveLineUp,
   onMoveLineDown,
@@ -128,9 +140,24 @@ export function buildEditorContextMenuItems({
       id: "duplicate",
       label: "Duplicate Line",
       icon: <FileText />,
-      keybinding: <Keybinding keys={[modifierKey, "D"]} className="opacity-60" />,
       disabled: isDisabled(onDuplicate),
       onClick: onDuplicate ?? noop,
+    },
+    {
+      id: "select-next-occurrence",
+      label: "Add Selection to Next Match",
+      icon: <Search />,
+      keybinding: <Keybinding keys={[modifierKey, "D"]} className="opacity-60" />,
+      disabled: isDisabled(onSelectNextOccurrence),
+      onClick: onSelectNextOccurrence ?? noop,
+    },
+    {
+      id: "select-all-occurrences",
+      label: "Select All Occurrences",
+      icon: <Search />,
+      keybinding: <Keybinding keys={[modifierKey, "Shift", "L"]} className="opacity-60" />,
+      disabled: isDisabled(onSelectAllOccurrences),
+      onClick: onSelectAllOccurrences ?? noop,
     },
     separator("sep-2"),
     {
@@ -164,6 +191,14 @@ export function buildEditorContextMenuItems({
       keybinding: <Keybinding keys={["Shift", altKey, "F"]} className="opacity-60" />,
       disabled: isDisabled(onFormat),
       onClick: onFormat ?? noop,
+    },
+    {
+      id: "format-selection",
+      label: "Format Selection",
+      icon: <AlignLeft />,
+      keybinding: <Keybinding keys={[modifierKey, "K", modifierKey, "F"]} className="opacity-60" />,
+      disabled: isDisabled(onFormatSelection, !hasSelection),
+      onClick: onFormatSelection ?? noop,
     },
     separator("sep-3"),
     {
@@ -213,6 +248,30 @@ export function buildEditorContextMenuItems({
       keybinding: <Keybinding keys={["F2"]} className="opacity-60" />,
       disabled: isDisabled(onRenameSymbol),
       onClick: onRenameSymbol ?? noop,
+    },
+    {
+      id: "quick-fix",
+      label: "Quick Fix...",
+      icon: <PenLine />,
+      keybinding: <Keybinding keys={[modifierKey, "."]} className="opacity-60" />,
+      disabled: isDisabled(onQuickFix),
+      onClick: onQuickFix ?? noop,
+    },
+    {
+      id: "show-hover",
+      label: "Show Hover",
+      icon: <Code />,
+      keybinding: <Keybinding keys={[modifierKey, "K", modifierKey, "I"]} className="opacity-60" />,
+      disabled: isDisabled(onShowHover),
+      onClick: onShowHover ?? noop,
+    },
+    {
+      id: "trigger-suggest",
+      label: "Trigger Suggest",
+      icon: <Code />,
+      keybinding: <Keybinding keys={["Ctrl", "Space"]} className="opacity-60" />,
+      disabled: isDisabled(onTriggerSuggest),
+      onClick: onTriggerSuggest ?? noop,
     },
     separator("sep-5"),
     {

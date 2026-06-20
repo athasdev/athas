@@ -13,11 +13,10 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
-import { SidebarEmptyActionState } from "@/ui/sidebar";
+import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
 import {
   SIDEBAR_TREE_ICON_SIZE,
   SidebarTreeRow,
@@ -31,9 +30,7 @@ import {
   unstageFile,
 } from "../../api/git-status-api";
 import type { GitFile } from "../../types/git.types";
-import GitSidebarSectionHeader, {
-  gitSidebarSectionActionButtonClassName,
-} from "../git-sidebar-section-header";
+import GitSidebarSectionHeader from "../git-sidebar-section-header";
 import { StashMessageModal } from "../stash/git-stash-modal";
 import { GitFileItem } from "./git-status-file-item";
 
@@ -542,46 +539,40 @@ const GitStatusPanel = ({
               actions={
                 <>
                   {unstagedFiles.length > 0 && (
-                    <Button
+                    <SidebarHeaderIconButton
                       onClick={handleStashAllUnstaged}
                       disabled={isLoading}
-                      variant="ghost"
-                      className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                      className="disabled:opacity-50"
                       tooltip="Stash all unstaged changes"
                       tooltipSide="bottom"
                       aria-label="Stash all unstaged changes"
-                      compact
                     >
                       <Archive />
-                    </Button>
+                    </SidebarHeaderIconButton>
                   )}
                   {unstagedFiles.length > 0 && (
-                    <Button
+                    <SidebarHeaderIconButton
                       onClick={handleStageAll}
                       disabled={isLoading}
-                      variant="ghost"
-                      className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                      className="disabled:opacity-50"
                       tooltip="Stage all changes"
                       tooltipSide="bottom"
                       aria-label="Stage all changes"
-                      compact
                     >
                       <Plus />
-                    </Button>
+                    </SidebarHeaderIconButton>
                   )}
                   {stagedFiles.length > 0 && (
-                    <Button
+                    <SidebarHeaderIconButton
                       onClick={handleUnstageAll}
                       disabled={isLoading}
-                      variant="ghost"
-                      className={gitSidebarSectionActionButtonClassName("disabled:opacity-50")}
+                      className="disabled:opacity-50"
                       tooltip="Unstage all changes"
                       tooltipSide="bottom"
                       aria-label="Unstage all changes"
-                      compact
                     >
                       <Minus />
-                    </Button>
+                    </SidebarHeaderIconButton>
                   )}
                 </>
               }

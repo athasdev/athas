@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { getRequiredAthasDefaultColor } from "@/extensions/themes/default-theme";
 
 export interface TerminalTheme {
   background: string;
@@ -25,30 +26,33 @@ export interface TerminalTheme {
   brightWhite: string;
 }
 
-// Default dark theme colors - guaranteed to work
+function athasTerminalColor(name: string): string {
+  return getRequiredAthasDefaultColor("dark", name);
+}
+
 const DEFAULT_THEME: TerminalTheme = {
-  background: "#1a1a1a",
-  foreground: "#e5e5e5",
-  cursor: "#3b82f6",
-  cursorAccent: "#1a1a1a",
-  selectionBackground: "#3b82f640",
-  selectionForeground: "#e5e5e5",
-  black: "#1a1a1a",
-  red: "#ff7b72",
-  green: "#7ee787",
-  yellow: "#ffa657",
-  blue: "#79c0ff",
-  magenta: "#d2a8ff",
-  cyan: "#a5d6ff",
-  white: "#b3b3b3",
-  brightBlack: "#8b949e",
-  brightRed: "#f87171",
-  brightGreen: "#86efac",
-  brightYellow: "#fbbf24",
-  brightBlue: "#60a5fa",
-  brightMagenta: "#c084fc",
-  brightCyan: "#67e8f9",
-  brightWhite: "#e5e5e5",
+  background: athasTerminalColor("primary-bg"),
+  foreground: athasTerminalColor("text"),
+  cursor: athasTerminalColor("accent"),
+  cursorAccent: athasTerminalColor("primary-bg"),
+  selectionBackground: athasTerminalColor("selection-bg"),
+  selectionForeground: athasTerminalColor("text"),
+  black: athasTerminalColor("terminal-black"),
+  red: athasTerminalColor("terminal-red"),
+  green: athasTerminalColor("terminal-green"),
+  yellow: athasTerminalColor("terminal-yellow"),
+  blue: athasTerminalColor("terminal-blue"),
+  magenta: athasTerminalColor("terminal-magenta"),
+  cyan: athasTerminalColor("terminal-cyan"),
+  white: athasTerminalColor("terminal-white"),
+  brightBlack: athasTerminalColor("terminal-bright-black"),
+  brightRed: athasTerminalColor("terminal-bright-red"),
+  brightGreen: athasTerminalColor("terminal-bright-green"),
+  brightYellow: athasTerminalColor("terminal-bright-yellow"),
+  brightBlue: athasTerminalColor("terminal-bright-blue"),
+  brightMagenta: athasTerminalColor("terminal-bright-magenta"),
+  brightCyan: athasTerminalColor("terminal-bright-cyan"),
+  brightWhite: athasTerminalColor("terminal-bright-white"),
 };
 
 // Check if a value is a valid hex color

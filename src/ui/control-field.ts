@@ -1,7 +1,7 @@
 import { cva } from "class-variance-authority";
 
 export const controlFieldSurfaceVariants = cva(
-  "ui-font min-w-0 text-text transition-[border-color,box-shadow,background-color,color] outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  "ui-font min-w-0 text-text transition-[border-color,box-shadow,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] outline-none disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {

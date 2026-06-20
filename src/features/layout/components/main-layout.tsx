@@ -13,7 +13,9 @@ import { initializeDebuggerEventBridge } from "@/features/debugger/services/debu
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
+import { ExtensionGenerationCommand } from "@/features/generate/components/extension-generation-command";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
@@ -43,6 +45,8 @@ import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
 
+const EMPTY_PROJECT_FILES: FileEntry[] = [];
+
 export function MainLayout() {
   useChatInitialization();
   usePaneKeyboard();
@@ -58,9 +62,14 @@ export function MainLayout() {
   const { settings } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
+  const buffers = useBufferStore.use.buffers();
+  const activeBufferId = useBufferStore.use.activeBufferId();
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+  const allProjectFiles = useFileSystemStore(
+    (state) => state.projectFilesCache?.files ?? EMPTY_PROJECT_FILES,
+  );
   const switchToProject = useFileSystemStore.use.switchToProject?.();
   const setIsSwitchingProject = useFileSystemStore.use.setIsSwitchingProject?.();
   const refreshWorkspaceGitStatus = useGitStore((state) => state.actions.refreshWorkspaceGitStatus);
@@ -109,6 +118,7 @@ export function MainLayout() {
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const showInlineAiChat = settings.isAIChatVisible;
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) ?? null;
 
   useEffect(() => {
     void initializeDebuggerEventBridge();
@@ -287,7 +297,12 @@ export function MainLayout() {
           {/* Right side panes are ordered from inner to edge. */}
           {showInlineAiChat ? (
             <ResizablePane position="right" widthKey="aiChatWidth">
-              <AIChat mode="chat" />
+              <AIChat
+                mode="chat"
+                activeBuffer={activeBuffer}
+                buffers={buffers}
+                allProjectFiles={allProjectFiles}
+              />
             </ResizablePane>
           ) : null}
 
@@ -330,6 +345,7 @@ export function MainLayout() {
       <VimCommandBar />
       <VimSearchBar />
       <CommandPalette />
+      <ExtensionGenerationCommand />
       <AgentLauncher />
       <ProjectNameMenu />
 

@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 
 interface WebViewerToolbarProps {
   canOpenDevTools: boolean;
@@ -113,16 +114,14 @@ export function WebViewerToolbar({
     if (key === "c" && selectedText) {
       event.preventDefault();
       event.stopPropagation();
-      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-      await writeText(selectedText);
+      await writeClipboardText(selectedText);
       return;
     }
 
     if (key === "x" && selectedText) {
       event.preventDefault();
       event.stopPropagation();
-      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-      await writeText(selectedText);
+      await writeClipboardText(selectedText);
       const nextValue = `${input.value.slice(0, selectionStart)}${input.value.slice(selectionEnd)}`;
       onInputUrlChange(nextValue);
       restoreSelection(input, selectionStart);
@@ -132,8 +131,7 @@ export function WebViewerToolbar({
     if (key === "v") {
       event.preventDefault();
       event.stopPropagation();
-      const { readText } = await import("@tauri-apps/plugin-clipboard-manager");
-      const pastedText = await readText();
+      const pastedText = await readClipboardText();
       const nextValue = `${input.value.slice(0, selectionStart)}${pastedText}${input.value.slice(
         selectionEnd,
       )}`;

@@ -18,6 +18,7 @@ import {
   MenubarTrigger,
 } from "@/ui/menubar";
 import { cn } from "@/utils/cn";
+import { IS_LINUX } from "@/utils/platform";
 
 interface Props {
   activeMenu: string | null;
@@ -387,11 +388,15 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           >
             Maximize
           </MenubarItem>
-          <MenubarSeparator />
-          <MenubarItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
-            Toggle Menu Bar
-          </MenubarItem>
-          <MenubarSeparator />
+          {!IS_LINUX && (
+            <>
+              <MenubarSeparator />
+              <MenubarItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
+                Toggle Menu Bar
+              </MenubarItem>
+              <MenubarSeparator />
+            </>
+          )}
           <MenubarItem
             shortcut="f11"
             onClick={async () => {
@@ -446,7 +451,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         className={cn(
           settings.compactMenuBar &&
             compactFloating &&
-            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
+            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
           settings.compactMenuBar &&
             !compactFloating &&
             "h-full rounded-none border-none bg-transparent px-2 py-0",

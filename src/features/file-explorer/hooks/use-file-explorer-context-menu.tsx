@@ -22,6 +22,7 @@ import {
   WarningIcon as Warning,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
+import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile as readTextFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
@@ -48,7 +49,7 @@ interface UseFileExplorerContextMenuOptions {
   ) => void | string | Promise<string | undefined>;
   onCreateNewFolderInDirectory?: (directoryPath: string, folderName: string) => void;
   onGenerateImage?: (directoryPath: string) => void;
-  onRefreshDirectory?: (path: string) => void;
+  onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
@@ -157,7 +158,7 @@ export function useFileExplorerContextMenu({
           bufferStore.actions.updateBufferContent(createdBuffer.id, templateContent, false);
         }
 
-        onRefreshDirectory?.(directoryPath);
+        onRefreshDirectory?.(directoryPath, { force: true });
         toast.success(`Created ${targetFileName}`);
       } catch (error) {
         console.error("Failed to create env template file:", error);
@@ -223,7 +224,7 @@ export function useFileExplorerContextMenu({
           id: "refresh",
           label: "Refresh",
           icon: <RefreshCw />,
-          onClick: () => onRefreshDirectory?.(contextMenu.path),
+          onClick: () => onRefreshDirectory?.(contextMenu.path, { force: true }),
         },
         {
           id: "add-folder-to-workspace",
@@ -306,7 +307,7 @@ export function useFileExplorerContextMenu({
             try {
               const response = await fetch(contextMenu.path);
               const content = await response.text();
-              await navigator.clipboard.writeText(content);
+              await writeClipboardText(content);
             } catch {}
           },
         },
@@ -369,7 +370,7 @@ export function useFileExplorerContextMenu({
         icon: <Link />,
         onClick: async () => {
           try {
-            await navigator.clipboard.writeText(contextMenu.path);
+            await writeClipboardText(contextMenu.path);
           } catch {}
         },
       },
@@ -380,7 +381,7 @@ export function useFileExplorerContextMenu({
         onClick: async () => {
           try {
             const relativePath = getRelativePath(contextMenu.path, rootFolderPath);
-            await navigator.clipboard.writeText(relativePath);
+            await writeClipboardText(relativePath);
           } catch {}
         },
       },
@@ -407,7 +408,7 @@ export function useFileExplorerContextMenu({
         icon: <Clipboard />,
         onClick: () => {
           clipboardActions.paste(contextMenu.path).then(() => {
-            onRefreshDirectory?.(contextMenu.path);
+            onRefreshDirectory?.(contextMenu.path, { force: true });
           });
         },
       });
@@ -439,7 +440,7 @@ export function useFileExplorerContextMenu({
           id: "delete",
           label: "Delete",
           icon: <Trash />,
-          className: "text-red-400",
+          className: "text-error",
           onClick: () => onDeleteRequested({ path: contextMenu.path, isDir: contextMenu.isDir }),
         },
       );

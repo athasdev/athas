@@ -15,9 +15,9 @@ import { getModelById, getProviderById } from "@/features/ai/types/providers.typ
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import { writeClipboardText } from "@/utils/clipboard";
 
 interface QuickQuestionCommandContentProps {
-  isActive: boolean;
   onBack: () => void;
   onClose: () => void;
   activeBuffer: PaneContent | null;
@@ -66,16 +66,10 @@ function getReadableError(error: string): string {
 }
 
 async function copyText(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 }
 
 export function QuickQuestionCommandContent({
-  isActive,
   onBack,
   onClose,
   activeBuffer,
@@ -113,17 +107,13 @@ export function QuickQuestionCommandContent({
   }, [activeBuffer, buffers, projectRoot, settings.aiProviderId]);
 
   useEffect(() => {
-    if (!isActive) {
-      requestIdRef.current += 1;
-      return;
-    }
+    const focusFrame = requestAnimationFrame(() => inputRef.current?.focus());
 
-    setQuestion("");
-    setAnswer("");
-    setError("");
-    setIsLoading(false);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, [isActive]);
+    return () => {
+      requestIdRef.current += 1;
+      cancelAnimationFrame(focusFrame);
+    };
+  }, []);
 
   const handleSubmit = async () => {
     const trimmedQuestion = question.trim();

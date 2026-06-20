@@ -10,7 +10,7 @@
 }
 
 @utility animate-slide-in-left {
-  animation: slide-in-left 0.5s ease-out;
+  animation: slide-in-left var(--app-duration-slow) var(--app-ease-out);
 }
 
 @keyframes slide-in-right {
@@ -25,7 +25,7 @@
 }
 
 @utility animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
+  animation: slide-in-right var(--app-duration-slow) var(--app-ease-out);
 }
 
 @keyframes slide-out-right {
@@ -40,7 +40,7 @@
 }
 
 @utility animate-slide-out-right {
-  animation: slide-out-right 0.3s ease-in;
+  animation: slide-out-right var(--app-duration-normal) var(--app-ease-in-out);
 }
 
 @keyframes fadeInUp {
@@ -79,7 +79,7 @@ html[data-window-resize-dragging] * {
 }
 
 .tab-drag-preview {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-drag);
 }
 
 .ui-text-sm {
@@ -107,7 +107,7 @@ html[data-window-resize-dragging] * {
 }
 
 .drop-indicator {
-  animation: dropIndicatorPulse 1s ease-in-out infinite;
+  animation: dropIndicatorPulse 1s var(--app-ease-in-out) infinite;
 }
 
 .ai-chat-surface {
@@ -191,7 +191,7 @@ html[data-window-resize-dragging] * {
       color-mix(in srgb, var(--text) 42%, transparent)
     );
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 18%, transparent);
-  animation: aiChatLoadingCell 1.15s ease-in-out infinite;
+  animation: aiChatLoadingCell 1.15s var(--app-ease-in-out) infinite;
   animation-delay: var(--ai-loading-delay);
 }
 
@@ -205,8 +205,20 @@ html[data-window-resize-dragging] * {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
   .ai-chat-loading-cell,
-  .ai-chat-loading-cursor {
+  .ai-chat-loading-cursor,
+  .drop-indicator {
     animation: none;
   }
 

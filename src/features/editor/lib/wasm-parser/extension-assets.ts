@@ -22,6 +22,8 @@ const QUERY_FOLDER_BY_LANGUAGE: Record<string, string> = {
   typescript: "tsx",
   typescriptreact: "tsx",
   mdx: "markdown",
+  rmarkdown: "markdown",
+  "jupyter-notebook": "json",
   csharp: "c_sharp",
   scheme: "elisp",
 };

@@ -1,15 +1,22 @@
-import { CaretRightIcon as CaretRight, type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import {
+  CaretRightIcon as CaretRight,
+  FunnelIcon as Funnel,
+  MagnifyingGlassIcon as Search,
+  type Icon as PhosphorIcon,
+} from "@phosphor-icons/react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,
   useEffect,
   useState,
   type ComponentProps,
+  type Ref,
   type ReactNode,
   useRef,
 } from "react";
 import { Button, type ButtonProps } from "@/ui/button";
-import Input from "@/ui/input";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { SearchField } from "@/ui/search";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -131,7 +138,7 @@ export function SidebarComposerBody({
 
 export const SidebarHeaderSearch = forwardRef<
   HTMLInputElement,
-  Omit<ComponentProps<typeof Input>, "onChange" | "value" | "size" | "variant"> & {
+  Omit<ComponentProps<typeof SearchField>, "onChange" | "value" | "size" | "variant"> & {
     value: string;
     onChange: (value: string) => void;
     leftIcon: PhosphorIcon;
@@ -141,10 +148,10 @@ export const SidebarHeaderSearch = forwardRef<
   ref,
 ) {
   return (
-    <Input
+    <SearchField
       ref={ref}
       value={value}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={onChange}
       leftIcon={leftIcon}
       variant="ghost"
       size="xs"
@@ -171,6 +178,113 @@ export const SidebarHeaderIconButton = forwardRef<
     />
   );
 });
+
+export function SidebarSearchFilterRow({
+  value,
+  onChange,
+  searchIcon = Search,
+  placeholder = "Search",
+  searchAriaLabel,
+  searchClassName,
+  searchContainerClassName,
+  searchInputRef,
+  searchInputProps,
+  leading,
+  actions,
+  filterOpen = false,
+  onFilterOpenChange,
+  filterItems = [],
+  filterActive = false,
+  filterTooltip = "Filter",
+  filterAriaLabel = "Filter",
+  filterDisabled = false,
+  filterCloseOnSelect = true,
+  filterMenuClassName,
+  filterButtonClassName,
+  className,
+  ...props
+}: Omit<ComponentProps<"div">, "onChange"> & {
+  value: string;
+  onChange: (value: string) => void;
+  searchIcon?: PhosphorIcon;
+  placeholder?: string;
+  searchAriaLabel?: string;
+  searchClassName?: string;
+  searchContainerClassName?: string;
+  searchInputRef?: Ref<HTMLInputElement>;
+  searchInputProps?: Omit<
+    ComponentProps<typeof SidebarHeaderSearch>,
+    | "value"
+    | "onChange"
+    | "leftIcon"
+    | "placeholder"
+    | "aria-label"
+    | "className"
+    | "containerClassName"
+  >;
+  leading?: ReactNode;
+  actions?: ReactNode;
+  filterOpen?: boolean;
+  onFilterOpenChange?: (open: boolean) => void;
+  filterItems?: MenuItem[];
+  filterActive?: boolean;
+  filterTooltip?: string;
+  filterAriaLabel?: string;
+  filterDisabled?: boolean;
+  filterCloseOnSelect?: boolean;
+  filterMenuClassName?: string;
+  filterButtonClassName?: string;
+}) {
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const hasFilter = filterItems.length > 0;
+
+  return (
+    <>
+      <SidebarHeader className={cn("min-w-0 px-0", className)} {...props}>
+        {leading}
+        <SidebarHeaderSearch
+          ref={searchInputRef}
+          value={value}
+          onChange={onChange}
+          leftIcon={searchIcon}
+          placeholder={placeholder}
+          aria-label={searchAriaLabel ?? placeholder}
+          className={searchClassName}
+          containerClassName={searchContainerClassName}
+          {...searchInputProps}
+        />
+        {actions}
+        {hasFilter ? (
+          <SidebarHeaderIconButton
+            ref={filterTriggerRef}
+            active={filterActive}
+            className={cn("shrink-0", filterButtonClassName)}
+            disabled={filterDisabled}
+            tooltip={filterTooltip}
+            tooltipSide="bottom"
+            aria-label={filterAriaLabel}
+            onClick={() => onFilterOpenChange?.(true)}
+          >
+            <Funnel />
+          </SidebarHeaderIconButton>
+        ) : null}
+      </SidebarHeader>
+
+      {hasFilter ? (
+        <Dropdown
+          isOpen={filterOpen}
+          anchorRef={filterTriggerRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          items={filterItems}
+          onClose={() => onFilterOpenChange?.(false)}
+          closeOnSelect={filterCloseOnSelect}
+          className={filterMenuClassName}
+        />
+      ) : null}
+    </>
+  );
+}
 
 export function SidebarListItem({
   children,
@@ -239,6 +353,34 @@ export function SidebarSectionHeader({
         <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">{count}</span>
       ) : null}
     </button>
+  );
+}
+
+export function SidebarSectionLabel({
+  children,
+  leading,
+  trailing,
+  className,
+  ...props
+}: ComponentProps<"div"> & {
+  children: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "ui-font ui-text-xs flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
+        className,
+      )}
+      {...props}
+    >
+      {leading ? (
+        <span className="flex shrink-0 items-center justify-center">{leading}</span>
+      ) : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
+    </div>
   );
 }
 

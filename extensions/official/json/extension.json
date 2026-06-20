@@ -12,6 +12,11 @@
       "id": "json",
       "extensions": [".json", ".jsonc"],
       "aliases": ["JSON"]
+    },
+    {
+      "id": "jupyter-notebook",
+      "extensions": [".ipynb"],
+      "aliases": ["Jupyter Notebook", "ipynb"]
     }
   ],
   "capabilities": {

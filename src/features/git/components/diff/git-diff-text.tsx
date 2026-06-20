@@ -5,11 +5,14 @@ import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
 import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff.types";
-import { groupLinesIntoHunks } from "../../utils/git-diff-helpers";
+import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../utils/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {
   getContentColor,
+  getGutterBackground,
+  getGutterTextColor,
   getLineBackground,
+  getRailClassName,
   getSplitLineMeta,
   renderDiffLineContent,
 } from "./git-diff-line";
@@ -48,7 +51,7 @@ function SplitDiffCodePanel({
           return (
             <div
               key={`${side}-gutter-${index}`}
-              className="select-none px-2 py-0.5 text-right text-text-lighter tabular-nums"
+              className={`select-none px-2 py-0.5 text-right tabular-nums ${getGutterBackground(meta.diffType)} ${getRailClassName(meta.diffType)} ${getGutterTextColor(meta.diffType)}`}
               style={{
                 fontSize: `${fontSize}px`,
                 lineHeight: `${lineHeight}px`,
@@ -145,12 +148,14 @@ const TextDiffViewer = memo(
             tabSize,
           }}
         >
-          {hunks.map((hunk) => {
+          {hunks.map((hunk, hunkIndex) => {
             const isCollapsed = collapsedHunks.has(hunk.id);
+            const hiddenLineCount = getSkippedUnchangedLineCount(hunks[hunkIndex - 1], hunk);
             return (
               <div key={`split-${hunk.id}`}>
                 <DiffHunkHeader
                   hunk={hunk}
+                  hiddenLineCount={hiddenLineCount}
                   isCollapsed={isCollapsed}
                   onToggleCollapse={() => toggleHunkCollapse(hunk.id)}
                   isStaged={isStaged}
@@ -216,12 +221,14 @@ const TextDiffViewer = memo(
             tabSize,
           }}
         >
-          {hunks.map((hunk) => {
+          {hunks.map((hunk, hunkIndex) => {
             const isCollapsed = collapsedHunks.has(hunk.id);
+            const hiddenLineCount = getSkippedUnchangedLineCount(hunks[hunkIndex - 1], hunk);
             return (
               <div key={hunk.id}>
                 <DiffHunkHeader
                   hunk={hunk}
+                  hiddenLineCount={hiddenLineCount}
                   isCollapsed={isCollapsed}
                   onToggleCollapse={() => toggleHunkCollapse(hunk.id)}
                   isStaged={isStaged}

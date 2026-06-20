@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import {
   buildRuntimeManifest,
+  getLanguageToolConfigSet,
   resolveToolDownloadUrlForBackend,
   resolveToolCommandForManifest,
   resolveToolDownloadUrlForManifest,
@@ -53,6 +54,32 @@ describe("extension-store runtime manifest", () => {
     expect(url).toContain("https://github.com/LuaLS/lua-language-server/releases/download/3.18.2/");
     expect(url).toMatch(
       /lua-language-server-3\.18\.2-((darwin|linux)-(arm64|x64)\.tar\.gz|win32-x64\.zip)$/,
+    );
+  });
+
+  it("uses the known StyLua release asset for Lua formatting", () => {
+    const url = resolveToolDownloadUrlForManifest(
+      {
+        name: "stylua",
+      },
+      "1.0.0",
+    );
+
+    expect(url).toMatch(
+      /^https:\/\/github\.com\/JohnnyMorganz\/StyLua\/releases\/latest\/download\/stylua-(macos|linux|windows)-(aarch64|x86_64)(-musl)?\.zip$/,
+    );
+  });
+
+  it("uses the known Zig SDK asset for Zig formatting", () => {
+    const url = resolveToolDownloadUrlForManifest(
+      {
+        name: "zig",
+      },
+      "1.0.0",
+    );
+
+    expect(url).toMatch(
+      /^https:\/\/ziglang\.org\/download\/0\.16\.0\/zig-(aarch64|x86_64)-(macos|linux|windows)-0\.16\.0\.(tar\.xz|zip)$/,
     );
   });
 
@@ -169,5 +196,44 @@ describe("extension-store runtime manifest", () => {
 
     expect(runtimeManifest.lsp?.server.default).toContain("vtsls.js");
     expect(runtimeManifest.lsp?.packages).toEqual(["typescript"]);
+  });
+
+  it("passes R language server tools to the backend", () => {
+    const manifest = createManifest({
+      lsp: {
+        name: "r-languageserver",
+        runtime: "r",
+        package: "languageserver",
+        server: { default: "r-languageserver" },
+        args: [],
+        fileExtensions: [".R", ".r"],
+        languageIds: ["r"],
+      },
+    });
+
+    expect(getLanguageToolConfigSet(manifest)?.lsp).toMatchObject({
+      name: "r-languageserver",
+      runtime: "r",
+      package: "languageserver",
+    });
+  });
+
+  it("passes system toolchain tools to the backend without download metadata", () => {
+    const manifest = createManifest({
+      lsp: {
+        name: "sourcekit-lsp",
+        runtime: "system",
+        server: { default: "sourcekit-lsp" },
+        args: [],
+        fileExtensions: [".swift"],
+        languageIds: ["swift"],
+      },
+    });
+
+    expect(getLanguageToolConfigSet(manifest)?.lsp).toMatchObject({
+      name: "sourcekit-lsp",
+      runtime: "system",
+    });
+    expect(getLanguageToolConfigSet(manifest)?.lsp?.downloadUrl).toBeUndefined();
   });
 });

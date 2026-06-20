@@ -44,6 +44,7 @@ export interface DiffHeaderProps {
 
 export interface DiffHunkHeaderProps {
   hunk: ParsedHunk;
+  hiddenLineCount?: number | null;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   isStaged: boolean;

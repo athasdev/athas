@@ -28,6 +28,7 @@ import { FileExplorerIcon } from "@/features/file-explorer/components/file-explo
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
+  type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
@@ -526,6 +527,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
+  const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
@@ -843,16 +845,18 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             selectedKey={selectedFileKey}
             onSelect={handleSelectFileFromTree}
             ariaLabel="Changed files"
+            viewMode={fileNavigatorViewMode}
+            onViewModeChange={setFileNavigatorViewMode}
           />
         ) : null}
 
         <div
-          className="min-h-0 flex-1 overflow-auto px-2 pt-2 pb-2"
+          className="min-h-0 flex-1 overflow-auto px-2 pb-2"
           style={{ overflowAnchor: "none" }}
           data-diff-stack-scroll-container
           onWheelCapture={handleStackWheelCapture}
         >
-          <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
+          <div className="flex min-w-0 max-w-full flex-col gap-1.5 rounded-md">
             {multiDiff.files.map((diff, index) => {
               const sectionKey = getDiffSectionKey(multiDiff, diff, index);
 
