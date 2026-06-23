@@ -19,9 +19,7 @@ members = [
 resolver = "2"
 
 [patch.crates-io]
-agent-client-protocol = { path = "vendor/agent-client-protocol" }
-agent-client-protocol-schema = { path = "vendor/agent-client-protocol-schema" }
-tauri = { git = "https://github.com/tauri-apps/tauri", branch = "feat/cef" }
+tauri = { git = "https://github.com/tauri-apps/tauri", rev = "7815deda7cec511c2623c0e62d89ad02c026ba58" }
 
 [workspace.lints.clippy]
 uninlined_format_args = "allow"
