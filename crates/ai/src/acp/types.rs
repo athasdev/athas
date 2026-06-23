@@ -147,12 +147,14 @@ pub struct AcpAgentCapabilities {
    pub prompt_capabilities: AcpPromptCapabilities,
    pub mcp_capabilities: AcpMcpCapabilities,
    pub session_capabilities: serde_json::Value,
+   pub auth_capabilities: serde_json::Value,
 }
 
 impl From<agent_client_protocol::schema::AgentCapabilities> for AcpAgentCapabilities {
    fn from(capabilities: agent_client_protocol::schema::AgentCapabilities) -> Self {
       let session_capabilities =
          serde_json::to_value(&capabilities.session_capabilities).unwrap_or_default();
+      let auth_capabilities = serde_json::to_value(&capabilities.auth).unwrap_or_default();
 
       Self {
          load_session: capabilities.load_session,
@@ -166,6 +168,7 @@ impl From<agent_client_protocol::schema::AgentCapabilities> for AcpAgentCapabili
             sse: capabilities.mcp_capabilities.sse,
          },
          session_capabilities,
+         auth_capabilities,
       }
    }
 }

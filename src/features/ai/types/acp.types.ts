@@ -37,6 +37,7 @@ export interface AcpAgentCapabilities {
     sse: boolean;
   };
   sessionCapabilities: unknown;
+  authCapabilities: unknown;
 }
 
 export interface AcpSessionInfo {

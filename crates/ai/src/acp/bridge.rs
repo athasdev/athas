@@ -315,6 +315,57 @@ impl AcpWorker {
       })
    }
 
+   pub(super) async fn delete_session(&mut self, session_id: &str) -> Result<()> {
+      self.ensure_process_alive().await?;
+
+      if !self.supports_session_delete() {
+         bail!("ACP agent does not support session/delete");
+      }
+
+      let connection = self.connection.as_ref().context("No active connection")?;
+      connection
+         .send_request(acp::DeleteSessionRequest::new(session_id.to_string()))
+         .block_task()
+         .await
+         .context("Failed to delete ACP session")?;
+
+      if self
+         .session_id
+         .as_ref()
+         .map(|active_session_id| active_session_id.to_string() == session_id)
+         .unwrap_or(false)
+      {
+         self.session_id = None;
+         if let Some(app_handle) = self.app_handle.as_ref() {
+            let _ = app_handle.emit(
+               "acp-event",
+               AcpEvent::SessionComplete {
+                  session_id: session_id.to_string(),
+               },
+            );
+         }
+      }
+
+      Ok(())
+   }
+
+   pub(super) async fn logout(&mut self) -> Result<()> {
+      self.ensure_process_alive().await?;
+
+      if !self.supports_logout() {
+         bail!("ACP agent does not support logout");
+      }
+
+      let connection = self.connection.as_ref().context("No active connection")?;
+      connection
+         .send_request(acp::LogoutRequest::new())
+         .block_task()
+         .await
+         .context("Failed to log out ACP agent")?;
+
+      Ok(())
+   }
+
    fn supports_session_list(&self) -> bool {
       self
          .agent_capabilities
@@ -323,11 +374,27 @@ impl AcpWorker {
          .is_some()
    }
 
+   fn supports_session_delete(&self) -> bool {
+      self
+         .agent_capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.session_capabilities.get("delete"))
+         .is_some()
+   }
+
    fn supports_session_close(&self) -> bool {
       self
          .agent_capabilities
          .as_ref()
          .and_then(|capabilities| capabilities.session_capabilities.get("close"))
+         .is_some()
+   }
+
+   fn supports_logout(&self) -> bool {
+      self
+         .agent_capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.auth_capabilities.get("logout"))
          .is_some()
    }
 
@@ -623,6 +690,35 @@ impl AcpAgentBridge {
             cursor,
             response_tx,
          })
+         .await
+         .context("Failed to send command to ACP worker")?;
+
+      response_rx.await.context("Worker disconnected")?
+   }
+
+   /// Delete a session known to the active agent
+   pub async fn delete_session(&self, session_id: &str) -> Result<()> {
+      let (response_tx, response_rx) = oneshot::channel();
+
+      self
+         .command_tx
+         .send(AcpCommand::DeleteSession {
+            session_id: session_id.to_string(),
+            response_tx,
+         })
+         .await
+         .context("Failed to send command to ACP worker")?;
+
+      response_rx.await.context("Worker disconnected")?
+   }
+
+   /// Log out of the active agent when supported by ACP auth capabilities
+   pub async fn logout(&self) -> Result<()> {
+      let (response_tx, response_rx) = oneshot::channel();
+
+      self
+         .command_tx
+         .send(AcpCommand::Logout { response_tx })
          .await
          .context("Failed to send command to ACP worker")?;
 

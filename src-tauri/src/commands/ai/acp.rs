@@ -342,6 +342,12 @@ pub struct SessionListArgs {
    cursor: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct SessionDeleteArgs {
+   #[serde(alias = "sessionId")]
+   session_id: String,
+}
+
 #[tauri::command]
 pub async fn set_acp_session_config_option(
    bridge: State<'_, AcpBridgeState>,
@@ -364,6 +370,24 @@ pub async fn list_acp_sessions(
       .list_sessions(args.cwd, args.cursor)
       .await
       .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_acp_session(
+   bridge: State<'_, AcpBridgeState>,
+   args: SessionDeleteArgs,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .delete_session(&args.session_id)
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn logout_acp_agent(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge.logout().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
