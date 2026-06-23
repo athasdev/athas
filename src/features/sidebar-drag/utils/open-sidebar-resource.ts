@@ -121,6 +121,7 @@ export const openSidebarResourceBuffer = async (
     case "github-pr":
       return bufferActions.openPRBuffer(resource.number, {
         title: resource.title,
+        repoPath: resource.repoPath,
         authorAvatarUrl: resource.authorAvatarUrl,
       });
 

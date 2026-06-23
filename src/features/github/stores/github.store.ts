@@ -89,9 +89,10 @@ const initialState: GitHubState = {
 
 let prsRequestSeq = 0;
 let authCheckedAt = 0;
+let selectedPRRequestSeq = 0;
 const prDetailsRequestSeqByKey: Record<string, number> = {};
 const prContentRequestSeqByKey: Record<string, number> = {};
-const prDetailsInFlightByKey: Record<string, Promise<void> | undefined> = {};
+const prDetailsInFlightByKey: Record<string, Promise<PullRequestDetails> | undefined> = {};
 const prContentInFlightByKey: Record<string, Promise<void> | undefined> = {};
 
 function getPRListCacheKey(repoPath: string, filter: PRFilter): string {
@@ -184,6 +185,18 @@ function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDe
     statusChecks,
     linkedIssues,
   };
+}
+
+async function fetchNormalizedPRDetails(
+  repoPath: string,
+  prNumber: number,
+): Promise<PullRequestDetails> {
+  const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
+    repoPath,
+    prNumber,
+  });
+
+  return normalizePullRequestDetails(detailsResponse);
 }
 
 export const useGitHubStore = create(
@@ -374,43 +387,82 @@ export const useGitHubStore = create(
         }
       },
 
+      prefetchPR: async (repoPath: string, prNumber: number) => {
+        const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
+        const cached = get().prDetailsCache[cacheKey];
+
+        if (cached && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS)) {
+          return;
+        }
+
+        const existingRequest = prDetailsInFlightByKey[cacheKey];
+        if (existingRequest) {
+          try {
+            await existingRequest;
+          } catch {
+            return;
+          }
+          return;
+        }
+
+        let request: Promise<PullRequestDetails>;
+        request = fetchNormalizedPRDetails(repoPath, prNumber)
+          .then((details) => {
+            set((state) => ({
+              prDetailsCache: {
+                ...state.prDetailsCache,
+                [cacheKey]: {
+                  ...state.prDetailsCache[cacheKey],
+                  fetchedAt: Date.now(),
+                  details,
+                },
+              },
+            }));
+            return details;
+          })
+          .finally(() => {
+            if (prDetailsInFlightByKey[cacheKey] === request) {
+              delete prDetailsInFlightByKey[cacheKey];
+            }
+          });
+
+        prDetailsInFlightByKey[cacheKey] = request;
+
+        try {
+          await request;
+        } catch {
+          return;
+        }
+      },
+
       selectPR: async (repoPath: string, prNumber: number, options?: { force?: boolean }) => {
         const force = options?.force ?? false;
         const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
         const cached = get().prDetailsCache[cacheKey];
         const hasFreshDetails =
           cached && !force && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS);
+        const selectionRequestId = ++selectedPRRequestSeq;
 
-        if (!force && prDetailsInFlightByKey[cacheKey]) {
-          await prDetailsInFlightByKey[cacheKey];
-          return;
-        }
-
-        if (hasFreshDetails) {
+        const applyCachedSelection = (entry: PRDetailsCacheEntry, isRefreshing: boolean) => {
           set({
             selectedPRNumber: prNumber,
-            selectedPRDetails: cached.details,
-            selectedPRDiff: cached.diff ?? null,
-            selectedPRFiles: cached.files ?? [],
-            selectedPRComments: cached.comments ?? [],
-            isLoadingDetails: false,
+            selectedPRDetails: entry.details,
+            selectedPRDiff: entry.diff ?? null,
+            selectedPRFiles: entry.files ?? [],
+            selectedPRComments: entry.comments ?? [],
+            isLoadingDetails: isRefreshing,
             detailsError: null,
             contentError: null,
           });
+        };
+
+        if (hasFreshDetails) {
+          applyCachedSelection(cached, false);
           return;
         }
 
         if (cached) {
-          set({
-            selectedPRNumber: prNumber,
-            selectedPRDetails: cached.details,
-            selectedPRDiff: cached.diff ?? null,
-            selectedPRFiles: cached.files ?? [],
-            selectedPRComments: cached.comments ?? [],
-            isLoadingDetails: true,
-            detailsError: null,
-            contentError: null,
-          });
+          applyCachedSelection(cached, true);
         } else {
           set({
             selectedPRNumber: prNumber,
@@ -427,44 +479,67 @@ export const useGitHubStore = create(
         const requestId = (prDetailsRequestSeqByKey[cacheKey] ?? 0) + 1;
         prDetailsRequestSeqByKey[cacheKey] = requestId;
 
-        const run = (async () => {
-          try {
-            const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
-              repoPath,
-              prNumber,
+        const existingRequest = !force ? prDetailsInFlightByKey[cacheKey] : undefined;
+        let request = existingRequest;
+        if (!request) {
+          request = fetchNormalizedPRDetails(repoPath, prNumber)
+            .then((details) => {
+              if (requestId === prDetailsRequestSeqByKey[cacheKey]) {
+                set((state) => ({
+                  prDetailsCache: {
+                    ...state.prDetailsCache,
+                    [cacheKey]: {
+                      ...state.prDetailsCache[cacheKey],
+                      fetchedAt: Date.now(),
+                      details,
+                    },
+                  },
+                }));
+              }
+              return details;
+            })
+            .finally(() => {
+              if (prDetailsInFlightByKey[cacheKey] === request) {
+                delete prDetailsInFlightByKey[cacheKey];
+              }
             });
-            const details = normalizePullRequestDetails(detailsResponse);
 
-            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
+          prDetailsInFlightByKey[cacheKey] = request;
+        }
 
+        try {
+          await request;
+          if (
+            selectionRequestId !== selectedPRRequestSeq ||
+            requestId !== prDetailsRequestSeqByKey[cacheKey]
+          ) {
+            return;
+          }
+
+          const nextCached = get().prDetailsCache[cacheKey];
+          if (nextCached) {
+            applyCachedSelection(nextCached, false);
+          } else {
             set((state) => ({
-              selectedPRDetails: details,
+              selectedPRDetails: state.selectedPRDetails,
               isLoadingDetails: false,
               detailsError: null,
               contentError: null,
-              prDetailsCache: {
-                ...state.prDetailsCache,
-                [cacheKey]: {
-                  ...state.prDetailsCache[cacheKey],
-                  fetchedAt: Date.now(),
-                  details,
-                },
-              },
             }));
-          } catch (err) {
-            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
-
-            set({
-              detailsError: err instanceof Error ? err.message : String(err),
-              isLoadingDetails: false,
-            });
-          } finally {
-            delete prDetailsInFlightByKey[cacheKey];
           }
-        })();
+        } catch (err) {
+          if (
+            selectionRequestId !== selectedPRRequestSeq ||
+            requestId !== prDetailsRequestSeqByKey[cacheKey]
+          ) {
+            return;
+          }
 
-        prDetailsInFlightByKey[cacheKey] = run;
-        await run;
+          set({
+            detailsError: err instanceof Error ? err.message : String(err),
+            isLoadingDetails: false,
+          });
+        }
       },
 
       fetchPRContent: async (
@@ -557,7 +632,12 @@ export const useGitHubStore = create(
                 : Promise.resolve(undefined),
             ]);
 
-            if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
+            if (
+              requestId !== prContentRequestSeqByKey[cacheKey] ||
+              get().selectedPRNumber !== prNumber
+            ) {
+              return;
+            }
 
             const normalizedFiles = shouldFetchFiles ? normalizePullRequestFiles(files) : undefined;
 
@@ -611,7 +691,12 @@ export const useGitHubStore = create(
               };
             });
           } catch (err) {
-            if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
+            if (
+              requestId !== prContentRequestSeqByKey[cacheKey] ||
+              get().selectedPRNumber !== prNumber
+            ) {
+              return;
+            }
 
             set({
               contentError: err instanceof Error ? err.message : String(err),

@@ -22,8 +22,17 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
-import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github.types";
-import { GITHUB_ACTION_LIST_TTL_MS, githubActionListCache } from "../utils/github-data-cache";
+import type {
+  WorkflowRunDetails,
+  WorkflowRunFilter,
+  WorkflowRunListItem,
+} from "../types/github.types";
+import {
+  GITHUB_ACTION_DETAILS_TTL_MS,
+  GITHUB_ACTION_LIST_TTL_MS,
+  githubActionDetailsCache,
+  githubActionListCache,
+} from "../utils/github-data-cache";
 import { LoadingIndicator } from "@/ui/loading";
 import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
@@ -122,47 +131,53 @@ interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
   isActive: boolean;
   onSelect: () => void;
+  onPrefetch?: () => void;
   repoPath?: string | null;
 }
 
-const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunRowProps) => (
-  <SidebarListItem
-    onClick={onSelect}
-    draggable
-    onDragStart={(event) => {
-      const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
-      writeSidebarResourceDragData(event.dataTransfer, {
-        type: "github-action",
-        repoPath: repoPath ?? undefined,
-        runId: run.databaseId,
-        title,
-        url: run.url,
-        name: title,
-      });
-    }}
-    active={isActive}
-    className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
-    leading={<WorkflowRunStatusIcon status={run.status} conclusion={run.conclusion} />}
-  >
-    <div className="min-w-0 flex-1">
-      <div className="ui-text-sm truncate leading-4 text-text">
-        {run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`}
+const WorkflowRunRow = memo(
+  ({ run, isActive, onSelect, onPrefetch, repoPath }: WorkflowRunRowProps) => (
+    <SidebarListItem
+      onClick={onSelect}
+      onMouseEnter={onPrefetch}
+      onFocus={onPrefetch}
+      onPointerDown={onPrefetch}
+      draggable
+      onDragStart={(event) => {
+        const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
+        writeSidebarResourceDragData(event.dataTransfer, {
+          type: "github-action",
+          repoPath: repoPath ?? undefined,
+          runId: run.databaseId,
+          title,
+          url: run.url,
+          name: title,
+        });
+      }}
+      active={isActive}
+      className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
+      leading={<WorkflowRunStatusIcon status={run.status} conclusion={run.conclusion} />}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="ui-text-sm truncate leading-4 text-text">
+          {run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`}
+        </div>
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
+          {run.workflowName ? (
+            <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+              <span className="truncate">{run.workflowName}</span>
+            </span>
+          ) : null}
+          {run.headBranch ? (
+            <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+              <span className="truncate">{run.headBranch}</span>
+            </span>
+          ) : null}
+        </div>
       </div>
-      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
-        {run.workflowName ? (
-          <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
-            <span className="truncate">{run.workflowName}</span>
-          </span>
-        ) : null}
-        {run.headBranch ? (
-          <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
-            <span className="truncate">{run.headBranch}</span>
-          </span>
-        ) : null}
-      </div>
-    </div>
-  </SidebarListItem>
-));
+    </SidebarListItem>
+  ),
+);
 
 WorkflowRunRow.displayName = "WorkflowRunRow";
 
@@ -229,6 +244,26 @@ const GitHubActionsView = memo(
         } finally {
           setIsLoading(false);
         }
+      },
+      [repoPath],
+    );
+
+    const prefetchWorkflowRun = useCallback(
+      (run: WorkflowRunListItem) => {
+        if (!repoPath) return;
+
+        const cacheKey = `${repoPath}::${run.databaseId}`;
+        void githubActionDetailsCache
+          .load(
+            cacheKey,
+            () =>
+              invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
+                repoPath,
+                runId: run.databaseId,
+              }),
+            { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
+          )
+          .catch(() => undefined);
       },
       [repoPath],
     );
@@ -340,6 +375,7 @@ const GitHubActionsView = memo(
                   run={run}
                   isActive={activeRunId === run.databaseId}
                   repoPath={repoPath}
+                  onPrefetch={() => prefetchWorkflowRun(run)}
                   onSelect={() =>
                     startTransition(() => {
                       openGitHubActionBuffer({

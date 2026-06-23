@@ -99,11 +99,11 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   } = useGitHubStore();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } = useGitHubStore().actions;
-  const repoPath = selectedRepoPath ?? rootFolderPath;
   const prBuffer = buffers.find(
     (buffer): buffer is Extract<(typeof buffers)[number], { type: "pullRequest" }> =>
       buffer.type === "pullRequest" && buffer.prNumber === prNumber,
   );
+  const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>("activity");
   const [fileQuery, setFileQuery] = useState("");

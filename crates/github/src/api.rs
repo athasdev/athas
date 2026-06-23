@@ -600,7 +600,6 @@ fn pr_from_rest(pr: RestPullRequest) -> PullRequest {
 fn pr_details_from_rest(
    pr: RestPullRequest,
    commits: Vec<serde_json::Value>,
-   files: Vec<PullRequestFile>,
    review_requests: Vec<ReviewRequest>,
    status_checks: Vec<StatusCheck>,
 ) -> PullRequestDetails {
@@ -619,9 +618,7 @@ fn pr_details_from_rest(
       base_ref: pr.base.and_then(|base| base.ref_name).unwrap_or_default(),
       additions: pr.additions.unwrap_or_default(),
       deletions: pr.deletions.unwrap_or_default(),
-      changed_files: pr
-         .changed_files
-         .unwrap_or_else(|| i64::try_from(files.len()).unwrap_or_default()),
+      changed_files: pr.changed_files.unwrap_or_default(),
       commits,
       status_checks,
       linked_issues: Vec::new(),
@@ -1118,7 +1115,6 @@ pub fn github_get_pr_details(
    let commits: Vec<serde_json::Value> =
       api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
    let commits = commits.into_iter().map(commit_value_from_rest).collect();
-   let files = github_get_pr_files(repo_path_value.clone(), pr_number, api.github_token.clone())?;
    let review_requests = get_review_requests(&api, &slug, pr_number).unwrap_or_default();
    let status_checks = head_sha
       .as_deref()
@@ -1128,7 +1124,6 @@ pub fn github_get_pr_details(
    Ok(pr_details_from_rest(
       pr,
       commits,
-      files,
       review_requests,
       status_checks,
    ))

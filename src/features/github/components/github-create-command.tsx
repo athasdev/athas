@@ -105,7 +105,11 @@ export function GitHubCreateCommand({
   const isVisible = Boolean(kind && repoPath);
 
   if (!isVisible || !kind || !repoPath) {
-    return <Command isVisible={false} onClose={onClose} title="GitHub" />;
+    return (
+      <Command isVisible={false} onClose={onClose} title="GitHub">
+        {null}
+      </Command>
+    );
   }
 
   return (

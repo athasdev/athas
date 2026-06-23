@@ -19,8 +19,13 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
-import type { IssueFilter, IssueListItem } from "../types/github.types";
-import { GITHUB_ISSUE_LIST_TTL_MS, githubIssueListCache } from "../utils/github-data-cache";
+import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.types";
+import {
+  GITHUB_ISSUE_DETAILS_TTL_MS,
+  GITHUB_ISSUE_LIST_TTL_MS,
+  githubIssueDetailsCache,
+  githubIssueListCache,
+} from "../utils/github-data-cache";
 import { LoadingIndicator } from "@/ui/loading";
 import { SidebarListItem } from "@/ui/sidebar";
 
@@ -28,12 +33,16 @@ interface IssueListItemProps {
   issue: IssueListItem;
   isActive: boolean;
   onSelect: () => void;
+  onPrefetch?: () => void;
   repoPath?: string | null;
 }
 
-const IssueRow = memo(({ issue, isActive, onSelect, repoPath }: IssueListItemProps) => (
+const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: IssueListItemProps) => (
   <SidebarListItem
     onClick={onSelect}
+    onMouseEnter={onPrefetch}
+    onFocus={onPrefetch}
+    onPointerDown={onPrefetch}
     draggable
     onDragStart={(event) => {
       writeSidebarResourceDragData(event.dataTransfer, {
@@ -139,6 +148,26 @@ const GitHubIssuesView = memo(
       [filter, repoPath],
     );
 
+    const prefetchIssue = useCallback(
+      (issue: IssueListItem) => {
+        if (!repoPath) return;
+
+        const cacheKey = `${repoPath}::${issue.number}`;
+        void githubIssueDetailsCache
+          .load(
+            cacheKey,
+            () =>
+              invoke<IssueDetails>("github_get_issue_details", {
+                repoPath,
+                issueNumber: issue.number,
+              }),
+            { ttlMs: GITHUB_ISSUE_DETAILS_TTL_MS },
+          )
+          .catch(() => undefined);
+      },
+      [repoPath],
+    );
+
     useEffect(() => {
       const timeoutId = window.setTimeout(() => {
         void checkAuth();
@@ -227,6 +256,7 @@ const GitHubIssuesView = memo(
                   issue={issue}
                   isActive={activeIssueNumber === issue.number}
                   repoPath={repoPath}
+                  onPrefetch={() => prefetchIssue(issue)}
                   onSelect={() =>
                     startTransition(() => {
                       openGitHubIssueBuffer({

@@ -116,7 +116,7 @@ const GitHubMarkdown = memo(
 
         if (entityLink.kind === "pullRequest") {
           startTransition(() => {
-            openPRBuffer(entityLink.number);
+            openPRBuffer(entityLink.number, { repoPath });
           });
           return;
         }
