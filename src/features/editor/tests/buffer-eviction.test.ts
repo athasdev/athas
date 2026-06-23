@@ -47,6 +47,20 @@ describe("buffer auto eviction", () => {
     expect(result.buffers.map((item) => item.id)).toEqual(["terminal", "web", "agent"]);
   });
 
+  it("does not evict singleton tool buffers", () => {
+    const result = evictLeastRecentAutoClosableBuffer(
+      [
+        buffer("search", "globalSearch"),
+        buffer("diagnostics", "diagnostics"),
+        buffer("references", "references"),
+      ],
+      1,
+    );
+
+    expect(result.evictedBuffer).toBeNull();
+    expect(result.buffers.map((item) => item.id)).toEqual(["search", "diagnostics", "references"]);
+  });
+
   it("can ignore preview buffers for editor-file opens", () => {
     const result = evictLeastRecentAutoClosableBuffer(
       [buffer("preview", "editor", { isPreview: true }), buffer("regular")],

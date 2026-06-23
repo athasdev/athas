@@ -25,6 +25,7 @@ import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -100,7 +101,12 @@ interface BufferActions {
   openWebViewerBuffer: (url: string) => string;
   openPRBuffer: (
     prNumber: number,
-    metadata?: { title?: string; authorAvatarUrl?: string; selectedFilePath?: string },
+    metadata?: {
+      title?: string;
+      repoPath?: string;
+      authorAvatarUrl?: string;
+      selectedFilePath?: string;
+    },
   ) => string;
   openGitHubIssueBuffer: (options: {
     issueNumber: number;
@@ -510,7 +516,10 @@ export const useBufferStore = createSelectors(
                 ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
                 : `pr://${spec.prNumber}`;
               const existing = buffers.find(
-                (b) => b.type === "pullRequest" && b.prNumber === spec.prNumber,
+                (b) =>
+                  b.type === "pullRequest" &&
+                  b.prNumber === spec.prNumber &&
+                  (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
                 set((state) => {
@@ -521,6 +530,7 @@ export const useBufferStore = createSelectors(
                           ...b,
                           path,
                           name: spec.name ?? b.name,
+                          repoPath: spec.repoPath ?? b.repoPath,
                           authorAvatarUrl: spec.authorAvatarUrl ?? b.authorAvatarUrl,
                           isActive: true,
                         }
@@ -685,10 +695,19 @@ export const useBufferStore = createSelectors(
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  state.buffers = state.buffers.map((b) => {
+                    if (b.id !== existing.id) {
+                      return {
+                        ...b,
+                        isActive: false,
+                      };
+                    }
+
+                    return {
+                      ...b,
+                      isActive: true,
+                    };
+                  });
                 });
                 syncAndFocusBufferInPane(existing.id);
                 return existing.id;
@@ -697,13 +716,7 @@ export const useBufferStore = createSelectors(
               let newBuffers = closeNewTabInActivePane([...buffers]);
               newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
-              const path =
-                spec.type === "globalSearch"
-                  ? "search://global"
-                  : spec.type === "diagnostics"
-                    ? "diagnostics://problems"
-                    : "references://results";
-              const id = generateBufferId(path);
+              const id = generateBufferId(SINGLETON_TOOL_BUFFER_METADATA[spec.type].path);
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
@@ -919,12 +932,18 @@ export const useBufferStore = createSelectors(
 
         openPRBuffer: (
           prNumber: number,
-          metadata?: { title?: string; authorAvatarUrl?: string; selectedFilePath?: string },
+          metadata?: {
+            title?: string;
+            repoPath?: string;
+            authorAvatarUrl?: string;
+            selectedFilePath?: string;
+          },
         ): string => {
           return get().actions.openContent({
             type: "pullRequest",
             prNumber,
             name: metadata?.title,
+            repoPath: metadata?.repoPath,
             authorAvatarUrl: metadata?.authorAvatarUrl,
             selectedFilePath: metadata?.selectedFilePath,
           });
@@ -1148,6 +1167,11 @@ export const useBufferStore = createSelectors(
         },
 
         setActiveBuffer: (bufferId: string) => {
+          if (get().activeBufferId === bufferId) {
+            syncAndFocusBufferInPane(bufferId);
+            return;
+          }
+
           syncAndFocusBufferInPane(bufferId);
           set((state) => {
             state.activeBufferId = bufferId;

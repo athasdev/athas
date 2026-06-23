@@ -116,6 +116,7 @@ export interface DatabaseContent extends PaneContentBase {
 
 export interface PullRequestContent extends PaneContentBase {
   type: "pullRequest";
+  repoPath?: string;
   prNumber: number;
   authorAvatarUrl?: string;
 }
@@ -355,6 +356,7 @@ export type OpenContentSpec =
   | {
       type: "pullRequest";
       prNumber: number;
+      repoPath?: string;
       authorAvatarUrl?: string;
       name?: string;
       selectedFilePath?: string;
