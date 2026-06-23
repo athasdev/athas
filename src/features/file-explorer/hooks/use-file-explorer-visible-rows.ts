@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useShallow } from "zustand/react/shallow";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
 import {
@@ -56,9 +57,13 @@ export function useFileExplorerVisibleRows({
   rootFolderPath,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
-  const compactFolders = useSettingsStore((state) => state.settings.compactFoldersInFileTree);
-  const hideRootFolder = useSettingsStore((state) => state.settings.hideRootFolderInFileTree);
-  const density = useSettingsStore((state) => state.settings.fileTreeDensity);
+  const { compactFolders, hideRootFolder, density } = useSettingsStore(
+    useShallow((state) => ({
+      compactFolders: state.settings.compactFoldersInFileTree,
+      hideRootFolder: state.settings.hideRootFolderInFileTree,
+      density: state.settings.fileTreeDensity,
+    })),
+  );
   const rowHeight = FILE_TREE_DENSITY_CONFIG[density].rowHeight;
 
   const visibleRows = useMemo(() => {

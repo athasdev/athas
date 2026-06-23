@@ -9,6 +9,7 @@ import {
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { useShallow } from "zustand/react/shallow";
 import { useEventListener } from "usehooks-ts";
 import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
@@ -16,7 +17,6 @@ import {
   collectFileTreeSearchHits,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
-  getStickyAncestorRows,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import {
   createFileTreeGitStatusLookup,
@@ -31,7 +31,6 @@ import {
   type FileTreeGitIgnoreRules,
   type GitIgnoreFileContent,
 } from "@/features/file-explorer/lib/file-tree-gitignore";
-import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { findFileInTree } from "@/features/file-system/controllers/file-tree-utils";
 import { readDirectory, readFile } from "@/features/file-system/controllers/platform";
@@ -57,9 +56,8 @@ import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-m
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
-import { FILE_TREE_BASE_INDENT, FileExplorerTreeItem } from "./file-explorer-tree-item";
+import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
-import { FileExplorerIcon } from "./file-explorer-icon";
 import "../styles/file-explorer-tree.css";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
@@ -108,8 +106,6 @@ interface OpenAllFilesDialogState {
   filePaths: string[];
 }
 
-const FILE_TREE_CONTAINER_INSET = 4;
-const FILE_TREE_HEADER_HEIGHT = 32;
 const FILE_TREE_SEARCH_DEBOUNCE_DELAY = 80;
 const FILE_TREE_SEARCH_RESULT_LIMIT = 500;
 const getFileTreeRowId = (path: string) => `file-tree-row-${path.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
@@ -157,10 +153,27 @@ function FileExplorerTreeComponent({
   const [gitIgnoreRules, setGitIgnoreRules] = useState<FileTreeGitIgnoreRules | null>(null);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
-  // sticky handled purely by CSS; no JS scanning
 
-  const { settings, updateSetting } = useSettingsStore();
-  const fileTreeDensity = settings.fileTreeDensity;
+  const fileTreeSettings = useSettingsStore(
+    useShallow((state) => ({
+      fileTreeDensity: state.settings.fileTreeDensity,
+      fileTreeIndentSize: state.settings.fileTreeIndentSize,
+      hiddenDirectoryPatterns: state.settings.hiddenDirectoryPatterns,
+      hiddenFilePatterns: state.settings.hiddenFilePatterns,
+      showGitignoredFilesInFileTree: state.settings.showGitignoredFilesInFileTree,
+      showGitStatusInFileTree: state.settings.showGitStatusInFileTree,
+      showHiddenFilesInFileTree: state.settings.showHiddenFilesInFileTree,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const cutClipboardEntries = useFileClipboardStore((state) =>
+    state.clipboard?.operation === "cut" ? state.clipboard.entries : null,
+  );
+  const cutFilePaths = useMemo(
+    () => new Set(cutClipboardEntries?.map((entry) => entry.path) ?? []),
+    [cutClipboardEntries],
+  );
+  const fileTreeDensity = fileTreeSettings.fileTreeDensity;
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
   const removeFolderFromWorkspace = useFileSystemStore((state) => state.removeFolderFromWorkspace);
@@ -198,14 +211,14 @@ function FileExplorerTreeComponent({
 
   const userIgnore = useMemo(() => {
     const ig = ignore();
-    if (settings.hiddenFilePatterns.length > 0) {
-      ig.add(settings.hiddenFilePatterns);
+    if (fileTreeSettings.hiddenFilePatterns.length > 0) {
+      ig.add(fileTreeSettings.hiddenFilePatterns);
     }
-    if (settings.hiddenDirectoryPatterns.length > 0) {
-      ig.add(settings.hiddenDirectoryPatterns.map((p) => (p.endsWith("/") ? p : `${p}/`)));
+    if (fileTreeSettings.hiddenDirectoryPatterns.length > 0) {
+      ig.add(fileTreeSettings.hiddenDirectoryPatterns.map((p) => (p.endsWith("/") ? p : `${p}/`)));
     }
     return ig;
-  }, [settings.hiddenFilePatterns, settings.hiddenDirectoryPatterns]);
+  }, [fileTreeSettings.hiddenFilePatterns, fileTreeSettings.hiddenDirectoryPatterns]);
 
   const workspaceRootPaths = useMemo(() => {
     const roots = files.filter((file) => file.isDir).map((file) => file.path);
@@ -232,8 +245,6 @@ function FileExplorerTreeComponent({
     },
     [getWorkspaceRootForPath, userIgnore],
   );
-
-  // removed scroll-time DOM scanning for sticky folders
 
   const gitIgnoreFileReferences = useMemo(
     () => collectGitIgnoreFileReferences(files, rootFolderPath),
@@ -296,7 +307,7 @@ function FileExplorerTreeComponent({
 
   const gitStatusDecorationLookup = useMemo(() => {
     const startedAt = performance.now();
-    if (!gitStatus || !settings.showGitStatusInFileTree)
+    if (!gitStatus || !fileTreeSettings.showGitStatusInFileTree)
       return null as FileTreeGitStatusLookup | null;
 
     const lookup = createFileTreeGitStatusLookup(gitStatus);
@@ -308,7 +319,7 @@ function FileExplorerTreeComponent({
       durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
     });
     return lookup;
-  }, [gitStatus, settings.showGitStatusInFileTree]);
+  }, [fileTreeSettings.showGitStatusInFileTree, gitStatus]);
 
   const getGitStatusDecoration = useCallback(
     (file: FileEntry): FileTreeGitStatusDecoration | null =>
@@ -328,11 +339,11 @@ function FileExplorerTreeComponent({
           return [];
         }
 
-        if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(item.name)) {
+        if (!fileTreeSettings.showHiddenFilesInFileTree && isHiddenFileTreeName(item.name)) {
           return [];
         }
 
-        if (!settings.showGitignoredFilesInFileTree && ignored) {
+        if (!fileTreeSettings.showGitignoredFilesInFileTree && ignored) {
           return [];
         }
 
@@ -356,8 +367,8 @@ function FileExplorerTreeComponent({
     files,
     isGitIgnored,
     isUserHidden,
-    settings.showGitignoredFilesInFileTree,
-    settings.showHiddenFilesInFileTree,
+    fileTreeSettings.showGitignoredFilesInFileTree,
+    fileTreeSettings.showHiddenFilesInFileTree,
   ]);
 
   useFileExplorerSync({
@@ -402,32 +413,35 @@ function FileExplorerTreeComponent({
   const displayedExpandedPaths =
     isTreeSearchActive && !isTreeSearchSearching ? treeSearchResult.expandedPaths : undefined;
   const hasActiveFileTreeFilters =
-    !settings.showHiddenFilesInFileTree ||
-    !settings.showGitignoredFilesInFileTree ||
-    !settings.showGitStatusInFileTree;
+    !fileTreeSettings.showHiddenFilesInFileTree ||
+    !fileTreeSettings.showGitignoredFilesInFileTree ||
+    !fileTreeSettings.showGitStatusInFileTree;
   const fileTreeFilterMenuItems = useMemo<MenuItem[]>(
     () => [
       {
         id: "hidden-files",
         label: "Hidden Files",
         icon: <Eye />,
-        keybinding: settings.showHiddenFilesInFileTree ? (
+        keybinding: fileTreeSettings.showHiddenFilesInFileTree ? (
           <Check className="size-3.5 text-accent" />
         ) : null,
         onClick: () =>
-          void updateSetting("showHiddenFilesInFileTree", !settings.showHiddenFilesInFileTree),
+          void updateSetting(
+            "showHiddenFilesInFileTree",
+            !fileTreeSettings.showHiddenFilesInFileTree,
+          ),
       },
       {
         id: "gitignored-files",
         label: "Gitignored Files",
         icon: <GitBranch />,
-        keybinding: settings.showGitignoredFilesInFileTree ? (
+        keybinding: fileTreeSettings.showGitignoredFilesInFileTree ? (
           <Check className="size-3.5 text-accent" />
         ) : null,
         onClick: () =>
           void updateSetting(
             "showGitignoredFilesInFileTree",
-            !settings.showGitignoredFilesInFileTree,
+            !fileTreeSettings.showGitignoredFilesInFileTree,
           ),
       },
       { id: "sep-status", label: "", separator: true, onClick: () => {} },
@@ -435,17 +449,17 @@ function FileExplorerTreeComponent({
         id: "git-status",
         label: "Git Status",
         icon: <GitBranch />,
-        keybinding: settings.showGitStatusInFileTree ? (
+        keybinding: fileTreeSettings.showGitStatusInFileTree ? (
           <Check className="size-3.5 text-accent" />
         ) : null,
         onClick: () =>
-          void updateSetting("showGitStatusInFileTree", !settings.showGitStatusInFileTree),
+          void updateSetting("showGitStatusInFileTree", !fileTreeSettings.showGitStatusInFileTree),
       },
     ],
     [
-      settings.showGitStatusInFileTree,
-      settings.showGitignoredFilesInFileTree,
-      settings.showHiddenFilesInFileTree,
+      fileTreeSettings.showGitStatusInFileTree,
+      fileTreeSettings.showGitignoredFilesInFileTree,
+      fileTreeSettings.showHiddenFilesInFileTree,
       updateSetting,
     ],
   );
@@ -546,8 +560,6 @@ function FileExplorerTreeComponent({
     window.addEventListener("file-tree-open-search", handleFileTreeOpenSearch);
     return () => window.removeEventListener("file-tree-open-search", handleFileTreeOpenSearch);
   }, []);
-
-  // No sticky overlays or global guides
 
   const startInlineEditing = (parentPath: string, isFolder: boolean) => {
     if (!onUpdateFiles) return;
@@ -722,11 +734,11 @@ function FileExplorerTreeComponent({
               continue;
             }
 
-            if (!settings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
+            if (!fileTreeSettings.showHiddenFilesInFileTree && isHiddenFileTreeName(entryName)) {
               continue;
             }
 
-            if (!settings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
+            if (!fileTreeSettings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
               continue;
             }
 
@@ -744,8 +756,8 @@ function FileExplorerTreeComponent({
     [
       isUserHidden,
       isGitIgnored,
-      settings.showGitignoredFilesInFileTree,
-      settings.showHiddenFilesInFileTree,
+      fileTreeSettings.showGitignoredFilesInFileTree,
+      fileTreeSettings.showHiddenFilesInFileTree,
     ],
   );
 
@@ -1256,73 +1268,8 @@ function FileExplorerTreeComponent({
             const paddingBottom = items.length
               ? rowVirtualizer.getTotalSize() - items[items.length - 1].end
               : 0;
-            const densityConfig = FILE_TREE_DENSITY_CONFIG[fileTreeDensity];
-            const stickyViewportStart =
-              (rowVirtualizer.scrollOffset ?? 0) +
-              FILE_TREE_HEADER_HEIGHT -
-              FILE_TREE_CONTAINER_INSET;
-            const stickyMarkerItem = items.find((item) => item.end > stickyViewportStart);
-            const stickyMarkerIndex =
-              stickyMarkerItem && visibleRows.length
-                ? Math.min(visibleRows.length - 1, Math.max(0, stickyMarkerItem.index))
-                : -1;
-            const stickyAncestors =
-              stickyMarkerIndex >= 0 ? getStickyAncestorRows(visibleRows, stickyMarkerIndex) : [];
-            const stickyAncestorsStyle = {
-              "--file-tree-container-inset": `${FILE_TREE_CONTAINER_INSET}px`,
-              "--file-tree-header-height": `${FILE_TREE_HEADER_HEIGHT}px`,
-              "--file-tree-sticky-row-height": `${densityConfig.rowHeight}px`,
-              "--file-tree-sticky-stack-height": `${
-                stickyAncestors.length * densityConfig.rowHeight
-              }px`,
-            } as React.CSSProperties;
             return (
               <>
-                {stickyAncestors.length > 0 ? (
-                  <div className="file-tree-sticky-ancestors" style={stickyAncestorsStyle}>
-                    <div className="file-tree-sticky-ancestor-stack">
-                      {stickyAncestors.map((stickyAncestor) => {
-                        const stickyAncestorLabel =
-                          stickyAncestor.displayName ?? stickyAncestor.file.name;
-                        const stickyAncestorGitStatus = getGitStatusDecoration(stickyAncestor.file);
-                        const stickyAncestorPaddingLeft =
-                          FILE_TREE_BASE_INDENT +
-                          FILE_TREE_CONTAINER_INSET +
-                          stickyAncestor.depth * settings.fileTreeIndentSize;
-
-                        return (
-                          <div
-                            key={stickyAncestor.file.path}
-                            data-path={stickyAncestor.file.path}
-                            data-depth={stickyAncestor.depth}
-                            title={stickyAncestor.file.path}
-                            className={cn(
-                              "file-tree-row ui-font ui-text-sm flex w-full min-w-max select-none items-center whitespace-nowrap rounded-none border-none bg-transparent text-left text-text outline-none",
-                              densityConfig.rowClassName,
-                            )}
-                            style={{ paddingLeft: `${stickyAncestorPaddingLeft}px` }}
-                          >
-                            <FileExplorerIcon
-                              fileName={stickyAncestor.file.name}
-                              isDir={stickyAncestor.file.isDir}
-                              isExpanded={stickyAncestor.isExpanded}
-                              isSymlink={stickyAncestor.file.isSymlink}
-                              className="relative z-1 shrink-0 text-text-lighter"
-                            />
-                            <span
-                              className={cn(
-                                "relative z-1 select-none whitespace-nowrap",
-                                stickyAncestorGitStatus?.colorClassName,
-                              )}
-                            >
-                              {stickyAncestorLabel}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
                 <div style={{ height: paddingTop }} />
                 {items.map((vi) => {
                   const row = visibleRows[vi.index];
@@ -1354,10 +1301,11 @@ function FileExplorerTreeComponent({
                       guideTargets={guideTargets}
                       previousDepth={previousRow?.depth ?? 0}
                       nextDepth={nextRow?.depth ?? 0}
-                      indentSize={settings.fileTreeIndentSize}
+                      indentSize={fileTreeSettings.fileTreeIndentSize}
                       density={fileTreeDensity}
                       isExpanded={row.isExpanded}
                       isActive={highlightedPath === row.file.path}
+                      isCut={cutFilePaths.has(row.file.path)}
                       dragOverPath={dragState.dragOverPath}
                       isDragging={dragState.isDragging}
                       editingValue={editingValue}

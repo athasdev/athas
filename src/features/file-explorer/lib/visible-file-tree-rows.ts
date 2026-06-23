@@ -188,40 +188,6 @@ export function filterFileTreeForFffHits(
   };
 }
 
-export function getStickyAncestorRow(
-  rows: readonly VisibleFileTreeRow[],
-  firstVisibleIndex: number,
-): VisibleFileTreeRow | null {
-  const ancestors = getStickyAncestorRows(rows, firstVisibleIndex);
-  return ancestors[ancestors.length - 1] ?? null;
-}
-
-export function getStickyAncestorRows(
-  rows: readonly VisibleFileTreeRow[],
-  firstVisibleIndex: number,
-): VisibleFileTreeRow[] {
-  const firstVisibleRow = rows[firstVisibleIndex];
-  if (!firstVisibleRow || firstVisibleRow.depth === 0) {
-    return [];
-  }
-
-  const ancestors: Array<VisibleFileTreeRow | null> = Array.from(
-    { length: firstVisibleRow.depth },
-    () => null,
-  );
-  let remaining = firstVisibleRow.depth;
-
-  for (let index = firstVisibleIndex - 1; index >= 0 && remaining > 0; index--) {
-    const candidate = rows[index];
-    if (candidate.depth < firstVisibleRow.depth && ancestors[candidate.depth] === null) {
-      ancestors[candidate.depth] = candidate;
-      remaining--;
-    }
-  }
-
-  return ancestors.filter((row): row is VisibleFileTreeRow => row !== null);
-}
-
 export function getGuideAncestorRows(
   rows: readonly VisibleFileTreeRow[],
   rowIndex: number,

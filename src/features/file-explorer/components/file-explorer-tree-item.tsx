@@ -5,7 +5,6 @@ import {
   type FileTreeDensity,
 } from "@/features/file-explorer/lib/file-tree-density";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import Input from "@/ui/input";
 import { TreeRow } from "@/features/sidebar-tree/components/tree-row";
@@ -52,6 +51,7 @@ interface FileExplorerTreeItemProps {
   density: FileTreeDensity;
   isExpanded: boolean;
   isActive: boolean;
+  isCut: boolean;
   dragOverPath: string | null;
   isDragging: boolean;
   editingValue: string;
@@ -96,6 +96,7 @@ function FileExplorerTreeItemComponent({
   density,
   isExpanded,
   isActive,
+  isCut,
   dragOverPath,
   isDragging,
   editingValue,
@@ -107,10 +108,6 @@ function FileExplorerTreeItemComponent({
   isSearchMatch = false,
   rowId,
 }: FileExplorerTreeItemProps) {
-  const isCut = useFileClipboardStore(
-    (s) =>
-      s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
-  );
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const densityConfig = FILE_TREE_DENSITY_CONFIG[density];
   const gitStatusDecoration = getGitStatusDecoration(file);
@@ -263,6 +260,7 @@ export const FileExplorerTreeItem = memo(
     prev.density === next.density &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
+    prev.isCut === next.isCut &&
     prev.dragOverPath === next.dragOverPath &&
     prev.isDragging === next.isDragging &&
     prev.editingValue === next.editingValue &&

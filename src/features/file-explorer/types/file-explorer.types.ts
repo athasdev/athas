@@ -27,7 +27,6 @@ export interface FileTreeItemProps {
   activePath?: string;
   dragOverPath: string | null;
   isDragging: boolean;
-  deepestStickyFolder: string | null;
   editingValue: string;
   onEditingValueChange: (value: string) => void;
   onMouseDown: (e: React.MouseEvent, file: FileEntry) => void;
