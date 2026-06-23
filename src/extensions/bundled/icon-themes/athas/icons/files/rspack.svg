@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Rspack">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#6F7DD6"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#CDD4FF" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="m12 6.5 5 2.7v5.6l-5 2.7-5-2.7V9.2z" fill="none" stroke="#CDD4FF" stroke-width="1.35" stroke-linejoin="round"/><path d="M7 9.2 12 12l5-2.8M12 12v5.5" fill="none" stroke="#CDD4FF" stroke-width="1.15" stroke-linecap="round"/><text x="12" y="14.3" text-anchor="middle" font-family="Arial,sans-serif" font-size="3.9" font-weight="700" fill="#CDD4FF">R</text>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="JS Config">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#B89D51"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#E7D794" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <circle cx="12" cy="12" r="2.4" fill="none" stroke="#E7D794" stroke-width="1.55"/><path d="M12 6.2v1.5M12 16.3v1.5M6.2 12h1.5M16.3 12h1.5M7.9 7.9 9 9M15 15l1.1 1.1M16.1 7.9 15 9M9 15l-1.1 1.1" stroke="#E7D794" stroke-width="1.55" stroke-linecap="round"/>
+</svg>

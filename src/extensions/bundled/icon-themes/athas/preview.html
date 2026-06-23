@@ -1,0 +1,2421 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Athas Icons Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #11151b;
+      --panel: #171d25;
+      --panel-2: #1d2530;
+      --text: #ecf1f7;
+      --muted: #96a3b4;
+      --line: #2a3442;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.4;
+    }
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+    h1, h2, p { margin: 0; }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    p {
+      color: var(--muted);
+      max-width: 720px;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 190px auto auto;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .search,
+    .select {
+      height: 38px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0 12px;
+      font: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    .search:focus,
+    .select:focus {
+      border-color: #4e91d9;
+      box-shadow: 0 0 0 3px rgba(78, 145, 217, .18);
+    }
+    .stats {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .segmented {
+      display: inline-flex;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 3px;
+    }
+    .segmented button {
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      padding: 0 10px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .segmented button.is-active {
+      background: var(--panel-2);
+      color: var(--text);
+    }
+    .preview-workbench {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .explorer,
+    .inspector,
+    .compare {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+    .explorer-list {
+      padding: 6px;
+    }
+    .explorer-row {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 28px;
+      border-radius: 6px;
+      padding-right: 8px;
+      padding-left: calc(8px + var(--depth) * 16px);
+    }
+    .explorer-row:hover {
+      background: var(--panel-2);
+    }
+    .explorer-row img {
+      width: 18px;
+      height: 18px;
+    }
+    .explorer-row span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .explorer-row em {
+      color: var(--muted);
+      font-size: 11px;
+      font-style: normal;
+    }
+    .inspector {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100%;
+    }
+    .inspector-body {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      padding: 18px;
+    }
+    .inspector-preview {
+      display: grid;
+      place-items: center;
+      width: 96px;
+      height: 96px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+    }
+    .inspector-preview img {
+      width: 52px;
+      height: 52px;
+    }
+    .inspector-body strong,
+    .inspector-body code,
+    .inspector-body span {
+      display: block;
+    }
+    .inspector-body strong {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    .inspector-body code {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    .inspector-body span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .compare {
+      margin-bottom: 28px;
+      padding: 12px;
+    }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .compare-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 10px;
+    }
+    .compare-card strong,
+    .compare-card span {
+      display: block;
+      white-space: nowrap;
+    }
+    .compare-card strong {
+      font-size: 13px;
+    }
+    .compare-card span {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+    .compare-icons {
+      display: flex;
+      gap: 6px;
+    }
+    .compare-icons img {
+      width: 22px;
+      height: 22px;
+    }
+    section + section { margin-top: 36px; }
+    h2 {
+      font-size: 16px;
+      margin-bottom: 14px;
+      font-weight: 650;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 10px;
+      cursor: pointer;
+    }
+    .card.is-selected {
+      border-color: #4e91d9;
+      box-shadow: 0 0 0 3px rgba(78, 145, 217, .18);
+    }
+    .card[hidden] {
+      display: none;
+    }
+    .card img {
+      width: 28px;
+      height: 28px;
+      image-rendering: auto;
+      flex: none;
+    }
+    .card div { min-width: 0; }
+    .card strong,
+    .card span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card strong {
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .card span {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 10px;
+      margin-bottom: 28px;
+    }
+    .strip img {
+      width: 24px;
+      height: 24px;
+      justify-self: center;
+    }
+    .empty {
+      display: none;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 18px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .empty.is-visible {
+      display: block;
+    }
+    @media (max-width: 720px) {
+      header {
+        display: block;
+      }
+      .meta {
+        display: block;
+        margin-top: 12px;
+      }
+      main {
+        width: min(100vw - 20px, 1180px);
+        padding-top: 20px;
+      }
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      }
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+      .preview-workbench {
+        grid-template-columns: 1fr;
+      }
+      .stats {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Athas Icons</h1>
+        <p>Original duotone file and folder icons designed for the Athas explorer. This page is static and can be opened directly from disk.</p>
+      </div>
+      <span class="meta">186 files / 70 folders / 3 colorways</span>
+    </header>
+    <div class="toolbar">
+      <input class="search" id="icon-search" type="search" placeholder="Search icons" autocomplete="off">
+      <select class="select" id="theme-variant" aria-label="Icon colorway">
+        <option value="athas-icons">Athas (Dark)</option>
+<option value="athas-icons-dimmed">Athas (Dimmed)</option>
+<option value="athas-icons-light">Athas (Light)</option>
+      </select>
+      <div class="segmented" aria-label="Icon type filter">
+        <button type="button" class="is-active" data-filter-type="all">All</button>
+        <button type="button" data-filter-type="file">Files</button>
+        <button type="button" data-filter-type="folder">Folders</button>
+      </div>
+      <span class="stats" id="icon-stats">256 icons shown</span>
+    </div>
+    <section class="compare" aria-label="Colorway comparison">
+      <div class="panel-title">Colorways</div>
+      <div class="compare-grid">
+        <article class="compare-card">
+        <div>
+          <strong>Athas (Dark)</strong>
+          <span>athas-icons</span>
+        </div>
+        <div class="compare-icons">
+          <img src="./icons/folders/folder-src.svg" alt="">
+          <img src="./icons/files/typescript.svg" alt="">
+          <img src="./icons/files/react.svg" alt="">
+          <img src="./icons/files/codex.svg" alt="">
+          <img src="./icons/files/github-actions.svg" alt="">
+        </div>
+      </article>
+<article class="compare-card">
+        <div>
+          <strong>Athas (Dimmed)</strong>
+          <span>athas-icons-dimmed</span>
+        </div>
+        <div class="compare-icons">
+          <img src="./icons/dimmed/folders/folder-src.svg" alt="">
+          <img src="./icons/dimmed/files/typescript.svg" alt="">
+          <img src="./icons/dimmed/files/react.svg" alt="">
+          <img src="./icons/dimmed/files/codex.svg" alt="">
+          <img src="./icons/dimmed/files/github-actions.svg" alt="">
+        </div>
+      </article>
+<article class="compare-card">
+        <div>
+          <strong>Athas (Light)</strong>
+          <span>athas-icons-light</span>
+        </div>
+        <div class="compare-icons">
+          <img src="./icons/light/folders/folder-src.svg" alt="">
+          <img src="./icons/light/files/typescript.svg" alt="">
+          <img src="./icons/light/files/react.svg" alt="">
+          <img src="./icons/light/files/codex.svg" alt="">
+          <img src="./icons/light/files/github-actions.svg" alt="">
+        </div>
+      </article>
+      </div>
+    </section>
+    <div class="preview-workbench">
+      <section class="explorer" aria-label="Explorer sample">
+        <div class="panel-title">Explorer Sample</div>
+        <div class="explorer-list">
+          <div class="explorer-row" style="--depth:0">
+        <img src="./icons/folders/folder-codex.svg" alt="" data-type="folder" data-icon-id="folder-codex">
+        <span>.codex</span>
+        <em>AI workspace config</em>
+      </div>
+<div class="explorer-row" style="--depth:0">
+        <img src="./icons/folders/folder-src.svg" alt="" data-type="folder" data-icon-id="folder-src">
+        <span>src</span>
+        <em>source</em>
+      </div>
+<div class="explorer-row" style="--depth:1">
+        <img src="./icons/folders/folder-components.svg" alt="" data-type="folder" data-icon-id="folder-components">
+        <span>components</span>
+        <em>ui</em>
+      </div>
+<div class="explorer-row" style="--depth:2">
+        <img src="./icons/files/react.svg" alt="" data-type="file" data-icon-id="react">
+        <span>icon-preview.tsx</span>
+        <em>React component</em>
+      </div>
+<div class="explorer-row" style="--depth:1">
+        <img src="./icons/files/typescript.svg" alt="" data-type="file" data-icon-id="typescript">
+        <span>generate-icons.ts</span>
+        <em>TypeScript</em>
+      </div>
+<div class="explorer-row" style="--depth:0">
+        <img src="./icons/folders/folder-workflows.svg" alt="" data-type="folder" data-icon-id="folder-workflows">
+        <span>.github/workflows</span>
+        <em>automation</em>
+      </div>
+<div class="explorer-row" style="--depth:1">
+        <img src="./icons/files/github-actions.svg" alt="" data-type="file" data-icon-id="github-actions">
+        <span>release.yml</span>
+        <em>GitHub Actions</em>
+      </div>
+<div class="explorer-row" style="--depth:0">
+        <img src="./icons/files/codex.svg" alt="" data-type="file" data-icon-id="codex">
+        <span>AGENTS.md</span>
+        <em>Codex instructions</em>
+      </div>
+<div class="explorer-row" style="--depth:0">
+        <img src="./icons/files/docker-compose.svg" alt="" data-type="file" data-icon-id="docker-compose">
+        <span>docker-compose.yml</span>
+        <em>containers</em>
+      </div>
+<div class="explorer-row" style="--depth:0">
+        <img src="./icons/files/mermaid.svg" alt="" data-type="file" data-icon-id="mermaid">
+        <span>architecture.mmd</span>
+        <em>diagram</em>
+      </div>
+        </div>
+      </section>
+      <aside class="inspector" aria-label="Selected icon">
+        <div class="panel-title">Selected Icon</div>
+        <div class="inspector-body">
+          <div class="inspector-preview">
+            <img id="selected-icon-image" src="./icons/files/typescript.svg" alt="">
+          </div>
+          <div>
+            <strong id="selected-icon-title">TypeScript</strong>
+            <code id="selected-icon-id">typescript</code>
+            <span id="selected-icon-meta">file · code</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+    <div class="strip">
+      <img src="./icons/files/file.svg" alt="File" data-type="file" data-icon-id="file">
+      <img src="./icons/files/text.svg" alt="Text" data-type="file" data-icon-id="text">
+      <img src="./icons/files/document.svg" alt="Document" data-type="file" data-icon-id="document">
+      <img src="./icons/files/markdown.svg" alt="Markdown" data-type="file" data-icon-id="markdown">
+      <img src="./icons/files/html.svg" alt="HTML" data-type="file" data-icon-id="html">
+      <img src="./icons/files/css.svg" alt="CSS" data-type="file" data-icon-id="css">
+      <img src="./icons/files/sass.svg" alt="Sass" data-type="file" data-icon-id="sass">
+      <img src="./icons/files/javascript.svg" alt="JavaScript" data-type="file" data-icon-id="javascript">
+      <img src="./icons/files/typescript.svg" alt="TypeScript" data-type="file" data-icon-id="typescript">
+      <img src="./icons/files/react.svg" alt="React" data-type="file" data-icon-id="react">
+      <img src="./icons/files/vue.svg" alt="Vue" data-type="file" data-icon-id="vue">
+      <img src="./icons/files/svelte.svg" alt="Svelte" data-type="file" data-icon-id="svelte">
+      <img src="./icons/files/astro.svg" alt="Astro" data-type="file" data-icon-id="astro">
+      <img src="./icons/files/json.svg" alt="JSON" data-type="file" data-icon-id="json">
+      <img src="./icons/files/yaml.svg" alt="YAML" data-type="file" data-icon-id="yaml">
+      <img src="./icons/files/toml.svg" alt="TOML" data-type="file" data-icon-id="toml">
+      <img src="./icons/files/xml.svg" alt="XML" data-type="file" data-icon-id="xml">
+      <img src="./icons/files/rust.svg" alt="Rust" data-type="file" data-icon-id="rust">
+      <img src="./icons/files/python.svg" alt="Python" data-type="file" data-icon-id="python">
+      <img src="./icons/files/go.svg" alt="Go" data-type="file" data-icon-id="go">
+      <img src="./icons/files/java.svg" alt="Java" data-type="file" data-icon-id="java">
+      <img src="./icons/files/c.svg" alt="C" data-type="file" data-icon-id="c">
+      <img src="./icons/files/cpp.svg" alt="C++" data-type="file" data-icon-id="cpp">
+      <img src="./icons/files/csharp.svg" alt="C#" data-type="file" data-icon-id="csharp">
+      <img src="./icons/files/swift.svg" alt="Swift" data-type="file" data-icon-id="swift">
+      <img src="./icons/files/zig.svg" alt="Zig" data-type="file" data-icon-id="zig">
+      <img src="./icons/files/ruby.svg" alt="Ruby" data-type="file" data-icon-id="ruby">
+      <img src="./icons/files/php.svg" alt="PHP" data-type="file" data-icon-id="php">
+      <img src="./icons/files/shell.svg" alt="Shell" data-type="file" data-icon-id="shell">
+      <img src="./icons/files/sql.svg" alt="SQL" data-type="file" data-icon-id="sql">
+      <img src="./icons/files/database.svg" alt="Database" data-type="file" data-icon-id="database">
+      <img src="./icons/files/prisma.svg" alt="Prisma" data-type="file" data-icon-id="prisma">
+      <img src="./icons/files/graphql.svg" alt="GraphQL" data-type="file" data-icon-id="graphql">
+      <img src="./icons/files/docker.svg" alt="Docker" data-type="file" data-icon-id="docker">
+      <img src="./icons/files/git.svg" alt="Git" data-type="file" data-icon-id="git">
+      <img src="./icons/files/github.svg" alt="GitHub" data-type="file" data-icon-id="github">
+    </div>
+    <section class="icons-section">
+      <h2>File Icons</h2>
+      <div class="grid">
+        <article class="card" data-type="file" data-icon-id="file" data-keywords="File file file ">
+        <img src="./icons/files/file.svg" alt="" data-type="file" data-icon-id="file">
+        <div>
+          <strong>File</strong>
+          <span>file · file</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="text" data-keywords="Text text document TXT">
+        <img src="./icons/files/text.svg" alt="" data-type="file" data-icon-id="text">
+        <div>
+          <strong>Text</strong>
+          <span>text · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="document" data-keywords="Document document document DOC">
+        <img src="./icons/files/document.svg" alt="" data-type="file" data-icon-id="document">
+        <div>
+          <strong>Document</strong>
+          <span>document · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="markdown" data-keywords="Markdown markdown markdown MD">
+        <img src="./icons/files/markdown.svg" alt="" data-type="file" data-icon-id="markdown">
+        <div>
+          <strong>Markdown</strong>
+          <span>markdown · markdown</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="html" data-keywords="HTML html code H">
+        <img src="./icons/files/html.svg" alt="" data-type="file" data-icon-id="html">
+        <div>
+          <strong>HTML</strong>
+          <span>html · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="css" data-keywords="CSS css brackets #">
+        <img src="./icons/files/css.svg" alt="" data-type="file" data-icon-id="css">
+        <div>
+          <strong>CSS</strong>
+          <span>css · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="sass" data-keywords="Sass sass brackets S">
+        <img src="./icons/files/sass.svg" alt="" data-type="file" data-icon-id="sass">
+        <div>
+          <strong>Sass</strong>
+          <span>sass · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="javascript" data-keywords="JavaScript javascript code JS">
+        <img src="./icons/files/javascript.svg" alt="" data-type="file" data-icon-id="javascript">
+        <div>
+          <strong>JavaScript</strong>
+          <span>javascript · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="typescript" data-keywords="TypeScript typescript code TS">
+        <img src="./icons/files/typescript.svg" alt="" data-type="file" data-icon-id="typescript">
+        <div>
+          <strong>TypeScript</strong>
+          <span>typescript · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="react" data-keywords="React react react ">
+        <img src="./icons/files/react.svg" alt="" data-type="file" data-icon-id="react">
+        <div>
+          <strong>React</strong>
+          <span>react · react</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="vue" data-keywords="Vue vue code V">
+        <img src="./icons/files/vue.svg" alt="" data-type="file" data-icon-id="vue">
+        <div>
+          <strong>Vue</strong>
+          <span>vue · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="svelte" data-keywords="Svelte svelte code S">
+        <img src="./icons/files/svelte.svg" alt="" data-type="file" data-icon-id="svelte">
+        <div>
+          <strong>Svelte</strong>
+          <span>svelte · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="astro" data-keywords="Astro astro palette A">
+        <img src="./icons/files/astro.svg" alt="" data-type="file" data-icon-id="astro">
+        <div>
+          <strong>Astro</strong>
+          <span>astro · palette</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="json" data-keywords="JSON json brackets {}">
+        <img src="./icons/files/json.svg" alt="" data-type="file" data-icon-id="json">
+        <div>
+          <strong>JSON</strong>
+          <span>json · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="yaml" data-keywords="YAML yaml brackets Y">
+        <img src="./icons/files/yaml.svg" alt="" data-type="file" data-icon-id="yaml">
+        <div>
+          <strong>YAML</strong>
+          <span>yaml · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="toml" data-keywords="TOML toml gear ">
+        <img src="./icons/files/toml.svg" alt="" data-type="file" data-icon-id="toml">
+        <div>
+          <strong>TOML</strong>
+          <span>toml · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="xml" data-keywords="XML xml brackets &lt;>">
+        <img src="./icons/files/xml.svg" alt="" data-type="file" data-icon-id="xml">
+        <div>
+          <strong>XML</strong>
+          <span>xml · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="rust" data-keywords="Rust rust rust ">
+        <img src="./icons/files/rust.svg" alt="" data-type="file" data-icon-id="rust">
+        <div>
+          <strong>Rust</strong>
+          <span>rust · rust</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="python" data-keywords="Python python python ">
+        <img src="./icons/files/python.svg" alt="" data-type="file" data-icon-id="python">
+        <div>
+          <strong>Python</strong>
+          <span>python · python</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="go" data-keywords="Go go go ">
+        <img src="./icons/files/go.svg" alt="" data-type="file" data-icon-id="go">
+        <div>
+          <strong>Go</strong>
+          <span>go · go</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="java" data-keywords="Java java java ">
+        <img src="./icons/files/java.svg" alt="" data-type="file" data-icon-id="java">
+        <div>
+          <strong>Java</strong>
+          <span>java · java</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="c" data-keywords="C c code C">
+        <img src="./icons/files/c.svg" alt="" data-type="file" data-icon-id="c">
+        <div>
+          <strong>C</strong>
+          <span>c · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cpp" data-keywords="C++ cpp code C+">
+        <img src="./icons/files/cpp.svg" alt="" data-type="file" data-icon-id="cpp">
+        <div>
+          <strong>C++</strong>
+          <span>cpp · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="csharp" data-keywords="C# csharp code C#">
+        <img src="./icons/files/csharp.svg" alt="" data-type="file" data-icon-id="csharp">
+        <div>
+          <strong>C#</strong>
+          <span>csharp · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="swift" data-keywords="Swift swift swift ">
+        <img src="./icons/files/swift.svg" alt="" data-type="file" data-icon-id="swift">
+        <div>
+          <strong>Swift</strong>
+          <span>swift · swift</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="zig" data-keywords="Zig zig zig ">
+        <img src="./icons/files/zig.svg" alt="" data-type="file" data-icon-id="zig">
+        <div>
+          <strong>Zig</strong>
+          <span>zig · zig</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="ruby" data-keywords="Ruby ruby code RB">
+        <img src="./icons/files/ruby.svg" alt="" data-type="file" data-icon-id="ruby">
+        <div>
+          <strong>Ruby</strong>
+          <span>ruby · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="php" data-keywords="PHP php code P">
+        <img src="./icons/files/php.svg" alt="" data-type="file" data-icon-id="php">
+        <div>
+          <strong>PHP</strong>
+          <span>php · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="shell" data-keywords="Shell shell terminal ">
+        <img src="./icons/files/shell.svg" alt="" data-type="file" data-icon-id="shell">
+        <div>
+          <strong>Shell</strong>
+          <span>shell · terminal</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="sql" data-keywords="SQL sql database ">
+        <img src="./icons/files/sql.svg" alt="" data-type="file" data-icon-id="sql">
+        <div>
+          <strong>SQL</strong>
+          <span>sql · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="database" data-keywords="Database database database ">
+        <img src="./icons/files/database.svg" alt="" data-type="file" data-icon-id="database">
+        <div>
+          <strong>Database</strong>
+          <span>database · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="prisma" data-keywords="Prisma prisma database P">
+        <img src="./icons/files/prisma.svg" alt="" data-type="file" data-icon-id="prisma">
+        <div>
+          <strong>Prisma</strong>
+          <span>prisma · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="graphql" data-keywords="GraphQL graphql brackets G">
+        <img src="./icons/files/graphql.svg" alt="" data-type="file" data-icon-id="graphql">
+        <div>
+          <strong>GraphQL</strong>
+          <span>graphql · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="docker" data-keywords="Docker docker docker ">
+        <img src="./icons/files/docker.svg" alt="" data-type="file" data-icon-id="docker">
+        <div>
+          <strong>Docker</strong>
+          <span>docker · docker</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="git" data-keywords="Git git git ">
+        <img src="./icons/files/git.svg" alt="" data-type="file" data-icon-id="git">
+        <div>
+          <strong>Git</strong>
+          <span>git · git</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="github" data-keywords="GitHub github git ">
+        <img src="./icons/files/github.svg" alt="" data-type="file" data-icon-id="github">
+        <div>
+          <strong>GitHub</strong>
+          <span>github · git</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="package" data-keywords="Package package package ">
+        <img src="./icons/files/package.svg" alt="" data-type="file" data-icon-id="package">
+        <div>
+          <strong>Package</strong>
+          <span>package · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="node" data-keywords="Node node package N">
+        <img src="./icons/files/node.svg" alt="" data-type="file" data-icon-id="node">
+        <div>
+          <strong>Node</strong>
+          <span>node · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="bun" data-keywords="Bun bun package B">
+        <img src="./icons/files/bun.svg" alt="" data-type="file" data-icon-id="bun">
+        <div>
+          <strong>Bun</strong>
+          <span>bun · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="deno" data-keywords="Deno deno package D">
+        <img src="./icons/files/deno.svg" alt="" data-type="file" data-icon-id="deno">
+        <div>
+          <strong>Deno</strong>
+          <span>deno · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="lock" data-keywords="Lock lock lock ">
+        <img src="./icons/files/lock.svg" alt="" data-type="file" data-icon-id="lock">
+        <div>
+          <strong>Lock</strong>
+          <span>lock · lock</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="config" data-keywords="Config config gear ">
+        <img src="./icons/files/config.svg" alt="" data-type="file" data-icon-id="config">
+        <div>
+          <strong>Config</strong>
+          <span>config · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="env" data-keywords="Environment env lock ">
+        <img src="./icons/files/env.svg" alt="" data-type="file" data-icon-id="env">
+        <div>
+          <strong>Environment</strong>
+          <span>env · lock</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="test" data-keywords="Test test test ">
+        <img src="./icons/files/test.svg" alt="" data-type="file" data-icon-id="test">
+        <div>
+          <strong>Test</strong>
+          <span>test · test</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="vite" data-keywords="Vite vite cloud V">
+        <img src="./icons/files/vite.svg" alt="" data-type="file" data-icon-id="vite">
+        <div>
+          <strong>Vite</strong>
+          <span>vite · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="tailwind" data-keywords="Tailwind tailwind cloud T">
+        <img src="./icons/files/tailwind.svg" alt="" data-type="file" data-icon-id="tailwind">
+        <div>
+          <strong>Tailwind</strong>
+          <span>tailwind · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="image" data-keywords="Image image image ">
+        <img src="./icons/files/image.svg" alt="" data-type="file" data-icon-id="image">
+        <div>
+          <strong>Image</strong>
+          <span>image · image</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="svg" data-keywords="SVG svg palette S">
+        <img src="./icons/files/svg.svg" alt="" data-type="file" data-icon-id="svg">
+        <div>
+          <strong>SVG</strong>
+          <span>svg · palette</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="audio" data-keywords="Audio audio audio ">
+        <img src="./icons/files/audio.svg" alt="" data-type="file" data-icon-id="audio">
+        <div>
+          <strong>Audio</strong>
+          <span>audio · audio</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="video" data-keywords="Video video video ">
+        <img src="./icons/files/video.svg" alt="" data-type="file" data-icon-id="video">
+        <div>
+          <strong>Video</strong>
+          <span>video · video</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="font" data-keywords="Font font font ">
+        <img src="./icons/files/font.svg" alt="" data-type="file" data-icon-id="font">
+        <div>
+          <strong>Font</strong>
+          <span>font · font</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="pdf" data-keywords="PDF pdf document PDF">
+        <img src="./icons/files/pdf.svg" alt="" data-type="file" data-icon-id="pdf">
+        <div>
+          <strong>PDF</strong>
+          <span>pdf · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="notebook" data-keywords="Notebook notebook book ">
+        <img src="./icons/files/notebook.svg" alt="" data-type="file" data-icon-id="notebook">
+        <div>
+          <strong>Notebook</strong>
+          <span>notebook · book</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="next" data-keywords="Next next compass N">
+        <img src="./icons/files/next.svg" alt="" data-type="file" data-icon-id="next">
+        <div>
+          <strong>Next</strong>
+          <span>next · compass</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="nuxt" data-keywords="Nuxt nuxt layers N">
+        <img src="./icons/files/nuxt.svg" alt="" data-type="file" data-icon-id="nuxt">
+        <div>
+          <strong>Nuxt</strong>
+          <span>nuxt · layers</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="angular" data-keywords="Angular angular angular ">
+        <img src="./icons/files/angular.svg" alt="" data-type="file" data-icon-id="angular">
+        <div>
+          <strong>Angular</strong>
+          <span>angular · angular</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="solid" data-keywords="Solid solid layers S">
+        <img src="./icons/files/solid.svg" alt="" data-type="file" data-icon-id="solid">
+        <div>
+          <strong>Solid</strong>
+          <span>solid · layers</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="remix" data-keywords="Remix remix compass R">
+        <img src="./icons/files/remix.svg" alt="" data-type="file" data-icon-id="remix">
+        <div>
+          <strong>Remix</strong>
+          <span>remix · compass</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="qwik" data-keywords="Qwik qwik bolt Q">
+        <img src="./icons/files/qwik.svg" alt="" data-type="file" data-icon-id="qwik">
+        <div>
+          <strong>Qwik</strong>
+          <span>qwik · bolt</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="lit" data-keywords="Lit lit flame ">
+        <img src="./icons/files/lit.svg" alt="" data-type="file" data-icon-id="lit">
+        <div>
+          <strong>Lit</strong>
+          <span>lit · flame</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="storybook" data-keywords="Storybook storybook book SB">
+        <img src="./icons/files/storybook.svg" alt="" data-type="file" data-icon-id="storybook">
+        <div>
+          <strong>Storybook</strong>
+          <span>storybook · book</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="jest" data-keywords="Jest jest test ">
+        <img src="./icons/files/jest.svg" alt="" data-type="file" data-icon-id="jest">
+        <div>
+          <strong>Jest</strong>
+          <span>jest · test</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="vitest" data-keywords="Vitest vitest test ">
+        <img src="./icons/files/vitest.svg" alt="" data-type="file" data-icon-id="vitest">
+        <div>
+          <strong>Vitest</strong>
+          <span>vitest · test</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="playwright" data-keywords="Playwright playwright test ">
+        <img src="./icons/files/playwright.svg" alt="" data-type="file" data-icon-id="playwright">
+        <div>
+          <strong>Playwright</strong>
+          <span>playwright · test</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cypress" data-keywords="Cypress cypress test ">
+        <img src="./icons/files/cypress.svg" alt="" data-type="file" data-icon-id="cypress">
+        <div>
+          <strong>Cypress</strong>
+          <span>cypress · test</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="eslint" data-keywords="ESLint eslint shield E">
+        <img src="./icons/files/eslint.svg" alt="" data-type="file" data-icon-id="eslint">
+        <div>
+          <strong>ESLint</strong>
+          <span>eslint · shield</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="prettier" data-keywords="Prettier prettier pen ">
+        <img src="./icons/files/prettier.svg" alt="" data-type="file" data-icon-id="prettier">
+        <div>
+          <strong>Prettier</strong>
+          <span>prettier · pen</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="biome" data-keywords="Biome biome leaf ">
+        <img src="./icons/files/biome.svg" alt="" data-type="file" data-icon-id="biome">
+        <div>
+          <strong>Biome</strong>
+          <span>biome · leaf</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="babel" data-keywords="Babel babel brackets B">
+        <img src="./icons/files/babel.svg" alt="" data-type="file" data-icon-id="babel">
+        <div>
+          <strong>Babel</strong>
+          <span>babel · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="swc" data-keywords="SWC swc cube S">
+        <img src="./icons/files/swc.svg" alt="" data-type="file" data-icon-id="swc">
+        <div>
+          <strong>SWC</strong>
+          <span>swc · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="webpack" data-keywords="Webpack webpack cube W">
+        <img src="./icons/files/webpack.svg" alt="" data-type="file" data-icon-id="webpack">
+        <div>
+          <strong>Webpack</strong>
+          <span>webpack · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="rollup" data-keywords="Rollup rollup cube R">
+        <img src="./icons/files/rollup.svg" alt="" data-type="file" data-icon-id="rollup">
+        <div>
+          <strong>Rollup</strong>
+          <span>rollup · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="rspack" data-keywords="Rspack rspack cube R">
+        <img src="./icons/files/rspack.svg" alt="" data-type="file" data-icon-id="rspack">
+        <div>
+          <strong>Rspack</strong>
+          <span>rspack · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="turborepo" data-keywords="Turborepo turborepo network T">
+        <img src="./icons/files/turborepo.svg" alt="" data-type="file" data-icon-id="turborepo">
+        <div>
+          <strong>Turborepo</strong>
+          <span>turborepo · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="nx" data-keywords="Nx nx network NX">
+        <img src="./icons/files/nx.svg" alt="" data-type="file" data-icon-id="nx">
+        <div>
+          <strong>Nx</strong>
+          <span>nx · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="npm" data-keywords="npm npm package N">
+        <img src="./icons/files/npm.svg" alt="" data-type="file" data-icon-id="npm">
+        <div>
+          <strong>npm</strong>
+          <span>npm · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="pnpm" data-keywords="pnpm pnpm package P">
+        <img src="./icons/files/pnpm.svg" alt="" data-type="file" data-icon-id="pnpm">
+        <div>
+          <strong>pnpm</strong>
+          <span>pnpm · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="yarn" data-keywords="Yarn yarn package Y">
+        <img src="./icons/files/yarn.svg" alt="" data-type="file" data-icon-id="yarn">
+        <div>
+          <strong>Yarn</strong>
+          <span>yarn · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="maven" data-keywords="Maven maven package M">
+        <img src="./icons/files/maven.svg" alt="" data-type="file" data-icon-id="maven">
+        <div>
+          <strong>Maven</strong>
+          <span>maven · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="gradle" data-keywords="Gradle gradle package G">
+        <img src="./icons/files/gradle.svg" alt="" data-type="file" data-icon-id="gradle">
+        <div>
+          <strong>Gradle</strong>
+          <span>gradle · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="kotlin" data-keywords="Kotlin kotlin code K">
+        <img src="./icons/files/kotlin.svg" alt="" data-type="file" data-icon-id="kotlin">
+        <div>
+          <strong>Kotlin</strong>
+          <span>kotlin · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="dart" data-keywords="Dart dart code D">
+        <img src="./icons/files/dart.svg" alt="" data-type="file" data-icon-id="dart">
+        <div>
+          <strong>Dart</strong>
+          <span>dart · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="lua" data-keywords="Lua lua code L">
+        <img src="./icons/files/lua.svg" alt="" data-type="file" data-icon-id="lua">
+        <div>
+          <strong>Lua</strong>
+          <span>lua · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="elixir" data-keywords="Elixir elixir code EX">
+        <img src="./icons/files/elixir.svg" alt="" data-type="file" data-icon-id="elixir">
+        <div>
+          <strong>Elixir</strong>
+          <span>elixir · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="erlang" data-keywords="Erlang erlang code ER">
+        <img src="./icons/files/erlang.svg" alt="" data-type="file" data-icon-id="erlang">
+        <div>
+          <strong>Erlang</strong>
+          <span>erlang · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="haskell" data-keywords="Haskell haskell code HS">
+        <img src="./icons/files/haskell.svg" alt="" data-type="file" data-icon-id="haskell">
+        <div>
+          <strong>Haskell</strong>
+          <span>haskell · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="scala" data-keywords="Scala scala layers S">
+        <img src="./icons/files/scala.svg" alt="" data-type="file" data-icon-id="scala">
+        <div>
+          <strong>Scala</strong>
+          <span>scala · layers</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="clojure" data-keywords="Clojure clojure leaf ">
+        <img src="./icons/files/clojure.svg" alt="" data-type="file" data-icon-id="clojure">
+        <div>
+          <strong>Clojure</strong>
+          <span>clojure · leaf</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="nim" data-keywords="Nim nim code N">
+        <img src="./icons/files/nim.svg" alt="" data-type="file" data-icon-id="nim">
+        <div>
+          <strong>Nim</strong>
+          <span>nim · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="nix" data-keywords="Nix nix network N">
+        <img src="./icons/files/nix.svg" alt="" data-type="file" data-icon-id="nix">
+        <div>
+          <strong>Nix</strong>
+          <span>nix · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="terraform" data-keywords="Terraform terraform cube TF">
+        <img src="./icons/files/terraform.svg" alt="" data-type="file" data-icon-id="terraform">
+        <div>
+          <strong>Terraform</strong>
+          <span>terraform · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="kubernetes" data-keywords="Kubernetes kubernetes network K8">
+        <img src="./icons/files/kubernetes.svg" alt="" data-type="file" data-icon-id="kubernetes">
+        <div>
+          <strong>Kubernetes</strong>
+          <span>kubernetes · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="helm" data-keywords="Helm helm compass H">
+        <img src="./icons/files/helm.svg" alt="" data-type="file" data-icon-id="helm">
+        <div>
+          <strong>Helm</strong>
+          <span>helm · compass</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="ansible" data-keywords="Ansible ansible compass A">
+        <img src="./icons/files/ansible.svg" alt="" data-type="file" data-icon-id="ansible">
+        <div>
+          <strong>Ansible</strong>
+          <span>ansible · compass</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cloudflare" data-keywords="Cloudflare cloudflare cloud CF">
+        <img src="./icons/files/cloudflare.svg" alt="" data-type="file" data-icon-id="cloudflare">
+        <div>
+          <strong>Cloudflare</strong>
+          <span>cloudflare · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="netlify" data-keywords="Netlify netlify cloud N">
+        <img src="./icons/files/netlify.svg" alt="" data-type="file" data-icon-id="netlify">
+        <div>
+          <strong>Netlify</strong>
+          <span>netlify · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="vercel" data-keywords="Vercel vercel cloud V">
+        <img src="./icons/files/vercel.svg" alt="" data-type="file" data-icon-id="vercel">
+        <div>
+          <strong>Vercel</strong>
+          <span>vercel · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="firebase" data-keywords="Firebase firebase flame ">
+        <img src="./icons/files/firebase.svg" alt="" data-type="file" data-icon-id="firebase">
+        <div>
+          <strong>Firebase</strong>
+          <span>firebase · flame</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="supabase" data-keywords="Supabase supabase database S">
+        <img src="./icons/files/supabase.svg" alt="" data-type="file" data-icon-id="supabase">
+        <div>
+          <strong>Supabase</strong>
+          <span>supabase · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="mongo" data-keywords="Mongo mongo leaf ">
+        <img src="./icons/files/mongo.svg" alt="" data-type="file" data-icon-id="mongo">
+        <div>
+          <strong>Mongo</strong>
+          <span>mongo · leaf</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="redis" data-keywords="Redis redis database R">
+        <img src="./icons/files/redis.svg" alt="" data-type="file" data-icon-id="redis">
+        <div>
+          <strong>Redis</strong>
+          <span>redis · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="postgres" data-keywords="Postgres postgres database P">
+        <img src="./icons/files/postgres.svg" alt="" data-type="file" data-icon-id="postgres">
+        <div>
+          <strong>Postgres</strong>
+          <span>postgres · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="drizzle" data-keywords="Drizzle drizzle database D">
+        <img src="./icons/files/drizzle.svg" alt="" data-type="file" data-icon-id="drizzle">
+        <div>
+          <strong>Drizzle</strong>
+          <span>drizzle · database</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="figma" data-keywords="Figma figma layers F">
+        <img src="./icons/files/figma.svg" alt="" data-type="file" data-icon-id="figma">
+        <div>
+          <strong>Figma</strong>
+          <span>figma · layers</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="sketch" data-keywords="Sketch sketch palette S">
+        <img src="./icons/files/sketch.svg" alt="" data-type="file" data-icon-id="sketch">
+        <div>
+          <strong>Sketch</strong>
+          <span>sketch · palette</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="adobe" data-keywords="Adobe adobe palette A">
+        <img src="./icons/files/adobe.svg" alt="" data-type="file" data-icon-id="adobe">
+        <div>
+          <strong>Adobe</strong>
+          <span>adobe · palette</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="csv" data-keywords="CSV csv graph CSV">
+        <img src="./icons/files/csv.svg" alt="" data-type="file" data-icon-id="csv">
+        <div>
+          <strong>CSV</strong>
+          <span>csv · graph</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="spreadsheet" data-keywords="Spreadsheet spreadsheet graph XLS">
+        <img src="./icons/files/spreadsheet.svg" alt="" data-type="file" data-icon-id="spreadsheet">
+        <div>
+          <strong>Spreadsheet</strong>
+          <span>spreadsheet · graph</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="word" data-keywords="Word word document DOC">
+        <img src="./icons/files/word.svg" alt="" data-type="file" data-icon-id="word">
+        <div>
+          <strong>Word</strong>
+          <span>word · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="powerpoint" data-keywords="PowerPoint powerpoint document PPT">
+        <img src="./icons/files/powerpoint.svg" alt="" data-type="file" data-icon-id="powerpoint">
+        <div>
+          <strong>PowerPoint</strong>
+          <span>powerpoint · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="archive" data-keywords="Archive archive archive ">
+        <img src="./icons/files/archive.svg" alt="" data-type="file" data-icon-id="archive">
+        <div>
+          <strong>Archive</strong>
+          <span>archive · archive</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="certificate" data-keywords="Certificate certificate shield CRT">
+        <img src="./icons/files/certificate.svg" alt="" data-type="file" data-icon-id="certificate">
+        <div>
+          <strong>Certificate</strong>
+          <span>certificate · shield</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="key" data-keywords="Key key key ">
+        <img src="./icons/files/key.svg" alt="" data-type="file" data-icon-id="key">
+        <div>
+          <strong>Key</strong>
+          <span>key · key</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="log" data-keywords="Log log document LOG">
+        <img src="./icons/files/log.svg" alt="" data-type="file" data-icon-id="log">
+        <div>
+          <strong>Log</strong>
+          <span>log · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="diff" data-keywords="Diff diff document +-">
+        <img src="./icons/files/diff.svg" alt="" data-type="file" data-icon-id="diff">
+        <div>
+          <strong>Diff</strong>
+          <span>diff · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="patch" data-keywords="Patch patch document +-">
+        <img src="./icons/files/patch.svg" alt="" data-type="file" data-icon-id="patch">
+        <div>
+          <strong>Patch</strong>
+          <span>patch · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="license" data-keywords="License license shield LIC">
+        <img src="./icons/files/license.svg" alt="" data-type="file" data-icon-id="license">
+        <div>
+          <strong>License</strong>
+          <span>license · shield</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="makefile" data-keywords="Makefile makefile gear ">
+        <img src="./icons/files/makefile.svg" alt="" data-type="file" data-icon-id="makefile">
+        <div>
+          <strong>Makefile</strong>
+          <span>makefile · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cmake" data-keywords="CMake cmake gear ">
+        <img src="./icons/files/cmake.svg" alt="" data-type="file" data-icon-id="cmake">
+        <div>
+          <strong>CMake</strong>
+          <span>cmake · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="proto" data-keywords="Proto proto network P">
+        <img src="./icons/files/proto.svg" alt="" data-type="file" data-icon-id="proto">
+        <div>
+          <strong>Proto</strong>
+          <span>proto · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="wasm" data-keywords="Wasm wasm cube W">
+        <img src="./icons/files/wasm.svg" alt="" data-type="file" data-icon-id="wasm">
+        <div>
+          <strong>Wasm</strong>
+          <span>wasm · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="rescript" data-keywords="ReScript rescript code RE">
+        <img src="./icons/files/rescript.svg" alt="" data-type="file" data-icon-id="rescript">
+        <div>
+          <strong>ReScript</strong>
+          <span>rescript · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="ocaml" data-keywords="OCaml ocaml code ML">
+        <img src="./icons/files/ocaml.svg" alt="" data-type="file" data-icon-id="ocaml">
+        <div>
+          <strong>OCaml</strong>
+          <span>ocaml · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="solidity" data-keywords="Solidity solidity cube S">
+        <img src="./icons/files/solidity.svg" alt="" data-type="file" data-icon-id="solidity">
+        <div>
+          <strong>Solidity</strong>
+          <span>solidity · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="r" data-keywords="R r graph R">
+        <img src="./icons/files/r.svg" alt="" data-type="file" data-icon-id="r">
+        <div>
+          <strong>R</strong>
+          <span>r · graph</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="julia" data-keywords="Julia julia graph JL">
+        <img src="./icons/files/julia.svg" alt="" data-type="file" data-icon-id="julia">
+        <div>
+          <strong>Julia</strong>
+          <span>julia · graph</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="perl" data-keywords="Perl perl code PL">
+        <img src="./icons/files/perl.svg" alt="" data-type="file" data-icon-id="perl">
+        <div>
+          <strong>Perl</strong>
+          <span>perl · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="athas" data-keywords="Athas athas bolt A">
+        <img src="./icons/files/athas.svg" alt="" data-type="file" data-icon-id="athas">
+        <div>
+          <strong>Athas</strong>
+          <span>athas · bolt</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="codex" data-keywords="Codex codex terminal CX">
+        <img src="./icons/files/codex.svg" alt="" data-type="file" data-icon-id="codex">
+        <div>
+          <strong>Codex</strong>
+          <span>codex · terminal</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="claude" data-keywords="Claude claude document AI">
+        <img src="./icons/files/claude.svg" alt="" data-type="file" data-icon-id="claude">
+        <div>
+          <strong>Claude</strong>
+          <span>claude · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cursor" data-keywords="Cursor cursor pen ">
+        <img src="./icons/files/cursor.svg" alt="" data-type="file" data-icon-id="cursor">
+        <div>
+          <strong>Cursor</strong>
+          <span>cursor · pen</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="tauri" data-keywords="Tauri tauri mobile T">
+        <img src="./icons/files/tauri.svg" alt="" data-type="file" data-icon-id="tauri">
+        <div>
+          <strong>Tauri</strong>
+          <span>tauri · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="electron" data-keywords="Electron electron network E">
+        <img src="./icons/files/electron.svg" alt="" data-type="file" data-icon-id="electron">
+        <div>
+          <strong>Electron</strong>
+          <span>electron · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="xcode" data-keywords="Xcode xcode mobile X">
+        <img src="./icons/files/xcode.svg" alt="" data-type="file" data-icon-id="xcode">
+        <div>
+          <strong>Xcode</strong>
+          <span>xcode · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="android" data-keywords="Android android mobile A">
+        <img src="./icons/files/android.svg" alt="" data-type="file" data-icon-id="android">
+        <div>
+          <strong>Android</strong>
+          <span>android · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="apple" data-keywords="Apple apple mobile iOS">
+        <img src="./icons/files/apple.svg" alt="" data-type="file" data-icon-id="apple">
+        <div>
+          <strong>Apple</strong>
+          <span>apple · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="windows" data-keywords="Windows windows layers W">
+        <img src="./icons/files/windows.svg" alt="" data-type="file" data-icon-id="windows">
+        <div>
+          <strong>Windows</strong>
+          <span>windows · layers</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="linux" data-keywords="Linux linux terminal LX">
+        <img src="./icons/files/linux.svg" alt="" data-type="file" data-icon-id="linux">
+        <div>
+          <strong>Linux</strong>
+          <span>linux · terminal</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="changelog" data-keywords="Changelog changelog document LOG">
+        <img src="./icons/files/changelog.svg" alt="" data-type="file" data-icon-id="changelog">
+        <div>
+          <strong>Changelog</strong>
+          <span>changelog · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="authors" data-keywords="Authors authors document BY">
+        <img src="./icons/files/authors.svg" alt="" data-type="file" data-icon-id="authors">
+        <div>
+          <strong>Authors</strong>
+          <span>authors · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="security" data-keywords="Security security shield SEC">
+        <img src="./icons/files/security.svg" alt="" data-type="file" data-icon-id="security">
+        <div>
+          <strong>Security</strong>
+          <span>security · shield</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="warning" data-keywords="Warning warning warning ">
+        <img src="./icons/files/warning.svg" alt="" data-type="file" data-icon-id="warning">
+        <div>
+          <strong>Warning</strong>
+          <span>warning · warning</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="agents" data-keywords="Agents agents network AI">
+        <img src="./icons/files/agents.svg" alt="" data-type="file" data-icon-id="agents">
+        <div>
+          <strong>Agents</strong>
+          <span>agents · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="copilot" data-keywords="Copilot copilot network AI">
+        <img src="./icons/files/copilot.svg" alt="" data-type="file" data-icon-id="copilot">
+        <div>
+          <strong>Copilot</strong>
+          <span>copilot · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="gemini" data-keywords="Gemini gemini sparkles G">
+        <img src="./icons/files/gemini.svg" alt="" data-type="file" data-icon-id="gemini">
+        <div>
+          <strong>Gemini</strong>
+          <span>gemini · sparkles</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cline" data-keywords="Cline cline terminal CL">
+        <img src="./icons/files/cline.svg" alt="" data-type="file" data-icon-id="cline">
+        <div>
+          <strong>Cline</strong>
+          <span>cline · terminal</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="mcp" data-keywords="MCP mcp network M">
+        <img src="./icons/files/mcp.svg" alt="" data-type="file" data-icon-id="mcp">
+        <div>
+          <strong>MCP</strong>
+          <span>mcp · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="editorconfig" data-keywords="EditorConfig editorconfig gear EC">
+        <img src="./icons/files/editorconfig.svg" alt="" data-type="file" data-icon-id="editorconfig">
+        <div>
+          <strong>EditorConfig</strong>
+          <span>editorconfig · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="stylelint" data-keywords="Stylelint stylelint shield SL">
+        <img src="./icons/files/stylelint.svg" alt="" data-type="file" data-icon-id="stylelint">
+        <div>
+          <strong>Stylelint</strong>
+          <span>stylelint · shield</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="markdownlint" data-keywords="Markdownlint markdownlint markdown ML">
+        <img src="./icons/files/markdownlint.svg" alt="" data-type="file" data-icon-id="markdownlint">
+        <div>
+          <strong>Markdownlint</strong>
+          <span>markdownlint · markdown</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="cspell" data-keywords="CSpell cspell book CS">
+        <img src="./icons/files/cspell.svg" alt="" data-type="file" data-icon-id="cspell">
+        <div>
+          <strong>CSpell</strong>
+          <span>cspell · book</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="commitlint" data-keywords="Commitlint commitlint git CL">
+        <img src="./icons/files/commitlint.svg" alt="" data-type="file" data-icon-id="commitlint">
+        <div>
+          <strong>Commitlint</strong>
+          <span>commitlint · git</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="lintstaged" data-keywords="Lint Staged lintstaged shield LS">
+        <img src="./icons/files/lintstaged.svg" alt="" data-type="file" data-icon-id="lintstaged">
+        <div>
+          <strong>Lint Staged</strong>
+          <span>lintstaged · shield</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="renovate" data-keywords="Renovate renovate gear R">
+        <img src="./icons/files/renovate.svg" alt="" data-type="file" data-icon-id="renovate">
+        <div>
+          <strong>Renovate</strong>
+          <span>renovate · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="dependabot" data-keywords="Dependabot dependabot package D">
+        <img src="./icons/files/dependabot.svg" alt="" data-type="file" data-icon-id="dependabot">
+        <div>
+          <strong>Dependabot</strong>
+          <span>dependabot · package</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="docker-compose" data-keywords="Docker Compose docker-compose docker DC">
+        <img src="./icons/files/docker-compose.svg" alt="" data-type="file" data-icon-id="docker-compose">
+        <div>
+          <strong>Docker Compose</strong>
+          <span>docker-compose · docker</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="devcontainer" data-keywords="Dev Container devcontainer cube DC">
+        <img src="./icons/files/devcontainer.svg" alt="" data-type="file" data-icon-id="devcontainer">
+        <div>
+          <strong>Dev Container</strong>
+          <span>devcontainer · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="github-actions" data-keywords="GitHub Actions github-actions bolt GH">
+        <img src="./icons/files/github-actions.svg" alt="" data-type="file" data-icon-id="github-actions">
+        <div>
+          <strong>GitHub Actions</strong>
+          <span>github-actions · bolt</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="gitlab" data-keywords="GitLab gitlab git GL">
+        <img src="./icons/files/gitlab.svg" alt="" data-type="file" data-icon-id="gitlab">
+        <div>
+          <strong>GitLab</strong>
+          <span>gitlab · git</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="bitbucket" data-keywords="Bitbucket bitbucket git BB">
+        <img src="./icons/files/bitbucket.svg" alt="" data-type="file" data-icon-id="bitbucket">
+        <div>
+          <strong>Bitbucket</strong>
+          <span>bitbucket · git</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="jenkins" data-keywords="Jenkins jenkins gear J">
+        <img src="./icons/files/jenkins.svg" alt="" data-type="file" data-icon-id="jenkins">
+        <div>
+          <strong>Jenkins</strong>
+          <span>jenkins · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="vercel-config" data-keywords="Vercel Config vercel-config cloud VC">
+        <img src="./icons/files/vercel-config.svg" alt="" data-type="file" data-icon-id="vercel-config">
+        <div>
+          <strong>Vercel Config</strong>
+          <span>vercel-config · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="nginx" data-keywords="Nginx nginx network N">
+        <img src="./icons/files/nginx.svg" alt="" data-type="file" data-icon-id="nginx">
+        <div>
+          <strong>Nginx</strong>
+          <span>nginx · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="http" data-keywords="HTTP http network HT">
+        <img src="./icons/files/http.svg" alt="" data-type="file" data-icon-id="http">
+        <div>
+          <strong>HTTP</strong>
+          <span>http · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="hurl" data-keywords="Hurl hurl network HU">
+        <img src="./icons/files/hurl.svg" alt="" data-type="file" data-icon-id="hurl">
+        <div>
+          <strong>Hurl</strong>
+          <span>hurl · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="graphql-schema" data-keywords="GraphQL Schema graphql-schema brackets GS">
+        <img src="./icons/files/graphql-schema.svg" alt="" data-type="file" data-icon-id="graphql-schema">
+        <div>
+          <strong>GraphQL Schema</strong>
+          <span>graphql-schema · brackets</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="jsconfig" data-keywords="JS Config jsconfig gear JS">
+        <img src="./icons/files/jsconfig.svg" alt="" data-type="file" data-icon-id="jsconfig">
+        <div>
+          <strong>JS Config</strong>
+          <span>jsconfig · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="index-js" data-keywords="Index JS index-js code IDX">
+        <img src="./icons/files/index-js.svg" alt="" data-type="file" data-icon-id="index-js">
+        <div>
+          <strong>Index JS</strong>
+          <span>index-js · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="index-ts" data-keywords="Index TS index-ts code IDX">
+        <img src="./icons/files/index-ts.svg" alt="" data-type="file" data-icon-id="index-ts">
+        <div>
+          <strong>Index TS</strong>
+          <span>index-ts · code</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="layout" data-keywords="Layout layout layers L">
+        <img src="./icons/files/layout.svg" alt="" data-type="file" data-icon-id="layout">
+        <div>
+          <strong>Layout</strong>
+          <span>layout · layers</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="page" data-keywords="Page page document P">
+        <img src="./icons/files/page.svg" alt="" data-type="file" data-icon-id="page">
+        <div>
+          <strong>Page</strong>
+          <span>page · document</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="route" data-keywords="Route route network RT">
+        <img src="./icons/files/route.svg" alt="" data-type="file" data-icon-id="route">
+        <div>
+          <strong>Route</strong>
+          <span>route · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="loading" data-keywords="Loading loading compass ...">
+        <img src="./icons/files/loading.svg" alt="" data-type="file" data-icon-id="loading">
+        <div>
+          <strong>Loading</strong>
+          <span>loading · compass</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="not-found" data-keywords="Not Found not-found warning 404">
+        <img src="./icons/files/not-found.svg" alt="" data-type="file" data-icon-id="not-found">
+        <div>
+          <strong>Not Found</strong>
+          <span>not-found · warning</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="error" data-keywords="Error error warning !">
+        <img src="./icons/files/error.svg" alt="" data-type="file" data-icon-id="error">
+        <div>
+          <strong>Error</strong>
+          <span>error · warning</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="docusaurus" data-keywords="Docusaurus docusaurus book D">
+        <img src="./icons/files/docusaurus.svg" alt="" data-type="file" data-icon-id="docusaurus">
+        <div>
+          <strong>Docusaurus</strong>
+          <span>docusaurus · book</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="gatsby" data-keywords="Gatsby gatsby compass G">
+        <img src="./icons/files/gatsby.svg" alt="" data-type="file" data-icon-id="gatsby">
+        <div>
+          <strong>Gatsby</strong>
+          <span>gatsby · compass</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="laravel" data-keywords="Laravel laravel flame L">
+        <img src="./icons/files/laravel.svg" alt="" data-type="file" data-icon-id="laravel">
+        <div>
+          <strong>Laravel</strong>
+          <span>laravel · flame</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="django" data-keywords="Django django leaf D">
+        <img src="./icons/files/django.svg" alt="" data-type="file" data-icon-id="django">
+        <div>
+          <strong>Django</strong>
+          <span>django · leaf</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="flask" data-keywords="Flask flask test F">
+        <img src="./icons/files/flask.svg" alt="" data-type="file" data-icon-id="flask">
+        <div>
+          <strong>Flask</strong>
+          <span>flask · test</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="fastapi" data-keywords="FastAPI fastapi bolt FA">
+        <img src="./icons/files/fastapi.svg" alt="" data-type="file" data-icon-id="fastapi">
+        <div>
+          <strong>FastAPI</strong>
+          <span>fastapi · bolt</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="arduino" data-keywords="Arduino arduino network A">
+        <img src="./icons/files/arduino.svg" alt="" data-type="file" data-icon-id="arduino">
+        <div>
+          <strong>Arduino</strong>
+          <span>arduino · network</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="blender" data-keywords="Blender blender cube B">
+        <img src="./icons/files/blender.svg" alt="" data-type="file" data-icon-id="blender">
+        <div>
+          <strong>Blender</strong>
+          <span>blender · cube</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="drawio" data-keywords="Draw.io drawio graph D">
+        <img src="./icons/files/drawio.svg" alt="" data-type="file" data-icon-id="drawio">
+        <div>
+          <strong>Draw.io</strong>
+          <span>drawio · graph</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="excalidraw" data-keywords="Excalidraw excalidraw pen EX">
+        <img src="./icons/files/excalidraw.svg" alt="" data-type="file" data-icon-id="excalidraw">
+        <div>
+          <strong>Excalidraw</strong>
+          <span>excalidraw · pen</span>
+        </div>
+      </article>
+<article class="card" data-type="file" data-icon-id="mermaid" data-keywords="Mermaid mermaid graph MM">
+        <img src="./icons/files/mermaid.svg" alt="" data-type="file" data-icon-id="mermaid">
+        <div>
+          <strong>Mermaid</strong>
+          <span>mermaid · graph</span>
+        </div>
+      </article>
+      </div>
+    </section>
+    <section class="icons-section">
+      <h2>Folder Icons</h2>
+      <div class="grid">
+        <article class="card" data-type="folder" data-icon-id="folder" data-keywords="Folder folder ">
+        <img src="./icons/folders/folder.svg" alt="" data-type="folder" data-icon-id="folder">
+        <div>
+          <strong>Folder</strong>
+          <span>folder · base</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-open" data-keywords="Folder Open folder-open open">
+        <img src="./icons/folders/folder-open.svg" alt="" data-type="folder" data-icon-id="folder-open">
+        <div>
+          <strong>Folder Open</strong>
+          <span>folder-open · open</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-src" data-keywords="Source folder-src src">
+        <img src="./icons/folders/folder-src.svg" alt="" data-type="folder" data-icon-id="folder-src">
+        <div>
+          <strong>Source</strong>
+          <span>folder-src · src</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-components" data-keywords="Components folder-components grid">
+        <img src="./icons/folders/folder-components.svg" alt="" data-type="folder" data-icon-id="folder-components">
+        <div>
+          <strong>Components</strong>
+          <span>folder-components · grid</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-hooks" data-keywords="Hooks folder-hooks hook">
+        <img src="./icons/folders/folder-hooks.svg" alt="" data-type="folder" data-icon-id="folder-hooks">
+        <div>
+          <strong>Hooks</strong>
+          <span>folder-hooks · hook</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-utils" data-keywords="Utilities folder-utils tool">
+        <img src="./icons/folders/folder-utils.svg" alt="" data-type="folder" data-icon-id="folder-utils">
+        <div>
+          <strong>Utilities</strong>
+          <span>folder-utils · tool</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-tests" data-keywords="Tests folder-tests check">
+        <img src="./icons/folders/folder-tests.svg" alt="" data-type="folder" data-icon-id="folder-tests">
+        <div>
+          <strong>Tests</strong>
+          <span>folder-tests · check</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-config" data-keywords="Config folder-config gear">
+        <img src="./icons/folders/folder-config.svg" alt="" data-type="folder" data-icon-id="folder-config">
+        <div>
+          <strong>Config</strong>
+          <span>folder-config · gear</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-assets" data-keywords="Assets folder-assets image">
+        <img src="./icons/folders/folder-assets.svg" alt="" data-type="folder" data-icon-id="folder-assets">
+        <div>
+          <strong>Assets</strong>
+          <span>folder-assets · image</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-images" data-keywords="Images folder-images image">
+        <img src="./icons/folders/folder-images.svg" alt="" data-type="folder" data-icon-id="folder-images">
+        <div>
+          <strong>Images</strong>
+          <span>folder-images · image</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-docs" data-keywords="Docs folder-docs doc">
+        <img src="./icons/folders/folder-docs.svg" alt="" data-type="folder" data-icon-id="folder-docs">
+        <div>
+          <strong>Docs</strong>
+          <span>folder-docs · doc</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-scripts" data-keywords="Scripts folder-scripts term">
+        <img src="./icons/folders/folder-scripts.svg" alt="" data-type="folder" data-icon-id="folder-scripts">
+        <div>
+          <strong>Scripts</strong>
+          <span>folder-scripts · term</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-rust" data-keywords="Rust folder-rust rs">
+        <img src="./icons/folders/folder-rust.svg" alt="" data-type="folder" data-icon-id="folder-rust">
+        <div>
+          <strong>Rust</strong>
+          <span>folder-rust · rs</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-tauri" data-keywords="Tauri folder-tauri tau">
+        <img src="./icons/folders/folder-tauri.svg" alt="" data-type="folder" data-icon-id="folder-tauri">
+        <div>
+          <strong>Tauri</strong>
+          <span>folder-tauri · tau</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-node" data-keywords="Node folder-node pkg">
+        <img src="./icons/folders/folder-node.svg" alt="" data-type="folder" data-icon-id="folder-node">
+        <div>
+          <strong>Node</strong>
+          <span>folder-node · pkg</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-git" data-keywords="Git folder-git git">
+        <img src="./icons/folders/folder-git.svg" alt="" data-type="folder" data-icon-id="folder-git">
+        <div>
+          <strong>Git</strong>
+          <span>folder-git · git</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-github" data-keywords="GitHub folder-github git">
+        <img src="./icons/folders/folder-github.svg" alt="" data-type="folder" data-icon-id="folder-github">
+        <div>
+          <strong>GitHub</strong>
+          <span>folder-github · git</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-vscode" data-keywords="VS Code folder-vscode code">
+        <img src="./icons/folders/folder-vscode.svg" alt="" data-type="folder" data-icon-id="folder-vscode">
+        <div>
+          <strong>VS Code</strong>
+          <span>folder-vscode · code</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-build" data-keywords="Build folder-build box">
+        <img src="./icons/folders/folder-build.svg" alt="" data-type="folder" data-icon-id="folder-build">
+        <div>
+          <strong>Build</strong>
+          <span>folder-build · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-dist" data-keywords="Dist folder-dist box">
+        <img src="./icons/folders/folder-dist.svg" alt="" data-type="folder" data-icon-id="folder-dist">
+        <div>
+          <strong>Dist</strong>
+          <span>folder-dist · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-database" data-keywords="Database folder-database db">
+        <img src="./icons/folders/folder-database.svg" alt="" data-type="folder" data-icon-id="folder-database">
+        <div>
+          <strong>Database</strong>
+          <span>folder-database · db</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-api" data-keywords="API folder-api api">
+        <img src="./icons/folders/folder-api.svg" alt="" data-type="folder" data-icon-id="folder-api">
+        <div>
+          <strong>API</strong>
+          <span>folder-api · api</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-routes" data-keywords="Routes folder-routes route">
+        <img src="./icons/folders/folder-routes.svg" alt="" data-type="folder" data-icon-id="folder-routes">
+        <div>
+          <strong>Routes</strong>
+          <span>folder-routes · route</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-stores" data-keywords="Stores folder-stores store">
+        <img src="./icons/folders/folder-stores.svg" alt="" data-type="folder" data-icon-id="folder-stores">
+        <div>
+          <strong>Stores</strong>
+          <span>folder-stores · store</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-features" data-keywords="Features folder-features spark">
+        <img src="./icons/folders/folder-features.svg" alt="" data-type="folder" data-icon-id="folder-features">
+        <div>
+          <strong>Features</strong>
+          <span>folder-features · spark</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-ui" data-keywords="UI folder-ui grid">
+        <img src="./icons/folders/folder-ui.svg" alt="" data-type="folder" data-icon-id="folder-ui">
+        <div>
+          <strong>UI</strong>
+          <span>folder-ui · grid</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-pages" data-keywords="Pages folder-pages doc">
+        <img src="./icons/folders/folder-pages.svg" alt="" data-type="folder" data-icon-id="folder-pages">
+        <div>
+          <strong>Pages</strong>
+          <span>folder-pages · doc</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-views" data-keywords="Views folder-views doc">
+        <img src="./icons/folders/folder-views.svg" alt="" data-type="folder" data-icon-id="folder-views">
+        <div>
+          <strong>Views</strong>
+          <span>folder-views · doc</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-lib" data-keywords="Library folder-lib box">
+        <img src="./icons/folders/folder-lib.svg" alt="" data-type="folder" data-icon-id="folder-lib">
+        <div>
+          <strong>Library</strong>
+          <span>folder-lib · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-services" data-keywords="Services folder-services api">
+        <img src="./icons/folders/folder-services.svg" alt="" data-type="folder" data-icon-id="folder-services">
+        <div>
+          <strong>Services</strong>
+          <span>folder-services · api</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-types" data-keywords="Types folder-types ts">
+        <img src="./icons/folders/folder-types.svg" alt="" data-type="folder" data-icon-id="folder-types">
+        <div>
+          <strong>Types</strong>
+          <span>folder-types · ts</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-styles" data-keywords="Styles folder-styles style">
+        <img src="./icons/folders/folder-styles.svg" alt="" data-type="folder" data-icon-id="folder-styles">
+        <div>
+          <strong>Styles</strong>
+          <span>folder-styles · style</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-locales" data-keywords="Locales folder-locales lang">
+        <img src="./icons/folders/folder-locales.svg" alt="" data-type="folder" data-icon-id="folder-locales">
+        <div>
+          <strong>Locales</strong>
+          <span>folder-locales · lang</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-terminal" data-keywords="Terminal folder-terminal term">
+        <img src="./icons/folders/folder-terminal.svg" alt="" data-type="folder" data-icon-id="folder-terminal">
+        <div>
+          <strong>Terminal</strong>
+          <span>folder-terminal · term</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-security" data-keywords="Security folder-security lock">
+        <img src="./icons/folders/folder-security.svg" alt="" data-type="folder" data-icon-id="folder-security">
+        <div>
+          <strong>Security</strong>
+          <span>folder-security · lock</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-ci" data-keywords="CI folder-ci check">
+        <img src="./icons/folders/folder-ci.svg" alt="" data-type="folder" data-icon-id="folder-ci">
+        <div>
+          <strong>CI</strong>
+          <span>folder-ci · check</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-docker" data-keywords="Docker folder-docker box">
+        <img src="./icons/folders/folder-docker.svg" alt="" data-type="folder" data-icon-id="folder-docker">
+        <div>
+          <strong>Docker</strong>
+          <span>folder-docker · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-kubernetes" data-keywords="Kubernetes folder-kubernetes net">
+        <img src="./icons/folders/folder-kubernetes.svg" alt="" data-type="folder" data-icon-id="folder-kubernetes">
+        <div>
+          <strong>Kubernetes</strong>
+          <span>folder-kubernetes · net</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-cloud" data-keywords="Cloud folder-cloud cloud">
+        <img src="./icons/folders/folder-cloud.svg" alt="" data-type="folder" data-icon-id="folder-cloud">
+        <div>
+          <strong>Cloud</strong>
+          <span>folder-cloud · cloud</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-firebase" data-keywords="Firebase folder-firebase spark">
+        <img src="./icons/folders/folder-firebase.svg" alt="" data-type="folder" data-icon-id="folder-firebase">
+        <div>
+          <strong>Firebase</strong>
+          <span>folder-firebase · spark</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-supabase" data-keywords="Supabase folder-supabase db">
+        <img src="./icons/folders/folder-supabase.svg" alt="" data-type="folder" data-icon-id="folder-supabase">
+        <div>
+          <strong>Supabase</strong>
+          <span>folder-supabase · db</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-prisma" data-keywords="Prisma folder-prisma db">
+        <img src="./icons/folders/folder-prisma.svg" alt="" data-type="folder" data-icon-id="folder-prisma">
+        <div>
+          <strong>Prisma</strong>
+          <span>folder-prisma · db</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-cache" data-keywords="Cache folder-cache db">
+        <img src="./icons/folders/folder-cache.svg" alt="" data-type="folder" data-icon-id="folder-cache">
+        <div>
+          <strong>Cache</strong>
+          <span>folder-cache · db</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-logs" data-keywords="Logs folder-logs doc">
+        <img src="./icons/folders/folder-logs.svg" alt="" data-type="folder" data-icon-id="folder-logs">
+        <div>
+          <strong>Logs</strong>
+          <span>folder-logs · doc</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-temp" data-keywords="Temp folder-temp box">
+        <img src="./icons/folders/folder-temp.svg" alt="" data-type="folder" data-icon-id="folder-temp">
+        <div>
+          <strong>Temp</strong>
+          <span>folder-temp · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-mobile" data-keywords="Mobile folder-mobile mobile">
+        <img src="./icons/folders/folder-mobile.svg" alt="" data-type="folder" data-icon-id="folder-mobile">
+        <div>
+          <strong>Mobile</strong>
+          <span>folder-mobile · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-ios" data-keywords="iOS folder-ios mobile">
+        <img src="./icons/folders/folder-ios.svg" alt="" data-type="folder" data-icon-id="folder-ios">
+        <div>
+          <strong>iOS</strong>
+          <span>folder-ios · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-android" data-keywords="Android folder-android mobile">
+        <img src="./icons/folders/folder-android.svg" alt="" data-type="folder" data-icon-id="folder-android">
+        <div>
+          <strong>Android</strong>
+          <span>folder-android · mobile</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-storybook" data-keywords="Storybook folder-storybook doc">
+        <img src="./icons/folders/folder-storybook.svg" alt="" data-type="folder" data-icon-id="folder-storybook">
+        <div>
+          <strong>Storybook</strong>
+          <span>folder-storybook · doc</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-fixtures" data-keywords="Fixtures folder-fixtures box">
+        <img src="./icons/folders/folder-fixtures.svg" alt="" data-type="folder" data-icon-id="folder-fixtures">
+        <div>
+          <strong>Fixtures</strong>
+          <span>folder-fixtures · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-mocks" data-keywords="Mocks folder-mocks spark">
+        <img src="./icons/folders/folder-mocks.svg" alt="" data-type="folder" data-icon-id="folder-mocks">
+        <div>
+          <strong>Mocks</strong>
+          <span>folder-mocks · spark</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-generated" data-keywords="Generated folder-generated spark">
+        <img src="./icons/folders/folder-generated.svg" alt="" data-type="folder" data-icon-id="folder-generated">
+        <div>
+          <strong>Generated</strong>
+          <span>folder-generated · spark</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-benchmarks" data-keywords="Benchmarks folder-benchmarks graph">
+        <img src="./icons/folders/folder-benchmarks.svg" alt="" data-type="folder" data-icon-id="folder-benchmarks">
+        <div>
+          <strong>Benchmarks</strong>
+          <span>folder-benchmarks · graph</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-extensions" data-keywords="Extensions folder-extensions puzzle">
+        <img src="./icons/folders/folder-extensions.svg" alt="" data-type="folder" data-icon-id="folder-extensions">
+        <div>
+          <strong>Extensions</strong>
+          <span>folder-extensions · puzzle</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-themes" data-keywords="Themes folder-themes style">
+        <img src="./icons/folders/folder-themes.svg" alt="" data-type="folder" data-icon-id="folder-themes">
+        <div>
+          <strong>Themes</strong>
+          <span>folder-themes · style</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-ai" data-keywords="AI folder-ai ai">
+        <img src="./icons/folders/folder-ai.svg" alt="" data-type="folder" data-icon-id="folder-ai">
+        <div>
+          <strong>AI</strong>
+          <span>folder-ai · ai</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-agents" data-keywords="Agents folder-agents ai">
+        <img src="./icons/folders/folder-agents.svg" alt="" data-type="folder" data-icon-id="folder-agents">
+        <div>
+          <strong>Agents</strong>
+          <span>folder-agents · ai</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-codex" data-keywords="Codex folder-codex cx">
+        <img src="./icons/folders/folder-codex.svg" alt="" data-type="folder" data-icon-id="folder-codex">
+        <div>
+          <strong>Codex</strong>
+          <span>folder-codex · cx</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-claude" data-keywords="Claude folder-claude ai">
+        <img src="./icons/folders/folder-claude.svg" alt="" data-type="folder" data-icon-id="folder-claude">
+        <div>
+          <strong>Claude</strong>
+          <span>folder-claude · ai</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-packages" data-keywords="Packages folder-packages pkg">
+        <img src="./icons/folders/folder-packages.svg" alt="" data-type="folder" data-icon-id="folder-packages">
+        <div>
+          <strong>Packages</strong>
+          <span>folder-packages · pkg</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-examples" data-keywords="Examples folder-examples spark">
+        <img src="./icons/folders/folder-examples.svg" alt="" data-type="folder" data-icon-id="folder-examples">
+        <div>
+          <strong>Examples</strong>
+          <span>folder-examples · spark</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-playground" data-keywords="Playground folder-playground spark">
+        <img src="./icons/folders/folder-playground.svg" alt="" data-type="folder" data-icon-id="folder-playground">
+        <div>
+          <strong>Playground</strong>
+          <span>folder-playground · spark</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-commands" data-keywords="Commands folder-commands term">
+        <img src="./icons/folders/folder-commands.svg" alt="" data-type="folder" data-icon-id="folder-commands">
+        <div>
+          <strong>Commands</strong>
+          <span>folder-commands · term</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-plugins" data-keywords="Plugins folder-plugins puzzle">
+        <img src="./icons/folders/folder-plugins.svg" alt="" data-type="folder" data-icon-id="folder-plugins">
+        <div>
+          <strong>Plugins</strong>
+          <span>folder-plugins · puzzle</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-workflows" data-keywords="Workflows folder-workflows check">
+        <img src="./icons/folders/folder-workflows.svg" alt="" data-type="folder" data-icon-id="folder-workflows">
+        <div>
+          <strong>Workflows</strong>
+          <span>folder-workflows · check</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-devcontainer" data-keywords="Dev Container folder-devcontainer box">
+        <img src="./icons/folders/folder-devcontainer.svg" alt="" data-type="folder" data-icon-id="folder-devcontainer">
+        <div>
+          <strong>Dev Container</strong>
+          <span>folder-devcontainer · box</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-web" data-keywords="Web folder-web net">
+        <img src="./icons/folders/folder-web.svg" alt="" data-type="folder" data-icon-id="folder-web">
+        <div>
+          <strong>Web</strong>
+          <span>folder-web · net</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-server" data-keywords="Server folder-server db">
+        <img src="./icons/folders/folder-server.svg" alt="" data-type="folder" data-icon-id="folder-server">
+        <div>
+          <strong>Server</strong>
+          <span>folder-server · db</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-client" data-keywords="Client folder-client grid">
+        <img src="./icons/folders/folder-client.svg" alt="" data-type="folder" data-icon-id="folder-client">
+        <div>
+          <strong>Client</strong>
+          <span>folder-client · grid</span>
+        </div>
+      </article>
+<article class="card" data-type="folder" data-icon-id="folder-shared" data-keywords="Shared folder-shared link">
+        <img src="./icons/folders/folder-shared.svg" alt="" data-type="folder" data-icon-id="folder-shared">
+        <div>
+          <strong>Shared</strong>
+          <span>folder-shared · link</span>
+        </div>
+      </article>
+      </div>
+    </section>
+    <div class="empty" id="empty-state">No icons match the current search.</div>
+  </main>
+  <script>
+    const search = document.getElementById("icon-search");
+    const variantSelect = document.getElementById("theme-variant");
+    const stats = document.getElementById("icon-stats");
+    const empty = document.getElementById("empty-state");
+    const cards = Array.from(document.querySelectorAll(".card"));
+    const sections = Array.from(document.querySelectorAll(".icons-section"));
+    const variantImages = Array.from(document.querySelectorAll("img[data-icon-id]"));
+    const filterButtons = Array.from(document.querySelectorAll("[data-filter-type]"));
+    const selectedIconImage = document.getElementById("selected-icon-image");
+    const selectedIconTitle = document.getElementById("selected-icon-title");
+    const selectedIconId = document.getElementById("selected-icon-id");
+    const selectedIconMeta = document.getElementById("selected-icon-meta");
+    const variantPaths = {"athas-icons":"./icons","athas-icons-dimmed":"./icons/dimmed","athas-icons-light":"./icons/light"};
+    const variantPalettes = {"athas-icons":{"bg":"#11151B","panel":"#171D25","panel2":"#1D2530","text":"#ECF1F7","muted":"#96A3B4","line":"#2A3442"},"athas-icons-dimmed":{"bg":"#151A22","panel":"#1B222C","panel2":"#202934","text":"#E4EAF2","muted":"#9AA6B6","line":"#303B4A"},"athas-icons-light":{"bg":"#F6F8FB","panel":"#FFFFFF","panel2":"#EEF2F7","text":"#182233","muted":"#637086","line":"#D8E0EA"}};
+    let activeType = "all";
+    let selectedCard = cards.find((card) => card.dataset.iconId === "typescript") || cards[0];
+
+    function updateVariant() {
+      const variantId = variantSelect.value;
+      const basePath = variantPaths[variantId] || variantPaths["athas-icons"];
+      const palette = variantPalettes[variantId] || variantPalettes["athas-icons"];
+
+      for (const [key, value] of Object.entries(palette)) {
+        document.documentElement.style.setProperty("--" + key.replace("panel2", "panel-2"), value);
+      }
+
+      for (const image of variantImages) {
+        const directory = image.dataset.type === "folder" ? "folders" : "files";
+        image.src = basePath + "/" + directory + "/" + image.dataset.iconId + ".svg";
+      }
+
+      updateSelectedIcon();
+    }
+
+    function updateSelectedIcon() {
+      if (!selectedCard) return;
+      const image = selectedCard.querySelector("img");
+      const title = selectedCard.querySelector("strong");
+      const meta = selectedCard.querySelector("span");
+      cards.forEach((card) => card.classList.toggle("is-selected", card === selectedCard));
+      selectedIconImage.src = image.src;
+      selectedIconTitle.textContent = title.textContent;
+      selectedIconId.textContent = selectedCard.dataset.iconId;
+      selectedIconMeta.textContent = selectedCard.dataset.type + " · " + meta.textContent;
+    }
+
+    function updateFilter() {
+      const query = search.value.trim().toLowerCase();
+      let visible = 0;
+
+      for (const card of cards) {
+        const typeMatches = activeType === "all" || card.dataset.type === activeType;
+        const queryMatches = !query || card.dataset.keywords.toLowerCase().includes(query);
+        const matches = typeMatches && queryMatches;
+        card.hidden = !matches;
+        if (matches) visible += 1;
+      }
+
+      for (const section of sections) {
+        const hasVisibleCards = Array.from(section.querySelectorAll(".card")).some((card) => !card.hidden);
+        section.hidden = !hasVisibleCards;
+      }
+
+      stats.textContent = visible + " icon" + (visible === 1 ? "" : "s") + " shown";
+      empty.classList.toggle("is-visible", visible === 0);
+    }
+
+    search.addEventListener("input", updateFilter);
+    variantSelect.addEventListener("change", updateVariant);
+    for (const button of filterButtons) {
+      button.addEventListener("click", () => {
+        activeType = button.dataset.filterType;
+        filterButtons.forEach((candidate) => candidate.classList.toggle("is-active", candidate === button));
+        updateFilter();
+      });
+    }
+    for (const card of cards) {
+      card.addEventListener("click", () => {
+        selectedCard = card;
+        updateSelectedIcon();
+      });
+    }
+    updateVariant();
+    updateFilter();
+  </script>
+</body>
+</html>

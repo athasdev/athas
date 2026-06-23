@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="iOS">
+  <path d="M3.2 8c0-1 .8-1.8 1.8-1.8h5l1.9 2.2H19c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8H5c-1 0-1.8-.8-1.8-1.8z" fill="#7D8CA1"/>
+  <path d="M4.7 9.5h14.6v1.8H4.7z" fill="#D1DAE5" opacity=".48"/>
+  <path d="M5.5 8.4h4.2l1.2 1.5H5.5z" fill="#D1DAE5" opacity=".8"/>
+  <g transform="translate(6.2 4.9) scale(.68)"><rect x="9.6" y="10.3" width="4.8" height="7.2" rx="1" fill="none" stroke="#D1DAE5" stroke-width="1.15"/><path d="M11.2 11.5h1.6M11.5 16.4h1" stroke="#D1DAE5" stroke-width="1" stroke-linecap="round"/></g>
+</svg>

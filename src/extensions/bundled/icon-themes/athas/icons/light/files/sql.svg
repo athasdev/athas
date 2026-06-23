@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="SQL">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#6BA1D2"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#AFC7E5" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <ellipse cx="12" cy="8" rx="5.2" ry="2.1" fill="#AFC7E5"/><path d="M6.8 8v6.8c0 1.2 2.3 2.2 5.2 2.2s5.2-1 5.2-2.2V8" fill="none" stroke="#AFC7E5" stroke-width="1.45"/><path d="M6.8 11.4c0 1.2 2.3 2.2 5.2 2.2s5.2-1 5.2-2.2" fill="none" stroke="#6BA1D2" stroke-width="1.2" opacity=".65"/>
+</svg>

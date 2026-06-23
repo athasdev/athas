@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { cloneElement, isValidElement, useSyncExternalStore } from "react";
+import { cloneElement, isValidElement, useMemo, useSyncExternalStore } from "react";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 
@@ -8,7 +8,7 @@ interface FileExplorerIconProps {
   isDir: boolean;
   isExpanded?: boolean;
   isSymlink?: boolean;
-  size?: number;
+  size?: number | string;
   className?: string;
 }
 
@@ -17,29 +17,36 @@ export function FileExplorerIcon({
   isDir,
   isExpanded = false,
   isSymlink = false,
-  size = 14,
+  size = "var(--app-ui-font-size)",
   className = "text-text-lighter",
 }: FileExplorerIconProps) {
-  const { settings } = useSettingsStore();
+  const iconThemeId = useSettingsStore((state) => state.settings.iconTheme);
   useSyncExternalStore(
     (callback) => iconThemeRegistry.onRegistryChange(callback),
     () => iconThemeRegistry.getVersion(),
     () => iconThemeRegistry.getVersion(),
   );
   const iconTheme =
-    iconThemeRegistry.getTheme(settings.iconTheme) ??
+    iconThemeRegistry.getTheme(iconThemeId) ??
     iconThemeRegistry.getTheme(getDefaultSetting("iconTheme"));
 
-  if (!iconTheme) {
+  const iconResult = useMemo(
+    () => iconTheme?.getFileIcon(fileName, isDir, isExpanded, isSymlink) ?? null,
+    [fileName, iconTheme, isDir, isExpanded, isSymlink],
+  );
+  const sanitizedSvg = useMemo(
+    () =>
+      iconResult?.svg
+        ? DOMPurify.sanitize(iconResult.svg, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+          })
+        : null,
+    [iconResult?.svg],
+  );
+
+  if (!iconResult) {
     return <span className={className}>&#8226;</span>;
   }
-
-  const iconResult = iconTheme.getFileIcon(fileName, isDir, isExpanded, isSymlink);
-  const sanitizedSvg = iconResult.svg
-    ? DOMPurify.sanitize(iconResult.svg, {
-        USE_PROFILES: { svg: true, svgFilters: true },
-      })
-    : null;
 
   const renderIcon = () => {
     if (iconResult.component) {
@@ -56,8 +63,8 @@ export function FileExplorerIcon({
         <span
           className={className}
           style={{
-            width: `${size}px`,
-            height: `${size}px`,
+            width: size,
+            height: size,
             display: "inline-block",
             lineHeight: 0,
           }}
@@ -74,8 +81,8 @@ export function FileExplorerIcon({
           aria-hidden="true"
           className={className}
           style={{
-            width: `${size}px`,
-            height: `${size}px`,
+            width: size,
+            height: size,
             display: "inline-block",
           }}
         />

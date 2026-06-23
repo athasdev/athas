@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Electron">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#4F9EBC"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#B6E0EF" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <circle cx="8.2" cy="9" r="1.6" fill="#B6E0EF"/><circle cx="15.8" cy="9" r="1.6" fill="#B6E0EF"/><circle cx="12" cy="16" r="1.6" fill="#B6E0EF"/><path d="M9.5 10.2 11 14.5M14.5 10.2 13 14.5M9.8 9h4.4" stroke="#B6E0EF" stroke-width="1.15" stroke-linecap="round"/><text x="12" y="13.1" text-anchor="middle" font-family="Arial,sans-serif" font-size="3.5" font-weight="700" fill="#B6E0EF">E</text>
+</svg>

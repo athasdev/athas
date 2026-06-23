@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="License">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#A18960"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#DDCCAC" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="M12 6.3 17 8v3.5c0 3.2-2 5.3-5 6.4-3-1.1-5-3.2-5-6.4V8z" fill="none" stroke="#DDCCAC" stroke-width="1.35" stroke-linejoin="round"/><text x="12" y="13.7" text-anchor="middle" font-family="Arial,sans-serif" font-size="4" font-weight="700" fill="#DDCCAC">LIC</text>
+</svg>

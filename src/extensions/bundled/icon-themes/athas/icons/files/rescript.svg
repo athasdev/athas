@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="ReScript">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#C95D58"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#FFC9C7" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="M8.5 14.5 5.7 12l2.8-2.5" fill="none" stroke="#FFC9C7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="m15.5 9.5 2.8 2.5-2.8 2.5" fill="none" stroke="#FFC9C7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><text x="12" y="18.1" text-anchor="middle" font-family="Arial,sans-serif" font-size="4.6" font-weight="700" fill="#FFC9C7">RE</text>
+</svg>

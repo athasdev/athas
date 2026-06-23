@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Babel">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#D2B35D"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#E0CB80" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="M8.3 7.4H6.7c-.7 0-1.1.4-1.1 1.1v7c0 .7.4 1.1 1.1 1.1h1.6" fill="none" stroke="#E0CB80" stroke-width="1.5" stroke-linecap="round"/><path d="M15.7 7.4h1.6c.7 0 1.1.4 1.1 1.1v7c0 .7-.4 1.1-1.1 1.1h-1.6" fill="none" stroke="#E0CB80" stroke-width="1.5" stroke-linecap="round"/><text x="12" y="13.8" text-anchor="middle" font-family="Arial,sans-serif" font-size="5" font-weight="700" fill="#E0CB80">B</text>
+</svg>

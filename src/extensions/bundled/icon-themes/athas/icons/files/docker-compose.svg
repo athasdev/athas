@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Docker Compose">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#3E94D9"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#B9DEFF" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="M6.1 12.1h10.7c.9 0 1.5.7 1.2 1.6-.6 1.9-2.4 3.4-5.5 3.4H9.6c-2.1 0-3.5-1.3-3.5-3.1z" fill="#B9DEFF"/><path d="M8 9h2v2H8zM10.7 9h2v2h-2zM13.4 9h2v2h-2zM10.7 6.5h2v2h-2z" fill="#3E94D9"/>
+</svg>

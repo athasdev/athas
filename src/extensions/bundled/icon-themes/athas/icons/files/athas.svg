@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Athas">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#4E91D9"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#D7E8FF" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="m13.2 6.5-6 6.9h4l-1.1 4.1 6.7-7.7h-4.1z" fill="#D7E8FF"/><text x="13.7" y="17.6" text-anchor="middle" font-family="Arial,sans-serif" font-size="4" font-weight="700" fill="#D7E8FF">A</text>
+</svg>

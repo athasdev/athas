@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Shell">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#619B7F"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#BCDDCF" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="m7 9 3 3-3 3" fill="none" stroke="#BCDDCF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.2 15h4.2" stroke="#BCDDCF" stroke-width="1.7" stroke-linecap="round"/>
+</svg>
