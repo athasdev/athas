@@ -47,7 +47,7 @@ function RenderComponent({ component }: { component: GenerativeUIComponent }) {
             <h3 className="mb-1 font-medium ui-text-sm text-text">{props.title}</h3>
           )}
           {typeof props.description === "string" && (
-            <p className="text-text-lighter ui-text-xs">{props.description}</p>
+            <p className="text-text-lighter ui-text-sm">{props.description}</p>
           )}
           {renderedChildren}
           {renderedActions}
@@ -59,7 +59,7 @@ function RenderComponent({ component }: { component: GenerativeUIComponent }) {
           {(props.items as string[] | undefined)?.map((item, i) => (
             <div
               key={`item-${i}`}
-              className="rounded-md px-2 py-1 text-text ui-text-xs hover:bg-hover"
+              className="rounded-md px-2 py-1 text-text ui-text-sm hover:bg-hover"
             >
               {item}
             </div>
@@ -73,7 +73,7 @@ function RenderComponent({ component }: { component: GenerativeUIComponent }) {
       const rows = (props.rows as string[][]) ?? [];
       return (
         <div className="overflow-x-auto">
-          <table className="w-full ui-text-xs">
+          <table className="w-full ui-text-sm">
             {headers.length > 0 && (
               <thead>
                 <tr className="border-border border-b">

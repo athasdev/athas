@@ -16,6 +16,7 @@ export interface GeneratedUIExtension {
 
 type UIStyle = Record<string, unknown>;
 const GENERATED_EXTENSIONS_STORAGE_KEY = "athas.generated-ui-extensions";
+const GENERATED_UI_FONT_SIZE = "var(--ui-text-sm)";
 
 function toChildrenArray(children: unknown[] | unknown): ReactNode[] {
   return (Array.isArray(children) ? children : [children]).filter(
@@ -84,7 +85,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             if (typeof content === "string") {
               return createElement("div", {
                 dangerouslySetInnerHTML: { __html: content },
-                className: "ui-font h-full overflow-auto text-text",
+                className: "ui-font ui-text-sm h-full overflow-auto text-text",
               });
             }
 
@@ -194,6 +195,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               padding: `${padding}px`,
               color: "var(--color-text)",
               ...style,
+              fontSize: GENERATED_UI_FONT_SIZE,
             },
           },
           ...toChildrenArray(children),
@@ -218,6 +220,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               gap: `${gap}px`,
               color: "var(--color-text)",
               ...style,
+              fontSize: GENERATED_UI_FONT_SIZE,
             },
           },
           ...toChildrenArray(children),
@@ -236,6 +239,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               padding: `${padding}px`,
               color: "var(--color-text)",
               ...style,
+              fontSize: GENERATED_UI_FONT_SIZE,
             },
           },
           ...toChildrenArray(children),
@@ -248,27 +252,25 @@ function createGeneratedExtensionAPI(extensionId: string) {
         weight?: number;
         style?: UIStyle;
       }) {
-        const { children, tone = "default", size = "sm", weight = 400, style } = config;
+        const { children, tone = "default", weight = 400, style } = config;
         const color =
           tone === "muted"
             ? "var(--color-text-lighter)"
             : tone === "accent"
               ? "var(--color-accent)"
               : "var(--color-text)";
-        const fontSize =
-          size === "xs"
-            ? "var(--ui-text-xs)"
-            : size === "md"
-              ? "var(--ui-text-sm)"
-              : size === "lg"
-                ? "var(--ui-text-base)"
-                : "var(--ui-text-xs)";
 
         return createElement(
           "div",
           {
             className: "ui-font",
-            style: { color, fontSize, fontWeight: weight, lineHeight: 1.45, ...style },
+            style: {
+              color,
+              fontWeight: weight,
+              lineHeight: 1.45,
+              ...style,
+              fontSize: GENERATED_UI_FONT_SIZE,
+            },
           },
           ...toChildrenArray(children),
         );
@@ -297,10 +299,10 @@ function createGeneratedExtensionAPI(extensionId: string) {
               alignItems: "center",
               borderRadius: "999px",
               padding: "4px 8px",
-              fontSize: "var(--ui-text-xs)",
               fontWeight: 500,
               ...palette,
               ...style,
+              fontSize: GENERATED_UI_FONT_SIZE,
             },
           },
           label,
@@ -308,7 +310,11 @@ function createGeneratedExtensionAPI(extensionId: string) {
       },
       button(config: { label: string; onClick: () => void; variant?: "default" | "accent" }) {
         const { label, onClick, variant = "default" } = config;
-        return createElement(Button, { onClick, variant, compact: true }, label);
+        return createElement(
+          Button,
+          { onClick, variant, compact: true, style: { fontSize: GENERATED_UI_FONT_SIZE } },
+          label,
+        );
       },
       input(config: {
         value?: string;
@@ -334,6 +340,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             padding: "0 10px",
             outline: "none",
             ...style,
+            fontSize: GENERATED_UI_FONT_SIZE,
           },
         });
       },
@@ -367,7 +374,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             {
               style: {
                 color: "var(--color-text-lighter)",
-                fontSize: "var(--ui-text-xs)",
+                fontSize: GENERATED_UI_FONT_SIZE,
                 lineHeight: 1.4,
               },
             },
@@ -378,7 +385,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             {
               style: {
                 color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
-                fontSize: "var(--ui-text-base)",
+                fontSize: GENERATED_UI_FONT_SIZE,
                 fontWeight: 600,
                 lineHeight: 1.2,
               },
@@ -414,7 +421,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               {
                 style: {
                   color: "var(--color-text)",
-                  fontSize: "var(--ui-text-base)",
+                  fontSize: GENERATED_UI_FONT_SIZE,
                   fontWeight: 600,
                 },
               },
@@ -426,7 +433,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
                   {
                     style: {
                       color: "var(--color-text-lighter)",
-                      fontSize: "var(--ui-text-xs)",
+                      fontSize: GENERATED_UI_FONT_SIZE,
                       lineHeight: 1.45,
                     },
                   },
@@ -472,7 +479,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               {
                 style: {
                   color: "var(--color-text)",
-                  fontSize: "var(--ui-text-sm)",
+                  fontSize: GENERATED_UI_FONT_SIZE,
                   fontWeight: 500,
                 },
               },
@@ -484,7 +491,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
                   {
                     style: {
                       color: "var(--color-text-lighter)",
-                      fontSize: "var(--ui-text-xs)",
+                      fontSize: GENERATED_UI_FONT_SIZE,
                       lineHeight: 1.4,
                     },
                   },
@@ -521,7 +528,11 @@ function createGeneratedExtensionAPI(extensionId: string) {
           createElement(
             "div",
             {
-              style: { color: "var(--color-text)", fontSize: "var(--ui-text-sm)", fontWeight: 600 },
+              style: {
+                color: "var(--color-text)",
+                fontSize: GENERATED_UI_FONT_SIZE,
+                fontWeight: 600,
+              },
             },
             title,
           ),
@@ -531,7 +542,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
                 {
                   style: {
                     color: "var(--color-text-lighter)",
-                    fontSize: "var(--ui-text-xs)",
+                    fontSize: GENERATED_UI_FONT_SIZE,
                     lineHeight: 1.45,
                   },
                 },

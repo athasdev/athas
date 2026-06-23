@@ -56,6 +56,7 @@ const GENERATING_MESSAGES = [
   "Tightening the structure...",
   "Preparing installable code...",
 ];
+const GENERATED_UI_FONT_SIZE = "var(--ui-text-sm)";
 
 interface GeneratedExtension {
   id: string;
@@ -174,7 +175,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 if (typeof content === "string") {
                   return createElement("div", {
                     dangerouslySetInnerHTML: { __html: content },
-                    style: { height: "100%", overflow: "auto" },
+                    style: { height: "100%", overflow: "auto", fontSize: GENERATED_UI_FONT_SIZE },
                   });
                 }
 
@@ -236,6 +237,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   padding: `${padding}px`,
                   color: "var(--color-text)",
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -266,6 +268,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   gap: `${gap}px`,
                   color: "var(--color-text)",
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -288,6 +291,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   padding: `${padding}px`,
                   color: "var(--color-text)",
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -300,15 +304,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             weight?: number;
             style?: Record<string, unknown>;
           }) {
-            const { children, tone = "default", size = "sm", weight = 400, style } = config;
+            const { children, tone = "default", weight = 400, style } = config;
             const color =
               tone === "muted"
                 ? "var(--color-text-lighter)"
                 : tone === "accent"
                   ? "var(--color-accent)"
                   : "var(--color-text)";
-            const fontSize =
-              size === "xs" ? "12px" : size === "md" ? "14px" : size === "lg" ? "16px" : "13px";
 
             return createElement(
               "div",
@@ -316,10 +318,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 className: "ui-font",
                 style: {
                   color,
-                  fontSize,
                   fontWeight: weight,
                   lineHeight: 1.45,
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -359,10 +361,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   alignItems: "center",
                   borderRadius: "999px",
                   padding: "4px 8px",
-                  fontSize: "var(--ui-text-xs)",
                   fontWeight: 500,
                   ...palette,
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               label,
@@ -376,6 +378,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 onClick,
                 variant,
                 compact: true,
+                style: { fontSize: GENERATED_UI_FONT_SIZE },
               },
               label,
             );
@@ -404,6 +407,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 padding: "0 10px",
                 outline: "none",
                 ...style,
+                fontSize: GENERATED_UI_FONT_SIZE,
               },
             });
           },
@@ -437,7 +441,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 {
                   style: {
                     color: "var(--color-text-lighter)",
-                    fontSize: "var(--ui-text-xs)",
+                    fontSize: GENERATED_UI_FONT_SIZE,
                     lineHeight: 1.4,
                   },
                 },
@@ -448,7 +452,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 {
                   style: {
                     color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
-                    fontSize: "var(--ui-text-base)",
+                    fontSize: GENERATED_UI_FONT_SIZE,
                     fontWeight: 600,
                     lineHeight: 1.2,
                   },
@@ -484,7 +488,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   {
                     style: {
                       color: "var(--color-text)",
-                      fontSize: "var(--ui-text-base)",
+                      fontSize: GENERATED_UI_FONT_SIZE,
                       fontWeight: 600,
                     },
                   },
@@ -496,7 +500,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       {
                         style: {
                           color: "var(--color-text-lighter)",
-                          fontSize: "var(--ui-text-xs)",
+                          fontSize: GENERATED_UI_FONT_SIZE,
                           lineHeight: 1.45,
                         },
                       },
@@ -542,7 +546,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   {
                     style: {
                       color: "var(--color-text)",
-                      fontSize: "var(--ui-text-sm)",
+                      fontSize: GENERATED_UI_FONT_SIZE,
                       fontWeight: 500,
                     },
                   },
@@ -554,7 +558,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       {
                         style: {
                           color: "var(--color-text-lighter)",
-                          fontSize: "var(--ui-text-xs)",
+                          fontSize: GENERATED_UI_FONT_SIZE,
                           lineHeight: 1.4,
                         },
                       },
@@ -593,7 +597,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 {
                   style: {
                     color: "var(--color-text)",
-                    fontSize: "var(--ui-text-sm)",
+                    fontSize: GENERATED_UI_FONT_SIZE,
                     fontWeight: 600,
                   },
                 },
@@ -605,7 +609,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                     {
                       style: {
                         color: "var(--color-text-lighter)",
-                        fontSize: "var(--ui-text-xs)",
+                        fontSize: GENERATED_UI_FONT_SIZE,
                         lineHeight: 1.45,
                       },
                     },
