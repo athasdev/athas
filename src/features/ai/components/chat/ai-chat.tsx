@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { KeyIcon as KeyRound } from "@phosphor-icons/react";
 import type React from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
@@ -29,6 +29,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { Conversation } from "../elements/conversation";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
@@ -118,6 +119,24 @@ function getPermissionOptionClassName(option: AcpPermissionOption) {
   }
 }
 
+function getMessageSearchMatches(messages: Message[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [];
+
+  return messages.flatMap((message) => {
+    const content = message.content.toLowerCase();
+    const matches: Array<{ messageId: string }> = [];
+    let index = content.indexOf(normalizedQuery);
+
+    while (index !== -1) {
+      matches.push({ messageId: message.id });
+      index = content.indexOf(normalizedQuery, index + normalizedQuery.length);
+    }
+
+    return matches;
+  });
+}
+
 const AIChat = memo(function AIChat({
   className,
   chatId,
@@ -154,8 +173,38 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
+  const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
   const effectiveChatId =
     chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
+  const currentChat = useMemo(
+    () => chatState.chats.find((chat) => chat.id === effectiveChatId),
+    [chatState.chats, effectiveChatId],
+  );
+  const messageSearchMatches = useMemo(
+    () => getMessageSearchMatches(currentChat?.messages ?? [], messageSearchQuery),
+    [currentChat?.messages, messageSearchQuery],
+  );
+  const activeMessageSearchMatch = messageSearchMatches[activeMessageSearchIndex] ?? null;
+
+  const closeMessageSearch = useCallback(() => {
+    setIsMessageSearchOpen(false);
+    setMessageSearchQuery("");
+    setActiveMessageSearchIndex(0);
+  }, []);
+
+  const goToPreviousMessageSearchMatch = useCallback(() => {
+    if (messageSearchMatches.length === 0) return;
+    setActiveMessageSearchIndex((index) =>
+      index === 0 ? messageSearchMatches.length - 1 : index - 1,
+    );
+  }, [messageSearchMatches.length]);
+
+  const goToNextMessageSearchMatch = useCallback(() => {
+    if (messageSearchMatches.length === 0) return;
+    setActiveMessageSearchIndex((index) => (index + 1) % messageSearchMatches.length);
+  }, [messageSearchMatches.length]);
 
   useEffect(() => {
     if (isActiveSurface && activeBuffer) {
@@ -186,7 +235,35 @@ const AIChat = memo(function AIChat({
   // Clear ACP events when switching chats
   useEffect(() => {
     setAcpEvents([]);
-  }, [effectiveChatId]);
+    closeMessageSearch();
+  }, [closeMessageSearch, effectiveChatId]);
+
+  useEffect(() => {
+    setActiveMessageSearchIndex(0);
+  }, [messageSearchQuery]);
+
+  useEffect(() => {
+    if (messageSearchMatches.length === 0) {
+      setActiveMessageSearchIndex(0);
+      return;
+    }
+
+    setActiveMessageSearchIndex((index) => Math.min(index, messageSearchMatches.length - 1));
+  }, [messageSearchMatches.length]);
+
+  useEffect(() => {
+    if (!isActiveSurface || isAiChatBlockedByPolicy) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setIsMessageSearchOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isActiveSurface, isAiChatBlockedByPolicy]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -876,19 +953,6 @@ details: ${errorDetails || mainError}
               break;
             }
             case "usage_update": {
-              const usagePercent =
-                event.usage.size > 0
-                  ? Math.round((event.usage.used / event.usage.size) * 100)
-                  : null;
-              appendAcpEvent({
-                kind: "status",
-                label: "Session usage updated",
-                detail:
-                  usagePercent === null
-                    ? `${event.usage.used} used`
-                    : `${event.usage.used}/${event.usage.size} (${usagePercent}%)`,
-                state: "info",
-              });
               break;
             }
             case "status_changed":
@@ -1042,7 +1106,26 @@ details: ${errorDetails || mainError}
     <div
       className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text ui-text-xs ${className || ""}`}
     >
-      <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
+      <ChatHeader
+        chatId={effectiveChatId}
+        onDeleteChat={handleDeleteChat}
+        isMessageSearchOpen={isMessageSearchOpen}
+        messageSearchQuery={messageSearchQuery}
+        onToggleMessageSearch={() => {
+          if (isMessageSearchOpen) {
+            closeMessageSearch();
+            return;
+          }
+
+          setIsMessageSearchOpen(true);
+        }}
+        onCloseMessageSearch={closeMessageSearch}
+        onMessageSearchQueryChange={setMessageSearchQuery}
+        messageSearchMatchCount={messageSearchMatches.length}
+        activeMessageSearchIndex={activeMessageSearchIndex}
+        onPreviousMessageSearchMatch={goToPreviousMessageSearchMatch}
+        onNextMessageSearchMatch={goToNextMessageSearchMatch}
+      />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
@@ -1054,19 +1137,18 @@ details: ${errorDetails || mainError}
         </div>
       ) : (
         <>
-          <div
-            ref={messagesContainerRef}
-            onScroll={handleMessagesScroll}
-            className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto"
-          >
+          <Conversation ref={messagesContainerRef} onScroll={handleMessagesScroll}>
             <ChatMessages
               ref={messagesEndRef}
               chatId={effectiveChatId}
               onApplyCode={onApplyCode}
               onSendFollowUp={handleSendMessage}
               acpEvents={acpEvents}
+              searchQuery={messageSearchQuery}
+              activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
+              activeSearchIndex={activeMessageSearchIndex}
             />
-          </div>
+          </Conversation>
 
           {currentPermission && (
             <div className="bg-transparent px-3 pt-2 ui-text-xs">

@@ -1,14 +1,20 @@
-import { ClockCounterClockwiseIcon as History } from "@phosphor-icons/react";
+import {
+  ArrowDownIcon as ArrowDown,
+  ArrowUpIcon as ArrowUp,
+  ClockCounterClockwiseIcon as History,
+  MagnifyingGlassIcon as Search,
+  XIcon as X,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import {
   PaneChip,
-  PaneIconButton,
   paneHeaderClassName,
   paneTitleClassName,
 } from "@/features/panes/components/pane-chrome";
@@ -92,9 +98,30 @@ function EditableChatTitle({
 interface ChatHeaderProps {
   chatId?: string | null;
   onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
+  isMessageSearchOpen: boolean;
+  messageSearchQuery: string;
+  onToggleMessageSearch: () => void;
+  onCloseMessageSearch: () => void;
+  onMessageSearchQueryChange: (query: string) => void;
+  messageSearchMatchCount: number;
+  activeMessageSearchIndex: number;
+  onPreviousMessageSearchMatch: () => void;
+  onNextMessageSearchMatch: () => void;
 }
 
-export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
+export function ChatHeader({
+  chatId,
+  onDeleteChat,
+  isMessageSearchOpen,
+  messageSearchQuery,
+  onToggleMessageSearch,
+  onCloseMessageSearch,
+  onMessageSearchQueryChange,
+  messageSearchMatchCount,
+  activeMessageSearchIndex,
+  onPreviousMessageSearchMatch,
+  onNextMessageSearchMatch,
+}: ChatHeaderProps) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const chats = useAIChatStore((state) => state.chats);
   const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
@@ -110,44 +137,152 @@ export function ChatHeader({ chatId, onDeleteChat }: ChatHeaderProps) {
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
+  const messageSearchInputRef = useRef<HTMLInputElement>(null);
   const currentHeaderIconId = currentAgentId === "custom" ? aiProviderId : currentAgentId;
   const workspaceChats = useMemo(
     () => filterChatsByWorkspace(chats, workspacePath),
     [chats, workspacePath],
   );
+  const hasSearchQuery = messageSearchQuery.trim().length > 0;
+  const hasMessageSearchMatches = messageSearchMatchCount > 0;
+  const messageSearchPosition =
+    hasSearchQuery && hasMessageSearchMatches
+      ? `${activeMessageSearchIndex + 1}/${messageSearchMatchCount}`
+      : hasSearchQuery
+        ? "0/0"
+        : "";
+
+  useEffect(() => {
+    if (!isMessageSearchOpen) return;
+    requestAnimationFrame(() => messageSearchInputRef.current?.focus());
+  }, [isMessageSearchOpen]);
 
   return (
-    <div className={cn("relative z-[10020]", paneHeaderClassName())}>
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <PaneChip className="size-6 justify-center px-0">
-            <ProviderIcon providerId={currentHeaderIconId} size={12} />
-          </PaneChip>
-          {effectiveChatId ? (
-            <EditableChatTitle
-              title={currentChat ? currentChat.title : "New Chat"}
-              onUpdateTitle={(title) => updateChatTitle(effectiveChatId, title)}
-            />
-          ) : (
-            <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
-          )}
+    <div className="relative z-[10020] bg-primary-bg">
+      <div className={paneHeaderClassName()}>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <PaneChip className="size-6 justify-center px-0">
+              <ProviderIcon providerId={currentHeaderIconId} size={12} />
+            </PaneChip>
+            {effectiveChatId ? (
+              <EditableChatTitle
+                title={currentChat ? currentChat.title : "New Chat"}
+                onUpdateTitle={(title) => updateChatTitle(effectiveChatId, title)}
+              />
+            ) : (
+              <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            compact
+            onClick={onToggleMessageSearch}
+            active={isMessageSearchOpen}
+            tooltip="Search messages"
+            tooltipSide="bottom"
+            aria-label="Search messages"
+            className="size-6 rounded-lg bg-transparent p-0 text-text-lighter shadow-none hover:text-text"
+          >
+            <Search />
+          </Button>
+
+          <Button
+            type="button"
+            ref={historyButtonRef}
+            variant="ghost"
+            compact
+            onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
+            tooltip="Chat History"
+            tooltipSide="bottom"
+            aria-label="Toggle chat history"
+            className="size-6 rounded-lg bg-transparent p-0 text-text-lighter shadow-none hover:text-text"
+          >
+            <History />
+          </Button>
+
+          <AgentSelector
+            variant="header"
+            onOpenSettings={() => openSettingsDialog("ai")}
+            triggerClassName="size-6 rounded-lg bg-transparent p-0 text-text-lighter shadow-none hover:text-text"
+          />
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
-        <PaneIconButton
-          type="button"
-          ref={historyButtonRef}
-          onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-          tooltip="Chat History"
-          tooltipSide="bottom"
-          aria-label="Toggle chat history"
-        >
-          <History />
-        </PaneIconButton>
+      {isMessageSearchOpen ? (
+        <div className="flex items-center gap-1.5 border-border/50 border-t px-1.5 py-1">
+          <Input
+            ref={messageSearchInputRef}
+            value={messageSearchQuery}
+            onChange={(event) => onMessageSearchQueryChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                onCloseMessageSearch();
+                return;
+              }
 
-        <AgentSelector variant="header" onOpenSettings={() => openSettingsDialog("ai")} />
-      </div>
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (event.shiftKey) {
+                  onPreviousMessageSearchMatch();
+                } else {
+                  onNextMessageSearchMatch();
+                }
+              }
+            }}
+            placeholder="Search messages"
+            size="xs"
+            variant="ghost"
+            leftIcon={Search}
+            className="h-7 rounded-lg bg-secondary-bg/45"
+          />
+
+          <span className="min-w-10 shrink-0 text-right text-text-lighter ui-text-xs">
+            {messageSearchPosition}
+          </span>
+
+          <Button
+            type="button"
+            variant="ghost"
+            compact
+            disabled={!hasMessageSearchMatches}
+            onClick={onPreviousMessageSearchMatch}
+            tooltip="Previous match"
+            aria-label="Previous search match"
+            className="size-6 rounded-lg bg-transparent p-0"
+          >
+            <ArrowUp />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            compact
+            disabled={!hasMessageSearchMatches}
+            onClick={onNextMessageSearchMatch}
+            tooltip="Next match"
+            aria-label="Next search match"
+            className="size-6 rounded-lg bg-transparent p-0"
+          >
+            <ArrowDown />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            compact
+            onClick={onCloseMessageSearch}
+            tooltip="Close search"
+            aria-label="Close message search"
+            className="size-6 rounded-lg bg-transparent p-0"
+          >
+            <X />
+          </Button>
+        </div>
+      ) : null}
 
       <ChatHistoryDropdown
         isOpen={isChatHistoryVisible}

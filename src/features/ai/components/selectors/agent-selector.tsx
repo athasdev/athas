@@ -15,7 +15,6 @@ import { LoadingIndicator } from "@/ui/loading";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { PaneIconButton } from "@/features/panes/components/pane-chrome";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import {
@@ -290,15 +289,17 @@ export function AgentSelector({
   return (
     <>
       {variant === "header" ? (
-        <PaneIconButton
+        <Button
           ref={triggerRef}
           onClick={toggleAgentSelector}
           type="button"
+          variant="ghost"
+          compact
           tooltip={triggerTooltip ?? "New chat"}
           className={triggerClassName}
         >
           <Plus />
-        </PaneIconButton>
+        </Button>
       ) : (
         <Button
           ref={triggerRef}

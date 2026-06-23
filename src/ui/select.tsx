@@ -259,13 +259,15 @@ export default function Select({
   const listboxRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const openedByFocusRef = useRef(false);
-  const open = openProp ?? uncontrolledOpen;
+  const canOpen = options.length > 0;
+  const open = (openProp ?? uncontrolledOpen) && canOpen;
 
   const handleOpenChange = (nextOpen: boolean) => {
+    const resolvedNextOpen = nextOpen && canOpen;
     if (openProp === undefined) {
-      setUncontrolledOpen(nextOpen);
+      setUncontrolledOpen(resolvedNextOpen);
     }
-    onOpenChange?.(nextOpen);
+    onOpenChange?.(resolvedNextOpen);
   };
 
   const selectedOption = options.find((option) => option.value === value);

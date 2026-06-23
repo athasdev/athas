@@ -30,10 +30,18 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, isMac } from "@/utils/platform";
+import {
+  PromptInput,
+  PromptInputAttachments,
+  PromptInputBody,
+  PromptInputContextList,
+  PromptInputEditable,
+  PromptInputToolbar,
+  PromptInputTools,
+} from "../elements/prompt-input";
 import { FileMentionDropdown } from "../mentions/file-mention-dropdown";
 import { SlashCommandDropdown } from "../mentions/slash-command-dropdown";
 import { AcpConfigSelector } from "../selectors/acp-config-selector";
@@ -1290,22 +1298,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
 
   return (
-    <SidebarFooter
+    <PromptInput
       ref={aiChatContainerRef}
-      surface
       attached={hasAttachedComposerDropdown}
       data-ai-context-drop-target
       onDragOver={handleContextDragOver}
       onDragLeave={handleContextDragLeave}
       onDrop={handleContextDrop}
-      className={cn(
-        "ai-chat-container relative z-20",
-        isContextDragOver && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
-      )}
+      dragActive={isContextDragOver}
     >
-      <SidebarComposerBody>
+      <PromptInputBody>
         {pastedImages.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-3 pt-3">
+          <PromptInputAttachments>
             {pastedImages.map((image) => (
               <div
                 key={image.id}
@@ -1327,11 +1331,12 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 </Button>
               </div>
             ))}
-          </div>
+          </PromptInputAttachments>
         )}
 
-        <div
+        <PromptInputEditable
           ref={inputRef}
+          enabled={isInputEnabled}
           contentEditable={isInputEnabled}
           onInput={handleInputChange}
           onKeyDown={handleKeyDown}
@@ -1346,28 +1351,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 : "Ask anything... (@ to mention files)"
               : "Configure API key to enable AI chat..."
           }
-          className={cn(
-            "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
-            "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
-            "whitespace-pre-wrap focus:outline-none",
-            hasAttachedComposerDropdown && "border-none",
-            !isInputEnabled ? "cursor-not-allowed opacity-50" : "cursor-text",
-            "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",
-          )}
-          style={
-            {
-              lineHeight: "1.4",
-              wordWrap: "break-word",
-              overflowWrap: "break-word",
-            } as React.CSSProperties
-          }
+          className={cn(hasAttachedComposerDropdown && "border-none")}
           role="textbox"
           aria-multiline="true"
           aria-label="Message input"
           tabIndex={isInputEnabled ? 0 : -1}
         />
 
-        <div className="flex items-end gap-2 px-2 pb-2 pt-1">
+        <PromptInputToolbar>
           <div ref={contextDropdownRef} className="min-w-0 flex-1">
             <ContextSelector
               buffers={buffers}
@@ -1445,14 +1436,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
               {isStreaming ? <Stop /> : <ArrowUp />}
             </Button>
           </div>
-        </div>
+        </PromptInputToolbar>
 
         {selectedContextItems.length > 0 ? (
-          <div
-            className="custom-scrollbar-thin flex max-h-12 min-w-0 flex-wrap items-center gap-1 overflow-y-auto overflow-x-hidden px-2 pb-2"
-            role="list"
-            aria-label="Selected context"
-          >
+          <PromptInputContextList>
             {selectedContextItems.map((item) => (
               <div
                 key={`selected-${item.type}-${item.id}`}
@@ -1550,11 +1537,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 </Button>
               </div>
             ))}
-          </div>
+          </PromptInputContextList>
         ) : null}
-      </SidebarComposerBody>
+      </PromptInputBody>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5 pb-0.5">
+      <PromptInputTools>
         {isAcpMetadataLoading ? (
           <ChatLoadingIndicator label="loading session" compact />
         ) : (
@@ -1706,7 +1693,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             </Button>
           </>
         )}
-      </div>
+      </PromptInputTools>
 
       {(isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
@@ -1718,8 +1705,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
         />
       )}
 
-      {(isActiveSurface || isComposerFocused) && slashCommandState.active && (
-        <SlashCommandDropdown onSelect={handleSlashCommandSelect} />
+      {slashCommandState.active && (
+        <SlashCommandDropdown
+          onSelect={(command) => {
+            setActiveInlineControl(null);
+            handleSlashCommandSelect(command);
+          }}
+          onClose={() => setActiveInlineControl(null)}
+        />
       )}
 
       <SkillsCommand
@@ -1733,7 +1726,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         onClose={() => setIsApiKeyManagerOpen(false)}
         initialProviderId={aiProviderId}
       />
-    </SidebarFooter>
+    </PromptInput>
   );
 });
 

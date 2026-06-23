@@ -15,6 +15,7 @@ import {
   WrenchIcon as Wrench,
 } from "@phosphor-icons/react";
 import { memo } from "react";
+import { MessageActions } from "@/features/ai/components/elements/message";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import { Button } from "@/ui/button";
 
@@ -47,11 +48,11 @@ export const ChatFollowUpActions = memo(function ChatFollowUpActions({
   if (actions.length === 0) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+    <MessageActions className="opacity-100">
       {actions.map((action) => (
         <FollowUpButton key={action.id} action={action} onSelect={onSelect} />
       ))}
-    </div>
+    </MessageActions>
   );
 });
 

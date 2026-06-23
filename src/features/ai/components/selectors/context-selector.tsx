@@ -175,6 +175,8 @@ function ContextSelectorDropdownContent({
   }, []);
 
   const totalResults = filteredContextBuffers.length + visibleFileResults.length;
+  const shouldShowContextResults =
+    filteredContextBuffers.length > 0 || searchTerm.trim().length > 0;
   const boundedSelectedContextIndex =
     totalResults === 0 ? 0 : Math.min(selectedContextIndex, totalResults - 1);
   const activeFileIndex = boundedSelectedContextIndex - filteredContextBuffers.length;
@@ -244,76 +246,78 @@ function ContextSelectorDropdownContent({
           aria-label="Search context"
         />
       </div>
-      <AIFileSelector
-        files={[]}
-        query={searchTerm}
-        onQueryChange={setSearchTerm}
-        onSelect={handleFileSelect}
-        rootFolderPath={rootFolderPath}
-        selectedIndex={fileSelectedIndex}
-        onSelectedIndexChange={(index) =>
-          setSelectedContextIndex(filteredContextBuffers.length + index)
-        }
-        onResultsChange={setVisibleFileResults}
-        emptyLabel={searchTerm ? "No matching context found" : "Type to search files"}
-        compact
-        showSearchInput={false}
-        listClassName="max-h-[264px]"
-        leadingContent={
-          filteredContextBuffers.length > 0 ? (
-            <>
-              <div className="ui-text-xs px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
-                Open tabs
-              </div>
-              {filteredContextBuffers.map((buffer) => {
-                const index = filteredContextBuffers.indexOf(buffer);
-                const isSelected = selectedBufferIds.has(buffer.id);
-                return (
-                  <button
-                    key={buffer.id}
-                    type="button"
-                    data-context-buffer-option
-                    onClick={() => {
-                      onToggleBuffer(buffer.id);
-                      searchInputRef.current?.focus();
-                    }}
-                    onMouseEnter={() => setSelectedContextIndex(index)}
-                    className={cn(
-                      "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left ui-text-xs leading-[1.35] transition-colors",
-                      boundedSelectedContextIndex === index
-                        ? "bg-selected text-text"
-                        : isSelected
-                          ? "bg-hover/70 text-text"
-                          : "text-text hover:bg-hover focus:bg-hover focus:outline-none",
-                      isSelected && boundedSelectedContextIndex !== index
-                        ? "shadow-[inset_0_0_0_1px_var(--color-border)]"
-                        : "",
-                    )}
-                  >
-                    <span className="flex size-3.5 shrink-0 items-center justify-center text-text-lighter [&_svg]:size-3">
-                      {getBufferContextIcon(buffer)}
-                    </span>
-                    <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                      <span className="min-w-0 max-w-[45%] shrink truncate text-text">
-                        {buffer.name}
+      {shouldShowContextResults ? (
+        <AIFileSelector
+          files={[]}
+          query={searchTerm}
+          onQueryChange={setSearchTerm}
+          onSelect={handleFileSelect}
+          rootFolderPath={rootFolderPath}
+          selectedIndex={fileSelectedIndex}
+          onSelectedIndexChange={(index) =>
+            setSelectedContextIndex(filteredContextBuffers.length + index)
+          }
+          onResultsChange={setVisibleFileResults}
+          emptyLabel="No matching context found"
+          compact
+          showSearchInput={false}
+          listClassName="max-h-[264px]"
+          leadingContent={
+            filteredContextBuffers.length > 0 ? (
+              <>
+                <div className="ui-text-xs px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
+                  Open tabs
+                </div>
+                {filteredContextBuffers.map((buffer) => {
+                  const index = filteredContextBuffers.indexOf(buffer);
+                  const isSelected = selectedBufferIds.has(buffer.id);
+                  return (
+                    <button
+                      key={buffer.id}
+                      type="button"
+                      data-context-buffer-option
+                      onClick={() => {
+                        onToggleBuffer(buffer.id);
+                        searchInputRef.current?.focus();
+                      }}
+                      onMouseEnter={() => setSelectedContextIndex(index)}
+                      className={cn(
+                        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left ui-text-xs leading-[1.35] transition-colors",
+                        boundedSelectedContextIndex === index
+                          ? "bg-selected text-text"
+                          : isSelected
+                            ? "bg-hover/70 text-text"
+                            : "text-text hover:bg-hover focus:bg-hover focus:outline-none",
+                        isSelected && boundedSelectedContextIndex !== index
+                          ? "shadow-[inset_0_0_0_1px_var(--color-border)]"
+                          : "",
+                      )}
+                    >
+                      <span className="flex size-3.5 shrink-0 items-center justify-center text-text-lighter [&_svg]:size-3">
+                        {getBufferContextIcon(buffer)}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-text-lighter/70">
-                        {getBufferContextDescription(buffer)}
+                      <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                        <span className="min-w-0 max-w-[45%] shrink truncate text-text">
+                          {buffer.name}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-text-lighter/70">
+                          {getBufferContextDescription(buffer)}
+                        </span>
                       </span>
-                    </span>
-                    {isSelected && (
-                      <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 leading-[1.35] text-text-lighter">
-                        added
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </>
-          ) : null
-        }
-        hasLeadingResults={filteredContextBuffers.length > 0}
-      />
+                      {isSelected && (
+                        <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 leading-[1.35] text-text-lighter">
+                          added
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </>
+            ) : null
+          }
+          hasLeadingResults={filteredContextBuffers.length > 0}
+        />
+      ) : null}
     </>
   );
 }

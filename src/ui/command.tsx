@@ -195,13 +195,16 @@ export const CommandHeader = ({
   );
 };
 
-interface CommandListProps {
-  children: React.ReactNode;
+type CommandListProps = React.ComponentProps<"div"> & {
   ref?: React.Ref<HTMLDivElement>;
-}
+};
 
-export const CommandList = ({ children, ref }: CommandListProps) => (
-  <div ref={ref} className="custom-scrollbar-thin flex-1 overflow-y-auto p-1">
+export const CommandList = ({ children, ref, className, ...props }: CommandListProps) => (
+  <div
+    ref={ref}
+    className={cn("custom-scrollbar-thin flex-1 overflow-y-auto p-1", className)}
+    {...props}
+  >
     {children}
   </div>
 );
@@ -223,7 +226,7 @@ export const CommandFooter = ({ children }: CommandFooterProps) => (
 
 CommandFooter.displayName = "CommandFooter";
 
-interface CommandInputProps {
+type CommandInputProps = Omit<React.ComponentProps<"input">, "onChange" | "size"> & {
   value: string;
   onChange: (value: string) => void;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
@@ -231,7 +234,7 @@ interface CommandInputProps {
   className?: string;
   size?: "sm" | "md";
   ref?: React.Ref<HTMLInputElement>;
-}
+};
 
 export const CommandInput = ({
   value,
@@ -241,6 +244,7 @@ export const CommandInput = ({
   className,
   size = "sm",
   ref,
+  ...props
 }: CommandInputProps) => (
   <input
     ref={ref}
@@ -251,6 +255,7 @@ export const CommandInput = ({
     placeholder={placeholder}
     className={cn(commandInputVariants({ size }), className)}
     data-command-input=""
+    {...props}
   />
 );
 
@@ -299,11 +304,50 @@ export const CommandItemTitle = ({ className, ...props }: React.ComponentProps<"
 
 CommandItemTitle.displayName = "CommandItemTitle";
 
+export const CommandItemContent = ({ className, ...props }: React.ComponentProps<"div">) => (
+  <div className={cn("min-w-0 flex-1 text-left", className)} {...props} />
+);
+
+CommandItemContent.displayName = "CommandItemContent";
+
 export const CommandItemMeta = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span className={cn("ml-1.5 min-w-0 truncate text-text-lighter/70", className)} {...props} />
 );
 
 CommandItemMeta.displayName = "CommandItemMeta";
+
+export const CommandItemDescription = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span
+    className={cn("mt-0.5 block min-w-0 truncate text-text-lighter/70", className)}
+    {...props}
+  />
+);
+
+CommandItemDescription.displayName = "CommandItemDescription";
+
+export const CommandItemIcon = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span
+    className={cn(
+      "inline-flex size-5 shrink-0 items-center justify-center rounded-md border border-border/70 bg-secondary-bg/70 text-text-lighter",
+      className,
+    )}
+    {...props}
+  />
+);
+
+CommandItemIcon.displayName = "CommandItemIcon";
+
+export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span
+    className={cn(
+      "max-w-32 shrink-0 truncate rounded-md border border-border/70 bg-secondary-bg/70 px-1.5 py-0.5 text-text-lighter",
+      className,
+    )}
+    {...props}
+  />
+);
+
+CommandItemBadge.displayName = "CommandItemBadge";
 
 type CommandFooterActionProps = Omit<ButtonProps, "compact" | "variant"> & {
   variant?: ButtonVariant;
