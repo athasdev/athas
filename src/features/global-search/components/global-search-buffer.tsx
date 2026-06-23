@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  FileNavigatorSidebar,
+  type FileNavigatorItem,
+  type FileNavigatorViewMode,
+} from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { Button } from "@/ui/button";
@@ -21,6 +26,16 @@ const MAX_MARKERS = 160;
 const DEFAULT_CONTEXT_LINES = 2;
 const EXPANDED_CONTEXT_LINES = 7;
 
+const isAbsolutePath = (filePath: string) => {
+  return filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath);
+};
+
+const getNavigatorPath = (filePath: string, displayPath: string, fileName: string) => {
+  if (displayPath && displayPath !== filePath) return displayPath;
+  if (isAbsolutePath(filePath)) return fileName;
+  return displayPath || fileName;
+};
+
 const GlobalSearchBuffer = () => {
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +45,9 @@ const GlobalSearchBuffer = () => {
   const [replaceQuery, setReplaceQuery] = useState("");
   const [canScrollResults, setCanScrollResults] = useState(false);
   const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
+  const [fileNavigatorViewMode, setFileNavigatorViewMode] =
+    useState<FileNavigatorViewMode>("tree");
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
   const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
   const {
@@ -38,7 +56,14 @@ const GlobalSearchBuffer = () => {
     debouncedQuery,
     results,
     isSearching,
+    isLoadingMore,
     error,
+    hasMoreResults,
+    searchedFiles,
+    searchableFiles,
+    isIndexing,
+    indexedFiles,
+    scannedFiles,
     rootFolderPath,
     searchOptions,
     setSearchOption,
@@ -47,6 +72,7 @@ const GlobalSearchBuffer = () => {
     excludeQuery,
     setExcludeQuery,
     refreshSearch,
+    loadMoreResults: loadMoreBackendResults,
   } = useContentSearch();
 
   const handleFileClick = useCallback(
@@ -63,6 +89,31 @@ const GlobalSearchBuffer = () => {
         sourceContentByPath,
       }),
     [contextLinesByFile, results, rootFolderPath, sourceContentByPath, visibleMatchLimit],
+  );
+
+  const fileNavigatorItems = useMemo<FileNavigatorItem[]>(
+    () =>
+      excerpts.map((excerpt) => {
+        const navigatorPath = getNavigatorPath(
+          excerpt.filePath,
+          excerpt.displayPath,
+          excerpt.fileName,
+        );
+
+        return {
+          key: excerpt.filePath,
+          path: navigatorPath,
+          label: navigatorPath,
+          iconPath: excerpt.filePath,
+          metadata: [
+            {
+              label: excerpt.matchCount,
+              className: "text-text-lighter",
+            },
+          ],
+        };
+      }),
+    [excerpts],
   );
 
   const navigationItems = useMemo(
@@ -134,6 +185,27 @@ const GlobalSearchBuffer = () => {
       : null;
   const selectedMatch =
     selectedItemKey && matchIndex.has(selectedItemKey) ? matchIndex.get(selectedItemKey) : null;
+  const selectedFileNavigatorKey =
+    selectedFilePath && fileNavigatorItems.some((item) => item.key === selectedFilePath)
+      ? selectedFilePath
+      : (selectedMatch?.filePath ?? fileNavigatorItems[0]?.key ?? null);
+
+  const handleFileNavigatorSelect = useCallback(
+    (filePath: string) => {
+      setSelectedFilePath(filePath);
+      const excerptIndex = excerpts.findIndex((excerpt) => excerpt.filePath === filePath);
+      if (excerptIndex < 0) return;
+
+      const selectedElement = scrollContainerRef.current?.querySelector(
+        `[data-excerpt-index="${excerptIndex}"]`,
+      ) as HTMLElement | null;
+      selectedElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    },
+    [excerpts, scrollContainerRef],
+  );
 
   const filePathsWithResults = useMemo(
     () => Array.from(new Set(results.map((result) => result.file_path))),
@@ -220,24 +292,94 @@ const GlobalSearchBuffer = () => {
     setVisibleMatchLimit(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
   }, [debouncedQuery, includeQuery, excludeQuery, searchOptions]);
 
+  useEffect(() => {
+    if (!selectedMatch?.filePath) return;
+    setSelectedFilePath(selectedMatch.filePath);
+  }, [selectedMatch?.filePath]);
+
+  useEffect(() => {
+    if (fileNavigatorItems.length === 0) {
+      setSelectedFilePath(null);
+      return;
+    }
+
+    setSelectedFilePath((current) =>
+      current && fileNavigatorItems.some((item) => item.key === current)
+        ? current
+        : (fileNavigatorItems[0]?.key ?? null),
+    );
+  }, [fileNavigatorItems]);
+
   const trimmedQuery = query.trim();
   const trimmedDebouncedQuery = debouncedQuery.trim();
   const isSearchPending = trimmedQuery.length > 0 && trimmedQuery !== trimmedDebouncedQuery;
-  const showSearching = trimmedQuery.length > 0 && (isSearching || isSearchPending);
+  const showBusy =
+    trimmedQuery.length > 0 && (isSearching || isSearchPending || isIndexing || isLoadingMore);
   const hasResults = results.length > 0;
   const totalMatches = results.reduce((sum, r) => sum + r.total_matches, 0);
   const displayedCount = navigationItems.length;
-  const hasMore = totalMatches > displayedCount;
+  const hasMoreRenderedMatches = totalMatches > displayedCount;
+  const hasMore = hasMoreRenderedMatches || hasMoreResults;
   const showMarkerRail = hasResults && canScrollResults && markerItems.length > 1;
   const loadMoreResults = useCallback(() => {
-    setVisibleMatchLimit((limit) =>
-      Math.min(limit + CONTENT_SEARCH_RENDER_INCREMENT, totalMatches),
-    );
-  }, [totalMatches]);
+    if (hasMoreRenderedMatches) {
+      setVisibleMatchLimit((limit) =>
+        Math.min(limit + CONTENT_SEARCH_RENDER_INCREMENT, totalMatches),
+      );
+      return;
+    }
+
+    if (hasMoreResults && !isLoadingMore) {
+      void loadMoreBackendResults();
+    }
+  }, [
+    hasMoreRenderedMatches,
+    hasMoreResults,
+    isLoadingMore,
+    loadMoreBackendResults,
+    totalMatches,
+  ]);
+  const busyLabel = useMemo(() => {
+    if (isIndexing) {
+      return scannedFiles > 0 ? `Indexing ${scannedFiles} files` : "Indexing files";
+    }
+
+    if (isSearchPending) {
+      return "Preparing search";
+    }
+
+    if (isSearching) {
+      if (searchableFiles > 0) {
+        return `Searching ${Math.min(searchedFiles, searchableFiles)}/${searchableFiles} files`;
+      }
+
+      if (indexedFiles > 0) {
+        return `Searching ${indexedFiles} files`;
+      }
+
+      return "Searching files";
+    }
+
+    if (isLoadingMore) {
+      return "Loading more results";
+    }
+
+    return null;
+  }, [
+    indexedFiles,
+    isIndexing,
+    isLoadingMore,
+    isSearchPending,
+    isSearching,
+    scannedFiles,
+    searchableFiles,
+    searchedFiles,
+  ]);
   const resultLabel =
-    trimmedDebouncedQuery && !showSearching
-      ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${totalMatches} total)` : ""}`
-      : null;
+    busyLabel ??
+    (trimmedDebouncedQuery && !showBusy
+      ? `${displayedCount} ${displayedCount === 1 ? "result" : "results"}${hasMore ? ` (${hasMoreResults ? `${totalMatches}+` : totalMatches} total)` : ""}`
+      : null);
   const searchOptionsButtons = [
     {
       id: "case-sensitive",
@@ -266,7 +408,7 @@ const GlobalSearchBuffer = () => {
   useEffect(() => {
     const sentinel = loadMoreRef.current;
     const scrollContainer = scrollContainerRef.current;
-    if (!sentinel || !scrollContainer || !hasMore || showSearching) return;
+    if (!sentinel || !scrollContainer || !hasMore || showBusy) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -282,11 +424,11 @@ const GlobalSearchBuffer = () => {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loadMoreResults, scrollContainerRef, showSearching]);
+  }, [hasMore, loadMoreResults, scrollContainerRef, showBusy]);
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer || !hasResults || showSearching) {
+    if (!scrollContainer || !hasResults || showBusy) {
       setCanScrollResults(false);
       return;
     }
@@ -304,7 +446,7 @@ const GlobalSearchBuffer = () => {
       cancelAnimationFrame(frame);
       resizeObserver?.disconnect();
     };
-  }, [displayedCount, hasResults, scrollContainerRef, showSearching, totalMatches]);
+  }, [displayedCount, hasResults, scrollContainerRef, showBusy, totalMatches]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -380,95 +522,126 @@ const GlobalSearchBuffer = () => {
         ) : null}
       </div>
 
-      <div
-        ref={scrollContainerRef}
-        data-editor-outer-scroll
-        className="custom-scrollbar-thin relative min-h-0 flex-1 overflow-y-auto bg-primary-bg"
-      >
-        {!debouncedQuery ? (
-          <div className="flex h-full min-h-[320px] items-center justify-center px-6">
-            <div className="flex max-w-md flex-col items-center text-center">
-              <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
-                <MagnifyingGlass className="size-6" weight="duotone" />
-              </div>
-              <div className="ui-text-sm font-medium text-text">Search across your project</div>
-              <div className="ui-text-sm mt-1 text-text-lighter">
-                Type a query to see matching files and lines in a single vertical result stream.
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {showSearching ? (
-          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
-            Searching...
-          </div>
-        ) : null}
-
-        {trimmedDebouncedQuery && !showSearching && !hasResults && !error ? (
-          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
-            No results found for "{debouncedQuery}"
-          </div>
-        ) : null}
-
-        {error ? (
-          <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-error">
-            {error}
-          </div>
-        ) : null}
-
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-primary-bg">
         {hasResults ? (
-          <>
-            <div className={cn(showMarkerRail && "pr-5")}>
-              <SearchExcerptResults
-                excerpts={excerpts}
-                selectedItemKey={selectedItemKey}
-                onOpen={handleFileClick}
-                onExpandContext={handleExpandContext}
-                onCollapseContext={handleCollapseContext}
-                isContextExpanded={isContextExpanded}
-              />
-            </div>
-            {showMarkerRail ? (
-              <div className="pointer-events-none absolute top-2 right-3 bottom-2 w-2 rounded-full bg-secondary-bg/30">
-                {markerItems.map(({ item, markerIndex }) => {
-                  const match = matchIndex.get(item.path);
-                  if (!match) return null;
-                  const markerPercent =
-                    navigationItems.length <= 1
-                      ? 0
-                      : (markerIndex / (navigationItems.length - 1)) * 100;
+          <div className="flex h-full min-h-0 overflow-hidden">
+            <FileNavigatorSidebar
+              items={fileNavigatorItems}
+              selectedKey={selectedFileNavigatorKey}
+              onSelect={handleFileNavigatorSelect}
+              ariaLabel="Search result files"
+              viewMode={fileNavigatorViewMode}
+              onViewModeChange={setFileNavigatorViewMode}
+              searchMode="fuzzy"
+            />
+            <div
+              ref={scrollContainerRef}
+              data-editor-outer-scroll
+              className="custom-scrollbar-thin relative min-h-0 flex-1 overflow-y-auto bg-primary-bg"
+            >
+              {showBusy && busyLabel ? (
+                <div className="ui-text-sm flex min-h-[120px] items-center justify-center text-center text-text-lighter">
+                  {busyLabel}
+                </div>
+              ) : null}
 
-                  return (
-                    <button
-                      key={item.path}
-                      type="button"
-                      aria-label={`Result ${markerIndex + 1}`}
-                      className={cn(
-                        "pointer-events-auto absolute right-0 size-1 rounded-full bg-text-lighter/35 hover:bg-accent",
-                        selectedItemKey === item.path && "bg-accent",
-                      )}
-                      style={{
-                        top: `calc(${markerPercent}% - 2px)`,
-                      }}
-                      onClick={() => {
-                        const selectedElement = scrollContainerRef.current?.querySelector(
-                          `[data-excerpt-index="${match.excerptIndex}"]`,
-                        ) as HTMLElement | null;
-                        selectedElement?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                      }}
-                    />
-                  );
-                })}
+              <div className={cn(showMarkerRail && "pr-5")}>
+                <SearchExcerptResults
+                  excerpts={excerpts}
+                  selectedItemKey={selectedItemKey}
+                  onOpen={handleFileClick}
+                  onExpandContext={handleExpandContext}
+                  onCollapseContext={handleCollapseContext}
+                  isContextExpanded={isContextExpanded}
+                />
+              </div>
+              {showMarkerRail ? (
+                <div className="pointer-events-none absolute top-2 right-3 bottom-2 w-2 rounded-full bg-secondary-bg/30">
+                  {markerItems.map(({ item, markerIndex }) => {
+                    const match = matchIndex.get(item.path);
+                    if (!match) return null;
+                    const markerPercent =
+                      navigationItems.length <= 1
+                        ? 0
+                        : (markerIndex / (navigationItems.length - 1)) * 100;
+
+                    return (
+                      <button
+                        key={item.path}
+                        type="button"
+                        aria-label={`Result ${markerIndex + 1}`}
+                        className={cn(
+                          "pointer-events-auto absolute right-0 size-1 rounded-full bg-text-lighter/35 hover:bg-accent",
+                          selectedItemKey === item.path && "bg-accent",
+                        )}
+                        style={{
+                          top: `calc(${markerPercent}% - 2px)`,
+                        }}
+                        onClick={() => {
+                          const selectedElement = scrollContainerRef.current?.querySelector(
+                            `[data-excerpt-index="${match.excerptIndex}"]`,
+                          ) as HTMLElement | null;
+                          selectedElement?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "nearest",
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              ) : null}
+              {hasMore ? (
+                <div
+                  ref={loadMoreRef}
+                  className="ui-text-sm px-3 py-3 text-center text-text-lighter"
+                >
+                  {isLoadingMore
+                    ? "Loading more results"
+                    : `Showing ${displayedCount} of ${hasMoreResults ? `${totalMatches}+` : totalMatches} results`}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div
+            ref={scrollContainerRef}
+            data-editor-outer-scroll
+            className="custom-scrollbar-thin h-full overflow-y-auto bg-primary-bg"
+          >
+            {!debouncedQuery ? (
+              <div className="flex h-full min-h-[320px] items-center justify-center px-6">
+                <div className="flex max-w-md flex-col items-center text-center">
+                  <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
+                    <MagnifyingGlass className="size-6" weight="duotone" />
+                  </div>
+                  <div className="ui-text-sm font-medium text-text">Search across your project</div>
+                  <div className="ui-text-sm mt-1 text-text-lighter">
+                    Type a query to see matching files and lines in a project-wide result buffer.
+                  </div>
+                </div>
               </div>
             ) : null}
-            {hasMore ? (
-              <div ref={loadMoreRef} className="ui-text-sm px-3 py-3 text-center text-text-lighter">
-                Showing {displayedCount} of {totalMatches} results
+
+            {showBusy && busyLabel ? (
+              <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+                {busyLabel}
               </div>
             ) : null}
-          </>
-        ) : null}
+
+            {trimmedDebouncedQuery && !showBusy && !error ? (
+              <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+                No results found for "{debouncedQuery}"
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-error">
+                {error}
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );

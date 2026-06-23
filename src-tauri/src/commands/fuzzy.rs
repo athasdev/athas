@@ -210,6 +210,15 @@ pub struct FffSearchState {
    workspace_path: Mutex<Option<PathBuf>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FffScanStatus {
+   pub is_scanning: bool,
+   pub scanned_files_count: usize,
+   pub indexed_files: usize,
+   pub is_watcher_ready: bool,
+   pub is_warmup_complete: bool,
+}
+
 impl FffSearchState {
    pub fn new() -> Self {
       Self {
@@ -249,6 +258,41 @@ impl FffSearchState {
          .map_err(|e| format!("fff set_workspace: {e}"))?;
       *workspace_path = Some(next_path);
       Ok(())
+   }
+
+   pub(crate) fn scan_status(
+      &self,
+      app: &AppHandle,
+      base_path: Option<&Path>,
+   ) -> Result<FffScanStatus, String> {
+      if let Some(base_path) = base_path {
+         self.ensure_workspace(app, base_path)?;
+      }
+
+      let fff = self.get_or_init(app)?;
+      let picker_guard = fff
+         .picker
+         .read()
+         .map_err(|e| format!("fff picker read: {e}"))?;
+
+      let Some(picker) = picker_guard.as_ref() else {
+         return Ok(FffScanStatus {
+            is_scanning: false,
+            scanned_files_count: 0,
+            indexed_files: 0,
+            is_watcher_ready: false,
+            is_warmup_complete: false,
+         });
+      };
+
+      let progress = picker.get_scan_progress();
+      Ok(FffScanStatus {
+         is_scanning: progress.is_scanning,
+         scanned_files_count: progress.scanned_files_count,
+         indexed_files: picker.get_files().len(),
+         is_watcher_ready: progress.is_watcher_ready,
+         is_warmup_complete: progress.is_warmup_complete,
+      })
    }
 }
 
@@ -292,6 +336,25 @@ pub fn fff_search_files(
    let fff = state.get_or_init(&app)?;
    fff.search(&query, limit.unwrap_or(100))
       .map_err(|e| format!("fff search: {e}"))
+}
+
+#[tauri::command]
+pub fn fff_scan_status(
+   app: AppHandle,
+   state: State<'_, FffSearchState>,
+   root_path: String,
+) -> Result<FffScanStatus, String> {
+   if should_skip_fff_path(&root_path) {
+      return Ok(FffScanStatus {
+         is_scanning: false,
+         scanned_files_count: 0,
+         indexed_files: 0,
+         is_watcher_ready: false,
+         is_warmup_complete: false,
+      });
+   }
+
+   state.scan_status(&app, Some(Path::new(&root_path)))
 }
 
 #[tauri::command]

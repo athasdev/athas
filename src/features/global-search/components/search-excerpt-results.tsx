@@ -39,8 +39,8 @@ interface SearchExcerptItemProps {
 }
 
 const EDIT_SYNC_DELAY_MS = 350;
-const EDITOR_PREFETCH_MARGIN = "360px 0px";
-const INITIAL_EDITOR_MOUNT_COUNT = 3;
+const EDITOR_PREFETCH_MARGIN = "180px 0px";
+const INITIAL_EDITOR_MOUNT_COUNT = 1;
 
 function splitContentBySegments(content: string, segmentCount: number): string[][] | null {
   const lines = splitLines(content);

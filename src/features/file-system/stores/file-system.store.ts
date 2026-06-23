@@ -128,6 +128,19 @@ const logWorkspaceOpenStep = (
   frontendTrace("error", "workspace-open", `${label}:error`, payload);
 };
 
+const inFlightFileReads = new Map<string, Promise<unknown>>();
+
+function readFileOnce<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const existing = inFlightFileReads.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+
+  const promise = loader().finally(() => {
+    inFlightFileReads.delete(key);
+  });
+  inFlightFileReads.set(key, promise);
+  return promise;
+}
+
 /**
  * Wraps the file tree with a root folder entry
  */
@@ -1258,7 +1271,9 @@ export const useFileSystemStore = createSelectors(
 
           if (!path.startsWith("remote://") && !wslInfo && !isKnownTextFile(resolvedPath)) {
             try {
-              const fileData = await readFile(resolvedPath);
+              const fileData = await readFileOnce(`local-bytes:${resolvedPath}`, () =>
+                readFile(resolvedPath),
+              );
 
               if (isStaleRequest()) return;
 
@@ -1296,10 +1311,14 @@ export const useFileSystemStore = createSelectors(
             }
           } else if (wslInfo && !isKnownTextFile(resolvedPath)) {
             try {
-              const fileData = await invoke<number[]>("wsl_read_file_bytes", {
-                distro: wslInfo.distro,
-                filePath: wslInfo.linuxPath,
-              });
+              const fileData = await readFileOnce(
+                `wsl-bytes:${wslInfo.distro}:${wslInfo.linuxPath}`,
+                () =>
+                  invoke<number[]>("wsl_read_file_bytes", {
+                    distro: wslInfo.distro,
+                    filePath: wslInfo.linuxPath,
+                  }),
+              );
 
               if (isStaleRequest()) return;
 
@@ -1382,19 +1401,27 @@ export const useFileSystemStore = createSelectors(
             const connectionId = match[1];
             const remotePath = match[2] || "/";
 
-            content = await invoke<string>("ssh_read_file", {
-              connectionId,
-              filePath: remotePath,
-            });
+            content = await readFileOnce(`remote-text:${connectionId}:${remotePath}`, () =>
+              invoke<string>("ssh_read_file", {
+                connectionId,
+                filePath: remotePath,
+              }),
+            );
           } else if (wslInfo) {
             content =
               preloadedLocalText ??
-              (await invoke<string>("wsl_read_file", {
-                distro: wslInfo.distro,
-                filePath: wslInfo.linuxPath,
-              }));
+              (await readFileOnce(`wsl-text:${wslInfo.distro}:${wslInfo.linuxPath}`, () =>
+                invoke<string>("wsl_read_file", {
+                  distro: wslInfo.distro,
+                  filePath: wslInfo.linuxPath,
+                }),
+              ));
           } else {
-            content = preloadedLocalText ?? (await readFileContent(resolvedPath));
+            content =
+              preloadedLocalText ??
+              (await readFileOnce(`local-text:${resolvedPath}`, () =>
+                readFileContent(resolvedPath),
+              ));
           }
           fileOpenBenchmark.mark(path, "file-read", `${content.length} chars`);
 
