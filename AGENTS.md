@@ -38,8 +38,7 @@
 - Keep commits focused. One logical change per commit.
 - Commit titles should be short, direct, and describe the outcome of the change.
 - Start commit messages with an uppercase letter.
-- Add a short commit body when the change benefits from extra context.
-- Prefer a short wrapped commit body in plain language.
+- Every commit must include a short wrapped body in plain language.
 - Wrap commit body lines before the commitlint line-length limit instead of leaving warnings behind.
 - Commit bodies should explain what changed and why without headings, boilerplate, or filler.
 - When useful, end the commit message with a separate `Fixes ...` or `Closes ...` line.
