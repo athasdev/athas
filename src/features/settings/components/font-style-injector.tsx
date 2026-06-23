@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import {
   DEFAULT_MONO_FONT_FAMILY,
@@ -41,42 +42,46 @@ function buildFontVariable(primary: string, fallback: string): string {
   return `"${normalized}", ${fallback}`;
 }
 
+function setRootStyleProperty(name: string, value: string) {
+  const rootStyle = document.documentElement.style;
+  if (rootStyle.getPropertyValue(name) === value) return;
+  rootStyle.setProperty(name, value);
+}
+
 /**
  * FontStyleInjector - Updates CSS variables when font settings change
  * Font fallbacks are defined in styles.css @theme directive
  */
 export const FontStyleInjector = () => {
   const codeEditorFontFamily = useEditorSettingsStore((state) => state.fontFamily);
-  const { settings } = useSettingsStore();
+  const { fontFamily, uiFontFamily, uiFontSize } = useSettingsStore(
+    useShallow((state) => ({
+      fontFamily: state.settings.fontFamily,
+      uiFontFamily: state.settings.uiFontFamily,
+      uiFontSize: state.settings.uiFontSize,
+    })),
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute("data-platform", currentPlatform);
 
     const requestedEditorFont =
-      stripWrappingQuotes(settings.fontFamily || codeEditorFontFamily || "") ||
-      DEFAULT_MONO_FONT_FAMILY;
-    const requestedUiFont =
-      stripWrappingQuotes(settings.uiFontFamily || "") || DEFAULT_UI_FONT_FAMILY;
+      stripWrappingQuotes(fontFamily || codeEditorFontFamily || "") || DEFAULT_MONO_FONT_FAMILY;
+    const requestedUiFont = stripWrappingQuotes(uiFontFamily || "") || DEFAULT_UI_FONT_FAMILY;
 
     const monoFallback = IS_WINDOWS ? WINDOWS_MONO_FALLBACK : DEFAULT_MONO_FALLBACK;
     const sansFallback = IS_WINDOWS ? WINDOWS_SANS_FALLBACK : DEFAULT_SANS_FALLBACK;
 
-    document.documentElement.style.setProperty(
+    setRootStyleProperty(
       "--editor-font-family",
       buildFontVariable(requestedEditorFont, monoFallback),
     );
-    document.documentElement.style.setProperty(
-      "--app-font-family",
-      buildFontVariable(requestedUiFont, sansFallback),
-    );
+    setRootStyleProperty("--app-font-family", buildFontVariable(requestedUiFont, sansFallback));
 
-    const normalizedUiFontSize = normalizeUiFontSize(settings.uiFontSize);
-    document.documentElement.style.setProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
-    document.documentElement.style.setProperty(
-      "--app-ui-scale",
-      `${getUiFontScale(normalizedUiFontSize)}`,
-    );
-  }, [settings.fontFamily, settings.uiFontFamily, settings.uiFontSize, codeEditorFontFamily]);
+    const normalizedUiFontSize = normalizeUiFontSize(uiFontSize);
+    setRootStyleProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
+    setRootStyleProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);
+  }, [fontFamily, uiFontFamily, uiFontSize, codeEditorFontFamily]);
 
   return null;
 };
