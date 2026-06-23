@@ -36,7 +36,7 @@ interface ContextMenuState<T = unknown> {
   data: T | null;
 }
 
-export const useContextMenu = <T = unknown>() => {
+export const useContextMenu = <T = unknown,>() => {
   const [state, setState] = useState<ContextMenuState<T>>({
     isOpen: false,
     position: { x: 0, y: 0 },

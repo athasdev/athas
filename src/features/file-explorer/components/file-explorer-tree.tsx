@@ -738,7 +738,10 @@ function FileExplorerTreeComponent({
               continue;
             }
 
-            if (!fileTreeSettings.showGitignoredFilesInFileTree && isGitIgnored(entry.path, isDir)) {
+            if (
+              !fileTreeSettings.showGitignoredFilesInFileTree &&
+              isGitIgnored(entry.path, isDir)
+            ) {
               continue;
             }
 

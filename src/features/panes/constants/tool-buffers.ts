@@ -23,9 +23,7 @@ export const SINGLETON_TOOL_BUFFER_METADATA: Record<
   },
 };
 
-export function isSingletonToolBufferType(
-  type: PaneContentType,
-): type is SingletonToolBufferType {
+export function isSingletonToolBufferType(type: PaneContentType): type is SingletonToolBufferType {
   return type in SINGLETON_TOOL_BUFFER_METADATA;
 }
 

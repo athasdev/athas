@@ -302,7 +302,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         }))
         .filter(({ score }) => score > 0)
         .sort(
-          (left, right) => right.score - left.score || left.item.path.localeCompare(right.item.path),
+          (left, right) =>
+            right.score - left.score || left.item.path.localeCompare(right.item.path),
         )
         .map(({ item }) => item);
     }

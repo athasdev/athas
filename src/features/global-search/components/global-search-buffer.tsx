@@ -45,8 +45,7 @@ const GlobalSearchBuffer = () => {
   const [replaceQuery, setReplaceQuery] = useState("");
   const [canScrollResults, setCanScrollResults] = useState(false);
   const [visibleMatchLimit, setVisibleMatchLimit] = useState(CONTENT_SEARCH_INITIAL_RENDER_LIMIT);
-  const [fileNavigatorViewMode, setFileNavigatorViewMode] =
-    useState<FileNavigatorViewMode>("tree");
+  const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("tree");
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [contextLinesByFile, setContextLinesByFile] = useState<Record<string, number>>({});
   const [sourceContentByPath, setSourceContentByPath] = useState<Record<string, string>>({});
@@ -332,13 +331,7 @@ const GlobalSearchBuffer = () => {
     if (hasMoreResults && !isLoadingMore) {
       void loadMoreBackendResults();
     }
-  }, [
-    hasMoreRenderedMatches,
-    hasMoreResults,
-    isLoadingMore,
-    loadMoreBackendResults,
-    totalMatches,
-  ]);
+  }, [hasMoreRenderedMatches, hasMoreResults, isLoadingMore, loadMoreBackendResults, totalMatches]);
   const busyLabel = useMemo(() => {
     if (isIndexing) {
       return scannedFiles > 0 ? `Indexing ${scannedFiles} files` : "Indexing files";

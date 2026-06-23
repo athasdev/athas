@@ -6,9 +6,7 @@
   "version": "0.1.0",
   "description": "Original duotone file and folder icons for Athas.",
   "publisher": "Athas",
-  "categories": [
-    "Icon Theme"
-  ],
+  "categories": ["Icon Theme"],
   "activationEvents": [
     "onIconTheme:athas-icons",
     "onIconTheme:athas-icons-dimmed",
