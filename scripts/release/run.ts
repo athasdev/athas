@@ -315,14 +315,14 @@ async function release() {
     success("Staged version changes");
 
     const commitMessage = getReleaseCommitMessage(parsedNewVersion);
-    await $`git commit -m ${commitMessage}`;
+    await $`git commit -m ${commitMessage} -m "Update version files for the release."`;
     success(`Created commit: ${commitMessage}`);
 
     await $`git tag v${newVersion}`;
     success(`Created tag: v${newVersion}`);
 
     log("\nPushing to remote...\n", "magenta");
-    await $`git push origin master`;
+    await $`git push origin main`;
     success("Pushed commits");
 
     await $`git push origin v${newVersion}`;

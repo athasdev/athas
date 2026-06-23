@@ -28,10 +28,10 @@
 
 ## Branches And Releases
 
-- Default to working directly on `master`.
-- If a branch is needed, branch from `master`.
+- Default to working directly on `main`.
+- If a branch is needed, branch from `main`.
 - Keep branch names short and descriptive.
-- Keep releases and release tags on `master`.
+- Keep releases and release tags on `main`.
 
 ## Commits
 

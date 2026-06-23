@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: master
+          ref: main
           fetch-depth: 0
 
       - name: Setup Bun
@@ -31,11 +31,11 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Use latest master and tags
+      - name: Use latest main and tags
         run: |
           set -euo pipefail
           git fetch --force --tags origin
-          git checkout -B master origin/master
+          git checkout -B main origin/main
 
       - name: Check for commits since latest preview
         id: changes
@@ -100,5 +100,5 @@ jobs:
           set -euo pipefail
           gh workflow run release.yml \
             --repo "${{ github.repository }}" \
-            --ref master \
+            --ref main \
             --field tag="$TAG_NAME"

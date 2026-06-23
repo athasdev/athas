@@ -179,10 +179,10 @@ async function main() {
     return { passed: true };
   });
 
-  // Check: On master branch
-  await runCheck("On master branch", async () => {
+  // Check: On main branch
+  await runCheck("On main branch", async () => {
     const branch = await $`git branch --show-current`.text();
-    if (branch.trim() !== "master") {
+    if (branch.trim() !== "main") {
       return { passed: false, message: `Currently on '${branch.trim()}'` };
     }
     return { passed: true };
@@ -207,24 +207,24 @@ async function main() {
 
   // Check: Up to date with remote
   await runCheck("Up to date with remote", async () => {
-    const fetchResult = await $`git fetch origin master`.quiet().nothrow();
+    const fetchResult = await $`git fetch origin main`.quiet().nothrow();
     if (fetchResult.exitCode !== 0) {
-      const cachedRemote = await $`git rev-parse --verify origin/master`.quiet().nothrow();
+      const cachedRemote = await $`git rev-parse --verify origin/main`.quiet().nothrow();
       if (cachedRemote.exitCode !== 0) {
         return {
           passed: true,
           warning: true,
-          message: "Could not fetch origin/master in current environment",
+          message: "Could not fetch origin/main in current environment",
         };
       }
     }
 
     const status = await $`git status -uno`.text();
     if (status.includes("Your branch is behind")) {
-      return { passed: false, message: "Branch is behind origin/master" };
+      return { passed: false, message: "Branch is behind origin/main" };
     }
     if (status.includes("have diverged")) {
-      return { passed: false, message: "Branch has diverged from origin/master" };
+      return { passed: false, message: "Branch has diverged from origin/main" };
     }
     return { passed: true };
   });
