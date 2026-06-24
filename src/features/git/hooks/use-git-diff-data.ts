@@ -18,11 +18,12 @@ interface UseDiffDataReturn {
 }
 
 export const useDiffData = (): UseDiffDataReturn => {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const activeBuffer = useBufferStore((state) => {
+    if (!state.activeBufferId) return null;
+    return state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null;
+  });
   const { updateBufferContent, closeBuffer } = useBufferStore.use.actions();
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

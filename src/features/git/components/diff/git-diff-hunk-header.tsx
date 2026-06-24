@@ -24,7 +24,7 @@ const DiffHunkHeader = memo(
     onUnstageHunk,
     isInMultiFileView = false,
   }: DiffHunkHeaderProps) => {
-    const { rootFolderPath } = useFileSystemStore();
+    const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
 
     const handleStageHunk = useCallback(
       async (e: React.MouseEvent) => {
