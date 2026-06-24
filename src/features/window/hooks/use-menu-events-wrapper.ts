@@ -60,12 +60,10 @@ function handleEmbeddedWebviewGlobalShortcut(shortcut: string) {
 }
 
 export function useMenuEventsWrapper() {
-  const uiState = useUIState();
-  const fileSystemStore = useFileSystemStore();
+  const handleCreateNewFile = useFileSystemStore.use.handleCreateNewFile();
+  const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
+  const closeFolder = useFileSystemStore.use.closeFolder();
   const updateSetting = useSettingsStore((state) => state.updateSetting);
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
@@ -95,7 +93,7 @@ export function useMenuEventsWrapper() {
       return false;
     }
 
-    return activeBuffer?.type === "editor";
+    return useBufferStore.getState().actions.getActiveBuffer()?.type === "editor";
   };
 
   useEffect(() => {
@@ -129,12 +127,13 @@ export function useMenuEventsWrapper() {
         window.dispatchEvent(new CustomEvent("terminal-new"));
         return;
       }
-      void fileSystemStore.handleCreateNewFile();
+      void handleCreateNewFile();
     },
-    onOpenFolder: fileSystemStore.handleOpenFolder,
-    onCloseFolder: fileSystemStore.closeFolder,
+    onOpenFolder: handleOpenFolder,
+    onCloseFolder: closeFolder,
     onSave: handleSave,
     onSaveAs: async () => {
+      const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
       if (!activeBuffer) return;
 
       try {
@@ -186,7 +185,8 @@ export function useMenuEventsWrapper() {
       // Use the active pane's active buffer instead of global activeBuffer
       const paneStore = usePaneStore.getState();
       const activePane = paneStore.actions.getActivePane();
-      const bufferIdToClose = activePane?.activeBufferId || activeBuffer?.id;
+      const bufferIdToClose =
+        activePane?.activeBufferId || useBufferStore.getState().actions.getActiveBuffer()?.id;
 
       if (bufferIdToClose) {
         closeBuffer(bufferIdToClose);
@@ -222,7 +222,7 @@ export function useMenuEventsWrapper() {
         return;
       }
 
-      uiState.setIsFindVisible(true);
+      useUIState.getState().setIsFindVisible(true);
     },
     onFindReplace: () => {
       void keymapRegistry.executeCommand("workbench.showFindReplace");
@@ -230,9 +230,13 @@ export function useMenuEventsWrapper() {
     onToggleComment: () => {
       void keymapRegistry.executeCommand("editor.toggleComment");
     },
-    onCommandPalette: () => uiState.setIsCommandPaletteVisible(true),
-    onToggleSidebar: () => uiState.setIsSidebarVisible(!uiState.isSidebarVisible),
+    onCommandPalette: () => useUIState.getState().setIsCommandPaletteVisible(true),
+    onToggleSidebar: () => {
+      const { isSidebarVisible, setIsSidebarVisible } = useUIState.getState();
+      setIsSidebarVisible(!isSidebarVisible);
+    },
     onToggleTerminal: () => {
+      const uiState = useUIState.getState();
       const showingTerminal =
         !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
       uiState.setBottomPaneActiveTab("terminal");
@@ -260,7 +264,7 @@ export function useMenuEventsWrapper() {
       );
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
-    onQuickOpen: () => uiState.setIsQuickOpenVisible(true),
+    onQuickOpen: () => useUIState.getState().setIsQuickOpenVisible(true),
     onGoToLine: () => {
       void keymapRegistry.executeCommand("editor.goToLine");
     },
@@ -327,10 +331,10 @@ export function useMenuEventsWrapper() {
       }
     },
     onOpenSettings: () => {
-      uiState.openSettingsDialog("general");
+      useUIState.getState().openSettingsDialog("general");
     },
     onOpenExtensions: () => {
-      uiState.openSettingsDialog("extensions");
+      useUIState.getState().openSettingsDialog("extensions");
     },
     onToggleMenuBar: async () => {
       try {
