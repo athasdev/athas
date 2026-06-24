@@ -16,6 +16,10 @@ const MULTI_FILE_DIFF_CACHE_TTL = 30_000;
 const commitDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 const stashDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 const refDiffCache = new Map<string, MultiFileDiffCacheEntry>();
+const inFlightFileDiffRequests = new Map<string, Promise<GitDiff | null>>();
+
+const getFileDiffRequestKey = (repoPath: string, filePath: string, staged: boolean): string =>
+  JSON.stringify([repoPath, filePath, staged]);
 
 const getMultiFileDiffCacheEntry = (
   cache: Map<string, MultiFileDiffCacheEntry>,
@@ -83,17 +87,36 @@ export const getFileDiff = async (
       return cached;
     }
 
-    const diff = await tauriInvoke<GitDiff>("git_diff_file", {
+    const requestKey = getFileDiffRequestKey(resolved.repoPath, resolved.filePath, staged);
+    const existingRequest = inFlightFileDiffRequests.get(requestKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    const request = tauriInvoke<GitDiff>("git_diff_file", {
       repoPath: resolved.repoPath,
       filePath: resolved.filePath,
       staged,
-    });
+    })
+      .then((diff) => {
+        if (diff) {
+          gitDiffCache.set(resolved.repoPath, resolved.filePath, staged, diff, content);
+        }
 
-    if (diff) {
-      gitDiffCache.set(resolved.repoPath, resolved.filePath, staged, diff, content);
-    }
+        return diff;
+      })
+      .catch((error) => {
+        if (!isNotGitRepositoryError(error) && !isNoDiffFoundError(error)) {
+          console.error("Failed to get file diff:", error);
+        }
+        return null;
+      })
+      .finally(() => {
+        inFlightFileDiffRequests.delete(requestKey);
+      });
 
-    return diff;
+    inFlightFileDiffRequests.set(requestKey, request);
+    return request;
   } catch (error) {
     if (!isNotGitRepositoryError(error) && !isNoDiffFoundError(error)) {
       console.error("Failed to get file diff:", error);
