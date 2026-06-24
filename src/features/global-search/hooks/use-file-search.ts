@@ -45,25 +45,20 @@ export const useFileSearch = (
     (state) => state.getRecentFilesOrderedByFrecency,
   );
 
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-  const recentFiles = getRecentFilesOrderedByFrecency();
-
   const categorizedFiles = useMemo((): CategorizedFiles => {
-    // Get open buffer paths (excluding active buffer) - Use Set for O(1) lookups
+    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+    const activeBufferPath = activeBuffer?.path;
     const openBufferPaths = new Set(
       buffers
         .filter((buffer) => buffer.id !== activeBufferId && !isVirtualContent(buffer))
         .map((buffer) => buffer.path),
     );
 
-    // Get recent file paths (excluding active buffer) - Use Set for O(1) lookups
+    const recentFiles = getRecentFilesOrderedByFrecency();
     const recentFilePaths = new Set(
-      recentFiles
-        .filter((rf) => !activeBuffer || rf.path !== activeBuffer.path)
-        .map((rf) => rf.path),
+      recentFiles.filter((rf) => rf.path !== activeBufferPath).map((rf) => rf.path),
     );
 
-    // Create a Map for recent file indices for O(1) lookups
     const recentFileIndices = new Map(recentFiles.map((rf, index) => [rf.path, index]));
 
     if (!debouncedQuery.trim()) {
@@ -91,7 +86,7 @@ export const useFileSearch = (
           continue;
         }
 
-        if (!activeBuffer || file.path !== activeBuffer.path) {
+        if (file.path !== activeBufferPath) {
           insertSortedLimited(
             otherCandidates,
             file,
@@ -163,7 +158,7 @@ export const useFileSearch = (
           insertSortedLimited(openCandidates, candidate, compareScoredFiles, MAX_RESULTS);
         } else if (recentFilePaths.has(file.path)) {
           insertSortedLimited(recentCandidates, candidate, compareScoredFiles, MAX_RESULTS);
-        } else if (!activeBuffer || file.path !== activeBuffer.path) {
+        } else if (file.path !== activeBufferPath) {
           insertSortedLimited(
             otherCandidates,
             candidate,
@@ -189,7 +184,7 @@ export const useFileSearch = (
         ({ file }) =>
           !recentFilePaths.has(file.path) &&
           !openBufferPaths.has(file.path) &&
-          (!activeBuffer || file.path !== activeBuffer.path),
+          file.path !== activeBufferPath,
       )
       .map(({ file }) => file);
 
@@ -205,7 +200,7 @@ export const useFileSearch = (
       recentFilesInResults: recentFilesShown,
       otherFiles: otherFilesShown,
     };
-  }, [files, debouncedQuery, buffers, activeBufferId, recentFiles, activeBuffer, fffHits]);
+  }, [files, debouncedQuery, buffers, activeBufferId, getRecentFilesOrderedByFrecency, fffHits]);
 
   return categorizedFiles;
 };
