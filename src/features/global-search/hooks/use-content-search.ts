@@ -32,14 +32,17 @@ const INDEX_STATUS_POLL_DELAY = 250;
 
 function flattenSearchFiles(entries: FileEntry[]): FileEntry[] {
   const files: FileEntry[] = [];
-  const stack = [...entries];
+  const stack = [...entries].reverse();
 
   while (stack.length > 0) {
-    const entry = stack.shift();
+    const entry = stack.pop();
     if (!entry) continue;
     if (shouldIgnoreInCommandPalette(entry.name, entry.isDir)) continue;
     if (entry.isDir) {
-      stack.unshift(...(entry.children ?? []));
+      const children = entry.children ?? [];
+      for (let index = children.length - 1; index >= 0; index--) {
+        stack.push(children[index]);
+      }
       continue;
     }
     files.push(entry);
@@ -48,15 +51,10 @@ function flattenSearchFiles(entries: FileEntry[]): FileEntry[] {
   return files;
 }
 
-function lineMatches(
-  line: string,
-  query: string,
-  options: ContentSearchOptions,
-): SearchMatchRange[] {
-  const regex = buildSearchRegex(query, options);
-  if (!regex) return [];
-
+function lineMatches(line: string, regex: RegExp): SearchMatchRange[] {
   const ranges: SearchMatchRange[] = [];
+  regex.lastIndex = 0;
+
   let match = regex.exec(line);
   while (match) {
     ranges.push({
@@ -72,8 +70,7 @@ function lineMatches(
 function buildFileSearchResult(
   filePath: string,
   content: string,
-  query: string,
-  options: ContentSearchOptions,
+  regex: RegExp,
   contextLines: number,
 ): FileSearchResult | null {
   if (content.includes("\0")) return null;
@@ -83,7 +80,7 @@ function buildFileSearchResult(
   let totalMatches = 0;
 
   lines.forEach((line, index) => {
-    const ranges = lineMatches(line, query, options);
+    const ranges = lineMatches(line, regex);
     if (ranges.length === 0) return;
 
     const lineNumber = index + 1;
@@ -127,7 +124,8 @@ async function searchProviderFilesContent({
   includeQuery: string;
   excludeQuery: string;
 }): Promise<SearchFilesResponse> {
-  if (!buildSearchRegex(query, options)) {
+  const searchRegex = buildSearchRegex(query, options);
+  if (!searchRegex) {
     return {
       results: [],
       total_files: 0,
@@ -157,7 +155,7 @@ async function searchProviderFilesContent({
 
     try {
       const content = await readFileContent(file.path);
-      const result = buildFileSearchResult(file.path, content, query, options, contextLines);
+      const result = buildFileSearchResult(file.path, content, searchRegex, contextLines);
       if (result) {
         results.push(result);
         matchCount += result.total_matches;
