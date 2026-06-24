@@ -61,10 +61,12 @@ export function MainLayout() {
   const setIsDatabaseConnectionVisible = useUIState(
     (state) => state.setIsDatabaseConnectionVisible,
   );
-  const { settings } = useSettingsStore();
+  const showInlineAiChat = useSettingsStore((state) => state.settings.isAIChatVisible);
+  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
+  const sidebarTabsPosition = useSettingsStore((state) => state.settings.sidebarTabsPosition);
+  const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const showInlineAiChat = settings.isAIChatVisible;
   const buffers = useBufferStore((state) => (showInlineAiChat ? state.buffers : EMPTY_BUFFERS));
   const activeBuffer = useBufferStore((state) => {
     if (!showInlineAiChat || !state.activeBufferId) return null;
@@ -120,9 +122,8 @@ export function MainLayout() {
     }
   });
 
-  const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
-  const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+  const showLeftSidebarTabs = sidebarTabsPosition === "left";
 
   useEffect(() => {
     void initializeDebuggerEventBridge();
@@ -136,12 +137,12 @@ export function MainLayout() {
   }, [consumeOnboardingOpenRequest, onboardingContext, onboardingOpen, openOnboardingBuffer]);
 
   useEffect(() => {
-    if (settings.vimRelativeLineNumbers !== relativeLineNumbers) {
-      setRelativeLineNumbers(settings.vimRelativeLineNumbers, {
+    if (vimRelativeLineNumbers !== relativeLineNumbers) {
+      setRelativeLineNumbers(vimRelativeLineNumbers, {
         persist: false,
       });
     }
-  }, [settings.vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
+  }, [vimRelativeLineNumbers, relativeLineNumbers, setRelativeLineNumbers]);
 
   // Initialize event listeners
   useMenuEventsWrapper();
