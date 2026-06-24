@@ -54,13 +54,13 @@ export function MainLayout() {
   usePaneKeyboard();
   useCollaborationPresence();
 
-  const {
-    isSidebarVisible,
-    isRightSidebarVisible,
-    activeRightSidebarView,
-    isDatabaseConnectionVisible,
-    setIsDatabaseConnectionVisible,
-  } = useUIState();
+  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
+  const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
+  const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
+  const setIsDatabaseConnectionVisible = useUIState(
+    (state) => state.setIsDatabaseConnectionVisible,
+  );
   const { settings } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
