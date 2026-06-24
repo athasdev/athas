@@ -192,14 +192,16 @@ const GitStatusPanel = ({
     setOptimisticStageMap({});
   }, [files]);
 
-  const displayFiles = useMemo(
-    () =>
-      files.map((file) => ({
-        ...file,
-        staged: optimisticStageMap[file.path] ?? file.staged,
-      })),
-    [files, optimisticStageMap],
-  );
+  const displayFiles = useMemo(() => {
+    if (Object.keys(optimisticStageMap).length === 0) {
+      return files;
+    }
+
+    return files.map((file) => ({
+      ...file,
+      staged: optimisticStageMap[file.path] ?? file.staged,
+    }));
+  }, [files, optimisticStageMap]);
   const stagedFiles = useMemo(() => displayFiles.filter((f) => f.staged), [displayFiles]);
   const unstagedFiles = useMemo(() => displayFiles.filter((f) => !f.staged), [displayFiles]);
   const hasStagedDiffableFiles = useMemo(
