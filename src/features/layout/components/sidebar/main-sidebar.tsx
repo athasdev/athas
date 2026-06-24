@@ -34,9 +34,11 @@ interface SidebarPaneEntry {
 }
 
 export const SidebarActivityRail = memo(() => {
-  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView } = useUIState();
+  const isGitViewActive = useUIState((state) => state.isGitViewActive);
+  const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
+  const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
-  const { settings } = useSettingsStore();
+  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const { openSidebarView } = useSidebarPaneController();
 
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
@@ -49,7 +51,7 @@ export const SidebarActivityRail = memo(() => {
         activeSidebarView={activeSidebarView}
         isGitViewActive={isGitViewActive}
         isGitHubPRsViewActive={isGitHubPRsViewActive}
-        coreFeatures={settings.coreFeatures}
+        coreFeatures={coreFeatures}
         onViewChange={handleSidebarViewChange}
         onSearchClick={() => openGlobalSearchBuffer()}
         orientation="vertical"
@@ -66,10 +68,12 @@ export const MainSidebar = memo(
     isGitActive,
     isGitHubPRsActive,
   }: MainSidebarProps) => {
-    const uiState = useUIState();
-    const isGitViewActive = isGitActive ?? uiState.isGitViewActive;
-    const isGitHubPRsViewActive = isGitHubPRsActive ?? uiState.isGitHubPRsViewActive;
-    const activeSidebarView = activeView ?? uiState.activeSidebarView;
+    const uiGitViewActive = useUIState((state) => state.isGitViewActive);
+    const uiGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
+    const uiActiveSidebarView = useUIState((state) => state.activeSidebarView);
+    const isGitViewActive = isGitActive ?? uiGitViewActive;
+    const isGitHubPRsViewActive = isGitHubPRsActive ?? uiGitHubPRsViewActive;
+    const activeSidebarView = activeView ?? uiActiveSidebarView;
     const extensionViews = useExtensionViews();
 
     // file system store
@@ -96,14 +100,15 @@ export const MainSidebar = memo(
     const activePath = useSidebarStore.use.activePath?.();
     const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
-    const { settings } = useSettingsStore();
+    const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
+    const sidebarTabsPosition = useSettingsStore((state) => state.settings.sidebarTabsPosition);
     const hasTeamsCollaborationAccess = useAuthStore(
       (state) => state.subscription?.collaboration?.enabled === true,
     );
     const isCollaborationFeatureEnabled =
-      hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
-    const isOutlineFeatureEnabled = settings.coreFeatures.outline;
-    const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
+      hasTeamsCollaborationAccess && coreFeatures.teamCollaboration;
+    const isOutlineFeatureEnabled = coreFeatures.outline;
+    const showLeftSidebarTabs = sidebarTabsPosition === "left";
     const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
     const activePaneId: SidebarView = isGitViewActive
       ? "git"
@@ -111,7 +116,7 @@ export const MainSidebar = memo(
         ? "github-prs"
         : activeSidebarView;
     const allPaneEntries: SidebarPaneEntry[] = [
-      ...(settings.coreFeatures.git
+      ...(coreFeatures.git
         ? [
             {
               id: "git" as const,
@@ -125,7 +130,7 @@ export const MainSidebar = memo(
             },
           ]
         : []),
-      ...(settings.coreFeatures.github
+      ...(coreFeatures.github
         ? [
             {
               id: "github-prs" as const,

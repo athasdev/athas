@@ -34,9 +34,10 @@ interface ProjectTabsProps {
 const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
-  const { switchToProject, closeProject } = useFileSystemStore();
+  const switchToProject = useFileSystemStore((state) => state.switchToProject);
+  const closeProject = useFileSystemStore((state) => state.closeProject);
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
-  const { setIsProjectPickerVisible } = useUIState();
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
   const contextMenu = useContextMenu<ProjectTab>();
 
