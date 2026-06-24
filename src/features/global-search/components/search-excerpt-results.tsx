@@ -254,18 +254,20 @@ function SearchExcerptItemComponent({
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncedContentRef = useRef(excerpt.content);
   const latestContentRef = useRef(excerpt.content);
+  const contentMatchesExcerpt = currentContent === excerpt.content;
   const selectedMatch =
     excerpt.matches.find((match) => match.itemKey === selectedItemKey) ?? excerpt.matches[0];
   const selected = selectedMatch?.itemKey === selectedItemKey;
   const currentHighlightIndex = selectedMatch?.highlightIndexes[0] ?? -1;
-  const lineNumberMap = useMemo(
-    () => buildLineNumberMapFromContent(currentContent, excerpt.segments),
-    [currentContent, excerpt.segments],
-  );
+  const lineNumberMap = useMemo(() => {
+    if (contentMatchesExcerpt) return excerpt.lineNumberMap;
+    return buildLineNumberMapFromContent(currentContent, excerpt.segments);
+  }, [contentMatchesExcerpt, currentContent, excerpt.lineNumberMap, excerpt.segments]);
   const isExpanded = isContextExpanded?.(excerpt.filePath) ?? false;
   const height = useMemo(() => {
     const lineHeight = calculateLineHeight(fontSize * zoomLevel);
-    const currentLineCount = splitLines(currentContent).length;
+    const currentLineCount =
+      lineNumberMap.length > 0 ? lineNumberMap.length : splitLines(currentContent).length;
 
     return Math.max(
       currentLineCount * lineHeight +

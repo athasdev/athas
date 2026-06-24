@@ -114,6 +114,17 @@ const GlobalSearchBuffer = () => {
       }),
     [excerpts],
   );
+  const fileNavigatorKeySet = useMemo(
+    () => new Set(fileNavigatorItems.map((item) => item.key)),
+    [fileNavigatorItems],
+  );
+  const excerptIndexByFilePath = useMemo(() => {
+    const index = new Map<string, number>();
+    excerpts.forEach((excerpt, excerptIndex) => {
+      index.set(excerpt.filePath, excerptIndex);
+    });
+    return index;
+  }, [excerpts]);
 
   const navigationItems = useMemo(
     () =>
@@ -185,14 +196,14 @@ const GlobalSearchBuffer = () => {
   const selectedMatch =
     selectedItemKey && matchIndex.has(selectedItemKey) ? matchIndex.get(selectedItemKey) : null;
   const selectedFileNavigatorKey =
-    selectedFilePath && fileNavigatorItems.some((item) => item.key === selectedFilePath)
+    selectedFilePath && fileNavigatorKeySet.has(selectedFilePath)
       ? selectedFilePath
       : (selectedMatch?.filePath ?? fileNavigatorItems[0]?.key ?? null);
 
   const handleFileNavigatorSelect = useCallback(
     (filePath: string) => {
       setSelectedFilePath(filePath);
-      const excerptIndex = excerpts.findIndex((excerpt) => excerpt.filePath === filePath);
+      const excerptIndex = excerptIndexByFilePath.get(filePath) ?? -1;
       if (excerptIndex < 0) return;
 
       const selectedElement = scrollContainerRef.current?.querySelector(
@@ -203,7 +214,7 @@ const GlobalSearchBuffer = () => {
         block: "start",
       });
     },
-    [excerpts, scrollContainerRef],
+    [excerptIndexByFilePath, scrollContainerRef],
   );
 
   const filePathsWithResults = useMemo(
@@ -303,11 +314,9 @@ const GlobalSearchBuffer = () => {
     }
 
     setSelectedFilePath((current) =>
-      current && fileNavigatorItems.some((item) => item.key === current)
-        ? current
-        : (fileNavigatorItems[0]?.key ?? null),
+      current && fileNavigatorKeySet.has(current) ? current : (fileNavigatorItems[0]?.key ?? null),
     );
-  }, [fileNavigatorItems]);
+  }, [fileNavigatorItems, fileNavigatorKeySet]);
 
   const trimmedQuery = query.trim();
   const trimmedDebouncedQuery = debouncedQuery.trim();
@@ -315,7 +324,10 @@ const GlobalSearchBuffer = () => {
   const showBusy =
     trimmedQuery.length > 0 && (isSearching || isSearchPending || isIndexing || isLoadingMore);
   const hasResults = results.length > 0;
-  const totalMatches = results.reduce((sum, r) => sum + r.total_matches, 0);
+  const totalMatches = useMemo(
+    () => results.reduce((sum, result) => sum + result.total_matches, 0),
+    [results],
+  );
   const displayedCount = navigationItems.length;
   const hasMoreRenderedMatches = totalMatches > displayedCount;
   const hasMore = hasMoreRenderedMatches || hasMoreResults;
