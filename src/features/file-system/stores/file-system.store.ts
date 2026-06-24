@@ -1116,13 +1116,13 @@ export const useFileSystemStore = createSelectors(
         const fileName = getFilenameFromPath(path);
         const existingBuffer = buffers.find((buffer) => buffer.path === path);
         if (existingBuffer) {
-          fileOpenBenchmark.finish(path, "existing-buffer");
           setActiveBuffer(existingBuffer.id);
           recordLocalFileAccess(path, fileName, workspaceRootPath, getWorkspaceFolderPaths(get));
 
           if (existingBuffer.isPreview && !isPreview) {
             convertPreviewToDefinite(existingBuffer.id);
           }
+          fileOpenBenchmark.finish(path, "existing-buffer");
 
           if (line) {
             setTimeout(() => {
@@ -1148,7 +1148,9 @@ export const useFileSystemStore = createSelectors(
 
         let resolvedPath = path;
 
-        const shouldResolveSymlink = !path.startsWith("diff://") && !path.startsWith("remote://");
+        const isKnownTextPath = isKnownTextFile(path);
+        const shouldResolveSymlink =
+          !isKnownTextPath && !path.startsWith("diff://") && !path.startsWith("remote://");
         if (shouldResolveSymlink) {
           try {
             const workspaceRoot = get().rootFolderPath;
@@ -1180,7 +1182,7 @@ export const useFileSystemStore = createSelectors(
             console.error("Failed to resolve symlink:", error);
           }
         }
-        fileOpenBenchmark.mark(path, "symlink-resolved");
+        fileOpenBenchmark.mark(path, shouldResolveSymlink ? "symlink-resolved" : "symlink-skipped");
 
         if (isStaleRequest()) return;
         const { openBuffer } = useBufferStore.getState().actions;
@@ -1269,7 +1271,10 @@ export const useFileSystemStore = createSelectors(
 
           const wslInfo = parseWslPath(path);
 
-          if (!path.startsWith("remote://") && !wslInfo && !isKnownTextFile(resolvedPath)) {
+          const resolvedKnownTextPath =
+            resolvedPath === path ? isKnownTextPath : isKnownTextFile(resolvedPath);
+
+          if (!path.startsWith("remote://") && !wslInfo && !resolvedKnownTextPath) {
             try {
               const fileData = await readFileOnce(`local-bytes:${resolvedPath}`, () =>
                 readFile(resolvedPath),
@@ -1309,7 +1314,7 @@ export const useFileSystemStore = createSelectors(
             } catch (error) {
               console.error("Failed to inspect file bytes before opening:", error);
             }
-          } else if (wslInfo && !isKnownTextFile(resolvedPath)) {
+          } else if (wslInfo && !resolvedKnownTextPath) {
             try {
               const fileData = await readFileOnce(
                 `wsl-bytes:${wslInfo.distro}:${wslInfo.linuxPath}`,

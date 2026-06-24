@@ -135,7 +135,7 @@ export const fileOpenBenchmark = {
     const fileType = meta.fileType ?? getFileType(path);
     logger.info("FileOpenBenchmark", summary.text);
     console.info(
-      `[athas:file-open] file=${shortPath(path)} type=${fileType} lines=${meta.lineCount ?? "unknown"} seconds=${seconds.toFixed(3)} chars=${meta.contentLength ?? "unknown"} large=${meta.largeContentMode ?? "unknown"}`,
+      `[athas:file-open] file=${shortPath(path)} type=${fileType} lines=${meta.lineCount ?? "unknown"} totalMs=${summary.total.toFixed(1)} seconds=${seconds.toFixed(3)} chars=${meta.contentLength ?? "unknown"} large=${meta.largeContentMode ?? "unknown"}`,
     );
     frontendTrace(level, "bench:file-open", shortPath(path), {
       totalMs: Math.round(summary.total * 100) / 100,
