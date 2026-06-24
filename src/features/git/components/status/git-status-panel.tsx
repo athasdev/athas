@@ -107,6 +107,7 @@ interface GitFolderNode {
   fullPath: string;
   folders: Map<string, GitFolderNode>;
   files: GitFile[];
+  descendantFiles: GitFile[];
 }
 
 const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
@@ -114,6 +115,7 @@ const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
   fullPath,
   folders: new Map<string, GitFolderNode>(),
   files: [],
+  descendantFiles: [],
 });
 
 const normalizePathSegments = (path: string): string[] =>
@@ -131,6 +133,7 @@ const buildGitFolderTree = (fileList: GitFile[]): GitFolderNode => {
     if (segments.length === 0) continue;
 
     let currentNode = root;
+    currentNode.descendantFiles.push(file);
     let currentPath = "";
     const directorySegments = segments.slice(0, -1);
     for (const segment of directorySegments) {
@@ -139,6 +142,7 @@ const buildGitFolderTree = (fileList: GitFile[]): GitFolderNode => {
         currentNode.folders.set(segment, createFolderNode(segment, currentPath));
       }
       currentNode = currentNode.folders.get(segment)!;
+      currentNode.descendantFiles.push(file);
     }
 
     currentNode.files.push(file);
@@ -152,11 +156,6 @@ const sortFoldersByName = (folders: Iterable<GitFolderNode>) =>
 
 const sortFilesByPath = (fileList: GitFile[]) =>
   [...fileList].sort((a, b) => a.path.localeCompare(b.path));
-
-const collectNodeFiles = (node: GitFolderNode): GitFile[] => [
-  ...node.files,
-  ...Array.from(node.folders.values()).flatMap((child) => collectNodeFiles(child)),
-];
 
 const GitStatusPanel = ({
   files,
@@ -466,7 +465,7 @@ const GitStatusPanel = ({
       const folderRows = sortFoldersByName(node.folders.values()).map((folderNode) => {
         const collapseKey = `${section}:${folderNode.fullPath}`;
         const isCollapsed = collapsedFolders.has(collapseKey);
-        const folderFiles = collectNodeFiles(folderNode);
+        const folderFiles = folderNode.descendantFiles;
         const areAllFolderFilesStaged =
           folderFiles.length > 0 && folderFiles.every((file) => file.staged);
 
