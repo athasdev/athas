@@ -6,20 +6,42 @@ import {
   resolveRepositoryPathOrThrow,
 } from "./git-repo-api";
 
+const inFlightGitStatusRequests = new Map<string, Promise<GitStatus | null>>();
+
 export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> => {
+  let resolvedRepoPath: string | null;
+
   try {
-    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
-    if (!resolvedRepoPath) {
-      return null;
-    }
-    const status = await tauriInvoke<GitStatus>("git_status", { repoPath: resolvedRepoPath });
-    return status;
+    resolvedRepoPath = await resolveRepositoryPath(repoPath);
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get git status:", error);
     }
     return null;
   }
+
+  if (!resolvedRepoPath) {
+    return null;
+  }
+
+  const existingRequest = inFlightGitStatusRequests.get(resolvedRepoPath);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = tauriInvoke<GitStatus>("git_status", { repoPath: resolvedRepoPath })
+    .catch((error) => {
+      if (!isNotGitRepositoryError(error)) {
+        console.error("Failed to get git status:", error);
+      }
+      return null;
+    })
+    .finally(() => {
+      inFlightGitStatusRequests.delete(resolvedRepoPath);
+    });
+
+  inFlightGitStatusRequests.set(resolvedRepoPath, request);
+  return request;
 };
 
 export const stageFile = async (repoPath: string, filePath: string): Promise<boolean> => {
