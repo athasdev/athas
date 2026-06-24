@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
@@ -11,6 +12,8 @@ import {
 import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
 import type { CategorizedFiles, FileItem, SearchResult } from "../types/quick-open.types";
 import { fuzzyScore } from "../utils/fuzzy-search";
+
+const BUFFER_SEARCH_KEY_SEPARATOR = "\u0000";
 
 function insertSortedLimited<T>(
   items: T[],
@@ -39,20 +42,31 @@ export const useFileSearch = (
   debouncedQuery: string,
   fffHits: FffSearchHit[] | null = null,
 ) => {
-  const buffers = useBufferStore.use.buffers();
+  const bufferSearchKeys = useBufferStore(
+    useShallow((state) =>
+      state.buffers.map((buffer) =>
+        [buffer.id, buffer.path, isVirtualContent(buffer) ? "1" : "0"].join(
+          BUFFER_SEARCH_KEY_SEPARATOR,
+        ),
+      ),
+    ),
+  );
   const activeBufferId = useBufferStore.use.activeBufferId();
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
     (state) => state.getRecentFilesOrderedByFrecency,
   );
 
   const categorizedFiles = useMemo((): CategorizedFiles => {
-    const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-    const activeBufferPath = activeBuffer?.path;
-
+    let activeBufferPath: string | undefined;
     const openBufferPaths = new Set(
-      buffers
-        .filter((buffer) => buffer.id !== activeBufferId && !isVirtualContent(buffer))
-        .map((buffer) => buffer.path),
+      bufferSearchKeys.flatMap((key) => {
+        const [id, path, virtualFlag] = key.split(BUFFER_SEARCH_KEY_SEPARATOR);
+        if (id === activeBufferId) {
+          activeBufferPath = path;
+          return [];
+        }
+        return virtualFlag === "1" ? [] : [path];
+      }),
     );
 
     const recentFiles = getRecentFilesOrderedByFrecency();
@@ -198,7 +212,14 @@ export const useFileSearch = (
       recentFilesInResults: recentFilesShown,
       otherFiles: otherFilesShown,
     };
-  }, [files, debouncedQuery, buffers, activeBufferId, getRecentFilesOrderedByFrecency, fffHits]);
+  }, [
+    files,
+    debouncedQuery,
+    bufferSearchKeys,
+    activeBufferId,
+    getRecentFilesOrderedByFrecency,
+    fffHits,
+  ]);
 
   return categorizedFiles;
 };
