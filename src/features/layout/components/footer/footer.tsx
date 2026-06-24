@@ -115,7 +115,14 @@ function FooterTabControl({
 
 const Footer = () => {
   const settings = useSettingsStore((state) => state.settings);
-  const uiState = useUIState();
+  const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
+  const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
+  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
+  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
+  const requestTerminalFocus = useUIState((state) => state.requestTerminalFocus);
+  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const hasTeamsCollaborationAccess = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
   );
@@ -253,18 +260,17 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip="Toggle Terminal"
-              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "terminal"}
+              active={isBottomPaneVisible && bottomPaneActiveTab === "terminal"}
               className={chromeControl()}
               commandId="workbench.toggleTerminal"
               onClick={() => {
-                uiState.setBottomPaneActiveTab("terminal");
-                const showingTerminal =
-                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
-                uiState.setIsBottomPaneVisible(showingTerminal);
+                setBottomPaneActiveTab("terminal");
+                const showingTerminal = !isBottomPaneVisible || bottomPaneActiveTab !== "terminal";
+                setIsBottomPaneVisible(showingTerminal);
 
                 if (showingTerminal) {
                   setTimeout(() => {
-                    uiState.requestTerminalFocus();
+                    requestTerminalFocus();
                   }, 100);
                 }
               }}
@@ -281,14 +287,13 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip="Toggle Run and Debug"
-              active={uiState.isBottomPaneVisible && uiState.bottomPaneActiveTab === "debugger"}
+              active={isBottomPaneVisible && bottomPaneActiveTab === "debugger"}
               className={chromeControl()}
               commandId="workbench.showDebugger"
               onClick={() => {
-                uiState.setBottomPaneActiveTab("debugger");
-                const showingDebugger =
-                  !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "debugger";
-                uiState.setIsBottomPaneVisible(showingDebugger);
+                setBottomPaneActiveTab("debugger");
+                const showingDebugger = !isBottomPaneVisible || bottomPaneActiveTab !== "debugger";
+                setIsBottomPaneVisible(showingDebugger);
               }}
             >
               <BugBeetle weight="duotone" />
@@ -333,7 +338,7 @@ const Footer = () => {
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
               className={cn(chromeControl({ shape: "pill" }), "text-accent hover:text-accent")}
-              onClick={() => uiState.openSettingsDialog("extensions")}
+              onClick={() => openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
               <span className={cn(footerCountPill(), "bg-accent text-primary-bg")}>
@@ -420,12 +425,9 @@ const Footer = () => {
     (item): item is FooterItem<FooterLeadingItemId> => item !== null,
   );
   const shouldShowOutline = settings.coreFeatures.outline;
-  const isOutlineActive =
-    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "outline";
-  const isDatabasesActive =
-    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "databases";
-  const isCollaborationActive =
-    uiState.isRightSidebarVisible && uiState.activeRightSidebarView === "collaboration";
+  const isOutlineActive = isRightSidebarVisible && activeRightSidebarView === "outline";
+  const isDatabasesActive = isRightSidebarVisible && activeRightSidebarView === "databases";
+  const isCollaborationActive = isRightSidebarVisible && activeRightSidebarView === "collaboration";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
     return normalizeItemOrder(
       settings.footerTrailingItemsOrder,
