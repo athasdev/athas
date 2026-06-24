@@ -17,6 +17,7 @@ const commitDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 const stashDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 const refDiffCache = new Map<string, MultiFileDiffCacheEntry>();
 const inFlightFileDiffRequests = new Map<string, Promise<GitDiff | null>>();
+const inFlightStatusDiffStatsRequests = new Map<string, Promise<GitDiffStat[]>>();
 
 const getFileDiffRequestKey = (repoPath: string, filePath: string, staged: boolean): string =>
   JSON.stringify([repoPath, filePath, staged]);
@@ -174,9 +175,26 @@ export const getStatusDiffStats = async (repoPath: string): Promise<GitDiffStat[
       return [];
     }
 
-    return await tauriInvoke<GitDiffStat[]>("git_status_diff_stats", {
+    const existingRequest = inFlightStatusDiffStatsRequests.get(resolvedRepoPath);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    const request = tauriInvoke<GitDiffStat[]>("git_status_diff_stats", {
       repoPath: resolvedRepoPath,
-    });
+    })
+      .catch((error) => {
+        if (!isNotGitRepositoryError(error)) {
+          console.error("Failed to get status diff stats:", error);
+        }
+        return [];
+      })
+      .finally(() => {
+        inFlightStatusDiffStatsRequests.delete(resolvedRepoPath);
+      });
+
+    inFlightStatusDiffStatsRequests.set(resolvedRepoPath, request);
+    return request;
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get status diff stats:", error);

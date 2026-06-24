@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { getFileDiff } from "../api/git-diff-api";
+import { getFileDiff, getStatusDiffStats } from "../api/git-diff-api";
 import { clearRepositoryDiscoveryCache } from "../api/git-repo-api";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -57,5 +57,45 @@ describe("git diff api", () => {
     resolveDiff?.(diff);
 
     await expect(Promise.all([first, second])).resolves.toEqual([diff, diff]);
+  });
+
+  it("reuses in-flight status diff stat requests for the same resolved repository", async () => {
+    let resolveStats: ((stats: unknown) => void) | undefined;
+    const statsPromise = new Promise((resolve) => {
+      resolveStats = resolve;
+    });
+
+    mockInvoke.mockImplementation((command) => {
+      if (command === "git_discover_repo") {
+        return Promise.resolve("/repo");
+      }
+      if (command === "git_status_diff_stats") {
+        return statsPromise;
+      }
+      return Promise.resolve(null);
+    });
+
+    const first = getStatusDiffStats("/repo/project");
+    const second = getStatusDiffStats("/repo/project");
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockInvoke).toHaveBeenCalledTimes(3);
+    expect(mockInvoke).toHaveBeenCalledWith("git_status_diff_stats", {
+      repoPath: "/repo",
+    });
+
+    const stats = [
+      {
+        file_path: "src/app.ts",
+        staged: false,
+        additions: 12,
+        deletions: 3,
+      },
+    ];
+    resolveStats?.(stats);
+
+    await expect(Promise.all([first, second])).resolves.toEqual([stats, stats]);
   });
 });
