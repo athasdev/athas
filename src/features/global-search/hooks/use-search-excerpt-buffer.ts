@@ -16,7 +16,8 @@ export function useSearchExcerptBuffer({
   content,
 }: UseSearchExcerptBufferOptions): string {
   const bufferId = useMemo(() => `search_excerpt_${id.replace(/[^a-zA-Z0-9_]/g, "_")}`, [id]);
-  const name = getBaseName(filePath, filePath);
+  const name = useMemo(() => getBaseName(filePath, filePath), [filePath]);
+  const language = useMemo(() => detectLanguageFromPath(filePath), [filePath]);
 
   useEffect(() => {
     const nextBuffer: EditorContent = {
@@ -31,7 +32,7 @@ export function useSearchExcerptBuffer({
       isPreview: false,
       isPinned: false,
       isActive: false,
-      language: detectLanguageFromPath(filePath),
+      language,
       tokens: [],
     };
 
@@ -65,14 +66,16 @@ export function useSearchExcerptBuffer({
         buffers: nextBuffers,
       };
     });
+  }, [bufferId, content, filePath, language, name]);
 
+  useEffect(() => {
     return () => {
       useBufferStore.setState((state) => ({
         ...state,
         buffers: state.buffers.filter((buffer) => buffer.id !== bufferId),
       }));
     };
-  }, [bufferId, content, filePath, name]);
+  }, [bufferId]);
 
   return bufferId;
 }
