@@ -110,7 +110,7 @@ const TabBar = ({
   const { handleSave } = useEditorAppStore.use.actions();
   const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
   const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
-  const { updateActivePath } = useSidebarStore();
+  const updateActivePath = useSidebarStore.use.updateActivePath();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
   const jumpListActions = useJumpListStore.use.actions();
   const activeBuffer = useMemo(
