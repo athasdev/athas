@@ -61,11 +61,13 @@ import type { CommandPaletteViewId } from "../types/view.types";
 import { useActionsStore } from "../stores/action-history.store";
 import { useCommandPaletteViews } from "../services/command-palette-view-registry";
 
-const CommandPalette = () => {
+interface CommandPaletteContentProps {
+  commandPaletteInitialView: CommandPaletteViewId;
+}
+
+const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteContentProps) => {
   // Get data from stores
   const {
-    isCommandPaletteVisible,
-    commandPaletteInitialView,
     setIsCommandPaletteVisible,
     setIsSettingsDialogVisible,
     isSidebarVisible,
@@ -85,7 +87,6 @@ const CommandPalette = () => {
   } = useUIState();
   const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
-  const isVisible = isCommandPaletteVisible;
   const onClose = () => {
     setIsCommandPaletteVisible(false);
     setViewStack(["root"]);
@@ -101,7 +102,7 @@ const CommandPalette = () => {
     [commandPaletteInitialView],
   );
   const renderedViewStack =
-    isVisible && activeInitialView !== commandPaletteInitialView ? initialViewStack : viewStack;
+    activeInitialView !== commandPaletteInitialView ? initialViewStack : viewStack;
   const currentView = renderedViewStack[renderedViewStack.length - 1] || "root";
   const isRootView = currentView === "root";
 
@@ -338,7 +339,7 @@ const CommandPalette = () => {
 
   // Handle keyboard navigation
   useEffect(() => {
-    if (!isVisible || !isRootView) return;
+    if (!isRootView) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
@@ -363,17 +364,15 @@ const CommandPalette = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, isRootView, selectedIndex, prioritizedActions, pushAction]);
+  }, [isRootView, selectedIndex, prioritizedActions, pushAction]);
 
   // Reset state when visibility changes
   useEffect(() => {
-    if (isVisible) {
-      setQuery("");
-      setSelectedIndex(0);
-      setActiveInitialView(commandPaletteInitialView);
-      setViewStack(initialViewStack);
-    }
-  }, [isVisible, commandPaletteInitialView, initialViewStack]);
+    setQuery("");
+    setSelectedIndex(0);
+    setActiveInitialView(commandPaletteInitialView);
+    setViewStack(initialViewStack);
+  }, [commandPaletteInitialView, initialViewStack]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -393,12 +392,10 @@ const CommandPalette = () => {
     }
   }, [selectedIndex, filteredActions.length]);
 
-  if (!isVisible) return null;
-
   const extensionView = extensionViews.get(currentView);
 
   return (
-    <Command isVisible={isVisible} onClose={onClose}>
+    <Command isVisible onClose={onClose}>
       {currentView === "quick-question" ? (
         <QuickQuestionCommandContent
           onBack={popView}
@@ -494,6 +491,16 @@ const CommandPalette = () => {
   );
 };
 
+const CommandPalette = () => {
+  const isVisible = useUIState((state) => state.isCommandPaletteVisible);
+  const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
+
+  if (!isVisible) return null;
+
+  return <CommandPaletteContent commandPaletteInitialView={commandPaletteInitialView} />;
+};
+
+CommandPaletteContent.displayName = "CommandPaletteContent";
 CommandPalette.displayName = "CommandPalette";
 
 export default CommandPalette;
