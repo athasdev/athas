@@ -74,15 +74,21 @@ const TabBar = ({
   const { closePane, setActivePane, togglePaneFullscreen, setPaneLocked } =
     usePaneStore.use.actions();
 
-  // Filter buffers by paneId if provided
-  const pane = paneId
-    ? paneId === BOTTOM_PANE_ID
+  const pane = useMemo(() => {
+    if (!paneId) return null;
+    return paneId === BOTTOM_PANE_ID
       ? findPaneGroup(bottomRoot, BOTTOM_PANE_ID)
-      : findPaneGroup(paneRoot, paneId)
-    : null;
-  const buffers = (
-    pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers
-  ).filter((buffer) => buffer.type !== "newTab");
+      : findPaneGroup(paneRoot, paneId);
+  }, [bottomRoot, paneId, paneRoot]);
+  const paneBufferIdSet = useMemo(() => {
+    return pane ? new Set(pane.bufferIds) : null;
+  }, [pane?.bufferIds]);
+  const buffers = useMemo(() => {
+    const visibleBuffers = paneBufferIdSet
+      ? allBuffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
+      : allBuffers;
+    return visibleBuffers.filter((buffer) => buffer.type !== "newTab");
+  }, [allBuffers, paneBufferIdSet]);
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
   const activeBufferId =
     activeBufferCandidate && buffers.some((buffer) => buffer.id === activeBufferCandidate)
@@ -102,7 +108,8 @@ const TabBar = ({
     showNewTabView,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
-  const { settings } = useSettingsStore();
+  const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
+  const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
   const { updateActivePath } = useSidebarStore();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
   const jumpListActions = useJumpListStore.use.actions();
@@ -250,7 +257,7 @@ const TabBar = ({
     (e: React.WheelEvent<HTMLDivElement>) => {
       const container = tabBarRef.current;
       if (!container) return;
-      if (!settings.horizontalTabScroll) return;
+      if (!horizontalTabScroll) return;
       if (draggedBufferId) return;
       if (e.ctrlKey || e.metaKey) return;
       if (!canScrollTabsHorizontally()) return;
@@ -275,7 +282,7 @@ const TabBar = ({
       e.preventDefault();
       container.scrollLeft = nextScrollLeft;
     },
-    [canScrollTabsHorizontally, draggedBufferId, settings.horizontalTabScroll],
+    [canScrollTabsHorizontally, draggedBufferId, horizontalTabScroll],
   );
 
   const sortedBuffers = useMemo(() => {
@@ -324,16 +331,16 @@ const TabBar = ({
   );
 
   useEffect(() => {
-    if (settings.maxOpenTabs > 0 && buffers.length > settings.maxOpenTabs && handleTabClose) {
+    if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
       const closableBuffers = buffers.filter((b) => !b.isPinned && b.id !== activeBufferId);
 
-      let tabsToClose = buffers.length - settings.maxOpenTabs;
+      let tabsToClose = buffers.length - maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
         handleTabClose(closableBuffers[i].id);
         tabsToClose--;
       }
     }
-  }, [buffers, settings.maxOpenTabs, activeBufferId, handleTabClose]);
+  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
 
   // Auto-scroll active tab into view
   useEffect(() => {
