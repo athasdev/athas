@@ -122,16 +122,20 @@ const Footer = () => {
   const isCollaborationFeatureEnabled =
     hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
   const { openSidebarView } = useSidebarPaneController();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const buffers = useBufferStore.use.buffers();
+  const isDiagnosticsBufferActive = useBufferStore((state) => {
+    if (!state.activeBufferId) return false;
+    return state.buffers.some(
+      (buffer) => buffer.id === state.activeBufferId && buffer.type === "diagnostics",
+    );
+  });
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const gitStatus = useGitStore((state) => state.gitStatus);
   const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
   const currentRepoPath = useGitStore((state) => state.currentRepoPath);
   const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
-  const { actions } = useGitStore();
+  const actions = useGitStore((state) => state.actions);
   const {
     showUpdateIndicator,
     downloading,
@@ -153,9 +157,6 @@ const Footer = () => {
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
     0,
-  );
-  const isDiagnosticsBufferActive = buffers.some(
-    (buffer) => buffer.id === activeBufferId && buffer.type === "diagnostics",
   );
   const footerRepoPath = activeRepoPath ?? currentWorkspaceRepoPath ?? rootFolderPath;
   const footerGitStatus =

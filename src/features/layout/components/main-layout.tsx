@@ -23,6 +23,7 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import QuickOpen from "@/features/quick-open/components/quick-open";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import VimCommandBar from "@/features/vim/components/vim-command-bar";
@@ -46,6 +47,7 @@ import { ResizablePane } from "./resizable-pane";
 import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
+const EMPTY_BUFFERS: PaneContent[] = [];
 
 export function MainLayout() {
   useChatInitialization();
@@ -62,8 +64,12 @@ export function MainLayout() {
   const { settings } = useSettingsStore();
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const showInlineAiChat = settings.isAIChatVisible;
+  const buffers = useBufferStore((state) => (showInlineAiChat ? state.buffers : EMPTY_BUFFERS));
+  const activeBuffer = useBufferStore((state) => {
+    if (!showInlineAiChat || !state.activeBufferId) return null;
+    return state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null;
+  });
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
@@ -116,9 +122,7 @@ export function MainLayout() {
 
   const sidebarPosition = settings.sidebarPosition;
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
-  const showInlineAiChat = settings.isAIChatVisible;
   const showLeftSidebarTabs = settings.sidebarTabsPosition === "left";
-  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) ?? null;
 
   useEffect(() => {
     void initializeDebuggerEventBridge();
