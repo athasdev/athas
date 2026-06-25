@@ -72,17 +72,15 @@ export const XtermTerminal = ({
   const connectionId = session?.connectionId;
   const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
 
-  const {
-    theme: terminalThemeId,
-    terminalFontFamily,
-    terminalFontSize,
-    terminalLineHeight,
-    terminalLetterSpacing,
-    terminalScrollback,
-    terminalCursorStyle,
-    terminalCursorBlink,
-    terminalCursorWidth,
-  } = useSettingsStore((state) => state.settings);
+  const terminalThemeId = useSettingsStore((state) => state.settings.theme);
+  const terminalFontFamily = useSettingsStore((state) => state.settings.terminalFontFamily);
+  const terminalFontSize = useSettingsStore((state) => state.settings.terminalFontSize);
+  const terminalLineHeight = useSettingsStore((state) => state.settings.terminalLineHeight);
+  const terminalLetterSpacing = useSettingsStore((state) => state.settings.terminalLetterSpacing);
+  const terminalScrollback = useSettingsStore((state) => state.settings.terminalScrollback);
+  const terminalCursorStyle = useSettingsStore((state) => state.settings.terminalCursorStyle);
+  const terminalCursorBlink = useSettingsStore((state) => state.settings.terminalCursorBlink);
+  const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const { rootFolderPath } = useProjectStore();
   const { getTerminalTheme } = useTerminalTheme();
