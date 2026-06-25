@@ -15,6 +15,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import type { Position, Range } from "../types/editor.types";
+import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 
@@ -249,7 +250,7 @@ export const useEditorAppStore = createSelectors(
           const { markPendingSave } = useFileWatcherStore.getState();
           const contentAlreadyApplied = options?.contentAlreadyApplied === true;
 
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+          const activeBuffer = getBufferById(buffers, activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
           const { parseCollaborationNoteBufferPath } =
             await import("@/features/collaboration/lib/collaboration-sidebar-model");
@@ -322,7 +323,7 @@ export const useEditorAppStore = createSelectors(
 
         handleSave: async () => {
           const { activeBufferId, buffers } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+          const activeBuffer = getBufferById(buffers, activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
 
           await saveEditorBufferById(activeBuffer.id);

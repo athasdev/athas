@@ -38,6 +38,7 @@ import {
 } from "../utils/line-operations";
 import { resolveCursorPositionsAtLineEndsForSelection } from "../utils/multi-cursor";
 import { getLineSlice } from "../utils/large-file";
+import { getBufferById } from "../utils/buffer-index";
 import type {
   EditorAPI,
   EditorEvent,
@@ -549,7 +550,7 @@ class EditorAPIImpl implements EditorAPI {
       return;
     }
 
-    const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
     const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
@@ -604,7 +605,7 @@ class EditorAPIImpl implements EditorAPI {
       return;
     }
 
-    const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
     const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
@@ -776,7 +777,7 @@ class EditorAPIImpl implements EditorAPI {
 
   private getActiveLineCommentToken(): string {
     const { activeBufferId, buffers } = useBufferStore.getState();
-    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeBuffer = getBufferById(buffers, activeBufferId);
     const languageId =
       activeBuffer && "language" in activeBuffer && typeof activeBuffer.language === "string"
         ? activeBuffer.language

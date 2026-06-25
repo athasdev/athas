@@ -4,6 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
@@ -89,9 +90,7 @@ const FindBar = () => {
       }
 
       const { activeBufferId, buffers } = useBufferStore.getState();
-      const activeBuffer = activeBufferId
-        ? buffers.find((candidate) => candidate.id === activeBufferId)
-        : null;
+      const activeBuffer = getBufferById(buffers, activeBufferId);
 
       return activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
     })();

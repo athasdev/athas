@@ -12,6 +12,7 @@ import type { SnippetSession } from "@/features/editor/types/snippet.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import type { Position } from "@/features/editor/types/editor.types";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import { logger } from "@/features/editor/utils/logger";
@@ -70,7 +71,7 @@ export function useSnippetCompletion(filePath: string | undefined) {
     if (!activeBufferId || !completion.data?.isSnippet) return false;
 
     const cursorPosition = useEditorStateStore.getState().cursorPosition;
-    const buffer = useBufferStore.getState().buffers.find((b) => b.id === activeBufferId);
+    const buffer = getBufferById(useBufferStore.getState().buffers, activeBufferId);
     if (!buffer || !isEditorContent(buffer)) return false;
 
     const snippet = completion.data.snippet;
@@ -151,9 +152,8 @@ export function useSnippetCompletion(filePath: string | undefined) {
     // Calculate absolute position for this tab stop
     const session = sessionRef.current;
     const newOffset = session.insertPosition.offset + tabStop.offset;
-    const buffer = useBufferStore
-      .getState()
-      .buffers.find((b) => b.id === useBufferStore.getState().activeBufferId);
+    const { activeBufferId, buffers } = useBufferStore.getState();
+    const buffer = getBufferById(buffers, activeBufferId);
 
     if (buffer && isEditorContent(buffer)) {
       const newPosition = calculatePosition(buffer.content, newOffset);
@@ -184,9 +184,8 @@ export function useSnippetCompletion(filePath: string | undefined) {
     // Calculate absolute position for this tab stop
     const session = sessionRef.current;
     const newOffset = session.insertPosition.offset + tabStop.offset;
-    const buffer = useBufferStore
-      .getState()
-      .buffers.find((b) => b.id === useBufferStore.getState().activeBufferId);
+    const { activeBufferId, buffers } = useBufferStore.getState();
+    const buffer = getBufferById(buffers, activeBufferId);
 
     if (buffer && isEditorContent(buffer)) {
       const newPosition = calculatePosition(buffer.content, newOffset);

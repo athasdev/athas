@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { replaceAllSearchMatches, replaceSearchMatch } from "../utils/search-replace";
+import { getBufferById } from "../utils/buffer-index";
 
 // Types
 type HoverInfo = {
@@ -46,9 +47,7 @@ type DefinitionLinkRange = {
 
 function getActiveTextContent(): string {
   const { activeBufferId, buffers } = useBufferStore.getState();
-  const activeBuffer = activeBufferId
-    ? buffers.find((buffer) => buffer.id === activeBufferId)
-    : null;
+  const activeBuffer = getBufferById(buffers, activeBufferId);
   return activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
 }
 

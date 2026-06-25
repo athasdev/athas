@@ -5,6 +5,7 @@ import { getEditorWorkspaceScope } from "@/features/file-system/controllers/work
 import { createWorkspaceSessionSaveQueue } from "./workspace-session-save-queue";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { buildPersistedEditorViewState } from "./editor-session-state";
+import { getBufferById } from "../utils/buffer-index";
 
 const SAVE_SESSION_DEBOUNCE_MS = 300;
 
@@ -63,7 +64,7 @@ const saveSessionToStoreImmediate = (
     .map((buffer) => serializeBufferForSession(buffer, projectPath))
     .filter((buffer): buffer is BufferSession => buffer !== null);
 
-  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+  const activeBuffer = getBufferById(buffers, activeBufferId);
   const activeBufferPath =
     activeBuffer &&
     ((activeBuffer.type === "editor" && !activeBuffer.isVirtual) ||
