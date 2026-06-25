@@ -196,11 +196,23 @@ describe("line-based syntax highlighting", () => {
   });
 
   it("provides fallback tokens for reported parser-backed languages", () => {
-    for (const languageId of ["typescriptreact", "zig", "elm", "elisp"]) {
+    for (const languageId of ["typescript", "typescriptreact", "zig", "elm", "elisp"]) {
       expect(hasLineBasedSyntaxHighlighter(languageId)).toBe(false);
       expect(hasLineBasedSyntaxFallback(languageId)).toBe(true);
     }
 
+    expect(
+      tokenizeLineBasedSyntax(
+        'import type { View } from "./view";\nconst count: number = 1;',
+        "typescript",
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-type" }),
+        expect.objectContaining({ class_name: "token-string" }),
+      ]),
+    );
     expect(
       tokenizeLineBasedSyntax(
         'export const View = () => <div className="root" />',

@@ -7,14 +7,7 @@ const diffFileKey = (multiDiff: MultiFileDiff, diff: GitDiff, index: number): st
   multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
 
 export function getInitialExpandedDiffFileKeys(multiDiff: MultiFileDiff): string[] {
-  if (multiDiff.initiallyExpandedFileKey) {
-    return [multiDiff.initiallyExpandedFileKey];
-  }
-
-  const firstDiff = multiDiff.files[0];
-  if (!firstDiff) return [];
-
-  return [diffFileKey(multiDiff, firstDiff, 0)];
+  return multiDiff.files.map((diff, index) => diffFileKey(multiDiff, diff, index));
 }
 
 export function shouldUseScrollableDiffEditor(diff: GitDiff): boolean {

@@ -12,6 +12,7 @@ interface LineRange {
 const LINE_BASED_LANGUAGE_IDS = new Set(["diff", "gitignore", "gitattributes", "lockfile"]);
 const LINE_BASED_FALLBACK_LANGUAGE_IDS = new Set([
   ...LINE_BASED_LANGUAGE_IDS,
+  "typescript",
   "typescriptreact",
   "zig",
   "elm",
@@ -358,7 +359,7 @@ export function tokenizeLineBasedSyntax(
         tokenizeGitAttributesLine(tokens, line, offset);
       } else if (languageId === "lockfile") {
         tokenizeLockfileLine(tokens, line, offset);
-      } else if (languageId === "typescriptreact") {
+      } else if (languageId === "typescript" || languageId === "typescriptreact") {
         tokenizeTypeScriptReactLine(tokens, line, offset);
       } else if (languageId === "zig") {
         tokenizeZigLine(tokens, line, offset);

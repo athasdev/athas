@@ -29,20 +29,20 @@ const createMultiDiff = (files: GitDiff[]): MultiFileDiff => ({
 });
 
 describe("diff viewer scale helpers", () => {
-  test("expands only the first file by default", () => {
+  test("expands every file by default", () => {
     const multiDiff = createMultiDiff([createDiff("src/a.ts", 1), createDiff("src/b.ts", 1)]);
 
-    expect(getInitialExpandedDiffFileKeys(multiDiff)).toEqual(["src/a.ts:0"]);
+    expect(getInitialExpandedDiffFileKeys(multiDiff)).toEqual(["src/a.ts:0", "src/b.ts:1"]);
   });
 
-  test("keeps the requested initially expanded file", () => {
+  test("expands every file when one is requested initially", () => {
     const multiDiff = {
       ...createMultiDiff([createDiff("src/a.ts", 1), createDiff("src/b.ts", 1)]),
       fileKeys: ["first", "second"],
       initiallyExpandedFileKey: "second",
     };
 
-    expect(getInitialExpandedDiffFileKeys(multiDiff)).toEqual(["second"]);
+    expect(getInitialExpandedDiffFileKeys(multiDiff)).toEqual(["first", "second"]);
   });
 
   test("uses a scrollable editor for very large file diffs", () => {

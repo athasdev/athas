@@ -111,7 +111,8 @@ const TextDiffViewer = memo(
     const tabSize = editorTabSize;
 
     const hunks = useMemo(() => groupLinesIntoHunks(diff.lines), [diff.lines]);
-    const tokenMap = useDiffHighlighting(diff.lines, diff.file_path);
+    const syntaxPath = diff.new_path || diff.old_path || diff.file_path;
+    const tokenMap = useDiffHighlighting(diff.lines, syntaxPath);
 
     const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
     useSelectionScope(selectionScopeRef);
