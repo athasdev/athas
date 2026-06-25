@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DebuggerView from "@/features/debugger/components/debugger-view";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
@@ -20,11 +20,16 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {
-  const { isBottomPaneVisible, bottomPaneActiveTab } = useUIState();
-  const { rootFolderPath } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
+  const debuggerEnabled = useSettingsStore((state) => state.settings.coreFeatures.debugger);
   const bottomRoot = usePaneStore.use.bottomRoot();
-  const bottomPaneBufferIds = getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds);
+  const bottomPaneBufferIds = useMemo(
+    () => getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds),
+    [bottomRoot],
+  );
   const { moveBufferToPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
   const [height, setHeight] = useState(320);
@@ -51,14 +56,10 @@ const BottomPane = () => {
   }, [bottomPaneActiveTab, isBottomPaneVisible]);
 
   useEffect(() => {
-    if (
-      isBottomPaneVisible &&
-      bottomPaneActiveTab === "debugger" &&
-      !settings.coreFeatures.debugger
-    ) {
+    if (isBottomPaneVisible && bottomPaneActiveTab === "debugger" && !debuggerEnabled) {
       useUIState.getState().setIsBottomPaneVisible(false);
     }
-  }, [bottomPaneActiveTab, isBottomPaneVisible, settings.coreFeatures.debugger]);
+  }, [bottomPaneActiveTab, isBottomPaneVisible, debuggerEnabled]);
 
   useEffect(() => {
     if (
@@ -212,7 +213,7 @@ const BottomPane = () => {
       {/* Content Area */}
       <div className="h-full overflow-hidden">
         {/* Terminal Container - Always mounted to preserve terminal sessions */}
-        {settings.coreFeatures.terminal && (
+        {terminalEnabled && (
           <TerminalContainer
             currentDirectory={rootFolderPath}
             className={cn("h-full", bottomPaneActiveTab === "terminal" ? "block" : "hidden")}
@@ -221,7 +222,7 @@ const BottomPane = () => {
           />
         )}
 
-        {settings.coreFeatures.debugger && bottomPaneActiveTab === "debugger" && (
+        {debuggerEnabled && bottomPaneActiveTab === "debugger" && (
           <div className="h-full">
             <DebuggerView />
           </div>
