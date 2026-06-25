@@ -13,7 +13,7 @@ import type {
 import { fffScanStatus, searchFilesContent } from "@/features/global-search/lib/rust-api/search";
 import { CONTENT_SEARCH_PAGE_SIZE, SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
-import { matchesPathFilters } from "../utils/path-filters";
+import { createPathFilterPredicate } from "../utils/path-filters";
 
 export interface ContentSearchOptions {
   caseSensitive: boolean;
@@ -141,9 +141,8 @@ async function searchProviderFilesContent({
   }
 
   const allFiles = flattenSearchFiles(await useFileSystemStore.getState().getAllProjectFiles());
-  const searchableFiles = allFiles.filter((file) =>
-    matchesPathFilters(file.path, rootFolderPath, includeQuery, excludeQuery),
-  );
+  const matchesPathFilters = createPathFilterPredicate(rootFolderPath, includeQuery, excludeQuery);
+  const searchableFiles = allFiles.filter((file) => matchesPathFilters(file.path));
   const results: FileSearchResult[] = [];
   let searchedFiles = 0;
   let matchCount = 0;
@@ -454,13 +453,14 @@ export const useContentSearch = () => {
     };
   }, [debouncedQuery, isIndexing, performSearch, rootFolderPath]);
 
-  const results = useMemo(
-    () =>
-      rawResults.filter((result) =>
-        matchesPathFilters(result.file_path, rootFolderPath, includeQuery, excludeQuery),
-      ),
-    [rawResults, rootFolderPath, includeQuery, excludeQuery],
-  );
+  const results = useMemo(() => {
+    const matchesPathFilters = createPathFilterPredicate(
+      rootFolderPath,
+      includeQuery,
+      excludeQuery,
+    );
+    return rawResults.filter((result) => matchesPathFilters(result.file_path));
+  }, [rawResults, rootFolderPath, includeQuery, excludeQuery]);
 
   useEffect(() => {
     performSearch();
