@@ -99,22 +99,31 @@ export const useQuickOpen = () => {
   );
 
   // In symbol mode, keyboard nav operates on symbols; in file mode, on files
+  const { symbolResultsAsFiles, symbolByPath } = useMemo(() => {
+    const nextSymbolResultsAsFiles = [];
+    const nextSymbolByPath = new Map<string, SymbolItem>();
+    for (const symbol of symbols) {
+      const path = `${symbol.name}:${symbol.line}`;
+      nextSymbolResultsAsFiles.push({
+        name: symbol.name,
+        path,
+        isDir: false,
+      });
+      nextSymbolByPath.set(path, symbol);
+    }
+
+    return {
+      symbolResultsAsFiles: nextSymbolResultsAsFiles,
+      symbolByPath: nextSymbolByPath,
+    };
+  }, [symbols]);
+
   const symbolSelectAdapter = useCallback(
     (path: string) => {
-      const index = symbols.findIndex((s) => `${s.name}:${s.line}` === path);
-      if (index >= 0) handleSymbolSelect(symbols[index]);
+      const symbol = symbolByPath.get(path);
+      if (symbol) handleSymbolSelect(symbol);
     },
-    [symbols, handleSymbolSelect],
-  );
-
-  const symbolResultsAsFiles = useMemo(
-    () =>
-      symbols.map((s) => ({
-        name: s.name,
-        path: `${s.name}:${s.line}`,
-        isDir: false,
-      })),
-    [symbols],
+    [symbolByPath, handleSymbolSelect],
   );
 
   const { selectedIndex, setSelectedIndex, scrollContainerRef } = useKeyboardNavigation({

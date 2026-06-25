@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   KEY_ARROW_DOWN,
   KEY_ARROW_UP,
@@ -24,6 +24,16 @@ export const useKeyboardNavigation = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const selectedPathRef = useRef<string | null>(null);
+  const resultIndexByPath = useMemo(() => {
+    const indexByPath = new Map<string, number>();
+    for (let index = 0; index < allResults.length; index++) {
+      const result = allResults[index];
+      if (result) {
+        indexByPath.set(result.path, index);
+      }
+    }
+    return indexByPath;
+  }, [allResults]);
 
   useEffect(() => {
     selectedPathRef.current = allResults[selectedIndex]?.path || null;
@@ -39,7 +49,7 @@ export const useKeyboardNavigation = ({
 
       const selectedPath = selectedPathRef.current;
       if (selectedPath) {
-        const nextIndex = allResults.findIndex((item) => item.path === selectedPath);
+        const nextIndex = resultIndexByPath.get(selectedPath) ?? -1;
         if (nextIndex >= 0) {
           return nextIndex;
         }
@@ -47,7 +57,7 @@ export const useKeyboardNavigation = ({
 
       return Math.min(previousIndex, allResults.length - 1);
     });
-  }, [allResults]);
+  }, [allResults, resultIndexByPath]);
 
   useEffect(() => {
     if (isVisible) {
