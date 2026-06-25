@@ -14,6 +14,7 @@ import type { FffSearchHit } from "../lib/rust-api/search";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 const BUFFER_SEARCH_KEY_SEPARATOR = "\u0000";
+const VIRTUAL_BUFFER_FLAG_CODE = 49;
 
 function insertSortedLimited<T>(
   items: T[],
@@ -60,10 +61,18 @@ export const useFileSearch = (
     let activeBufferPath: string | undefined;
     const openBufferPaths = new Set<string>();
     for (const key of bufferSearchKeys) {
-      const [id, path, virtualFlag] = key.split(BUFFER_SEARCH_KEY_SEPARATOR);
+      const idEndIndex = key.indexOf(BUFFER_SEARCH_KEY_SEPARATOR);
+      if (idEndIndex < 0) continue;
+
+      const pathEndIndex = key.indexOf(BUFFER_SEARCH_KEY_SEPARATOR, idEndIndex + 1);
+      if (pathEndIndex < 0) continue;
+
+      const id = key.slice(0, idEndIndex);
+      const path = key.slice(idEndIndex + 1, pathEndIndex);
+      const isVirtual = key.charCodeAt(pathEndIndex + 1) === VIRTUAL_BUFFER_FLAG_CODE;
       if (id === activeBufferId) {
         activeBufferPath = path;
-      } else if (virtualFlag !== "1" && path) {
+      } else if (!isVirtual && path) {
         openBufferPaths.add(path);
       }
     }
