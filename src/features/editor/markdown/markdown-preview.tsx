@@ -31,8 +31,8 @@ export function MarkdownPreview() {
   );
   const fontSize = useEditorSettingsStore.use.fontSize();
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
-  const { handleFileSelect } = useFileSystemStore();
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || "";
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath) || "";
   const containerRef = useRef<HTMLDivElement>(null);
   const html = useHighlightedMarkdown(sourceContent, { frontMatter: "render" });
 
