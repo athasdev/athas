@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
@@ -197,7 +198,7 @@ const TabBar = ({
     const bufferStore = useBufferStore.getState();
     const editorState = useEditorStateStore.getState();
     const currentActiveBufferId = bufferStore.activeBufferId;
-    const currentActiveBuffer = bufferStore.buffers.find((b) => b.id === currentActiveBufferId);
+    const currentActiveBuffer = getBufferById(bufferStore.buffers, currentActiveBufferId);
 
     const currentPosition =
       currentActiveBufferId && currentActiveBuffer?.path
