@@ -33,8 +33,8 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   const [visibleResultCount, setVisibleResultCount] = useState(0);
   const prefersReducedMotion = useReducedMotion();
 
-  const { rootFolderPath } = useProjectStore();
-  const { getAllProjectFiles } = useFileSystemStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const { mentionState, hideMention } = useAIChatStore();
   const setSelectedIndex = useAIChatStore((state) => state.setSelectedIndex);
   const { position, selectedIndex } = mentionState;

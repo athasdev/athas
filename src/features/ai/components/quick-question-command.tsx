@@ -78,7 +78,8 @@ export function QuickQuestionCommandContent({
 }: QuickQuestionCommandContentProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
-  const { settings } = useSettingsStore();
+  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
   const [question, setQuestion] = useState("");
@@ -86,8 +87,8 @@ export function QuickQuestionCommandContent({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const provider = getProviderById(settings.aiProviderId);
-  const model = getModelById(settings.aiProviderId, settings.aiModelId);
+  const provider = getProviderById(aiProviderId);
+  const model = getModelById(aiProviderId, aiModelId);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const isBlockedByPolicy = Boolean(
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
@@ -100,11 +101,11 @@ export function QuickQuestionCommandContent({
       activeBuffer: contextualActiveBuffer,
       openBuffers: buffers.filter((buffer) => buffer.type !== "agent"),
       projectRoot: projectRoot || undefined,
-      providerId: settings.aiProviderId,
+      providerId: aiProviderId,
       agentId: "custom",
       language: getLanguageForBuffer(activeBuffer),
     };
-  }, [activeBuffer, buffers, projectRoot, settings.aiProviderId]);
+  }, [activeBuffer, aiProviderId, buffers, projectRoot]);
 
   useEffect(() => {
     const focusFrame = requestAnimationFrame(() => inputRef.current?.focus());
@@ -131,8 +132,8 @@ export function QuickQuestionCommandContent({
     setIsLoading(true);
 
     await getQuickQuestionCompletionStream(
-      settings.aiProviderId,
-      settings.aiModelId,
+      aiProviderId,
+      aiModelId,
       trimmedQuestion,
       context,
       (chunk) => {
@@ -157,7 +158,7 @@ export function QuickQuestionCommandContent({
     showToast({ message: "Answer copied.", type: "success" });
   };
 
-  const modelLabel = `${provider?.name || settings.aiProviderId} / ${model?.name || settings.aiModelId}`;
+  const modelLabel = `${provider?.name || aiProviderId} / ${model?.name || aiModelId}`;
 
   return (
     <div
@@ -198,7 +199,7 @@ export function QuickQuestionCommandContent({
         {!question.trim() && !answer && !error && !isLoading ? (
           <CommandEmpty>
             <div className="flex items-center justify-center gap-1.5">
-              <ProviderIcon providerId={settings.aiProviderId} size={12} />
+              <ProviderIcon providerId={aiProviderId} size={12} />
               <span className="truncate">{modelLabel}</span>
             </div>
           </CommandEmpty>
@@ -213,7 +214,7 @@ export function QuickQuestionCommandContent({
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 border-border border-t pt-2">
               <div className="flex min-w-0 items-center gap-1.5 ui-text-xs text-text-lighter">
-                <ProviderIcon providerId={settings.aiProviderId} size={11} />
+                <ProviderIcon providerId={aiProviderId} size={11} />
                 <span className="truncate">{modelLabel}</span>
               </div>
               <Button

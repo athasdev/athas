@@ -147,8 +147,8 @@ const AIChat = memo(function AIChat({
   allProjectFiles = [],
   onApplyCode,
 }: AIChatProps) {
-  const { rootFolderPath } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const subscription = useAuthStore((state) => state.subscription);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const isAiChatBlockedByPolicy = Boolean(
@@ -228,9 +228,9 @@ const AIChat = memo(function AIChat({
   ]);
 
   useEffect(() => {
-    chatActions.checkApiKey(settings.aiProviderId);
+    chatActions.checkApiKey(aiProviderId);
     chatActions.checkAllProviderApiKeys();
-  }, [settings.aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
+  }, [aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
 
   // Clear ACP events when switching chats
   useEffect(() => {

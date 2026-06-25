@@ -135,7 +135,7 @@ function ContextSelectorDropdownContent({
   const [selectedContextIndex, setSelectedContextIndex] = useState(0);
   const [visibleFileResults, setVisibleFileResults] = useState<FileItem[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { rootFolderPath } = useProjectStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const selectableBuffers = useMemo(
     () => buffers.filter((buffer) => buffer.type !== "agent" && buffer.type !== "newTab"),
