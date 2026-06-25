@@ -88,7 +88,10 @@ type GitPaletteAction =
   | { type: "refresh" };
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
-  const { gitStatus, isLoadingGitData, isRefreshing, actions } = useGitStore();
+  const gitStatus = useGitStore((state) => state.gitStatus);
+  const isLoadingGitData = useGitStore((state) => state.isLoadingGitData);
+  const isRefreshing = useGitStore((state) => state.isRefreshing);
+  const actions = useGitStore((state) => state.actions);
   const commits = useGitStore((state) => state.commits);
   const branches = useGitStore((state) => state.branches);
   const stashes = useGitStore((state) => state.stashes);
