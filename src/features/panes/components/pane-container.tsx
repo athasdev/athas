@@ -112,6 +112,7 @@ const CAROUSEL_OUTER_GAP_PX = 160;
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
 
+const DIRECT_PANE_BUFFER_LOOKUP_FACTOR = 32;
 const editorBufferShellCache = new Map<string, EditorBufferShell>();
 
 function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
@@ -128,6 +129,13 @@ function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
   } satisfies EditorBufferShell;
   editorBufferShellCache.set(buffer.id, shell);
   return shell;
+}
+
+function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | undefined {
+  if (!buffer) return undefined;
+  if (buffer.type === "newTab") return undefined;
+  if (buffer.type === "editor") return getEditorBufferShell(buffer);
+  return buffer;
 }
 
 function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
@@ -294,18 +302,18 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   const paneBuffers = useBufferStore(
     useShallow((state) => {
+      if (pane.bufferIds.length * DIRECT_PANE_BUFFER_LOOKUP_FACTOR < state.buffers.length) {
+        return pane.bufferIds
+          .map((bufferId) =>
+            toPaneRenderBuffer(state.buffers.find((buffer) => buffer.id === bufferId)),
+          )
+          .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
+      }
+
       const buffersById = new Map(state.buffers.map((buffer) => [buffer.id, buffer]));
 
       return pane.bufferIds
-        .map((bufferId) => {
-          const buffer = buffersById.get(bufferId);
-          if (!buffer) return undefined;
-          if (buffer.type === "newTab") return undefined;
-          if (buffer.type === "editor") {
-            return getEditorBufferShell(buffer);
-          }
-          return buffer;
-        })
+        .map((bufferId) => toPaneRenderBuffer(buffersById.get(bufferId)))
         .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
     }),
   );
