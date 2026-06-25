@@ -176,7 +176,12 @@ const GitHubPRsView = memo(() => {
   const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
   const { openPRBuffer, openGitHubIssueBuffer } = useBufferStore.use.actions();
-  const settings = useSettingsStore((state) => state.settings);
+  const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
+  const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
+  const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
+  const githubSidebarSectionOrder = useSettingsStore(
+    (state) => state.settings.githubSidebarSectionOrder,
+  );
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
 
@@ -203,11 +208,11 @@ const GitHubPRsView = memo(() => {
   const availableSections = useMemo(
     () =>
       [
-        settings.showGitHubPullRequests ? "pull-requests" : null,
-        settings.showGitHubIssues ? "issues" : null,
-        settings.showGitHubActions ? "actions" : null,
+        showGitHubPullRequests ? "pull-requests" : null,
+        showGitHubIssues ? "issues" : null,
+        showGitHubActions ? "actions" : null,
       ].filter((section): section is GitHubSidebarSection => !!section),
-    [settings.showGitHubActions, settings.showGitHubIssues, settings.showGitHubPullRequests],
+    [showGitHubActions, showGitHubIssues, showGitHubPullRequests],
   );
 
   useEffect(() => {
@@ -289,7 +294,7 @@ const GitHubPRsView = memo(() => {
     const prefetchSecondaryLists = () => {
       if (cancelled) return;
 
-      if (settings.showGitHubIssues) {
+      if (showGitHubIssues) {
         const issueCacheKey = `${effectiveRepoPath}::${issueFilter}`;
         void githubIssueListCache
           .load(
@@ -304,7 +309,7 @@ const GitHubPRsView = memo(() => {
           .catch(() => undefined);
       }
 
-      if (settings.showGitHubActions) {
+      if (showGitHubActions) {
         void githubActionListCache
           .load(
             effectiveRepoPath,
@@ -340,8 +345,8 @@ const GitHubPRsView = memo(() => {
     isAuthenticated,
     isGitHubPRsViewActive,
     issueFilter,
-    settings.showGitHubActions,
-    settings.showGitHubIssues,
+    showGitHubActions,
+    showGitHubIssues,
   ]);
 
   const handleRefresh = useCallback(() => {
@@ -546,8 +551,8 @@ const GitHubPRsView = memo(() => {
       },
     };
 
-    return settings.githubSidebarSectionOrder.map((id) => tabMap[id]).filter(Boolean);
-  }, [settings.githubSidebarSectionOrder]);
+    return githubSidebarSectionOrder.map((id) => tabMap[id]).filter(Boolean);
+  }, [githubSidebarSectionOrder]);
 
   const sectionTabs = allSectionTabs.filter((tab) => availableSections.includes(tab.id));
   const activeFilterLabel =
