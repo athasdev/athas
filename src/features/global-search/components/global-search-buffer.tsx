@@ -227,9 +227,28 @@ const GlobalSearchBuffer = () => {
     }
 
     const step = Math.ceil(navigationItems.length / MAX_MARKERS);
-    return navigationItems
-      .map((item, index) => ({ item, markerIndex: index }))
-      .filter(({ markerIndex }) => markerIndex % step === 0 || markerIndex === selectedIndex);
+    const items: Array<{ item: (typeof navigationItems)[number]; markerIndex: number }> = [];
+
+    for (let markerIndex = 0; markerIndex < navigationItems.length; markerIndex += step) {
+      const item = navigationItems[markerIndex];
+      if (item) {
+        items.push({ item, markerIndex });
+      }
+    }
+
+    if (
+      selectedIndex >= 0 &&
+      selectedIndex < navigationItems.length &&
+      selectedIndex % step !== 0
+    ) {
+      const selectedItem = navigationItems[selectedIndex];
+      if (selectedItem) {
+        items.push({ item: selectedItem, markerIndex: selectedIndex });
+        items.sort((a, b) => a.markerIndex - b.markerIndex);
+      }
+    }
+
+    return items;
   }, [navigationItems, selectedIndex]);
 
   const handleExpandContext = useCallback(async (filePath: string) => {
