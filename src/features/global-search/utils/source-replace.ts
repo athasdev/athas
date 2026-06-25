@@ -1,4 +1,5 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
 import { buildSearchRegex } from "@/features/editor/utils/search";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";
@@ -28,11 +29,9 @@ function lineColumnToOffset(content: string, line: number, column: number): numb
 
 function getSourceContent(filePath: string): SourceContent | null {
   const { buffers } = useBufferStore.getState();
-  const openSourceBuffer = buffers.find(
-    (buffer) => buffer.type === "editor" && !buffer.isVirtual && buffer.path === filePath,
-  );
+  const openSourceBuffer = getSourceEditorBufferByPath(buffers, filePath);
 
-  if (openSourceBuffer?.type === "editor") {
+  if (openSourceBuffer) {
     return { bufferId: openSourceBuffer.id, content: openSourceBuffer.content };
   }
 

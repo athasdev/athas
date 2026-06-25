@@ -8,6 +8,7 @@ import CodeEditor from "@/features/editor/components/code-editor";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
@@ -317,14 +318,8 @@ function SearchExcerptItemComponent({
       if (nextContent === lastSyncedContentRef.current) return;
 
       const { buffers, actions } = useBufferStore.getState();
-      const openSourceBuffer = buffers.find(
-        (buffer) =>
-          buffer.type === "editor" && !buffer.isVirtual && buffer.path === excerpt.filePath,
-      );
-      const sourceContent =
-        openSourceBuffer && openSourceBuffer.type === "editor"
-          ? openSourceBuffer.content
-          : await readFileContent(excerpt.filePath);
+      const openSourceBuffer = getSourceEditorBufferByPath(buffers, excerpt.filePath);
+      const sourceContent = openSourceBuffer?.content ?? (await readFileContent(excerpt.filePath));
       const nextSourceContent = applyMappedLineChanges(
         sourceContent,
         nextContent,
@@ -333,7 +328,7 @@ function SearchExcerptItemComponent({
 
       if (nextSourceContent === null) return;
 
-      if (openSourceBuffer && openSourceBuffer.type === "editor") {
+      if (openSourceBuffer) {
         actions.updateBufferContent(openSourceBuffer.id, nextSourceContent, true);
       } else {
         await writeFile(excerpt.filePath, nextSourceContent);
