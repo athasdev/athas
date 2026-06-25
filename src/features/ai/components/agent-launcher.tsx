@@ -1,5 +1,5 @@
 import { MicrophoneIcon as Mic, PaperPlaneTiltIcon as Send } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ContextSelector } from "@/features/ai/components/selectors/context-selector";
 import { AgentSelector } from "@/features/ai/components/selectors/agent-selector";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -17,7 +17,9 @@ export function AgentLauncher() {
   const launcherRef = useRef<HTMLDivElement>(null);
   const isVisible = useUIState((state) => state.isAgentLauncherVisible);
   const setIsVisible = useUIState((state) => state.setIsAgentLauncherVisible);
-  const buffers = useBufferStore.use.buffers();
+  const selectableBuffers = useBufferStore((state) =>
+    isVisible ? state.buffers.filter((buffer) => buffer.type !== "agent") : [],
+  );
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const createNewChat = useAIChatStore((state) => state.createNewChat);
   const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
@@ -163,11 +165,6 @@ export function AgentLauncher() {
     setSelectedBufferIds,
     setSelectedFilesPaths,
   ]);
-
-  const selectableBuffers = useMemo(
-    () => buffers.filter((buffer) => buffer.type !== "agent"),
-    [buffers],
-  );
 
   return (
     <Command
