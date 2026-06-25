@@ -20,7 +20,9 @@ const telemetryDescription =
 const telemetryLearnMoreUrl = "https://athas.dev/docs/telemetry";
 
 export const AdvancedSettings = () => {
-  const { settings, updateSetting, resetToDefaults } = useSettingsStore();
+  const telemetry = useSettingsStore((state) => state.settings.telemetry);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const resetToDefaults = useSettingsStore((state) => state.resetToDefaults);
   const { showToast } = useToast();
   const [showTelemetryLog, setShowTelemetryLog] = useState(false);
   const [telemetryLog, setTelemetryLog] = useState<TelemetryLogEntry[]>([]);
@@ -140,7 +142,7 @@ export const AdvancedSettings = () => {
           }
         >
           <Switch
-            checked={settings.telemetry}
+            checked={telemetry}
             onChange={(checked) => updateSetting("telemetry", checked)}
             size="sm"
           />
