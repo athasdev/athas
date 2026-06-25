@@ -94,12 +94,12 @@ const GitHubIssuesView = memo(
     const { isAuthenticated } = useGitHubStore();
     const { checkAuth } = useGitHubStore().actions;
     const { openGitHubIssueBuffer } = useBufferStore.use.actions();
-    const buffers = useBufferStore.use.buffers();
-    const activeBufferId = useBufferStore.use.activeBufferId();
-    const activeIssueNumber = useMemo(() => {
-      const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeIssueNumber = useBufferStore((state) => {
+      const activeBuffer = state.activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+        : null;
       return activeBuffer?.type === "githubIssue" ? activeBuffer.issueNumber : null;
-    }, [activeBufferId, buffers]);
+    });
     const [issues, setIssues] = useState<IssueListItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);

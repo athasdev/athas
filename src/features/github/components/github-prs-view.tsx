@@ -173,8 +173,6 @@ const GitHubPRsView = memo(() => {
   } = useGitHubStore().actions;
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { syncWorkspaceRepositories, setManualRepository } = useRepositoryStore.use.actions();
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
   const { openPRBuffer, openGitHubIssueBuffer } = useBufferStore.use.actions();
   const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
   const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
@@ -199,10 +197,12 @@ const GitHubPRsView = memo(() => {
   const sectionContextMenu = useContextMenu<null>();
 
   const isRepoError = !!error && isNotGitRepositoryError(error);
-  const activePRNumber = useMemo(() => {
-    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+  const activePRNumber = useBufferStore((state) => {
+    const activeBuffer = state.activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      : null;
     return activeBuffer?.type === "pullRequest" ? activeBuffer.prNumber : null;
-  }, [activeBufferId, buffers]);
+  });
   const deferredPrs = useDeferredValue(prs);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const availableSections = useMemo(

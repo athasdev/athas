@@ -86,7 +86,12 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const selectedRepoPath = useRepositoryStore.use.activeRepoPath();
   const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
-  const buffers = useBufferStore.use.buffers();
+  const prBuffer = useBufferStore((state) => {
+    const buffer = state.buffers.find(
+      (candidate) => candidate.type === "pullRequest" && candidate.prNumber === prNumber,
+    );
+    return buffer?.type === "pullRequest" ? buffer : undefined;
+  });
   const {
     selectedPRDetails,
     selectedPRDiff,
@@ -99,10 +104,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   } = useGitHubStore();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } = useGitHubStore().actions;
-  const prBuffer = buffers.find(
-    (buffer): buffer is Extract<(typeof buffers)[number], { type: "pullRequest" }> =>
-      buffer.type === "pullRequest" && buffer.prNumber === prNumber,
-  );
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>("activity");
@@ -178,18 +179,11 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   }, [activeTab, fetchPRContent, prNumber, repoPath, selectedPRDetails]);
 
   useEffect(() => {
-    if (!selectedPRDetails) return;
+    if (!selectedPRDetails || !prBuffer) return;
 
-    const prBuffer = buffers.find(
-      (buffer) => buffer.type === "pullRequest" && buffer.prNumber === selectedPRDetails.number,
-    );
     const authorAvatarUrl =
       selectedPRDetails.author.avatarUrl ||
       `https://github.com/${encodeURIComponent(selectedPRDetails.author.login || "github")}.png?size=32`;
-
-    if (!prBuffer || prBuffer.type !== "pullRequest") {
-      return;
-    }
 
     if (prBuffer.name === selectedPRDetails.title && prBuffer.authorAvatarUrl === authorAvatarUrl) {
       return;
@@ -200,7 +194,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       name: selectedPRDetails.title,
       authorAvatarUrl,
     });
-  }, [buffers, prBuffer, selectedPRDetails, updateBuffer]);
+  }, [prBuffer, selectedPRDetails, updateBuffer]);
 
   useEffect(() => {
     if (!prBuffer || prBuffer.type !== "pullRequest") return;

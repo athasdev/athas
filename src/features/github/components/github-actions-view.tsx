@@ -195,12 +195,12 @@ const GitHubActionsView = memo(
     const { isAuthenticated } = useGitHubStore();
     const { checkAuth } = useGitHubStore().actions;
     const { openGitHubActionBuffer } = useBufferStore.use.actions();
-    const buffers = useBufferStore.use.buffers();
-    const activeBufferId = useBufferStore.use.activeBufferId();
-    const activeRunId = useMemo(() => {
-      const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeRunId = useBufferStore((state) => {
+      const activeBuffer = state.activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+        : null;
       return activeBuffer?.type === "githubAction" ? activeBuffer.runId : null;
-    }, [activeBufferId, buffers]);
+    });
     const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
