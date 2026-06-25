@@ -522,6 +522,31 @@ export function setPanePreviewBuffer(
   });
 }
 
+export function clearPanePreviewBufferEverywhere(root: PaneNode, bufferId: string): PaneNode {
+  if (root.type === "group") {
+    if (root.previewBufferId !== bufferId) {
+      return root;
+    }
+
+    return normalizeGroup({
+      ...root,
+      previewBufferId: null,
+    });
+  }
+
+  const first = clearPanePreviewBufferEverywhere(root.children[0], bufferId);
+  const second = clearPanePreviewBufferEverywhere(root.children[1], bufferId);
+
+  if (first === root.children[0] && second === root.children[1]) {
+    return root;
+  }
+
+  return {
+    ...root,
+    children: [first, second],
+  };
+}
+
 export function setPaneBufferPinned(
   root: PaneNode,
   paneId: string,
@@ -548,6 +573,41 @@ export function setPaneBufferPinned(
       previewBufferId: pinned && node.previewBufferId === bufferId ? null : node.previewBufferId,
     });
   });
+}
+
+export function setPaneBufferPinnedEverywhere(
+  root: PaneNode,
+  bufferId: string,
+  pinned: boolean,
+): PaneNode {
+  if (root.type === "group") {
+    if (!root.bufferIds.includes(bufferId)) {
+      return root;
+    }
+
+    const currentPinnedBufferIds = root.pinnedBufferIds ?? [];
+    const pinnedBufferIds = pinned
+      ? [...currentPinnedBufferIds, bufferId]
+      : currentPinnedBufferIds.filter((pinnedBufferId) => pinnedBufferId !== bufferId);
+
+    return normalizeGroup({
+      ...root,
+      pinnedBufferIds,
+      previewBufferId: pinned && root.previewBufferId === bufferId ? null : root.previewBufferId,
+    });
+  }
+
+  const first = setPaneBufferPinnedEverywhere(root.children[0], bufferId, pinned);
+  const second = setPaneBufferPinnedEverywhere(root.children[1], bufferId, pinned);
+
+  if (first === root.children[0] && second === root.children[1]) {
+    return root;
+  }
+
+  return {
+    ...root,
+    children: [first, second],
+  };
 }
 
 export function setPaneLocked(root: PaneNode, paneId: string, locked: boolean): PaneNode {

@@ -7,6 +7,7 @@ import type { PaneGroup, PaneNode, SplitDirection, SplitPlacement } from "../typ
 import {
   addBufferToPane,
   closePane,
+  clearPanePreviewBufferEverywhere,
   distributeFlattenedPaneSplit,
   findPaneGroup,
   findPaneGroupByBufferId,
@@ -20,6 +21,7 @@ import {
   resizeFlattenedPaneSplit,
   setActivePaneBuffer,
   setPaneBufferPinned,
+  setPaneBufferPinnedEverywhere,
   setPaneLocked,
   setPanePreviewBuffer,
   splitPane,
@@ -460,31 +462,15 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
 
       setBufferPinnedEverywhere: (bufferId, pinned) => {
         set((state) => {
-          for (const pane of getAllPaneGroups(state.root)) {
-            if (pane.bufferIds.includes(bufferId)) {
-              state.root = setPaneBufferPinned(state.root, pane.id, bufferId, pinned);
-            }
-          }
-          for (const pane of getAllPaneGroups(state.bottomRoot)) {
-            if (pane.bufferIds.includes(bufferId)) {
-              state.bottomRoot = setPaneBufferPinned(state.bottomRoot, pane.id, bufferId, pinned);
-            }
-          }
+          state.root = setPaneBufferPinnedEverywhere(state.root, bufferId, pinned);
+          state.bottomRoot = setPaneBufferPinnedEverywhere(state.bottomRoot, bufferId, pinned);
         });
       },
 
       clearPreviewBufferEverywhere: (bufferId) => {
         set((state) => {
-          for (const pane of getAllPaneGroups(state.root)) {
-            if (pane.previewBufferId === bufferId) {
-              state.root = setPanePreviewBuffer(state.root, pane.id, null);
-            }
-          }
-          for (const pane of getAllPaneGroups(state.bottomRoot)) {
-            if (pane.previewBufferId === bufferId) {
-              state.bottomRoot = setPanePreviewBuffer(state.bottomRoot, pane.id, null);
-            }
-          }
+          state.root = clearPanePreviewBufferEverywhere(state.root, bufferId);
+          state.bottomRoot = clearPanePreviewBufferEverywhere(state.bottomRoot, bufferId);
         });
       },
 
