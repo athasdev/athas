@@ -221,10 +221,21 @@ function FileExplorerTreeComponent({
   }, [fileTreeSettings.hiddenFilePatterns, fileTreeSettings.hiddenDirectoryPatterns]);
 
   const workspaceRootPaths = useMemo(() => {
-    const roots = files.filter((file) => file.isDir).map((file) => file.path);
-    if (rootFolderPath && !roots.includes(rootFolderPath)) {
+    const roots: string[] = [];
+    let hasRootFolderPath = false;
+
+    for (const file of files) {
+      if (!file.isDir) continue;
+      roots.push(file.path);
+      if (file.path === rootFolderPath) {
+        hasRootFolderPath = true;
+      }
+    }
+
+    if (rootFolderPath && !hasRootFolderPath) {
       roots.unshift(rootFolderPath);
     }
+
     return roots;
   }, [files, rootFolderPath]);
 
@@ -796,7 +807,13 @@ function FileExplorerTreeComponent({
         }
       }
 
-      const uniqueFilePaths = Array.from(new Set(filePaths));
+      const seenFilePaths = new Set<string>();
+      const uniqueFilePaths: string[] = [];
+      for (const filePath of filePaths) {
+        if (seenFilePaths.has(filePath)) continue;
+        seenFilePaths.add(filePath);
+        uniqueFilePaths.push(filePath);
+      }
       if (uniqueFilePaths.length === 0) return;
 
       if (uniqueFilePaths.length > 100) {
