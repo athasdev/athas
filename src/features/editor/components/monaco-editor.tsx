@@ -32,6 +32,7 @@ import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
 import { useEditorUIStore } from "../stores/ui.store";
 import type { Position, Range } from "../types/editor.types";
+import { getBufferById } from "../utils/buffer-index";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
@@ -123,13 +124,7 @@ export function MonacoEditor({
   const latestContentChangeRef = useRef(onContentChange);
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const activeBuffer = useBufferStore(
-    useCallback(
-      (state) =>
-        activeBufferId
-          ? state.buffers.find((buffer) => buffer.id === activeBufferId) || null
-          : null,
-      [activeBufferId],
-    ),
+    useCallback((state) => getBufferById(state.buffers, activeBufferId), [activeBufferId]),
   );
   const buffer = activeBuffer && activeBuffer.type === "editor" ? activeBuffer : null;
   const content = buffer?.content ?? "";

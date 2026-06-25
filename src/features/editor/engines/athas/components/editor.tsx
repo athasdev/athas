@@ -81,6 +81,7 @@ import {
   isTooLargeForSyntaxTokenization,
 } from "@/features/editor/utils/large-file";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import {
   EDITOR_FONT_METRICS_READY_EVENT,
   calculateCursorPosition,
@@ -220,10 +221,7 @@ export function AthasEditor({
 
   const bufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const rawBuffer = useBufferStore(
-    useCallback(
-      (state) => (bufferId ? state.buffers.find((candidate) => candidate.id === bufferId) : null),
-      [bufferId],
-    ),
+    useCallback((state) => getBufferById(state.buffers, bufferId), [bufferId]),
   );
   const { updateBufferContent, updateBufferTokens } = useBufferStore.use.actions();
   const {

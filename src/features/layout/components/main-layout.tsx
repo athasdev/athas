@@ -11,6 +11,7 @@ import {
 } from "@/features/database/utils/database-file-drop";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
 import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
 import { ExtensionGenerationCommand } from "@/features/generate/components/extension-generation-command";
@@ -70,7 +71,7 @@ export function MainLayout() {
   const buffers = useBufferStore((state) => (showInlineAiChat ? state.buffers : EMPTY_BUFFERS));
   const activeBuffer = useBufferStore((state) => {
     if (!showInlineAiChat || !state.activeBufferId) return null;
-    return state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null;
+    return getBufferById(state.buffers, state.activeBufferId);
   });
   const handleOpenFolderByPath = useFileSystemStore.use.handleOpenFolderByPath?.();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();

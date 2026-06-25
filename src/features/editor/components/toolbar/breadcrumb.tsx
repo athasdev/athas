@@ -7,6 +7,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -55,9 +56,7 @@ export default function Breadcrumb({
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
   const activeBuffer = useBufferStore(
     useShallow((state) => {
-      const buffer = resolvedBufferId
-        ? state.buffers.find((candidate) => candidate.id === resolvedBufferId)
-        : null;
+      const buffer = getBufferById(state.buffers, resolvedBufferId);
       return buffer
         ? {
             id: buffer.id,

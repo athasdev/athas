@@ -34,6 +34,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
@@ -551,9 +552,7 @@ export function NotebookEditor() {
   const cellRefs = useRef<Array<HTMLElement | null>>([]);
   const { bufferId, content, path } = useBufferStore(
     useShallow((state) => {
-      const buffer = state.activeBufferId
-        ? state.buffers.find((candidate) => candidate.id === state.activeBufferId)
-        : null;
+      const buffer = getBufferById(state.buffers, state.activeBufferId);
       return {
         bufferId: buffer?.id ?? null,
         content: buffer?.type === "editor" ? buffer.content : "",

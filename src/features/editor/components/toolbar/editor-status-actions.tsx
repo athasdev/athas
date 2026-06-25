@@ -14,6 +14,7 @@ import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/buil
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import type { Position } from "@/features/editor/types/editor.types";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { LoadingIndicator } from "@/ui/loading";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -218,9 +219,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const projectName = rootFolderPath ? getFilenameFromPath(rootFolderPath) : "No Project";
   const activeBuffer = useBufferStore(
     useShallow((state) => {
-      const buffer = resolvedBufferId
-        ? state.buffers.find((candidate) => candidate.id === resolvedBufferId)
-        : null;
+      const buffer = getBufferById(state.buffers, resolvedBufferId);
       return buffer
         ? {
             id: buffer.id,

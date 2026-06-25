@@ -24,6 +24,11 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
+import {
+  getBufferById,
+  getBufferByPath,
+  getBufferIndexById,
+} from "@/features/editor/utils/buffer-index";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
@@ -334,7 +339,7 @@ export const useBufferStore = createSelectors(
               const shouldBePreview = spec.isPreview ?? false;
 
               // Check if already open
-              const existing = buffers.find((b) => b.path === spec.path);
+              const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
@@ -354,11 +359,9 @@ export const useBufferStore = createSelectors(
 
               if (shouldBePreview) {
                 const existingPreview = previewTargetPane?.previewBufferId
-                  ? newBuffers.find(
-                      (b) => b.id === previewTargetPane.previewBufferId && b.isPreview,
-                    )
+                  ? getBufferById(newBuffers, previewTargetPane.previewBufferId)
                   : null;
-                if (existingPreview) {
+                if (existingPreview?.isPreview) {
                   cleanupBufferHistoryTracking(existingPreview.id);
                   removeBufferFromPanes(existingPreview.id, true);
                   newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
@@ -679,7 +682,7 @@ export const useBufferStore = createSelectors(
             }
 
             case "externalEditor": {
-              const existing = buffers.find((b) => b.path === spec.path);
+              const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
@@ -762,7 +765,7 @@ export const useBufferStore = createSelectors(
 
             case "onboarding": {
               const path = `onboarding://${spec.context.mode}/${spec.context.currentVersion}`;
-              const existing = buffers.find((b) => b.path === path);
+              const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
@@ -799,7 +802,7 @@ export const useBufferStore = createSelectors(
             case "htmlPreview":
             case "csvPreview": {
               const path = spec.path;
-              const existing = buffers.find((b) => b.path === path);
+              const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
                   state.activeBufferId = existing.id;
@@ -1040,7 +1043,7 @@ export const useBufferStore = createSelectors(
         },
 
         closeBuffer: (bufferId: string) => {
-          const buffer = get().buffers.find((b) => b.id === bufferId);
+          const buffer = getBufferById(get().buffers, bufferId);
 
           if (!buffer) return;
 
@@ -1060,7 +1063,7 @@ export const useBufferStore = createSelectors(
 
         closeBufferForce: (bufferId: string) => {
           const { buffers, activeBufferId, closedBuffersHistory } = get();
-          const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+          const bufferIndex = getBufferIndexById(buffers, bufferId);
 
           if (bufferIndex === -1) return;
 
@@ -1225,7 +1228,7 @@ export const useBufferStore = createSelectors(
           markDirty = true,
           diffData?: GitDiff | MultiFileDiff,
         ) => {
-          const buffer = get().buffers.find((b) => b.id === bufferId);
+          const buffer = getBufferById(get().buffers, bufferId);
           if (!buffer) return;
 
           // Only content types with text content can be updated
@@ -1525,7 +1528,7 @@ export const useBufferStore = createSelectors(
 
         getActiveBuffer: (): PaneContent | null => {
           const { buffers, activeBufferId } = get();
-          return buffers.find((b) => b.id === activeBufferId) || null;
+          return getBufferById(buffers, activeBufferId);
         },
 
         setMaxOpenTabs: (max: number) => {
@@ -1535,7 +1538,7 @@ export const useBufferStore = createSelectors(
         },
 
         reloadBufferFromDisk: async (bufferId: string): Promise<void> => {
-          const buffer = get().buffers.find((b) => b.id === bufferId);
+          const buffer = getBufferById(get().buffers, bufferId);
           if (!buffer) return;
 
           // Only reload real editor files from disk

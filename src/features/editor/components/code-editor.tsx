@@ -19,6 +19,7 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { useEditorViewStore } from "@/features/editor/stores/view.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { resolveGoToLineTarget } from "@/features/editor/utils/go-to-line";
 import { calculateCursorPositionFromContent } from "@/features/editor/utils/position";
@@ -183,13 +184,7 @@ const CodeEditor = ({
   const activeBufferId = useBufferStore((state) => propBufferId ?? state.activeBufferId);
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const activeBuffer = useBufferStore(
-    useCallback(
-      (state) =>
-        activeBufferId
-          ? state.buffers.find((buffer) => buffer.id === activeBufferId) || null
-          : null,
-      [activeBufferId],
-    ),
+    useCallback((state) => getBufferById(state.buffers, activeBufferId), [activeBufferId]),
   );
   const editorViewKey = paneId && activeBufferId ? `${paneId}:${activeBufferId}` : activeBufferId;
   const { handleContentChange } = useEditorAppStore.use.actions();
