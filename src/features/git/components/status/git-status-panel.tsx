@@ -85,6 +85,10 @@ interface GitFolderNode {
   folders: Map<string, GitFolderNode>;
   files: GitFile[];
   descendantFiles: GitFile[];
+  sortedFolders: GitFolderNode[];
+  sortedFiles: GitFile[];
+  descendantFilePaths: string[];
+  areAllDescendantFilesStaged: boolean;
 }
 
 const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
@@ -93,6 +97,10 @@ const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
   folders: new Map<string, GitFolderNode>(),
   files: [],
   descendantFiles: [],
+  sortedFolders: [],
+  sortedFiles: [],
+  descendantFilePaths: [],
+  areAllDescendantFilesStaged: false,
 });
 
 const normalizePathSegments = (path: string): string[] =>
@@ -101,6 +109,20 @@ const normalizePathSegments = (path: string): string[] =>
     .split("/")
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
+
+function finalizeGitFolderTree(node: GitFolderNode): void {
+  node.sortedFolders = Array.from(node.folders.values()).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  node.sortedFiles = [...node.files].sort((a, b) => a.path.localeCompare(b.path));
+  node.descendantFilePaths = node.descendantFiles.map((file) => file.path);
+  node.areAllDescendantFilesStaged =
+    node.descendantFiles.length > 0 && node.descendantFiles.every((file) => file.staged);
+
+  for (const folderNode of node.sortedFolders) {
+    finalizeGitFolderTree(folderNode);
+  }
+}
 
 const buildGitFolderTree = (fileList: GitFile[]): GitFolderNode => {
   const root = createFolderNode("", "");
@@ -125,14 +147,9 @@ const buildGitFolderTree = (fileList: GitFile[]): GitFolderNode => {
     currentNode.files.push(file);
   }
 
+  finalizeGitFolderTree(root);
   return root;
 };
-
-const sortFoldersByName = (folders: Iterable<GitFolderNode>) =>
-  Array.from(folders).sort((a, b) => a.name.localeCompare(b.name));
-
-const sortFilesByPath = (fileList: GitFile[]) =>
-  [...fileList].sort((a, b) => a.path.localeCompare(b.path));
 
 const GitStatusPanel = ({
   files,
@@ -263,6 +280,14 @@ const GitStatusPanel = ({
         { additions: 0, deletions: 0 },
       ),
     [displayFiles, getDiffStats],
+  );
+  const trackedFolderTree = useMemo(
+    () => (gitChangesFolderView ? buildGitFolderTree(trackedFiles) : null),
+    [gitChangesFolderView, trackedFiles],
+  );
+  const untrackedFolderTree = useMemo(
+    () => (gitChangesFolderView ? buildGitFolderTree(untrackedFiles) : null),
+    [gitChangesFolderView, untrackedFiles],
   );
 
   const setOptimisticStage = (filePaths: string[], staged: boolean) => {
@@ -487,16 +512,11 @@ const GitStatusPanel = ({
     </button>
   );
 
-  const renderFolderTree = (fileList: GitFile[], section: "changes") => {
-    const rootNode = buildGitFolderTree(fileList);
-
+  const renderFolderTree = (rootNode: GitFolderNode, section: "changes") => {
     const renderNode = (node: GitFolderNode, depth: number): React.ReactNode => {
-      const folderRows = sortFoldersByName(node.folders.values()).map((folderNode) => {
+      const folderRows = node.sortedFolders.map((folderNode) => {
         const collapseKey = `${section}:${folderNode.fullPath}`;
         const isCollapsed = collapsedFolders.has(collapseKey);
-        const folderFiles = folderNode.descendantFiles;
-        const areAllFolderFilesStaged =
-          folderFiles.length > 0 && folderFiles.every((file) => file.staged);
 
         return (
           <Fragment key={folderNode.fullPath}>
@@ -527,16 +547,13 @@ const GitStatusPanel = ({
               </span>
               <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
                 <Checkbox
-                  checked={areAllFolderFilesStaged}
+                  checked={folderNode.areAllDescendantFilesStaged}
                   onChange={(checked) =>
-                    void handleSetFilesStaged(
-                      folderFiles.map((file) => file.path),
-                      checked,
-                    )
+                    void handleSetFilesStaged(folderNode.descendantFilePaths, checked)
                   }
-                  disabled={isLoading || folderFiles.length === 0}
+                  disabled={isLoading || folderNode.descendantFilePaths.length === 0}
                   ariaLabel={
-                    areAllFolderFilesStaged
+                    folderNode.areAllDescendantFilesStaged
                       ? `Unstage folder ${folderNode.name}`
                       : `Stage folder ${folderNode.name}`
                   }
@@ -548,7 +565,7 @@ const GitStatusPanel = ({
         );
       });
 
-      const fileRows = sortFilesByPath(node.files).map((file) => (
+      const fileRows = node.sortedFiles.map((file) => (
         <GitFileItem
           key={`${section}:${file.path}:${file.staged ? "staged" : "unstaged"}:${file.status}`}
           file={file}
@@ -735,7 +752,7 @@ const GitStatusPanel = ({
                 {renderSectionHeader("tracked", SECTION_LABELS.tracked)}
                 {!collapsedSections.has("tracked") &&
                   (gitChangesFolderView
-                    ? renderFolderTree(trackedFiles, "changes")
+                    ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
                     : renderFlatFileList(groupedTrackedFiles))}
               </>
             )}
@@ -744,7 +761,7 @@ const GitStatusPanel = ({
                 {renderSectionHeader("untracked", SECTION_LABELS.untracked)}
                 {!collapsedSections.has("untracked") &&
                   (gitChangesFolderView
-                    ? renderFolderTree(untrackedFiles, "changes")
+                    ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
                     : renderFlatFileList(groupedUntrackedFiles))}
               </>
             )}
