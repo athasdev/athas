@@ -26,9 +26,26 @@ import { scoreSearchQuery } from "@/utils/search-match";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";
 
+type CommandPaletteSettings = Pick<
+  AppSettings,
+  | "aiCompletion"
+  | "autoCompletion"
+  | "autoDetectLanguage"
+  | "autoSave"
+  | "coreFeatures"
+  | "formatOnSave"
+  | "lineNumbers"
+  | "parameterHints"
+  | "showMinimap"
+  | "telemetry"
+  | "vimMode"
+  | "vimRelativeLineNumbers"
+  | "wordWrap"
+>;
+
 interface SettingsActionsParams {
   query: string;
-  settings: AppSettings;
+  settings: CommandPaletteSettings;
   setIsSettingsDialogVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   setSettingsSearchQuery: (query: string) => void;

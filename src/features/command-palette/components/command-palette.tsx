@@ -132,7 +132,29 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
 
   const lastEnteredActions = useActionsStore.use.lastEnteredActionsStack();
   const pushAction = useActionsStore.use.pushAction();
-  const { settings } = useSettingsStore();
+  const aiCompletion = useSettingsStore((state) => state.settings.aiCompletion);
+  const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
+  const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
+  const autoSave = useSettingsStore((state) => state.settings.autoSave);
+  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
+  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
+  const formatOnSave = useSettingsStore((state) => state.settings.formatOnSave);
+  const iconTheme = useSettingsStore((state) => state.settings.iconTheme);
+  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
+  const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
+  const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
+  const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
+  const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
+  const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
+  const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
+  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
+  const syncSystemTheme = useSettingsStore((state) => state.settings.syncSystemTheme);
+  const telemetry = useSettingsStore((state) => state.settings.telemetry);
+  const theme = useSettingsStore((state) => state.settings.theme);
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
+  const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
+  const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
   const effectiveTheme = useEditorSettingsStore.use.theme();
   const { setMode } = useVimStore.use.actions();
   const lspStatus = useLspStore.use.lspStatus();
@@ -159,6 +181,59 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const { zoomIn, zoomOut, resetZoom } = useZoomStore.use.actions();
   const { openBuffer } = useBufferStore.use.actions();
 
+  const commandSettings = useMemo(
+    () => ({
+      aiCompletion,
+      autoCompletion,
+      autoDetectLanguage,
+      autoSave,
+      compactMenuBar,
+      coreFeatures,
+      formatOnSave,
+      iconTheme,
+      isAIChatVisible,
+      lineNumbers,
+      nativeMenuBar,
+      parameterHints,
+      showGitHubActions,
+      showGitHubIssues,
+      showGitHubPullRequests,
+      showMinimap,
+      sidebarPosition,
+      syncSystemTheme,
+      telemetry,
+      theme,
+      vimMode,
+      vimRelativeLineNumbers,
+      wordWrap,
+    }),
+    [
+      aiCompletion,
+      autoCompletion,
+      autoDetectLanguage,
+      autoSave,
+      compactMenuBar,
+      coreFeatures,
+      formatOnSave,
+      iconTheme,
+      isAIChatVisible,
+      lineNumbers,
+      nativeMenuBar,
+      parameterHints,
+      showGitHubActions,
+      showGitHubIssues,
+      showGitHubPullRequests,
+      showMinimap,
+      sidebarPosition,
+      syncSystemTheme,
+      telemetry,
+      theme,
+      vimMode,
+      vimRelativeLineNumbers,
+      wordWrap,
+    ],
+  );
+
   const isActiveMarkdownFile = activeBuffer ? isMarkdownFile(activeBuffer.path) : false;
 
   // Create all actions using factory functions
@@ -179,11 +254,11 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       isFindVisible,
       setIsFindVisible,
       settings: {
-        isAIChatVisible: settings.isAIChatVisible,
-        sidebarPosition: settings.sidebarPosition,
-        nativeMenuBar: settings.nativeMenuBar,
-        compactMenuBar: settings.compactMenuBar,
-        webViewerEnabled: settings.coreFeatures.webViewer,
+        isAIChatVisible: commandSettings.isAIChatVisible,
+        sidebarPosition: commandSettings.sidebarPosition,
+        nativeMenuBar: commandSettings.nativeMenuBar,
+        compactMenuBar: commandSettings.compactMenuBar,
+        webViewerEnabled: commandSettings.coreFeatures.webViewer,
       },
       updateSetting: useSettingsStore.getState().updateSetting as (
         key: string,
@@ -197,7 +272,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     }),
     ...createSettingsActions({
       query,
-      settings,
+      settings: commandSettings,
       setIsSettingsDialogVisible,
       openSettingsDialog,
       setSettingsSearchQuery: useSettingsStore.getState().setSearchQuery,
@@ -220,7 +295,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setIsQuickOpenVisible,
       openCommandPaletteView,
       openSettingsDialog,
-      coreFeatures: settings.coreFeatures,
+      coreFeatures: commandSettings.coreFeatures,
       onClose,
     }),
     ...createPaneActions({
@@ -288,9 +363,9 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setIsSidebarVisible,
       setActiveView,
       settings: {
-        showGitHubPullRequests: settings.showGitHubPullRequests,
-        showGitHubIssues: settings.showGitHubIssues,
-        showGitHubActions: settings.showGitHubActions,
+        showGitHubPullRequests: commandSettings.showGitHubPullRequests,
+        showGitHubIssues: commandSettings.showGitHubIssues,
+        showGitHubActions: commandSettings.showGitHubActions,
       },
       updateSetting: useSettingsStore.getState().updateSetting as (
         key: string,
@@ -309,7 +384,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     }),
     ...createAdvancedActions({
       lspStatus,
-      vimMode: settings.vimMode,
+      vimMode: commandSettings.vimMode,
       vimCommands,
       setMode,
       openQuickEdit,
@@ -327,7 +402,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   );
 
   const prioritizedActions = useMemo(() => {
-    if (!settings.coreFeatures.persistentCommands) return filteredActions;
+    if (!commandSettings.coreFeatures.persistentCommands) return filteredActions;
     if (!filteredActions) return [];
 
     const remaining = filteredActions.filter((action) => !lastEnteredActions.includes(action.id));
@@ -337,7 +412,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       .filter((a): a is Action => !!a); // Filter out undefined and assure it is of type Action
 
     return [...prioritized, ...remaining];
-  }, [filteredActions, lastEnteredActions, settings.coreFeatures.persistentCommands]);
+  }, [commandSettings.coreFeatures.persistentCommands, filteredActions, lastEnteredActions]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -412,7 +487,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
           onBack={popView}
           onClose={onClose}
           onThemeChange={handleThemeChange}
-          currentTheme={settings.syncSystemTheme ? effectiveTheme : settings.theme}
+          currentTheme={commandSettings.syncSystemTheme ? effectiveTheme : commandSettings.theme}
         />
       ) : currentView === "icon-theme" ? (
         <IconThemeSelectorContent
@@ -420,7 +495,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
           onBack={popView}
           onClose={onClose}
           onThemeChange={handleIconThemeChange}
-          currentTheme={settings.iconTheme}
+          currentTheme={commandSettings.iconTheme}
         />
       ) : currentView === "local-history" ? (
         <LocalHistoryCommandContent
@@ -447,7 +522,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
         <>
           <CommandHeader
             onClose={onClose}
-            showClearButton={settings.coreFeatures.persistentCommands}
+            showClearButton={commandSettings.coreFeatures.persistentCommands}
           >
             <CommandInput value={query} onChange={setQuery} placeholder="Type a command..." />
           </CommandHeader>
@@ -458,7 +533,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
             ) : (
               prioritizedActions.map((action, index) => {
                 const isRecent =
-                  settings.coreFeatures.persistentCommands &&
+                  commandSettings.coreFeatures.persistentCommands &&
                   lastEnteredActions.includes(action.id);
                 const binding = action.commandId
                   ? keymapRegistry.getKeybinding(action.commandId)?.key
