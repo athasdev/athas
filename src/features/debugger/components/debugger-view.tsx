@@ -42,11 +42,10 @@ import {
 import { DebugWatchPanel } from "./debugger-watch-panel";
 import { DebugVariablesPanel } from "./debugger-variables-panel";
 
-const getActiveDebuggableFile = () => {
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
+const getActiveDebuggableFile = (state: ReturnType<typeof useBufferStore.getState>) => {
+  const activeBuffer = state.activeBufferId
+    ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    : null;
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
 
   return {
@@ -69,8 +68,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
 
 export default function DebuggerView() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const buffers = useBufferStore.use.buffers();
+  const activeFile = useBufferStore(getActiveDebuggableFile);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const breakpoints = useDebuggerStore.use.breakpoints();
@@ -93,7 +91,6 @@ export default function DebuggerView() {
   const [startError, setStartError] = useState<string | null>(null);
   const syncedBreakpointFilesRef = useRef<Set<string>>(new Set());
 
-  const activeFile = useMemo(() => getActiveDebuggableFile(), [activeBufferId, buffers]);
   const generatedConfig = useMemo(
     () => createGeneratedDebugConfig(activeFile, rootFolderPath),
     [activeFile, rootFolderPath],
@@ -282,9 +279,8 @@ export default function DebuggerView() {
   };
 
   const toggleCurrentLineBreakpoint = () => {
-    const file = getActiveDebuggableFile();
-    if (!file) return;
-    debuggerActions.toggleBreakpoint(file.path, cursorPosition.line);
+    if (!activeFile) return;
+    debuggerActions.toggleBreakpoint(activeFile.path, cursorPosition.line);
   };
 
   const selectStackFrame = async (frameId: number, sourcePath?: string, line?: number) => {

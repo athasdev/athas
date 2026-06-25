@@ -227,11 +227,10 @@ const DiagnosticsPane = ({
   const filterContextMenu = useContextMenu<FilterMenuType>();
   const headerContextMenu = useContextMenu<"header">();
 
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const buffers = useBufferStore.use.buffers();
-
-  const activeFilePath = useMemo(() => {
-    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+  const activeFilePath = useBufferStore((state) => {
+    const activeBuffer = state.activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      : null;
     if (!activeBuffer) return null;
 
     if (activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
@@ -239,7 +238,7 @@ const DiagnosticsPane = ({
     }
 
     return activeBuffer.path;
-  }, [activeBufferId, buffers]);
+  });
 
   const [preferences, setPreferences] = useState<PanePreferences>(() => loadPreferences());
   const [searchQuery, setSearchQuery] = useState("");
