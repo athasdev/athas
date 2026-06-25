@@ -24,6 +24,7 @@ import Breadcrumb, {
   BreadcrumbActionButton,
 } from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
 import {
   FileNavigatorSidebar,
@@ -526,9 +527,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   multiDiff: MultiFileDiff;
 }) {
   const activeBuffer = useBufferStore((state) => {
-    return state.activeBufferId
-      ? (state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null)
-      : null;
+    return getBufferById(state.buffers, state.activeBufferId);
   });
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;

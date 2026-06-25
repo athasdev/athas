@@ -2,6 +2,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
@@ -105,11 +106,9 @@ export function WindowCloseGuard() {
     setActiveBuffer(pendingClose.bufferId);
     await handleSave();
 
-    const savedBuffer = useBufferStore
-      .getState()
-      .buffers.find((buffer) => buffer.id === pendingClose.bufferId);
+    const pendingBuffer = getBufferById(useBufferStore.getState().buffers, pendingClose.bufferId);
 
-    if (savedBuffer && isEditorContent(savedBuffer) && savedBuffer.isDirty) {
+    if (pendingBuffer && isEditorContent(pendingBuffer) && pendingBuffer.isDirty) {
       return;
     }
 
