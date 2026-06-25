@@ -67,8 +67,9 @@ export const XtermTerminal = ({
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
 
-  const { updateSession, getSession } = useTerminalStore();
-  const session = getSession(sessionId);
+  const updateSession = useTerminalStore((state) => state.updateSession);
+  const getSession = useTerminalStore((state) => state.getSession);
+  const session = useTerminalStore((state) => state.sessions.get(sessionId));
   const connectionId = session?.connectionId;
   const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
 
@@ -82,7 +83,7 @@ export const XtermTerminal = ({
   const terminalCursorBlink = useSettingsStore((state) => state.settings.terminalCursorBlink);
   const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
-  const { rootFolderPath } = useProjectStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const { getTerminalTheme } = useTerminalTheme();
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
