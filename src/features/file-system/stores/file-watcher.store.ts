@@ -4,6 +4,7 @@ import { dirname } from "@tauri-apps/api/path";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "../stores/file-system.store";
 
 interface FileChangeEvent {
@@ -164,7 +165,7 @@ export async function initializeFileWatcherListener() {
     // Handle the file change directly
     const { buffers } = useBufferStore.getState();
     const { reloadBufferFromDisk } = useBufferStore.getState().actions;
-    const buffer = buffers.find((b) => b.path === path);
+    const buffer = getBufferByPath(buffers, path);
 
     if (buffer) {
       // Reload buffer content from disk

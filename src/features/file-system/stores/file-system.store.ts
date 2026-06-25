@@ -14,6 +14,7 @@ import {
   clearQueuedWorkspaceSessionSave,
   useBufferStore,
 } from "@/features/editor/stores/buffer.store";
+import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getLineSlice } from "@/features/editor/utils/large-file";
 import { getAncestorDirectoryPaths } from "@/features/file-explorer/utils/file-explorer-tree-utils";
@@ -306,9 +307,7 @@ const restoreEditorSessionStateForPath = (
     return;
   }
 
-  const openedBuffer = useBufferStore
-    .getState()
-    .buffers.find((buffer) => buffer.type === "editor" && buffer.path === bufferSession.path);
+  const openedBuffer = getBufferByPath(useBufferStore.getState().buffers, bufferSession.path);
 
   if (openedBuffer?.type === "editor") {
     restorePersistedEditorViewState(openedBuffer, bufferSession.editorState);
@@ -746,7 +745,7 @@ export const useFileSystemStore = createSelectors(
               // We can pin it after opening if needed.
               if (buffer.isPinned) {
                 const newBuffers = useBufferStore.getState().buffers;
-                const openedBuffer = newBuffers.find((b) => b.path === buffer.path);
+                const openedBuffer = getBufferByPath(newBuffers, buffer.path);
                 if (openedBuffer) {
                   bufferActions.handleTabPin(openedBuffer.id);
                 }
@@ -759,7 +758,7 @@ export const useFileSystemStore = createSelectors(
           // Restore active buffer
           if (restorePlan.activeBufferPath) {
             const { buffers } = useBufferStore.getState();
-            const activeBuffer = buffers.find((b) => b.path === restorePlan.activeBufferPath);
+            const activeBuffer = getBufferByPath(buffers, restorePlan.activeBufferPath);
             if (activeBuffer) {
               useBufferStore.getState().actions.setActiveBuffer(activeBuffer.id);
             }
@@ -818,7 +817,7 @@ export const useFileSystemStore = createSelectors(
         persistCurrentProjectUiState(currentRootPath);
 
         const { buffers, activeBufferId } = useBufferStore.getState();
-        const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+        const activeBuffer = getBufferById(buffers, activeBufferId);
         const workspaceFolders = normalizeWorkspaceFolders(currentRootPath, get().workspaceFolders);
         const workspaceFolderPaths = workspaceFolders.map((folder) => folder.path);
 
@@ -1114,7 +1113,7 @@ export const useFileSystemStore = createSelectors(
         } = useBufferStore.getState();
         const workspaceRootPath = get().rootFolderPath;
         const fileName = getFilenameFromPath(path);
-        const existingBuffer = buffers.find((buffer) => buffer.path === path);
+        const existingBuffer = getBufferByPath(buffers, path);
         if (existingBuffer) {
           setActiveBuffer(existingBuffer.id);
           recordLocalFileAccess(path, fileName, workspaceRootPath, getWorkspaceFolderPaths(get));
@@ -1883,7 +1882,7 @@ export const useFileSystemStore = createSelectors(
         // Update open buffers
         const { buffers } = useBufferStore.getState();
         const { updateBuffer } = useBufferStore.getState().actions;
-        const buffer = buffers.find((b) => b.path === oldPath);
+        const buffer = getBufferByPath(buffers, oldPath);
         if (buffer) {
           const fileName = getBaseName(newPath, buffer.name);
           updateBuffer({
@@ -2329,7 +2328,7 @@ export const useFileSystemStore = createSelectors(
             });
 
             const { buffers, actions } = useBufferStore.getState();
-            const buffer = buffers.find((b) => b.path === path);
+            const buffer = getBufferByPath(buffers, path);
             if (buffer) {
               actions.updateBuffer({
                 ...buffer,
@@ -2561,9 +2560,10 @@ export const useFileSystemStore = createSelectors(
                       restoreActiveStartedAt,
                     );
                     if (activeSessionBuffer.isPinned) {
-                      const openedBuffer = useBufferStore
-                        .getState()
-                        .buffers.find((buffer) => buffer.path === activeSessionBuffer.path);
+                      const openedBuffer = getBufferByPath(
+                        useBufferStore.getState().buffers,
+                        activeSessionBuffer.path,
+                      );
                       if (openedBuffer && !openedBuffer.isPinned) {
                         bufferActions.handleTabPin(openedBuffer.id);
                       }
