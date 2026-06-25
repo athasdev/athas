@@ -199,7 +199,12 @@ const CodeEditor = ({
   const searchNavigationRevision = useEditorUIStore.use.searchNavigationRevision();
   const searchOptions = useEditorUIStore.use.searchOptions();
   const { setSearchResults } = useEditorUIStore.use.actions();
-  const { settings } = useSettingsStore();
+  const editorFontSize = useSettingsStore((state) => state.settings.fontSize);
+  const editorLineHeight = useSettingsStore((state) => state.settings.editorLineHeight);
+  const athasEditorEngineEnabled = useSettingsStore(
+    (state) => state.settings.coreFeatures.athasEditorEngine,
+  );
+  const parameterHintsEnabled = useSettingsStore((state) => state.settings.parameterHints);
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const lspClient = useMemo(() => LspClient.getInstance(), []);
   const searchInputSignature = useMemo(
@@ -214,8 +219,8 @@ const CodeEditor = ({
   );
 
   // Apply zoom to font size for position calculations (must match editor.tsx)
-  const zoomedFontSize = settings.fontSize * zoomLevel;
-  const zoomedLineHeight = calculateLineHeight(zoomedFontSize, settings.editorLineHeight);
+  const zoomedFontSize = editorFontSize * zoomLevel;
+  const zoomedLineHeight = calculateLineHeight(zoomedFontSize, editorLineHeight);
 
   // Extract values from active buffer or use defaults
   const value = activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
@@ -225,7 +230,7 @@ const CodeEditor = ({
     ? (onContentChange ?? (isActiveSurface ? handleContentChange : () => {}))
     : () => {};
   const isPreviewBuffer = activeBuffer?.isPreview ?? false;
-  const useAthasEditor = settings.coreFeatures.athasEditorEngine;
+  const useAthasEditor = athasEditorEngineEnabled;
   const showNotebookEditor =
     activeBuffer?.type === "editor" && filePath.toLowerCase().endsWith(".ipynb");
   const enableInteractiveServices =
@@ -233,7 +238,7 @@ const CodeEditor = ({
   const largeEditorModeInfo = useLargeEditorModeInfo(value);
   const largeContentMode = useAthasEditor && largeEditorModeInfo.largeContentMode;
   const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
-  const enableInlayHints = useAthasEditor && enableRichEditorServices && settings.parameterHints;
+  const enableInlayHints = useAthasEditor && enableRichEditorServices && parameterHintsEnabled;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
