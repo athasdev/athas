@@ -159,9 +159,19 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
 }
 
 export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusActionsProps = {}) {
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
-  const { settings, updateSetting } = useSettingsStore();
+  const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
+  const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
+  const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
+  const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
+  const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
+  const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
+  const enableGitGutter = useSettingsStore((state) => state.settings.enableGitGutter);
+  const enableInlineGitBlame = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const minimapShortcut = useCommandShortcut("workbench.toggleMinimap");
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
@@ -376,83 +386,85 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
     {
       id: "breadcrumbs",
       label: "Breadcrumbs",
-      checked: settings.coreFeatures.breadcrumbs,
+      checked: breadcrumbsEnabled,
       shortcut: null,
-      onToggle: () =>
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          breadcrumbs: !settings.coreFeatures.breadcrumbs,
-        }),
+      onToggle: () => {
+        const { coreFeatures } = useSettingsStore.getState().settings;
+        void updateSetting("coreFeatures", {
+          ...coreFeatures,
+          breadcrumbs: !coreFeatures.breadcrumbs,
+        });
+      },
     },
     {
       id: "minimap",
       label: "Minimap",
-      checked: settings.showMinimap,
+      checked: showMinimap,
       shortcut: minimapShortcut,
-      onToggle: () => updateSetting("showMinimap", !settings.showMinimap),
+      onToggle: () => updateSetting("showMinimap", !showMinimap),
     },
     {
       id: "line-numbers",
       label: "Line Numbers",
-      checked: settings.lineNumbers,
+      checked: lineNumbers,
       shortcut: null,
-      onToggle: () => updateSetting("lineNumbers", !settings.lineNumbers),
+      onToggle: () => updateSetting("lineNumbers", !lineNumbers),
       disabled: false,
     },
     {
       id: "relative-line-numbers",
       label: "Relative Line Numbers",
-      checked: settings.vimRelativeLineNumbers,
+      checked: vimRelativeLineNumbers,
       shortcut: null,
-      onToggle: () => updateSetting("vimRelativeLineNumbers", !settings.vimRelativeLineNumbers),
-      disabled: !settings.lineNumbers,
+      onToggle: () => updateSetting("vimRelativeLineNumbers", !vimRelativeLineNumbers),
+      disabled: !lineNumbers,
     },
     {
       id: "word-wrap",
       label: "Word Wrap",
-      checked: settings.wordWrap,
+      checked: wordWrap,
       shortcut: null,
-      onToggle: () => updateSetting("wordWrap", !settings.wordWrap),
+      onToggle: () => updateSetting("wordWrap", !wordWrap),
       disabled: false,
     },
     {
       id: "parameter-hints",
       label: "Parameter Hints",
-      checked: settings.parameterHints,
+      checked: parameterHints,
       shortcut: null,
-      onToggle: () => updateSetting("parameterHints", !settings.parameterHints),
+      onToggle: () => updateSetting("parameterHints", !parameterHints),
       disabled: false,
     },
     {
       id: "auto-completion",
       label: "Auto Completion",
-      checked: settings.autoCompletion,
+      checked: autoCompletion,
       shortcut: null,
-      onToggle: () => updateSetting("autoCompletion", !settings.autoCompletion),
+      onToggle: () => updateSetting("autoCompletion", !autoCompletion),
       disabled: false,
     },
     {
       id: "vim-mode",
       label: "Vim Mode",
-      checked: settings.vimMode,
+      checked: vimMode,
       shortcut: null,
-      onToggle: () => updateSetting("vimMode", !settings.vimMode),
+      onToggle: () => updateSetting("vimMode", !vimMode),
       disabled: false,
     },
     {
       id: "git-gutter",
       label: "Git Gutter",
-      checked: settings.enableGitGutter,
+      checked: enableGitGutter,
       shortcut: null,
-      onToggle: () => updateSetting("enableGitGutter", !settings.enableGitGutter),
+      onToggle: () => updateSetting("enableGitGutter", !enableGitGutter),
       disabled: false,
     },
     {
       id: "inline-git-blame",
       label: "Inline Git Blame",
-      checked: settings.enableInlineGitBlame,
+      checked: enableInlineGitBlame,
       shortcut: null,
-      onToggle: () => updateSetting("enableInlineGitBlame", !settings.enableInlineGitBlame),
+      onToggle: () => updateSetting("enableInlineGitBlame", !enableInlineGitBlame),
       disabled: false,
     },
   ];
