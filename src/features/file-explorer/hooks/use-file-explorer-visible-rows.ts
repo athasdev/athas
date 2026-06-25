@@ -72,6 +72,16 @@ export function useFileExplorerVisibleRows({
       hiddenRootPath: hideRootFolder ? rootFolderPath : undefined,
     });
   }, [compactFolders, expandedPaths, expandedPathsOverride, files, hideRootFolder, rootFolderPath]);
+  const visibleRowIndexByPath = useMemo(() => {
+    const indexByPath = new Map<string, number>();
+    for (let index = 0; index < visibleRows.length; index++) {
+      const row = visibleRows[index];
+      if (row) {
+        indexByPath.set(row.file.path, index);
+      }
+    }
+    return indexByPath;
+  }, [visibleRows]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleRows.length,
@@ -92,7 +102,7 @@ export function useFileExplorerVisibleRows({
       fileOpenBenchmark.mark(activePath, "visible-rows-sync");
     }
 
-    const index = visibleRows.findIndex((row) => row.file.path === activePath);
+    const index = visibleRowIndexByPath.get(activePath) ?? -1;
     if (index < 0) return;
 
     if (fileOpenBenchmark.has(activePath)) {
@@ -124,7 +134,7 @@ export function useFileExplorerVisibleRows({
 
     rowVirtualizer.scrollToIndex(index, { align: "center" });
     revealedActivePathRef.current = { path: activePath, index, rowHeight };
-  }, [activePath, containerRef, rowHeight, rowVirtualizer, visibleRows]);
+  }, [activePath, containerRef, rowHeight, rowVirtualizer, visibleRowIndexByPath]);
 
   return { visibleRows, rowVirtualizer };
 }
