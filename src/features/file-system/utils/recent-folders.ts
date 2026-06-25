@@ -41,6 +41,22 @@ export function limitRecentFolders(folders: RecentFolder[]) {
   return [...pinned, ...unpinned];
 }
 
+export function uniqueRecentFolderImports<T extends { path: string }>(folders: T[]) {
+  const seenPaths = new Set<string>();
+  const uniqueFolders: T[] = [];
+
+  for (const folder of folders) {
+    if (seenPaths.has(folder.path)) {
+      continue;
+    }
+
+    seenPaths.add(folder.path);
+    uniqueFolders.push(folder);
+  }
+
+  return uniqueFolders;
+}
+
 export function upsertRecentFolder(
   folders: RecentFolder[],
   folderPath: string,
