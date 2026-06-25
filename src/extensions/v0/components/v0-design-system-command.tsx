@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   buildV0DesignSystemProfileFromRegistry,
   createV0DesignSystemId,
@@ -114,7 +115,13 @@ export function V0DesignSystemCommandContent({
   onBack,
   onClose,
 }: V0DesignSystemCommandContentProps) {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      activeV0DesignSystemId: state.settings.activeV0DesignSystemId,
+      v0DesignSystems: state.settings.v0DesignSystems,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [mode, setMode] = useState<"list" | "add">("list");
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);

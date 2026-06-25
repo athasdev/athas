@@ -1,5 +1,6 @@
 import { FolderOpenIcon as FolderOpen } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -49,7 +50,15 @@ function SettingRow({
 }
 
 export default function OnboardingView({ bufferId, context }: OnboardingViewProps) {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      keybindingPreset: state.settings.keybindingPreset,
+      openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
+      telemetry: state.settings.telemetry,
+      vimMode: state.settings.vimMode,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const closeBufferForce = useBufferStore.use.actions().closeBufferForce;
   const openWhatsNew = useWhatsNewStore((state) => state.open);
