@@ -137,51 +137,63 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [stashSearchQuery, setStashSearchQuery] = useState("");
   const [stashActionLoading, setStashActionLoading] = useState<Set<number>>(new Set());
 
-  const { visibleGitFiles, visibleGitFileKeySet, workingTreeDiffEntriesByScope, stagedFiles } =
-    useMemo(() => {
-      const nextVisibleGitFiles: GitFile[] = [];
-      const nextVisibleGitFileKeySet = new Set<string>();
-      const nextWorkingTreeDiffEntriesByScope: Record<
-        WorkingTreeDiffScope,
-        WorkingTreeDiffEntry[]
-      > = {
+  const {
+    gitFileByPath,
+    visibleGitFiles,
+    visibleGitFileKeySet,
+    workingTreeDiffEntriesByScope,
+    stagedFiles,
+  } = useMemo(() => {
+    const nextGitFileByPath = new Map<string, GitFile>();
+    const nextVisibleGitFiles: GitFile[] = [];
+    const nextVisibleGitFileKeySet = new Set<string>();
+    const nextWorkingTreeDiffEntriesByScope: Record<WorkingTreeDiffScope, WorkingTreeDiffEntry[]> =
+      {
         all: [],
         unstaged: [],
         staged: [],
       };
-      const nextStagedFiles: GitFile[] = [];
-      const seenDiffableFileKeys = new Set<string>();
+    const nextStagedFiles: GitFile[] = [];
+    const seenDiffableFileKeys = new Set<string>();
 
-      for (const file of gitStatus?.files ?? []) {
-        if (!showUntrackedFiles && file.status === "untracked") {
-          continue;
-        }
-
-        const fileKey = `${file.staged ? "staged" : "unstaged"}:${file.path}`;
-        nextVisibleGitFiles.push(file);
-        nextVisibleGitFileKeySet.add(fileKey);
-
-        if (file.staged) {
-          nextStagedFiles.push(file);
-        }
-
-        if (file.status === "untracked" || seenDiffableFileKeys.has(fileKey)) {
-          continue;
-        }
-
-        seenDiffableFileKeys.add(fileKey);
-        const entry: WorkingTreeDiffEntry = [fileKey, file];
-        nextWorkingTreeDiffEntriesByScope.all.push(entry);
-        nextWorkingTreeDiffEntriesByScope[file.staged ? "staged" : "unstaged"].push(entry);
+    for (const file of gitStatus?.files ?? []) {
+      if (!nextGitFileByPath.has(file.path)) {
+        nextGitFileByPath.set(file.path, file);
       }
 
-      return {
-        visibleGitFiles: nextVisibleGitFiles,
-        visibleGitFileKeySet: nextVisibleGitFileKeySet,
-        workingTreeDiffEntriesByScope: nextWorkingTreeDiffEntriesByScope,
-        stagedFiles: nextStagedFiles,
-      };
-    }, [gitStatus?.files, showUntrackedFiles]);
+      if (!showUntrackedFiles && file.status === "untracked") {
+        continue;
+      }
+
+      const fileKey = `${file.staged ? "staged" : "unstaged"}:${file.path}`;
+      nextVisibleGitFiles.push(file);
+      nextVisibleGitFileKeySet.add(fileKey);
+
+      if (file.staged) {
+        nextStagedFiles.push(file);
+      }
+
+      if (file.status === "untracked" || seenDiffableFileKeys.has(fileKey)) {
+        continue;
+      }
+
+      seenDiffableFileKeys.add(fileKey);
+      const entry: WorkingTreeDiffEntry = [fileKey, file];
+      nextWorkingTreeDiffEntriesByScope.all.push(entry);
+      nextWorkingTreeDiffEntriesByScope[file.staged ? "staged" : "unstaged"].push(entry);
+    }
+
+    return {
+      gitFileByPath: nextGitFileByPath,
+      visibleGitFiles: nextVisibleGitFiles,
+      visibleGitFileKeySet: nextVisibleGitFileKeySet,
+      workingTreeDiffEntriesByScope: nextWorkingTreeDiffEntriesByScope,
+      stagedFiles: nextStagedFiles,
+    };
+  }, [gitStatus?.files, showUntrackedFiles]);
+  const commitByHash = useMemo(() => {
+    return new Map(commits.map((commit) => [commit.hash, commit] as const));
+  }, [commits]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
@@ -545,7 +557,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         actualFilePath = actualFilePath.slice(1, -1);
       }
 
-      const file = gitStatus?.files.find((f: GitFile) => f.path === actualFilePath);
+      const file = gitFileByPath.get(actualFilePath);
 
       if (file && file.status === "untracked" && !staged) {
         handleOpenOriginalFile(actualFilePath);
@@ -723,7 +735,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     setIsLoadingCommitDiff(true);
     try {
       const diffs = await getCommitDiff(activeRepoPath, commitHash);
-      const commit = useGitStore.getState().commits.find((entry) => entry.hash === commitHash);
+      const commit = commitByHash.get(commitHash);
 
       if (diffs && diffs.length > 0) {
         if (filePath) {
