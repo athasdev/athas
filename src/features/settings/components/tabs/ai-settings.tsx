@@ -14,6 +14,7 @@ import {
   TrashIcon as Trash2,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { ModelSelector } from "@/features/ai/components/selectors/model-selector";
 import { ProviderSelector } from "@/features/ai/components/selectors/provider-selector";
@@ -66,7 +67,21 @@ function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: str
 }
 
 export const AISettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      aiAutocompleteCustomBaseUrl: state.settings.aiAutocompleteCustomBaseUrl,
+      aiAutocompleteCustomModelId: state.settings.aiAutocompleteCustomModelId,
+      aiAutocompleteModelId: state.settings.aiAutocompleteModelId,
+      aiAutocompleteProvider: state.settings.aiAutocompleteProvider,
+      aiCompletion: state.settings.aiCompletion,
+      aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
+      aiCustomModelId: state.settings.aiCustomModelId,
+      aiModelId: state.settings.aiModelId,
+      aiProviderId: state.settings.aiProviderId,
+      ollamaBaseUrl: state.settings.ollamaBaseUrl,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
