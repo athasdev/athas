@@ -9,7 +9,7 @@ interface LineRange {
   endLine: number;
 }
 
-const LINE_BASED_LANGUAGE_IDS = new Set(["gitignore", "gitattributes", "lockfile"]);
+const LINE_BASED_LANGUAGE_IDS = new Set(["diff", "gitignore", "gitattributes", "lockfile"]);
 const LINE_BASED_FALLBACK_LANGUAGE_IDS = new Set([
   ...LINE_BASED_LANGUAGE_IDS,
   "typescriptreact",
@@ -205,6 +205,47 @@ function tokenizeLockfileLine(
   }
 }
 
+function tokenizeDiffLine(tokens: LineBasedSyntaxToken[], line: string, lineStart: number): void {
+  if (
+    line.startsWith("diff --git ") ||
+    line.startsWith("index ") ||
+    line.startsWith("new file mode ") ||
+    line.startsWith("deleted file mode ") ||
+    line.startsWith("rename from ") ||
+    line.startsWith("rename to ") ||
+    line.startsWith("similarity index ") ||
+    line.startsWith("dissimilarity index ") ||
+    line.startsWith("Binary files ")
+  ) {
+    pushToken(tokens, lineStart, lineStart + line.length, "token-keyword");
+    return;
+  }
+
+  if (line.startsWith("@@")) {
+    pushToken(tokens, lineStart, lineStart + line.length, "token-attribute");
+    return;
+  }
+
+  if (line.startsWith("+++ ")) {
+    pushToken(tokens, lineStart, lineStart + line.length, "token-string");
+    return;
+  }
+
+  if (line.startsWith("--- ")) {
+    pushToken(tokens, lineStart, lineStart + line.length, "token-variable");
+    return;
+  }
+
+  if (line.startsWith("+")) {
+    pushToken(tokens, lineStart, lineStart + line.length, "token-string");
+    return;
+  }
+
+  if (line.startsWith("-")) {
+    pushToken(tokens, lineStart, lineStart + line.length, "token-variable");
+  }
+}
+
 function tokenizeTypeScriptReactLine(
   tokens: LineBasedSyntaxToken[],
   line: string,
@@ -309,7 +350,9 @@ export function tokenizeLineBasedSyntax(
     const line = lines[lineNumber] ?? "";
 
     if (lineNumber >= startLine && lineNumber <= endLine) {
-      if (languageId === "gitignore") {
+      if (languageId === "diff") {
+        tokenizeDiffLine(tokens, line, offset);
+      } else if (languageId === "gitignore") {
         tokenizeGitIgnoreLine(tokens, line, offset);
       } else if (languageId === "gitattributes") {
         tokenizeGitAttributesLine(tokens, line, offset);

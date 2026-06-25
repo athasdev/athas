@@ -153,11 +153,25 @@ describe("R Markdown overlays", () => {
 });
 
 describe("line-based syntax highlighting", () => {
-  it("highlights ignore, attributes, and lockfile syntaxes without a Tree-sitter parser", () => {
+  it("highlights diff, ignore, attributes, and lockfile syntaxes without a Tree-sitter parser", () => {
+    expect(hasLineBasedSyntaxHighlighter("diff")).toBe(true);
     expect(hasLineBasedSyntaxHighlighter("gitignore")).toBe(true);
     expect(hasLineBasedSyntaxHighlighter("gitattributes")).toBe(true);
     expect(hasLineBasedSyntaxHighlighter("lockfile")).toBe(true);
 
+    expect(
+      tokenizeLineBasedSyntax(
+        "diff --git a/src/file.ts b/src/file.ts\n@@ -1 +1 @@\n-old\n+new",
+        "diff",
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-attribute" }),
+        expect.objectContaining({ class_name: "token-variable" }),
+        expect.objectContaining({ class_name: "token-string" }),
+      ]),
+    );
     expect(tokenizeLineBasedSyntax("# comment\n!important/*.log", "gitignore")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ class_name: "token-comment" }),
