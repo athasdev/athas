@@ -24,7 +24,8 @@ function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) 
   const orderedItems = orderedIds
     .map((id) => itemMap.get(id))
     .filter((item): item is T => Boolean(item));
-  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  const orderedIdSet = new Set(orderedIds);
+  const missingItems = items.filter((item) => !orderedIdSet.has(item.id));
   return [...orderedItems, ...missingItems];
 }
 

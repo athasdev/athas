@@ -63,7 +63,8 @@ function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, ordered
   const orderedItems = orderedIds
     .map((id) => itemMap.get(id))
     .filter((item): item is FooterItem<T> => Boolean(item));
-  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  const orderedIdSet = new Set(orderedIds);
+  const missingItems = items.filter((item) => !orderedIdSet.has(item.id));
   return [...orderedItems, ...missingItems];
 }
 

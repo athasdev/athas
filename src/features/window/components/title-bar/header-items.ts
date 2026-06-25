@@ -11,7 +11,8 @@ export function orderHeaderItems<T extends string>(items: Array<HeaderItem<T>>, 
   const orderedItems = orderedIds
     .map((id) => itemMap.get(id))
     .filter((item): item is HeaderItem<T> => Boolean(item));
-  const missingItems = items.filter((item) => !orderedIds.includes(item.id));
+  const orderedIdSet = new Set(orderedIds);
+  const missingItems = items.filter((item) => !orderedIdSet.has(item.id));
   return [...orderedItems, ...missingItems];
 }
 
