@@ -10,6 +10,11 @@ interface ReplaceTarget {
   column: number;
 }
 
+interface SourceContent {
+  bufferId: string | null;
+  content: string;
+}
+
 function lineColumnToOffset(content: string, line: number, column: number): number {
   const lines = content.split("\n");
   let offset = 0;
@@ -21,7 +26,7 @@ function lineColumnToOffset(content: string, line: number, column: number): numb
   return offset + Math.max(0, Math.min(column - 1, lines[line - 1]?.length ?? 0));
 }
 
-function getSourceContent(filePath: string): { bufferId: string | null; content: string } | null {
+function getSourceContent(filePath: string): SourceContent | null {
   const { buffers } = useBufferStore.getState();
   const openSourceBuffer = buffers.find(
     (buffer) => buffer.type === "editor" && !buffer.isVirtual && buffer.path === filePath,
@@ -34,8 +39,23 @@ function getSourceContent(filePath: string): { bufferId: string | null; content:
   return null;
 }
 
-async function readSource(filePath: string): Promise<{ bufferId: string | null; content: string }> {
-  const openSource = getSourceContent(filePath);
+function getOpenSourceContentByPath(): Map<string, SourceContent> {
+  const sourcesByPath = new Map<string, SourceContent>();
+
+  for (const buffer of useBufferStore.getState().buffers) {
+    if (buffer.type === "editor" && !buffer.isVirtual) {
+      sourcesByPath.set(buffer.path, { bufferId: buffer.id, content: buffer.content });
+    }
+  }
+
+  return sourcesByPath;
+}
+
+async function readSource(
+  filePath: string,
+  openSourcesByPath?: ReadonlyMap<string, SourceContent>,
+): Promise<SourceContent> {
+  const openSource = openSourcesByPath?.get(filePath) ?? getSourceContent(filePath);
   if (openSource) return openSource;
 
   return {
@@ -107,22 +127,21 @@ export async function replaceAllInSources(
 ): Promise<number> {
   const regex = buildSearchRegex(query, options);
   if (!regex) return 0;
+  const openSourcesByPath = getOpenSourceContentByPath();
 
   const replaceCounts = await Promise.all(
     filePaths.map(async (filePath) => {
-      const source = await readSource(filePath);
+      const source = await readSource(filePath, openSourcesByPath);
       let matchCount = 0;
       const fileRegex = buildSearchRegex(query, options);
       if (!fileRegex) return 0;
+      const replacementRegex = options.useRegex
+        ? new RegExp(fileRegex.source, fileRegex.flags.replace(/g/g, ""))
+        : null;
       const nextContent = source.content.replace(fileRegex, (...args) => {
         matchCount++;
         const matchText = args[0] as string;
-        return options.useRegex
-          ? matchText.replace(
-              new RegExp(fileRegex.source, fileRegex.flags.replace(/g/g, "")),
-              replacement,
-            )
-          : replacement;
+        return options.useRegex ? matchText.replace(replacementRegex!, replacement) : replacement;
       });
 
       if (matchCount > 0 && nextContent !== source.content) {
