@@ -1133,17 +1133,18 @@ export const useBufferStore = createSelectors(
           if (bufferIds.length === 0) return;
 
           const { buffers, activeBufferId } = get();
+          const closingBufferIds = new Set(bufferIds);
           const replacementBufferId =
-            activeBufferId && bufferIds.includes(activeBufferId)
+            activeBufferId && closingBufferIds.has(activeBufferId)
               ? getPaneReplacementBufferId(bufferIds, buffers)
               : null;
 
           bufferIds.forEach((id) => removeBufferFromPanes(id));
 
           set((state) => {
-            state.buffers = state.buffers.filter((b) => !bufferIds.includes(b.id));
+            state.buffers = state.buffers.filter((b) => !closingBufferIds.has(b.id));
 
-            if (bufferIds.includes(state.activeBufferId || "")) {
+            if (state.activeBufferId && closingBufferIds.has(state.activeBufferId)) {
               if (replacementBufferId) {
                 activateBufferInState(state, replacementBufferId);
               } else if (state.buffers.length > 0) {
