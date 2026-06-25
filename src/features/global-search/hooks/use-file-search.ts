@@ -24,15 +24,22 @@ function insertSortedLimited<T>(
 ) {
   if (limit <= 0) return;
 
-  const insertIndex = items.findIndex((item) => compare(candidate, item) < 0);
-  if (insertIndex === -1) {
-    if (items.length < limit) {
-      items.push(candidate);
+  let low = 0;
+  let high = items.length;
+  while (low < high) {
+    const midpoint = (low + high) >> 1;
+    if (compare(candidate, items[midpoint]) < 0) {
+      high = midpoint;
+    } else {
+      low = midpoint + 1;
     }
+  }
+
+  if (low >= limit && items.length >= limit) {
     return;
   }
 
-  items.splice(insertIndex, 0, candidate);
+  items.splice(low, 0, candidate);
   if (items.length > limit) {
     items.pop();
   }
