@@ -146,66 +146,70 @@ export const useFileSearch = (
       return a.file.name.localeCompare(b.file.name);
     };
 
-    const scoredFiles: SearchResult[] =
-      fffHits && fffHits.length > 0
-        ? fffHits.map((hit) => ({
-            file: { name: hit.name, path: hit.path, isDir: false },
-            score: hit.score,
-          }))
-        : [];
+    if (fffHits && fffHits.length > 0) {
+      const openBuffers: FileItem[] = [];
+      const recent: FileItem[] = [];
+      const others: FileItem[] = [];
 
-    if (!fffHits || fffHits.length === 0) {
-      const openCandidates: SearchResult[] = [];
-      const recentCandidates: SearchResult[] = [];
-      const otherCandidates: SearchResult[] = [];
-
-      for (const file of files) {
-        const nameScore = fuzzyScore(file.name, debouncedQuery);
-        const pathScore = fuzzyScore(file.path, debouncedQuery);
-        const score = Math.max(nameScore, pathScore);
-        if (score <= 0) continue;
-
-        const candidate = { file, score };
+      for (const hit of fffHits) {
+        const file = { name: hit.name, path: hit.path, isDir: false };
         if (openBufferPaths.has(file.path)) {
-          insertSortedLimited(openCandidates, candidate, compareScoredFiles, MAX_RESULTS);
+          if (openBuffers.length < MAX_RESULTS) {
+            openBuffers.push(file);
+          }
         } else if (recentFilePaths.has(file.path)) {
-          insertSortedLimited(recentCandidates, candidate, compareScoredFiles, MAX_RESULTS);
-        } else if (file.path !== activeBufferPath) {
-          insertSortedLimited(
-            otherCandidates,
-            candidate,
-            compareScoredFiles,
-            MAX_OTHER_FILES_SHOWN,
-          );
+          if (recent.length < MAX_RESULTS) {
+            recent.push(file);
+          }
+        } else if (file.path !== activeBufferPath && others.length < MAX_OTHER_FILES_SHOWN) {
+          others.push(file);
         }
       }
 
-      scoredFiles.push(...openCandidates, ...recentCandidates, ...otherCandidates);
+      const openBuffersShown = openBuffers.slice(0, MAX_RESULTS);
+      const recentFilesShown = recent.slice(0, Math.max(0, MAX_RESULTS - openBuffersShown.length));
+      const otherFilesShown = others.slice(
+        0,
+        Math.max(0, MAX_OTHER_FILES_SHOWN - openBuffersShown.length - recentFilesShown.length),
+      );
+
+      return {
+        openBufferFiles: openBuffersShown,
+        recentFilesInResults: recentFilesShown,
+        otherFiles: otherFilesShown,
+      };
     }
 
-    const openBuffers = scoredFiles
-      .filter(({ file }) => openBufferPaths.has(file.path))
-      .map(({ file }) => file);
+    const openCandidates: SearchResult[] = [];
+    const recentCandidates: SearchResult[] = [];
+    const otherCandidates: SearchResult[] = [];
 
-    const recent = scoredFiles
-      .filter(({ file }) => recentFilePaths.has(file.path) && !openBufferPaths.has(file.path))
-      .map(({ file }) => file);
+    for (const file of files) {
+      const nameScore = fuzzyScore(file.name, debouncedQuery);
+      const pathScore = fuzzyScore(file.path, debouncedQuery);
+      const score = Math.max(nameScore, pathScore);
+      if (score <= 0) continue;
 
-    const others = scoredFiles
-      .filter(
-        ({ file }) =>
-          !recentFilePaths.has(file.path) &&
-          !openBufferPaths.has(file.path) &&
-          file.path !== activeBufferPath,
+      const candidate = { file, score };
+      if (openBufferPaths.has(file.path)) {
+        insertSortedLimited(openCandidates, candidate, compareScoredFiles, MAX_RESULTS);
+      } else if (recentFilePaths.has(file.path)) {
+        insertSortedLimited(recentCandidates, candidate, compareScoredFiles, MAX_RESULTS);
+      } else if (file.path !== activeBufferPath) {
+        insertSortedLimited(otherCandidates, candidate, compareScoredFiles, MAX_OTHER_FILES_SHOWN);
+      }
+    }
+
+    const openBuffersShown = openCandidates.slice(0, MAX_RESULTS).map(({ file }) => file);
+    const recentFilesShown = recentCandidates
+      .slice(0, Math.max(0, MAX_RESULTS - openBuffersShown.length))
+      .map(({ file }) => file);
+    const otherFilesShown = otherCandidates
+      .slice(
+        0,
+        Math.max(0, MAX_OTHER_FILES_SHOWN - openBuffersShown.length - recentFilesShown.length),
       )
       .map(({ file }) => file);
-
-    const openBuffersShown = openBuffers.slice(0, MAX_RESULTS);
-    const recentFilesShown = recent.slice(0, Math.max(0, MAX_RESULTS - openBuffersShown.length));
-    const otherFilesShown = others.slice(
-      0,
-      Math.max(0, MAX_OTHER_FILES_SHOWN - openBuffersShown.length - recentFilesShown.length),
-    );
 
     return {
       openBufferFiles: openBuffersShown,
