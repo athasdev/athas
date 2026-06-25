@@ -7,8 +7,7 @@ interface VimStatusIndicatorProps {
 }
 
 const VimStatusIndicator = ({ compact = false }: VimStatusIndicatorProps) => {
-  const { settings } = useSettingsStore();
-  const vimMode = settings.vimMode;
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
   const mode = useVimStore.use.mode();
   const isCommandMode = useVimStore.use.isCommandMode();
   const lastKey = useVimStore.use.lastKey();

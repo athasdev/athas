@@ -106,8 +106,7 @@ const getReplacementChar = (event: KeyboardEvent): string | null => {
 };
 
 export const useVimKeyboard = ({ onSave, onGoToLine }: UseVimKeyboardProps) => {
-  const { settings } = useSettingsStore();
-  const vimMode = settings.vimMode;
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
   const mode = useVimStore.use.mode();
   const isCommandMode = useVimStore.use.isCommandMode();
   const visualSelection = useVimStore.use.visualSelection();
