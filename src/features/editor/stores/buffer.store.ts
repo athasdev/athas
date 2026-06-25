@@ -257,6 +257,36 @@ const getExistingPaneBufferIds = (paneBufferIds: string[], buffers: PaneContent[
   return existingBufferIds;
 };
 
+const withActiveBufferState = (
+  buffers: PaneContent[],
+  activeBufferId: string | null,
+): PaneContent[] => {
+  return buffers.map((buffer) => {
+    const isActive = buffer.id === activeBufferId;
+    return buffer.isActive === isActive ? buffer : { ...buffer, isActive };
+  });
+};
+
+const deactivateBuffers = (buffers: PaneContent[]): PaneContent[] =>
+  withActiveBufferState(buffers, null);
+
+const activateBufferInState = (state: BufferState, bufferId: string | null): PaneContent | null => {
+  state.activeBufferId = bufferId;
+
+  let activeBuffer: PaneContent | null = null;
+  for (const buffer of state.buffers) {
+    const isActive = buffer.id === bufferId;
+    if (isActive) {
+      activeBuffer = buffer;
+    }
+    if (buffer.isActive !== isActive) {
+      buffer.isActive = isActive;
+    }
+  }
+
+  return activeBuffer;
+};
+
 /**
  * Run extension checking and LSP logic for a newly opened editor file.
  */
@@ -342,12 +372,10 @@ export const useBufferStore = createSelectors(
               const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                    isPreview: b.id === existing.id && !shouldBePreview ? false : b.isPreview,
-                  }));
+                  const activeBuffer = activateBufferInState(state, existing.id);
+                  if (activeBuffer && !shouldBePreview) {
+                    activeBuffer.isPreview = false;
+                  }
                 });
                 syncBufferToPane(existing.id);
                 syncPanePreviewForBuffer(existing.id, shouldBePreview);
@@ -376,7 +404,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec) as EditorContent;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -405,11 +433,7 @@ export const useBufferStore = createSelectors(
               );
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -429,7 +453,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -448,11 +472,7 @@ export const useBufferStore = createSelectors(
                 );
                 if (existing) {
                   set((state) => {
-                    state.activeBufferId = existing.id;
-                    state.buffers = state.buffers.map((b) => ({
-                      ...b,
-                      isActive: b.id === existing.id,
-                    }));
+                    activateBufferInState(state, existing.id);
                   });
                   syncAndFocusBufferInPane(existing.id);
                   return existing.id;
@@ -476,7 +496,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -502,11 +522,7 @@ export const useBufferStore = createSelectors(
               const existing = buffers.find((b) => b.type === "webViewer" && b.url === spec.url);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -521,7 +537,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -535,10 +551,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [
-                  ...cleanedBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...deactivateBuffers(cleanedBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
               syncBufferToPane(newBuffer.id);
@@ -586,7 +599,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -630,7 +643,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -673,7 +686,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -685,11 +698,7 @@ export const useBufferStore = createSelectors(
               const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -714,7 +723,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -729,20 +738,7 @@ export const useBufferStore = createSelectors(
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => {
-                    if (b.id !== existing.id) {
-                      return {
-                        ...b,
-                        isActive: false,
-                      };
-                    }
-
-                    return {
-                      ...b,
-                      isActive: true,
-                    };
-                  });
+                  activateBufferInState(state, existing.id);
                 });
                 syncAndFocusBufferInPane(existing.id);
                 return existing.id;
@@ -755,7 +751,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -768,11 +764,7 @@ export const useBufferStore = createSelectors(
               const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncAndFocusBufferInPane(existing.id);
                 return existing.id;
@@ -785,7 +777,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -805,31 +797,13 @@ export const useBufferStore = createSelectors(
               const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => {
-                    if (b.id !== existing.id) {
-                      return {
-                        ...b,
-                        isActive: false,
-                      };
-                    }
-
-                    if (spec.type === "diff" && b.type === "diff") {
-                      return {
-                        ...b,
-                        isActive: true,
-                        name: spec.name,
-                        content: spec.content,
-                        savedContent: spec.content,
-                        diffData: spec.diffData,
-                      };
-                    }
-
-                    return {
-                      ...b,
-                      isActive: true,
-                    };
-                  });
+                  const activeBuffer = activateBufferInState(state, existing.id);
+                  if (spec.type === "diff" && activeBuffer?.type === "diff") {
+                    activeBuffer.name = spec.name;
+                    activeBuffer.content = spec.content;
+                    activeBuffer.savedContent = spec.content;
+                    activeBuffer.diffData = spec.diffData;
+                  }
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -844,7 +818,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -1144,10 +1118,7 @@ export const useBufferStore = createSelectors(
           }
 
           set((state) => {
-            state.buffers = newBuffers.map((b) => ({
-              ...b,
-              isActive: b.id === newActiveId,
-            }));
+            state.buffers = withActiveBufferState(newBuffers, newActiveId);
             state.activeBufferId = newActiveId;
           });
 
@@ -1174,18 +1145,10 @@ export const useBufferStore = createSelectors(
 
             if (bufferIds.includes(state.activeBufferId || "")) {
               if (replacementBufferId) {
-                state.activeBufferId = replacementBufferId;
-                state.buffers = state.buffers.map((buffer) => ({
-                  ...buffer,
-                  isActive: buffer.id === replacementBufferId,
-                }));
+                activateBufferInState(state, replacementBufferId);
               } else if (state.buffers.length > 0) {
                 const nextBufferId = state.buffers[0].id;
-                state.activeBufferId = nextBufferId;
-                state.buffers = state.buffers.map((buffer) => ({
-                  ...buffer,
-                  isActive: buffer.id === nextBufferId,
-                }));
+                activateBufferInState(state, nextBufferId);
               } else {
                 state.activeBufferId = null;
               }
@@ -1209,11 +1172,7 @@ export const useBufferStore = createSelectors(
 
           syncAndFocusBufferInPane(bufferId);
           set((state) => {
-            state.activeBufferId = bufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === bufferId,
-            }));
+            activateBufferInState(state, bufferId);
           });
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
@@ -1490,11 +1449,7 @@ export const useBufferStore = createSelectors(
             ensureBufferInPane(activePane.id, nextBufferId, true);
           }
           set((state) => {
-            state.activeBufferId = nextBufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === nextBufferId,
-            }));
+            activateBufferInState(state, nextBufferId);
           });
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
@@ -1517,11 +1472,7 @@ export const useBufferStore = createSelectors(
             ensureBufferInPane(activePane.id, prevBufferId, true);
           }
           set((state) => {
-            state.activeBufferId = prevBufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === prevBufferId,
-            }));
+            activateBufferInState(state, prevBufferId);
           });
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
