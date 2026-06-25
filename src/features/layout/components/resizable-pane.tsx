@@ -28,9 +28,13 @@ export function ResizablePane({
   edgePadding = true,
   hidden = false,
 }: ResizablePaneProps) {
-  const { settings, updateSetting } = useSettingsStore();
+  const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
+  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
+  const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
+  const aiChatWidth = useSettingsStore((state) => state.settings.aiChatWidth);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const [width, setWidth] = useState(Math.max(settings[widthKey], MIN_PANE_WIDTH));
+  const [width, setWidth] = useState(Math.max(storedWidth, MIN_PANE_WIDTH));
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
 
@@ -47,25 +51,19 @@ export function ResizablePane({
   const getMaxWidth = useCallback(() => {
     const windowWidth = getViewportWidth();
     const MIN_MAIN_CONTENT_WIDTH = 360; // Keep editor area readable on smaller windows
-    const shouldAccountForAiChat = settings.isAIChatVisible;
+    const shouldAccountForAiChat = isAIChatVisible;
 
     // Calculate available space accounting for both sidebars and minimum main content
     if (widthKey === "sidebarWidth" && shouldAccountForAiChat) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.aiChatWidth - MIN_MAIN_CONTENT_WIDTH);
+      return Math.max(MIN_PANE_WIDTH, windowWidth - aiChatWidth - MIN_MAIN_CONTENT_WIDTH);
     }
     if (widthKey === "aiChatWidth" && isSidebarVisible) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - settings.sidebarWidth - MIN_MAIN_CONTENT_WIDTH);
+      return Math.max(MIN_PANE_WIDTH, windowWidth - sidebarWidth - MIN_MAIN_CONTENT_WIDTH);
     }
 
     // Single sidebar case - leave room for main content
     return Math.max(MIN_PANE_WIDTH, windowWidth - MIN_MAIN_CONTENT_WIDTH);
-  }, [
-    widthKey,
-    settings.isAIChatVisible,
-    settings.aiChatWidth,
-    settings.sidebarWidth,
-    isSidebarVisible,
-  ]);
+  }, [widthKey, isAIChatVisible, aiChatWidth, sidebarWidth, isSidebarVisible]);
 
   const clampWidth = useCallback(
     (value: number) => {
@@ -77,14 +75,13 @@ export function ResizablePane({
   );
 
   useEffect(() => {
-    const storedWidth = settings[widthKey];
     const nextWidth = clampWidth(storedWidth);
 
     setWidth(nextWidth);
     if (nextWidth !== storedWidth) {
       updateSetting(widthKey, nextWidth);
     }
-  }, [settings, widthKey, updateSetting, clampWidth]);
+  }, [storedWidth, widthKey, updateSetting, clampWidth]);
 
   useEffect(() => {
     const handleWindowResize = () => {
