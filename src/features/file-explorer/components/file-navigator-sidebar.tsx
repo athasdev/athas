@@ -295,17 +295,18 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     if (!trimmedQuery) return items;
 
     if (searchMode === "fuzzy") {
-      return items
-        .map((item) => ({
-          item,
-          score: getFuzzyItemSearchScore(item, trimmedQuery),
-        }))
-        .filter(({ score }) => score > 0)
-        .sort(
-          (left, right) =>
-            right.score - left.score || left.item.path.localeCompare(right.item.path),
-        )
-        .map(({ item }) => item);
+      const scoredItems: Array<{ item: FileNavigatorItem; score: number }> = [];
+      for (const item of items) {
+        const score = getFuzzyItemSearchScore(item, trimmedQuery);
+        if (score > 0) {
+          scoredItems.push({ item, score });
+        }
+      }
+
+      scoredItems.sort(
+        (left, right) => right.score - left.score || left.item.path.localeCompare(right.item.path),
+      );
+      return scoredItems.map(({ item }) => item);
     }
 
     const query = trimmedQuery.toLowerCase();
