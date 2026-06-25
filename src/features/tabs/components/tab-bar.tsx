@@ -89,10 +89,6 @@ const TabBar = ({
   });
   const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
-  const activeBufferId =
-    activeBufferCandidate && buffers.some((buffer) => buffer.id === activeBufferCandidate)
-      ? activeBufferCandidate
-      : null;
   const {
     handleTabClick,
     handleTabClose,
@@ -119,6 +115,8 @@ const TabBar = ({
     }
     return nextBufferById;
   }, [buffers]);
+  const activeBufferId =
+    activeBufferCandidate && bufferById.has(activeBufferCandidate) ? activeBufferCandidate : null;
   const activeBuffer = activeBufferId ? (bufferById.get(activeBufferId) ?? null) : null;
   const activeWebViewerNavigation = useWebViewerNavigationStore((state) =>
     activeBuffer?.type === "webViewer" ? state.navigationByBufferId[activeBuffer.id] : undefined,
@@ -289,13 +287,33 @@ const TabBar = ({
   );
 
   const sortedBuffers = useMemo(() => {
-    return [...buffers].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return 0;
-    });
+    const pinnedBuffers: PaneContent[] = [];
+    const unpinnedBuffers: PaneContent[] = [];
+
+    for (const buffer of buffers) {
+      if (buffer.isPinned) {
+        pinnedBuffers.push(buffer);
+      } else {
+        unpinnedBuffers.push(buffer);
+      }
+    }
+
+    if (pinnedBuffers.length === 0) return unpinnedBuffers;
+    if (unpinnedBuffers.length === 0) return pinnedBuffers;
+    return [...pinnedBuffers, ...unpinnedBuffers];
   }, [buffers]);
-  const sortedBufferIds = useMemo(() => sortedBuffers.map((buffer) => buffer.id), [sortedBuffers]);
+  const { sortedBufferIds, sortedBufferIndexById } = useMemo(() => {
+    const ids: string[] = [];
+    const indexById = new Map<string, number>();
+
+    for (let index = 0; index < sortedBuffers.length; index++) {
+      const buffer = sortedBuffers[index];
+      ids.push(buffer.id);
+      indexById.set(buffer.id, index);
+    }
+
+    return { sortedBufferIds: ids, sortedBufferIndexById: indexById };
+  }, [sortedBuffers]);
   const draggedBuffer = draggedBufferId ? (bufferById.get(draggedBufferId) ?? null) : null;
 
   // Calculate display names for tabs with minimal distinguishing paths
@@ -344,7 +362,7 @@ const TabBar = ({
 
   // Auto-scroll active tab into view
   useEffect(() => {
-    const activeIndex = sortedBuffers.findIndex((buffer) => buffer.id === activeBufferId);
+    const activeIndex = activeBufferId ? (sortedBufferIndexById.get(activeBufferId) ?? -1) : -1;
     if (activeIndex !== -1 && tabRefs.current[activeIndex] && tabBarRef.current) {
       const activeTab = tabRefs.current[activeIndex];
       const container = tabBarRef.current;
@@ -363,7 +381,7 @@ const TabBar = ({
         }
       }
     }
-  }, [activeBufferId, sortedBuffers]);
+  }, [activeBufferId, sortedBufferIndexById]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent, index: number) => {
@@ -498,7 +516,7 @@ const TabBar = ({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const buffer = sortedBuffers.find((item) => item.id === String(event.active.id));
+      const buffer = bufferById.get(String(event.active.id));
       if (!buffer) return;
 
       setDraggedBufferId(buffer.id);
@@ -510,7 +528,7 @@ const TabBar = ({
       });
       handleTabSelect(buffer);
     },
-    [handleTabSelect, paneId, sortedBuffers],
+    [bufferById, handleTabSelect, paneId],
   );
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
@@ -544,7 +562,7 @@ const TabBar = ({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const activeId = String(event.active.id);
-      const dragged = sortedBuffers.find((buffer) => buffer.id === activeId);
+      const dragged = bufferById.get(activeId);
       const point = getDragPoint(event);
       const target = point ? resolveDropTarget(point) : { paneId: null, zone: null };
       const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
@@ -573,8 +591,8 @@ const TabBar = ({
           useUIState.getState().setIsBottomPaneVisible(true);
         }
       } else if (event.over && reorderBuffers) {
-        const oldIndex = sortedBuffers.findIndex((buffer) => buffer.id === activeId);
-        const newIndex = sortedBuffers.findIndex((buffer) => buffer.id === String(event.over?.id));
+        const oldIndex = sortedBufferIndexById.get(activeId) ?? -1;
+        const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           reorderBuffers(oldIndex, newIndex);
           if (dragged) {
@@ -585,7 +603,7 @@ const TabBar = ({
 
       resetDrag();
     },
-    [handleTabClick, paneId, reorderBuffers, resetDrag, sortedBuffers],
+    [bufferById, handleTabClick, paneId, reorderBuffers, resetDrag, sortedBufferIndexById],
   );
 
   useEffect(() => {
