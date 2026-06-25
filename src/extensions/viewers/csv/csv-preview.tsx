@@ -31,23 +31,22 @@ function autodetectDelimiter(text: string): Delim {
 }
 
 export function CsvPreview() {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  const sourceContent = useBufferStore((state) => {
+    const activeBuffer = state.activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      : null;
+    const sourceFilePath =
+      activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
+    const sourceBuffer = sourceFilePath
+      ? state.buffers.find((buffer) => buffer.path === sourceFilePath)
+      : activeBuffer;
+    return sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
+  });
   const fontSize = useEditorSettingsStore.use.fontSize();
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
 
-  // Get the source buffer if this is a preview buffer
-  const sourceFilePath =
-    activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
-  const sourceBuffer = sourceFilePath
-    ? buffers.find((b) => b.path === sourceFilePath)
-    : activeBuffer;
-
   const [delimiter, setDelimiter] = useState<Delim | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
-
-  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
 
   const { headers, rows } = useMemo(() => {
     const delim = delimiter === "auto" ? autodetectDelimiter(sourceContent) : delimiter;
