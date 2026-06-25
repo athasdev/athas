@@ -129,8 +129,7 @@ function collapseEmptyPaneInTree(tree: PaneNode, paneId: string, fallbackId: str
     return tree;
   }
 
-  const allGroups = getAllPaneGroups(tree);
-  if (allGroups.length <= 1) {
+  if (tree.type === "group") {
     return fallbackId === ROOT_PANE_ID ? createInitialRoot() : createInitialBottomRoot();
   }
 
@@ -140,11 +139,39 @@ function collapseEmptyPaneInTree(tree: PaneNode, paneId: string, fallbackId: str
   );
 }
 
+function addPaneIds(root: PaneNode, paneIds: Set<string>) {
+  if (root.type === "group") {
+    paneIds.add(root.id);
+    return;
+  }
+
+  addPaneIds(root.children[0], paneIds);
+  addPaneIds(root.children[1], paneIds);
+}
+
+function collectPaneIds(root: PaneNode, paneIds: string[]) {
+  if (root.type === "group") {
+    paneIds.push(root.id);
+    return;
+  }
+
+  collectPaneIds(root.children[0], paneIds);
+  collectPaneIds(root.children[1], paneIds);
+}
+
+function findPaneNotInSet(root: PaneNode, paneIds: Set<string>): PaneGroup | null {
+  if (root.type === "group") {
+    return paneIds.has(root.id) ? null : root;
+  }
+
+  return findPaneNotInSet(root.children[0], paneIds) ?? findPaneNotInSet(root.children[1], paneIds);
+}
+
 function getPaneIds(state: Pick<PaneState, "root" | "bottomRoot">) {
-  return new Set([
-    ...getAllPaneGroups(state.root).map((pane) => pane.id),
-    ...getAllPaneGroups(state.bottomRoot).map((pane) => pane.id),
-  ]);
+  const paneIds = new Set<string>();
+  addPaneIds(state.root, paneIds);
+  addPaneIds(state.bottomRoot, paneIds);
+  return paneIds;
 }
 
 function findPaneTree(
@@ -163,10 +190,9 @@ function findPaneTree(
 }
 
 function setMostRecentActivePane(state: PaneState, paneId: string) {
-  const paneIds = [
-    ...getAllPaneGroups(state.root).map((pane) => pane.id),
-    ...getAllPaneGroups(state.bottomRoot).map((pane) => pane.id),
-  ];
+  const paneIds: string[] = [];
+  collectPaneIds(state.root, paneIds);
+  collectPaneIds(state.bottomRoot, paneIds);
   const paneIdSet = new Set(paneIds);
   if (!paneIdSet.has(paneId)) return;
 
@@ -199,7 +225,8 @@ function getFallbackActivePaneId(state: PaneState) {
 }
 
 function getFallbackPaneIdInTree(tree: PaneNode, history: string[], closingPaneId: string) {
-  const paneIds = new Set(getAllPaneGroups(tree).map((pane) => pane.id));
+  const paneIds = new Set<string>();
+  addPaneIds(tree, paneIds);
   return (
     history.find((paneId) => paneId !== closingPaneId && paneIds.has(paneId)) ??
     getFirstPaneGroup(tree).id
@@ -215,7 +242,8 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
         set((state) => {
           const targetTree = getTreeForPane(state, paneId);
           const currentTree = targetTree === "root" ? state.root : state.bottomRoot;
-          const existingPaneIds = new Set(getAllPaneGroups(currentTree).map((pane) => pane.id));
+          const existingPaneIds = new Set<string>();
+          addPaneIds(currentTree, existingPaneIds);
           const nextTree = splitPane(currentTree, paneId, direction, bufferId, placement);
           if (nextTree !== currentTree) {
             if (targetTree === "root") {
@@ -223,8 +251,7 @@ const usePaneStoreBase = createWithEqualityFn<PaneState>()(
             } else {
               state.bottomRoot = nextTree;
             }
-            const allGroups = getAllPaneGroups(nextTree);
-            const newPane = allGroups.find((g) => !existingPaneIds.has(g.id));
+            const newPane = findPaneNotInSet(nextTree, existingPaneIds);
             if (newPane) {
               newPaneId = newPane.id;
               state.activePaneId = newPane.id;
