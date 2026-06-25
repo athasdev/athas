@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
@@ -8,7 +9,31 @@ import Switch from "@/ui/switch";
 import { FontSelector } from "../font-selector";
 
 export const EditorSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      autoCompletion: state.settings.autoCompletion,
+      autoDetectLanguage: state.settings.autoDetectLanguage,
+      autoSave: state.settings.autoSave,
+      defaultLanguage: state.settings.defaultLanguage,
+      editorLineHeight: state.settings.editorLineHeight,
+      fontFamily: state.settings.fontFamily,
+      fontSize: state.settings.fontSize,
+      formatOnSave: state.settings.formatOnSave,
+      highlightOccurrences: state.settings.highlightOccurrences,
+      horizontalTabScroll: state.settings.horizontalTabScroll,
+      lineNumbers: state.settings.lineNumbers,
+      lintOnSave: state.settings.lintOnSave,
+      maxOpenTabs: state.settings.maxOpenTabs,
+      parameterHints: state.settings.parameterHints,
+      renderIndentGuides: state.settings.renderIndentGuides,
+      renderWhitespace: state.settings.renderWhitespace,
+      showMinimap: state.settings.showMinimap,
+      tabSize: state.settings.tabSize,
+      vimRelativeLineNumbers: state.settings.vimRelativeLineNumbers,
+      wordWrap: state.settings.wordWrap,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const languageOptions = useMemo(
     () => [
       { value: "auto", label: "Auto Detect" },
