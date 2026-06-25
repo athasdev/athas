@@ -20,6 +20,8 @@ impl Default for TerminalManager {
 
 impl TerminalManager {
    pub fn new() -> Self {
+      TerminalConnection::warm_user_environment();
+
       Self {
          connections: Arc::new(Mutex::new(HashMap::new())),
       }

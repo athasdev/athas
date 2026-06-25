@@ -5,10 +5,12 @@ use std::{
    collections::HashMap,
    io::{Read, Write},
    path::Path,
-   sync::{Arc, Mutex},
+   sync::{Arc, Mutex, OnceLock},
    thread,
 };
 use tauri::Emitter;
+
+static USER_ENVIRONMENT_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
 
 pub struct TerminalConnection {
    pub id: String,
@@ -48,6 +50,13 @@ impl TerminalConnection {
    /// the user's shell environment when launched from Finder/Launchpad.
    #[cfg(not(target_os = "windows"))]
    fn get_user_environment() -> HashMap<String, String> {
+      USER_ENVIRONMENT_CACHE
+         .get_or_init(Self::load_user_environment)
+         .clone()
+   }
+
+   #[cfg(not(target_os = "windows"))]
+   fn load_user_environment() -> HashMap<String, String> {
       use std::{
          io::{BufRead, BufReader},
          process::Command,
@@ -107,6 +116,19 @@ impl TerminalConnection {
       let mut env_map: HashMap<String, String> = std::env::vars().collect();
       Self::ensure_windows_profile_environment(&mut env_map);
       env_map
+   }
+
+   #[cfg(not(target_os = "windows"))]
+   pub fn warm_user_environment() {
+      let _ = thread::Builder::new()
+         .name("terminal-env-prewarm".to_string())
+         .spawn(|| {
+            let _ = USER_ENVIRONMENT_CACHE.get_or_init(Self::load_user_environment);
+         });
+   }
+
+   #[cfg(target_os = "windows")]
+   pub fn warm_user_environment() {
    }
 
    fn build_command(config: &TerminalConfig) -> Result<CommandBuilder> {

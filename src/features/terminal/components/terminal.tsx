@@ -174,7 +174,6 @@ export const XtermTerminal = ({
 
     isInitializingRef.current = true;
     const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (!terminalContainerRef.current) {
       isInitializingRef.current = false;
