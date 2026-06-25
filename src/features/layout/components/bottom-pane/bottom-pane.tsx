@@ -26,10 +26,15 @@ const BottomPane = () => {
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
   const debuggerEnabled = useSettingsStore((state) => state.settings.coreFeatures.debugger);
   const bottomRoot = usePaneStore.use.bottomRoot();
-  const bottomPaneBufferIds = useMemo(
-    () => getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds),
-    [bottomRoot],
-  );
+  const bottomPaneBufferIds = useMemo(() => {
+    const bufferIds: string[] = [];
+    for (const pane of getAllPaneGroups(bottomRoot)) {
+      for (const bufferId of pane.bufferIds) {
+        bufferIds.push(bufferId);
+      }
+    }
+    return bufferIds;
+  }, [bottomRoot]);
   const { moveBufferToPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
   const [height, setHeight] = useState(320);
