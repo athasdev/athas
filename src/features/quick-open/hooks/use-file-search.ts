@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { isVirtualContent } from "@/features/panes/types/pane-content.types";
+import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer-search-snapshot";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import {
   MAX_OPEN_BUFFERS_SHOWN,
@@ -12,9 +11,6 @@ import {
 import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
 import type { CategorizedFiles, FileItem, SearchResult } from "../types/quick-open.types";
 import { fuzzyScore } from "../utils/fuzzy-search";
-
-const BUFFER_SEARCH_KEY_SEPARATOR = "\u0000";
-const VIRTUAL_BUFFER_FLAG_CODE = 49;
 
 function insertSortedLimited<T>(
   items: T[],
@@ -50,39 +46,15 @@ export const useFileSearch = (
   debouncedQuery: string,
   fffHits: FffSearchHit[] | null = null,
 ) => {
-  const bufferSearchKeys = useBufferStore(
-    useShallow((state) =>
-      state.buffers.map((buffer) =>
-        [buffer.id, buffer.path, isVirtualContent(buffer) ? "1" : "0"].join(
-          BUFFER_SEARCH_KEY_SEPARATOR,
-        ),
-      ),
-    ),
+  const bufferSearchSnapshot = useBufferStore((state) =>
+    getOpenBufferSearchSnapshot(state.buffers, state.activeBufferId),
   );
-  const activeBufferId = useBufferStore.use.activeBufferId();
   const getRecentFilesOrderedByFrecency = useRecentFilesStore(
     (state) => state.getRecentFilesOrderedByFrecency,
   );
 
   const categorizedFiles = useMemo((): CategorizedFiles => {
-    let activeBufferPath: string | undefined;
-    const openBufferPaths = new Set<string>();
-    for (const key of bufferSearchKeys) {
-      const idEndIndex = key.indexOf(BUFFER_SEARCH_KEY_SEPARATOR);
-      if (idEndIndex < 0) continue;
-
-      const pathEndIndex = key.indexOf(BUFFER_SEARCH_KEY_SEPARATOR, idEndIndex + 1);
-      if (pathEndIndex < 0) continue;
-
-      const id = key.slice(0, idEndIndex);
-      const path = key.slice(idEndIndex + 1, pathEndIndex);
-      const isVirtual = key.charCodeAt(pathEndIndex + 1) === VIRTUAL_BUFFER_FLAG_CODE;
-      if (id === activeBufferId) {
-        activeBufferPath = path;
-      } else if (!isVirtual && path) {
-        openBufferPaths.add(path);
-      }
-    }
+    const { activeBufferPath, openBufferPaths } = bufferSearchSnapshot;
 
     const recentFiles = getRecentFilesOrderedByFrecency();
     const recentFilePaths = new Set<string>();
@@ -237,14 +209,7 @@ export const useFileSearch = (
       recentFilesInResults: recentFilesShown,
       otherFiles: otherFilesShown,
     };
-  }, [
-    files,
-    debouncedQuery,
-    bufferSearchKeys,
-    activeBufferId,
-    getRecentFilesOrderedByFrecency,
-    fffHits,
-  ]);
+  }, [files, debouncedQuery, bufferSearchSnapshot, getRecentFilesOrderedByFrecency, fffHits]);
 
   return categorizedFiles;
 };
