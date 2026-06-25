@@ -331,30 +331,33 @@ function FileExplorerTreeComponent({
 
   const filteredFiles = useMemo(() => {
     const startedAt = performance.now();
-    const process = (items: FileEntry[]): FileEntry[] =>
-      items.flatMap((item) => {
+    const process = (items: FileEntry[]): FileEntry[] => {
+      const filteredItems: FileEntry[] = [];
+
+      for (const item of items) {
         const ignored = isGitIgnored(item.path, item.isDir);
 
         if (isAlwaysHiddenFileName(item.name) || isUserHidden(item.path, item.isDir)) {
-          return [];
+          continue;
         }
 
         if (!fileTreeSettings.showHiddenFilesInFileTree && isHiddenFileTreeName(item.name)) {
-          return [];
+          continue;
         }
 
         if (!fileTreeSettings.showGitignoredFilesInFileTree && ignored) {
-          return [];
+          continue;
         }
 
-        return [
-          {
-            ...item,
-            ignored,
-            children: item.children ? process(item.children) : undefined,
-          },
-        ];
-      });
+        filteredItems.push({
+          ...item,
+          ignored,
+          children: item.children ? process(item.children) : undefined,
+        });
+      }
+
+      return filteredItems;
+    };
 
     const result = process(files);
     frontendTrace("info", "file-tree", "filteredFiles:computed", {
