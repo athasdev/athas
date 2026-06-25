@@ -143,15 +143,34 @@ export const buildWorkspaceRestorePlan = (
     };
   }
 
-  const initialBuffer =
-    (session.activeBufferPath
-      ? session.buffers.find((buffer) => buffer.path === session.activeBufferPath)
-      : null) ?? session.buffers[0];
+  if (session.activeBufferPath) {
+    let initialBuffer: BufferSession | null = null;
+    const remainingBuffers: BufferSession[] = [];
+
+    for (const buffer of session.buffers) {
+      if (buffer.path === session.activeBufferPath) {
+        initialBuffer ??= buffer;
+      } else {
+        remainingBuffers.push(buffer);
+      }
+    }
+
+    if (initialBuffer) {
+      return {
+        activeBufferPath: session.activeBufferPath,
+        initialBuffer,
+        remainingBuffers,
+      };
+    }
+  }
+
+  const initialBuffer = session.buffers[0];
+  const remainingBuffers = session.buffers.filter((buffer) => buffer.path !== initialBuffer.path);
 
   return {
     activeBufferPath: session.activeBufferPath,
     initialBuffer,
-    remainingBuffers: session.buffers.filter((buffer) => buffer.path !== initialBuffer.path),
+    remainingBuffers,
   };
 };
 
