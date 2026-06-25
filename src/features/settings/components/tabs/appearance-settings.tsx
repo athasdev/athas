@@ -5,6 +5,7 @@ import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   formatUiFontSize,
   UI_FONT_SIZE_MAX,
@@ -22,7 +23,25 @@ import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
 
 export const AppearanceSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      autoThemeDark: state.settings.autoThemeDark,
+      autoThemeLight: state.settings.autoThemeLight,
+      compactMenuBar: state.settings.compactMenuBar,
+      iconTheme: state.settings.iconTheme,
+      nativeMenuBar: state.settings.nativeMenuBar,
+      openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
+      sidebarPosition: state.settings.sidebarPosition,
+      sidebarTabsPosition: state.settings.sidebarTabsPosition,
+      syncSystemTheme: state.settings.syncSystemTheme,
+      theme: state.settings.theme,
+      titleBarProjectMode: state.settings.titleBarProjectMode,
+      uiFontFamily: state.settings.uiFontFamily,
+      uiFontSize: state.settings.uiFontSize,
+      windowTransparency: state.settings.windowTransparency,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const registeredThemes = useRegisteredThemes();
   const registeredIconThemes = useRegisteredIconThemes();
 
