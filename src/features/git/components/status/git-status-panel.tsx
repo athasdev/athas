@@ -202,6 +202,7 @@ const GitStatusPanel = ({
     hasStagedDiffableFiles,
     hasUnstagedDiffableFiles,
     visibleFiles,
+    displayFileByPath,
     trackedFiles,
     untrackedFiles,
     groupedTrackedFiles,
@@ -252,6 +253,7 @@ const GitStatusPanel = ({
       hasStagedDiffableFiles: nextHasStagedDiffableFiles,
       hasUnstagedDiffableFiles: nextHasUnstagedDiffableFiles,
       visibleFiles: nextVisibleFiles,
+      displayFileByPath: filesByPath,
       trackedFiles: nextTrackedFiles,
       untrackedFiles: nextUntrackedFiles,
       groupedTrackedFiles: nextGroupedTrackedFiles,
@@ -597,8 +599,8 @@ const GitStatusPanel = ({
 
   const contextMenuFile = useMemo(() => {
     if (!contextMenu.data) return null;
-    return displayFiles.find((file) => file.path === contextMenu.data?.filePath) ?? null;
-  }, [contextMenu.data, displayFiles]);
+    return displayFileByPath.get(contextMenu.data.filePath) ?? null;
+  }, [contextMenu.data, displayFileByPath]);
   const contextMenuData = contextMenu.data;
   const openScopedDiff = useCallback(
     (scope: GitStatusDiffScope) => {
