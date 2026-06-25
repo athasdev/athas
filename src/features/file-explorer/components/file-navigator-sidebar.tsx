@@ -52,6 +52,10 @@ interface FileNavigatorNode {
   item?: FileNavigatorItem;
 }
 
+interface FileNavigatorBuildNode extends FileNavigatorNode {
+  childDirectories: Map<string, FileNavigatorBuildNode>;
+}
+
 interface FileNavigatorSidebarProps {
   items: FileNavigatorItem[];
   selectedKey: string | null;
@@ -104,31 +108,47 @@ function getFlatItemParts(item: FileNavigatorItem) {
 }
 
 function buildFileTree(items: FileNavigatorItem[]): FileNavigatorNode[] {
-  const root: FileNavigatorNode = createDirectoryNode("", "");
+  const createBuildDirectoryNode = (name: string, path: string): FileNavigatorBuildNode => ({
+    ...createDirectoryNode(name, path),
+    children: [],
+    childDirectories: new Map(),
+  });
+
+  const root = createBuildDirectoryNode("", "");
 
   for (const item of items) {
-    const segments = item.path.split(/[\\/]/).filter(Boolean);
-    if (segments.length === 0) continue;
+    const segments = item.path.split(/[\\/]/);
+    let fileNameIndex = -1;
+    for (let index = segments.length - 1; index >= 0; index--) {
+      if (segments[index]) {
+        fileNameIndex = index;
+        break;
+      }
+    }
+    if (fileNameIndex < 0) continue;
 
     let current = root;
     let currentPath = "";
 
-    for (const segment of segments.slice(0, -1)) {
+    for (let index = 0; index < fileNameIndex; index++) {
+      const segment = segments[index];
+      if (!segment) continue;
+
       currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      let child = current.children.find((node) => node.isDir && node.name === segment);
+      let child = current.childDirectories.get(segment);
 
       if (!child) {
-        child = createDirectoryNode(segment, currentPath);
+        child = createBuildDirectoryNode(segment, currentPath);
+        current.childDirectories.set(segment, child);
         current.children.push(child);
       }
 
       current = child;
     }
 
-    const fileName = segments[segments.length - 1] ?? item.path;
     current.children.push({
       id: `file:${item.key}`,
-      name: fileName,
+      name: segments[fileNameIndex],
       path: item.path,
       isDir: false,
       children: [],
