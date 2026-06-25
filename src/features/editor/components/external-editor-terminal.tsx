@@ -54,8 +54,10 @@ export const ExternalEditorTerminal = ({
   const resizeRafRef = useRef<number | null>(null);
 
   const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
-  const { rootFolderPath } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const editorEngine = useSettingsStore((state) => state.settings.editorEngine);
+  const customEditorCommand = useSettingsStore((state) => state.settings.customEditorCommand);
+  const theme = useSettingsStore((state) => state.settings.theme);
   const { getTerminalTheme } = useTerminalTheme();
 
   const updateExternalEditorBufferTitle = useCallback(
@@ -83,7 +85,7 @@ export const ExternalEditorTerminal = ({
     (path: string): string => {
       const relativePath = rootFolderPath ? path.replace(rootFolderPath, ".") : path;
 
-      switch (settings.editorEngine) {
+      switch (editorEngine) {
         case "nvim":
           return `nvim "${relativePath}"`;
         case "helix":
@@ -91,12 +93,12 @@ export const ExternalEditorTerminal = ({
         case "vim":
           return `vim "${relativePath}"`;
         case "custom":
-          return settings.customEditorCommand.replace("$FILE", `"${relativePath}"`);
+          return customEditorCommand.replace("$FILE", `"${relativePath}"`);
         default:
           return `nvim "${relativePath}"`;
       }
     },
-    [settings.editorEngine, settings.customEditorCommand, rootFolderPath],
+    [editorEngine, customEditorCommand, rootFolderPath],
   );
 
   const initializeTerminal = useCallback(() => {
@@ -317,7 +319,7 @@ export const ExternalEditorTerminal = ({
         }
       };
     }
-  }, [settings.theme, getTerminalTheme]);
+  }, [theme, getTerminalTheme]);
 
   useEffect(() => {
     const handleResize = () => {
