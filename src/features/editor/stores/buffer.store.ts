@@ -208,16 +208,32 @@ const getPaneReplacementBufferId = (
 
   if (!sourcePane) return null;
 
-  const openBufferIds = new Set(
-    buffers.filter((buffer) => !closingBufferIdSet.has(buffer.id)).map((buffer) => buffer.id),
-  );
-  const candidates = [
-    ...(sourcePane.mruBufferIds ?? []),
-    ...sourcePane.bufferIds,
-    ...buffers.map((buffer) => buffer.id),
-  ];
+  const openBufferIds = new Set<string>();
+  for (const buffer of buffers) {
+    if (!closingBufferIdSet.has(buffer.id)) {
+      openBufferIds.add(buffer.id);
+    }
+  }
 
-  return candidates.find((bufferId) => openBufferIds.has(bufferId)) ?? null;
+  for (const bufferId of sourcePane.mruBufferIds ?? []) {
+    if (openBufferIds.has(bufferId)) {
+      return bufferId;
+    }
+  }
+
+  for (const bufferId of sourcePane.bufferIds) {
+    if (openBufferIds.has(bufferId)) {
+      return bufferId;
+    }
+  }
+
+  for (const buffer of buffers) {
+    if (openBufferIds.has(buffer.id)) {
+      return buffer.id;
+    }
+  }
+
+  return null;
 };
 
 /**
