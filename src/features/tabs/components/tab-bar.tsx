@@ -112,10 +112,14 @@ const TabBar = ({
   const updateActivePath = useSidebarStore.use.updateActivePath();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
   const jumpListActions = useJumpListStore.use.actions();
-  const activeBuffer = useMemo(
-    () => buffers.find((buffer) => buffer.id === activeBufferId) ?? null,
-    [activeBufferId, buffers],
-  );
+  const bufferById = useMemo(() => {
+    const nextBufferById = new Map<string, PaneContent>();
+    for (const buffer of buffers) {
+      nextBufferById.set(buffer.id, buffer);
+    }
+    return nextBufferById;
+  }, [buffers]);
+  const activeBuffer = activeBufferId ? (bufferById.get(activeBufferId) ?? null) : null;
   const activeWebViewerNavigation = useWebViewerNavigationStore((state) =>
     activeBuffer?.type === "webViewer" ? state.navigationByBufferId[activeBuffer.id] : undefined,
   );
@@ -292,10 +296,7 @@ const TabBar = ({
     });
   }, [buffers]);
   const sortedBufferIds = useMemo(() => sortedBuffers.map((buffer) => buffer.id), [sortedBuffers]);
-  const draggedBuffer = useMemo(
-    () => sortedBuffers.find((buffer) => buffer.id === draggedBufferId) ?? null,
-    [draggedBufferId, sortedBuffers],
-  );
+  const draggedBuffer = draggedBufferId ? (bufferById.get(draggedBufferId) ?? null) : null;
 
   // Calculate display names for tabs with minimal distinguishing paths
   const displayNames = useMemo(() => {
@@ -421,7 +422,7 @@ const TabBar = ({
   const handleSaveAndClose = useCallback(async () => {
     if (!pendingClose) return;
 
-    const buffer = buffers.find((b) => b.id === pendingClose.bufferId);
+    const buffer = bufferById.get(pendingClose.bufferId);
     if (!buffer) return;
 
     // Save the file
@@ -429,7 +430,7 @@ const TabBar = ({
 
     // Then proceed with closing
     confirmCloseWithoutSaving();
-  }, [pendingClose, buffers, handleSave, confirmCloseWithoutSaving]);
+  }, [pendingClose, bufferById, handleSave, confirmCloseWithoutSaving]);
 
   const handleDiscardAndClose = useCallback(() => {
     confirmCloseWithoutSaving();
@@ -816,7 +817,7 @@ const TabBar = ({
         onClose={closeContextMenu}
         onPin={handleTabPin}
         onCloseTab={(bufferId) => {
-          const buffer = buffers.find((b) => b.id === bufferId);
+          const buffer = bufferById.get(bufferId);
           if (buffer) {
             closeTab(bufferId);
           }
@@ -831,7 +832,7 @@ const TabBar = ({
         onCopyPath={handleCopyPath}
         onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {
-          const buffer = buffers.find((b) => b.id === bufferId);
+          const buffer = bufferById.get(bufferId);
           if (buffer && buffer.path !== "extensions://marketplace") {
             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
             closeBuffer(bufferId);
@@ -872,7 +873,7 @@ const TabBar = ({
 
       {pendingClose && (
         <UnsavedChangesDialog
-          fileName={buffers.find((b) => b.id === pendingClose.bufferId)?.name || ""}
+          fileName={bufferById.get(pendingClose.bufferId)?.name || ""}
           onSave={handleSaveAndClose}
           onDiscard={handleDiscardAndClose}
           onCancel={handleCancelClose}
