@@ -167,12 +167,15 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const { showToast } = useToast();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
   const openOnboarding = useOnboardingStore((state) => state.openPreview);
-  const buffers = useBufferStore.use.buffers();
   const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const activeBuffer = useBufferStore((state) =>
+    activeBufferId ? (state.buffers.find((buffer) => buffer.id === activeBufferId) ?? null) : null,
+  );
+  const quickQuestionBuffers = useBufferStore((state) =>
+    currentView === "quick-question" ? state.buffers : [],
+  );
   const {
     closeBuffer,
-    setActiveBuffer,
     switchToNextBuffer,
     switchToPreviousBuffer,
     reopenClosedTab,
@@ -303,11 +306,9 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     }),
     ...createFileActions({
       activeBufferId,
-      buffers,
       closeBuffer,
       switchToNextBuffer,
       switchToPreviousBuffer,
-      setActiveBuffer,
       reopenClosedTab,
       onClose,
     }),
@@ -478,7 +479,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
           onBack={popView}
           onClose={onClose}
           activeBuffer={activeBuffer}
-          buffers={buffers}
+          buffers={quickQuestionBuffers}
           projectRoot={rootFolderPath}
         />
       ) : currentView === "color-theme" ? (
