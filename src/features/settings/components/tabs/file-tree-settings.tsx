@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   FILE_TREE_DENSITY_OPTIONS,
   type FileTreeDensity,
@@ -12,7 +13,19 @@ import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 
 export const FileTreeSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      compactFoldersInFileTree: state.settings.compactFoldersInFileTree,
+      fileTreeDensity: state.settings.fileTreeDensity,
+      fileTreeIndentSize: state.settings.fileTreeIndentSize,
+      hiddenDirectoryPatterns: state.settings.hiddenDirectoryPatterns,
+      hiddenFilePatterns: state.settings.hiddenFilePatterns,
+      hideRootFolderInFileTree: state.settings.hideRootFolderInFileTree,
+      showGitignoredFilesInFileTree: state.settings.showGitignoredFilesInFileTree,
+      showHiddenFilesInFileTree: state.settings.showHiddenFilesInFileTree,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const [filePatternsInput, setFilePatternsInput] = useState(
     settings.hiddenFilePatterns.join(", "),
