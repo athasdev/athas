@@ -236,6 +236,22 @@ const getPaneReplacementBufferId = (
   return null;
 };
 
+const getExistingPaneBufferIds = (paneBufferIds: string[], buffers: PaneContent[]): string[] => {
+  const openBufferIds = new Set<string>();
+  for (const buffer of buffers) {
+    openBufferIds.add(buffer.id);
+  }
+
+  const existingBufferIds: string[] = [];
+  for (const bufferId of paneBufferIds) {
+    if (openBufferIds.has(bufferId)) {
+      existingBufferIds.push(bufferId);
+    }
+  }
+
+  return existingBufferIds;
+};
+
 /**
  * Run extension checking and LSP logic for a newly opened editor file.
  */
@@ -1459,9 +1475,7 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          const cyclableIds = paneBufferIds.filter((id) =>
-            buffers.some((buffer) => buffer.id === id),
-          );
+          const cyclableIds = getExistingPaneBufferIds(paneBufferIds, buffers);
 
           if (cyclableIds.length <= 1) return;
 
@@ -1488,9 +1502,7 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          const cyclableIds = paneBufferIds.filter((id) =>
-            buffers.some((buffer) => buffer.id === id),
-          );
+          const cyclableIds = getExistingPaneBufferIds(paneBufferIds, buffers);
 
           if (cyclableIds.length <= 1) return;
 
