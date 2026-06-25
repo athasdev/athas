@@ -231,12 +231,6 @@ function SearchExcerptPreview({
   );
 }
 
-function hasSelectedMatch(excerpt: SearchExcerpt, selectedItemKey: string | null) {
-  return Boolean(
-    selectedItemKey && excerpt.matches.some((match) => match.itemKey === selectedItemKey),
-  );
-}
-
 function SearchExcerptItemComponent({
   excerpt,
   index,
@@ -256,7 +250,9 @@ function SearchExcerptItemComponent({
   const latestContentRef = useRef(excerpt.content);
   const contentMatchesExcerpt = currentContent === excerpt.content;
   const selectedMatch =
-    excerpt.matches.find((match) => match.itemKey === selectedItemKey) ?? excerpt.matches[0];
+    (selectedItemKey
+      ? excerpt.matches.find((match) => match.itemKey === selectedItemKey)
+      : undefined) ?? excerpt.matches[0];
   const selected = selectedMatch?.itemKey === selectedItemKey;
   const currentHighlightIndex = selectedMatch?.highlightIndexes[0] ?? -1;
   const lineNumberMap = useMemo(() => {
@@ -473,14 +469,10 @@ function SearchExcerptItemComponent({
 }
 
 const SearchExcerptItem = memo(SearchExcerptItemComponent, (prev, next) => {
-  const wasSelected = hasSelectedMatch(prev.excerpt, prev.selectedItemKey);
-  const isSelected = hasSelectedMatch(next.excerpt, next.selectedItemKey);
-
   return (
     prev.excerpt === next.excerpt &&
     prev.index === next.index &&
-    wasSelected === isSelected &&
-    (!wasSelected || prev.selectedItemKey === next.selectedItemKey) &&
+    prev.selectedItemKey === next.selectedItemKey &&
     prev.onOpen === next.onOpen &&
     prev.onExpandContext === next.onExpandContext &&
     prev.onCollapseContext === next.onCollapseContext &&
@@ -496,6 +488,20 @@ export const SearchExcerptResults = memo(function SearchExcerptResults({
   onCollapseContext,
   isContextExpanded,
 }: SearchExcerptResultsProps) {
+  const selectedExcerptId = useMemo(() => {
+    if (!selectedItemKey) return null;
+
+    for (const excerpt of excerpts) {
+      for (const match of excerpt.matches) {
+        if (match.itemKey === selectedItemKey) {
+          return excerpt.id;
+        }
+      }
+    }
+
+    return null;
+  }, [excerpts, selectedItemKey]);
+
   return (
     <div className="mx-auto w-full max-w-6xl px-3 py-3">
       <div className="space-y-2">
@@ -504,7 +510,7 @@ export const SearchExcerptResults = memo(function SearchExcerptResults({
             key={excerpt.id}
             excerpt={excerpt}
             index={index}
-            selectedItemKey={selectedItemKey}
+            selectedItemKey={excerpt.id === selectedExcerptId ? selectedItemKey : null}
             onOpen={onOpen}
             onExpandContext={onExpandContext}
             onCollapseContext={onCollapseContext}
