@@ -114,7 +114,19 @@ function FooterTabControl({
 }
 
 const Footer = () => {
-  const settings = useSettingsStore((state) => state.settings);
+  const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
+  const debuggerEnabled = useSettingsStore((state) => state.settings.coreFeatures.debugger);
+  const diagnosticsEnabled = useSettingsStore((state) => state.settings.coreFeatures.diagnostics);
+  const outlineEnabled = useSettingsStore((state) => state.settings.coreFeatures.outline);
+  const teamCollaborationEnabled = useSettingsStore(
+    (state) => state.settings.coreFeatures.teamCollaboration,
+  );
+  const footerLeadingItemsOrder = useSettingsStore(
+    (state) => state.settings.footerLeadingItemsOrder,
+  );
+  const footerTrailingItemsOrder = useSettingsStore(
+    (state) => state.settings.footerTrailingItemsOrder,
+  );
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
@@ -126,8 +138,7 @@ const Footer = () => {
   const hasTeamsCollaborationAccess = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
   );
-  const isCollaborationFeatureEnabled =
-    hasTeamsCollaborationAccess && settings.coreFeatures.teamCollaboration;
+  const isCollaborationFeatureEnabled = hasTeamsCollaborationAccess && teamCollaborationEnabled;
   const { openSidebarView } = useSidebarPaneController();
   const isDiagnosticsBufferActive = useBufferStore((state) => {
     if (!state.activeBufferId) return false;
@@ -253,7 +264,7 @@ const Footer = () => {
           ),
         }
       : null,
-    settings.coreFeatures.terminal
+    terminalEnabled
       ? {
           id: "terminal",
           label: "Terminal",
@@ -280,7 +291,7 @@ const Footer = () => {
           ),
         }
       : null,
-    settings.coreFeatures.debugger
+    debuggerEnabled
       ? {
           id: "debugger",
           label: "Run and Debug",
@@ -301,7 +312,7 @@ const Footer = () => {
           ),
         }
       : null,
-    settings.coreFeatures.diagnostics
+    diagnosticsEnabled
       ? {
           id: "diagnostics",
           label: "Diagnostics",
@@ -424,16 +435,16 @@ const Footer = () => {
   const footerLeadingItems = footerLeadingItemsSource.filter(
     (item): item is FooterItem<FooterLeadingItemId> => item !== null,
   );
-  const shouldShowOutline = settings.coreFeatures.outline;
+  const shouldShowOutline = outlineEnabled;
   const isOutlineActive = isRightSidebarVisible && activeRightSidebarView === "outline";
   const isDatabasesActive = isRightSidebarVisible && activeRightSidebarView === "databases";
   const isCollaborationActive = isRightSidebarVisible && activeRightSidebarView === "collaboration";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
     return normalizeItemOrder(
-      settings.footerTrailingItemsOrder,
+      footerTrailingItemsOrder,
       FOOTER_TRAILING_ITEM_IDS,
     ) as FooterTrailingItemId[];
-  }, [settings.footerTrailingItemsOrder]);
+  }, [footerTrailingItemsOrder]);
 
   const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [
     ...(shouldShowOutline
@@ -504,7 +515,7 @@ const Footer = () => {
   return (
     <div className="athas-footer-bar relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
-        {orderFooterItems(footerLeadingItems, settings.footerLeadingItemsOrder).map((item) => (
+        {orderFooterItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
           <div key={item.id} className={chromeItemWrapper()}>
             {item.content}
           </div>
