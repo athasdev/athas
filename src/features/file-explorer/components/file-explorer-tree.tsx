@@ -478,7 +478,7 @@ function FileExplorerTreeComponent({
     ],
   );
 
-  const { visibleRows, rowVirtualizer } = useFileExplorerVisibleRows({
+  const { visibleRows, visibleRowIndexByPath, rowVirtualizer } = useFileExplorerVisibleRows({
     files: displayedFiles,
     activePath,
     containerRef,
@@ -510,22 +510,51 @@ function FileExplorerTreeComponent({
     containerRef.current?.focus();
   }, []);
 
+  const treeSearchMatchIndexes = useMemo(() => {
+    if (!isTreeSearchActive || treeSearchResult.matchedPaths.size === 0) return [];
+
+    const indexes: number[] = [];
+    for (const path of treeSearchResult.orderedMatchedPaths) {
+      const index = visibleRowIndexByPath.get(path);
+      if (index !== undefined) {
+        indexes.push(index);
+      }
+    }
+    return indexes;
+  }, [
+    isTreeSearchActive,
+    treeSearchResult.matchedPaths,
+    treeSearchResult.orderedMatchedPaths,
+    visibleRowIndexByPath,
+  ]);
+
   const navigateTreeSearchMatch = useCallback(
     (direction: 1 | -1) => {
-      if (!isTreeSearchActive || treeSearchResult.matchedPaths.size === 0) return;
+      if (!isTreeSearchActive || treeSearchMatchIndexes.length === 0) return;
 
-      const matchIndexes = treeSearchResult.orderedMatchedPaths
-        .map((path) => visibleRows.findIndex((row) => row.file.path === path))
-        .filter((index) => index >= 0);
-
-      if (matchIndexes.length === 0) return;
-
-      const currentIndex = visibleRows.findIndex((row) => row.file.path === keyboardPath);
-      const fallbackIndex = direction > 0 ? matchIndexes[0] : matchIndexes[matchIndexes.length - 1];
-      const nextIndex =
+      const currentIndex = keyboardPath ? (visibleRowIndexByPath.get(keyboardPath) ?? -1) : -1;
+      const fallbackIndex =
         direction > 0
-          ? (matchIndexes.find((index) => index > currentIndex) ?? fallbackIndex)
-          : ([...matchIndexes].reverse().find((index) => index < currentIndex) ?? fallbackIndex);
+          ? treeSearchMatchIndexes[0]
+          : treeSearchMatchIndexes[treeSearchMatchIndexes.length - 1];
+      let nextIndex = fallbackIndex;
+
+      if (direction > 0) {
+        for (const index of treeSearchMatchIndexes) {
+          if (index > currentIndex) {
+            nextIndex = index;
+            break;
+          }
+        }
+      } else {
+        for (let index = treeSearchMatchIndexes.length - 1; index >= 0; index--) {
+          const matchIndex = treeSearchMatchIndexes[index];
+          if (matchIndex < currentIndex) {
+            nextIndex = matchIndex;
+            break;
+          }
+        }
+      }
       const nextPath = visibleRows[nextIndex]?.file.path;
 
       if (nextPath) {
@@ -537,20 +566,17 @@ function FileExplorerTreeComponent({
       isTreeSearchActive,
       keyboardPath,
       rowVirtualizer,
-      treeSearchResult.matchedPaths,
-      treeSearchResult.orderedMatchedPaths,
+      treeSearchMatchIndexes,
+      visibleRowIndexByPath,
       visibleRows,
     ],
   );
 
   useEffect(() => {
-    if (!isTreeSearchActive || treeSearchResult.matchedPaths.size === 0) return;
+    if (!isTreeSearchActive || treeSearchMatchIndexes.length === 0) return;
     if (keyboardPath && treeSearchResult.matchedPaths.has(keyboardPath)) return;
 
-    const firstMatchIndex =
-      treeSearchResult.orderedMatchedPaths
-        .map((path) => visibleRows.findIndex((row) => row.file.path === path))
-        .find((index) => index >= 0) ?? -1;
+    const firstMatchIndex = treeSearchMatchIndexes[0];
     const firstMatchPath = visibleRows[firstMatchIndex]?.file.path;
 
     if (!firstMatchPath) return;
@@ -562,7 +588,7 @@ function FileExplorerTreeComponent({
     keyboardPath,
     rowVirtualizer,
     treeSearchResult.matchedPaths,
-    treeSearchResult.orderedMatchedPaths,
+    treeSearchMatchIndexes,
     visibleRows,
   ]);
 
@@ -724,9 +750,12 @@ function FileExplorerTreeComponent({
     async (directoryPath: string): Promise<string[]> => {
       const collected: string[] = [];
       const stack: string[] = [directoryPath];
+      let stackCursor = 0;
 
-      while (stack.length > 0) {
-        const currentBatch = stack.splice(0, 8);
+      while (stackCursor < stack.length) {
+        const batchEnd = Math.min(stackCursor + 8, stack.length);
+        const currentBatch = stack.slice(stackCursor, batchEnd);
+        stackCursor = batchEnd;
         const directoryEntries = await Promise.all(
           currentBatch.map((currentPath) => readDirectory(currentPath)),
         );
@@ -1085,7 +1114,7 @@ function FileExplorerTreeComponent({
         if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) {
           return;
         }
-        const index = visibleRows.findIndex((r) => r.file.path === keyboardPath);
+        const index = keyboardPath ? (visibleRowIndexByPath.get(keyboardPath) ?? -1) : -1;
         const curIndex = index === -1 ? 0 : index;
         const current = visibleRows[curIndex]?.file;
         const isDir = visibleRows[curIndex]?.file.isDir;
@@ -1185,7 +1214,7 @@ function FileExplorerTreeComponent({
             } else {
               const sep = current.path.includes("\\") ? "\\" : "/";
               const parentPath = current.path.split(sep).slice(0, -1).join(sep);
-              const parentIdx = visibleRows.findIndex((r) => r.file.path === parentPath);
+              const parentIdx = visibleRowIndexByPath.get(parentPath) ?? -1;
               if (parentIdx >= 0) {
                 setFocusedPath(parentPath);
                 rowVirtualizer.scrollToIndex(parentIdx);

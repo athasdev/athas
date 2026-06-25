@@ -136,7 +136,7 @@ export function useFileExplorerVisibleRows({
     revealedActivePathRef.current = { path: activePath, index, rowHeight };
   }, [activePath, containerRef, rowHeight, rowVirtualizer, visibleRowIndexByPath]);
 
-  return { visibleRows, rowVirtualizer };
+  return { visibleRows, visibleRowIndexByPath, rowVirtualizer };
 }
 
 export type VisibleRow = VisibleFileTreeRow;
