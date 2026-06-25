@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
@@ -112,6 +112,10 @@ const CAROUSEL_OUTER_GAP_PX = 160;
 
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
+type PaneRenderState = {
+  activeBuffer: PaneRenderBuffer | null;
+  paneBuffers: PaneRenderBuffer[];
+};
 
 const editorBufferShellCache = new Map<string, EditorBufferShell>();
 
@@ -137,6 +141,11 @@ function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | unde
   if (buffer.type === "editor") return getEditorBufferShell(buffer);
   return buffer;
 }
+
+const EMPTY_PANE_RENDER_STATE: PaneRenderState = {
+  activeBuffer: null,
+  paneBuffers: [],
+};
 
 function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const previewText =
@@ -300,18 +309,31 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const suppressAutoCenterRef = useRef(false);
   const isActivePane = pane.id === activePaneId;
 
-  const paneBuffers = useBufferStore(
+  const { activeBuffer, paneBuffers } = useBufferStore(
     useShallow((state) => {
-      return pane.bufferIds
-        .map((bufferId) => toPaneRenderBuffer(getBufferById(state.buffers, bufferId) ?? undefined))
-        .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
+      if (pane.bufferIds.length === 0) {
+        return EMPTY_PANE_RENDER_STATE;
+      }
+
+      const nextPaneBuffers: PaneRenderBuffer[] = [];
+      let nextActiveBuffer: PaneRenderBuffer | null = null;
+
+      for (const bufferId of pane.bufferIds) {
+        const buffer = toPaneRenderBuffer(getBufferById(state.buffers, bufferId) ?? undefined);
+        if (!buffer) continue;
+
+        nextPaneBuffers.push(buffer);
+        if (buffer.id === pane.activeBufferId) {
+          nextActiveBuffer = buffer;
+        }
+      }
+
+      return {
+        activeBuffer: nextActiveBuffer,
+        paneBuffers: nextPaneBuffers,
+      };
     }),
   );
-
-  const activeBuffer = useMemo(() => {
-    if (!pane.activeBufferId) return null;
-    return paneBuffers.find((b) => b.id === pane.activeBufferId) || null;
-  }, [paneBuffers, pane.activeBufferId]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
