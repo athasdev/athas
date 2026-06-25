@@ -75,6 +75,7 @@ interface GitFileDiffStats {
 type GitSidebarTab = "changes" | "history";
 const GIT_VIEW_BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
 type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
+type WorkingTreeDiffEntry = readonly [fileKey: string, file: GitFile];
 
 type GitPaletteAction =
   | { type: "select-repository" }
@@ -136,13 +137,51 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [stashSearchQuery, setStashSearchQuery] = useState("");
   const [stashActionLoading, setStashActionLoading] = useState<Set<number>>(new Set());
 
-  const visibleGitFiles = useMemo(
-    () =>
-      showUntrackedFiles
-        ? (gitStatus?.files ?? [])
-        : (gitStatus?.files ?? []).filter((file) => file.status !== "untracked"),
-    [gitStatus?.files, showUntrackedFiles],
-  );
+  const { visibleGitFiles, visibleGitFileKeySet, workingTreeDiffEntriesByScope, stagedFiles } =
+    useMemo(() => {
+      const nextVisibleGitFiles: GitFile[] = [];
+      const nextVisibleGitFileKeySet = new Set<string>();
+      const nextWorkingTreeDiffEntriesByScope: Record<
+        WorkingTreeDiffScope,
+        WorkingTreeDiffEntry[]
+      > = {
+        all: [],
+        unstaged: [],
+        staged: [],
+      };
+      const nextStagedFiles: GitFile[] = [];
+      const seenDiffableFileKeys = new Set<string>();
+
+      for (const file of gitStatus?.files ?? []) {
+        if (!showUntrackedFiles && file.status === "untracked") {
+          continue;
+        }
+
+        const fileKey = `${file.staged ? "staged" : "unstaged"}:${file.path}`;
+        nextVisibleGitFiles.push(file);
+        nextVisibleGitFileKeySet.add(fileKey);
+
+        if (file.staged) {
+          nextStagedFiles.push(file);
+        }
+
+        if (file.status === "untracked" || seenDiffableFileKeys.has(fileKey)) {
+          continue;
+        }
+
+        seenDiffableFileKeys.add(fileKey);
+        const entry: WorkingTreeDiffEntry = [fileKey, file];
+        nextWorkingTreeDiffEntriesByScope.all.push(entry);
+        nextWorkingTreeDiffEntriesByScope[file.staged ? "staged" : "unstaged"].push(entry);
+      }
+
+      return {
+        visibleGitFiles: nextVisibleGitFiles,
+        visibleGitFileKeySet: nextVisibleGitFileKeySet,
+        workingTreeDiffEntriesByScope: nextWorkingTreeDiffEntriesByScope,
+        stagedFiles: nextStagedFiles,
+      };
+    }, [gitStatus?.files, showUntrackedFiles]);
 
   const handleSelectRepository = useCallback(async () => {
     setIsSelectingRepo(true);
@@ -443,21 +482,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     let isCancelled = false;
 
     const loadFileDiffStats = async () => {
-      const visibleFileKeys = new Set(
-        visibleGitFiles.map((file) => `${file.staged ? "staged" : "unstaged"}:${file.path}`),
-      );
-      const statsEntries = (await getStatusDiffStats(activeRepoPath))
-        .map(
-          (stat) =>
-            [
-              `${stat.staged ? "staged" : "unstaged"}:${stat.file_path}`,
-              { additions: stat.additions, deletions: stat.deletions },
-            ] as const,
-        )
-        .filter(([key]) => visibleFileKeys.has(key));
+      const nextFileDiffStats: Record<string, GitFileDiffStats> = {};
+      for (const stat of await getStatusDiffStats(activeRepoPath)) {
+        const key = `${stat.staged ? "staged" : "unstaged"}:${stat.file_path}`;
+        if (visibleGitFileKeySet.has(key)) {
+          nextFileDiffStats[key] = { additions: stat.additions, deletions: stat.deletions };
+        }
+      }
 
       if (!isCancelled) {
-        setFileDiffStats(Object.fromEntries(statsEntries));
+        setFileDiffStats(nextFileDiffStats);
       }
     };
 
@@ -466,7 +500,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return () => {
       isCancelled = true;
     };
-  }, [activeRepoPath, visibleGitFiles]);
+  }, [activeRepoPath, visibleGitFiles.length, visibleGitFileKeySet]);
 
   const handleOpenOriginalFile = async (filePath: string) => {
     if (!activeRepoPath || !onFileSelect) return;
@@ -554,17 +588,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         // Load remaining diffs in the background
         const repoPath = activeRepoPath;
-        const diffableFiles = (visibleGitFiles ?? []).filter(
-          (entry) => entry.status !== "untracked",
+        const diffEntries = workingTreeDiffEntriesByScope.all.filter(
+          ([fileKey]) => fileKey !== selectedFileKey,
         );
-        const diffEntries = Array.from(
-          new Map(
-            diffableFiles.map((entry) => [
-              `${entry.staged ? "staged" : "unstaged"}:${entry.path}`,
-              entry,
-            ]),
-          ).entries(),
-        ).filter(([fileKey]) => fileKey !== selectedFileKey);
 
         if (diffEntries.length > 0) {
           void (async () => {
@@ -633,17 +659,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         unstaged: "unstaged tracked changes",
         staged: "staged changes",
       };
-      const diffEntries = Array.from(
-        new Map(
-          (visibleGitFiles ?? [])
-            .filter((entry) => entry.status !== "untracked")
-            .filter((entry) => {
-              if (scope === "all") return true;
-              return entry.staged === (scope === "staged");
-            })
-            .map((entry) => [`${entry.staged ? "staged" : "unstaged"}:${entry.path}`, entry]),
-        ).entries(),
-      );
+      const diffEntries = workingTreeDiffEntriesByScope[scope];
 
       if (diffEntries.length === 0) {
         await showAlertDialog(`No ${emptyLabelByScope[scope]} with diffs.`, "Git Diff");
@@ -1156,7 +1172,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     );
   }
 
-  const stagedFiles = visibleGitFiles.filter((f) => f.staged);
   const refreshAfterAction = autoRefreshGitStatus ? handleManualRefresh : undefined;
   const handleGitFileClick = openDiffOnClick ? handleViewFileDiff : handleOpenOriginalFile;
 
