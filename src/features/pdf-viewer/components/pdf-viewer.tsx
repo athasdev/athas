@@ -41,7 +41,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { width: containerWidth } = useResizeObserver(containerRef);
   const [isFitted, setIsFitted] = useState(true);
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const relativePath = getRelativePath(filePath, rootFolderPath);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);

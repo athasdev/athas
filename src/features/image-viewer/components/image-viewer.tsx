@@ -45,7 +45,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [originalSize, setOriginalSize] = useState(0);
   const [currentSize, setCurrentSize] = useState(0);
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const { markBufferDirty } = useBufferStore.use.actions();
 
   const imageContainerRef = useRef<HTMLDivElement>(null);
