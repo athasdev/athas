@@ -17,6 +17,7 @@ import type {
 import type { BackendLanguageToolConfigSet } from "@/extensions/registry/extension-store-runtime";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useBufferStore } from "../stores/buffer.store";
+import { getSourceEditorBufferByPath } from "../utils/buffer-index";
 import { logger } from "../utils/logger";
 import { useLspStore } from "./stores/lsp.store";
 import {
@@ -365,9 +366,7 @@ export class LspClient {
           const filePath = filePathFromUri(uri);
           const isOpenInEditor =
             this.openDocuments.has(filePath) ||
-            useBufferStore
-              .getState()
-              .buffers.some((buffer) => hasTextContent(buffer) && buffer.path === filePath);
+            !!getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
 
           if (!isOpenInEditor) {
             logger.debug("LSPClient", `Ignoring diagnostics for closed document: ${filePath}`);

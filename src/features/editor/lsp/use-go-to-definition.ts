@@ -5,6 +5,7 @@ import { useCenterCursor } from "@/features/editor/hooks/use-center-cursor";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { calculateOffsetFromContentPosition } from "@/features/editor/utils/position";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "../utils/logger";
@@ -100,7 +101,7 @@ export const useGoToDefinition = ({
                 scrollLeft: editorState.scrollLeft,
               });
             }
-            const existingBuffer = bufferStore.buffers.find((b) => b.path === targetFilePath);
+            const existingBuffer = getBufferByPath(bufferStore.buffers, targetFilePath);
 
             if (existingBuffer) {
               bufferStore.actions.setActiveBuffer(existingBuffer.id);

@@ -18,6 +18,7 @@ import { useHover } from "@/features/editor/lsp/use-hover";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { logger } from "@/features/editor/engines/athas/utils/logger";
@@ -184,9 +185,10 @@ export const useLspIntegration = ({
     }
 
     const cleanupDocument = () => {
-      const isStillOpen = useBufferStore
-        .getState()
-        .buffers.some((buffer) => hasTextContent(buffer) && buffer.path === filePath);
+      const isStillOpen = !!getSourceEditorBufferByPath(
+        useBufferStore.getState().buffers,
+        filePath,
+      );
 
       if (isStillOpen) {
         return;
@@ -332,7 +334,7 @@ export const useLspIntegration = ({
       // Debounce completion trigger with fixed delay for predictable behavior
       completionTimerRef.current = setTimeout(() => {
         // Get latest value at trigger time (not from effect deps)
-        const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
+        const buffer = getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
         if (!buffer || !hasTextContent(buffer)) return;
 
         const cursorOffset = cursorPositionRef.current.offset;
@@ -371,7 +373,7 @@ export const useLspIntegration = ({
         return;
       }
 
-      const buffer = useBufferStore.getState().buffers.find((b) => b.path === filePath);
+      const buffer = getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
       if (!buffer || !hasTextContent(buffer)) return;
 
       const cursorOffset = cursorPositionRef.current.offset;
