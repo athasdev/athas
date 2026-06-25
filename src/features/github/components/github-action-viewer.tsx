@@ -264,8 +264,8 @@ const getLogLineSegments = (line: string, query: string) => {
 };
 
 const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionViewerProps) => {
-  const buffers = useBufferStore.use.buffers();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
   const [details, setDetails] = useState<WorkflowRunDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -277,7 +277,6 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   const [loadingJobLogId, setLoadingJobLogId] = useState<number | null>(null);
   const [isLogSearchVisible, setIsLogSearchVisible] = useState(false);
   const [logSearchQuery, setLogSearchQuery] = useState("");
-  const buffer = buffers.find((item) => item.id === bufferId);
   const visibleJobs = useMemo(
     () => details?.jobs.slice(0, visibleJobCount) ?? [],
     [details?.jobs, visibleJobCount],

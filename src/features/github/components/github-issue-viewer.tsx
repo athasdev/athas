@@ -31,13 +31,12 @@ interface GitHubIssueViewerProps {
 }
 
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
-  const buffers = useBufferStore.use.buffers();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
   const [details, setDetails] = useState<IssueDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
-  const buffer = buffers.find((item) => item.id === bufferId);
   const issueBaseUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
     [details?.url],
