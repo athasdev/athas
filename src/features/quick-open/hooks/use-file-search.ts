@@ -58,22 +58,27 @@ export const useFileSearch = (
 
   const categorizedFiles = useMemo((): CategorizedFiles => {
     let activeBufferPath: string | undefined;
-    const openBufferPaths = new Set(
-      bufferSearchKeys.flatMap((key) => {
-        const [id, path, virtualFlag] = key.split(BUFFER_SEARCH_KEY_SEPARATOR);
-        if (id === activeBufferId) {
-          activeBufferPath = path;
-          return [];
-        }
-        return virtualFlag === "1" ? [] : [path];
-      }),
-    );
+    const openBufferPaths = new Set<string>();
+    for (const key of bufferSearchKeys) {
+      const [id, path, virtualFlag] = key.split(BUFFER_SEARCH_KEY_SEPARATOR);
+      if (id === activeBufferId) {
+        activeBufferPath = path;
+      } else if (virtualFlag !== "1" && path) {
+        openBufferPaths.add(path);
+      }
+    }
 
     const recentFiles = getRecentFilesOrderedByFrecency();
-    const recentFilePaths = new Set(
-      recentFiles.filter((rf) => rf.path !== activeBufferPath).map((rf) => rf.path),
-    );
-    const recentFileIndices = new Map(recentFiles.map((rf, index) => [rf.path, index]));
+    const recentFilePaths = new Set<string>();
+    const recentFileIndices = new Map<string, number>();
+    for (let index = 0; index < recentFiles.length; index++) {
+      const recentFile = recentFiles[index];
+      if (!recentFile) continue;
+      recentFileIndices.set(recentFile.path, index);
+      if (recentFile.path !== activeBufferPath) {
+        recentFilePaths.add(recentFile.path);
+      }
+    }
 
     if (!debouncedQuery.trim()) {
       const openBuffersShown: FileItem[] = [];
