@@ -68,21 +68,23 @@ const formatDiffExcerpt = (file: GitFile, diff: GitDiff | null): string => {
   if (!diff) return `### ${file.path}\n(no staged text diff available)`;
   if (diff.is_binary || diff.is_image) return `### ${file.path}\n(binary or image change)`;
 
-  const changedLines = diff.lines
-    .filter((line) => line.line_type === "added" || line.line_type === "removed")
-    .slice(0, MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT)
-    .map((line) => `${line.line_type === "added" ? "+" : "-"}${line.content}`)
-    .join("\n");
+  const changedLines: string[] = [];
+  let changedLineCount = 0;
 
-  const omittedCount = Math.max(
-    diff.lines.filter((line) => line.line_type === "added" || line.line_type === "removed").length -
-      MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT,
-    0,
-  );
+  for (const line of diff.lines) {
+    if (line.line_type !== "added" && line.line_type !== "removed") continue;
+
+    changedLineCount++;
+    if (changedLines.length < MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT) {
+      changedLines.push(`${line.line_type === "added" ? "+" : "-"}${line.content}`);
+    }
+  }
+
+  const omittedCount = Math.max(changedLineCount - MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT, 0);
 
   return [
     `### ${file.path}`,
-    changedLines || "(metadata-only change)",
+    changedLines.join("\n") || "(metadata-only change)",
     omittedCount > 0 ? `... ${omittedCount} more changed lines omitted` : "",
   ]
     .filter(Boolean)
