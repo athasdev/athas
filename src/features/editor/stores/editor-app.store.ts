@@ -36,7 +36,7 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
     useBufferStore.getState().actions;
   const { updateSettingsFromJSON } = useSettingsStore.getState();
   const { markPendingSave } = useFileWatcherStore.getState();
-  const activeBuffer = buffers.find((buffer) => buffer.id === bufferId);
+  const activeBuffer = getBufferById(buffers, bufferId);
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
 
   const { parseCollaborationNoteBufferPath } =
@@ -336,9 +336,7 @@ export const useEditorAppStore = createSelectors(
           const saveResults = await Promise.all(
             dirtyBufferIds.map(async (bufferId) => {
               const saved = await saveEditorBufferById(bufferId);
-              const nextBuffer = useBufferStore
-                .getState()
-                .buffers.find((buffer) => buffer.id === bufferId);
+              const nextBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
               return saved && (!nextBuffer || !isEditorContent(nextBuffer) || !nextBuffer.isDirty);
             }),
           );
