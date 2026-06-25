@@ -199,14 +199,17 @@ export async function discoverWorkspaceRepositories(
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
   const queue: string[] = [normalizedWorkspacePath];
+  let queueCursor = 0;
   const containingRepoPath = await discoverRepo(normalizedWorkspacePath);
 
   if (containingRepoPath) {
     discoveredRepos.add(containingRepoPath);
   }
 
-  while (queue.length > 0) {
-    const batch = queue.splice(0, 8);
+  while (queueCursor < queue.length) {
+    const batchEnd = Math.min(queueCursor + 8, queue.length);
+    const batch = queue.slice(queueCursor, batchEnd);
+    queueCursor = batchEnd;
     const directoryResults = await Promise.all(
       batch.map(async (currentPath) => {
         const directoryPath = normalizePath(currentPath);
