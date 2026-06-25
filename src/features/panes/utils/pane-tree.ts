@@ -72,23 +72,42 @@ function normalizeSplitSizes(sizes: [number, number]): [number, number] {
 }
 
 function normalizeGroup(group: PaneGroup): PaneGroup {
-  const bufferIds = dedupe(group.bufferIds);
+  const bufferIdSet = new Set(group.bufferIds);
+  const bufferIds = Array.from(bufferIdSet);
   const activeBufferId =
-    group.activeBufferId && bufferIds.includes(group.activeBufferId)
+    group.activeBufferId && bufferIdSet.has(group.activeBufferId)
       ? group.activeBufferId
       : (bufferIds[0] ?? null);
-  const mruBufferIds = dedupe([
-    ...(activeBufferId ? [activeBufferId] : []),
-    ...(group.mruBufferIds ?? []),
-    ...bufferIds,
-  ]).filter((bufferId) => bufferIds.includes(bufferId));
-  const pinnedBufferIds = dedupe(group.pinnedBufferIds ?? []).filter((bufferId) =>
-    bufferIds.includes(bufferId),
-  );
+
+  const seenMruBufferIds = new Set<string>();
+  const mruBufferIds: string[] = [];
+  const appendMruBufferId = (bufferId: string) => {
+    if (!bufferIdSet.has(bufferId) || seenMruBufferIds.has(bufferId)) return;
+    seenMruBufferIds.add(bufferId);
+    mruBufferIds.push(bufferId);
+  };
+
+  if (activeBufferId) {
+    appendMruBufferId(activeBufferId);
+  }
+  for (const bufferId of group.mruBufferIds ?? []) {
+    appendMruBufferId(bufferId);
+  }
+  for (const bufferId of bufferIds) {
+    appendMruBufferId(bufferId);
+  }
+
+  const seenPinnedBufferIds = new Set<string>();
+  const pinnedBufferIds: string[] = [];
+  for (const bufferId of group.pinnedBufferIds ?? []) {
+    if (bufferIdSet.has(bufferId) && !seenPinnedBufferIds.has(bufferId)) {
+      seenPinnedBufferIds.add(bufferId);
+      pinnedBufferIds.push(bufferId);
+    }
+  }
+
   const previewBufferId =
-    group.previewBufferId && bufferIds.includes(group.previewBufferId)
-      ? group.previewBufferId
-      : null;
+    group.previewBufferId && bufferIdSet.has(group.previewBufferId) ? group.previewBufferId : null;
 
   return {
     ...group,
