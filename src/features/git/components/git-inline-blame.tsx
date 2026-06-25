@@ -48,10 +48,10 @@ export const InlineGitBlame = ({
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const documentRef = useRef(document);
-  const { settings } = useSettingsStore();
-  const effectiveFontSize = fontSize ?? settings.fontSize;
+  const settingsFontSize = useSettingsStore((state) => state.settings.fontSize);
+  const effectiveFontSize = fontSize ?? settingsFontSize;
   const effectiveLineHeight =
-    lineHeight ?? settings.fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
+    lineHeight ?? settingsFontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
   const [isCopied, setIsCopied] = useState(false);
   const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
