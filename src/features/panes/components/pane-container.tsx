@@ -112,6 +112,24 @@ const CAROUSEL_OUTER_GAP_PX = 160;
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
 
+const editorBufferShellCache = new Map<string, EditorBufferShell>();
+
+function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
+  const cached = editorBufferShellCache.get(buffer.id);
+  if (cached && cached.path === buffer.path && cached.name === buffer.name) {
+    return cached;
+  }
+
+  const shell = {
+    id: buffer.id,
+    path: buffer.path,
+    name: buffer.name,
+    type: buffer.type,
+  } satisfies EditorBufferShell;
+  editorBufferShellCache.set(buffer.id, shell);
+  return shell;
+}
+
 function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const previewText =
     "content" in buffer && typeof buffer.content === "string"
@@ -284,12 +302,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           if (!buffer) return undefined;
           if (buffer.type === "newTab") return undefined;
           if (buffer.type === "editor") {
-            return {
-              id: buffer.id,
-              path: buffer.path,
-              name: buffer.name,
-              type: buffer.type,
-            } satisfies EditorBufferShell;
+            return getEditorBufferShell(buffer);
           }
           return buffer;
         })
