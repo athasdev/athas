@@ -15,19 +15,18 @@ interface OpenSidebarViewOptions {
 }
 
 export function useSidebarPaneController() {
-  const {
-    isSidebarVisible,
-    isRightSidebarVisible,
-    isGitViewActive,
-    isGitHubPRsViewActive,
-    activeSidebarView,
-    activeRightSidebarView,
-    setActiveView,
-    setActiveRightSidebarView,
-    setIsSidebarVisible,
-    setIsRightSidebarVisible,
-  } = useUIState();
-  const { settings, updateSetting } = useSettingsStore();
+  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
+  const isGitViewActive = useUIState((state) => state.isGitViewActive);
+  const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
+  const activeSidebarView = useUIState((state) => state.activeSidebarView);
+  const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
+  const setActiveView = useUIState((state) => state.setActiveView);
+  const setActiveRightSidebarView = useUIState((state) => state.setActiveRightSidebarView);
+  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
+  const setIsRightSidebarVisible = useUIState((state) => state.setIsRightSidebarVisible);
+  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const openSidebarView = useCallback(
     (view: SidebarView, options: OpenSidebarViewOptions = {}) => {
@@ -48,12 +47,12 @@ export function useSidebarPaneController() {
         },
         view,
         {
-          currentPosition: settings.sidebarPosition,
+          currentPosition: sidebarPosition,
           triggerSide: options.triggerSide,
         },
       );
 
-      if (settings.sidebarPosition !== nextPosition) {
+      if (sidebarPosition !== nextPosition) {
         void updateSetting("sidebarPosition", nextPosition);
       }
 
@@ -71,7 +70,7 @@ export function useSidebarPaneController() {
       setActiveRightSidebarView,
       setIsSidebarVisible,
       setIsRightSidebarVisible,
-      settings.sidebarPosition,
+      sidebarPosition,
       updateSetting,
     ],
   );
