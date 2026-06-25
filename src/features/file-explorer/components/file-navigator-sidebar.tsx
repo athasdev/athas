@@ -314,14 +314,16 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
 
     return items.filter((item) => getItemSearchText(item).includes(query));
   }, [items, searchMode, searchQuery]);
-  const tree = useMemo(() => buildFileTree(filteredItems), [filteredItems]);
-  const flatItems = useMemo(
-    () =>
-      searchMode === "fuzzy" && searchQuery.trim()
-        ? filteredItems
-        : [...filteredItems].sort((left, right) => left.path.localeCompare(right.path)),
-    [filteredItems, searchMode, searchQuery],
+  const tree = useMemo(
+    () => (viewMode === "tree" ? buildFileTree(filteredItems) : []),
+    [filteredItems, viewMode],
   );
+  const flatItems = useMemo(() => {
+    if (viewMode !== "flat") return [];
+    return searchMode === "fuzzy" && searchQuery.trim()
+      ? filteredItems
+      : [...filteredItems].sort((left, right) => left.path.localeCompare(right.path));
+  }, [filteredItems, searchMode, searchQuery, viewMode]);
 
   const resizeTo = useCallback((nextWidth: number) => {
     setWidth(clampNavigatorWidth(nextWidth));
