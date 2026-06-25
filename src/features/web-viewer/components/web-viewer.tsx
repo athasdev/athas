@@ -113,12 +113,13 @@ export function WebViewer({
 
   const { updateBuffer } = useBufferStore.use.actions();
   const webViewerNavigationActions = useWebViewerNavigationStore.use.actions();
-  const buffers = useBufferStore.use.buffers();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const profileKey = initialProfileKey ?? getWebViewerProfileKey(rootFolderPath);
   const userAgent = getEmbeddedWebViewerUserAgent();
-  const webViewerBuffer = buffers.find(
-    (buffer): buffer is WebViewerContent => buffer.id === bufferId && isWebViewerContent(buffer),
+  const webViewerBuffer = useBufferStore((state) =>
+    state.buffers.find(
+      (buffer): buffer is WebViewerContent => buffer.id === bufferId && isWebViewerContent(buffer),
+    ),
   );
   const {
     error: webviewError,
@@ -295,8 +296,7 @@ export function WebViewer({
   useEffect(() => {
     if (!currentUrl || !bufferId) return;
 
-    const buffer = buffers.find((b) => b.id === bufferId);
-    if (!buffer || buffer.type !== "webViewer") return;
+    if (!webViewerBuffer || webViewerBuffer.type !== "webViewer") return;
 
     try {
       const urlObj = new URL(currentUrl);
@@ -308,7 +308,7 @@ export function WebViewer({
       const faviconUrl = `${urlObj.origin}/favicon.ico`;
 
       updateBuffer({
-        ...buffer,
+        ...webViewerBuffer,
         name: title,
         title: hostname,
         favicon: faviconUrl,
@@ -320,7 +320,7 @@ export function WebViewer({
     } catch {
       // Invalid URL, ignore
     }
-  }, [currentUrl, bufferId, buffers, profileKey, updateBuffer]);
+  }, [currentUrl, bufferId, profileKey, updateBuffer, webViewerBuffer]);
 
   useEffect(() => {
     if (!webviewLabel) return;
