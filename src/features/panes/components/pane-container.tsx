@@ -8,6 +8,7 @@ import {
 import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git.types";
@@ -112,7 +113,6 @@ const CAROUSEL_OUTER_GAP_PX = 160;
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
 
-const DIRECT_PANE_BUFFER_LOOKUP_FACTOR = 32;
 const editorBufferShellCache = new Map<string, EditorBufferShell>();
 
 function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
@@ -302,18 +302,8 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   const paneBuffers = useBufferStore(
     useShallow((state) => {
-      if (pane.bufferIds.length * DIRECT_PANE_BUFFER_LOOKUP_FACTOR < state.buffers.length) {
-        return pane.bufferIds
-          .map((bufferId) =>
-            toPaneRenderBuffer(state.buffers.find((buffer) => buffer.id === bufferId)),
-          )
-          .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
-      }
-
-      const buffersById = new Map(state.buffers.map((buffer) => [buffer.id, buffer]));
-
       return pane.bufferIds
-        .map((bufferId) => toPaneRenderBuffer(buffersById.get(bufferId)))
+        .map((bufferId) => toPaneRenderBuffer(getBufferById(state.buffers, bufferId) ?? undefined))
         .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
     }),
   );
