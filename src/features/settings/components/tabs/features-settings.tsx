@@ -5,26 +5,27 @@ import { createCoreFeaturesList } from "../../config/features";
 import type { CoreFeature } from "../../types/feature.types";
 
 export const FeaturesSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const defaultCoreFeatures = getDefaultSetting("coreFeatures");
 
   // Create core features list
-  const coreFeaturesList = createCoreFeaturesList(settings.coreFeatures).filter(
+  const coreFeaturesList = createCoreFeaturesList(coreFeatures).filter(
     (feature: CoreFeature) => feature.id !== "git",
   );
 
   // Handle core feature toggle
   const handleCoreFeatureToggle = (featureId: string, enabled: boolean) => {
     updateSetting("coreFeatures", {
-      ...settings.coreFeatures,
+      ...coreFeatures,
       [featureId]: enabled,
     });
   };
 
   const handleResetFeature = (featureId: string) => {
     updateSetting("coreFeatures", {
-      ...settings.coreFeatures,
+      ...coreFeatures,
       [featureId]: defaultCoreFeatures[featureId as keyof typeof defaultCoreFeatures],
     });
   };
