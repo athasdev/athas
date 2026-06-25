@@ -92,14 +92,12 @@ const TerminalContainer = ({
     new Map(),
   );
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const {
-    registerTerminalFocus,
-    clearTerminalFocus,
-    setIsBottomPaneVisible,
-    setBottomPaneActiveTab,
-    isBottomPaneVisible,
-    bottomPaneActiveTab,
-  } = useUIState();
+  const registerTerminalFocus = useUIState((state) => state.registerTerminalFocus);
+  const clearTerminalFocus = useUIState((state) => state.clearTerminalFocus);
+  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
+  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
   useEffect(() => {
