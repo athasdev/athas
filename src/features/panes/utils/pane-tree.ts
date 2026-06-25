@@ -323,12 +323,20 @@ export function findParentSplit(
   return null;
 }
 
-export function getAllPaneGroups(root: PaneNode): PaneGroup[] {
+function collectPaneGroups(root: PaneNode, groups: PaneGroup[]) {
   if (root.type === "group") {
-    return [root];
+    groups.push(root);
+    return;
   }
 
-  return [...getAllPaneGroups(root.children[0]), ...getAllPaneGroups(root.children[1])];
+  collectPaneGroups(root.children[0], groups);
+  collectPaneGroups(root.children[1], groups);
+}
+
+export function getAllPaneGroups(root: PaneNode): PaneGroup[] {
+  const groups: PaneGroup[] = [];
+  collectPaneGroups(root, groups);
+  return groups;
 }
 
 export function getFirstPaneGroup(root: PaneNode): PaneGroup {
