@@ -1,20 +1,19 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { IS_MAC } from "@/utils/platform";
 import { usePaneStore } from "../stores/pane.store";
+import { findPaneGroup } from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneNodeRenderer } from "./pane-node-renderer";
 
 export function SplitViewRoot() {
   const root = usePaneStore.use.root();
-  const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { exitPaneFullscreen, getAllPaneGroups } = usePaneStore.use.actions();
-  const fullscreenPane = useMemo(
-    () =>
-      fullscreenPaneId
-        ? (getAllPaneGroups().find((pane) => pane.id === fullscreenPaneId) ?? null)
-        : null,
-    [fullscreenPaneId, getAllPaneGroups, root, bottomRoot],
+  const exitPaneFullscreen = usePaneStore((state) => state.actions.exitPaneFullscreen);
+  const fullscreenPane = usePaneStore((state) =>
+    state.fullscreenPaneId
+      ? (findPaneGroup(state.root, state.fullscreenPaneId) ??
+        findPaneGroup(state.bottomRoot, state.fullscreenPaneId))
+      : null,
   );
 
   useEffect(() => {
