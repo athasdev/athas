@@ -111,7 +111,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
-  const settings = useSettingsStore((state) => state.settings);
+  const showUntrackedFiles = useSettingsStore((state) => state.settings.showUntrackedFiles);
+  const autoRefreshGitStatus = useSettingsStore((state) => state.settings.autoRefreshGitStatus);
+  const rememberLastGitPanelMode = useSettingsStore(
+    (state) => state.settings.rememberLastGitPanelMode,
+  );
+  const gitLastPanelMode = useSettingsStore((state) => state.settings.gitLastPanelMode);
+  const gitSidebarTabOrder = useSettingsStore((state) => state.settings.gitSidebarTabOrder);
+  const openDiffOnClick = useSettingsStore((state) => state.settings.openDiffOnClick);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [activeTab, setActiveTab] = useState<GitSidebarTab>("changes");
   const [fileDiffStats, setFileDiffStats] = useState<Record<string, GitFileDiffStats>>({});
@@ -128,10 +135,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   const visibleGitFiles = useMemo(
     () =>
-      settings.showUntrackedFiles
+      showUntrackedFiles
         ? (gitStatus?.files ?? [])
         : (gitStatus?.files ?? []).filter((file) => file.status !== "untracked"),
-    [gitStatus?.files, settings.showUntrackedFiles],
+    [gitStatus?.files, showUntrackedFiles],
   );
 
   const handleSelectRepository = useCallback(async () => {
@@ -273,14 +280,14 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   }, [repoPath]);
 
   useEffect(() => {
-    if (settings.autoRefreshGitStatus && isActive && !wasActiveRef.current && gitStatus) {
+    if (autoRefreshGitStatus && isActive && !wasActiveRef.current && gitStatus) {
       refreshGitData();
     }
     wasActiveRef.current = isActive;
-  }, [settings.autoRefreshGitStatus, isActive, gitStatus, refreshGitData]);
+  }, [autoRefreshGitStatus, isActive, gitStatus, refreshGitData]);
 
   useEffect(() => {
-    if (!settings.autoRefreshGitStatus) return;
+    if (!autoRefreshGitStatus) return;
 
     const handleGitStatusChanged = () => {
       refreshGitData();
@@ -290,10 +297,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     return () => {
       window.removeEventListener("git-status-changed", handleGitStatusChanged);
     };
-  }, [settings.autoRefreshGitStatus, refreshGitData]);
+  }, [autoRefreshGitStatus, refreshGitData]);
 
   useEffect(() => {
-    if (!settings.autoRefreshGitStatus) return;
+    if (!autoRefreshGitStatus) return;
 
     let refreshTimeout: NodeJS.Timeout | null = null;
     type FileExternalChangeDetail = {
@@ -325,19 +332,19 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         clearTimeout(refreshTimeout);
       }
     };
-  }, [settings.autoRefreshGitStatus, activeRepoPath, refreshGitData]);
+  }, [autoRefreshGitStatus, activeRepoPath, refreshGitData]);
 
   useEffect(() => {
-    if (!settings.rememberLastGitPanelMode) return;
-    setActiveTab(settings.gitLastPanelMode);
-  }, [settings.rememberLastGitPanelMode, settings.gitLastPanelMode]);
+    if (!rememberLastGitPanelMode) return;
+    setActiveTab(gitLastPanelMode);
+  }, [rememberLastGitPanelMode, gitLastPanelMode]);
 
   useEffect(() => {
-    if (!settings.rememberLastGitPanelMode) return;
-    if (settings.gitLastPanelMode !== activeTab) {
+    if (!rememberLastGitPanelMode) return;
+    if (gitLastPanelMode !== activeTab) {
       void updateSetting("gitLastPanelMode", activeTab);
     }
-  }, [activeTab, settings.rememberLastGitPanelMode, settings.gitLastPanelMode, updateSetting]);
+  }, [activeTab, rememberLastGitPanelMode, gitLastPanelMode, updateSetting]);
 
   const handleOpenBranchManager = useCallback(() => {
     window.dispatchEvent(new Event(GIT_VIEW_BRANCH_MANAGER_EVENT));
@@ -912,7 +919,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     try {
       const success = await action();
       if (success) {
-        if (settings.autoRefreshGitStatus) {
+        if (autoRefreshGitStatus) {
           await handleManualRefresh();
         } else {
           actions.setStashes(await getStashes(activeRepoPath));
@@ -1073,7 +1080,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     id: GitSidebarTab;
     label: string;
     icon: ReactNode;
-  }> = [...settings.gitSidebarTabOrder]
+  }> = [...gitSidebarTabOrder]
     .filter((id): id is GitSidebarTab => id === "changes" || id === "history")
     .sort((a, b) => gitTabOrder.indexOf(a) - gitTabOrder.indexOf(b))
     .map((id) => {
@@ -1147,8 +1154,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   }
 
   const stagedFiles = visibleGitFiles.filter((f) => f.staged);
-  const refreshAfterAction = settings.autoRefreshGitStatus ? handleManualRefresh : undefined;
-  const handleGitFileClick = settings.openDiffOnClick ? handleViewFileDiff : handleOpenOriginalFile;
+  const refreshAfterAction = autoRefreshGitStatus ? handleManualRefresh : undefined;
+  const handleGitFileClick = openDiffOnClick ? handleViewFileDiff : handleOpenOriginalFile;
 
   return (
     <>
