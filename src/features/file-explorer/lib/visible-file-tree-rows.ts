@@ -141,14 +141,16 @@ export function filterFileTreeForFffHits(
     };
   }
 
-  const walk = (items: FileEntry[]): FileEntry[] =>
-    items.flatMap((item) => {
+  const walk = (items: FileEntry[]): FileEntry[] => {
+    const filteredItems: FileEntry[] = [];
+
+    for (const item of items) {
       const matchingChildren = item.children ? walk(item.children) : [];
       const normalizedPath = normalizeSearchPath(item.path);
       const isMatch = hitPathSet.has(normalizedPath);
 
       if (!isMatch && matchingChildren.length === 0) {
-        return [];
+        continue;
       }
 
       if (isMatch) {
@@ -160,13 +162,14 @@ export function filterFileTreeForFffHits(
         expandedPaths.add(item.path);
       }
 
-      return [
-        {
-          ...item,
-          children: matchingChildren.length > 0 ? matchingChildren : item.children,
-        },
-      ];
-    });
+      filteredItems.push({
+        ...item,
+        children: matchingChildren.length > 0 ? matchingChildren : item.children,
+      });
+    }
+
+    return filteredItems;
+  };
 
   const filteredFiles = walk(files);
   const orderedMatchedPaths: string[] = [];
