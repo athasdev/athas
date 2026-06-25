@@ -31,7 +31,8 @@ export function FilePathBreadcrumb({
   interactive = true,
   className,
 }: FilePathBreadcrumbProps) {
-  const { rootFolderPath, handleFileSelect } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const [dropdown, setDropdown] = useState<{
     segmentIndex: number;
