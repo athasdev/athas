@@ -79,29 +79,6 @@ const createEmptyStatusGroups = (): Record<StatusGroup, GitFile[]> => ({
   untracked: [],
 });
 
-const groupFilesByStatus = (fileList: GitFile[]) => {
-  const groups = createEmptyStatusGroups();
-
-  for (const file of fileList) {
-    groups[file.status].push(file);
-  }
-
-  return groups;
-};
-
-const dedupeVisibleFilesByPath = (fileList: GitFile[]) => {
-  const filesByPath = new Map<string, GitFile>();
-
-  for (const file of fileList) {
-    const existingFile = filesByPath.get(file.path);
-    if (!existingFile || (!existingFile.staged && file.staged)) {
-      filesByPath.set(file.path, file);
-    }
-  }
-
-  return Array.from(filesByPath.values());
-};
-
 interface GitFolderNode {
   name: string;
   fullPath: string;
@@ -202,18 +179,68 @@ const GitStatusPanel = ({
       staged: optimisticStageMap[file.path] ?? file.staged,
     }));
   }, [files, optimisticStageMap]);
-  const stagedFiles = useMemo(() => displayFiles.filter((f) => f.staged), [displayFiles]);
-  const unstagedFiles = useMemo(() => displayFiles.filter((f) => !f.staged), [displayFiles]);
-  const hasStagedDiffableFiles = useMemo(
-    () => stagedFiles.some((file) => file.status !== "untracked"),
-    [stagedFiles],
-  );
-  const hasUnstagedDiffableFiles = useMemo(
-    () => unstagedFiles.some((file) => file.status !== "untracked"),
-    [unstagedFiles],
-  );
-  const visibleFiles = useMemo(() => dedupeVisibleFilesByPath(displayFiles), [displayFiles]);
-  const groupedAllFiles = useMemo(() => groupFilesByStatus(visibleFiles), [visibleFiles]);
+  const {
+    stagedFiles,
+    unstagedFiles,
+    hasStagedDiffableFiles,
+    hasUnstagedDiffableFiles,
+    visibleFiles,
+    trackedFiles,
+    untrackedFiles,
+    groupedTrackedFiles,
+    groupedUntrackedFiles,
+  } = useMemo(() => {
+    const nextStagedFiles: GitFile[] = [];
+    const nextUnstagedFiles: GitFile[] = [];
+    const filesByPath = new Map<string, GitFile>();
+    let nextHasStagedDiffableFiles = false;
+    let nextHasUnstagedDiffableFiles = false;
+
+    for (const file of displayFiles) {
+      if (file.staged) {
+        nextStagedFiles.push(file);
+        nextHasStagedDiffableFiles ||= file.status !== "untracked";
+      } else {
+        nextUnstagedFiles.push(file);
+        nextHasUnstagedDiffableFiles ||= file.status !== "untracked";
+      }
+
+      const existingFile = filesByPath.get(file.path);
+      if (!existingFile || (!existingFile.staged && file.staged)) {
+        filesByPath.set(file.path, file);
+      }
+    }
+
+    const nextVisibleFiles: GitFile[] = [];
+    const nextTrackedFiles: GitFile[] = [];
+    const nextUntrackedFiles: GitFile[] = [];
+    const nextGroupedTrackedFiles = createEmptyStatusGroups();
+    const nextGroupedUntrackedFiles = createEmptyStatusGroups();
+
+    for (const file of filesByPath.values()) {
+      nextVisibleFiles.push(file);
+
+      if (file.status === "untracked") {
+        nextUntrackedFiles.push(file);
+        nextGroupedUntrackedFiles.untracked.push(file);
+      } else {
+        nextTrackedFiles.push(file);
+        nextGroupedTrackedFiles[file.status].push(file);
+      }
+    }
+
+    return {
+      stagedFiles: nextStagedFiles,
+      unstagedFiles: nextUnstagedFiles,
+      hasStagedDiffableFiles: nextHasStagedDiffableFiles,
+      hasUnstagedDiffableFiles: nextHasUnstagedDiffableFiles,
+      visibleFiles: nextVisibleFiles,
+      trackedFiles: nextTrackedFiles,
+      untrackedFiles: nextUntrackedFiles,
+      groupedTrackedFiles: nextGroupedTrackedFiles,
+      groupedUntrackedFiles: nextGroupedUntrackedFiles,
+    };
+  }, [displayFiles]);
   const getDiffStats = useCallback(
     (file: GitFile) => {
       const primaryKey = `${file.staged ? "staged" : "unstaged"}:${file.path}`;
@@ -550,31 +577,6 @@ const GitStatusPanel = ({
   };
 
   const hasFiles = visibleFiles.length > 0;
-  const trackedFiles = useMemo(
-    () => visibleFiles.filter((file) => file.status !== "untracked"),
-    [visibleFiles],
-  );
-  const untrackedFiles = useMemo(
-    () => visibleFiles.filter((file) => file.status === "untracked"),
-    [visibleFiles],
-  );
-  const groupedTrackedFiles = useMemo(
-    () => ({
-      ...createEmptyStatusGroups(),
-      added: groupedAllFiles.added,
-      modified: groupedAllFiles.modified,
-      deleted: groupedAllFiles.deleted,
-      renamed: groupedAllFiles.renamed,
-    }),
-    [groupedAllFiles],
-  );
-  const groupedUntrackedFiles = useMemo(
-    () => ({
-      ...createEmptyStatusGroups(),
-      untracked: groupedAllFiles.untracked,
-    }),
-    [groupedAllFiles],
-  );
 
   const contextMenuFile = useMemo(() => {
     if (!contextMenu.data) return null;
