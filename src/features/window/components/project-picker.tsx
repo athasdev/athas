@@ -61,8 +61,9 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const { openRecentFolder } = useRecentFoldersStore();
-  const { handleOpenFolder, handleOpenWslProject } = useFileSystemStore();
+  const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const handleOpenWslProject = useFileSystemStore((state) => state.handleOpenWslProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
   // Load connections
