@@ -64,7 +64,9 @@ export const KeyboardSettings = () => {
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [isEditingKeybindings, setIsEditingKeybindings] = useState(false);
   const { showToast } = useToast();
-  const { settings, updateSetting } = useSettingsStore();
+  const keybindingPreset = useSettingsStore((state) => state.settings.keybindingPreset);
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const userKeybindings = useKeymapStore.use.keybindings();
   const { resetToDefaults } = useKeymapStore.use.actions();
@@ -75,18 +77,18 @@ export const KeyboardSettings = () => {
   const getKeybindingForCommand = (commandId: string): Keybinding | undefined =>
     getEffectiveKeybindingForCommand({
       commandId,
-      preset: settings.keybindingPreset,
+      preset: keybindingPreset,
       registryKeybindings,
       userKeybindings,
     });
 
   const selectedPresetCoverage = useMemo(
-    () => getKeybindingPresetCoverageReport(settings.keybindingPreset),
-    [settings.keybindingPreset],
+    () => getKeybindingPresetCoverageReport(keybindingPreset),
+    [keybindingPreset],
   );
   const selectedPresetDiff = useMemo(
-    () => getKeybindingPresetDiffReport(settings.keybindingPreset),
-    [settings.keybindingPreset],
+    () => getKeybindingPresetDiffReport(keybindingPreset),
+    [keybindingPreset],
   );
 
   const filteredCommands = useMemo(() => {
@@ -123,7 +125,7 @@ export const KeyboardSettings = () => {
     searchQuery,
     filterType,
     selectedPresetDiff.changedCommandIds,
-    settings.keybindingPreset,
+    keybindingPreset,
     userKeybindings,
     registryKeybindings,
   ]);
@@ -155,7 +157,7 @@ export const KeyboardSettings = () => {
       }
 
       const payload = createKeybindingsExportPayload({
-        keybindingPreset: settings.keybindingPreset,
+        keybindingPreset,
         keybindings: userBindings,
       });
 
@@ -332,10 +334,10 @@ export const KeyboardSettings = () => {
               label="Vim Mode"
               description="Enable vim keybindings and commands"
               onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-              canReset={settings.vimMode !== getDefaultSetting("vimMode")}
+              canReset={vimMode !== getDefaultSetting("vimMode")}
             >
               <Switch
-                checked={settings.vimMode}
+                checked={vimMode}
                 onChange={(checked) => updateSetting("vimMode", checked)}
                 size="sm"
               />
@@ -347,10 +349,10 @@ export const KeyboardSettings = () => {
               onReset={() =>
                 updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
               }
-              canReset={settings.keybindingPreset !== getDefaultSetting("keybindingPreset")}
+              canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
             >
               <Select
-                value={settings.keybindingPreset}
+                value={keybindingPreset}
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
                 size="sm"
@@ -361,7 +363,7 @@ export const KeyboardSettings = () => {
               />
             </SettingRow>
 
-            {settings.keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
+            {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
               <div className="ui-font ui-text-sm rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
                 This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
                 built-in command
