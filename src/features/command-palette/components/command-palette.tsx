@@ -67,24 +67,22 @@ interface CommandPaletteContentProps {
 
 const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteContentProps) => {
   // Get data from stores
-  const {
-    setIsCommandPaletteVisible,
-    setIsSettingsDialogVisible,
-    isSidebarVisible,
-    setIsSidebarVisible,
-    isBottomPaneVisible,
-    setIsBottomPaneVisible,
-    bottomPaneActiveTab,
-    setBottomPaneActiveTab,
-    isFindVisible,
-    setIsFindVisible,
-    setActiveView,
-    setActiveRightSidebarView,
-    setIsQuickOpenVisible,
-    openCommandPaletteView,
-    setIsRightSidebarVisible,
-    openSettingsDialog,
-  } = useUIState();
+  const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
+  const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
+  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
+  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
+  const isFindVisible = useUIState((state) => state.isFindVisible);
+  const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
+  const setActiveView = useUIState((state) => state.setActiveView);
+  const setActiveRightSidebarView = useUIState((state) => state.setActiveRightSidebarView);
+  const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
+  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
+  const setIsRightSidebarVisible = useUIState((state) => state.setIsRightSidebarVisible);
+  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const onClose = () => {
