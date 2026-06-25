@@ -5,8 +5,11 @@ import {
   MinusIcon as Minus,
   PlusIcon as Plus,
 } from "@phosphor-icons/react";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { cn } from "@/utils/cn";
 import { stageHunk, unstageHunk } from "../../api/git-status-api";
 import type { DiffHunkHeaderProps } from "../../types/git-diff.types";
@@ -25,6 +28,21 @@ const DiffHunkHeader = memo(
     isInMultiFileView = false,
   }: DiffHunkHeaderProps) => {
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
+    const editorFontSize = useEditorSettingsStore.use.fontSize();
+    const editorFontFamily = useEditorSettingsStore.use.fontFamily();
+    const editorLineHeight = useEditorSettingsStore.use.lineHeight();
+    const zoomLevel = useZoomStore.use.editorZoomLevel();
+    const fontSize = editorFontSize * zoomLevel;
+    const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
+    const iconSize = Math.max(12, Math.min(16, Math.round(fontSize * 0.72)));
+    const headerStyle = useMemo(
+      () => ({
+        fontSize: `${fontSize}px`,
+        fontFamily: editorFontFamily,
+        lineHeight: `${lineHeight}px`,
+      }),
+      [editorFontFamily, fontSize, lineHeight],
+    );
 
     const handleStageHunk = useCallback(
       async (e: React.MouseEvent) => {
@@ -69,18 +87,19 @@ const DiffHunkHeader = memo(
       <div
         className={cn(
           "group grid cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-center",
-          "border-border/70 border-b bg-primary-bg ui-text-sm leading-5 text-text-lighter",
+          "editor-font code-editor-font-override border-border/70 border-b bg-primary-bg text-text-lighter",
         )}
+        style={headerStyle}
         onClick={onToggleCollapse}
       >
-        <div className="flex min-h-8 items-center justify-center border-border border-r text-text-lighter">
-          <ArrowsInLineVertical size={16} />
+        <div className="flex items-center justify-center border-border border-r text-text-lighter">
+          <ArrowsInLineVertical size={iconSize} />
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 px-2.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex size-5 items-center justify-center text-text-lighter">
-              {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        <div className="flex min-w-0 items-center gap-1.5 px-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="flex size-4 items-center justify-center text-text-lighter">
+              {isCollapsed ? <ChevronRight size={iconSize} /> : <ChevronDown size={iconSize} />}
             </span>
             <span className="shrink-0 whitespace-nowrap font-medium text-text-light">
               {hiddenLabel}
@@ -92,8 +111,8 @@ const DiffHunkHeader = memo(
 
           <div className="h-px min-w-8 flex-1 bg-border/70" />
 
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="ui-text-xs flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex items-center gap-1">
               {additions > 0 && <span className="text-git-added">+{additions}</span>}
               {deletions > 0 && <span className="text-git-deleted">-{deletions}</span>}
             </div>
@@ -102,7 +121,7 @@ const DiffHunkHeader = memo(
               <button
                 onClick={handleStageHunk}
                 className={cn(
-                  "flex items-center gap-1 rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100",
+                  "flex items-center gap-1 rounded px-1 py-0 opacity-0 group-hover:opacity-100",
                   isStaged
                     ? "bg-git-deleted/20 text-git-deleted hover:bg-git-deleted/30"
                     : "bg-git-added/20 text-git-added hover:bg-git-added/30",
@@ -110,8 +129,8 @@ const DiffHunkHeader = memo(
                 title={isStaged ? "Unstage hunk" : "Stage hunk"}
                 aria-label={isStaged ? "Unstage hunk" : "Stage hunk"}
               >
-                {isStaged ? <Minus /> : <Plus />}
-                <span className="ui-text-xs">{isStaged ? "Unstage" : "Stage"}</span>
+                {isStaged ? <Minus size={iconSize} /> : <Plus size={iconSize} />}
+                <span>{isStaged ? "Unstage" : "Stage"}</span>
               </button>
             )}
           </div>
