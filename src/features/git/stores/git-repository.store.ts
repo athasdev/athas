@@ -27,8 +27,11 @@ interface RepositoryState {
 
 const mergeRepositoryPaths = (workspaceRepos: string[], manualRepoPaths: string[]): string[] => {
   const result = [...workspaceRepos];
+  const resultSet = new Set(result);
+
   for (const manualRepoPath of manualRepoPaths) {
-    if (!result.includes(manualRepoPath)) {
+    if (!resultSet.has(manualRepoPath)) {
+      resultSet.add(manualRepoPath);
       result.push(manualRepoPath);
     }
   }
@@ -97,12 +100,12 @@ export const useRepositoryStore = createSelectors(
 
           set((state) => {
             const availableRepoPaths = mergeRepositoryPaths(discoveredRepos, state.manualRepoPaths);
+            const availableRepoPathSet = new Set(availableRepoPaths);
             const previousActive = state.activeRepoPath;
-            const hasPreviousActive =
-              !!previousActive && availableRepoPaths.includes(previousActive);
+            const hasPreviousActive = !!previousActive && availableRepoPathSet.has(previousActive);
             const nextActiveRepoPath = hasPreviousActive
               ? previousActive
-              : state.manualRepoPath && availableRepoPaths.includes(state.manualRepoPath)
+              : state.manualRepoPath && availableRepoPathSet.has(state.manualRepoPath)
                 ? state.manualRepoPath
                 : getWorkspaceDefaultRepo(discoveredRepos);
 
@@ -131,12 +134,12 @@ export const useRepositoryStore = createSelectors(
       selectRepository: (repoPath) => {
         const normalizedRepoPath = repoPath ? normalizeRepositoryPath(repoPath) : null;
         set((state) => {
+          const workspaceRepoPathSet = new Set(state.workspaceRepoPaths);
+          const manualRepoPathSet = new Set(state.manualRepoPaths);
           const hasInWorkspace =
-            !!normalizedRepoPath && state.workspaceRepoPaths.includes(normalizedRepoPath);
+            !!normalizedRepoPath && workspaceRepoPathSet.has(normalizedRepoPath);
           const nextManualRepoPaths =
-            normalizedRepoPath &&
-            !hasInWorkspace &&
-            !state.manualRepoPaths.includes(normalizedRepoPath)
+            normalizedRepoPath && !hasInWorkspace && !manualRepoPathSet.has(normalizedRepoPath)
               ? [...state.manualRepoPaths, normalizedRepoPath]
               : state.manualRepoPaths;
           const nextManualRepoPath = hasInWorkspace
@@ -160,7 +163,8 @@ export const useRepositoryStore = createSelectors(
       setManualRepository: (repoPath) => {
         const normalizedRepoPath = normalizeRepositoryPath(repoPath);
         set((state) => {
-          const manualRepoPaths = state.manualRepoPaths.includes(normalizedRepoPath)
+          const manualRepoPathSet = new Set(state.manualRepoPaths);
+          const manualRepoPaths = manualRepoPathSet.has(normalizedRepoPath)
             ? state.manualRepoPaths
             : [...state.manualRepoPaths, normalizedRepoPath];
           const availableRepoPaths = mergeRepositoryPaths(
@@ -180,11 +184,13 @@ export const useRepositoryStore = createSelectors(
       clearManualRepository: () => {
         set((state) => {
           const availableRepoPaths = mergeRepositoryPaths(state.workspaceRepoPaths, []);
+          const availableRepoPathSet = new Set(availableRepoPaths);
+          const manualRepoPathSet = new Set(state.manualRepoPaths);
           const shouldResetActive =
-            !!state.activeRepoPath && state.manualRepoPaths.includes(state.activeRepoPath);
+            !!state.activeRepoPath && manualRepoPathSet.has(state.activeRepoPath);
           const nextActiveRepoPath = shouldResetActive
             ? getWorkspaceDefaultRepo(state.workspaceRepoPaths)
-            : state.activeRepoPath && availableRepoPaths.includes(state.activeRepoPath)
+            : state.activeRepoPath && availableRepoPathSet.has(state.activeRepoPath)
               ? state.activeRepoPath
               : getWorkspaceDefaultRepo(state.workspaceRepoPaths);
 
