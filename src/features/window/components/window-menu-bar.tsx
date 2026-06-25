@@ -27,7 +27,7 @@ interface Props {
 }
 
 const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
-  const { settings } = useSettingsStore();
+  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const themes = useRegisteredThemes();
 
   const handleClickEmit = useCallback(
@@ -435,24 +435,24 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     [handleClickEmit, handleCommand, setActiveMenu, themes],
   );
 
-  if (settings.compactMenuBar && !activeMenu) return null;
+  if (compactMenuBar && !activeMenu) return null;
 
   return (
     <div
       className={cn(
         "z-[10030] flex flex-col",
-        settings.compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
-        settings.compactMenuBar && !compactFloating && "absolute inset-0",
+        compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
+        compactMenuBar && !compactFloating && "absolute inset-0",
       )}
     >
       <Menubar
         value={activeMenu ?? ""}
         onValueChange={(value) => setActiveMenu(value || null)}
         className={cn(
-          settings.compactMenuBar &&
+          compactMenuBar &&
             compactFloating &&
             "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
-          settings.compactMenuBar &&
+          compactMenuBar &&
             !compactFloating &&
             "h-full rounded-none border-none bg-transparent px-2 py-0",
         )}
