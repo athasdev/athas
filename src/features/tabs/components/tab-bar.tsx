@@ -65,8 +65,6 @@ const TabBar = ({
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
-  const allBuffers = useBufferStore.use.buffers();
-  const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
@@ -83,12 +81,13 @@ const TabBar = ({
   const paneBufferIdSet = useMemo(() => {
     return pane ? new Set(pane.bufferIds) : null;
   }, [pane?.bufferIds]);
-  const buffers = useMemo(() => {
+  const buffers = useBufferStore((state) => {
     const visibleBuffers = paneBufferIdSet
-      ? allBuffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
-      : allBuffers;
+      ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
+      : state.buffers;
     return visibleBuffers.filter((buffer) => buffer.type !== "newTab");
-  }, [allBuffers, paneBufferIdSet]);
+  });
+  const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
   const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
   const activeBufferId =
     activeBufferCandidate && buffers.some((buffer) => buffer.id === activeBufferCandidate)
