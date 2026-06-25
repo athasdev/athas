@@ -26,6 +26,19 @@ const MAX_MARKERS = 160;
 const DEFAULT_CONTEXT_LINES = 2;
 const EXPANDED_CONTEXT_LINES = 7;
 
+interface SearchNavigationItem {
+  path: string;
+  name: string;
+  isDir: false;
+}
+
+interface SearchMatchIndexEntry {
+  excerptIndex: number;
+  filePath: string;
+  targetLine: number;
+  targetColumn: number;
+}
+
 const isAbsolutePath = (filePath: string) => {
   return filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath);
 };
@@ -90,79 +103,67 @@ const GlobalSearchBuffer = () => {
     [contextLinesByFile, results, rootFolderPath, sourceContentByPath, visibleMatchLimit],
   );
 
-  const fileNavigatorItems = useMemo<FileNavigatorItem[]>(
-    () =>
-      excerpts.map((excerpt) => {
-        const navigatorPath = getNavigatorPath(
-          excerpt.filePath,
-          excerpt.displayPath,
-          excerpt.fileName,
-        );
+  const {
+    fileNavigatorItems,
+    fileNavigatorKeySet,
+    excerptIndexByFilePath,
+    navigationItems,
+    matchIndex,
+  } = useMemo(() => {
+    const nextFileNavigatorItems: FileNavigatorItem[] = [];
+    const nextFileNavigatorKeySet = new Set<string>();
+    const nextExcerptIndexByFilePath = new Map<string, number>();
+    const nextNavigationItems: SearchNavigationItem[] = [];
+    const nextMatchIndex = new Map<string, SearchMatchIndexEntry>();
 
-        return {
-          key: excerpt.filePath,
-          path: navigatorPath,
-          label: navigatorPath,
-          iconPath: excerpt.filePath,
-          metadata: [
-            {
-              label: excerpt.matchCount,
-              className: "text-text-lighter",
-            },
-          ],
-        };
-      }),
-    [excerpts],
-  );
-  const fileNavigatorKeySet = useMemo(
-    () => new Set(fileNavigatorItems.map((item) => item.key)),
-    [fileNavigatorItems],
-  );
-  const excerptIndexByFilePath = useMemo(() => {
-    const index = new Map<string, number>();
-    excerpts.forEach((excerpt, excerptIndex) => {
-      index.set(excerpt.filePath, excerptIndex);
-    });
-    return index;
-  }, [excerpts]);
+    for (let excerptIndex = 0; excerptIndex < excerpts.length; excerptIndex++) {
+      const excerpt = excerpts[excerptIndex];
+      if (!excerpt) continue;
 
-  const navigationItems = useMemo(() => {
-    const items: Array<{ path: string; name: string; isDir: false }> = [];
-    for (const excerpt of excerpts) {
+      nextFileNavigatorKeySet.add(excerpt.filePath);
+      nextExcerptIndexByFilePath.set(excerpt.filePath, excerptIndex);
+
+      const navigatorPath = getNavigatorPath(
+        excerpt.filePath,
+        excerpt.displayPath,
+        excerpt.fileName,
+      );
+
+      nextFileNavigatorItems.push({
+        key: excerpt.filePath,
+        path: navigatorPath,
+        label: navigatorPath,
+        iconPath: excerpt.filePath,
+        metadata: [
+          {
+            label: excerpt.matchCount,
+            className: "text-text-lighter",
+          },
+        ],
+      });
+
       for (const match of excerpt.matches) {
-        items.push({
+        nextNavigationItems.push({
           path: match.itemKey,
           name: excerpt.fileName,
           isDir: false,
         });
-      }
-    }
-    return items;
-  }, [excerpts]);
-
-  const matchIndex = useMemo(() => {
-    const index = new Map<
-      string,
-      {
-        excerptIndex: number;
-        filePath: string;
-        targetLine: number;
-        targetColumn: number;
-      }
-    >();
-
-    excerpts.forEach((excerpt, excerptIndex) => {
-      excerpt.matches.forEach((match) => {
-        index.set(match.itemKey, {
+        nextMatchIndex.set(match.itemKey, {
           excerptIndex,
           filePath: excerpt.filePath,
           targetLine: match.targetLine,
           targetColumn: match.targetColumn,
         });
-      });
-    });
+      }
+    }
 
-    return index;
+    return {
+      fileNavigatorItems: nextFileNavigatorItems,
+      fileNavigatorKeySet: nextFileNavigatorKeySet,
+      excerptIndexByFilePath: nextExcerptIndexByFilePath,
+      navigationItems: nextNavigationItems,
+      matchIndex: nextMatchIndex,
+    };
   }, [excerpts]);
 
   const { selectedIndex, scrollContainerRef } = useKeyboardNavigation({
