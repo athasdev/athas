@@ -126,17 +126,19 @@ const GlobalSearchBuffer = () => {
     return index;
   }, [excerpts]);
 
-  const navigationItems = useMemo(
-    () =>
-      excerpts.flatMap((excerpt) =>
-        excerpt.matches.map((match) => ({
+  const navigationItems = useMemo(() => {
+    const items: Array<{ path: string; name: string; isDir: false }> = [];
+    for (const excerpt of excerpts) {
+      for (const match of excerpt.matches) {
+        items.push({
           path: match.itemKey,
           name: excerpt.fileName,
           isDir: false,
-        })),
-      ),
-    [excerpts],
-  );
+        });
+      }
+    }
+    return items;
+  }, [excerpts]);
 
   const matchIndex = useMemo(() => {
     const index = new Map<
@@ -217,10 +219,13 @@ const GlobalSearchBuffer = () => {
     [excerptIndexByFilePath, scrollContainerRef],
   );
 
-  const filePathsWithResults = useMemo(
-    () => Array.from(new Set(results.map((result) => result.file_path))),
-    [results],
-  );
+  const filePathsWithResults = useMemo(() => {
+    const paths = new Set<string>();
+    for (const result of results) {
+      paths.add(result.file_path);
+    }
+    return Array.from(paths);
+  }, [results]);
   const markerItems = useMemo(() => {
     if (navigationItems.length <= MAX_MARKERS) {
       return navigationItems.map((item, index) => ({ item, markerIndex: index }));
