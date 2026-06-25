@@ -525,8 +525,11 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 }: {
   multiDiff: MultiFileDiff;
 }) {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const activeBuffer = useBufferStore((state) => {
+    return state.activeBufferId
+      ? (state.buffers.find((buffer) => buffer.id === state.activeBufferId) ?? null)
+      : null;
+  });
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -535,7 +538,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
-  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isRefreshingRef = useRef(false);
   const sectionElementsRef = useRef(new Map<string, HTMLDivElement>());
