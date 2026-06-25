@@ -45,12 +45,24 @@ interface CustomTitleBarProps {
 }
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
-  const { settings, updateSetting } = useSettingsStore();
+  const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
+  const titleBarProjectMode = useSettingsStore((state) => state.settings.titleBarProjectMode);
+  const sidebarTabsPosition = useSettingsStore((state) => state.settings.sidebarTabsPosition);
+  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
+  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
+  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
+  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
+  const headerTrailingItemsOrder = useSettingsStore(
+    (state) => state.settings.headerTrailingItemsOrder,
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const { isGitViewActive, isGitHubPRsViewActive, activeSidebarView, setIsProjectPickerVisible } =
-    useUIState();
+  const isGitViewActive = useUIState((state) => state.isGitViewActive);
+  const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
+  const activeSidebarView = useUIState((state) => state.activeSidebarView);
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const { openSidebarView } = useSidebarPaneController();
 
@@ -65,9 +77,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const isLinux = IS_LINUX;
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
-  const shouldUseNativeMenuBar = !isWindows && !isLinux && settings.nativeMenuBar;
-  const titleBarProjectMode = settings.titleBarProjectMode;
-  const showTopSidebarTabs = settings.sidebarTabsPosition === "top";
+  const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
+  const showTopSidebarTabs = sidebarTabsPosition === "top";
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
@@ -197,7 +208,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "sidebar-left",
       label: "Move Sidebar Left",
-      disabled: settings.sidebarPosition === "left",
+      disabled: sidebarPosition === "left",
       onClick: () => {
         void updateSetting("sidebarPosition", "left");
       },
@@ -205,7 +216,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "sidebar-right",
       label: "Move Sidebar Right",
-      disabled: settings.sidebarPosition === "right",
+      disabled: sidebarPosition === "right",
       onClick: () => {
         void updateSetting("sidebarPosition", "right");
       },
@@ -213,7 +224,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "activity-tabs-top",
       label: "Show Activity Tabs in Title Bar",
-      disabled: settings.sidebarTabsPosition === "top",
+      disabled: sidebarTabsPosition === "top",
       onClick: () => {
         void updateSetting("sidebarTabsPosition", "top");
       },
@@ -221,7 +232,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "activity-tabs-left",
       label: "Show Activity Tabs in Sidebar",
-      disabled: settings.sidebarTabsPosition === "left",
+      disabled: sidebarTabsPosition === "left",
       onClick: () => {
         void updateSetting("sidebarTabsPosition", "left");
       },
@@ -240,7 +251,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
 
   const menuItem =
     !isMacOS && !shouldUseNativeMenuBar ? (
-      settings.compactMenuBar ? (
+      compactMenuBar ? (
         <div className="relative">
           <Tooltip content="Menu" side="bottom">
             <TabsList variant="segmented" className={chromeControlGroup()}>
@@ -276,7 +287,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <Button
           type="button"
           variant="ghost"
-          active={settings.isAIChatVisible}
+          active={isAIChatVisible}
           tooltip="Toggle AI Chat"
           tooltipSide="bottom"
           commandId="workbench.toggleAIChat"
@@ -337,7 +348,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
               activeSidebarView={activeSidebarView}
               isGitViewActive={isGitViewActive}
               isGitHubPRsViewActive={isGitHubPRsViewActive}
-              coreFeatures={settings.coreFeatures}
+              coreFeatures={coreFeatures}
               onViewChange={handleSidebarViewChange}
               onSearchClick={() => openGlobalSearchBuffer()}
               compact
@@ -351,7 +362,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <div className="flex h-8 items-center">
           <div className="flex items-center gap-1">
             {placeHeaderItemsBeforeAccount(
-              orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
+              orderHeaderItems(headerTrailingItems, headerTrailingItemsOrder),
             ).map((item) =>
               item.content ? (
                 <div key={item.id} className={chromeItemWrapper()}>
@@ -383,7 +394,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 activeSidebarView={activeSidebarView}
                 isGitViewActive={isGitViewActive}
                 isGitHubPRsViewActive={isGitHubPRsViewActive}
-                coreFeatures={settings.coreFeatures}
+                coreFeatures={coreFeatures}
                 onViewChange={handleSidebarViewChange}
                 onSearchClick={() => openGlobalSearchBuffer()}
                 compact
@@ -399,7 +410,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       <div className="z-20 flex items-center">
         <div className="flex items-center gap-1">
           {placeHeaderItemsBeforeAccount(
-            orderHeaderItems(headerTrailingItems, settings.headerTrailingItemsOrder),
+            orderHeaderItems(headerTrailingItems, headerTrailingItemsOrder),
           ).map((item) =>
             item.content ? (
               <div key={item.id} className={chromeItemWrapper()}>
