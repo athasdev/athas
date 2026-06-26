@@ -397,6 +397,7 @@ export function SkillsCommand({
                   return (
                     <CommandItem
                       key={skill.id}
+                      as="div"
                       isSelected={isSelected}
                       onClick={() =>
                         isInstalled ? undefined : void handleInstallMarketplaceSkill(skill)
@@ -460,6 +461,7 @@ export function SkillsCommand({
                 return (
                   <CommandItem
                     key={skill.id}
+                    as="div"
                     isSelected={isSelected}
                     onClick={() => handleSelectSkill(skill)}
                     onMouseEnter={() => setSelectedIndex(index)}

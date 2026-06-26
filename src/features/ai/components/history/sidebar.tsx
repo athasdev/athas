@@ -132,6 +132,7 @@ export default function ChatHistoryDropdown({
             return (
               <CommandItem
                 key={chat.id}
+                as="div"
                 onClick={() => {
                   onSwitchToChat(chat.id);
                   handleClose();

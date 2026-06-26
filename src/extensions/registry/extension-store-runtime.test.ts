@@ -3,6 +3,7 @@ import type { ExtensionManifest } from "../types/extension-manifest";
 import {
   buildRuntimeManifest,
   getLanguageToolConfigSet,
+  isExpectedMissingToolError,
   resolveToolDownloadUrlForBackend,
   resolveToolCommandForManifest,
   resolveToolDownloadUrlForManifest,
@@ -216,6 +217,15 @@ describe("extension-store runtime manifest", () => {
       runtime: "r",
       package: "languageserver",
     });
+  });
+
+  it("treats missing system tools as expected optional-tool resolution failures", () => {
+    expect(
+      isExpectedMissingToolError(
+        "Tool 'metals (system tool not found in PATH or known toolchain locations)' not found",
+      ),
+    ).toBe(true);
+    expect(isExpectedMissingToolError("permission denied")).toBe(false);
   });
 
   it("passes system toolchain tools to the backend without download metadata", () => {

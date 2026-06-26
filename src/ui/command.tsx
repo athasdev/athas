@@ -3,6 +3,7 @@ import { cva } from "class-variance-authority";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
+import type { KeyboardEvent } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
@@ -264,37 +265,88 @@ CommandInput.displayName = "CommandInput";
 interface CommandItemProps {
   children: React.ReactNode;
   isSelected?: boolean;
+  as?: "button" | "div";
   onClick?: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   className?: string;
+  disabled?: boolean;
+  type?: React.ComponentProps<"button">["type"];
 }
 
 export const CommandItem = ({
   children,
   isSelected = false,
+  as = "button",
   onClick,
   onMouseEnter,
   onMouseLeave,
   className,
+  disabled = false,
+  type,
   ...props
 }: CommandItemProps &
   Omit<
     React.ComponentProps<typeof Button>,
-    "children" | "className" | "onClick" | "onMouseEnter" | "onMouseLeave" | "size" | "variant"
-  >) => (
-  <Button
-    onClick={onClick}
-    onMouseEnter={onMouseEnter}
-    onMouseLeave={onMouseLeave}
-    {...props}
-    variant="ghost"
-    className={cn(commandItemVariants({ selected: isSelected }), className)}
-    compact
-  >
-    {children}
-  </Button>
-);
+    | "children"
+    | "className"
+    | "disabled"
+    | "ref"
+    | "onClick"
+    | "onKeyDown"
+    | "onMouseEnter"
+    | "onMouseLeave"
+    | "size"
+    | "type"
+    | "variant"
+  >) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (disabled || event.target !== event.currentTarget) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onClick?.();
+  };
+
+  if (as === "div") {
+    const divProps = props as React.HTMLAttributes<HTMLDivElement>;
+
+    return (
+      <div
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick && !disabled ? 0 : undefined}
+        aria-disabled={disabled || undefined}
+        onClick={disabled ? undefined : onClick}
+        onKeyDown={handleKeyDown}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        {...divProps}
+        className={cn(
+          commandItemVariants({ selected: isSelected }),
+          disabled && "pointer-events-none opacity-50",
+          className,
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      disabled={disabled}
+      type={type ?? "button"}
+      {...props}
+      variant="ghost"
+      className={cn(commandItemVariants({ selected: isSelected }), className)}
+      compact
+    >
+      {children}
+    </Button>
+  );
+};
 
 CommandItem.displayName = "CommandItem";
 

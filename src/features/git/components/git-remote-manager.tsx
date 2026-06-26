@@ -152,6 +152,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             return (
               <CommandItem
                 key={remote.name}
+                as="div"
                 className="ui-font h-auto min-h-8 items-start whitespace-normal px-2 py-1.5 leading-normal"
               >
                 <Globe className="mt-0.5 size-4 shrink-0 text-text-lighter" />

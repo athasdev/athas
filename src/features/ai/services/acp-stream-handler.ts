@@ -470,7 +470,11 @@ export class AcpStreamHandler {
     this.pendingNewMessage = true;
 
     if (!event.success) {
-      console.warn("Tool call failed:", event.toolId);
+      console.debug("Tool call failed:", {
+        toolId: event.toolId,
+        toolName,
+        error: event.error,
+      });
     }
   }
 

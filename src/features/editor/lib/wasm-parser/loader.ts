@@ -9,6 +9,14 @@ import { indexedDBParserCache } from "./cache-indexeddb";
 import { fetchHighlightQuery } from "./extension-assets";
 import type { LoadedParser, ParserConfig } from "../../types/wasm-parser/wasm-parser.types";
 
+export function getTreeSitterRuntimeAssetPath(scriptName: string): string {
+  if (scriptName === "web-tree-sitter.wasm") {
+    return "/tree-sitter/tree-sitter.wasm";
+  }
+
+  return `/tree-sitter/${scriptName}`;
+}
+
 class WasmParserLoader {
   private static instance: WasmParserLoader;
   private initialized = false;
@@ -34,11 +42,12 @@ class WasmParserLoader {
     try {
       await Parser.init({
         locateFile(scriptName: string) {
-          const baseOrigin =
-            typeof globalThis !== "undefined" && globalThis.location?.origin
-              ? `${globalThis.location.origin}/`
-              : "/";
-          return new URL(`tree-sitter/${scriptName}`, baseOrigin).toString();
+          const assetPath = getTreeSitterRuntimeAssetPath(scriptName);
+          if (typeof globalThis !== "undefined" && globalThis.location?.origin) {
+            return new URL(assetPath, `${globalThis.location.origin}/`).toString();
+          }
+
+          return assetPath;
         },
       });
       this.initialized = true;
