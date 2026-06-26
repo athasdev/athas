@@ -81,4 +81,28 @@ describe("mergeTokenLayers", () => {
 
     expect(tokens).toEqual([{ start: 0, end: 16, class_name: "token-type" }]);
   });
+
+  it("keeps structural syntax colors when semantic tokens overlap TSX tags", () => {
+    const tokens = mergeTokenLayers(
+      [
+        { start: 0, end: 1, class_name: "token-punctuation" },
+        { start: 1, end: 6, class_name: "token-tag" },
+      ],
+      [{ start: 1, end: 6, class_name: "token-type" }],
+    );
+
+    expect(tokens).toEqual([
+      { start: 0, end: 1, class_name: "token-punctuation" },
+      { start: 1, end: 6, class_name: "token-tag" },
+    ]);
+  });
+
+  it("keeps structural syntax colors when semantic tokens overlap TSX attributes", () => {
+    const tokens = mergeTokenLayers(
+      [{ start: 7, end: 16, class_name: "token-attribute" }],
+      [{ start: 7, end: 16, class_name: "token-property" }],
+    );
+
+    expect(tokens).toEqual([{ start: 7, end: 16, class_name: "token-attribute" }]);
+  });
 });

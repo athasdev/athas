@@ -70,14 +70,41 @@ function isSpecificSyntaxToken(token: Token): boolean {
   return token.class_name !== "token-text" && token.class_name !== "token-variable";
 }
 
+const PRESERVED_SYNTAX_TOKEN_CLASSES = new Set([
+  "token-attribute",
+  "token-boolean",
+  "token-comment",
+  "token-constant",
+  "token-keyword",
+  "token-null",
+  "token-number",
+  "token-operator",
+  "token-punctuation",
+  "token-regex",
+  "token-string",
+  "token-tag",
+]);
+
+function doTokensOverlap(left: Token, right: Token): boolean {
+  return left.start < right.end && left.end > right.start;
+}
+
 function shouldApplySemanticToken(semanticToken: Token, syntaxTokens: Token[]): boolean {
+  if (
+    syntaxTokens.some(
+      (syntaxToken) =>
+        PRESERVED_SYNTAX_TOKEN_CLASSES.has(syntaxToken.class_name) &&
+        doTokensOverlap(semanticToken, syntaxToken),
+    )
+  ) {
+    return false;
+  }
+
   if (!isNeutralSemanticToken(semanticToken)) return true;
 
   return !syntaxTokens.some(
     (syntaxToken) =>
-      isSpecificSyntaxToken(syntaxToken) &&
-      semanticToken.start < syntaxToken.end &&
-      semanticToken.end > syntaxToken.start,
+      isSpecificSyntaxToken(syntaxToken) && doTokensOverlap(semanticToken, syntaxToken),
   );
 }
 
