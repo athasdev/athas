@@ -10,15 +10,15 @@ use std::{
       atomic::{AtomicU32, Ordering},
    },
 };
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy, clear_vibrancy};
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Menu;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 const EMBEDDED_WEBVIEW_CORNER_RADIUS: f64 = 7.0;
 
 // Counter for generating unique web viewer labels
@@ -28,9 +28,9 @@ static EMBEDDED_WEBVIEW_LABELS: LazyLock<Mutex<HashSet<String>>> =
    LazyLock::new(|| Mutex::new(HashSet::new()));
 
 struct EmbeddedWebviewProfile {
-   #[cfg_attr(target_os = "macos", allow(dead_code))]
+   #[cfg_attr(all(target_os = "macos", not(feature = "linux")), allow(dead_code))]
    data_directory: PathBuf,
-   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+   #[cfg_attr(any(not(target_os = "macos"), feature = "linux"), allow(dead_code))]
    data_store_identifier: [u8; 16],
 }
 
@@ -157,7 +157,7 @@ fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, St
 }
 
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
       if let Err(error) = apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None) {
@@ -165,7 +165,7 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
       }
    }
 
-   #[cfg(not(target_os = "macos"))]
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
    }
@@ -181,7 +181,7 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Result<(), String> {
    use objc::{class, msg_send, runtime::Object, sel, sel_impl};
    use std::ffi::CString;
@@ -208,7 +208,7 @@ fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Re
    Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 fn apply_embedded_webview_corner_radius(
    webview: &tauri::Webview<AthasRuntime>,
 ) -> Result<(), String> {
@@ -239,7 +239,7 @@ fn apply_embedded_webview_corner_radius(
       .map_err(|e| format!("Failed to apply embedded webview corner radius: {e}"))
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 fn sync_macos_window_appearance(
    window: &tauri::WebviewWindow<AthasRuntime>,
    theme_type: &str,
@@ -285,12 +285,12 @@ pub fn set_macos_window_appearance(
    theme_type: String,
    transparency_enabled: Option<bool>,
 ) -> Result<(), String> {
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(true))?;
    }
 
-   #[cfg(not(target_os = "macos"))]
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
    {
       let _ = window;
       let _ = theme_type;
@@ -305,7 +305,7 @@ pub fn set_window_transparency_enabled(
    window: tauri::WebviewWindow<AthasRuntime>,
    enabled: bool,
 ) -> Result<(), String> {
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       if enabled {
          let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
@@ -319,7 +319,7 @@ pub fn set_window_transparency_enabled(
       }
    }
 
-   #[cfg(not(target_os = "macos"))]
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
    {
       let _ = window;
       let _ = enabled;
@@ -351,7 +351,7 @@ fn create_labeled_app_window_internal(
    ))]
    let builder = builder.decorations(false);
 
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    let builder = builder
       .hidden_title(true)
       .title_bar_style(TitleBarStyle::Overlay);
@@ -602,12 +602,12 @@ pub async fn create_embedded_webview(
       ),
    );
 
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       webview_builder = webview_builder.data_store_identifier(profile.data_store_identifier);
    }
 
-   #[cfg(not(target_os = "macos"))]
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
    {
       webview_builder = webview_builder.data_directory(profile.data_directory);
    }
@@ -659,7 +659,7 @@ pub async fn create_embedded_webview(
       .set_auto_resize(false)
       .map_err(|e| format!("Failed to set auto resize: {e}"))?;
 
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    apply_embedded_webview_corner_radius(&webview)?;
 
    if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {

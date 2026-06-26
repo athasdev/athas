@@ -21,7 +21,7 @@ resolver = "2"
 
 [patch.crates-io]
 phf_generator = { path = "vendor/phf_generator-0.8.0" }
-tauri = { git = "https://github.com/tauri-apps/tauri", rev = "7815deda7cec511c2623c0e62d89ad02c026ba58" }
+tauri = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c" }
 
 [workspace.lints.clippy]
 uninlined_format_args = "allow"
