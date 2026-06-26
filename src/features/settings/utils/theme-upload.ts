@@ -1,4 +1,5 @@
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { toSyntaxTokenVariables } from "@/extensions/themes/syntax-token-colors";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 
 /**
@@ -39,12 +40,6 @@ function convertNewFormatTheme(jsonTheme: NewJsonTheme): ThemeDefinition {
     cssVariables[`--color-${key}`] = value;
   }
 
-  const syntaxTokens: Record<string, string> = {};
-  for (const [key, value] of Object.entries(jsonTheme.syntax)) {
-    syntaxTokens[`--syntax-${key}`] = value;
-    syntaxTokens[`--color-syntax-${key}`] = value;
-  }
-
   const isDark = jsonTheme.appearance === "dark";
 
   return {
@@ -53,7 +48,7 @@ function convertNewFormatTheme(jsonTheme: NewJsonTheme): ThemeDefinition {
     description: jsonTheme.description || "",
     category: isDark ? "Dark" : "Light",
     cssVariables,
-    syntaxTokens,
+    syntaxTokens: toSyntaxTokenVariables(jsonTheme.syntax, jsonTheme.colors, jsonTheme.appearance),
     isDark,
     icon: undefined,
   };

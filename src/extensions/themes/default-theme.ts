@@ -1,4 +1,5 @@
 import athasThemes from "./builtin/athas.json";
+import { toSyntaxTokenVariables } from "./syntax-token-colors";
 import type { Theme, ThemeFile } from "./theme-schema";
 import type { ThemeDefinition } from "./types";
 
@@ -40,12 +41,7 @@ function toThemeDefinition(theme: Theme): ThemeDefinition {
     cssVariables[`--color-${key}`] = value;
   }
 
-  const syntaxTokens: Record<string, string> = {};
   const syntax = toStringRecord(theme.syntax);
-  for (const [key, value] of Object.entries(syntax)) {
-    syntaxTokens[`--syntax-${key}`] = value;
-    syntaxTokens[`--color-syntax-${key}`] = value;
-  }
 
   const isDark = theme.appearance === "dark";
   return {
@@ -54,7 +50,7 @@ function toThemeDefinition(theme: Theme): ThemeDefinition {
     description: theme.description || "",
     category: isDark ? "Dark" : "Light",
     cssVariables,
-    syntaxTokens,
+    syntaxTokens: toSyntaxTokenVariables(syntax, colors, theme.appearance),
     isDark,
   };
 }

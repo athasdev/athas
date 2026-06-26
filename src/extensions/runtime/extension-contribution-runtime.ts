@@ -4,6 +4,7 @@ import type { IconThemeContribution, ThemeContribution } from "../types/extensio
 import { iconThemeRegistry } from "../icon-themes/icon-theme-registry";
 import type { IconResult, IconThemeDefinition } from "../icon-themes/types";
 import { themeRegistry } from "../themes/theme-registry";
+import { toSyntaxTokenVariables } from "../themes/syntax-token-colors";
 import type { ThemeDefinition } from "../themes/types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
@@ -35,21 +36,6 @@ function toCssVariables(colors: Record<string, string>): Record<string, string> 
   return variables;
 }
 
-function toSyntaxVariables(syntax: Record<string, string> | undefined): Record<string, string> {
-  const variables: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(syntax ?? {})) {
-    const normalizedKey = key.startsWith("--") ? key : `--syntax-${key}`;
-    variables[normalizedKey] = value;
-
-    if (!normalizedKey.startsWith("--color-")) {
-      variables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
-  }
-
-  return variables;
-}
-
 function toThemeDefinition(contribution: ThemeContribution): ThemeDefinition {
   const isDark = contribution.appearance === "dark";
 
@@ -59,7 +45,11 @@ function toThemeDefinition(contribution: ThemeContribution): ThemeDefinition {
     description: contribution.description || "",
     category: isDark ? "Dark" : "Light",
     cssVariables: toCssVariables(contribution.colors),
-    syntaxTokens: toSyntaxVariables(contribution.syntax),
+    syntaxTokens: toSyntaxTokenVariables(
+      contribution.syntax,
+      contribution.colors,
+      contribution.appearance,
+    ),
     isDark,
   };
 }

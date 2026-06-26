@@ -11,6 +11,7 @@ import githubThemes from "./builtin/github.json";
 import nordThemes from "./builtin/nord.json";
 import oneThemes from "./builtin/one.json";
 import solarizedThemes from "./builtin/solarized.json";
+import { toSyntaxTokenVariables } from "./syntax-token-colors";
 import tokyoNightThemes from "./builtin/tokyo-night.json";
 import vitesseThemes from "./builtin/vitesse.json";
 import type { ThemeDefinition } from "./types";
@@ -83,12 +84,6 @@ export class ThemeLoader extends BaseThemeExtension {
       cssVariables[`--color-${key}`] = value;
     }
 
-    const syntaxTokens: Record<string, string> = {};
-    for (const [key, value] of Object.entries(jsonTheme.syntax)) {
-      syntaxTokens[`--syntax-${key}`] = value;
-      syntaxTokens[`--color-syntax-${key}`] = value;
-    }
-
     const isDark = jsonTheme.appearance === "dark";
 
     return {
@@ -97,7 +92,11 @@ export class ThemeLoader extends BaseThemeExtension {
       description: jsonTheme.description || "",
       category: isDark ? "Dark" : "Light",
       cssVariables,
-      syntaxTokens,
+      syntaxTokens: toSyntaxTokenVariables(
+        jsonTheme.syntax,
+        jsonTheme.colors,
+        jsonTheme.appearance,
+      ),
       isDark,
       icon: undefined,
     };
