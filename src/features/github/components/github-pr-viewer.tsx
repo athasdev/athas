@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -29,6 +30,7 @@ import { useGitHubStore } from "../stores/github.store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
 import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
+import { GitHubTitleBodyForm } from "./github-title-body-form";
 import {
   GitHubViewerHeader,
   GitHubViewerLoadingState,
@@ -103,7 +105,8 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     contentError,
   } = useGitHubStore();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
-  const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } = useGitHubStore().actions;
+  const { selectPR, fetchPRContent, fetchPRs, openPRInBrowser, checkoutPR } =
+    useGitHubStore().actions;
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>("activity");
@@ -113,6 +116,8 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     () => parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "") ?? null,
   );
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
 
   useEffect(() => {
@@ -128,6 +133,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     setFileStatusFilter("all");
     setSelectedFilePath(deepLinkedFilePath ?? null);
     setFilePatches({});
+    setIsEditingDetails(false);
   }, [prNumber, repoPath]);
 
   useEffect(() => {
@@ -393,6 +399,35 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     void copyToClipboard(selectedPRDetails.headRef, "Branch name copied");
   }, [selectedPRDetails?.headRef]);
 
+  const handleSaveDetails = useCallback(
+    async ({ title, body }: { title: string; body: string }) => {
+      if (!repoPath || !selectedPRDetails || !prBuffer) return;
+
+      setIsSavingDetails(true);
+      try {
+        await invoke("github_update_pull_request", {
+          repoPath,
+          prNumber,
+          title,
+          body,
+        });
+        updateBuffer({
+          ...prBuffer,
+          name: title,
+        });
+        await selectPR(repoPath, prNumber, { force: true });
+        void fetchPRs(repoPath, { force: true });
+        setIsEditingDetails(false);
+        toast.success(`Updated PR #${prNumber}`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update pull request");
+      } finally {
+        setIsSavingDetails(false);
+      }
+    },
+    [fetchPRs, prBuffer, prNumber, repoPath, selectPR, selectedPRDetails, updateBuffer],
+  );
+
   const handleToggleFilesView = useCallback(() => {
     if (!selectedPRDiff || !selectedPRDetails) {
       // Diff not loaded yet — fetch first, then open
@@ -562,6 +597,10 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
           onCopyPRLink={handleCopyPRLink}
           onCopyBranchName={handleCopyBranchName}
           onToggleFilesView={handleToggleFilesView}
+          onEdit={() => {
+            setActiveTab("activity");
+            setIsEditingDetails(true);
+          }}
         />
       }
     >
@@ -587,6 +626,19 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
           activityItems={activityItems}
           isLoadingContent={isLoadingContent}
           contentError={contentError}
+          editForm={
+            isEditingDetails ? (
+              <GitHubTitleBodyForm
+                title={pr.title}
+                body={pr.body}
+                titlePlaceholder="Pull request title"
+                submitLabel="Save"
+                isSubmitting={isSavingDetails}
+                onCancel={() => setIsEditingDetails(false)}
+                onSubmit={(value) => void handleSaveDetails(value)}
+              />
+            ) : undefined
+          }
           onRetry={handleRefresh}
         />
       )}

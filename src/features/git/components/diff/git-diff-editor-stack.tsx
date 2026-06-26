@@ -810,7 +810,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 aria-label="View on GitHub"
               >
                 <GithubLogo weight="duotone" />
-                View on GitHub
+                <span className="max-[1280px]:hidden">View on GitHub</span>
               </BreadcrumbActionButton>
             ) : null}
             <BreadcrumbActionButton

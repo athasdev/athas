@@ -1,8 +1,10 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { CopyIcon as Copy, GithubLogoIcon as GithubLogo } from "@phosphor-icons/react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
+import { cn } from "@/utils/cn";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import GitHubMarkdown from "./github-markdown";
@@ -18,9 +20,37 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
   const shortSha = commit.oid.slice(0, 7);
   const authorName = author?.login || author?.name || "Unknown";
   const avatarLogin = (author?.login || "").trim();
+  const canOpenCommit = Boolean(commit.url);
+
+  const openCommit = () => {
+    if (commit.url) {
+      void openUrl(commit.url);
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!canOpenCommit || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    openCommit();
+  };
+
+  const stopActionClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+  };
 
   return (
-    <div className="flex items-start gap-2.5 px-1 py-1.5">
+    <div
+      role={canOpenCommit ? "button" : undefined}
+      tabIndex={canOpenCommit ? 0 : undefined}
+      onClick={canOpenCommit ? openCommit : undefined}
+      onKeyDown={handleKeyDown}
+      className={cn(
+        "flex w-full min-w-0 items-start gap-2.5 rounded-md px-2 py-2 transition-colors",
+        canOpenCommit &&
+          "cursor-pointer hover:bg-hover/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+      )}
+      aria-label={canOpenCommit ? `Open commit ${shortSha} on GitHub` : undefined}
+    >
       <img
         src={`https://github.com/${encodeURIComponent(avatarLogin || "github")}.png?size=32`}
         alt={authorName}
@@ -50,7 +80,10 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
           <span>committed {getTimeAgo(commit.authoredDate)}</span>
           <Tooltip content="Copy full commit SHA" side="top">
             <Button
-              onClick={() => void copyToClipboard(commit.oid, "Commit SHA copied")}
+              onClick={(event) => {
+                stopActionClick(event);
+                void copyToClipboard(commit.oid, "Commit SHA copied");
+              }}
               variant="ghost"
               compact
               className="rounded text-text-lighter"
@@ -62,7 +95,10 @@ export const CommitItem = memo(({ commit, issueBaseUrl, repoPath }: CommitItemPr
           {commit.url && (
             <Tooltip content="Open commit on GitHub" side="top">
               <Button
-                onClick={() => commit.url && void openUrl(commit.url)}
+                onClick={(event) => {
+                  stopActionClick(event);
+                  openCommit();
+                }}
                 variant="ghost"
                 compact
                 className="rounded text-text-lighter"

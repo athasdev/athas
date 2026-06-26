@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
@@ -31,6 +32,7 @@ interface PRActivityPanelProps {
   activityItems: Array<ActivityItemComment | ActivityItemCommit>;
   isLoadingContent: boolean;
   contentError: string | null;
+  editForm?: ReactNode;
   onRetry: () => void;
 }
 
@@ -41,6 +43,7 @@ export function PRActivityPanel({
   activityItems,
   isLoadingContent,
   contentError,
+  editForm,
   onRetry,
 }: PRActivityPanelProps) {
   const [visibleActivityCount, setVisibleActivityCount] = useState(12);
@@ -84,12 +87,14 @@ export function PRActivityPanel({
   }, [activityItems.length, visibleActivityCount]);
 
   return (
-    <div className="min-w-0 space-y-5">
-      {body ? (
+    <div className="min-w-0 w-full space-y-5">
+      {editForm ? (
+        editForm
+      ) : body ? (
         <GitHubMarkdown
           content={body}
-          className="github-markdown-pr"
-          contentClassName="github-markdown-pr-content"
+          className="github-markdown-pr w-full"
+          contentClassName="github-markdown-pr-content w-full max-w-none"
           issueBaseUrl={issueBaseUrl}
           repoPath={repoPath}
         />
@@ -121,7 +126,7 @@ export function PRActivityPanel({
             <p className="ui-font ui-text-sm text-text-lighter">No activity</p>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="w-full space-y-1">
             {visibleActivityItems.map((item) =>
               item.type === "comment" ? (
                 <CommentItem

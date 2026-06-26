@@ -8,7 +8,7 @@ pub use api::{
    github_get_issue_details, github_get_pr_comments, github_get_pr_details, github_get_pr_diff,
    github_get_pr_files, github_get_workflow_job_logs, github_get_workflow_run_details,
    github_list_issues, github_list_labels, github_list_prs, github_list_workflow_runs,
-   github_list_workflows,
+   github_list_workflows, github_update_issue, github_update_pull_request,
 };
 pub use models::{
    IssueComment, IssueDetails, IssueListItem, Label, LinkedIssue, PullRequest, PullRequestAuthor,

@@ -9,6 +9,7 @@ import {
   UserIcon as User,
   XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -19,6 +20,17 @@ import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/gi
 // CI Status Indicator
 interface CIStatusProps {
   checks: StatusCheck[];
+}
+
+function getCheckBadgeClassName(check: StatusCheck): string {
+  if (check.conclusion === "SUCCESS") return "border-success/20 bg-success/10 text-success";
+  if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") {
+    return "border-error/20 bg-error/10 text-error";
+  }
+  if (check.status === "IN_PROGRESS" || check.status === "PENDING" || check.status === "QUEUED") {
+    return "border-warning/20 bg-warning/10 text-warning";
+  }
+  return "";
 }
 
 export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
@@ -40,7 +52,6 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         icon: <XCircle className="text-error" />,
         label: `${failedCount} failed`,
         tone: "text-error",
-        badgeClassName: "border-error/20 bg-error/10 text-error",
       };
     }
 
@@ -49,7 +60,6 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         icon: <LoadingIndicator label="Pending checks" compact />,
         label: `${pendingCount} pending`,
         tone: "text-warning",
-        badgeClassName: "border-warning/20 bg-warning/10 text-warning",
       };
     }
 
@@ -58,7 +68,6 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         icon: <CheckCircle2 className="text-success" />,
         label: `${passedCount} checks passed`,
         tone: "text-success",
-        badgeClassName: "border-success/20 bg-success/10 text-success",
       };
     }
 
@@ -66,7 +75,6 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
       icon: <CircleDot className="text-text-lighter" />,
       label: `${passedCount}/${checks.length} passed`,
       tone: "text-text-lighter",
-      badgeClassName: "",
     };
   }, [checks]);
 
@@ -76,9 +84,11 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
     <div className="relative inline-flex shrink-0">
       <Button
         type="button"
-        variant="default"
+        variant="ghost"
+        compact
         onClick={() => setIsExpanded(!isExpanded)}
-        className="border-border/70 bg-primary-bg/70 text-text"
+        className="ui-text-sm h-auto min-w-0 rounded-md px-1.5 py-1 text-left"
+        aria-expanded={isExpanded}
       >
         {summary.icon}
         <span className={cn("ui-font ui-text-sm", summary.tone)}>{summary.label}</span>
@@ -90,11 +100,18 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
       </Button>
 
       {isExpanded && (
-        <div className="absolute top-full left-0 z-20 mt-2 min-w-[320px] rounded-2xl border border-border/70 bg-secondary-bg/95 p-2 shadow-[var(--shadow-popover)] backdrop-blur-sm">
+        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-[320px] rounded-lg border border-border/70 bg-secondary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
           {checks.map((check, idx) => (
-            <div
+            <button
               key={idx}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-hover/60"
+              type="button"
+              onClick={() => {
+                if (check.detailsUrl) {
+                  void openUrl(check.detailsUrl);
+                }
+              }}
+              disabled={!check.detailsUrl}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
             >
               {check.conclusion === "SUCCESS" ? (
                 <CheckCircle2 className="text-success" />
@@ -114,11 +131,11 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
               <Badge
                 variant="muted"
                 size="compact"
-                className={cn("capitalize", summary.badgeClassName)}
+                className={cn("capitalize", getCheckBadgeClassName(check))}
               >
                 {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
               </Badge>
-            </div>
+            </button>
           ))}
         </div>
       )}

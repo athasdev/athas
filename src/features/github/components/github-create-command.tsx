@@ -380,31 +380,25 @@ ${statusSummary}`;
   return (
     <Command isVisible onClose={onClose} title={titleByKind[kind]} className="max-h-[540px]">
       <CommandHeader onClose={mode === "form" ? onClose : closePicker}>
-        {mode === "form" && kind === "action" ? (
-          <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">Run workflow</span>
+        {mode === "form" ? (
+          <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">
+            {titleByKind[kind]}
+          </span>
         ) : (
           <CommandInput
-            value={mode === "form" ? title : query}
-            onChange={mode === "form" ? setTitle : setQuery}
+            value={query}
+            onChange={setQuery}
             placeholder={
-              mode === "form"
-                ? kind === "issue"
-                  ? "Issue title"
-                  : "Pull request title"
-                : mode === "workflow"
-                  ? "Search workflows"
-                  : mode === "labels"
-                    ? "Search labels"
-                    : "Search branches"
+              mode === "workflow"
+                ? "Search workflows"
+                : mode === "labels"
+                  ? "Search labels"
+                  : "Search branches"
             }
             onKeyDown={(event) => {
-              if (event.key === "Escape" && mode !== "form") {
+              if (event.key === "Escape") {
                 event.preventDefault();
                 closePicker();
-              }
-              if (event.key === "Enter" && mode === "form" && canSubmit) {
-                event.preventDefault();
-                void handleSubmit();
               }
             }}
           />
@@ -524,6 +518,18 @@ ${statusSummary}`;
               </>
             ) : (
               <>
+                <input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && canSubmit) {
+                      event.preventDefault();
+                      void handleSubmit();
+                    }
+                  }}
+                  placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
+                  className="ui-font h-8 w-full min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+                />
                 {kind === "pull-request" ? (
                   <div className="grid grid-cols-2 gap-2">
                     <FieldButton

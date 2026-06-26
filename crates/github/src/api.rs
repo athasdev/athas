@@ -171,6 +171,7 @@ struct RestCheckRun {
    name: Option<String>,
    status: Option<String>,
    conclusion: Option<String>,
+   html_url: Option<String>,
    check_suite: Option<RestCheckSuite>,
 }
 
@@ -979,6 +980,38 @@ pub fn github_create_issue(
    Ok(issue_from_rest(issue))
 }
 
+pub fn github_update_issue(
+   repo_path_value: String,
+   issue_number: i64,
+   title: String,
+   body: String,
+   github_token: Option<String>,
+) -> Result<IssueDetails, String> {
+   let title = title.trim();
+   if title.is_empty() {
+      return Err("Issue title is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let issue: RestIssue = api.patch_json(
+      &repo_path(&slug, &format!("issues/{issue_number}")),
+      &serde_json::json!({
+         "title": title,
+         "body": body.trim(),
+      }),
+   )?;
+   let comments: Vec<RestComment> = api.get_json_with_query(
+      &repo_path(&slug, &format!("issues/{issue_number}/comments")),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(issue_details_from_rest(
+      issue,
+      comments.into_iter().map(issue_comment_from_rest).collect(),
+   ))
+}
+
 pub fn github_create_pull_request(
    repo_path_value: String,
    title: String,
@@ -1030,6 +1063,45 @@ pub fn github_create_pull_request(
    }
 
    Ok(pr_from_rest(pr))
+}
+
+pub fn github_update_pull_request(
+   repo_path_value: String,
+   pr_number: i64,
+   title: String,
+   body: String,
+   github_token: Option<String>,
+) -> Result<PullRequestDetails, String> {
+   let title = title.trim();
+   if title.is_empty() {
+      return Err("Pull request title is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let pr: RestPullRequest = api.patch_json(
+      &repo_path(&slug, &format!("pulls/{pr_number}")),
+      &serde_json::json!({
+         "title": title,
+         "body": body.trim(),
+      }),
+   )?;
+   let head_sha = pr.head.as_ref().and_then(|head| head.sha.clone());
+   let commits: Vec<serde_json::Value> =
+      api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
+   let commits = commits.into_iter().map(commit_value_from_rest).collect();
+   let review_requests = get_review_requests(&api, &slug, pr_number).unwrap_or_default();
+   let status_checks = head_sha
+      .as_deref()
+      .map(|sha| get_status_checks(&api, &slug, sha).unwrap_or_default())
+      .unwrap_or_default();
+
+   Ok(pr_details_from_rest(
+      pr,
+      commits,
+      review_requests,
+      status_checks,
+   ))
 }
 
 pub fn github_dispatch_workflow(
@@ -1186,6 +1258,7 @@ fn get_status_checks(
             .check_suite
             .and_then(|suite| suite.app)
             .and_then(|app| app.name),
+         details_url: check.html_url,
       })
       .collect())
 }

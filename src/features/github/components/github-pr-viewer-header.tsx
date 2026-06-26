@@ -1,11 +1,11 @@
 import {
-  CheckIcon as Check,
   CheckCircleIcon as CheckCircle2,
   CopyIcon as Copy,
   FileCodeIcon as FileCode2,
   GitBranchIcon as GitBranch,
   GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
+  PencilSimpleIcon as Pencil,
   ArrowClockwiseIcon as RefreshCw,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
@@ -39,6 +39,7 @@ interface GitHubPRViewerHeaderProps {
   onCopyPRLink: () => void;
   onCopyBranchName: () => void;
   onToggleFilesView: () => void;
+  onEdit: () => void;
 }
 
 interface OverviewFieldProps {
@@ -72,6 +73,7 @@ export function GitHubPRViewerHeader({
   onCopyPRLink,
   onCopyBranchName,
   onToggleFilesView,
+  onEdit,
 }: GitHubPRViewerHeaderProps) {
   return (
     <GitHubViewerHeader
@@ -107,6 +109,11 @@ export function GitHubPRViewerHeader({
           <Tooltip content="Checkout PR branch" side="bottom">
             <Button onClick={onCheckout} variant="ghost" aria-label="Checkout PR branch" compact>
               <GitBranch />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Edit pull request" side="bottom">
+            <Button onClick={onEdit} variant="ghost" aria-label="Edit pull request" compact>
+              <Pencil />
             </Button>
           </Tooltip>
           <Tooltip content="Open on GitHub" side="bottom">
@@ -170,7 +177,7 @@ export function GitHubPRViewerHeader({
           <span className="text-git-deleted">-{deletions}</span>
         </Button>
 
-        <OverviewField icon={<Check />}>
+        <OverviewField>
           {pr.statusChecks?.length > 0 ? (
             <CIStatusIndicator checks={pr.statusChecks} />
           ) : (
