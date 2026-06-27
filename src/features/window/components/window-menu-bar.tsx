@@ -3,7 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -18,7 +18,7 @@ import {
   MenubarTrigger,
 } from "@/ui/menubar";
 import { cn } from "@/utils/cn";
-import { IS_LINUX } from "@/utils/platform";
+import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
 
 interface Props {
   activeMenu: string | null;
@@ -29,6 +29,61 @@ interface Props {
 const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const themes = useRegisteredThemes();
+  const menuWindowRaiseRef = useRef<{ restoreTo: boolean } | null>(null);
+  const shouldRaiseWindowForMenu = (IS_WINDOWS || IS_LINUX) && Boolean(activeMenu);
+
+  useEffect(() => {
+    let disposed = false;
+    const window = getCurrentWindow();
+
+    const restoreWindowLevel = async () => {
+      const previous = menuWindowRaiseRef.current;
+      if (!previous) return;
+
+      menuWindowRaiseRef.current = null;
+
+      try {
+        await window.setAlwaysOnTop(previous.restoreTo);
+      } catch (error) {
+        console.error("Failed to restore window menu level:", error);
+      }
+    };
+
+    if (!shouldRaiseWindowForMenu) {
+      void restoreWindowLevel();
+      return;
+    }
+
+    if (menuWindowRaiseRef.current) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const wasAlwaysOnTop = await window.isAlwaysOnTop();
+
+        if (!wasAlwaysOnTop) {
+          await window.setAlwaysOnTop(true);
+        }
+
+        if (disposed) {
+          if (!wasAlwaysOnTop) {
+            await window.setAlwaysOnTop(false);
+          }
+          return;
+        }
+
+        menuWindowRaiseRef.current = { restoreTo: wasAlwaysOnTop };
+      } catch (error) {
+        console.error("Failed to raise window menu level:", error);
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      void restoreWindowLevel();
+    };
+  }, [shouldRaiseWindowForMenu]);
 
   const handleClickEmit = useCallback(
     (event: string, payload?: unknown) => {
