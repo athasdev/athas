@@ -9,7 +9,17 @@ export interface DockerContainer {
   networks: string;
   createdAt: string;
   health?: string | null;
+  healthDetails?: DockerContainerHealthDetails | null;
   stats?: DockerContainerStats | null;
+}
+
+export interface DockerContainerHealthDetails {
+  status: string;
+  failingStreak: number;
+  lastOutput?: string | null;
+  lastExitCode?: number | null;
+  lastStartedAt?: string | null;
+  lastFinishedAt?: string | null;
 }
 
 export interface DockerContainerStats {
@@ -105,6 +115,7 @@ export interface DockerRunImageRequest {
   ports?: string[];
   volumes?: string[];
   env?: string[];
+  envFiles?: string[];
   command?: string;
   detach?: boolean;
 }
@@ -121,6 +132,89 @@ export interface DockerRegistrySearchResult {
   starCount: string;
   official: string;
   automated: string;
+}
+
+export interface DockerEnvFile {
+  path: string;
+  relativePath: string;
+  variableCount: number;
+  keys: string[];
+}
+
+export interface DockerDevContainer {
+  name: string;
+  configPath: string;
+  relativePath: string;
+  kind: "image" | "dockerfile" | "compose" | "unsupported";
+  image?: string | null;
+  dockerFile?: string | null;
+  context?: string | null;
+  dockerComposeFiles: string[];
+  service?: string | null;
+  workspaceFolder?: string | null;
+  remoteUser?: string | null;
+  runArgs: string[];
+  containerEnv: string[];
+  remoteEnv: string[];
+  workspaceMount?: string | null;
+  mounts: string[];
+  forwardPorts: string[];
+  postCreateCommand?: string | null;
+  postStartCommand?: string | null;
+  features: string[];
+}
+
+export interface DockerDevContainerOpenResult {
+  containerId: string;
+  command: string;
+  name: string;
+  output: string;
+}
+
+export interface DockerBuildPreset {
+  name: string;
+  contextPath: string;
+  dockerfilePath?: string | null;
+  tag?: string | null;
+  buildArgs: string[];
+}
+
+export interface DockerRunPreset {
+  name: string;
+  image: string;
+  containerName?: string | null;
+  ports: string[];
+  volumes: string[];
+  env: string[];
+  envFiles: string[];
+  command?: string | null;
+}
+
+export interface DockerComposePreset {
+  name: string;
+  files: string[];
+  service?: string | null;
+  action: DockerComposeAction;
+  envFiles: string[];
+}
+
+export interface DockerDebugPreset {
+  name: string;
+  command: string;
+  workdir?: string | null;
+  target: "container" | "devcontainer" | string;
+  source?: string | null;
+}
+
+export interface DockerProjectConfig {
+  workspacePath?: string | null;
+  buildPresets: DockerBuildPreset[];
+  runPresets: DockerRunPreset[];
+  composePresets: DockerComposePreset[];
+  debugPresets: DockerDebugPreset[];
+  workspaceDebugPresets: DockerDebugPreset[];
+  envFiles: DockerEnvFile[];
+  devContainers: DockerDevContainer[];
 }
 
 export type DockerContainerAction = "start" | "stop" | "restart" | "pause" | "unpause" | "remove";

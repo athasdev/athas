@@ -5,9 +5,12 @@ import type {
   DockerComposeProject,
   DockerContainerAction,
   DockerContainerFileEntry,
+  DockerDevContainerOpenResult,
+  DockerEnvFile,
   DockerImageAction,
   DockerInventory,
   DockerPruneTarget,
+  DockerProjectConfig,
   DockerRegistryLoginRequest,
   DockerRegistrySearchResult,
   DockerRunImageRequest,
@@ -62,17 +65,20 @@ export function runDockerComposeAction({
   files,
   service,
   action,
+  envFiles,
 }: {
   workspacePath: string;
   files: string[];
   service?: string;
   action: DockerComposeAction;
+  envFiles?: string[];
 }): Promise<string> {
   return invoke<string>("docker_compose_action", {
     workspacePath,
     files,
     service,
     action,
+    envFiles,
   });
 }
 
@@ -184,5 +190,52 @@ export function tagDockerImage(source: string, target: string): Promise<string> 
   return invoke<string>("docker_tag_image", {
     source,
     target,
+  });
+}
+
+export function getDockerProjectConfig(
+  workspacePath: string | undefined,
+): Promise<DockerProjectConfig> {
+  return invoke<DockerProjectConfig>("docker_get_project_config", {
+    workspacePath,
+  });
+}
+
+export function saveDockerProjectConfig(
+  workspacePath: string,
+  config: DockerProjectConfig,
+): Promise<DockerProjectConfig> {
+  return invoke<DockerProjectConfig>("docker_save_project_config", {
+    workspacePath,
+    config,
+  });
+}
+
+export function readDockerEnvFile(workspacePath: string, path: string): Promise<string> {
+  return invoke<string>("docker_read_env_file", {
+    workspacePath,
+    path,
+  });
+}
+
+export function writeDockerEnvFile(
+  workspacePath: string,
+  path: string,
+  content: string,
+): Promise<DockerEnvFile> {
+  return invoke<DockerEnvFile>("docker_write_env_file", {
+    workspacePath,
+    path,
+    content,
+  });
+}
+
+export function openDockerDevContainer(
+  workspacePath: string,
+  configPath: string,
+): Promise<DockerDevContainerOpenResult> {
+  return invoke<DockerDevContainerOpenResult>("docker_open_dev_container", {
+    workspacePath,
+    configPath,
   });
 }

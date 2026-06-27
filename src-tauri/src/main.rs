@@ -349,6 +349,11 @@ fn main() {
          docker_registry_pull,
          docker_registry_push,
          docker_tag_image,
+         docker_get_project_config,
+         docker_save_project_config,
+         docker_read_env_file,
+         docker_write_env_file,
+         docker_open_dev_container,
          // Tool commands
          install_language_tools,
          install_tool,

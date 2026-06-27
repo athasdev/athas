@@ -2,6 +2,7 @@ import {
   ArrowClockwiseIcon as Refresh,
   ArrowFatLineDownIcon as Down,
   ArrowSquareOutIcon as OpenExternal,
+  BugIcon as Bug,
   CubeIcon as ContainerIcon,
   DownloadSimpleIcon as Download,
   FileIcon,
@@ -24,13 +25,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import {
-  SidebarEmptyActionState,
   SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarListItem,
@@ -45,26 +47,36 @@ import {
   copyToDockerContainer,
   getDockerComposeProject,
   getDockerInventory,
+  getDockerProjectConfig,
   loginDockerRegistry,
   listDockerContainerFiles,
+  openDockerDevContainer,
   pullDockerRegistryImage,
   pruneDockerResources,
   pushDockerRegistryImage,
+  readDockerEnvFile,
   runDockerComposeAction,
   runDockerContainerAction,
   runDockerImage,
   runDockerImageAction,
+  saveDockerProjectConfig,
   searchDockerRegistry,
   startDockerContainerLogStream,
   stopDockerContainerLogStream,
   tagDockerImage,
+  writeDockerEnvFile,
 } from "../services/docker-api";
 import type {
+  DockerBuildPreset,
   DockerComposeAction,
+  DockerComposePreset,
   DockerComposeProject,
   DockerComposeService,
   DockerContainer,
   DockerContainerAction,
+  DockerDebugPreset,
+  DockerDevContainer,
+  DockerEnvFile,
   DockerContainerFileEntry,
   DockerImage,
   DockerPruneTarget,
@@ -72,13 +84,16 @@ import type {
   DockerLogEvent,
   DockerLogExitEvent,
   DockerNetwork,
+  DockerProjectConfig,
   DockerRegistrySearchResult,
+  DockerRunPreset,
   DockerVolume,
 } from "../types/docker.types";
 
 type DockerSection =
   | "containers"
   | "compose"
+  | "project"
   | "images"
   | "registry"
   | "volumes"
@@ -86,12 +101,13 @@ type DockerSection =
   | "cleanup";
 type DockerLogFilter = "all" | "stdout" | "stderr" | "errors";
 type DockerLogLine = DockerLogEvent & { id: number };
-type DockerDialogMode = "build" | "run" | null;
+type DockerDialogMode = "build" | "run" | "env" | null;
 type DockerDetailTab = "logs" | "files";
 
 const dockerSections: DockerSection[] = [
   "containers",
   "compose",
+  "project",
   "images",
   "registry",
   "volumes",
@@ -103,6 +119,16 @@ const emptyComposeProject: DockerComposeProject = {
   workspacePath: null,
   files: [],
   services: [],
+};
+const emptyProjectConfig: DockerProjectConfig = {
+  workspacePath: null,
+  buildPresets: [],
+  runPresets: [],
+  composePresets: [],
+  debugPresets: [],
+  workspaceDebugPresets: [],
+  envFiles: [],
+  devContainers: [],
 };
 
 const emptyInventory: DockerInventory = {
@@ -128,6 +154,7 @@ function includesQuery(values: Array<string | null | undefined>, query: string) 
 
 function sectionCount(inventory: DockerInventory, section: DockerSection) {
   if (section === "compose") return 0;
+  if (section === "project") return 0;
   if (section === "cleanup") return 5;
   if (section === "registry") return 0;
   return inventory[section].length;
@@ -151,6 +178,19 @@ function dockerExecCommand(containerId: string) {
     "elif command -v sh >/dev/null 2>&1; then exec sh; " +
     'else echo "No interactive shell found in this container." >&2; exit 127; fi';
   return `docker exec -it ${quoteShellArg(containerId)} sh -lc ${quoteShellArg(shellProbe)}`;
+}
+
+function dockerDebugCommand(containerId: string, command: string, workdir?: string | null) {
+  const debugCommand = workdir?.trim()
+    ? `cd ${quoteShellArg(workdir.trim())} && ${command}`
+    : command;
+  return `docker exec -it ${quoteShellArg(containerId)} sh -lc ${quoteShellArg(debugCommand)}`;
+}
+
+function openDebuggerPane() {
+  const state = useUIState.getState();
+  state.setBottomPaneActiveTab("debugger");
+  state.setIsBottomPaneVisible(true);
 }
 
 function isErrorLogLine(line: string) {
@@ -207,6 +247,7 @@ function ContainerActions({
   busy,
   onAction,
   onOpenTerminal,
+  onDebug,
   quickUrl,
   onOpenUrl,
 }: {
@@ -214,6 +255,7 @@ function ContainerActions({
   busy: boolean;
   onAction: (container: DockerContainer, action: DockerContainerAction) => void;
   onOpenTerminal: (container: DockerContainer) => void;
+  onDebug: (container: DockerContainer) => void;
   quickUrl: string | null;
   onOpenUrl: (url: string) => void;
 }) {
@@ -307,6 +349,22 @@ function ContainerActions({
         variant="ghost"
         compact
         className="size-6 p-0"
+        disabled={busy || !isRunning}
+        tooltip="Debug in container"
+        tooltipSide="bottom"
+        aria-label={`Debug in ${container.name}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onDebug(container);
+        }}
+      >
+        <Bug className="size-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        compact
+        className="size-6 p-0"
         disabled={busy || !quickUrl}
         tooltip="Open service URL"
         tooltipSide="bottom"
@@ -345,6 +403,7 @@ function ContainerRow({
   onSelect,
   onAction,
   onOpenTerminal,
+  onDebug,
   onOpenUrl,
 }: {
   container: DockerContainer;
@@ -353,6 +412,7 @@ function ContainerRow({
   onSelect: (container: DockerContainer) => void;
   onAction: (container: DockerContainer, action: DockerContainerAction) => void;
   onOpenTerminal: (container: DockerContainer) => void;
+  onDebug: (container: DockerContainer) => void;
   onOpenUrl: (url: string) => void;
 }) {
   const quickUrl = getPublishedTcpUrl(container.ports);
@@ -367,6 +427,7 @@ function ContainerRow({
           busy={busy}
           onAction={onAction}
           onOpenTerminal={onOpenTerminal}
+          onDebug={onDebug}
           quickUrl={quickUrl}
           onOpenUrl={onOpenUrl}
         />
@@ -390,6 +451,19 @@ function ContainerRow({
           {container.image}
           {container.ports ? ` · ${container.ports}` : ""}
         </ResourceMeta>
+        {container.healthDetails ? (
+          <ResourceMeta>
+            Health {container.healthDetails.status || container.health}
+            {container.healthDetails.failingStreak > 0
+              ? ` · ${container.healthDetails.failingStreak} failures`
+              : ""}
+            {container.healthDetails.lastExitCode !== null &&
+            container.healthDetails.lastExitCode !== undefined
+              ? ` · exit ${container.healthDetails.lastExitCode}`
+              : ""}
+            {container.healthDetails.lastOutput ? ` · ${container.healthDetails.lastOutput}` : ""}
+          </ResourceMeta>
+        ) : null}
         {container.stats ? (
           <ResourceMeta>
             CPU {container.stats.cpuPercent || "0%"} · Mem {container.stats.memoryUsage || "0B"}
@@ -640,6 +714,7 @@ export function DockerSidebar() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const [inventory, setInventory] = useState<DockerInventory>(emptyInventory);
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
+  const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const [expandedSections, setExpandedSections] = useState<Set<DockerSection>>(
     () => new Set(dockerSections),
@@ -657,12 +732,15 @@ export function DockerSidebar() {
   const [filesError, setFilesError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isComposeLoading, setIsComposeLoading] = useState(false);
+  const [isProjectConfigLoading, setIsProjectConfigLoading] = useState(false);
   const [busyContainerId, setBusyContainerId] = useState<string | null>(null);
   const [busyComposeService, setBusyComposeService] = useState<string | null>(null);
+  const [busyDevContainerPath, setBusyDevContainerPath] = useState<string | null>(null);
   const [busyImageId, setBusyImageId] = useState<string | null>(null);
   const [busyPruneTarget, setBusyPruneTarget] = useState<DockerPruneTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [composeError, setComposeError] = useState<string | null>(null);
+  const [projectConfigError, setProjectConfigError] = useState<string | null>(null);
   const [composeOutput, setComposeOutput] = useState<string | null>(null);
   const [dockerOutput, setDockerOutput] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<DockerDialogMode>(null);
@@ -683,6 +761,7 @@ export function DockerSidebar() {
     ports: "",
     volumes: "",
     env: "",
+    envFiles: "",
     command: "",
   });
   const [registryDraft, setRegistryDraft] = useState({
@@ -691,6 +770,11 @@ export function DockerSidebar() {
     password: "",
     image: "",
     target: "",
+  });
+  const [envDraft, setEnvDraft] = useState({
+    path: "",
+    relativePath: "",
+    content: "",
   });
 
   const loadInventory = useCallback(async () => {
@@ -737,10 +821,29 @@ export function DockerSidebar() {
     void loadComposeProject();
   }, [loadComposeProject]);
 
+  const loadProjectConfig = useCallback(async () => {
+    setIsProjectConfigLoading(true);
+    setProjectConfigError(null);
+    try {
+      const nextConfig = await getDockerProjectConfig(rootFolderPath);
+      setProjectConfig(nextConfig);
+    } catch (loadError) {
+      setProjectConfigError(loadError instanceof Error ? loadError.message : String(loadError));
+      setProjectConfig(emptyProjectConfig);
+    } finally {
+      setIsProjectConfigLoading(false);
+    }
+  }, [rootFolderPath]);
+
+  useEffect(() => {
+    void loadProjectConfig();
+  }, [loadProjectConfig]);
+
   const refreshDocker = useCallback(() => {
     void loadInventory();
     void loadComposeProject();
-  }, [loadComposeProject, loadInventory]);
+    void loadProjectConfig();
+  }, [loadComposeProject, loadInventory, loadProjectConfig]);
 
   const selectedContainer = useMemo(
     () => inventory.containers.find((container) => container.id === selectedContainerId) ?? null,
@@ -879,6 +982,14 @@ export function DockerSidebar() {
       normalizedQuery,
     ),
   );
+  const projectConfigItemCount =
+    projectConfig.envFiles.length +
+    projectConfig.devContainers.length +
+    projectConfig.buildPresets.length +
+    projectConfig.runPresets.length +
+    projectConfig.composePresets.length +
+    projectConfig.debugPresets.length +
+    projectConfig.workspaceDebugPresets.length;
   const normalizedLogQuery = logQuery.trim().toLowerCase();
   const filteredLogLines = logLines.filter((entry) => {
     if (logFilter === "stdout" && entry.stream !== "stdout") return false;
@@ -919,6 +1030,7 @@ export function DockerSidebar() {
   const handleComposeAction = async (
     service: DockerComposeService | null,
     action: DockerComposeAction,
+    envFiles: string[] = [],
   ) => {
     if (!composeProject.workspacePath || composeProject.files.length === 0) return;
 
@@ -932,6 +1044,7 @@ export function DockerSidebar() {
         files: composeProject.files,
         service: service?.name,
         action,
+        envFiles,
       });
       setComposeOutput(output.trim() || `Docker Compose ${action} completed.`);
       await loadComposeProject();
@@ -962,7 +1075,33 @@ export function DockerSidebar() {
       ports: "",
       volumes: "",
       env: "",
+      envFiles: "",
       command: "",
+    });
+    setDockerOutput(null);
+    setDialogMode("run");
+  };
+
+  const applyBuildPreset = (preset: DockerBuildPreset) => {
+    setBuildDraft({
+      contextPath: preset.contextPath,
+      dockerfilePath: preset.dockerfilePath ?? "",
+      tag: preset.tag ?? "",
+      buildArgs: preset.buildArgs.join("\n"),
+    });
+    setDockerOutput(null);
+    setDialogMode("build");
+  };
+
+  const applyRunPreset = (preset: DockerRunPreset) => {
+    setRunDraft({
+      image: preset.image,
+      name: preset.containerName ?? "",
+      ports: preset.ports.join("\n"),
+      volumes: preset.volumes.join("\n"),
+      env: preset.env.join("\n"),
+      envFiles: preset.envFiles.join("\n"),
+      command: preset.command ?? "",
     });
     setDockerOutput(null);
     setDialogMode("run");
@@ -1006,6 +1145,7 @@ export function DockerSidebar() {
         ports: splitConfigLines(runDraft.ports),
         volumes: splitConfigLines(runDraft.volumes),
         env: splitConfigLines(runDraft.env),
+        envFiles: splitConfigLines(runDraft.envFiles),
         command: runDraft.command.trim() || undefined,
         detach: true,
       });
@@ -1016,6 +1156,181 @@ export function DockerSidebar() {
       setError(runError instanceof Error ? runError.message : String(runError));
     } finally {
       setBusyImageId(null);
+    }
+  };
+
+  const saveProjectConfig = async (nextConfig: DockerProjectConfig) => {
+    if (!rootFolderPath) return;
+    setProjectConfigError(null);
+    const savedConfig = await saveDockerProjectConfig(rootFolderPath, nextConfig);
+    setProjectConfig(savedConfig);
+  };
+
+  const handleSaveBuildPreset = async () => {
+    if (!rootFolderPath || !buildDraft.contextPath.trim()) return;
+    const name = await showPromptDialog("Build preset name", {
+      title: "Save Build Preset",
+      placeholder: "production image",
+      confirmLabel: "Save",
+    });
+    const presetName = name?.trim();
+    if (!presetName) return;
+
+    try {
+      await saveProjectConfig({
+        ...projectConfig,
+        buildPresets: projectConfig.buildPresets
+          .filter((preset) => preset.name !== presetName)
+          .concat({
+            name: presetName,
+            contextPath: buildDraft.contextPath.trim(),
+            dockerfilePath: buildDraft.dockerfilePath.trim() || null,
+            tag: buildDraft.tag.trim() || null,
+            buildArgs: splitConfigLines(buildDraft.buildArgs),
+          }),
+      });
+    } catch (saveError) {
+      setProjectConfigError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  };
+
+  const handleSaveRunPreset = async () => {
+    if (!rootFolderPath || !runDraft.image.trim()) return;
+    const name = await showPromptDialog("Run preset name", {
+      title: "Save Run Preset",
+      placeholder: "web app",
+      confirmLabel: "Save",
+    });
+    const presetName = name?.trim();
+    if (!presetName) return;
+
+    try {
+      await saveProjectConfig({
+        ...projectConfig,
+        runPresets: projectConfig.runPresets
+          .filter((preset) => preset.name !== presetName)
+          .concat({
+            name: presetName,
+            image: runDraft.image.trim(),
+            containerName: runDraft.name.trim() || null,
+            ports: splitConfigLines(runDraft.ports),
+            volumes: splitConfigLines(runDraft.volumes),
+            env: splitConfigLines(runDraft.env),
+            envFiles: splitConfigLines(runDraft.envFiles),
+            command: runDraft.command.trim() || null,
+          }),
+      });
+    } catch (saveError) {
+      setProjectConfigError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  };
+
+  const handleSaveComposePreset = async () => {
+    if (!rootFolderPath || composeProject.files.length === 0) return;
+    const name = await showPromptDialog("Compose preset name", {
+      title: "Save Compose Preset",
+      placeholder: "start workspace",
+      confirmLabel: "Save",
+    });
+    const presetName = name?.trim();
+    if (!presetName) return;
+
+    try {
+      await saveProjectConfig({
+        ...projectConfig,
+        composePresets: projectConfig.composePresets
+          .filter((preset) => preset.name !== presetName)
+          .concat({
+            name: presetName,
+            files: composeProject.files,
+            service: null,
+            action: "up",
+            envFiles: projectConfig.envFiles.map((envFile) => envFile.path),
+          }),
+      });
+    } catch (saveError) {
+      setProjectConfigError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  };
+
+  const handleRunComposePreset = async (preset: DockerComposePreset) => {
+    if (!composeProject.workspacePath) return;
+
+    const busyKey = `preset:${preset.name}`;
+    setBusyComposeService(busyKey);
+    setComposeError(null);
+    setComposeOutput(null);
+    try {
+      const output = await runDockerComposeAction({
+        workspacePath: composeProject.workspacePath,
+        files: preset.files.length > 0 ? preset.files : composeProject.files,
+        service: preset.service ?? undefined,
+        action: preset.action,
+        envFiles: preset.envFiles,
+      });
+      setComposeOutput(output.trim() || `Docker Compose preset ${preset.name} completed.`);
+      await loadComposeProject();
+      await loadInventory();
+    } catch (actionError) {
+      setComposeError(actionError instanceof Error ? actionError.message : String(actionError));
+    } finally {
+      setBusyComposeService(null);
+    }
+  };
+
+  const openEnvFile = async (envFile: DockerEnvFile) => {
+    if (!rootFolderPath) return;
+
+    setProjectConfigError(null);
+    try {
+      const content = await readDockerEnvFile(rootFolderPath, envFile.path);
+      setEnvDraft({
+        path: envFile.path,
+        relativePath: envFile.relativePath,
+        content,
+      });
+      setDialogMode("env");
+    } catch (readError) {
+      setProjectConfigError(readError instanceof Error ? readError.message : String(readError));
+    }
+  };
+
+  const handleSaveEnvFile = async () => {
+    if (!rootFolderPath || !envDraft.path) return;
+
+    setProjectConfigError(null);
+    try {
+      await writeDockerEnvFile(rootFolderPath, envDraft.path, envDraft.content);
+      setDialogMode(null);
+      await loadProjectConfig();
+    } catch (writeError) {
+      setProjectConfigError(writeError instanceof Error ? writeError.message : String(writeError));
+    }
+  };
+
+  const handleOpenDevContainer = async (devContainer: DockerDevContainer) => {
+    if (!rootFolderPath || devContainer.kind === "unsupported") return;
+
+    setBusyDevContainerPath(devContainer.configPath);
+    setProjectConfigError(null);
+    setDockerOutput(null);
+    try {
+      const result = await openDockerDevContainer(rootFolderPath, devContainer.configPath);
+      window.dispatchEvent(
+        new CustomEvent("create-terminal-with-command", {
+          detail: {
+            command: result.command,
+            name: result.name,
+          },
+        }),
+      );
+      setDockerOutput(result.output.trim() || `Opened ${devContainer.name}.`);
+      await loadInventory();
+      await loadComposeProject();
+    } catch (openError) {
+      setProjectConfigError(openError instanceof Error ? openError.message : String(openError));
+    } finally {
+      setBusyDevContainerPath(null);
     }
   };
 
@@ -1035,6 +1350,14 @@ export function DockerSidebar() {
   };
 
   const handlePrune = async (target: DockerPruneTarget, includeVolumes = false) => {
+    const label = includeVolumes ? `${target} and volumes` : target;
+    const confirmation = await showPromptDialog(`Type prune to clean up Docker ${label}`, {
+      title: "Confirm Docker Cleanup",
+      placeholder: "prune",
+      confirmLabel: "Prune",
+    });
+    if (confirmation?.trim().toLowerCase() !== "prune") return;
+
     setBusyPruneTarget(target);
     setError(null);
     setDockerOutput(null);
@@ -1059,6 +1382,156 @@ export function DockerSidebar() {
         },
       }),
     );
+  };
+
+  const startDockerDebugSession = ({
+    containerId,
+    containerName,
+    command,
+    workdir,
+    configId,
+  }: {
+    containerId: string;
+    containerName: string;
+    command: string;
+    workdir?: string | null;
+    configId: string;
+  }) => {
+    const debugCommand = dockerDebugCommand(containerId, command, workdir);
+    window.dispatchEvent(
+      new CustomEvent("create-terminal-with-command", {
+        detail: {
+          command: debugCommand,
+          name: `Debug: ${containerName}`,
+        },
+      }),
+    );
+    useDebuggerStore.getState().actions.startSession({
+      id: `docker_debug_${Date.now()}`,
+      name: `Debug: ${containerName}`,
+      configId,
+      command: debugCommand,
+      startedAt: Date.now(),
+      status: "running",
+    });
+    openDebuggerPane();
+  };
+
+  const handleDebugContainer = async (container: DockerContainer) => {
+    const command = await showPromptDialog("Debug command", {
+      title: "Debug In Container",
+      placeholder: "python -m pdb app.py",
+      confirmLabel: "Debug",
+    });
+    if (!command?.trim()) return;
+
+    const workdir = await showPromptDialog("Working directory", {
+      title: "Debug In Container",
+      placeholder: "/workspace",
+      confirmLabel: "Start",
+    });
+
+    startDockerDebugSession({
+      containerId: container.id,
+      containerName: container.name,
+      command: command.trim(),
+      workdir: workdir?.trim() || null,
+      configId: `docker-container-${container.id}`,
+    });
+  };
+
+  const handleSaveDebugPreset = async () => {
+    if (!rootFolderPath) return;
+    const name = await showPromptDialog("Debug preset name", {
+      title: "Save Debug Preset",
+      placeholder: "debug server",
+      confirmLabel: "Next",
+    });
+    const presetName = name?.trim();
+    if (!presetName) return;
+
+    const command = await showPromptDialog("Debug command", {
+      title: "Save Debug Preset",
+      placeholder: "python -m pdb app.py",
+      confirmLabel: "Next",
+    });
+    if (!command?.trim()) return;
+
+    const workdir = await showPromptDialog("Working directory", {
+      title: "Save Debug Preset",
+      placeholder: "/workspace",
+      confirmLabel: "Save",
+    });
+
+    try {
+      await saveProjectConfig({
+        ...projectConfig,
+        debugPresets: projectConfig.debugPresets
+          .filter((preset) => preset.name !== presetName)
+          .concat({
+            name: presetName,
+            command: command.trim(),
+            workdir: workdir?.trim() || null,
+            target: "container",
+            source: "project",
+          }),
+      });
+    } catch (saveError) {
+      setProjectConfigError(saveError instanceof Error ? saveError.message : String(saveError));
+    }
+  };
+
+  const handleRunDebugPreset = (preset: DockerDebugPreset) => {
+    if (!selectedContainer) {
+      setProjectConfigError("Select a running container before starting a Docker debug preset.");
+      return;
+    }
+    if (selectedContainer.state !== "running") {
+      setProjectConfigError("Docker debug presets require a running container.");
+      return;
+    }
+
+    setProjectConfigError(null);
+    startDockerDebugSession({
+      containerId: selectedContainer.id,
+      containerName: selectedContainer.name,
+      command: preset.command,
+      workdir: preset.workdir,
+      configId: `docker-debug-preset-${preset.name}`,
+    });
+  };
+
+  const handleDeletePreset = async (
+    kind: "build" | "run" | "compose" | "debug",
+    presetName: string,
+  ) => {
+    if (!rootFolderPath) return;
+
+    try {
+      await saveProjectConfig({
+        ...projectConfig,
+        buildPresets:
+          kind === "build"
+            ? projectConfig.buildPresets.filter((preset) => preset.name !== presetName)
+            : projectConfig.buildPresets,
+        runPresets:
+          kind === "run"
+            ? projectConfig.runPresets.filter((preset) => preset.name !== presetName)
+            : projectConfig.runPresets,
+        composePresets:
+          kind === "compose"
+            ? projectConfig.composePresets.filter((preset) => preset.name !== presetName)
+            : projectConfig.composePresets,
+        debugPresets:
+          kind === "debug"
+            ? projectConfig.debugPresets.filter((preset) => preset.name !== presetName)
+            : projectConfig.debugPresets,
+      });
+    } catch (deleteError) {
+      setProjectConfigError(
+        deleteError instanceof Error ? deleteError.message : String(deleteError),
+      );
+    }
   };
 
   const openServiceUrl = (url: string) => {
@@ -1217,7 +1690,13 @@ export function DockerSidebar() {
   const renderSection = (section: DockerSection, rows: ReactNode, filteredCount: number) => {
     const expanded = expandedSections.has(section);
     const totalCount =
-      section === "compose" ? composeProject.services.length : sectionCount(inventory, section);
+      section === "compose"
+        ? composeProject.services.length
+        : section === "project"
+          ? projectConfigItemCount
+          : section === "registry"
+            ? registryResults.length
+            : sectionCount(inventory, section);
     return (
       <div key={section} className="min-w-0">
         <SidebarSectionHeader
@@ -1244,12 +1723,16 @@ export function DockerSidebar() {
           actions={
             <SidebarHeaderIconButton
               onClick={refreshDocker}
-              disabled={isLoading || isComposeLoading}
+              disabled={isLoading || isComposeLoading || isProjectConfigLoading}
               tooltip="Refresh"
               tooltipSide="bottom"
               aria-label="Refresh Docker resources"
             >
-              {isLoading || isComposeLoading ? <LoadingIndicator compact /> : <Refresh />}
+              {isLoading || isComposeLoading || isProjectConfigLoading ? (
+                <LoadingIndicator compact />
+              ) : (
+                <Refresh />
+              )}
             </SidebarHeaderIconButton>
           }
         />
@@ -1262,12 +1745,6 @@ export function DockerSidebar() {
 
         {isLoading ? (
           <SidebarEmptyState className="flex-1">Loading Docker resources...</SidebarEmptyState>
-        ) : error ? (
-          <SidebarEmptyActionState className="flex-1" message="Docker is not available">
-            <span className="ui-text-xs text-text-lighter">
-              Start Docker Desktop or make sure the Docker CLI can reach the daemon.
-            </span>
-          </SidebarEmptyActionState>
         ) : (
           <>
             <div className="min-h-0 flex-1 overflow-auto py-1">
@@ -1283,6 +1760,7 @@ export function DockerSidebar() {
                       onSelect={(nextContainer) => setSelectedContainerId(nextContainer.id)}
                       onAction={handleContainerAction}
                       onOpenTerminal={openContainerTerminal}
+                      onDebug={(nextContainer) => void handleDebugContainer(nextContainer)}
                       onOpenUrl={openServiceUrl}
                     />
                   ))
@@ -1307,17 +1785,29 @@ export function DockerSidebar() {
                       <div className="min-w-0 truncate ui-text-xs text-text-lighter">
                         {composeProject.files.map(fileName).join(", ")}
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        compact
-                        className="h-6 px-1.5 ui-text-xs"
-                        disabled={busyComposeService !== null}
-                        onClick={() => void handleComposeAction(null, "down")}
-                      >
-                        <Down className="size-3.5" />
-                        Down
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          compact
+                          className="h-6 px-1.5 ui-text-xs"
+                          disabled={busyComposeService !== null}
+                          onClick={() => void handleSaveComposePreset()}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          compact
+                          className="h-6 px-1.5 ui-text-xs"
+                          disabled={busyComposeService !== null}
+                          onClick={() => void handleComposeAction(null, "down")}
+                        >
+                          <Down className="size-3.5" />
+                          Down
+                        </Button>
+                      </div>
                     </div>
                     {composeOutput ? (
                       <div className="mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
@@ -1346,6 +1836,359 @@ export function DockerSidebar() {
                   </>
                 ),
                 filteredComposeServices.length,
+              )}
+              {renderSection(
+                "project",
+                !rootFolderPath ? (
+                  <SidebarSectionLabel>
+                    Open a workspace to manage Docker presets
+                  </SidebarSectionLabel>
+                ) : isProjectConfigLoading ? (
+                  <SidebarSectionLabel>Loading project Docker config...</SidebarSectionLabel>
+                ) : projectConfigError ? (
+                  <SidebarSectionLabel>{projectConfigError}</SidebarSectionLabel>
+                ) : projectConfigItemCount === 0 ? (
+                  <div className="space-y-1 px-2 py-1">
+                    <SidebarSectionLabel>
+                      No env files or presets in this workspace
+                    </SidebarSectionLabel>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      compact
+                      className="h-6 px-1.5 ui-text-xs"
+                      onClick={() => void handleSaveDebugPreset()}
+                    >
+                      <Bug className="size-3.5" />
+                      Save Debug Preset
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-2 px-2 py-1">
+                      <div className="min-w-0 truncate ui-text-xs text-text-lighter">
+                        Project Docker settings
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        compact
+                        className="h-6 px-1.5 ui-text-xs"
+                        onClick={() => void handleSaveDebugPreset()}
+                      >
+                        <Bug className="size-3.5" />
+                        Save Debug
+                      </Button>
+                    </div>
+                    {projectConfig.devContainers.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Dev Containers</SidebarSectionLabel>
+                        {projectConfig.devContainers.map((devContainer) => (
+                          <SidebarListItem
+                            key={devContainer.configPath}
+                            leading={
+                              <ContainerIcon
+                                className="size-4 text-text-lighter"
+                                weight="duotone"
+                              />
+                            }
+                            trailing={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                compact
+                                className="h-6 px-1.5 ui-text-xs"
+                                disabled={
+                                  busyDevContainerPath !== null ||
+                                  devContainer.kind === "unsupported"
+                                }
+                                onClick={() => void handleOpenDevContainer(devContainer)}
+                              >
+                                {busyDevContainerPath === devContainer.configPath ? (
+                                  <LoadingIndicator compact />
+                                ) : (
+                                  "Open"
+                                )}
+                              </Button>
+                            }
+                          >
+                            <ResourceTitle>{devContainer.name}</ResourceTitle>
+                            <ResourceMeta>
+                              {devContainer.kind}
+                              {devContainer.service ? ` · ${devContainer.service}` : ""}
+                              {devContainer.image ? ` · ${devContainer.image}` : ""}
+                              {devContainer.forwardPorts.length > 0
+                                ? ` · ports ${devContainer.forwardPorts.join(", ")}`
+                                : ""}
+                            </ResourceMeta>
+                            {devContainer.containerEnv.length > 0 ||
+                            devContainer.workspaceMount ||
+                            devContainer.mounts.length > 0 ||
+                            devContainer.postCreateCommand ||
+                            devContainer.postStartCommand ? (
+                              <ResourceMeta>
+                                {[
+                                  devContainer.containerEnv.length > 0
+                                    ? `${devContainer.containerEnv.length} env`
+                                    : null,
+                                  devContainer.mounts.length > 0
+                                    ? `${devContainer.mounts.length} mounts`
+                                    : null,
+                                  devContainer.workspaceMount ? "workspaceMount" : null,
+                                  devContainer.postCreateCommand ? "postCreate" : null,
+                                  devContainer.postStartCommand ? "postStart" : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </ResourceMeta>
+                            ) : null}
+                            <ResourceMeta>{devContainer.relativePath}</ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                    {projectConfig.workspaceDebugPresets.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Launch configs</SidebarSectionLabel>
+                        {projectConfig.workspaceDebugPresets.map((preset) => (
+                          <SidebarListItem
+                            key={`${preset.source}-${preset.name}`}
+                            leading={<Bug className="size-4 text-text-lighter" weight="duotone" />}
+                            trailing={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                compact
+                                className="h-6 px-1.5 ui-text-xs"
+                                onClick={() => handleRunDebugPreset(preset)}
+                              >
+                                Run
+                              </Button>
+                            }
+                          >
+                            <ResourceTitle>{preset.name}</ResourceTitle>
+                            <ResourceMeta>
+                              {preset.command}
+                              {preset.workdir ? ` · ${preset.workdir}` : ""}
+                            </ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                    {projectConfig.debugPresets.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Debug presets</SidebarSectionLabel>
+                        {projectConfig.debugPresets.map((preset) => (
+                          <SidebarListItem
+                            key={preset.name}
+                            leading={<Bug className="size-4 text-text-lighter" weight="duotone" />}
+                            trailing={
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="h-6 px-1.5 ui-text-xs"
+                                  onClick={() => handleRunDebugPreset(preset)}
+                                >
+                                  Run
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="size-6 p-0"
+                                  tooltip="Delete preset"
+                                  tooltipSide="left"
+                                  aria-label={`Delete ${preset.name}`}
+                                  onClick={() => void handleDeletePreset("debug", preset.name)}
+                                >
+                                  <Trash className="size-3.5" />
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <ResourceTitle>{preset.name}</ResourceTitle>
+                            <ResourceMeta>
+                              {preset.command}
+                              {preset.workdir ? ` · ${preset.workdir}` : ""}
+                            </ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                    {projectConfig.envFiles.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Env files</SidebarSectionLabel>
+                        {projectConfig.envFiles.map((envFile) => (
+                          <SidebarListItem
+                            key={envFile.path}
+                            leading={
+                              <FileIcon className="size-4 text-text-lighter" weight="duotone" />
+                            }
+                            trailing={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                compact
+                                className="h-6 px-1.5 ui-text-xs"
+                                onClick={() => void openEnvFile(envFile)}
+                              >
+                                Edit
+                              </Button>
+                            }
+                          >
+                            <ResourceTitle>{envFile.relativePath}</ResourceTitle>
+                            <ResourceMeta>
+                              {envFile.variableCount} variables
+                              {envFile.keys.length > 0
+                                ? ` · ${envFile.keys.slice(0, 3).join(", ")}`
+                                : ""}
+                            </ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                    {projectConfig.buildPresets.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Build presets</SidebarSectionLabel>
+                        {projectConfig.buildPresets.map((preset) => (
+                          <SidebarListItem
+                            key={preset.name}
+                            leading={
+                              <ImageIcon className="size-4 text-text-lighter" weight="duotone" />
+                            }
+                            trailing={
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="h-6 px-1.5 ui-text-xs"
+                                  onClick={() => applyBuildPreset(preset)}
+                                >
+                                  Use
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="size-6 p-0"
+                                  tooltip="Delete preset"
+                                  tooltipSide="left"
+                                  aria-label={`Delete ${preset.name}`}
+                                  onClick={() => void handleDeletePreset("build", preset.name)}
+                                >
+                                  <Trash className="size-3.5" />
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <ResourceTitle>{preset.name}</ResourceTitle>
+                            <ResourceMeta>{preset.tag || preset.contextPath}</ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                    {projectConfig.runPresets.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Run presets</SidebarSectionLabel>
+                        {projectConfig.runPresets.map((preset) => (
+                          <SidebarListItem
+                            key={preset.name}
+                            leading={
+                              <ContainerIcon
+                                className="size-4 text-text-lighter"
+                                weight="duotone"
+                              />
+                            }
+                            trailing={
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="h-6 px-1.5 ui-text-xs"
+                                  onClick={() => applyRunPreset(preset)}
+                                >
+                                  Use
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="size-6 p-0"
+                                  tooltip="Delete preset"
+                                  tooltipSide="left"
+                                  aria-label={`Delete ${preset.name}`}
+                                  onClick={() => void handleDeletePreset("run", preset.name)}
+                                >
+                                  <Trash className="size-3.5" />
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <ResourceTitle>{preset.name}</ResourceTitle>
+                            <ResourceMeta>
+                              {preset.image}
+                              {preset.envFiles.length > 0 ? " · env file" : ""}
+                            </ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                    {projectConfig.composePresets.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <SidebarSectionLabel>Compose presets</SidebarSectionLabel>
+                        {projectConfig.composePresets.map((preset) => (
+                          <SidebarListItem
+                            key={preset.name}
+                            leading={
+                              <Restart className="size-4 text-text-lighter" weight="duotone" />
+                            }
+                            trailing={
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="h-6 px-1.5 ui-text-xs"
+                                  disabled={busyComposeService !== null}
+                                  onClick={() => void handleRunComposePreset(preset)}
+                                >
+                                  {busyComposeService === `preset:${preset.name}` ? (
+                                    <LoadingIndicator compact />
+                                  ) : (
+                                    "Run"
+                                  )}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="size-6 p-0"
+                                  tooltip="Delete preset"
+                                  tooltipSide="left"
+                                  aria-label={`Delete ${preset.name}`}
+                                  onClick={() => void handleDeletePreset("compose", preset.name)}
+                                >
+                                  <Trash className="size-3.5" />
+                                </Button>
+                              </div>
+                            }
+                          >
+                            <ResourceTitle>{preset.name}</ResourceTitle>
+                            <ResourceMeta>
+                              {preset.action}
+                              {preset.service ? ` · ${preset.service}` : ""}
+                            </ResourceMeta>
+                          </SidebarListItem>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ),
+                projectConfigItemCount,
               )}
               {renderSection(
                 "images",
@@ -1848,8 +2691,14 @@ export function DockerSidebar() {
 
       {dialogMode ? (
         <Dialog
-          title={dialogMode === "build" ? "Build Docker Image" : "Run Docker Image"}
-          icon={dialogMode === "build" ? ImageIcon : Play}
+          title={
+            dialogMode === "build"
+              ? "Build Docker Image"
+              : dialogMode === "run"
+                ? "Run Docker Image"
+                : envDraft.relativePath
+          }
+          icon={dialogMode === "build" ? ImageIcon : dialogMode === "run" ? Play : FileIcon}
           onClose={() => setDialogMode(null)}
           size="md"
           footer={
@@ -1857,14 +2706,37 @@ export function DockerSidebar() {
               <Button variant="ghost" onClick={() => setDialogMode(null)}>
                 Cancel
               </Button>
-              <Button
-                onClick={dialogMode === "build" ? handleBuildImage : handleRunImage}
-                disabled={
-                  dialogMode === "build" ? !buildDraft.contextPath.trim() : !runDraft.image.trim()
-                }
-              >
-                {dialogMode === "build" ? "Build" : "Run"}
-              </Button>
+              {dialogMode === "build" ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => void handleSaveBuildPreset()}
+                    disabled={!rootFolderPath || !buildDraft.contextPath.trim()}
+                  >
+                    Save Preset
+                  </Button>
+                  <Button onClick={handleBuildImage} disabled={!buildDraft.contextPath.trim()}>
+                    Build
+                  </Button>
+                </>
+              ) : dialogMode === "run" ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => void handleSaveRunPreset()}
+                    disabled={!rootFolderPath || !runDraft.image.trim()}
+                  >
+                    Save Preset
+                  </Button>
+                  <Button onClick={handleRunImage} disabled={!runDraft.image.trim()}>
+                    Run
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => void handleSaveEnvFile()} disabled={!envDraft.path}>
+                  Save
+                </Button>
+              )}
             </>
           }
         >
@@ -1933,7 +2805,7 @@ export function DockerSidebar() {
                 />
               </div>
             </div>
-          ) : (
+          ) : dialogMode === "run" ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label htmlFor="docker-run-image" className="ui-text-sm block text-text">
@@ -2006,6 +2878,20 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
+                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-text">
+                  Env Files
+                </label>
+                <Textarea
+                  id="docker-run-env-files"
+                  value={runDraft.envFiles}
+                  onChange={(event) =>
+                    setRunDraft((current) => ({ ...current, envFiles: event.target.value }))
+                  }
+                  placeholder=".env"
+                  className="min-h-16 font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
                 <label htmlFor="docker-run-command" className="ui-text-sm block text-text">
                   Command
                 </label>
@@ -2018,6 +2904,19 @@ export function DockerSidebar() {
                   placeholder="npm start"
                 />
               </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+                {envDraft.path}
+              </div>
+              <Textarea
+                value={envDraft.content}
+                onChange={(event) =>
+                  setEnvDraft((current) => ({ ...current, content: event.target.value }))
+                }
+                className="min-h-80 font-mono"
+              />
             </div>
           )}
         </Dialog>

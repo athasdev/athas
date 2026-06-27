@@ -2,8 +2,9 @@ use crate::app_runtime::AppHandle;
 use serde::{Deserialize, Serialize};
 use std::{
    collections::{BTreeMap, HashMap},
+   fs,
    io::Cursor,
-   path::PathBuf,
+   path::{Path, PathBuf},
    process::Stdio,
    sync::Arc,
 };
@@ -81,7 +82,19 @@ pub struct DockerContainer {
    pub networks: String,
    pub created_at: String,
    pub health: Option<String>,
+   pub health_details: Option<DockerContainerHealthDetails>,
    pub stats: Option<DockerContainerStats>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerContainerHealthDetails {
+   pub status: String,
+   pub failing_streak: i64,
+   pub last_output: Option<String>,
+   pub last_exit_code: Option<i64>,
+   pub last_started_at: Option<String>,
+   pub last_finished_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -123,6 +136,7 @@ pub struct DockerRunImageRequest {
    pub ports: Option<Vec<String>>,
    pub volumes: Option<Vec<String>>,
    pub env: Option<Vec<String>>,
+   pub env_files: Option<Vec<String>>,
    pub command: Option<String>,
    pub detach: Option<bool>,
 }
@@ -143,6 +157,127 @@ pub struct DockerRegistrySearchResult {
    pub star_count: String,
    pub official: String,
    pub automated: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerProjectConfig {
+   pub workspace_path: Option<String>,
+   #[serde(default)]
+   pub build_presets: Vec<DockerBuildPreset>,
+   #[serde(default)]
+   pub run_presets: Vec<DockerRunPreset>,
+   #[serde(default)]
+   pub compose_presets: Vec<DockerComposePreset>,
+   #[serde(default)]
+   pub debug_presets: Vec<DockerDebugPreset>,
+   #[serde(default)]
+   pub workspace_debug_presets: Vec<DockerDebugPreset>,
+   #[serde(default)]
+   pub env_files: Vec<DockerEnvFile>,
+   #[serde(default)]
+   pub dev_containers: Vec<DockerDevContainer>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerBuildPreset {
+   pub name: String,
+   pub context_path: String,
+   pub dockerfile_path: Option<String>,
+   pub tag: Option<String>,
+   #[serde(default)]
+   pub build_args: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerRunPreset {
+   pub name: String,
+   pub image: String,
+   pub container_name: Option<String>,
+   #[serde(default)]
+   pub ports: Vec<String>,
+   #[serde(default)]
+   pub volumes: Vec<String>,
+   #[serde(default)]
+   pub env: Vec<String>,
+   #[serde(default)]
+   pub env_files: Vec<String>,
+   pub command: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerComposePreset {
+   pub name: String,
+   #[serde(default)]
+   pub files: Vec<String>,
+   pub service: Option<String>,
+   pub action: String,
+   #[serde(default)]
+   pub env_files: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerDebugPreset {
+   pub name: String,
+   pub command: String,
+   pub workdir: Option<String>,
+   pub target: String,
+   pub source: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerEnvFile {
+   pub path: String,
+   pub relative_path: String,
+   pub variable_count: usize,
+   #[serde(default)]
+   pub keys: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerDevContainer {
+   pub name: String,
+   pub config_path: String,
+   pub relative_path: String,
+   pub kind: String,
+   pub image: Option<String>,
+   pub docker_file: Option<String>,
+   pub context: Option<String>,
+   #[serde(default)]
+   pub docker_compose_files: Vec<String>,
+   pub service: Option<String>,
+   pub workspace_folder: Option<String>,
+   pub remote_user: Option<String>,
+   #[serde(default)]
+   pub run_args: Vec<String>,
+   #[serde(default)]
+   pub container_env: Vec<String>,
+   #[serde(default)]
+   pub remote_env: Vec<String>,
+   pub workspace_mount: Option<String>,
+   #[serde(default)]
+   pub mounts: Vec<String>,
+   #[serde(default)]
+   pub forward_ports: Vec<String>,
+   pub post_create_command: Option<String>,
+   pub post_start_command: Option<String>,
+   #[serde(default)]
+   pub features: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerDevContainerOpenResult {
+   pub container_id: String,
+   pub command: String,
+   pub name: String,
+   pub output: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -211,6 +346,47 @@ struct DockerStatsRow {
    block_io: String,
    #[serde(default, rename = "PIDs")]
    pids: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct DockerInspectContainerRow {
+   #[serde(default, rename = "Id")]
+   id: String,
+   #[serde(default)]
+   name: String,
+   #[serde(default)]
+   state: DockerInspectContainerState,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct DockerInspectContainerState {
+   health: Option<DockerInspectContainerHealth>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct DockerInspectContainerHealth {
+   #[serde(default)]
+   status: String,
+   #[serde(default)]
+   failing_streak: i64,
+   #[serde(default)]
+   log: Vec<DockerInspectContainerHealthLog>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct DockerInspectContainerHealthLog {
+   #[serde(default)]
+   start: String,
+   #[serde(default)]
+   end: String,
+   #[serde(default)]
+   exit_code: i64,
+   #[serde(default)]
+   output: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -436,6 +612,7 @@ pub async fn docker_compose_action(
    files: Vec<String>,
    service: Option<String>,
    action: String,
+   env_files: Option<Vec<String>>,
 ) -> Result<String, String> {
    let workspace_path = normalize_workspace_path(workspace_path)
       .ok_or_else(|| "Workspace path is required.".to_string())?;
@@ -444,6 +621,12 @@ pub async fn docker_compose_action(
    }
 
    let mut args = compose_file_args(&files);
+   for env_file in env_files.unwrap_or_default() {
+      if let Some(env_file) = normalize_optional_value(Some(env_file)) {
+         args.push("--env-file".to_string());
+         args.push(env_file);
+      }
+   }
    match action.as_str() {
       "up" => {
          args.push("up".to_string());
@@ -541,6 +724,12 @@ pub async fn docker_run_image(request: DockerRunImageRequest) -> Result<String, 
       if let Some(env) = normalize_optional_value(Some(env)) {
          args.push("--env".to_string());
          args.push(env);
+      }
+   }
+   for env_file in request.env_files.unwrap_or_default() {
+      if let Some(env_file) = normalize_optional_value(Some(env_file)) {
+         args.push("--env-file".to_string());
+         args.push(env_file);
       }
    }
    args.push(image);
@@ -738,9 +927,105 @@ pub async fn docker_tag_image(source: String, target: String) -> Result<String, 
    run_docker_owned(&["tag".to_string(), source, target]).await
 }
 
+#[tauri::command]
+pub async fn docker_get_project_config(
+   workspace_path: Option<String>,
+) -> Result<DockerProjectConfig, String> {
+   let Some(workspace_path) = workspace_path.and_then(normalize_workspace_path) else {
+      return Ok(empty_project_config(None));
+   };
+   ensure_workspace_dir(&workspace_path)?;
+
+   let mut config = read_project_config(&workspace_path)?;
+   config.workspace_path = Some(workspace_path.to_string_lossy().into_owned());
+   config.env_files = discover_env_files(&workspace_path);
+   config.dev_containers = discover_dev_containers(&workspace_path);
+   config.workspace_debug_presets = discover_workspace_debug_presets(&workspace_path);
+
+   Ok(config)
+}
+
+#[tauri::command]
+pub async fn docker_save_project_config(
+   workspace_path: String,
+   config: DockerProjectConfig,
+) -> Result<DockerProjectConfig, String> {
+   let workspace_path = normalize_workspace_path(workspace_path)
+      .ok_or_else(|| "Workspace path is required.".to_string())?;
+   ensure_workspace_dir(&workspace_path)?;
+
+   let config_path = project_config_path(&workspace_path);
+   if let Some(parent) = config_path.parent() {
+      fs::create_dir_all(parent)
+         .map_err(|error| format!("Failed to create Docker config directory: {}", error))?;
+   }
+
+   let saved_config = DockerProjectConfig {
+      workspace_path: None,
+      env_files: Vec::new(),
+      dev_containers: Vec::new(),
+      build_presets: sanitize_build_presets(config.build_presets),
+      run_presets: sanitize_run_presets(config.run_presets),
+      compose_presets: sanitize_compose_presets(config.compose_presets),
+      debug_presets: sanitize_debug_presets(config.debug_presets),
+      workspace_debug_presets: Vec::new(),
+   };
+   let contents = serde_json::to_string_pretty(&saved_config)
+      .map_err(|error| format!("Failed to encode Docker project config: {}", error))?;
+   fs::write(&config_path, format!("{}\n", contents))
+      .map_err(|error| format!("Failed to write Docker project config: {}", error))?;
+
+   docker_get_project_config(Some(workspace_path.to_string_lossy().into_owned())).await
+}
+
+#[tauri::command]
+pub async fn docker_read_env_file(workspace_path: String, path: String) -> Result<String, String> {
+   let workspace_path = normalize_workspace_path(workspace_path)
+      .ok_or_else(|| "Workspace path is required.".to_string())?;
+   ensure_workspace_dir(&workspace_path)?;
+   let path = resolve_workspace_file(&workspace_path, path)?;
+   fs::read_to_string(&path).map_err(|error| format!("Failed to read env file: {}", error))
+}
+
+#[tauri::command]
+pub async fn docker_write_env_file(
+   workspace_path: String,
+   path: String,
+   content: String,
+) -> Result<DockerEnvFile, String> {
+   let workspace_path = normalize_workspace_path(workspace_path)
+      .ok_or_else(|| "Workspace path is required.".to_string())?;
+   ensure_workspace_dir(&workspace_path)?;
+   let path = resolve_workspace_file(&workspace_path, path)?;
+   if !is_env_file_path(&path) {
+      return Err("Only .env files can be edited from Docker project settings.".to_string());
+   }
+   fs::write(&path, content).map_err(|error| format!("Failed to write env file: {}", error))?;
+   inspect_env_file(&workspace_path, &path)
+}
+
+#[tauri::command]
+pub async fn docker_open_dev_container(
+   workspace_path: String,
+   config_path: String,
+) -> Result<DockerDevContainerOpenResult, String> {
+   let workspace_path = normalize_workspace_path(workspace_path)
+      .ok_or_else(|| "Workspace path is required.".to_string())?;
+   ensure_workspace_dir(&workspace_path)?;
+   let config_path = resolve_workspace_file(&workspace_path, config_path)?;
+   let dev_container = read_dev_container(&workspace_path, &config_path)?;
+
+   if !dev_container.docker_compose_files.is_empty() {
+      return open_compose_dev_container(&workspace_path, &dev_container).await;
+   }
+
+   open_image_dev_container(&workspace_path, &dev_container).await
+}
+
 async fn docker_list_containers() -> Result<Vec<DockerContainer>, String> {
    let output = run_docker(&["ps", "--all", "--format", "{{json .}}"]).await?;
    let stats = docker_container_stats().await.unwrap_or_default();
+   let health_details = docker_container_health_details().await.unwrap_or_default();
    parse_json_lines::<DockerContainerRow>(&output).map(|rows| {
       rows
          .into_iter()
@@ -751,6 +1036,10 @@ async fn docker_list_containers() -> Result<Vec<DockerContainer>, String> {
             container.stats = stats
                .get(&stats_key)
                .or_else(|| stats.get(&stats_by_name_key))
+               .cloned();
+            container.health_details = health_details
+               .get(&stats_key)
+               .or_else(|| health_details.get(&stats_by_name_key))
                .cloned();
             container
          })
@@ -785,6 +1074,40 @@ async fn docker_container_stats() -> Result<HashMap<String, DockerContainerStats
             let stats = DockerContainerStats::from(row.clone());
             [(row.id, stats.clone()), (row.name, stats)]
          })
+         .filter(|(key, _)| !key.trim().is_empty())
+         .collect()
+   })
+}
+
+async fn docker_container_health_details()
+-> Result<HashMap<String, DockerContainerHealthDetails>, String> {
+   let ids = run_docker(&["ps", "--all", "--quiet"]).await?;
+   let ids = ids
+      .lines()
+      .map(str::trim)
+      .filter(|id| !id.is_empty())
+      .collect::<Vec<_>>();
+   if ids.is_empty() {
+      return Ok(HashMap::new());
+   }
+   let mut args = vec![
+      "inspect".to_string(),
+      "--format".to_string(),
+      "{{json .}}".to_string(),
+   ];
+   args.extend(ids.into_iter().map(ToString::to_string));
+   let output = run_docker_owned(&args).await?;
+
+   parse_json_lines::<DockerInspectContainerRow>(&output).map(|rows| {
+      rows
+         .into_iter()
+         .filter_map(|row| {
+            let health = row.state.health?;
+            let details = DockerContainerHealthDetails::from(health);
+            let name = row.name.trim_start_matches('/').to_string();
+            Some([(row.id, details.clone()), (name, details)])
+         })
+         .flatten()
          .filter(|(key, _)| !key.trim().is_empty())
          .collect()
    })
@@ -912,6 +1235,1036 @@ fn discover_compose_files(workspace_path: &PathBuf) -> Vec<PathBuf> {
    .map(|relative| workspace_path.join(relative))
    .filter(|path| path.is_file())
    .collect()
+}
+
+fn discover_env_files(workspace_path: &PathBuf) -> Vec<DockerEnvFile> {
+   let mut candidates = BTreeMap::<PathBuf, ()>::new();
+
+   for relative in [".env", ".env.local", ".env.development", ".env.production"] {
+      let path = workspace_path.join(relative);
+      if path.is_file() {
+         candidates.insert(path, ());
+      }
+   }
+
+   if let Ok(entries) = fs::read_dir(workspace_path) {
+      for entry in entries.flatten() {
+         let path = entry.path();
+         if path.is_file() && is_env_file_path(&path) {
+            candidates.insert(path, ());
+         }
+      }
+   }
+
+   let devcontainer_path = workspace_path.join(".devcontainer");
+   if let Ok(entries) = fs::read_dir(devcontainer_path) {
+      for entry in entries.flatten() {
+         let path = entry.path();
+         if path.is_file() && is_env_file_path(&path) {
+            candidates.insert(path, ());
+         }
+      }
+   }
+
+   candidates
+      .into_keys()
+      .filter_map(|path| inspect_env_file(workspace_path, &path).ok())
+      .collect()
+}
+
+fn discover_dev_containers(workspace_path: &PathBuf) -> Vec<DockerDevContainer> {
+   let mut candidates = BTreeMap::<PathBuf, ()>::new();
+
+   for relative in [".devcontainer.json", ".devcontainer/devcontainer.json"] {
+      let path = workspace_path.join(relative);
+      if path.is_file() {
+         candidates.insert(path, ());
+      }
+   }
+
+   let devcontainer_path = workspace_path.join(".devcontainer");
+   if let Ok(entries) = fs::read_dir(devcontainer_path) {
+      for entry in entries.flatten() {
+         let path = entry.path().join("devcontainer.json");
+         if path.is_file() {
+            candidates.insert(path, ());
+         }
+      }
+   }
+
+   candidates
+      .into_keys()
+      .filter_map(|path| read_dev_container(workspace_path, &path).ok())
+      .collect()
+}
+
+fn discover_workspace_debug_presets(workspace_path: &PathBuf) -> Vec<DockerDebugPreset> {
+   let path = workspace_path.join(".vscode").join("launch.json");
+   let Ok(content) = fs::read_to_string(path) else {
+      return Vec::new();
+   };
+   let Ok(value) = serde_json::from_str::<serde_json::Value>(&normalize_jsonc(&content)) else {
+      return Vec::new();
+   };
+   let Some(configurations) = value
+      .get("configurations")
+      .and_then(|value| value.as_array())
+   else {
+      return Vec::new();
+   };
+
+   configurations
+      .iter()
+      .enumerate()
+      .filter_map(|(index, config)| workspace_debug_preset_from_launch(index, config))
+      .collect()
+}
+
+fn workspace_debug_preset_from_launch(
+   index: usize,
+   config: &serde_json::Value,
+) -> Option<DockerDebugPreset> {
+   let name = string_value(config, "name")?;
+   let runtime = string_value(config, "runtime")
+      .or_else(|| string_value(config, "type"))
+      .unwrap_or_else(|| "custom".to_string());
+   let args = string_array_or_single(config, "args");
+   let program = string_value(config, "program");
+   let command = match normalize_debug_runtime(&runtime).as_str() {
+      "bun" => shell_join(
+         ["bun", "--inspect-brk"]
+            .into_iter()
+            .map(ToString::to_string)
+            .chain(program)
+            .chain(args),
+      ),
+      "node" => shell_join(
+         ["node", "--inspect-brk"]
+            .into_iter()
+            .map(ToString::to_string)
+            .chain(program)
+            .chain(args),
+      ),
+      "python" => shell_join(
+         ["python", "-m", "pdb"]
+            .into_iter()
+            .map(ToString::to_string)
+            .chain(program)
+            .chain(args),
+      ),
+      "rust" => shell_join(
+         ["cargo", "run"]
+            .into_iter()
+            .map(ToString::to_string)
+            .chain(args),
+      ),
+      "go" => shell_join(
+         ["dlv", "debug"]
+            .into_iter()
+            .map(ToString::to_string)
+            .chain(program)
+            .chain(std::iter::once("--".to_string()))
+            .chain(args),
+      ),
+      _ => string_value(config, "command")?,
+   };
+   if command.trim().is_empty() {
+      return None;
+   }
+
+   Some(DockerDebugPreset {
+      name: format!("{} ({})", name, index + 1),
+      command: resolve_debug_command_variables(&command),
+      workdir: string_value(config, "cwd").map(|cwd| resolve_debug_command_variables(&cwd)),
+      target: "container".to_string(),
+      source: Some("launch.json".to_string()),
+   })
+}
+
+fn read_dev_container(
+   workspace_path: &PathBuf,
+   config_path: &Path,
+) -> Result<DockerDevContainer, String> {
+   let content = fs::read_to_string(config_path)
+      .map_err(|error| format!("Failed to read devcontainer config: {}", error))?;
+   let value = serde_json::from_str::<serde_json::Value>(&normalize_jsonc(&content))
+      .map_err(|error| format!("Failed to parse devcontainer config: {}", error))?;
+   let config_dir = config_path
+      .parent()
+      .ok_or_else(|| "Dev Container config path must have a parent directory.".to_string())?;
+   let relative_path = config_path
+      .strip_prefix(workspace_path)
+      .unwrap_or(config_path)
+      .to_string_lossy()
+      .into_owned();
+   let name = string_value(&value, "name")
+      .or_else(|| {
+         config_path
+            .parent()
+            .and_then(|path| path.file_name())
+            .and_then(|name| name.to_str())
+            .filter(|name| *name != ".devcontainer")
+            .map(ToString::to_string)
+      })
+      .unwrap_or_else(|| "Dev Container".to_string());
+   let build = value.get("build");
+   let docker_file = string_value(&value, "dockerFile")
+      .or_else(|| build.and_then(|build| string_value(build, "dockerfile")))
+      .or_else(|| build.and_then(|build| string_value(build, "dockerFile")))
+      .map(|path| resolve_devcontainer_path(config_dir, &path));
+   let context = build
+      .and_then(|build| string_value(build, "context"))
+      .map(|path| resolve_devcontainer_path(config_dir, &path))
+      .or_else(|| {
+         docker_file
+            .as_ref()
+            .map(|_| config_dir.to_string_lossy().into_owned())
+      });
+   let docker_compose_files = string_array_or_single(&value, "dockerComposeFile")
+      .into_iter()
+      .map(|path| resolve_devcontainer_path(config_dir, &path))
+      .collect::<Vec<_>>();
+   let kind = if !docker_compose_files.is_empty() {
+      "compose"
+   } else if docker_file.is_some() {
+      "dockerfile"
+   } else if string_value(&value, "image").is_some() {
+      "image"
+   } else {
+      "unsupported"
+   }
+   .to_string();
+   let features = value
+      .get("features")
+      .and_then(|features| features.as_object())
+      .map(|features| features.keys().cloned().collect())
+      .unwrap_or_default();
+   let mut forward_ports = port_values(&value, "forwardPorts");
+   forward_ports.extend(port_values(&value, "appPort"));
+   forward_ports.sort();
+   forward_ports.dedup();
+
+   Ok(DockerDevContainer {
+      name,
+      config_path: config_path.to_string_lossy().into_owned(),
+      relative_path,
+      kind,
+      image: string_value(&value, "image"),
+      docker_file,
+      context,
+      docker_compose_files,
+      service: string_value(&value, "service"),
+      workspace_folder: string_value(&value, "workspaceFolder"),
+      remote_user: string_value(&value, "remoteUser"),
+      run_args: string_array_or_single(&value, "runArgs"),
+      container_env: string_map_entries(&value, "containerEnv"),
+      remote_env: string_map_entries(&value, "remoteEnv"),
+      workspace_mount: string_value(&value, "workspaceMount"),
+      mounts: string_array_or_single(&value, "mounts"),
+      forward_ports,
+      post_create_command: command_value(&value, "postCreateCommand"),
+      post_start_command: command_value(&value, "postStartCommand"),
+      features,
+   })
+}
+
+async fn open_compose_dev_container(
+   workspace_path: &PathBuf,
+   dev_container: &DockerDevContainer,
+) -> Result<DockerDevContainerOpenResult, String> {
+   let service = dev_container
+      .service
+      .clone()
+      .ok_or_else(|| "Dev Container Compose config is missing service.".to_string())?;
+   let compose_files = dev_container
+      .docker_compose_files
+      .iter()
+      .map(PathBuf::from)
+      .collect::<Vec<_>>();
+   let mut up_args = compose_path_args(&compose_files);
+   up_args.extend(["up".to_string(), "--detach".to_string(), service.clone()]);
+   let up_output = run_docker_in(&up_args, workspace_path).await?;
+
+   let mut ps_args = compose_path_args(&compose_files);
+   ps_args.extend(["ps".to_string(), "-q".to_string(), service.clone()]);
+   let container_id = run_docker_in(&ps_args, workspace_path)
+      .await?
+      .lines()
+      .next()
+      .map(str::trim)
+      .filter(|id| !id.is_empty())
+      .map(ToString::to_string)
+      .ok_or_else(|| format!("Docker Compose did not return a container for {}.", service))?;
+   let lifecycle_output = run_devcontainer_lifecycle_commands(&container_id, dev_container, true)
+      .await
+      .map(|output| join_command_output(up_output.clone(), output))?;
+
+   Ok(DockerDevContainerOpenResult {
+      command: docker_exec_shell_command(
+         &container_id,
+         dev_container.workspace_folder.as_deref(),
+         dev_container.remote_user.as_deref(),
+         &dev_container.remote_env,
+      ),
+      name: format!("Dev Container: {}", dev_container.name),
+      container_id,
+      output: lifecycle_output,
+   })
+}
+
+async fn open_image_dev_container(
+   workspace_path: &PathBuf,
+   dev_container: &DockerDevContainer,
+) -> Result<DockerDevContainerOpenResult, String> {
+   let image = match &dev_container.image {
+      Some(image) => image.clone(),
+      None if dev_container.docker_file.is_some() => {
+         let tag = format!(
+            "athas-devcontainer:{}",
+            slugify(&format!(
+               "{}-{}",
+               workspace_path.display(),
+               dev_container.name
+            ))
+         );
+         let docker_file = dev_container.docker_file.clone().unwrap();
+         let context = dev_container
+            .context
+            .clone()
+            .unwrap_or_else(|| workspace_path.to_string_lossy().into_owned());
+         run_docker_owned(&[
+            "build".to_string(),
+            "--file".to_string(),
+            docker_file,
+            "--tag".to_string(),
+            tag.clone(),
+            context,
+         ])
+         .await?;
+         tag
+      }
+      None => {
+         return Err(
+            "Dev Container must specify image, dockerFile, build.dockerFile, or Docker Compose."
+               .to_string(),
+         );
+      }
+   };
+   let container_name = format!(
+      "athas-devcontainer-{}",
+      slugify(&format!(
+         "{}-{}",
+         workspace_path.display(),
+         dev_container.name
+      ))
+   );
+   let workspace_folder = dev_container.workspace_folder.clone().unwrap_or_else(|| {
+      format!(
+         "/workspaces/{}",
+         workspace_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("workspace")
+      )
+   });
+   let existing_container = docker_container_id_by_name(&container_name).await?;
+   let output = if let Some(container_id) = existing_container {
+      run_docker_owned(&["start".to_string(), container_id.clone()]).await?;
+      String::new()
+   } else {
+      let mut args = vec![
+         "run".to_string(),
+         "--detach".to_string(),
+         "--name".to_string(),
+         container_name.clone(),
+         "--workdir".to_string(),
+         workspace_folder.clone(),
+      ];
+      if let Some(workspace_mount) = &dev_container.workspace_mount {
+         args.push("--mount".to_string());
+         args.push(resolve_workspace_mount(
+            workspace_mount,
+            workspace_path,
+            &workspace_folder,
+         ));
+      } else {
+         args.push("--volume".to_string());
+         args.push(format!(
+            "{}:{}",
+            workspace_path.to_string_lossy(),
+            workspace_folder
+         ));
+      }
+      for env in &dev_container.container_env {
+         args.push("--env".to_string());
+         args.push(env.clone());
+      }
+      for mount in &dev_container.mounts {
+         args.push("--mount".to_string());
+         args.push(mount.clone());
+      }
+      for port in &dev_container.forward_ports {
+         args.push("--publish".to_string());
+         args.push(publish_port_arg(port));
+      }
+      args.extend(dev_container.run_args.clone());
+      args.extend([
+         image,
+         "sh".to_string(),
+         "-lc".to_string(),
+         "sleep infinity".to_string(),
+      ]);
+      run_docker_owned(&args).await?
+   };
+   let container_id = docker_container_id_by_name(&container_name)
+      .await?
+      .unwrap_or(container_name);
+   let lifecycle_output = run_devcontainer_lifecycle_commands(&container_id, dev_container, true)
+      .await
+      .map(|lifecycle_output| join_command_output(output, lifecycle_output))?;
+
+   Ok(DockerDevContainerOpenResult {
+      command: docker_exec_shell_command(
+         &container_id,
+         Some(&workspace_folder),
+         dev_container.remote_user.as_deref(),
+         &dev_container.remote_env,
+      ),
+      name: format!("Dev Container: {}", dev_container.name),
+      container_id,
+      output: lifecycle_output,
+   })
+}
+
+fn inspect_env_file(workspace_path: &PathBuf, path: &Path) -> Result<DockerEnvFile, String> {
+   let content =
+      fs::read_to_string(path).map_err(|error| format!("Failed to read env file: {}", error))?;
+   let keys = parse_env_keys(&content);
+   Ok(DockerEnvFile {
+      path: path.to_string_lossy().into_owned(),
+      relative_path: path
+         .strip_prefix(workspace_path)
+         .unwrap_or(path)
+         .to_string_lossy()
+         .into_owned(),
+      variable_count: keys.len(),
+      keys,
+   })
+}
+
+fn parse_env_keys(content: &str) -> Vec<String> {
+   let mut keys = content
+      .lines()
+      .filter_map(|line| {
+         let line = line.trim();
+         if line.is_empty() || line.starts_with('#') {
+            return None;
+         }
+         let line = line.strip_prefix("export ").unwrap_or(line).trim_start();
+         let (key, _) = line.split_once('=')?;
+         let key = key.trim();
+         if key.is_empty() || key.contains(char::is_whitespace) {
+            None
+         } else {
+            Some(key.to_string())
+         }
+      })
+      .collect::<Vec<_>>();
+   keys.sort();
+   keys.dedup();
+   keys
+}
+
+fn is_env_file_path(path: &Path) -> bool {
+   path
+      .file_name()
+      .and_then(|name| name.to_str())
+      .is_some_and(|name| name == ".env" || name.starts_with(".env."))
+}
+
+fn project_config_path(workspace_path: &PathBuf) -> PathBuf {
+   workspace_path.join(".athas").join("docker.json")
+}
+
+fn read_project_config(workspace_path: &PathBuf) -> Result<DockerProjectConfig, String> {
+   let path = project_config_path(workspace_path);
+   if !path.exists() {
+      return Ok(empty_project_config(Some(
+         workspace_path.to_string_lossy().into_owned(),
+      )));
+   }
+
+   let contents = fs::read_to_string(&path)
+      .map_err(|error| format!("Failed to read Docker project config: {}", error))?;
+   let mut config = serde_json::from_str::<DockerProjectConfig>(&contents)
+      .map_err(|error| format!("Failed to parse Docker project config: {}", error))?;
+   config.build_presets = sanitize_build_presets(config.build_presets);
+   config.run_presets = sanitize_run_presets(config.run_presets);
+   config.compose_presets = sanitize_compose_presets(config.compose_presets);
+   config.debug_presets = sanitize_debug_presets(config.debug_presets);
+   Ok(config)
+}
+
+fn empty_project_config(workspace_path: Option<String>) -> DockerProjectConfig {
+   DockerProjectConfig {
+      workspace_path,
+      build_presets: Vec::new(),
+      run_presets: Vec::new(),
+      compose_presets: Vec::new(),
+      debug_presets: Vec::new(),
+      workspace_debug_presets: Vec::new(),
+      env_files: Vec::new(),
+      dev_containers: Vec::new(),
+   }
+}
+
+fn ensure_workspace_dir(workspace_path: &PathBuf) -> Result<(), String> {
+   if workspace_path.is_dir() {
+      Ok(())
+   } else {
+      Err(format!(
+         "Workspace path does not exist: {}",
+         workspace_path.display()
+      ))
+   }
+}
+
+fn resolve_workspace_file(workspace_path: &PathBuf, path: String) -> Result<PathBuf, String> {
+   let requested_path =
+      normalize_optional_value(Some(path)).ok_or_else(|| "File path is required.".to_string())?;
+   let workspace_root = workspace_path
+      .canonicalize()
+      .map_err(|error| format!("Failed to resolve workspace path: {}", error))?;
+   let requested_path = PathBuf::from(requested_path);
+   let path = if requested_path.is_absolute() {
+      requested_path
+   } else {
+      workspace_root.join(requested_path)
+   };
+
+   let resolved = if path.exists() {
+      path
+         .canonicalize()
+         .map_err(|error| format!("Failed to resolve file path: {}", error))?
+   } else {
+      let parent = path
+         .parent()
+         .ok_or_else(|| "File path must have a parent directory.".to_string())?;
+      let parent = parent
+         .canonicalize()
+         .map_err(|error| format!("Failed to resolve file parent directory: {}", error))?;
+      parent.join(
+         path
+            .file_name()
+            .ok_or_else(|| "File path must include a file name.".to_string())?,
+      )
+   };
+
+   if !resolved.starts_with(&workspace_root) {
+      return Err("Docker project file must be inside the workspace.".to_string());
+   }
+
+   Ok(resolved)
+}
+
+fn sanitize_build_presets(presets: Vec<DockerBuildPreset>) -> Vec<DockerBuildPreset> {
+   presets
+      .into_iter()
+      .filter_map(|preset| {
+         let name = normalize_optional_value(Some(preset.name))?;
+         let context_path = normalize_optional_value(Some(preset.context_path))?;
+         Some(DockerBuildPreset {
+            name,
+            context_path,
+            dockerfile_path: normalize_optional_value(preset.dockerfile_path),
+            tag: normalize_optional_value(preset.tag),
+            build_args: sanitize_list(preset.build_args),
+         })
+      })
+      .collect()
+}
+
+fn sanitize_run_presets(presets: Vec<DockerRunPreset>) -> Vec<DockerRunPreset> {
+   presets
+      .into_iter()
+      .filter_map(|preset| {
+         let name = normalize_optional_value(Some(preset.name))?;
+         let image = normalize_optional_value(Some(preset.image))?;
+         Some(DockerRunPreset {
+            name,
+            image,
+            container_name: normalize_optional_value(preset.container_name),
+            ports: sanitize_list(preset.ports),
+            volumes: sanitize_list(preset.volumes),
+            env: sanitize_list(preset.env),
+            env_files: sanitize_list(preset.env_files),
+            command: normalize_optional_value(preset.command),
+         })
+      })
+      .collect()
+}
+
+fn sanitize_compose_presets(presets: Vec<DockerComposePreset>) -> Vec<DockerComposePreset> {
+   presets
+      .into_iter()
+      .filter_map(|preset| {
+         let name = normalize_optional_value(Some(preset.name))?;
+         let action = normalize_optional_value(Some(preset.action))?;
+         Some(DockerComposePreset {
+            name,
+            files: sanitize_list(preset.files),
+            service: normalize_optional_value(preset.service),
+            action,
+            env_files: sanitize_list(preset.env_files),
+         })
+      })
+      .collect()
+}
+
+fn sanitize_debug_presets(presets: Vec<DockerDebugPreset>) -> Vec<DockerDebugPreset> {
+   presets
+      .into_iter()
+      .filter_map(|preset| {
+         let name = normalize_optional_value(Some(preset.name))?;
+         let command = normalize_optional_value(Some(preset.command))?;
+         Some(DockerDebugPreset {
+            name,
+            command,
+            workdir: normalize_optional_value(preset.workdir),
+            target: normalize_optional_value(Some(preset.target))
+               .unwrap_or_else(|| "container".to_string()),
+            source: normalize_optional_value(preset.source).or_else(|| Some("project".to_string())),
+         })
+      })
+      .collect()
+}
+
+fn sanitize_list(values: Vec<String>) -> Vec<String> {
+   values
+      .into_iter()
+      .filter_map(|value| normalize_optional_value(Some(value)))
+      .collect()
+}
+
+async fn docker_container_id_by_name(container_name: &str) -> Result<Option<String>, String> {
+   let output = run_docker_owned(&[
+      "ps".to_string(),
+      "--all".to_string(),
+      "--quiet".to_string(),
+      "--filter".to_string(),
+      format!("name=^/{}$", container_name),
+   ])
+   .await?;
+   Ok(output
+      .lines()
+      .next()
+      .map(str::trim)
+      .filter(|id| !id.is_empty())
+      .map(ToString::to_string))
+}
+
+async fn run_devcontainer_lifecycle_commands(
+   container_id: &str,
+   dev_container: &DockerDevContainer,
+   include_post_create: bool,
+) -> Result<String, String> {
+   let mut output = String::new();
+   if include_post_create && let Some(command) = &dev_container.post_create_command {
+      let marker_path = lifecycle_marker_path(dev_container);
+      let marker_exists = run_docker_exec_shell(container_id, &format!("test -f {}", marker_path))
+         .await
+         .is_ok();
+      if !marker_exists {
+         output = join_command_output(
+            output,
+            run_docker_exec_command(container_id, command, dev_container).await?,
+         );
+         run_docker_exec_shell(
+            container_id,
+            &format!("mkdir -p /tmp && touch {}", marker_path),
+         )
+         .await?;
+      }
+   }
+   if let Some(command) = &dev_container.post_start_command {
+      output = join_command_output(
+         output,
+         run_docker_exec_command(container_id, command, dev_container).await?,
+      );
+   }
+   Ok(output)
+}
+
+async fn run_docker_exec_command(
+   container_id: &str,
+   command: &str,
+   dev_container: &DockerDevContainer,
+) -> Result<String, String> {
+   let command = shell_command_with_context(
+      command,
+      dev_container.workspace_folder.as_deref(),
+      &dev_container.remote_env,
+   );
+   let mut args = vec!["exec".to_string()];
+   if let Some(remote_user) = dev_container
+      .remote_user
+      .as_deref()
+      .and_then(|user| normalize_optional_value(Some(user.to_string())))
+   {
+      args.push("--user".to_string());
+      args.push(remote_user);
+   }
+   args.extend([
+      container_id.to_string(),
+      "sh".to_string(),
+      "-lc".to_string(),
+      command,
+   ]);
+   run_docker_owned(&args).await
+}
+
+async fn run_docker_exec_shell(container_id: &str, command: &str) -> Result<String, String> {
+   run_docker_owned(&[
+      "exec".to_string(),
+      container_id.to_string(),
+      "sh".to_string(),
+      "-lc".to_string(),
+      command.to_string(),
+   ])
+   .await
+}
+
+fn lifecycle_marker_path(dev_container: &DockerDevContainer) -> String {
+   format!(
+      "/tmp/.athas-devcontainer-post-create-{}",
+      slugify(&dev_container.config_path)
+   )
+}
+
+fn publish_port_arg(port: &str) -> String {
+   if port.contains(':') {
+      port.to_string()
+   } else {
+      let host_port = port.split('/').next().unwrap_or(port);
+      format!("{}:{}", host_port, port)
+   }
+}
+
+fn resolve_workspace_mount(
+   workspace_mount: &str,
+   workspace_path: &Path,
+   workspace_folder: &str,
+) -> String {
+   let local_workspace_folder = workspace_path.to_string_lossy();
+   let local_workspace_basename = workspace_path
+      .file_name()
+      .and_then(|name| name.to_str())
+      .unwrap_or("workspace");
+   workspace_mount
+      .replace("${localWorkspaceFolder}", local_workspace_folder.as_ref())
+      .replace("${localWorkspaceFolderBasename}", local_workspace_basename)
+      .replace("${containerWorkspaceFolder}", workspace_folder)
+}
+
+fn resolve_devcontainer_path(config_dir: &Path, path: &str) -> String {
+   let path = PathBuf::from(path);
+   if path.is_absolute() {
+      path.to_string_lossy().into_owned()
+   } else {
+      config_dir.join(path).to_string_lossy().into_owned()
+   }
+}
+
+fn string_value(value: &serde_json::Value, key: &str) -> Option<String> {
+   value
+      .get(key)
+      .and_then(|value| value.as_str())
+      .map(str::trim)
+      .filter(|value| !value.is_empty())
+      .map(ToString::to_string)
+}
+
+fn string_array_or_single(value: &serde_json::Value, key: &str) -> Vec<String> {
+   match value.get(key) {
+      Some(serde_json::Value::String(value)) => vec![value.clone()],
+      Some(serde_json::Value::Array(values)) => values
+         .iter()
+         .filter_map(|value| value.as_str())
+         .map(str::trim)
+         .filter(|value| !value.is_empty())
+         .map(ToString::to_string)
+         .collect(),
+      _ => Vec::new(),
+   }
+}
+
+fn string_map_entries(value: &serde_json::Value, key: &str) -> Vec<String> {
+   value
+      .get(key)
+      .and_then(|value| value.as_object())
+      .map(|entries| {
+         let mut values = entries
+            .iter()
+            .filter_map(|(key, value)| {
+               let value = match value {
+                  serde_json::Value::String(value) => value.clone(),
+                  serde_json::Value::Number(value) => value.to_string(),
+                  serde_json::Value::Bool(value) => value.to_string(),
+                  _ => return None,
+               };
+               Some(format!("{}={}", key, value))
+            })
+            .collect::<Vec<_>>();
+         values.sort();
+         values
+      })
+      .unwrap_or_default()
+}
+
+fn port_values(value: &serde_json::Value, key: &str) -> Vec<String> {
+   match value.get(key) {
+      Some(serde_json::Value::Array(values)) => values
+         .iter()
+         .filter_map(|value| match value {
+            serde_json::Value::String(value) => normalize_optional_value(Some(value.clone())),
+            serde_json::Value::Number(value) => Some(value.to_string()),
+            _ => None,
+         })
+         .collect(),
+      Some(serde_json::Value::String(value)) => vec![value.clone()],
+      Some(serde_json::Value::Number(value)) => vec![value.to_string()],
+      _ => Vec::new(),
+   }
+}
+
+fn command_value(value: &serde_json::Value, key: &str) -> Option<String> {
+   match value.get(key) {
+      Some(serde_json::Value::String(value)) => normalize_optional_value(Some(value.clone())),
+      Some(serde_json::Value::Array(values)) => {
+         let parts = values
+            .iter()
+            .filter_map(|value| value.as_str())
+            .map(shell_quote)
+            .collect::<Vec<_>>();
+         if parts.is_empty() {
+            None
+         } else {
+            Some(parts.join(" "))
+         }
+      }
+      Some(serde_json::Value::Object(commands)) => {
+         let parts = commands
+            .values()
+            .filter_map(|value| command_value(&serde_json::json!({ "command": value }), "command"))
+            .collect::<Vec<_>>();
+         if parts.is_empty() {
+            None
+         } else {
+            Some(parts.join(" && "))
+         }
+      }
+      _ => None,
+   }
+}
+
+fn normalize_debug_runtime(value: &str) -> String {
+   let normalized = value.to_lowercase();
+   if normalized.contains("bun") {
+      "bun"
+   } else if normalized.contains("node") || normalized.contains("pwa-node") {
+      "node"
+   } else if normalized.contains("python") || normalized.contains("debugpy") {
+      "python"
+   } else if normalized.contains("rust") || normalized.contains("lldb") {
+      "rust"
+   } else if normalized.contains("go") || normalized.contains("delve") {
+      "go"
+   } else {
+      "custom"
+   }
+   .to_string()
+}
+
+fn resolve_debug_command_variables(value: &str) -> String {
+   value
+      .replace("${workspaceFolder}", "/workspace")
+      .replace("${workspaceRoot}", "/workspace")
+      .replace("${fileWorkspaceFolder}", "/workspace")
+}
+
+fn shell_join(values: impl IntoIterator<Item = String>) -> String {
+   values
+      .into_iter()
+      .filter(|value| !value.trim().is_empty())
+      .map(|value| shell_quote(&value))
+      .collect::<Vec<_>>()
+      .join(" ")
+}
+
+fn normalize_jsonc(input: &str) -> String {
+   strip_json_trailing_commas(&strip_json_comments(input))
+}
+
+fn strip_json_comments(input: &str) -> String {
+   let mut output = String::with_capacity(input.len());
+   let mut chars = input.chars().peekable();
+   let mut in_string = false;
+   let mut escaped = false;
+
+   while let Some(ch) = chars.next() {
+      if in_string {
+         output.push(ch);
+         if escaped {
+            escaped = false;
+         } else if ch == '\\' {
+            escaped = true;
+         } else if ch == '"' {
+            in_string = false;
+         }
+         continue;
+      }
+
+      if ch == '"' {
+         in_string = true;
+         output.push(ch);
+         continue;
+      }
+
+      if ch == '/' {
+         match chars.peek() {
+            Some('/') => {
+               chars.next();
+               for next in chars.by_ref() {
+                  if next == '\n' {
+                     output.push('\n');
+                     break;
+                  }
+               }
+               continue;
+            }
+            Some('*') => {
+               chars.next();
+               let mut previous = '\0';
+               for next in chars.by_ref() {
+                  if next == '\n' {
+                     output.push('\n');
+                  }
+                  if previous == '*' && next == '/' {
+                     break;
+                  }
+                  previous = next;
+               }
+               continue;
+            }
+            _ => {}
+         }
+      }
+
+      output.push(ch);
+   }
+
+   output
+}
+
+fn strip_json_trailing_commas(input: &str) -> String {
+   let mut output = String::with_capacity(input.len());
+   let mut chars = input.chars().peekable();
+   let mut in_string = false;
+   let mut escaped = false;
+
+   while let Some(ch) = chars.next() {
+      if in_string {
+         output.push(ch);
+         if escaped {
+            escaped = false;
+         } else if ch == '\\' {
+            escaped = true;
+         } else if ch == '"' {
+            in_string = false;
+         }
+         continue;
+      }
+
+      if ch == '"' {
+         in_string = true;
+         output.push(ch);
+         continue;
+      }
+
+      if ch == ',' {
+         let mut lookahead = chars.clone();
+         while matches!(lookahead.peek(), Some(next) if next.is_whitespace()) {
+            lookahead.next();
+         }
+         if matches!(lookahead.peek(), Some('}' | ']')) {
+            continue;
+         }
+      }
+
+      output.push(ch);
+   }
+
+   output
+}
+
+fn docker_exec_shell_command(
+   container_id: &str,
+   workdir: Option<&str>,
+   remote_user: Option<&str>,
+   remote_env: &[String],
+) -> String {
+   let shell_probe = "if command -v bash >/dev/null 2>&1; then exec bash; elif command -v sh \
+                      >/dev/null 2>&1; then exec sh; else echo \"No interactive shell found in \
+                      this container.\" >&2; exit 127; fi";
+   let command = shell_command_with_context(shell_probe, workdir, remote_env);
+   let user_arg = remote_user
+      .filter(|user| !user.trim().is_empty())
+      .map(|user| format!(" --user {}", shell_quote(user)))
+      .unwrap_or_default();
+   format!(
+      "docker exec -it{} {} sh -lc {}",
+      user_arg,
+      shell_quote(container_id),
+      shell_quote(&command)
+   )
+}
+
+fn shell_command_with_context(
+   command: &str,
+   workdir: Option<&str>,
+   remote_env: &[String],
+) -> String {
+   let mut parts = remote_env
+      .iter()
+      .filter_map(|entry| entry.split_once('='))
+      .map(|(key, value)| format!("export {}={}", key, shell_quote(value)))
+      .collect::<Vec<_>>();
+   if let Some(workdir) = workdir.filter(|workdir| !workdir.trim().is_empty()) {
+      parts.push(format!("cd {}", shell_quote(workdir)));
+   }
+   parts.push(command.to_string());
+   parts.join(" && ")
+}
+
+fn shell_quote(value: &str) -> String {
+   format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+fn slugify(value: &str) -> String {
+   let mut slug = value
+      .chars()
+      .map(|ch| {
+         if ch.is_ascii_alphanumeric() {
+            ch.to_ascii_lowercase()
+         } else {
+            '-'
+         }
+      })
+      .collect::<String>();
+   while slug.contains("--") {
+      slug = slug.replace("--", "-");
+   }
+   slug.trim_matches('-').chars().take(48).collect()
 }
 
 fn compose_path_args(compose_files: &[PathBuf]) -> Vec<String> {
@@ -1349,7 +2702,28 @@ impl From<DockerContainerRow> for DockerContainer {
          networks: row.networks,
          created_at: row.created_at,
          health,
+         health_details: None,
          stats: None,
+      }
+   }
+}
+
+impl From<DockerInspectContainerHealth> for DockerContainerHealthDetails {
+   fn from(health: DockerInspectContainerHealth) -> Self {
+      let last_log = health.log.last();
+      Self {
+         status: health.status,
+         failing_streak: health.failing_streak,
+         last_output: last_log
+            .map(|log| log.output.trim().to_string())
+            .filter(|output| !output.is_empty()),
+         last_exit_code: last_log.map(|log| log.exit_code),
+         last_started_at: last_log
+            .map(|log| log.start.clone())
+            .filter(|value| !value.trim().is_empty()),
+         last_finished_at: last_log
+            .map(|log| log.end.clone())
+            .filter(|value| !value.trim().is_empty()),
       }
    }
 }
@@ -1485,10 +2859,13 @@ impl From<DockerComposeServiceRow> for DockerComposeService {
 #[cfg(test)]
 mod tests {
    use super::{
-      DockerComposeService, DockerContainerRow, DockerRegistrySearchRow, DockerStatsRow,
-      parse_compose_ps_output, parse_container_file_archive, parse_health, parse_json_lines,
+      DockerComposeService, DockerContainerHealthDetails, DockerContainerRow,
+      DockerInspectContainerRow, DockerRegistrySearchRow, DockerStatsRow, discover_dev_containers,
+      discover_workspace_debug_presets, normalize_jsonc, parse_compose_ps_output,
+      parse_container_file_archive, parse_env_keys, parse_health, parse_json_lines,
+      resolve_workspace_mount,
    };
-   use std::io::Cursor;
+   use std::{fs, io::Cursor};
 
    #[test]
    fn parses_docker_json_lines() {
@@ -1530,6 +2907,22 @@ mod tests {
    }
 
    #[test]
+   fn parses_container_health_details() {
+      let rows = parse_json_lines::<DockerInspectContainerRow>(
+         r#"{"Id":"abc123","Name":"/web","State":{"Health":{"Status":"unhealthy","FailingStreak":2,"Log":[{"Start":"2026-06-27T10:00:00Z","End":"2026-06-27T10:00:01Z","ExitCode":1,"Output":"connection refused\n"}]}}}"#,
+      )
+      .expect("valid docker inspect json line");
+
+      let health = rows[0].state.health.clone().expect("health state");
+      let details = DockerContainerHealthDetails::from(health);
+
+      assert_eq!(details.status, "unhealthy");
+      assert_eq!(details.failing_streak, 2);
+      assert_eq!(details.last_exit_code, Some(1));
+      assert_eq!(details.last_output.as_deref(), Some("connection refused"));
+   }
+
+   #[test]
    fn parses_container_file_archive_top_level_entries() {
       let mut builder = tar::Builder::new(Vec::new());
       append_tar_file(&mut builder, "app/package.json", b"{}");
@@ -1559,6 +2952,147 @@ mod tests {
       assert_eq!(rows.len(), 1);
       assert_eq!(rows[0].name, "nginx");
       assert_eq!(rows[0].official, "[OK]");
+   }
+
+   #[test]
+   fn parses_env_file_keys() {
+      let keys = parse_env_keys(
+         r#"
+         # comment
+         DATABASE_URL=postgres://localhost
+         export NODE_ENV=development
+         EMPTY=
+         BAD KEY=value
+         NODE_ENV=production
+         "#,
+      );
+
+      assert_eq!(keys, vec!["DATABASE_URL", "EMPTY", "NODE_ENV"]);
+   }
+
+   #[test]
+   fn strips_devcontainer_json_comments_without_touching_strings() {
+      let normalized = normalize_jsonc(
+         r#"{
+           // comment
+           "name": "https://example.test",
+           "image": "mcr.microsoft.com/devcontainers/rust:1",
+           /* block
+              comment */
+           "runArgs": ["--label", "path=//tmp",],
+         }"#,
+      );
+      let value: serde_json::Value = serde_json::from_str(&normalized).expect("jsonc normalized");
+
+      assert_eq!(value["name"], "https://example.test");
+      assert_eq!(value["runArgs"][1], "path=//tmp");
+   }
+
+   #[test]
+   fn discovers_devcontainer_definitions() {
+      let workspace = tempfile::tempdir().expect("workspace tempdir");
+      let devcontainer_dir = workspace.path().join(".devcontainer");
+      fs::create_dir_all(&devcontainer_dir).expect("devcontainer directory");
+      fs::write(
+         devcontainer_dir.join("devcontainer.json"),
+         r#"{
+           "name": "Rust",
+           "build": { "dockerFile": "Dockerfile", "context": ".." },
+           "workspaceFolder": "/workspaces/app",
+           "workspaceMount": "source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind",
+           "containerEnv": { "RUST_LOG": "debug", "PORT": 3000 },
+           "remoteEnv": { "EDITOR": "athas" },
+           "mounts": ["source=cache,target=/cache,type=volume"],
+           "forwardPorts": [3000, "9229/tcp"],
+           "postCreateCommand": "cargo fetch",
+           "postStartCommand": ["cargo", "test"],
+           "features": { "ghcr.io/devcontainers/features/node:1": {} }
+         }"#,
+      )
+      .expect("devcontainer json");
+
+      let definitions = discover_dev_containers(&workspace.path().to_path_buf());
+
+      assert_eq!(definitions.len(), 1);
+      assert_eq!(definitions[0].name, "Rust");
+      assert_eq!(definitions[0].kind, "dockerfile");
+      assert_eq!(
+         definitions[0].workspace_folder.as_deref(),
+         Some("/workspaces/app")
+      );
+      assert_eq!(definitions[0].features.len(), 1);
+      assert_eq!(
+         definitions[0].workspace_mount.as_deref(),
+         Some("source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind")
+      );
+      assert_eq!(
+         resolve_workspace_mount(
+            definitions[0].workspace_mount.as_deref().unwrap(),
+            workspace.path(),
+            "/workspaces/app",
+         ),
+         format!(
+            "source={},target=/workspaces/app,type=bind",
+            workspace.path().display()
+         )
+      );
+      assert_eq!(
+         definitions[0].container_env,
+         vec!["PORT=3000", "RUST_LOG=debug"]
+      );
+      assert_eq!(definitions[0].remote_env, vec!["EDITOR=athas"]);
+      assert_eq!(
+         definitions[0].mounts,
+         vec!["source=cache,target=/cache,type=volume"]
+      );
+      assert_eq!(definitions[0].forward_ports, vec!["3000", "9229/tcp"]);
+      assert_eq!(
+         definitions[0].post_create_command.as_deref(),
+         Some("cargo fetch")
+      );
+      assert_eq!(
+         definitions[0].post_start_command.as_deref(),
+         Some("'cargo' 'test'")
+      );
+   }
+
+   #[test]
+   fn discovers_workspace_debug_presets_from_launch_json() {
+      let workspace = tempfile::tempdir().expect("workspace tempdir");
+      let vscode_dir = workspace.path().join(".vscode");
+      fs::create_dir_all(&vscode_dir).expect("vscode directory");
+      fs::write(
+         vscode_dir.join("launch.json"),
+         r#"{
+           "configurations": [
+             {
+               "name": "Debug server",
+               "type": "node",
+               "program": "${workspaceFolder}/server.js",
+               "cwd": "${workspaceFolder}",
+               "args": ["--port", "3000"]
+             },
+             {
+               "name": "Custom",
+               "type": "custom",
+               "command": "echo ready"
+             }
+           ]
+         }"#,
+      )
+      .expect("launch json");
+
+      let presets = discover_workspace_debug_presets(&workspace.path().to_path_buf());
+
+      assert_eq!(presets.len(), 2);
+      assert_eq!(presets[0].name, "Debug server (1)");
+      assert_eq!(
+         presets[0].command,
+         "'node' '--inspect-brk' '/workspace/server.js' '--port' '3000'"
+      );
+      assert_eq!(presets[0].workdir.as_deref(), Some("/workspace"));
+      assert_eq!(presets[0].source.as_deref(), Some("launch.json"));
+      assert_eq!(presets[1].command, "echo ready");
    }
 
    fn append_tar_file(builder: &mut tar::Builder<Vec<u8>>, path: &str, contents: &[u8]) {
