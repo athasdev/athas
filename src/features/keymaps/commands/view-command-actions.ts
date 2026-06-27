@@ -106,6 +106,16 @@ export function toggleGitHubSidebar(): void {
   }
 }
 
+export function toggleDockerSidebar(): void {
+  const state = useUIState.getState();
+  if (state.isSidebarVisible && state.activeSidebarView === "docker") {
+    state.setIsSidebarVisible(false);
+  } else {
+    state.setActiveView("docker");
+    state.setIsSidebarVisible(true);
+  }
+}
+
 export function toggleSidebarPosition(): void {
   const { settings, updateSetting } = useSettingsStore.getState();
   updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");

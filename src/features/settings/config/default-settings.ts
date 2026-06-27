@@ -113,6 +113,7 @@ export const defaultSettings: Settings = {
     search: true,
     diagnostics: true,
     debugger: false,
+    docker: true,
     outline: true,
     aiChat: true,
     teamCollaboration: true,

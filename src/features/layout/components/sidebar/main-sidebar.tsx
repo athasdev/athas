@@ -1,6 +1,7 @@
 import { memo, type ReactNode } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DatabaseSidebar } from "@/features/database/components/database-sidebar";
+import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerTree } from "@/features/file-explorer/components/file-explorer-tree";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import GitView from "@/features/git/components/git-view";
@@ -135,6 +136,14 @@ export const MainSidebar = memo(
             {
               id: "github-prs" as const,
               content: <GitHubPRsView />,
+            },
+          ]
+        : []),
+      ...(coreFeatures.docker
+        ? [
+            {
+              id: "docker" as const,
+              content: <DockerSidebar />,
             },
           ]
         : []),

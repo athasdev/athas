@@ -329,6 +329,10 @@ fn main() {
          get_runtime_version,
          get_js_runtime,
          get_all_runtime_statuses,
+         // Docker commands
+         docker_get_inventory,
+         docker_container_action,
+         docker_get_container_logs,
          // Tool commands
          install_language_tools,
          install_tool,

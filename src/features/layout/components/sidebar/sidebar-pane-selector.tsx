@@ -3,6 +3,7 @@ import {
   GitBranchIcon as GitBranch,
   GitPullRequestIcon as GitPullRequest,
   MagnifyingGlassIcon as MagnifyingGlass,
+  CubeIcon as Cube,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
@@ -134,6 +135,23 @@ export const SidebarPaneSelector = ({
             } satisfies TabsItem,
           ]
         : []),
+      ...(coreFeatures.docker
+        ? [
+            {
+              id: "docker",
+              icon: <Cube className={iconClassName} weight="duotone" />,
+              isActive: activeSidebarView === "docker",
+              onClick: () => onViewChange("docker"),
+              role: "tab",
+              ariaLabel: "Docker",
+              className: tabClassName,
+              tooltip: {
+                content: "Docker",
+                side: tooltipSide,
+              },
+            } satisfies TabsItem,
+          ]
+        : []),
       ...Array.from(extensionViews.values()).map(
         (view) =>
           ({
@@ -155,6 +173,7 @@ export const SidebarPaneSelector = ({
       activeSidebarView,
       coreFeatures.git,
       coreFeatures.github,
+      coreFeatures.docker,
       coreFeatures.search,
       extensionViews,
       iconClassName,

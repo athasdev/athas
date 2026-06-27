@@ -95,6 +95,7 @@ import {
   toggleAgentLauncher,
   toggleAIChat,
   toggleFilesSidebar,
+  toggleDockerSidebar,
   toggleGitHubSidebar,
   toggleLineNumbers,
   toggleMinimap,
@@ -593,6 +594,12 @@ const viewCommands: Command[] = [
     title: "Show GitHub",
     category: "View",
     execute: toggleGitHubSidebar,
+  },
+  {
+    id: "workbench.showDocker",
+    title: "Show Docker",
+    category: "View",
+    execute: toggleDockerSidebar,
   },
   {
     id: "workbench.showDebugger",
