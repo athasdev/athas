@@ -82,6 +82,7 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(FffSearchState::new());
+   app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
 }
 
