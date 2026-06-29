@@ -142,6 +142,21 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     titleBarContextMenu.open(e);
   };
 
+  const handleTitleBarMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+
+    const target = e.target as HTMLElement;
+    const interactiveTarget = target.closest(
+      "button, a, input, textarea, select, [role='tab'], [data-title-bar-project-tabs='true'], [contenteditable='true']",
+    );
+
+    if (interactiveTarget) return;
+
+    void currentWindow?.startDragging().catch((error: unknown) => {
+      console.error("Error starting window drag:", error);
+    });
+  };
+
   const handleOpenFolderInNewWindow = async () => {
     const selected = await openFolder();
     if (!selected) return;
@@ -312,6 +327,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
+        onMouseDown={handleTitleBarMouseDown}
         className={`athas-title-bar relative z-50 flex select-none items-center justify-between ${
           isMacOS ? "h-8" : "h-8"
         } bg-secondary-bg px-2`}
@@ -334,6 +350,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     return (
       <div
         data-tauri-drag-region
+        onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
           "athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
@@ -381,6 +398,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   return (
     <div
       data-tauri-drag-region
+      onMouseDown={handleTitleBarMouseDown}
       onContextMenu={handleTitleBarContextMenu}
       className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
     >

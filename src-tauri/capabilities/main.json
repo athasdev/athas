@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "core:window:default",
+    "core:window:allow-start-dragging",
     "core:window:allow-set-always-on-top",
     "core:event:default",
     "opener:allow-reveal-item-in-dir",
