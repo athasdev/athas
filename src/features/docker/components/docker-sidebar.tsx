@@ -45,11 +45,13 @@ import {
   buildDockerImage,
   copyFromDockerContainer,
   copyToDockerContainer,
+  deleteDockerEnvFile,
   getDockerComposeProject,
   getDockerInventory,
   getDockerProjectConfig,
   loginDockerRegistry,
   listDockerContainerFiles,
+  openDockerEnvFile,
   openDockerDevContainer,
   pullDockerRegistryImage,
   pruneDockerResources,
@@ -450,6 +452,7 @@ function ContainerRow({
         <ResourceMeta>
           {container.image}
           {container.ports ? ` · ${container.ports}` : ""}
+          {container.size ? ` · Size ${container.size}` : ""}
         </ResourceMeta>
         {container.healthDetails ? (
           <ResourceMeta>
@@ -468,7 +471,7 @@ function ContainerRow({
           <ResourceMeta>
             CPU {container.stats.cpuPercent || "0%"} · Mem {container.stats.memoryUsage || "0B"}
             {container.stats.memoryPercent ? ` (${container.stats.memoryPercent})` : ""} · Net{" "}
-            {container.stats.networkIo || "0B / 0B"} · Disk {container.stats.blockIo || "0B / 0B"}
+            {container.stats.networkIo || "0B / 0B"} · I/O {container.stats.blockIo || "0B / 0B"}
           </ResourceMeta>
         ) : null}
       </div>
@@ -963,7 +966,14 @@ export function DockerSidebar() {
   const normalizedQuery = query.trim().toLowerCase();
   const filteredContainers = inventory.containers.filter((container) =>
     includesQuery(
-      [container.name, container.image, container.status, container.state, container.ports],
+      [
+        container.name,
+        container.image,
+        container.status,
+        container.state,
+        container.ports,
+        container.size,
+      ],
       normalizedQuery,
     ),
   );
@@ -982,6 +992,7 @@ export function DockerSidebar() {
       normalizedQuery,
     ),
   );
+  const composeEnvFilePaths = projectConfig.envFiles.map((envFile) => envFile.path);
   const projectConfigItemCount =
     projectConfig.envFiles.length +
     projectConfig.devContainers.length +
@@ -1046,7 +1057,11 @@ export function DockerSidebar() {
         action,
         envFiles,
       });
-      setComposeOutput(output.trim() || `Docker Compose ${action} completed.`);
+      const envFileSuffix =
+        envFiles.length > 0
+          ? ` with ${envFiles.length} env file${envFiles.length === 1 ? "" : "s"}`
+          : "";
+      setComposeOutput(output.trim() || `Docker Compose ${action} completed${envFileSuffix}.`);
       await loadComposeProject();
       await loadInventory();
     } catch (actionError) {
@@ -1295,6 +1310,33 @@ export function DockerSidebar() {
     }
   };
 
+  const handleOpenEnvFile = async () => {
+    if (!rootFolderPath) return;
+
+    const path = await showPromptDialog("Env file path", {
+      title: "Open Env File",
+      placeholder: ".env",
+      confirmLabel: "Open",
+      defaultValue: ".env",
+    });
+    const envPath = path?.trim();
+    if (!envPath) return;
+
+    setProjectConfigError(null);
+    try {
+      const { file, content } = await openDockerEnvFile(rootFolderPath, envPath);
+      setEnvDraft({
+        path: file.path,
+        relativePath: file.relativePath,
+        content,
+      });
+      await loadProjectConfig();
+      setDialogMode("env");
+    } catch (openError) {
+      setProjectConfigError(openError instanceof Error ? openError.message : String(openError));
+    }
+  };
+
   const handleSaveEnvFile = async () => {
     if (!rootFolderPath || !envDraft.path) return;
 
@@ -1305,6 +1347,27 @@ export function DockerSidebar() {
       await loadProjectConfig();
     } catch (writeError) {
       setProjectConfigError(writeError instanceof Error ? writeError.message : String(writeError));
+    }
+  };
+
+  const handleDeleteEnvFile = async (envFile: DockerEnvFile) => {
+    if (!rootFolderPath) return;
+
+    const confirmation = await showPromptDialog(`Type delete to remove ${envFile.relativePath}`, {
+      title: "Delete Env File",
+      placeholder: "delete",
+      confirmLabel: "Delete",
+    });
+    if (confirmation?.trim().toLowerCase() !== "delete") return;
+
+    setProjectConfigError(null);
+    try {
+      await deleteDockerEnvFile(rootFolderPath, envFile.path);
+      await loadProjectConfig();
+    } catch (deleteError) {
+      setProjectConfigError(
+        deleteError instanceof Error ? deleteError.message : String(deleteError),
+      );
     }
   };
 
@@ -1791,6 +1854,23 @@ export function DockerSidebar() {
                           variant="ghost"
                           compact
                           className="h-6 px-1.5 ui-text-xs"
+                          disabled={busyComposeService !== null || composeEnvFilePaths.length === 0}
+                          tooltip={
+                            composeEnvFilePaths.length === 0
+                              ? "Add a project env file first"
+                              : "Start Compose with project env files"
+                          }
+                          tooltipSide="bottom"
+                          onClick={() => void handleComposeAction(null, "up", composeEnvFilePaths)}
+                        >
+                          <FileIcon className="size-3.5" />
+                          Env Up
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          compact
+                          className="h-6 px-1.5 ui-text-xs"
                           disabled={busyComposeService !== null}
                           onClick={() => void handleSaveComposePreset()}
                         >
@@ -1852,23 +1932,17 @@ export function DockerSidebar() {
                     <SidebarSectionLabel>
                       No env files or presets in this workspace
                     </SidebarSectionLabel>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      compact
-                      className="h-6 px-1.5 ui-text-xs"
-                      onClick={() => void handleSaveDebugPreset()}
-                    >
-                      <Bug className="size-3.5" />
-                      Save Debug Preset
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between gap-2 px-2 py-1">
-                      <div className="min-w-0 truncate ui-text-xs text-text-lighter">
-                        Project Docker settings
-                      </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        compact
+                        className="h-6 px-1.5 ui-text-xs"
+                        onClick={() => void handleOpenEnvFile()}
+                      >
+                        <FileIcon className="size-3.5" />
+                        Env
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
@@ -1879,6 +1953,36 @@ export function DockerSidebar() {
                         <Bug className="size-3.5" />
                         Save Debug
                       </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-2 px-2 py-1">
+                      <div className="min-w-0 truncate ui-text-xs text-text-lighter">
+                        Project Docker settings
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          compact
+                          className="h-6 px-1.5 ui-text-xs"
+                          onClick={() => void handleOpenEnvFile()}
+                        >
+                          <FileIcon className="size-3.5" />
+                          Env
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          compact
+                          className="h-6 px-1.5 ui-text-xs"
+                          onClick={() => void handleSaveDebugPreset()}
+                        >
+                          <Bug className="size-3.5" />
+                          Save Debug
+                        </Button>
+                      </div>
                     </div>
                     {projectConfig.devContainers.length > 0 ? (
                       <div className="space-y-0.5">
@@ -2027,15 +2131,29 @@ export function DockerSidebar() {
                               <FileIcon className="size-4 text-text-lighter" weight="duotone" />
                             }
                             trailing={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                compact
-                                className="h-6 px-1.5 ui-text-xs"
-                                onClick={() => void openEnvFile(envFile)}
-                              >
-                                Edit
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="h-6 px-1.5 ui-text-xs"
+                                  onClick={() => void openEnvFile(envFile)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  compact
+                                  className="size-6 p-0"
+                                  tooltip="Delete env file"
+                                  tooltipSide="left"
+                                  aria-label={`Delete ${envFile.relativePath}`}
+                                  onClick={() => void handleDeleteEnvFile(envFile)}
+                                >
+                                  <Trash className="size-3.5" />
+                                </Button>
+                              </div>
                             }
                           >
                             <ResourceTitle>{envFile.relativePath}</ResourceTitle>

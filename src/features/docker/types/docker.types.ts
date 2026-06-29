@@ -8,6 +8,7 @@ export interface DockerContainer {
   ports: string;
   networks: string;
   createdAt: string;
+  size: string;
   health?: string | null;
   healthDetails?: DockerContainerHealthDetails | null;
   stats?: DockerContainerStats | null;
@@ -139,6 +140,11 @@ export interface DockerEnvFile {
   relativePath: string;
   variableCount: number;
   keys: string[];
+}
+
+export interface DockerEnvFileContent {
+  file: DockerEnvFile;
+  content: string;
 }
 
 export interface DockerDevContainer {

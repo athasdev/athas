@@ -81,6 +81,7 @@ pub struct DockerContainer {
    pub ports: String,
    pub networks: String,
    pub created_at: String,
+   pub size: String,
    pub health: Option<String>,
    pub health_details: Option<DockerContainerHealthDetails>,
    pub stats: Option<DockerContainerStats>,
@@ -239,6 +240,13 @@ pub struct DockerEnvFile {
    pub keys: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DockerEnvFileContent {
+   pub file: DockerEnvFile,
+   pub content: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DockerDevContainer {
@@ -325,6 +333,8 @@ struct DockerContainerRow {
    networks: String,
    #[serde(default)]
    created_at: String,
+   #[serde(default)]
+   size: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -734,7 +744,7 @@ pub async fn docker_run_image(request: DockerRunImageRequest) -> Result<String, 
    }
    args.push(image);
    if let Some(command) = normalize_optional_value(request.command) {
-      args.extend(command.split_whitespace().map(ToString::to_string));
+      args.extend(split_command_args(&command)?);
    }
 
    run_docker_owned(&args).await
@@ -984,7 +994,35 @@ pub async fn docker_read_env_file(workspace_path: String, path: String) -> Resul
       .ok_or_else(|| "Workspace path is required.".to_string())?;
    ensure_workspace_dir(&workspace_path)?;
    let path = resolve_workspace_file(&workspace_path, path)?;
+   if !is_env_file_path(&path) {
+      return Err("Only .env files can be opened from Docker project settings.".to_string());
+   }
    fs::read_to_string(&path).map_err(|error| format!("Failed to read env file: {}", error))
+}
+
+#[tauri::command]
+pub async fn docker_open_env_file(
+   workspace_path: String,
+   path: String,
+) -> Result<DockerEnvFileContent, String> {
+   let workspace_path = normalize_workspace_path(workspace_path)
+      .ok_or_else(|| "Workspace path is required.".to_string())?;
+   ensure_workspace_dir(&workspace_path)?;
+   let path = resolve_workspace_file(&workspace_path, path)?;
+   if !is_env_file_path(&path) {
+      return Err("Only .env files can be opened from Docker project settings.".to_string());
+   }
+   let content = if path.exists() {
+      if !path.is_file() {
+         return Err("Env file path must point to a file.".to_string());
+      }
+      fs::read_to_string(&path).map_err(|error| format!("Failed to read env file: {}", error))?
+   } else {
+      fs::write(&path, "").map_err(|error| format!("Failed to create env file: {}", error))?;
+      String::new()
+   };
+   let file = inspect_env_file(&workspace_path, &path)?;
+   Ok(DockerEnvFileContent { file, content })
 }
 
 #[tauri::command]
@@ -1002,6 +1040,21 @@ pub async fn docker_write_env_file(
    }
    fs::write(&path, content).map_err(|error| format!("Failed to write env file: {}", error))?;
    inspect_env_file(&workspace_path, &path)
+}
+
+#[tauri::command]
+pub async fn docker_delete_env_file(workspace_path: String, path: String) -> Result<(), String> {
+   let workspace_path = normalize_workspace_path(workspace_path)
+      .ok_or_else(|| "Workspace path is required.".to_string())?;
+   ensure_workspace_dir(&workspace_path)?;
+   let path = resolve_workspace_file(&workspace_path, path)?;
+   if !is_env_file_path(&path) {
+      return Err("Only .env files can be deleted from Docker project settings.".to_string());
+   }
+   if !path.is_file() {
+      return Err("Env file path must point to a file.".to_string());
+   }
+   fs::remove_file(&path).map_err(|error| format!("Failed to delete env file: {}", error))
 }
 
 #[tauri::command]
@@ -1023,7 +1076,7 @@ pub async fn docker_open_dev_container(
 }
 
 async fn docker_list_containers() -> Result<Vec<DockerContainer>, String> {
-   let output = run_docker(&["ps", "--all", "--format", "{{json .}}"]).await?;
+   let output = run_docker(&["ps", "--all", "--size", "--format", "{{json .}}"]).await?;
    let stats = docker_container_stats().await.unwrap_or_default();
    let health_details = docker_container_health_details().await.unwrap_or_default();
    parse_json_lines::<DockerContainerRow>(&output).map(|rows| {
@@ -1558,15 +1611,7 @@ async fn open_image_dev_container(
          dev_container.name
       ))
    );
-   let workspace_folder = dev_container.workspace_folder.clone().unwrap_or_else(|| {
-      format!(
-         "/workspaces/{}",
-         workspace_path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("workspace")
-      )
-   });
+   let workspace_folder = devcontainer_workspace_folder(workspace_path, dev_container);
    let existing_container = docker_container_id_by_name(&container_name).await?;
    let output = if let Some(container_id) = existing_container {
       run_docker_owned(&["start".to_string(), container_id.clone()]).await?;
@@ -1601,7 +1646,11 @@ async fn open_image_dev_container(
       }
       for mount in &dev_container.mounts {
          args.push("--mount".to_string());
-         args.push(mount.clone());
+         args.push(resolve_workspace_mount(
+            mount,
+            workspace_path,
+            &workspace_folder,
+         ));
       }
       for port in &dev_container.forward_ports {
          args.push("--publish".to_string());
@@ -1640,13 +1689,17 @@ fn inspect_env_file(workspace_path: &PathBuf, path: &Path) -> Result<DockerEnvFi
    let content =
       fs::read_to_string(path).map_err(|error| format!("Failed to read env file: {}", error))?;
    let keys = parse_env_keys(&content);
+   let canonical_workspace = workspace_path.canonicalize().ok();
+   let relative_path = canonical_workspace
+      .as_ref()
+      .and_then(|workspace| path.strip_prefix(workspace).ok())
+      .or_else(|| path.strip_prefix(workspace_path).ok())
+      .unwrap_or(path)
+      .to_string_lossy()
+      .into_owned();
    Ok(DockerEnvFile {
       path: path.to_string_lossy().into_owned(),
-      relative_path: path
-         .strip_prefix(workspace_path)
-         .unwrap_or(path)
-         .to_string_lossy()
-         .into_owned(),
+      relative_path,
       variable_count: keys.len(),
       keys,
    })
@@ -1950,6 +2003,49 @@ fn publish_port_arg(port: &str) -> String {
    }
 }
 
+fn devcontainer_workspace_folder(
+   workspace_path: &Path,
+   dev_container: &DockerDevContainer,
+) -> String {
+   dev_container
+      .workspace_folder
+      .as_deref()
+      .and_then(|folder| normalize_optional_value(Some(folder.to_string())))
+      .or_else(|| {
+         dev_container
+            .workspace_mount
+            .as_deref()
+            .and_then(workspace_mount_target)
+      })
+      .unwrap_or_else(|| default_devcontainer_workspace_folder(workspace_path))
+}
+
+fn default_devcontainer_workspace_folder(workspace_path: &Path) -> String {
+   format!(
+      "/workspaces/{}",
+      workspace_path
+         .file_name()
+         .and_then(|name| name.to_str())
+         .unwrap_or("workspace")
+   )
+}
+
+fn workspace_mount_target(workspace_mount: &str) -> Option<String> {
+   workspace_mount.split(',').find_map(|part| {
+      let (key, value) = part.split_once('=')?;
+      let key = key.trim();
+      if !matches!(key, "target" | "dst" | "destination") {
+         return None;
+      }
+      let value = normalize_optional_value(Some(value.trim_matches('"').to_string()))?;
+      if value.contains("${containerWorkspaceFolder}") {
+         None
+      } else {
+         Some(value)
+      }
+   })
+}
+
 fn resolve_workspace_mount(
    workspace_mount: &str,
    workspace_path: &Path,
@@ -2246,6 +2342,56 @@ fn shell_command_with_context(
    parts.join(" && ")
 }
 
+fn split_command_args(command: &str) -> Result<Vec<String>, String> {
+   let mut args = Vec::new();
+   let mut current = String::new();
+   let mut chars = command.chars().peekable();
+   let mut quote: Option<char> = None;
+   let mut arg_started = false;
+
+   while let Some(ch) = chars.next() {
+      match ch {
+         '\\' if quote != Some('\'') => {
+            let Some(next) = chars.next() else {
+               return Err("Docker command ends with a dangling escape.".to_string());
+            };
+            current.push(next);
+            arg_started = true;
+         }
+         '\'' | '"' if quote == Some(ch) => {
+            quote = None;
+            arg_started = true;
+         }
+         '\'' | '"' if quote.is_none() => {
+            quote = Some(ch);
+            arg_started = true;
+         }
+         ch if ch.is_whitespace() && quote.is_none() => {
+            if arg_started {
+               args.push(std::mem::take(&mut current));
+               arg_started = false;
+            }
+         }
+         _ => {
+            current.push(ch);
+            arg_started = true;
+         }
+      }
+   }
+
+   if let Some(quote) = quote {
+      return Err(format!(
+         "Docker command has an unterminated {} quote.",
+         quote
+      ));
+   }
+   if arg_started {
+      args.push(current);
+   }
+
+   Ok(args)
+}
+
 fn shell_quote(value: &str) -> String {
    format!("'{}'", value.replace('\'', "'\\''"))
 }
@@ -2293,12 +2439,21 @@ fn join_command_output(first: String, second: String) -> String {
       .join("\n")
 }
 
+fn format_docker_launch_error(error: std::io::Error) -> String {
+   if error.kind() == std::io::ErrorKind::NotFound {
+      "Docker CLI was not found. Install Docker Desktop or make sure `docker` is available in PATH."
+         .to_string()
+   } else {
+      format!("Failed to launch Docker CLI: {}", error)
+   }
+}
+
 async fn run_docker(args: &[&str]) -> Result<String, String> {
    let output = Command::new("docker")
       .args(args)
       .output()
       .await
-      .map_err(|error| format!("Failed to launch Docker CLI: {}", error))?;
+      .map_err(format_docker_launch_error)?;
 
    if output.status.success() {
       return String::from_utf8(output.stdout)
@@ -2322,7 +2477,7 @@ async fn run_docker_in(args: &[String], cwd: &PathBuf) -> Result<String, String>
       .current_dir(cwd)
       .output()
       .await
-      .map_err(|error| format!("Failed to launch Docker CLI: {}", error))?;
+      .map_err(format_docker_launch_error)?;
 
    docker_output_result(output).await
 }
@@ -2332,7 +2487,7 @@ async fn run_docker_owned(args: &[String]) -> Result<String, String> {
       .args(args)
       .output()
       .await
-      .map_err(|error| format!("Failed to launch Docker CLI: {}", error))?;
+      .map_err(format_docker_launch_error)?;
 
    docker_output_result(output).await
 }
@@ -2344,7 +2499,7 @@ async fn run_docker_with_stdin(args: &[String], stdin: String) -> Result<String,
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
       .spawn()
-      .map_err(|error| format!("Failed to launch Docker CLI: {}", error))?;
+      .map_err(format_docker_launch_error)?;
 
    if let Some(mut child_stdin) = child.stdin.take() {
       child_stdin
@@ -2366,7 +2521,7 @@ async fn run_docker_bytes(args: &[String]) -> Result<Vec<u8>, String> {
       .args(args)
       .output()
       .await
-      .map_err(|error| format!("Failed to launch Docker CLI: {}", error))?;
+      .map_err(format_docker_launch_error)?;
 
    if output.status.success() {
       return Ok(output.stdout);
@@ -2429,7 +2584,7 @@ async fn run_container_log_stream(
             &stream_id,
             &container_id,
             None,
-            Some(format!("Failed to launch Docker CLI: {}", error)),
+            Some(format_docker_launch_error(error)),
          );
          tasks.lock().await.remove(&stream_id);
          return;
@@ -2701,6 +2856,7 @@ impl From<DockerContainerRow> for DockerContainer {
          ports: row.ports,
          networks: row.networks,
          created_at: row.created_at,
+         size: row.size,
          health,
          health_details: None,
          stats: None,
@@ -2859,23 +3015,29 @@ impl From<DockerComposeServiceRow> for DockerComposeService {
 #[cfg(test)]
 mod tests {
    use super::{
-      DockerComposeService, DockerContainerHealthDetails, DockerContainerRow,
-      DockerInspectContainerRow, DockerRegistrySearchRow, DockerStatsRow, discover_dev_containers,
-      discover_workspace_debug_presets, normalize_jsonc, parse_compose_ps_output,
-      parse_container_file_archive, parse_env_keys, parse_health, parse_json_lines,
-      resolve_workspace_mount,
+      DockerComposeService, DockerContainerHealthDetails, DockerContainerRow, DockerDevContainer,
+      DockerInspectContainerRow, DockerRegistrySearchRow, DockerStatsRow,
+      devcontainer_workspace_folder, discover_dev_containers, discover_workspace_debug_presets,
+      docker_delete_env_file, docker_open_env_file, format_docker_launch_error, is_env_file_path,
+      normalize_jsonc, parse_compose_ps_output, parse_container_file_archive, parse_env_keys,
+      parse_health, parse_json_lines, resolve_workspace_mount, split_command_args,
    };
-   use std::{fs, io::Cursor};
+   use std::{
+      fs,
+      io::{Cursor, Error, ErrorKind},
+      path::Path,
+   };
 
    #[test]
    fn parses_docker_json_lines() {
       let rows = parse_json_lines::<DockerContainerRow>(
-         r#"{"ID":"abc123","Names":"web","Image":"nginx","Command":"\"nginx\"","Status":"Up 2 minutes (healthy)","State":"running","Ports":"0.0.0.0:8080->80/tcp","Networks":"bridge","CreatedAt":"2026-06-27 10:00:00 +0000 UTC"}"#,
+         r#"{"ID":"abc123","Names":"web","Image":"nginx","Command":"\"nginx\"","Status":"Up 2 minutes (healthy)","State":"running","Ports":"0.0.0.0:8080->80/tcp","Networks":"bridge","CreatedAt":"2026-06-27 10:00:00 +0000 UTC","Size":"1.2MB (virtual 142MB)"}"#,
       )
       .expect("valid docker json line");
 
       assert_eq!(rows.len(), 1);
       assert_eq!(rows[0].id, "abc123");
+      assert_eq!(rows[0].size, "1.2MB (virtual 142MB)");
       assert_eq!(parse_health(&rows[0].status).as_deref(), Some("healthy"));
    }
 
@@ -2971,6 +3133,146 @@ mod tests {
    }
 
    #[test]
+   fn allows_only_env_file_names() {
+      assert!(is_env_file_path(Path::new(".env")));
+      assert!(is_env_file_path(Path::new(".env.local")));
+      assert!(is_env_file_path(Path::new("config/.env.production")));
+      assert!(!is_env_file_path(Path::new("env")));
+      assert!(!is_env_file_path(Path::new(".envrc")));
+      assert!(!is_env_file_path(Path::new("package.json")));
+   }
+
+   #[tokio::test]
+   async fn opens_or_creates_env_files() {
+      let workspace = tempfile::tempdir().expect("workspace tempdir");
+      let workspace_path = workspace.path().to_string_lossy().into_owned();
+      fs::write(
+         workspace.path().join(".env.local"),
+         "NODE_ENV=development\n",
+      )
+      .expect("write env file");
+
+      let existing = docker_open_env_file(workspace_path.clone(), ".env.local".to_string())
+         .await
+         .expect("open existing env file");
+      assert_eq!(existing.content, "NODE_ENV=development\n");
+      assert_eq!(existing.file.relative_path, ".env.local");
+      assert_eq!(existing.file.keys, vec!["NODE_ENV"]);
+
+      let created = docker_open_env_file(workspace_path.clone(), ".env.test".to_string())
+         .await
+         .expect("create env file");
+      assert_eq!(created.content, "");
+      assert!(workspace.path().join(".env.test").is_file());
+
+      let invalid = docker_open_env_file(workspace_path, "package.json".to_string())
+         .await
+         .expect_err("reject non-env file");
+      assert!(invalid.contains("Only .env files"));
+   }
+
+   #[tokio::test]
+   async fn deletes_only_env_files() {
+      let workspace = tempfile::tempdir().expect("workspace tempdir");
+      let workspace_path = workspace.path().to_string_lossy().into_owned();
+      fs::write(workspace.path().join(".env.local"), "NODE_ENV=test\n").expect("write env file");
+      fs::write(workspace.path().join("package.json"), "{}\n").expect("write json file");
+
+      docker_delete_env_file(workspace_path.clone(), ".env.local".to_string())
+         .await
+         .expect("delete env file");
+      assert!(!workspace.path().join(".env.local").exists());
+
+      let invalid = docker_delete_env_file(workspace_path, "package.json".to_string())
+         .await
+         .expect_err("reject non-env delete");
+      assert!(invalid.contains("Only .env files"));
+      assert!(workspace.path().join("package.json").exists());
+   }
+
+   #[test]
+   fn splits_docker_run_commands_like_shell_words() {
+      let args =
+         split_command_args(r#"sh -lc "echo hello world" --flag='quoted value' '' escaped\ space"#)
+            .expect("valid command args");
+
+      assert_eq!(
+         args,
+         vec![
+            "sh",
+            "-lc",
+            "echo hello world",
+            "--flag=quoted value",
+            "",
+            "escaped space"
+         ]
+      );
+   }
+
+   #[test]
+   fn rejects_invalid_docker_run_command_syntax() {
+      assert!(split_command_args(r#"sh -lc "echo nope"#).is_err());
+      assert!(split_command_args(r#"echo dangling\"#).is_err());
+   }
+
+   #[test]
+   fn explains_missing_docker_cli() {
+      let message = format_docker_launch_error(Error::new(ErrorKind::NotFound, "docker"));
+
+      assert!(message.contains("Docker CLI was not found"));
+      assert!(message.contains("PATH"));
+   }
+
+   #[test]
+   fn resolves_devcontainer_workspace_folder_from_mount_target() {
+      let workspace = Path::new("/Users/test/project");
+      let mut dev_container = DockerDevContainer {
+         name: "Project".to_string(),
+         config_path: "/Users/test/project/.devcontainer/devcontainer.json".to_string(),
+         relative_path: ".devcontainer/devcontainer.json".to_string(),
+         kind: "image".to_string(),
+         image: Some("ubuntu:latest".to_string()),
+         docker_file: None,
+         context: None,
+         docker_compose_files: Vec::new(),
+         service: None,
+         workspace_folder: None,
+         remote_user: None,
+         run_args: Vec::new(),
+         container_env: Vec::new(),
+         remote_env: Vec::new(),
+         workspace_mount: Some(
+            "source=${localWorkspaceFolder},target=/workspace,type=bind".to_string(),
+         ),
+         mounts: Vec::new(),
+         forward_ports: Vec::new(),
+         post_create_command: None,
+         post_start_command: None,
+         features: Vec::new(),
+      };
+
+      assert_eq!(
+         devcontainer_workspace_folder(workspace, &dev_container),
+         "/workspace"
+      );
+
+      dev_container.workspace_folder = Some("/workspaces/custom".to_string());
+      assert_eq!(
+         devcontainer_workspace_folder(workspace, &dev_container),
+         "/workspaces/custom"
+      );
+
+      dev_container.workspace_folder = None;
+      dev_container.workspace_mount = Some(
+         "source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind".to_string(),
+      );
+      assert_eq!(
+         devcontainer_workspace_folder(workspace, &dev_container),
+         "/workspaces/project"
+      );
+   }
+
+   #[test]
    fn strips_devcontainer_json_comments_without_touching_strings() {
       let normalized = normalize_jsonc(
          r#"{
@@ -3002,7 +3304,10 @@ mod tests {
            "workspaceMount": "source=${localWorkspaceFolder},target=${containerWorkspaceFolder},type=bind",
            "containerEnv": { "RUST_LOG": "debug", "PORT": 3000 },
            "remoteEnv": { "EDITOR": "athas" },
-           "mounts": ["source=cache,target=/cache,type=volume"],
+           "mounts": [
+             "source=cache,target=/cache,type=volume",
+             "source=${localWorkspaceFolderBasename}-cache,target=${containerWorkspaceFolder}/.cache,type=volume"
+           ],
            "forwardPorts": [3000, "9229/tcp"],
            "postCreateCommand": "cargo fetch",
            "postStartCommand": ["cargo", "test"],
@@ -3043,7 +3348,26 @@ mod tests {
       assert_eq!(definitions[0].remote_env, vec!["EDITOR=athas"]);
       assert_eq!(
          definitions[0].mounts,
-         vec!["source=cache,target=/cache,type=volume"]
+         vec![
+            "source=cache,target=/cache,type=volume",
+            "source=${localWorkspaceFolderBasename}-cache,target=${containerWorkspaceFolder}/.\
+             cache,type=volume"
+         ]
+      );
+      assert_eq!(
+         resolve_workspace_mount(
+            &definitions[0].mounts[1],
+            workspace.path(),
+            "/workspaces/app"
+         ),
+         format!(
+            "source={}-cache,target=/workspaces/app/.cache,type=volume",
+            workspace
+               .path()
+               .file_name()
+               .and_then(|name| name.to_str())
+               .unwrap()
+         )
       );
       assert_eq!(definitions[0].forward_ports, vec!["3000", "9229/tcp"]);
       assert_eq!(
