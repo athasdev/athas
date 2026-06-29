@@ -50,7 +50,7 @@ const QuickOpen = () => {
           className="ui-font"
         />
         {isSymbolMode ? (
-          <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+          <span className="ui-font ui-text-base shrink-0 text-text-lighter">
             {isLoadingSymbols ? "..." : `${symbols.length} symbols`}
           </span>
         ) : (
@@ -67,7 +67,7 @@ const QuickOpen = () => {
         {isSymbolMode ? (
           symbols.length === 0 ? (
             <div className="flex items-center justify-center p-4 text-text-lighter">
-              <span className="ui-font ui-text-sm">
+              <span className="ui-font ui-text-base">
                 {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
               </span>
             </div>

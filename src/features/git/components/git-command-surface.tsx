@@ -10,6 +10,7 @@ interface GitCommandSurfaceProps {
   onInputKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   meta?: ReactNode;
+  headerAddon?: ReactNode;
   placement?: "top" | "bottom";
   children: ReactNode;
 }
@@ -22,6 +23,7 @@ const GitCommandSurface = ({
   onInputKeyDown,
   placeholder,
   meta,
+  headerAddon,
   placement = "top",
   children,
 }: GitCommandSurfaceProps) => {
@@ -49,8 +51,11 @@ const GitCommandSurface = ({
           placeholder={placeholder}
           className="ui-font"
         />
-        {meta ? <div className="ui-font ui-text-xs shrink-0 text-text-lighter">{meta}</div> : null}
+        {meta ? (
+          <div className="ui-font ui-text-base shrink-0 text-text-lighter">{meta}</div>
+        ) : null}
       </CommandHeader>
+      {headerAddon}
       {children}
     </Command>
   );

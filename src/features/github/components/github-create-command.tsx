@@ -381,7 +381,7 @@ ${statusSummary}`;
     <Command isVisible onClose={onClose} title={titleByKind[kind]} className="max-h-[540px]">
       <CommandHeader onClose={mode === "form" ? onClose : closePicker}>
         {mode === "form" ? (
-          <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">
+          <span className="min-w-0 flex-1 truncate ui-font ui-text-base text-text">
             {titleByKind[kind]}
           </span>
         ) : (
@@ -423,7 +423,7 @@ ${statusSummary}`;
                     closePicker();
                   }}
                 >
-                  <span className="min-w-0 flex-1 truncate ui-text-sm">
+                  <span className="min-w-0 flex-1 truncate ui-text-base">
                     {workflow.name || workflow.path}
                   </span>
                   {selected ? <Check className="size-3.5 text-accent" /> : null}
@@ -461,7 +461,7 @@ ${statusSummary}`;
                     className="size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: label.color ? `#${label.color}` : undefined }}
                   />
-                  <span className="min-w-0 flex-1 truncate ui-text-sm">{label.name}</span>
+                  <span className="min-w-0 flex-1 truncate ui-text-base">{label.name}</span>
                   {selected ? <Check className="size-3.5 text-accent" /> : null}
                 </CommandItem>
               );
@@ -493,7 +493,7 @@ ${statusSummary}`;
                     closePicker();
                   }}
                 >
-                  <span className="min-w-0 flex-1 truncate ui-text-sm">{branch}</span>
+                  <span className="min-w-0 flex-1 truncate ui-text-base">{branch}</span>
                   {selected ? <Check className="size-3.5 text-accent" /> : null}
                 </CommandItem>
               );
@@ -528,7 +528,7 @@ ${statusSummary}`;
                     }
                   }}
                   placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
-                  className="ui-font h-8 w-full min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+                  className="ui-font h-8 w-full min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-base text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
                 />
                 {kind === "pull-request" ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -560,11 +560,11 @@ ${statusSummary}`;
                     value={assignees}
                     onChange={(event) => setAssignees(event.target.value)}
                     placeholder="Assignees"
-                    className="ui-font h-8 min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+                    className="ui-font h-8 min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-base text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
                   />
                 </div>
                 {kind === "pull-request" ? (
-                  <label className="flex items-center gap-2 px-1 ui-font ui-text-xs text-text-lighter">
+                  <label className="flex items-center gap-2 px-1 ui-font ui-text-base text-text-lighter">
                     <input
                       type="checkbox"
                       checked={draft}
@@ -576,7 +576,7 @@ ${statusSummary}`;
                 ) : null}
               </>
             )}
-            {error ? <div className="ui-text-xs text-error">{error}</div> : null}
+            {error ? <div className="ui-text-base text-error">{error}</div> : null}
           </div>
         </CommandList>
       )}
@@ -593,7 +593,7 @@ ${statusSummary}`;
           </CommandFooterAction>
         ) : (
           <>
-            <span className="min-w-0 flex-1 truncate px-1 ui-text-xs text-text-lighter">
+            <span className="min-w-0 flex-1 truncate px-1 ui-text-base text-text-lighter">
               {mode === "form" ? repoPath : titleByKind[kind]}
             </span>
             {kind !== "action" ? (
@@ -644,8 +644,8 @@ function FieldButton({
         "flex h-8 min-w-0 items-center gap-2 rounded-md bg-secondary-bg px-2 text-left transition-colors hover:bg-hover",
       )}
     >
-      <span className="shrink-0 ui-font ui-text-xs text-text-lighter">{label}</span>
-      <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">{value}</span>
+      <span className="shrink-0 ui-font ui-text-base text-text-lighter">{label}</span>
+      <span className="min-w-0 flex-1 truncate ui-font ui-text-base text-text">{value}</span>
     </button>
   );
 }

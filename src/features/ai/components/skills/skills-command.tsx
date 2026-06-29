@@ -346,7 +346,7 @@ export function SkillsCommand({
                 type="button"
                 variant="ghost"
                 onClick={openNewSkill}
-                className="w-20 shrink-0 ui-text-sm"
+                className="w-20 shrink-0 ui-text-base"
                 compact
               >
                 <Plus />
@@ -357,7 +357,7 @@ export function SkillsCommand({
                 type="button"
                 variant="ghost"
                 onClick={() => setView("list")}
-                className="w-20 shrink-0 ui-text-sm"
+                className="w-20 shrink-0 ui-text-base"
                 compact
               >
                 <span>My skills</span>
@@ -367,7 +367,7 @@ export function SkillsCommand({
               type="button"
               variant="ghost"
               onClick={openBrowseSkills}
-              className="w-20 shrink-0 ui-text-sm"
+              className="w-20 shrink-0 ui-text-base"
               active={view === "browse"}
               compact
             >
@@ -383,7 +383,7 @@ export function SkillsCommand({
               ) : marketplaceSkills.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
                   <CommandEmpty>No published skills yet</CommandEmpty>
-                  <div className="ui-text-xs max-w-[280px] text-text-lighter">
+                  <div className="ui-text-base max-w-[280px] text-text-lighter">
                     Published skills will appear here once the Athas skills registry is available.
                   </div>
                 </div>
@@ -407,18 +407,18 @@ export function SkillsCommand({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
-                          <div className="truncate ui-text-xs text-text">{skill.title}</div>
+                          <div className="truncate ui-text-base text-text">{skill.title}</div>
                           {skill.version ? (
-                            <span className="ui-text-xs shrink-0 text-text-lighter">
+                            <span className="ui-text-base shrink-0 text-text-lighter">
                               v{skill.version}
                             </span>
                           ) : null}
                         </div>
-                        <div className="ui-text-xs mt-0.5 truncate text-text-lighter">
+                        <div className="ui-text-base mt-0.5 truncate text-text-lighter">
                           {skill.description}
                         </div>
                         {(skill.author || skill.tags.length > 0) && (
-                          <div className="ui-text-xs mt-1 flex flex-wrap items-center gap-1.5 text-text-lighter/80">
+                          <div className="ui-text-base mt-1 flex flex-wrap items-center gap-1.5 text-text-lighter/80">
                             {skill.author ? <span>by {skill.author}</span> : null}
                             {skill.tags.slice(0, 3).map((tag) => (
                               <span
@@ -468,9 +468,9 @@ export function SkillsCommand({
                     className="group mb-1 px-3 py-2 last:mb-0"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-xs text-text">{skill.title}</div>
+                      <div className="truncate ui-text-base text-text">{skill.title}</div>
                       {(skill.source === "marketplace" || hasLocalOverride) && (
-                        <div className="ui-text-xs mt-1 flex items-center gap-1.5 text-text-lighter">
+                        <div className="ui-text-base mt-1 flex items-center gap-1.5 text-text-lighter">
                           {skill.source === "marketplace" ? <span>Marketplace</span> : null}
                           {hasLocalOverride ? (
                             <span className="rounded border border-warning/25 bg-warning/10 px-1 text-warning">
@@ -480,7 +480,7 @@ export function SkillsCommand({
                         </div>
                       )}
                       {preview && (
-                        <div className="ui-text-xs mt-0.5 truncate text-text-lighter">
+                        <div className="ui-text-base mt-0.5 truncate text-text-lighter">
                           {preview}
                         </div>
                       )}
@@ -533,7 +533,7 @@ export function SkillsCommand({
         <>
           <CommandHeader onClose={handleClose}>
             <div className="min-w-0 flex-1">
-              <div className="ui-font ui-text-sm truncate text-text">
+              <div className="ui-font ui-text-base truncate text-text">
                 {editingSkillId ? "Edit skill" : "New skill"}
               </div>
               {(() => {
@@ -541,7 +541,7 @@ export function SkillsCommand({
                 if (!editingSkill || editingSkill.source !== "marketplace") return null;
 
                 return (
-                  <div className="ui-text-xs mt-0.5 text-text-lighter">
+                  <div className="ui-text-base mt-0.5 text-text-lighter">
                     Marketplace skill
                     {hasSkillLocalOverride(editingSkill) ? " with local override" : ""}
                   </div>
@@ -552,7 +552,7 @@ export function SkillsCommand({
 
           <div className="custom-scrollbar-thin flex-1 space-y-3 overflow-y-auto p-3">
             <div className="space-y-1.5">
-              <label className="ui-font ui-text-sm text-text-lighter" htmlFor="ai-skill-title">
+              <label className="ui-font ui-text-base text-text-lighter" htmlFor="ai-skill-title">
                 Title
               </label>
               <Input
@@ -567,7 +567,7 @@ export function SkillsCommand({
             </div>
 
             <div className="space-y-1.5">
-              <label className="ui-font ui-text-sm text-text-lighter" htmlFor="ai-skill-content">
+              <label className="ui-font ui-text-base text-text-lighter" htmlFor="ai-skill-content">
                 Markdown
               </label>
               <Textarea

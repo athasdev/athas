@@ -138,7 +138,9 @@ const GitProjectSelector = ({
           title={activeRepoTitle ?? undefined}
           onClick={() => setIsOpen((open) => !open)}
         >
-          <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
+          <span className="ui-text-base min-w-0 flex-1 truncate font-medium">
+            {activeRepoLabel}
+          </span>
           <CaretDown
             className={cn(
               "size-3.5 shrink-0 text-accent/65 transition-transform",
@@ -208,7 +210,7 @@ const GitProjectSelector = ({
             </CommandFooterAction>
           ) : null}
           {selectionError ? (
-            <span className="ui-text-xs min-w-0 flex-1 truncate text-error/90">
+            <span className="ui-text-base min-w-0 flex-1 truncate text-error/90">
               {selectionError}
             </span>
           ) : null}
@@ -241,14 +243,14 @@ function RepositoryRow({
         <FolderOpen className="size-3.5 shrink-0 text-text-lighter" />
       )}
       <span className="min-w-0 flex flex-1 items-baseline gap-1.5">
-        <span className="ui-text-xs min-w-0 max-w-[45%] shrink-0 truncate text-text">
+        <span className="ui-text-base min-w-0 max-w-[45%] shrink-0 truncate text-text">
           {getFolderName(repoPath)}
         </span>
-        <span className="ui-text-xs min-w-0 flex-1 truncate text-text-lighter/75">
+        <span className="ui-text-base min-w-0 flex-1 truncate text-text-lighter/75">
           {relativePath === "." ? repoPath : relativePath}
         </span>
       </span>
-      {isAdded ? <span className="ui-text-xs shrink-0 text-text-lighter/75">added</span> : null}
+      {isAdded ? <span className="ui-text-base shrink-0 text-text-lighter/75">added</span> : null}
     </CommandItem>
   );
 }

@@ -40,6 +40,7 @@ interface EmbeddedWebviewMetadataEvent {
 }
 
 interface EmbeddedWebviewShortcutEvent {
+  parentWindowLabel: string;
   webviewLabel: string;
   shortcut: string;
 }

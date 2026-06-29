@@ -209,11 +209,11 @@ export function QuickQuestionCommandContent({
           </CommandEmpty>
         ) : answer ? (
           <div className="px-3 py-2">
-            <div className="ui-text-sm max-h-48 overflow-y-auto text-text">
+            <div className="ui-text-base max-h-48 overflow-y-auto text-text">
               <MarkdownRenderer content={answer} />
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 border-border border-t pt-2">
-              <div className="flex min-w-0 items-center gap-1.5 ui-text-xs text-text-lighter">
+              <div className="flex min-w-0 items-center gap-1.5 ui-text-base text-text-lighter">
                 <ProviderIcon providerId={aiProviderId} size={11} />
                 <span className="truncate">{modelLabel}</span>
               </div>
@@ -238,8 +238,8 @@ export function QuickQuestionCommandContent({
             disabled={!question.trim()}
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="shrink-0 truncate ui-text-xs leading-none">Ask quick question</div>
-              <div className="min-w-0 truncate ui-text-xs leading-none text-text-lighter">
+              <div className="shrink-0 truncate ui-text-base leading-none">Ask quick question</div>
+              <div className="min-w-0 truncate ui-text-base leading-none text-text-lighter">
                 {modelLabel}
               </div>
             </div>

@@ -519,7 +519,7 @@ const GlobalSearchBuffer = () => {
             ))}
           </TabsList>
           {resultLabel ? (
-            <span className="ui-font ui-text-xs shrink-0 rounded-full border border-border/60 bg-primary-bg/65 px-2 py-1 text-text-lighter">
+            <span className="ui-font ui-text-base shrink-0 rounded-full border border-border/60 bg-primary-bg/65 px-2 py-1 text-text-lighter">
               {resultLabel}
             </span>
           ) : null}
@@ -570,7 +570,7 @@ const GlobalSearchBuffer = () => {
               className="custom-scrollbar-thin relative min-h-0 flex-1 overflow-y-auto bg-primary-bg"
             >
               {showBusy && busyLabel ? (
-                <div className="ui-text-sm flex min-h-[120px] items-center justify-center text-center text-text-lighter">
+                <div className="ui-text-base flex min-h-[120px] items-center justify-center text-center text-text-lighter">
                   {busyLabel}
                 </div>
               ) : null}
@@ -624,7 +624,7 @@ const GlobalSearchBuffer = () => {
               {hasMore ? (
                 <div
                   ref={loadMoreRef}
-                  className="ui-text-sm px-3 py-3 text-center text-text-lighter"
+                  className="ui-text-base px-3 py-3 text-center text-text-lighter"
                 >
                   {isLoadingMore
                     ? "Loading more results"
@@ -645,8 +645,10 @@ const GlobalSearchBuffer = () => {
                   <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
                     <MagnifyingGlass className="size-6" weight="duotone" />
                   </div>
-                  <div className="ui-text-sm font-medium text-text">Search across your project</div>
-                  <div className="ui-text-sm mt-1 text-text-lighter">
+                  <div className="ui-text-base font-medium text-text">
+                    Search across your project
+                  </div>
+                  <div className="ui-text-base mt-1 text-text-lighter">
                     Type a query to see matching files and lines in a project-wide result buffer.
                   </div>
                 </div>
@@ -654,19 +656,19 @@ const GlobalSearchBuffer = () => {
             ) : null}
 
             {showBusy && busyLabel ? (
-              <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+              <div className="ui-text-base flex min-h-[240px] items-center justify-center text-center text-text-lighter">
                 {busyLabel}
               </div>
             ) : null}
 
             {trimmedDebouncedQuery && !showBusy && !error ? (
-              <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-text-lighter">
+              <div className="ui-text-base flex min-h-[240px] items-center justify-center text-center text-text-lighter">
                 No results found for "{debouncedQuery}"
               </div>
             ) : null}
 
             {error ? (
-              <div className="ui-text-sm flex min-h-[240px] items-center justify-center text-center text-error">
+              <div className="ui-text-base flex min-h-[240px] items-center justify-center text-center text-error">
                 {error}
               </div>
             ) : null}

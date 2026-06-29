@@ -7,7 +7,7 @@ import type { KeyboardEvent } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
-import { instantTransition, overlayTransition, motionEase, motionDuration } from "@/ui/motion";
+import { instantTransition, motionEase, motionDuration } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -23,11 +23,11 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-80 w-[520px] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
+  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
 );
 
 const commandItemVariants = cva(
-  "ui-font mb-1 flex min-h-7 w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left text-[length:var(--ui-text-xs)] leading-[1.35] transition-colors",
+  "ui-font ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-xl px-3 py-2 text-left leading-[1.35] transition-colors",
   {
     variants: {
       selected: {
@@ -44,8 +44,8 @@ const commandItemVariants = cva(
 const commandHeaderContentVariants = cva("flex items-center gap-2", {
   variants: {
     density: {
-      compact: "px-3 py-2",
-      comfortable: "px-4 py-3",
+      compact: "px-4 py-3",
+      comfortable: "px-5 py-4",
     },
   },
   defaultVariants: {
@@ -53,19 +53,8 @@ const commandHeaderContentVariants = cva("flex items-center gap-2", {
   },
 });
 
-const commandInputVariants = cva(
-  "ui-font min-w-0 flex-1 bg-transparent text-text placeholder-text-lighter outline-none",
-  {
-    variants: {
-      size: {
-        sm: "h-6 text-[length:var(--ui-text-xs)] leading-[1.35]",
-        md: "h-7 text-[length:var(--ui-text-sm)] leading-[1.4]",
-      },
-    },
-    defaultVariants: {
-      size: "sm",
-    },
-  },
+const commandInputClassName = cva(
+  "ui-font ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
 );
 
 const Command = ({
@@ -81,8 +70,8 @@ const Command = ({
   const prefersReducedMotion = useReducedMotion();
   const containerClassName =
     placement === "bottom"
-      ? "fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
-      : "fixed inset-0 z-[10060] flex items-start justify-center pt-16";
+      ? "pointer-events-none fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
+      : "pointer-events-none fixed inset-0 z-[10060] flex items-start justify-center pt-16";
   const motionY = placement === "bottom" ? 8 : -8;
   const getInitialFocusTarget = useCallback(
     () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
@@ -95,20 +84,6 @@ const Command = ({
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
             <div className={containerClassName}>
-              <DialogPrimitive.Backdrop
-                render={
-                  <motion.button
-                    type="button"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={prefersReducedMotion ? instantTransition : overlayTransition}
-                  />
-                }
-                className="absolute inset-0 z-0 cursor-default bg-black/20"
-                aria-label="Close command palette"
-                tabIndex={-1}
-              />
               <DialogPrimitive.Popup
                 ref={popupRef}
                 aria-describedby={undefined}
@@ -133,7 +108,7 @@ const Command = ({
                     }
                   />
                 }
-                className={cn(commandContentVariants(), className)}
+                className={cn(commandContentVariants(), "pointer-events-auto", className)}
               >
                 <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
                 {children}
@@ -203,7 +178,7 @@ type CommandListProps = React.ComponentProps<"div"> & {
 export const CommandList = ({ children, ref, className, ...props }: CommandListProps) => (
   <div
     ref={ref}
-    className={cn("custom-scrollbar-thin flex-1 overflow-y-auto p-1", className)}
+    className={cn("custom-scrollbar-thin flex-1 overflow-y-auto p-2", className)}
     {...props}
   >
     {children}
@@ -219,9 +194,9 @@ interface CommandFooterProps {
 export const CommandFooter = ({ children }: CommandFooterProps) => (
   <div
     data-command-footer
-    className="sticky bottom-0 border-border border-t bg-primary-bg px-2 py-2"
+    className="sticky bottom-0 border-border border-t bg-primary-bg px-3 py-3"
   >
-    <div className="flex items-center gap-1">{children}</div>
+    <div className="flex items-center gap-2">{children}</div>
   </div>
 );
 
@@ -233,7 +208,6 @@ type CommandInputProps = Omit<React.ComponentProps<"input">, "onChange" | "size"
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   className?: string;
-  size?: "sm" | "md";
   ref?: React.Ref<HTMLInputElement>;
 };
 
@@ -243,7 +217,6 @@ export const CommandInput = ({
   onKeyDown,
   placeholder,
   className,
-  size = "sm",
   ref,
   ...props
 }: CommandInputProps) => (
@@ -254,7 +227,7 @@ export const CommandInput = ({
     onChange={(e) => onChange(e.target.value)}
     onKeyDown={onKeyDown}
     placeholder={placeholder}
-    className={cn(commandInputVariants({ size }), className)}
+    className={cn(commandInputClassName(), className)}
     data-command-input=""
     {...props}
   />
@@ -414,7 +387,7 @@ export const CommandFooterAction = ({
     variant={variant}
     compact
     className={cn(
-      "h-6 min-w-0 justify-start px-2 text-[length:var(--ui-text-xs)] leading-[1.35]",
+      "ui-text-base h-8 min-w-0 justify-start px-3 leading-[1.35]",
       variant === "ghost" && "text-text-lighter hover:text-text",
       className,
     )}
@@ -429,7 +402,7 @@ interface CommandEmptyProps {
 }
 
 export const CommandEmpty = ({ children }: CommandEmptyProps) => (
-  <div className="ui-text-sm p-3 text-center leading-[1.35] text-text-lighter">{children}</div>
+  <div className="ui-text-base p-3 text-center leading-[1.35] text-text-lighter">{children}</div>
 );
 
 export default Command;

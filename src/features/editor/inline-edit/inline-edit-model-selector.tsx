@@ -183,7 +183,7 @@ export const InlineEditModelSelector = ({
         className="max-w-[144px] justify-start px-1.5 text-text"
         tooltip="Inline edit model"
       >
-        <span className="truncate ui-text-xs">
+        <span className="truncate ui-text-base">
           {currentProviderName} / {currentModelName}
         </span>
       </Button>
@@ -238,7 +238,7 @@ export const InlineEditModelSelector = ({
                         size={14}
                         className="shrink-0 text-text-lighter"
                       />
-                      <span className="min-w-0 flex-1 truncate ui-text-xs text-text">
+                      <span className="min-w-0 flex-1 truncate ui-text-base text-text">
                         {model.name}
                       </span>
                       {isSelected && <Check className="shrink-0 text-accent" size={13} />}
@@ -275,7 +275,7 @@ export const InlineEditModelSelector = ({
                     size={14}
                     className="shrink-0 text-text-lighter"
                   />
-                  <span className="min-w-0 flex-1 truncate ui-text-xs text-text">
+                  <span className="min-w-0 flex-1 truncate ui-text-base text-text">
                     {provider.name}
                   </span>
                 </CommandItem>

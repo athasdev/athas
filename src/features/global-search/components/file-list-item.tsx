@@ -49,17 +49,12 @@ export const FileListItem = memo(
             : "ui-font leading-[1.35]"
         }
       >
-        <FileExplorerIcon
-          fileName={file.name}
-          isDir={false}
-          size={compact ? 10 : 12}
-          className="shrink-0"
-        />
+        <FileExplorerIcon fileName={file.name} isDir={false} className="shrink-0" />
         <div className="min-w-0 flex-1 overflow-hidden">
           <div
             className={cn(
               "flex min-w-0 items-baseline truncate leading-[1.35]",
-              compact ? "ui-text-xs gap-2" : "ui-text-sm gap-1.5",
+              compact ? "ui-text-base gap-2" : "ui-text-base gap-1.5",
             )}
           >
             <span className="min-w-0 max-w-[45%] shrink truncate text-text">{file.name}</span>
@@ -67,7 +62,7 @@ export const FileListItem = memo(
               <span
                 className={cn(
                   "min-w-0 flex-1 truncate text-text-lighter leading-[1.35] opacity-60",
-                  compact ? "ui-text-xs" : "ui-text-sm",
+                  compact ? "ui-text-base" : "ui-text-base",
                 )}
               >
                 {directoryPath}
@@ -79,7 +74,7 @@ export const FileListItem = memo(
           <span
             className={cn(
               "rounded-full bg-accent/20 px-1 font-medium leading-[1.35] text-accent",
-              compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
+              compact ? "ui-text-base py-0" : "ui-text-base py-0.5",
             )}
           >
             open
@@ -89,7 +84,7 @@ export const FileListItem = memo(
           <span
             className={cn(
               "rounded px-1 font-medium leading-[1.35] text-text-lighter",
-              compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
+              compact ? "ui-text-base py-0" : "ui-text-base py-0.5",
             )}
           >
             <ClockIcon />

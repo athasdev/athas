@@ -86,7 +86,7 @@ export function OutlineCommandContent({ isActive, onBack, onClose }: OutlineComm
           onKeyDown={handleKeyDown}
           placeholder={filePath ? `Outline: ${getBaseName(filePath)}` : "Outline"}
         />
-        <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+        <span className="ui-font ui-text-base shrink-0 text-text-lighter">
           {isLoading ? "..." : `${visibleSymbols.length}`}
         </span>
       </CommandHeader>

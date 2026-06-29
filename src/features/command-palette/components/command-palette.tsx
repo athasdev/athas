@@ -558,7 +558,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                   >
                     {isRecent && <History className="shrink-0 text-text-lighter" />}
                     <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-xs">{action.label}</div>
+                      <div className="truncate ui-text-base">{action.label}</div>
                     </div>
                     {binding && (
                       <div className="shrink-0">

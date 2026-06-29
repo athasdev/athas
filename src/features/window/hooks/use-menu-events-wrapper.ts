@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
@@ -21,6 +22,7 @@ import { writeClipboardText } from "@/utils/clipboard";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
+  parentWindowLabel: string;
   webviewLabel: string;
   shortcut: string;
 }
@@ -99,12 +101,14 @@ export function useMenuEventsWrapper() {
   useEffect(() => {
     let disposed = false;
     let unlisten: (() => void) | undefined;
+    const currentWindowLabel = getCurrentWebviewWindow().label;
 
     const setupListener = async () => {
       unlisten = await listen<EmbeddedWebviewShortcutEvent>(
         "embedded-webview-shortcut",
         (event) => {
           if (disposed) return;
+          if (event.payload.parentWindowLabel !== currentWindowLabel) return;
           handleEmbeddedWebviewGlobalShortcut(event.payload.shortcut);
         },
       );

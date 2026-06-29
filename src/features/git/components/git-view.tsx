@@ -55,10 +55,8 @@ import GitBranchManager from "./git-branch-manager";
 import GitCommitHistory from "./git-commit-history";
 import GitCommitPanel from "./git-commit-panel";
 import GitCommandSurface from "./git-command-surface";
-import GitProjectSelector from "./git-project-selector";
 import GitRemoteManager from "./git-remote-manager";
 import GitTagManager from "./git-tag-manager";
-import GitWorktreeSwitcher from "./git-worktree-switcher";
 import GitStatusPanel from "./status/git-status-panel";
 
 interface GitViewProps {
@@ -174,11 +172,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const branches = useGitStore((state) => state.branches);
   const stashes = useGitStore((state) => state.stashes);
   const { setIsLoadingGitData, setIsRefreshing } = actions;
-  const repositoryHeaderState = useRepositoryStore(
-    (state) => `${state.availableRepoPaths.length > 1 ? "1" : "0"}:${state.activeRepoPath ?? ""}`,
-  );
-  const showRepositorySelector = repositoryHeaderState.startsWith("1:");
-  const activeRepoPath = repositoryHeaderState.slice(2) || null;
+  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { syncWorkspaceRepositories, setManualRepository, refreshWorkspaceRepositories } =
     useRepositoryStore.use.actions();
   const [showGitActionsMenu, setShowGitActionsMenu] = useState(false);
@@ -1043,7 +1037,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         disabled={!canInitializeRepository || isInitializingRepo}
         variant="ghost"
         compact
-        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-base hover:bg-hover hover:text-text"
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
@@ -1062,7 +1056,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         type="button"
         variant="ghost"
         compact
-        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-xs hover:bg-hover hover:text-text"
+        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-base hover:bg-hover hover:text-text"
         disabled={isSelectingRepo}
         onClick={() => void handleSelectRepository()}
       >
@@ -1186,7 +1180,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
+              <span className="ui-text-base mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -1219,7 +1213,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
+              <span className="ui-text-base mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -1233,7 +1227,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
+      <SidebarPanel className="ui-font ui-text-base select-none gap-2 p-2">
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <SidebarSectionSwitcher
             items={gitTabs}
@@ -1242,41 +1236,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           />
 
           <div className="flex min-w-0 shrink-0 items-end gap-2 overflow-hidden">
-            {showRepositorySelector ? (
-              <div className="flex min-w-0 shrink flex-col gap-0.5">
-                <span className="ui-text-xs px-1 text-text-lighter">Repository</span>
-                <GitProjectSelector
-                  className="w-fit min-w-0 max-w-[9rem] shrink"
-                  triggerClassName="w-fit"
-                  onRepositoryChange={() => setRepoSelectionError(null)}
-                />
-              </div>
-            ) : null}
-
             <div className="flex min-w-0 shrink flex-col gap-0.5">
-              <span className="ui-text-xs px-1 text-text-lighter">Branch</span>
+              <span className="ui-text-base px-1 text-text-lighter">Branch</span>
               <GitBranchManager
                 currentBranch={gitStatus.branch}
                 repoPath={activeRepoPath}
                 paletteTarget
                 openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
-                placement="up"
-                triggerIconSize={14}
-                triggerClassName="h-7 w-fit min-w-0 max-w-[8rem] justify-start px-2"
-                triggerInputClassName="max-w-full"
                 onBranchChange={() => void handleManualRefresh()}
-              />
-            </div>
-
-            <div className="flex min-w-0 shrink flex-col gap-0.5">
-              <span className="ui-text-xs px-1 text-text-lighter">Worktree</span>
-              <GitWorktreeSwitcher
-                repoPath={activeRepoPath}
-                placement="up"
-                triggerIconSize={14}
-                triggerClassName="h-7 w-fit min-w-0 max-w-[8rem] justify-start px-2"
-                triggerInputClassName="max-w-full"
                 onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
+                onRepositoryChange={() => setRepoSelectionError(null)}
               />
             </div>
 
@@ -1387,10 +1356,10 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     className="ui-font"
                   >
                     <ClockCounterClockwise size={14} className="shrink-0 text-text-lighter" />
-                    <span className="ui-text-xs min-w-0 flex-1 truncate text-text">
+                    <span className="ui-text-base min-w-0 flex-1 truncate text-text">
                       {commit.message}
                     </span>
-                    <span className="ui-text-xs shrink-0 editor-font text-text-lighter">
+                    <span className="ui-text-base shrink-0 editor-font text-text-lighter">
                       {shortHash}
                     </span>
                   </CommandItem>
@@ -1427,8 +1396,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   className="ui-font"
                 >
                   <GitBranch size={14} className="shrink-0 text-text-lighter" />
-                  <span className="ui-text-xs min-w-0 flex-1 truncate text-text">{branch}</span>
-                  <span className="ui-text-xs shrink-0 text-text-lighter">
+                  <span className="ui-text-base min-w-0 flex-1 truncate text-text">{branch}</span>
+                  <span className="ui-text-base shrink-0 text-text-lighter">
                     compare with {gitStatus.branch}
                   </span>
                 </CommandItem>
@@ -1463,7 +1432,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   key={stash.index}
                   role="button"
                   tabIndex={0}
-                  className="group/stash ui-font ui-text-xs mb-1 flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left leading-[1.35] transition-colors hover:bg-hover focus:bg-hover focus:outline-none"
+                  className="group/stash ui-font ui-text-base mb-1 flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left leading-[1.35] transition-colors hover:bg-hover focus:bg-hover focus:outline-none"
                   onClick={() => {
                     void handleViewStashDiff(stash.index);
                     setShowStashList(false);
@@ -1485,7 +1454,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   <span className="shrink-0 text-text-lighter/80">
                     {formatRelativeDate(stash.date)}
                   </span>
-                  <span className="shrink-0 rounded border border-border/50 px-1 ui-text-xs leading-4 text-text-lighter/80">
+                  <span className="shrink-0 rounded border border-border/50 px-1 ui-text-base leading-4 text-text-lighter/80">
                     {getStashPositionLabel(stash.index)}
                   </span>
                   <div className="ml-1 flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/stash:opacity-100 sm:group-focus-within/stash:opacity-100">

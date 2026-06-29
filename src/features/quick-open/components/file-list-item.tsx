@@ -34,22 +34,24 @@ export const FileListItem = ({
       isSelected={isSelected}
       className="ui-font"
     >
-      <FileExplorerIcon fileName={file.name} isDir={false} size={14} className="shrink-0" />
+      <FileExplorerIcon fileName={file.name} isDir={false} className="shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="truncate ui-text-xs">
+        <div className="truncate ui-text-base">
           <span className="text-text">{file.name}</span>
           {directoryPath && (
-            <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">{directoryPath}</span>
+            <span className="ml-1.5 ui-text-base text-text-lighter opacity-60">
+              {directoryPath}
+            </span>
           )}
         </div>
       </div>
       {category === "open" && (
-        <span className="rounded-full bg-accent/20 px-1 py-0.5 font-medium ui-text-xs text-accent">
+        <span className="rounded-full bg-accent/20 px-1 py-0.5 font-medium ui-text-base text-accent">
           open
         </span>
       )}
       {category === "recent" && (
-        <span className="rounded px-1 py-0.5 font-medium ui-text-xs text-text-lighter">
+        <span className="rounded px-1 py-0.5 font-medium ui-text-base text-text-lighter">
           <ClockIcon />
         </span>
       )}

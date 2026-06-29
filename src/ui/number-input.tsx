@@ -24,7 +24,7 @@ const numberInputFieldPadding = {
 } as const;
 
 const numberInputTextSize = {
-  xs: "ui-text-sm",
+  xs: "ui-text-xs",
   sm: "ui-text-sm",
   md: "ui-text-base",
 } as const;

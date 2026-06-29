@@ -158,13 +158,13 @@ export default function ChatHistoryDropdown({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="truncate ui-text-xs">
+                  <div className="truncate ui-text-base">
                     <span className={cn(isCurrent && "text-accent")}>{chat.title}</span>
                   </div>
                 </div>
 
-                <span className="ui-text-xs shrink-0 text-text-lighter">{providerLabel}</span>
-                <span className="ui-text-xs shrink-0 text-text-lighter">
+                <span className="ui-text-base shrink-0 text-text-lighter">{providerLabel}</span>
+                <span className="ui-text-base shrink-0 text-text-lighter">
                   {getRelativeTime(chat.lastMessageAt)}
                 </span>
 

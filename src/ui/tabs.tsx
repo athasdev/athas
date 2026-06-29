@@ -109,9 +109,9 @@ const tabVariants = cva(
   {
     variants: {
       size: {
-        xs: "ui-text-sm flex h-5 items-center gap-1 px-2.5",
+        xs: "ui-text-xs flex h-5 items-center gap-1 px-2.5",
         sm: "ui-text-sm flex h-7 items-center gap-1 px-2.5",
-        md: "ui-text-sm flex h-8 items-center gap-1 px-3",
+        md: "ui-text-base flex h-8 items-center gap-1 px-3",
       },
       variant: {
         default: "rounded-md",
@@ -147,7 +147,7 @@ const tabVariants = cva(
       {
         variant: "pill",
         active: true,
-        className: "border-border/70 bg-primary-bg text-text",
+        className: "border-transparent bg-hover/80 text-text",
       },
       {
         variant: "pill",

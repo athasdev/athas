@@ -196,7 +196,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="ui-font ui-text-xs -mt-3 px-1 text-text-lighter/75">
+      <div className="ui-font ui-text-base -mt-3 px-1 text-text-lighter/75">
         {downloading
           ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
           : installing
@@ -219,7 +219,7 @@ export const GeneralSettings = () => {
         </div>
       )}
 
-      {error && <div className="ui-font ui-text-sm px-3 text-error">{error}</div>}
+      {error && <div className="ui-font ui-text-base px-3 text-error">{error}</div>}
 
       <SettingRow
         label="Terminal Command"
@@ -257,7 +257,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="ui-font ui-text-xs -mt-3 px-1 text-text-lighter/75">
+      <div className="ui-font ui-text-base -mt-3 px-1 text-text-lighter/75">
         {cliChecking
           ? "Checking..."
           : cliInstalled
@@ -364,8 +364,8 @@ function ReportBugCommandDialog({
               onMouseEnter={() => setSelectedIndex(index)}
               className="h-8 items-center justify-between px-3"
             >
-              <span className="ui-font ui-text-sm text-text">{channel.label}</span>
-              <span className="ui-font ui-text-sm shrink-0 text-text-lighter">
+              <span className="ui-font ui-text-base text-text">{channel.label}</span>
+              <span className="ui-font ui-text-base shrink-0 text-text-lighter">
                 {channel.detail}
               </span>
             </CommandItem>

@@ -419,7 +419,7 @@ export function V0DesignSystemCommandContent({
             <CaretLeft className="text-text-lighter" />
           </Button>
           <Palette className="shrink-0 text-text-lighter" size={15} weight="duotone" />
-          <div className="min-w-0 flex-1 truncate ui-text-xs text-text">Add v0 design system</div>
+          <div className="min-w-0 flex-1 truncate ui-text-base text-text">Add v0 design system</div>
         </CommandHeader>
 
         <CommandList>
@@ -447,7 +447,7 @@ export function V0DesignSystemCommandContent({
               placeholder="Notes"
               size="xs"
             />
-            {formError && <div className="ui-text-xs text-error">{formError}</div>}
+            {formError && <div className="ui-text-base text-error">{formError}</div>}
           </div>
         </CommandList>
 
@@ -579,7 +579,7 @@ export function V0DesignSystemCommandContent({
           <Trash />
           <span>Remove selected</span>
         </CommandFooterAction>
-        <span className="ml-auto min-w-0 truncate px-1 ui-text-xs text-text-lighter">
+        <span className="ml-auto min-w-0 truncate px-1 ui-text-base text-text-lighter">
           {directoryStatus === "loading"
             ? "Loading..."
             : directoryStatus === "error"

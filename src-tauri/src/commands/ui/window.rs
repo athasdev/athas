@@ -491,9 +491,14 @@ pub async fn create_app_window(
    result
 }
 
-fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
+fn build_webview_bridge_script(
+   webview_label: &str,
+   parent_window_label: &str,
+) -> Result<String, String> {
    let encoded_label = serde_json::to_string(webview_label)
       .map_err(|e| format!("Failed to serialize webview label: {e}"))?;
+   let encoded_parent_window_label = serde_json::to_string(parent_window_label)
+      .map_err(|e| format!("Failed to serialize parent window label: {e}"))?;
 
    Ok(format!(
       r#"
@@ -502,6 +507,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
   window.__ATHAS_WEBVIEW_BRIDGE_LOADED__ = true;
 
   const WEBVIEW_LABEL = {encoded_label};
+  const PARENT_WINDOW_LABEL = {encoded_parent_window_label};
 
   function emit(event, payload) {{
     const invoke = window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke;
@@ -517,6 +523,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 
   function emitShortcut(shortcut) {{
     emit('embedded-webview-shortcut', {{
+      parentWindowLabel: PARENT_WINDOW_LABEL,
       webviewLabel: WEBVIEW_LABEL,
       shortcut
     }});
@@ -675,6 +682,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 #[allow(clippy::too_many_arguments)]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
+   window: tauri::WebviewWindow<AthasRuntime>,
    url: String,
    profile_key: String,
    user_agent: Option<String>,
@@ -689,14 +697,8 @@ pub async fn create_embedded_webview(
    let parsed_url = normalize_webview_url(&url)?;
    let profile = resolve_embedded_webview_profile(&app, &profile_key)?;
    let user_agent = normalize_user_agent(user_agent)?;
-
-   // Get the main window
-   let main_webview_window = app
-      .get_webview_window("main")
-      .ok_or("Main window not found")?;
-
-   // Get the underlying Window to use add_child
-   let main_window = main_webview_window.as_ref().window();
+   let parent_window_label = window.label().to_string();
+   let parent_window = window.as_ref().window();
 
    // Build webview with conditional react-grab injection for localhost
    let mut webview_builder = WebviewBuilder::new(
@@ -722,8 +724,10 @@ pub async fn create_embedded_webview(
       webview_builder = webview_builder.user_agent(user_agent);
    }
 
-   webview_builder =
-      webview_builder.initialization_script(build_webview_bridge_script(&webview_label)?);
+   webview_builder = webview_builder.initialization_script(build_webview_bridge_script(
+      &webview_label,
+      &parent_window_label,
+   )?);
    let app_handle = app.clone();
    let event_webview_label = webview_label.clone();
    let navigation_webview_label = webview_label.clone();
@@ -751,8 +755,8 @@ pub async fn create_embedded_webview(
       let _ = app_handle.emit("embedded-webview-page-load", event);
    });
 
-   // Create embedded webview within the main window
-   let webview = main_window
+   // Create embedded webview within the window that requested it.
+   let webview = parent_window
       .add_child(
          webview_builder,
          tauri::LogicalPosition::new(x, y),

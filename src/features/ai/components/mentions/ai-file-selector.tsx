@@ -221,7 +221,7 @@ export function AIFileSelector({
               return (
                 <Fragment key={`${category}-${file.path}`}>
                   {showCategoryHeader && (
-                    <div className="ui-text-xs px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
+                    <div className="ui-text-base px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
                       {categoryLabels[category]}
                     </div>
                   )}

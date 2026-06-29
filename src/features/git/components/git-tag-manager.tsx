@@ -291,7 +291,7 @@ const GitTagManager = ({
                   }
                 }}
               />
-              <label className="ui-text-xs col-span-2 inline-flex items-center gap-2 text-text-lighter">
+              <label className="ui-text-base col-span-2 inline-flex items-center gap-2 text-text-lighter">
                 <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
                 Sign tag
               </label>
@@ -361,7 +361,7 @@ const GitTagManager = ({
                   </div>
                   <div className="min-w-0 flex-1 pr-48">
                     <div className="flex min-w-0 items-center gap-2">
-                      <div className="ui-text-sm truncate text-text" title={tag.name}>
+                      <div className="ui-text-base truncate text-text" title={tag.name}>
                         {tag.name}
                       </div>
                       {isExpanded ? (
@@ -372,13 +372,13 @@ const GitTagManager = ({
                     </div>
                     {tag.message ? (
                       <div
-                        className="ui-text-xs mt-1 truncate text-text-lighter"
+                        className="ui-text-base mt-1 truncate text-text-lighter"
                         title={tag.message}
                       >
                         {tag.message}
                       </div>
                     ) : null}
-                    <div className="ui-text-xs mt-1 flex min-w-0 flex-wrap items-center gap-3 text-text-lighter/80">
+                    <div className="ui-text-base mt-1 flex min-w-0 flex-wrap items-center gap-3 text-text-lighter/80">
                       <span className="inline-flex items-center gap-1">
                         <GitCommit className="size-3.5" />
                         <span className="ui-font">{shortCommit}</span>
@@ -538,14 +538,14 @@ const GitTagManager = ({
                   <div className="border-border/50 border-t px-2.5 py-2">
                     <div className="grid gap-1.5 pl-9">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Commit</span>
+                        <span className="ui-text-base w-14 shrink-0 text-text-lighter">Commit</span>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             void handleCopy(tag.commit, "Commit SHA");
                           }}
-                          className="ui-font ui-text-xs min-w-0 truncate text-text hover:text-accent"
+                          className="ui-font ui-text-base min-w-0 truncate text-text hover:text-accent"
                           title={tag.commit}
                         >
                           {tag.commit}
@@ -553,24 +553,24 @@ const GitTagManager = ({
                       </div>
                       {tag.date ? (
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Date</span>
-                          <span className="ui-text-xs truncate text-text">
+                          <span className="ui-text-base w-14 shrink-0 text-text-lighter">Date</span>
+                          <span className="ui-text-base truncate text-text">
                             {formatShortDate(tag.date)}
                           </span>
                         </div>
                       ) : null}
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Type</span>
-                        <Badge variant="muted" size="compact" className="ui-text-xs">
+                        <span className="ui-text-base w-14 shrink-0 text-text-lighter">Type</span>
+                        <Badge variant="muted" size="compact" className="ui-text-base">
                           {tag.is_annotated ? "Annotated" : "Lightweight"}
                         </Badge>
                       </div>
                       {tag.message ? (
                         <div className="flex min-w-0 items-start gap-2">
-                          <span className="ui-text-xs w-14 shrink-0 text-text-lighter">
+                          <span className="ui-text-base w-14 shrink-0 text-text-lighter">
                             Message
                           </span>
-                          <span className="ui-text-xs min-w-0 break-words text-text">
+                          <span className="ui-text-base min-w-0 break-words text-text">
                             {tag.message}
                           </span>
                         </div>

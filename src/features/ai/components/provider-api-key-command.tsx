@@ -202,7 +202,7 @@ function ProviderApiKeyCommandContent({
                     size={14}
                     className="shrink-0 text-text-lighter"
                   />
-                  <span className="min-w-0 flex-1 truncate ui-text-xs text-text">
+                  <span className="min-w-0 flex-1 truncate ui-text-base text-text">
                     {provider.name}
                   </span>
                   {hasKey ? (
@@ -226,8 +226,8 @@ function ProviderApiKeyCommandContent({
                   className="shrink-0 text-text-lighter"
                 />
                 <div className="min-w-0">
-                  <div className="truncate ui-text-sm text-text">{selectedProvider.name}</div>
-                  <div className="ui-text-xs text-text-lighter">
+                  <div className="truncate ui-text-base text-text">{selectedProvider.name}</div>
+                  <div className="ui-text-base text-text-lighter">
                     {hasExistingKey ? "API key saved" : "API key required"}
                   </div>
                 </div>
@@ -254,13 +254,13 @@ function ProviderApiKeyCommandContent({
               />
 
               {status === "valid" && (
-                <div className="flex items-center gap-1.5 text-success ui-text-xs">
+                <div className="flex items-center gap-1.5 text-success ui-text-base">
                   <CheckCircle />
                   API key saved.
                 </div>
               )}
               {status === "invalid" && errorMessage && (
-                <div className="flex items-center gap-1.5 text-error ui-text-xs">
+                <div className="flex items-center gap-1.5 text-error ui-text-base">
                   <WarningCircle />
                   {errorMessage}
                 </div>
@@ -272,7 +272,7 @@ function ProviderApiKeyCommandContent({
                     href={dashboardLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ui-font text-text-lighter ui-text-xs hover:text-text"
+                    className="ui-font text-text-lighter ui-text-base hover:text-text"
                   >
                     Open dashboard
                   </a>

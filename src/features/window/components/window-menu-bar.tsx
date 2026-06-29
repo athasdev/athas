@@ -87,7 +87,8 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
 
   const handleClickEmit = useCallback(
     (event: string, payload?: unknown) => {
-      void getCurrentWebviewWindow().emit(event, payload);
+      const currentWindow = getCurrentWebviewWindow();
+      void currentWindow.emitTo(currentWindow.label, event, payload);
       setActiveMenu(null);
     },
     [setActiveMenu],
@@ -139,6 +140,12 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenubarSeparator />
           <MenubarItem shortcut="mod+w" onClick={() => handleClickEmit("menu_close_tab")}>
             Close Tab
+          </MenubarItem>
+          <MenubarItem
+            shortcut="mod+shift+w"
+            onClick={() => handleCommand("workbench.closeWindow")}
+          >
+            Close Window
           </MenubarItem>
           <MenubarItem onClick={() => handleCommand("file.closeAll")}>Close All Tabs</MenubarItem>
           <MenubarItem onClick={() => handleCommand("file.closeOthers")}>

@@ -10,6 +10,7 @@ use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
+use serde::Serialize;
 use std::{path::PathBuf, sync::Arc, time::Instant};
 use tauri::{Emitter, Manager};
 #[cfg(target_os = "macos")]
@@ -214,6 +215,13 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
    }
 }
 
+fn emit_menu_event<P>(window: &tauri::WebviewWindow<AthasRuntime>, event: &str, payload: P)
+where
+   P: Serialize + Clone,
+{
+   let _ = window.emit_to(window.label(), event, payload);
+}
+
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
    match event.id().0.as_str() {
       "new_window" => {
@@ -238,63 +246,67 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
             match event_id {
                "quit" => {
                   info!("Quit menu item clicked");
-                  let _ = window.emit("menu_quit_app", ());
+                  emit_menu_event(&window, "menu_quit_app", ());
                }
                "quit_app" => {
                   info!("Quit app menu item triggered");
-                  let _ = window.emit("menu_quit_app", ());
+                  emit_menu_event(&window, "menu_quit_app", ());
                }
                "new_file" => {
-                  let _ = window.emit("menu_new_file", ());
+                  emit_menu_event(&window, "menu_new_file", ());
                }
                "open_folder" => {
-                  let _ = window.emit("menu_open_folder", ());
+                  emit_menu_event(&window, "menu_open_folder", ());
                }
                "close_folder" => {
-                  let _ = window.emit("menu_close_folder", ());
+                  emit_menu_event(&window, "menu_close_folder", ());
                }
                "save" => {
-                  let _ = window.emit("menu_save", ());
+                  emit_menu_event(&window, "menu_save", ());
                }
                "save_as" => {
-                  let _ = window.emit("menu_save_as", ());
+                  emit_menu_event(&window, "menu_save_as", ());
                }
                "close_tab" => {
                   debug!("Close tab menu item triggered");
-                  let _ = window.emit("menu_close_tab", ());
+                  emit_menu_event(&window, "menu_close_tab", ());
+               }
+               "close_window" => {
+                  debug!("Close window menu item triggered");
+                  emit_menu_event(&window, "menu_close_window", ());
                }
                "undo" => {
-                  let _ = window.emit("menu_undo", ());
+                  emit_menu_event(&window, "menu_undo", ());
                }
                "redo" => {
-                  let _ = window.emit("menu_redo", ());
+                  emit_menu_event(&window, "menu_redo", ());
                }
                "select_all" => {
-                  let _ = window.emit("menu_select_all", ());
+                  emit_menu_event(&window, "menu_select_all", ());
                }
                "find" => {
-                  let _ = window.emit("menu_find", ());
+                  emit_menu_event(&window, "menu_find", ());
                }
                "find_replace" => {
-                  let _ = window.emit("menu_find_replace", ());
+                  emit_menu_event(&window, "menu_find_replace", ());
                }
                "toggle_comment" => {
-                  let _ = window.emit("menu_toggle_comment", ());
+                  emit_menu_event(&window, "menu_toggle_comment", ());
                }
                "command_palette" => {
-                  let _ = window.emit("menu_command_palette", ());
+                  emit_menu_event(&window, "menu_command_palette", ());
                }
                "toggle_sidebar" => {
-                  let _ = window.emit("menu_toggle_sidebar", ());
+                  emit_menu_event(&window, "menu_toggle_sidebar", ());
                }
                "toggle_terminal" => {
-                  let _ = window.emit("menu_toggle_terminal", ());
+                  emit_menu_event(&window, "menu_toggle_terminal", ());
                }
                "toggle_ai_chat" => {
-                  let _ = window.emit("menu_toggle_ai_chat", ());
+                  emit_menu_event(&window, "menu_toggle_ai_chat", ());
                }
                "split_editor" => {
-                  let _ = window.emit("menu_split_editor", ());
+                  emit_menu_event(&window, "menu_split_editor", ());
                }
                "toggle_menu_bar" => {
                   #[cfg(target_os = "linux")]
@@ -340,23 +352,23 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                   }
                }
                "toggle_vim" => {
-                  let _ = window.emit("menu_toggle_vim", ());
+                  emit_menu_event(&window, "menu_toggle_vim", ());
                }
                "quick_open" => {
-                  let _ = window.emit("menu_quick_open", ());
+                  emit_menu_event(&window, "menu_quick_open", ());
                }
                "go_to_line" => {
-                  let _ = window.emit("menu_go_to_line", ());
+                  emit_menu_event(&window, "menu_go_to_line", ());
                }
                "next_tab" => {
-                  let _ = window.emit("menu_next_tab", ());
+                  emit_menu_event(&window, "menu_next_tab", ());
                }
                "prev_tab" => {
-                  let _ = window.emit("menu_prev_tab", ());
+                  emit_menu_event(&window, "menu_prev_tab", ());
                }
                command_event_id if command_id_for_menu_event(command_event_id).is_some() => {
                   let command_id = command_id_for_menu_event(command_event_id).unwrap();
-                  let _ = window.emit("menu_execute_command", command_id);
+                  emit_menu_event(&window, "menu_execute_command", command_id);
                }
                "open_web_inspector" => {
                   #[cfg(any(debug_assertions, feature = "devtools"))]
@@ -368,28 +380,28 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                   }
                }
                "documentation" => {
-                  let _ = window.emit("menu_documentation", ());
+                  emit_menu_event(&window, "menu_documentation", ());
                }
                "changelog" => {
-                  let _ = window.emit("menu_changelog", ());
+                  emit_menu_event(&window, "menu_changelog", ());
                }
                "whats_new" => {
-                  let _ = window.emit("menu_whats_new", ());
+                  emit_menu_event(&window, "menu_whats_new", ());
                }
                "report_bug" => {
-                  let _ = window.emit("menu_report_bug", ());
+                  emit_menu_event(&window, "menu_report_bug", ());
                }
                "request_feature" => {
-                  let _ = window.emit("menu_request_feature", ());
+                  emit_menu_event(&window, "menu_request_feature", ());
                }
                "check_updates" => {
-                  let _ = window.emit("menu_check_updates", ());
+                  emit_menu_event(&window, "menu_check_updates", ());
                }
                "open_settings" => {
-                  let _ = window.emit("menu_open_settings", ());
+                  emit_menu_event(&window, "menu_open_settings", ());
                }
                "open_extensions" => {
-                  let _ = window.emit("menu_open_extensions", ());
+                  emit_menu_event(&window, "menu_open_extensions", ());
                }
                "minimize_window" => {
                   if let Err(e) = window.minimize() {
@@ -408,7 +420,7 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                   }
                }
                theme_id if theme_id.contains('-') => {
-                  let _ = window.emit("menu_theme_change", theme_id);
+                  emit_menu_event(&window, "menu_theme_change", theme_id);
                }
                _ => {}
             }

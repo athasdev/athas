@@ -277,7 +277,7 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
                 onClick={() => handleToggleCapability(capability)}
                 className="h-8 items-center justify-between px-3"
               >
-                <span className="ui-font ui-text-sm truncate text-text">{capability.label}</span>
+                <span className="ui-font ui-text-base truncate text-text">{capability.label}</span>
                 <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-accent">
                   {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
                 </span>
@@ -295,7 +295,7 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
               onClick={() => handleSelectSource(source)}
               className="h-8 items-center px-3"
             >
-              <span className="ui-font ui-text-sm truncate text-text">{source.name}</span>
+              <span className="ui-font ui-text-base truncate text-text">{source.name}</span>
             </CommandItem>
           ))
         )}

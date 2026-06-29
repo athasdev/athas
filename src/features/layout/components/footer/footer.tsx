@@ -27,7 +27,6 @@ import {
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import GitBranchManager from "@/features/git/components/git-branch-manager";
-import GitWorktreeSwitcher from "@/features/git/components/git-worktree-switcher";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
@@ -230,41 +229,39 @@ const Footer = () => {
           id: "branch",
           label: "Git branch",
           content: (
-            <div className="flex shrink-0 items-center gap-1">
-              <GitBranchManager
-                currentBranch={footerBranch}
-                repoPath={footerRepoPath}
-                paletteTarget
-                placement="down"
-                triggerIconSize={16}
-                triggerClassName={footerGitTrigger()}
-                triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[220px]")}
-                onBranchChange={async () => {
-                  const status = await getGitStatus(footerRepoPath);
-                  actions.setWorkspaceGitStatus(status, footerRepoPath);
-                  if (currentRepoPath === footerRepoPath) {
-                    actions.setGitStatus(status);
-                  }
-                }}
-              />
-              <GitWorktreeSwitcher
-                repoPath={footerRepoPath}
-                placement="down"
-                triggerIconSize={16}
-                triggerClassName={footerGitTrigger()}
-                triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[118px]")}
-                onWorktreeChange={async (worktreePath) => {
-                  const opened = await openGitWorktreeWorkspace(worktreePath);
-                  if (!opened) return;
+            <GitBranchManager
+              currentBranch={footerBranch}
+              repoPath={footerRepoPath}
+              paletteTarget
+              triggerClassName={footerGitTrigger()}
+              triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[220px]")}
+              onBranchChange={async () => {
+                const status = await getGitStatus(footerRepoPath);
+                actions.setWorkspaceGitStatus(status, footerRepoPath);
+                if (currentRepoPath === footerRepoPath) {
+                  actions.setGitStatus(status);
+                }
+              }}
+              onWorktreeChange={async (worktreePath) => {
+                const opened = await openGitWorktreeWorkspace(worktreePath);
+                if (!opened) return;
 
-                  const status = await getGitStatus(worktreePath);
-                  actions.setWorkspaceGitStatus(status, worktreePath);
-                  if (currentRepoPath === footerRepoPath) {
-                    actions.setGitStatus(status);
-                  }
-                }}
-              />
-            </div>
+                const status = await getGitStatus(worktreePath);
+                actions.setWorkspaceGitStatus(status, worktreePath);
+                if (currentRepoPath === footerRepoPath) {
+                  actions.setGitStatus(status);
+                }
+              }}
+              onRepositoryChange={async (repoPath) => {
+                if (!repoPath) return;
+
+                const status = await getGitStatus(repoPath);
+                actions.setWorkspaceGitStatus(status, repoPath);
+                if (currentRepoPath === repoPath) {
+                  actions.setGitStatus(status);
+                }
+              }}
+            />
           ),
         }
       : null,

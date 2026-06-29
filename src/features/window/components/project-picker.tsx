@@ -335,7 +335,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       <PushPin className="shrink-0 fill-current text-accent" />
                     ) : null}
                     {folder.missing ? (
-                      <span className="shrink-0 rounded-full bg-warning/10 px-1 py-0.5 font-medium ui-text-xs text-warning">
+                      <span className="shrink-0 rounded-full bg-warning/10 px-1 py-0.5 font-medium ui-text-base text-warning">
                         Missing
                       </span>
                     ) : null}
@@ -412,7 +412,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       </CommandItemMeta>
                     </div>
                     {distribution.is_default ? (
-                      <span className="shrink-0 rounded-full bg-accent/10 px-1 py-0.5 font-medium ui-text-xs text-accent">
+                      <span className="shrink-0 rounded-full bg-accent/10 px-1 py-0.5 font-medium ui-text-base text-accent">
                         Default
                       </span>
                     ) : null}

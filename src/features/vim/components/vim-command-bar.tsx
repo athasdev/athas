@@ -143,7 +143,7 @@ const VimCommandBar = () => {
   return (
     <Command isVisible={isCommandMode} onClose={exitCommandMode} className="max-h-80">
       <CommandHeader onClose={exitCommandMode}>
-        <span className="ui-font text-accent ui-text-sm">:</span>
+        <span className="ui-font text-accent ui-text-base">:</span>
         <CommandInput
           ref={inputRef}
           value={commandInput}
@@ -177,11 +177,11 @@ const VimCommandBar = () => {
                   className="ui-font"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate ui-text-xs">
+                    <div className="truncate ui-text-base">
                       <span className="text-accent">:</span>
                       <span className="text-text">{displayName}</span>
                     </div>
-                    <div className="mt-0.5 truncate ui-text-xs text-text-lighter opacity-60">
+                    <div className="mt-0.5 truncate ui-text-base text-text-lighter opacity-60">
                       {command.description}
                     </div>
                   </div>
