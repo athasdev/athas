@@ -28,3 +28,24 @@ export function getWindowOpenDiagnostics(extra?: Record<string, unknown>) {
 export function traceWindowOpen(message: string, extra?: Record<string, unknown>) {
   frontendTrace("info", "window-open", message, getWindowOpenDiagnostics(extra));
 }
+
+export function traceWindowOpenAfterFrame(
+  message: string,
+  getExtra?: () => Record<string, unknown>,
+) {
+  let didTrace = false;
+
+  const trace = (scheduler: "animation-frame" | "timer") => {
+    if (didTrace) return;
+    didTrace = true;
+    traceWindowOpen(message, { scheduler, ...getExtra?.() });
+  };
+
+  const frame = window.requestAnimationFrame(() => trace("animation-frame"));
+  const timer = window.setTimeout(() => trace("timer"), 100);
+
+  return () => {
+    window.cancelAnimationFrame(frame);
+    window.clearTimeout(timer);
+  };
+}

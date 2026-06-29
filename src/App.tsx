@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   getWindowOpenDiagnostics,
   traceWindowOpen,
+  traceWindowOpenAfterFrame,
 } from "@/features/window/utils/window-open-diagnostics";
 
 const WorkbenchApp = lazy(() => import("./workbench-app"));
@@ -57,16 +58,24 @@ function App() {
   useEffect(() => {
     const mountedAt = performance.now();
     traceWindowOpen("app:mounted", { shell: true, blankWindowOpen });
-    const frame = window.requestAnimationFrame(() => {
-      traceWindowOpen("app:firstFrame", {
-        shell: true,
-        blankWindowOpen,
-        durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
+    return traceWindowOpenAfterFrame("app:firstFrame", () => ({
+      shell: true,
+      blankWindowOpen,
+      durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
+    }));
   }, [blankWindowOpen]);
+
+  useEffect(() => {
+    if (!workbenchReady) return;
+
+    const readyAt = performance.now();
+    traceWindowOpen("app:workbenchReady", { blankWindowOpen });
+    return traceWindowOpenAfterFrame("app:workbenchReadyFrame", () => ({
+      shell: true,
+      blankWindowOpen,
+      durationMs: Math.round((performance.now() - readyAt) * 100) / 100,
+    }));
+  }, [blankWindowOpen, workbenchReady]);
 
   if (!workbenchReady) {
     return <InitialWindowShell />;

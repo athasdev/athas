@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { initializeAppBootstrap } from "@/bootstrap/initialize-app-bootstrap";
 import { useAppBootstrap } from "@/bootstrap/use-app-bootstrap";
-import { traceWindowOpen } from "@/features/window/utils/window-open-diagnostics";
+import {
+  traceWindowOpen,
+  traceWindowOpenAfterFrame,
+} from "@/features/window/utils/window-open-diagnostics";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -32,13 +35,9 @@ function WorkbenchApp() {
   useEffect(() => {
     const mountedAt = performance.now();
     traceWindowOpen("workbench:mounted");
-    const frame = window.requestAnimationFrame(() => {
-      traceWindowOpen("workbench:firstFrame", {
-        durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
+    return traceWindowOpenAfterFrame("workbench:firstFrame", () => ({
+      durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
+    }));
   }, []);
 
   return (
