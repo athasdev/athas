@@ -4,6 +4,7 @@
  */
 
 import { Language, Parser, Query } from "web-tree-sitter";
+import treeSitterRuntimeWasmUrl from "web-tree-sitter/web-tree-sitter.wasm?url";
 import { logger } from "../../utils/logger";
 import { indexedDBParserCache } from "./cache-indexeddb";
 import { fetchHighlightQuery } from "./extension-assets";
@@ -11,7 +12,7 @@ import type { LoadedParser, ParserConfig } from "../../types/wasm-parser/wasm-pa
 
 export function getTreeSitterRuntimeAssetPath(scriptName: string): string {
   if (scriptName === "web-tree-sitter.wasm") {
-    return "/tree-sitter/tree-sitter.wasm";
+    return treeSitterRuntimeWasmUrl;
   }
 
   return `/tree-sitter/${scriptName}`;
