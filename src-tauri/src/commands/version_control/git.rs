@@ -32,11 +32,12 @@ fn restore_provider_path(original_path: &str, backend_path: String) -> String {
 }
 
 #[tauri::command]
-pub fn git_status(repo_path: String) -> Result<git_backend::GitStatus, String> {
+pub async fn git_status(repo_path: String) -> Result<git_backend::GitStatus, String> {
    let started_at = Instant::now();
    let short = short_repo_path(&repo_path);
    log::info!("[git] git_status:start {}", short);
-   let result = git_backend::git_status(resolve_backend_path(repo_path.clone()));
+   let repo_path = resolve_backend_path(repo_path);
+   let result = run_blocking(move || git_backend::git_status(repo_path)).await;
 
    match &result {
       Ok(status) => {
@@ -87,27 +88,27 @@ pub fn git_log(
 }
 
 #[tauri::command]
-pub fn git_diff_file(
+pub async fn git_diff_file(
    repo_path: String,
    file_path: String,
    staged: bool,
 ) -> Result<git_backend::GitDiff, String> {
-   git_backend::git_diff_file(resolve_backend_path(repo_path), file_path, staged)
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_diff_file(repo_path, file_path, staged)).await
 }
 
 #[tauri::command]
-pub fn git_diff_file_with_content(
+pub async fn git_diff_file_with_content(
    repo_path: String,
    file_path: String,
    content: String,
    base: String,
 ) -> Result<git_backend::GitDiff, String> {
-   git_backend::git_diff_file_with_content(
-      resolve_backend_path(repo_path),
-      file_path,
-      content,
-      base,
-   )
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || {
+      git_backend::git_diff_file_with_content(repo_path, file_path, content, base)
+   })
+   .await
 }
 
 #[tauri::command]
@@ -277,11 +278,12 @@ pub fn git_drop_stash(repo_path: String, stash_index: usize) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub fn git_stash_diff(
+pub async fn git_stash_diff(
    repo_path: String,
    stash_index: usize,
 ) -> Result<Vec<git_backend::GitDiff>, String> {
-   git_backend::git_stash_diff(resolve_backend_path(repo_path), stash_index)
+   let repo_path = resolve_backend_path(repo_path);
+   run_blocking(move || git_backend::git_stash_diff(repo_path, stash_index)).await
 }
 
 #[tauri::command]

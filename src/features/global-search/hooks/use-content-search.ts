@@ -29,6 +29,12 @@ const canUseContentSearch = (rootPath: string | null | undefined): rootPath is s
 const canUseProviderContentSearch = (rootPath: string | null | undefined): rootPath is string =>
   typeof rootPath === "string" && rootPath.startsWith("wsl://");
 const INDEX_STATUS_POLL_DELAY = 250;
+const PROVIDER_CONTENT_SEARCH_FILE_BATCH_SIZE = 250;
+const PROVIDER_CONTENT_SEARCH_YIELD_INTERVAL = 16;
+const yieldToSearchLoop = () =>
+  new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
 
 function flattenSearchFiles(entries: FileEntry[]): FileEntry[] {
   const files: FileEntry[] = [];
@@ -164,7 +170,12 @@ async function searchProviderFilesContent({
     }
 
     nextFileOffset = index + 1;
-    if (matchCount >= maxResults) break;
+    if (matchCount >= maxResults || searchedFiles >= PROVIDER_CONTENT_SEARCH_FILE_BATCH_SIZE) {
+      break;
+    }
+    if (searchedFiles % PROVIDER_CONTENT_SEARCH_YIELD_INTERVAL === 0) {
+      await yieldToSearchLoop();
+    }
   }
 
   return {

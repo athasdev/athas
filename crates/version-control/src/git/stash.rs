@@ -274,8 +274,8 @@ fn _git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDiff>
          None
       };
 
-      let (lines, is_binary, old_blob_base64, new_blob_base64) = if is_image {
-         (Vec::new(), true, None, None)
+      let (lines, is_binary, old_blob_base64, new_blob_base64, is_truncated) = if is_image {
+         (Vec::new(), true, None, None, false)
       } else {
          // Get diff for this specific file
          let mut diff_opts = git2::DiffOptions::new();
@@ -289,8 +289,10 @@ fn _git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDiff>
             )
             .context("Failed to create diff")?;
 
-         let lines = parse_diff_to_lines(&mut diff).unwrap_or_default();
-         (lines, false, None, None)
+         let parsed = parse_diff_to_lines(&mut diff).unwrap_or_default();
+         let is_truncated = parsed.is_truncated;
+         let lines = parsed.lines;
+         (lines, false, None, None, is_truncated)
       };
 
       results.push(GitDiff {
@@ -308,6 +310,7 @@ fn _git_stash_diff(repo_path: String, stash_index: usize) -> Result<Vec<GitDiff>
          raw_patch: None,
          additions: None,
          deletions: None,
+         is_truncated: is_truncated.then_some(true),
       });
    }
 

@@ -47,6 +47,7 @@ import type { GitDiff } from "../../types/git.types";
 import { gitDiffCache } from "../../utils/git-diff-cache";
 import { getFileStatus } from "../../utils/git-diff-helpers";
 import {
+  DIFF_INLINE_RENDER_LINE_THRESHOLD,
   getInitialExpandedDiffFileKeys,
   shouldUseScrollableDiffEditor,
 } from "../../utils/diff-viewer-scale";
@@ -93,8 +94,6 @@ const statusBadgeClass: Record<string, string> = {
   modified: "bg-git-modified/12 text-git-modified",
   renamed: "bg-git-renamed/12 text-git-renamed",
 };
-
-const MAX_HUNK_ACTION_DIFF_LINES = 1200;
 
 function getDiffSectionKey(multiDiff: MultiFileDiff, diff: GitDiff, index: number): string {
   return multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
@@ -450,7 +449,7 @@ const DiffFileSection = memo(function DiffFileSection({
     [filePath, onOpenFile],
   );
   const shouldUseInlineTextDiff =
-    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= MAX_HUNK_ACTION_DIFF_LINES;
+    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
 
   return (
     <section className="relative isolate min-w-0 max-w-full rounded-md bg-primary-bg">
@@ -596,6 +595,14 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() =>
     getInitialExpandedFiles(multiDiff),
   );
+  const indexingProgress = multiDiff.indexingProgress;
+  const isIndexingDiffs = Boolean(multiDiff.isLoading);
+  const indexingLabel = indexingProgress
+    ? `${indexingProgress.label ?? "Indexing"} ${indexingProgress.processed.toLocaleString()}/${indexingProgress.total.toLocaleString()}`
+    : "Indexing changes";
+  const indexedFileLabel = indexingProgress
+    ? `${multiDiff.files.length.toLocaleString()} of ${indexingProgress.total.toLocaleString()} changed files`
+    : `${multiDiff.totalFiles.toLocaleString()} changed file${multiDiff.totalFiles !== 1 ? "s" : ""}`;
   const diffFileItems = useMemo<FileNavigatorItem[]>(
     () =>
       multiDiff.files.map((diff, index) => {
@@ -779,12 +786,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         showDefaultActions={true}
         extraLeftContent={
           <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
-            <span>
-              {multiDiff.totalFiles} changed file
-              {multiDiff.totalFiles !== 1 ? "s" : ""}
-            </span>
+            <span>{indexedFileLabel}</span>
             <span className="text-git-added">+{multiDiff.totalAdditions}</span>
             <span className="text-git-deleted">-{multiDiff.totalDeletions}</span>
+            {isIndexingDiffs ? <span>{indexingLabel}</span> : null}
           </div>
         }
         rightContent={
@@ -876,47 +881,55 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {isFileTreeVisible ? (
-          <FileNavigatorSidebar
-            items={diffFileItems}
-            selectedKey={selectedFileKey}
-            onSelect={handleSelectFileFromTree}
-            ariaLabel="Changed files"
-            viewMode={fileNavigatorViewMode}
-            onViewModeChange={setFileNavigatorViewMode}
-            borderless
-            searchMode="fuzzy"
-          />
-        ) : null}
+      {isIndexingDiffs && multiDiff.files.length === 0 ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-primary-bg">
+          <div className="ui-text-sm text-text-lighter">{indexingLabel}</div>
+        </div>
+      ) : null}
 
-        <div
-          className="min-h-0 flex-1 overflow-auto px-2 pb-2"
-          style={{ overflowAnchor: "none" }}
-          data-diff-stack-scroll-container
-          onWheelCapture={handleStackWheelCapture}
-        >
-          <div className="flex min-w-0 max-w-full flex-col gap-1.5 rounded-md">
-            {multiDiff.files.map((diff, index) => {
-              const sectionKey = getDiffSectionKey(multiDiff, diff, index);
+      {isIndexingDiffs && multiDiff.files.length === 0 ? null : (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {isFileTreeVisible ? (
+            <FileNavigatorSidebar
+              items={diffFileItems}
+              selectedKey={selectedFileKey}
+              onSelect={handleSelectFileFromTree}
+              ariaLabel="Changed files"
+              viewMode={fileNavigatorViewMode}
+              onViewModeChange={setFileNavigatorViewMode}
+              borderless
+              searchMode="fuzzy"
+            />
+          ) : null}
 
-              return (
-                <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
-                  <DiffFileSection
-                    diff={diff}
-                    sectionKey={sectionKey}
-                    expanded={expandedFiles.has(sectionKey)}
-                    viewMode={viewMode}
-                    showWhitespace={showWhitespace}
-                    onToggle={handleToggleSection}
-                    onOpenFile={handleOpenFile}
-                  />
-                </div>
-              );
-            })}
+          <div
+            className="min-h-0 flex-1 overflow-auto px-2 pb-2"
+            style={{ overflowAnchor: "none" }}
+            data-diff-stack-scroll-container
+            onWheelCapture={handleStackWheelCapture}
+          >
+            <div className="flex min-w-0 max-w-full flex-col gap-1.5 rounded-md">
+              {multiDiff.files.map((diff, index) => {
+                const sectionKey = getDiffSectionKey(multiDiff, diff, index);
+
+                return (
+                  <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
+                    <DiffFileSection
+                      diff={diff}
+                      sectionKey={sectionKey}
+                      expanded={expandedFiles.has(sectionKey)}
+                      viewMode={viewMode}
+                      showWhitespace={showWhitespace}
+                      onToggle={handleToggleSection}
+                      onOpenFile={handleOpenFile}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 });

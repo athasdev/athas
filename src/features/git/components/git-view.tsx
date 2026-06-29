@@ -76,6 +76,10 @@ type GitSidebarTab = "changes" | "history";
 const GIT_VIEW_BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
 type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
 type WorkingTreeDiffEntry = readonly [fileKey: string, file: GitFile];
+type LoadedWorkingTreeDiff = { fileKey: string; diff: GitDiff };
+
+const WORKING_TREE_DIFF_BATCH_SIZE = 8;
+const WORKING_TREE_DIFF_FILE_LIMIT = 1_000;
 
 type GitPaletteAction =
   | { type: "select-repository" }
@@ -87,6 +91,79 @@ type GitPaletteAction =
   | { type: "view-stashes" }
   | { type: "initialize-repository" }
   | { type: "refresh" };
+
+const yieldToRenderer = () => new Promise((resolve) => globalThis.setTimeout(resolve, 0));
+
+async function loadWorkingTreeDiffsProgressively({
+  repoPath,
+  bufferId,
+  title,
+  diffEntries,
+  initialDiffs = [],
+  initialProcessed = 0,
+  initiallyExpandedFileKey,
+}: {
+  repoPath: string;
+  bufferId: string;
+  title: string;
+  diffEntries: WorkingTreeDiffEntry[];
+  initialDiffs?: LoadedWorkingTreeDiff[];
+  initialProcessed?: number;
+  initiallyExpandedFileKey?: string;
+}) {
+  const total = initialProcessed + diffEntries.length;
+  const diffEntriesToLoad = diffEntries.slice(
+    0,
+    Math.max(0, WORKING_TREE_DIFF_FILE_LIMIT - initialDiffs.length),
+  );
+  const loadedDiffs: LoadedWorkingTreeDiff[] = [...initialDiffs];
+
+  const publish = (processed: number, isLoading: boolean) => {
+    const stats = countDiffStats(loadedDiffs.map((item) => item.diff));
+
+    useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
+      title,
+      repoPath,
+      commitHash: "working-tree",
+      files: loadedDiffs.map((item) => item.diff),
+      totalFiles: loadedDiffs.length,
+      totalAdditions: stats.additions,
+      totalDeletions: stats.deletions,
+      fileKeys: loadedDiffs.map((item) => item.fileKey),
+      initiallyExpandedFileKey: initiallyExpandedFileKey ?? loadedDiffs[0]?.fileKey,
+      isLoading,
+      indexingProgress: {
+        processed,
+        total,
+        label: "Indexing",
+      },
+    } satisfies MultiFileDiff);
+  };
+
+  publish(initialProcessed, diffEntriesToLoad.length > 0);
+
+  let processed = initialProcessed;
+  for (let index = 0; index < diffEntriesToLoad.length; index += WORKING_TREE_DIFF_BATCH_SIZE) {
+    const batch = diffEntriesToLoad.slice(index, index + WORKING_TREE_DIFF_BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(async ([fileKey, entry]) => {
+        const diff = await getFileDiff(repoPath, entry.path, entry.staged);
+        if (!diff || (diff.lines.length === 0 && diff.is_image !== true)) {
+          return null;
+        }
+
+        return { fileKey, diff };
+      }),
+    );
+
+    processed += batch.length;
+    loadedDiffs.push(
+      ...batchResults.filter((entry): entry is LoadedWorkingTreeDiff => entry !== null),
+    );
+    publish(processed, index + batch.length < diffEntriesToLoad.length);
+    await yieldToRenderer();
+  }
+}
 
 const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const gitStatus = useGitStore((state) => state.gitStatus);
@@ -606,40 +683,15 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
         if (diffEntries.length > 0) {
           void (async () => {
-            const remainingDiffs = await Promise.all(
-              diffEntries.map(async ([fileKey, entry]) => {
-                const nextDiff = await getFileDiff(repoPath, entry.path, entry.staged);
-                if (!nextDiff || (nextDiff.lines.length === 0 && nextDiff.is_image !== true)) {
-                  return null;
-                }
-
-                return {
-                  fileKey,
-                  diff: nextDiff,
-                };
-              }),
-            );
-
-            const accumulatedDiffs = [
-              { fileKey: selectedFileKey, diff },
-              ...remainingDiffs.filter(
-                (entry): entry is NonNullable<typeof entry> => entry !== null,
-              ),
-            ];
-
-            const allStats = countDiffStats(accumulatedDiffs.map((item) => item.diff));
-            useBufferStore.getState().actions.updateBufferContent(bufferId, "", false, {
-              title: "Uncommitted Changes",
+            await loadWorkingTreeDiffsProgressively({
               repoPath,
-              commitHash: "working-tree",
-              files: accumulatedDiffs.map((item) => item.diff),
-              totalFiles: accumulatedDiffs.length,
-              totalAdditions: allStats.additions,
-              totalDeletions: allStats.deletions,
-              fileKeys: accumulatedDiffs.map((item) => item.fileKey),
+              bufferId,
+              title: "Uncommitted Changes",
+              diffEntries,
+              initialDiffs: [{ fileKey: selectedFileKey, diff }],
+              initialProcessed: 1,
               initiallyExpandedFileKey: selectedFileKey,
-              isLoading: false,
-            } satisfies MultiFileDiff);
+            });
           })();
         } else {
           // No other files to load, mark as done
@@ -678,44 +730,29 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         return;
       }
 
-      const diffItems = (
-        await Promise.all(
-          diffEntries.map(async ([fileKey, entry]) => {
-            const diff = await getFileDiff(activeRepoPath, entry.path, entry.staged);
-            if (!diff || (diff.lines.length === 0 && diff.is_image !== true)) {
-              return null;
-            }
-
-            return { fileKey, diff };
-          }),
-        )
-      ).filter((entry): entry is { fileKey: string; diff: GitDiff } => Boolean(entry));
-
-      if (diffItems.length === 0) {
-        await showAlertDialog("No changes to show.", "Git Diff");
-        return;
-      }
-
-      const allStats = countDiffStats(diffItems.map((item) => item.diff));
       const title = titleByScope[scope];
       const multiDiff: MultiFileDiff = {
         title,
         repoPath: activeRepoPath,
         commitHash: "working-tree",
-        files: diffItems.map((item) => item.diff),
-        totalFiles: diffItems.length,
-        totalAdditions: allStats.additions,
-        totalDeletions: allStats.deletions,
-        fileKeys: diffItems.map((item) => item.fileKey),
-        initiallyExpandedFileKey: diffItems[0]?.fileKey,
-        isLoading: false,
+        files: [],
+        totalFiles: 0,
+        totalAdditions: 0,
+        totalDeletions: 0,
+        fileKeys: [],
+        isLoading: true,
+        indexingProgress: {
+          processed: 0,
+          total: diffEntries.length,
+          label: "Indexing",
+        },
       };
 
-      useBufferStore
+      const bufferId = useBufferStore
         .getState()
         .actions.openBuffer(
           "diff://working-tree/all-files",
-          `${title} (${diffItems.length} files)`,
+          title,
           "",
           false,
           undefined,
@@ -723,6 +760,13 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           true,
           multiDiff,
         );
+
+      void loadWorkingTreeDiffsProgressively({
+        repoPath: activeRepoPath,
+        bufferId,
+        title,
+        diffEntries,
+      });
     } catch (error) {
       console.error("Error getting working tree diff:", error);
       await showAlertDialog(`Failed to get working tree diff:\n${error}`, "Git Diff");

@@ -193,7 +193,7 @@ export const XtermTerminal = ({
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
         convertEol: false,
-        macOptionIsMeta: true,
+        macOptionIsMeta: false,
         rightClickSelectsWord: false,
       });
 

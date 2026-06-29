@@ -10,6 +10,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
+import { isTerminalAltTextInput } from "@/features/terminal/utils/terminal-keyboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/keymaps.store";
@@ -162,6 +163,10 @@ export function useKeymaps() {
       // Skip if target is an input (except our editor textarea or terminal)
       const isEditorTextarea = isEditorTarget;
       const isTerminalTextarea = target?.classList.contains("xterm-helper-textarea") ?? false;
+      if (isTerminalTextarea && isTerminalAltTextInput(e)) {
+        return;
+      }
+
       if (
         target?.tagName === "INPUT" ||
         (target?.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)

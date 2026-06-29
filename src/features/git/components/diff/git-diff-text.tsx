@@ -5,6 +5,7 @@ import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
 import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff.types";
+import { DIFF_HIGHLIGHT_LINE_THRESHOLD } from "../../utils/diff-viewer-scale";
 import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../utils/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {
@@ -112,7 +113,8 @@ const TextDiffViewer = memo(
 
     const hunks = useMemo(() => groupLinesIntoHunks(diff.lines), [diff.lines]);
     const syntaxPath = diff.new_path || diff.old_path || diff.file_path;
-    const tokenMap = useDiffHighlighting(diff.lines, syntaxPath);
+    const highlightLines = diff.lines.length <= DIFF_HIGHLIGHT_LINE_THRESHOLD ? diff.lines : [];
+    const tokenMap = useDiffHighlighting(highlightLines, syntaxPath);
 
     const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
     useSelectionScope(selectionScopeRef);

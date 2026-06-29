@@ -99,6 +99,11 @@ export interface MultiFileDiff {
   fileKeys?: string[];
   initiallyExpandedFileKey?: string;
   isLoading?: boolean;
+  indexingProgress?: {
+    processed: number;
+    total: number;
+    label?: string;
+  };
 }
 
 export interface MultiFileDiffViewerProps {

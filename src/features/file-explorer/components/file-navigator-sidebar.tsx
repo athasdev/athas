@@ -30,6 +30,7 @@ const DEFAULT_NAVIGATOR_WIDTH = 224;
 const MIN_NAVIGATOR_WIDTH = 176;
 const MAX_NAVIGATOR_WIDTH = 420;
 const RESIZE_STEP = 16;
+const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
 
 export interface FileNavigatorItem {
   key: string;
@@ -310,13 +311,15 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const searchableItems = useMemo(() => items.slice(0, MAX_NAVIGATOR_SYNC_ITEMS), [items]);
+  const hiddenItemCount = Math.max(0, items.length - searchableItems.length);
   const filteredItems = useMemo(() => {
     const trimmedQuery = searchQuery.trim();
-    if (!trimmedQuery) return items;
+    if (!trimmedQuery) return searchableItems;
 
     if (searchMode === "fuzzy") {
       const scoredItems: Array<{ item: FileNavigatorItem; score: number }> = [];
-      for (const item of items) {
+      for (const item of searchableItems) {
         const score = getFuzzyItemSearchScore(item, trimmedQuery);
         if (score > 0) {
           scoredItems.push({ item, score });
@@ -330,10 +333,10 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
     }
 
     const query = trimmedQuery.toLowerCase();
-    if (!query) return items;
+    if (!query) return searchableItems;
 
-    return items.filter((item) => getItemSearchText(item).includes(query));
-  }, [items, searchMode, searchQuery]);
+    return searchableItems.filter((item) => getItemSearchText(item).includes(query));
+  }, [searchableItems, searchMode, searchQuery]);
   const tree = useMemo(
     () => (viewMode === "tree" ? buildFileTree(filteredItems) : []),
     [filteredItems, viewMode],
@@ -437,6 +440,11 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto p-1">
+        {hiddenItemCount > 0 ? (
+          <SidebarSectionLabel>
+            Showing {searchableItems.length.toLocaleString()} of {items.length.toLocaleString()}
+          </SidebarSectionLabel>
+        ) : null}
         {filteredItems.length === 0 ? (
           <SidebarSectionLabel>No files match</SidebarSectionLabel>
         ) : viewMode === "flat" ? (

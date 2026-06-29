@@ -4,6 +4,12 @@ import type { GitDiff, GitFile, GitStatus } from "../types/git.types";
 import { countDiffStats } from "./git-diff-helpers";
 
 const WORKING_TREE_TITLE = "Uncommitted Changes";
+const WORKING_TREE_MULTI_DIFF_BATCH_SIZE = 8;
+const WORKING_TREE_MULTI_DIFF_FILE_LIMIT = 1_000;
+const yieldToRenderer = () =>
+  new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
 
 const getWorkingTreeFileKey = (file: Pick<GitFile, "path" | "staged">): string =>
   `${file.staged ? "staged" : "unstaged"}:${file.path}`;
@@ -100,13 +106,21 @@ export const buildWorkingTreeMultiDiff = async ({
 }): Promise<MultiFileDiff> => {
   const statusFiles = getDiffableWorkingTreeFiles(status);
   const orderedFiles = reconcileWorkingTreeFiles(statusFiles, previousFileKeys);
+  const filesToLoad = orderedFiles.slice(0, WORKING_TREE_MULTI_DIFF_FILE_LIMIT);
+  const diffResults: Array<{ fileKey: string; diff: GitDiff | null }> = [];
 
-  const diffResults = await Promise.all(
-    orderedFiles.map(async (file) => ({
-      fileKey: getWorkingTreeFileKey(file),
-      diff: await loadDiff(repoPath, file.path, file.staged),
-    })),
-  );
+  for (let index = 0; index < filesToLoad.length; index += WORKING_TREE_MULTI_DIFF_BATCH_SIZE) {
+    const batch = filesToLoad.slice(index, index + WORKING_TREE_MULTI_DIFF_BATCH_SIZE);
+    diffResults.push(
+      ...(await Promise.all(
+        batch.map(async (file) => ({
+          fileKey: getWorkingTreeFileKey(file),
+          diff: await loadDiff(repoPath, file.path, file.staged),
+        })),
+      )),
+    );
+    await yieldToRenderer();
+  }
 
   const resolvedDiffs = diffResults.filter(
     (
@@ -130,5 +144,10 @@ export const buildWorkingTreeMultiDiff = async ({
     fileKeys: resolvedDiffs.map((entry) => entry.fileKey),
     initiallyExpandedFileKey: resolvedDiffs[0]?.fileKey,
     isLoading: false,
+    indexingProgress: {
+      processed: filesToLoad.length,
+      total: orderedFiles.length,
+      label: "Indexing",
+    },
   };
 };

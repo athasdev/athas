@@ -61,6 +61,12 @@ import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
 import "../styles/file-explorer-tree.css";
 
 const ALWAYS_HIDDEN_FILE_NAMES = new Set([".ds_store"]);
+const OPEN_ALL_FILES_LIMIT = 1_000;
+const OPEN_ALL_FILES_BATCH_SIZE = 8;
+const yieldToFileExplorer = () =>
+  new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
 
 const isAlwaysHiddenFileName = (name: string): boolean =>
   ALWAYS_HIDDEN_FILE_NAMES.has(name.toLowerCase());
@@ -732,6 +738,7 @@ function FileExplorerTreeComponent({
       const walk = (entries?: FileEntry[]) => {
         if (!entries) return;
         for (const entry of entries) {
+          if (collected.length >= OPEN_ALL_FILES_LIMIT) return;
           if (entry.isDir) {
             walk(entry.children);
           } else {
@@ -753,6 +760,7 @@ function FileExplorerTreeComponent({
       let stackCursor = 0;
 
       while (stackCursor < stack.length) {
+        if (collected.length >= OPEN_ALL_FILES_LIMIT) break;
         const batchEnd = Math.min(stackCursor + 8, stack.length);
         const currentBatch = stack.slice(stackCursor, batchEnd);
         stackCursor = batchEnd;
@@ -791,10 +799,13 @@ function FileExplorerTreeComponent({
             if (isDir) {
               stack.push(entry.path);
             } else {
+              if (collected.length >= OPEN_ALL_FILES_LIMIT) break;
               collected.push(entry.path);
             }
           }
         }
+
+        await yieldToFileExplorer();
       }
 
       return collected;
@@ -809,8 +820,12 @@ function FileExplorerTreeComponent({
 
   const openFilePathsInTabs = useCallback(
     async (filePaths: string[]) => {
-      for (const filePath of filePaths) {
+      for (let index = 0; index < filePaths.length; index++) {
+        const filePath = filePaths[index];
         await openPathInTab(filePath);
+        if ((index + 1) % OPEN_ALL_FILES_BATCH_SIZE === 0) {
+          await yieldToFileExplorer();
+        }
       }
 
       updateActivePath?.(filePaths[filePaths.length - 1]);
