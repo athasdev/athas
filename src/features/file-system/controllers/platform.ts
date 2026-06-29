@@ -180,6 +180,7 @@ export async function readDirectory(path: string): Promise<any[]> {
       name: entry.name,
       path: `${normalizedPath}${separator}${entry.name}`,
       is_dir: entry.isDirectory,
+      is_symlink: entry.isSymlink,
     }));
   } catch (error) {
     console.error("readDirectory: Error reading directory:", path, error);
