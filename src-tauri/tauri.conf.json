@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "",
+        "title": "Athas",
         "width": 1200,
         "height": 800,
         "decorations": true,

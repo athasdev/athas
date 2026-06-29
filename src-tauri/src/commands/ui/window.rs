@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 use std::{
    collections::HashSet,
    fs,
-   path::PathBuf,
+   path::{Path, PathBuf},
    sync::{
       LazyLock, Mutex,
       atomic::{AtomicU32, Ordering},
@@ -97,6 +97,31 @@ fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
    }
 
    format!("/?{}", serializer.finish())
+}
+
+fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String {
+   let name = request.and_then(|request| {
+      request
+         .remote_connection_name
+         .as_deref()
+         .filter(|name| !name.trim().is_empty())
+         .map(str::trim)
+         .map(str::to_string)
+         .or_else(|| {
+            request.path.as_deref().and_then(|path| {
+               Path::new(path)
+                  .file_name()
+                  .and_then(|name| name.to_str())
+                  .filter(|name| !name.trim().is_empty())
+                  .map(str::to_string)
+            })
+         })
+   });
+
+   match name {
+      Some(name) => format!("{name} - Athas"),
+      None => "Athas".to_string(),
+   }
 }
 
 fn profile_digest(profile_key: &str) -> [u8; 32] {
@@ -334,9 +359,10 @@ fn create_labeled_app_window_internal(
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
    let url = build_window_open_url(request.as_ref());
+   let title = window_title_for_request(request.as_ref());
 
    let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
-      .title("")
+      .title(title)
       .inner_size(1200.0, 800.0)
       .min_inner_size(400.0, 400.0)
       .center()
@@ -362,6 +388,8 @@ fn create_labeled_app_window_internal(
       .map_err(|e| format!("Failed to create app window: {e}"))?;
 
    configure_app_window(&window);
+   let _ = window.show();
+   let _ = window.set_focus();
 
    Ok(label)
 }
