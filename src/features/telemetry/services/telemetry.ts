@@ -572,30 +572,28 @@ export function subscribeToTelemetryLog(subscriber: TelemetryLogSubscriber) {
 export function initializeTelemetry(): Promise<void> {
   if (initializationPromise) return initializationPromise;
 
-  initializationPromise = new Promise((resolve) => {
-    setTimeout(() => {
-      registerCrashListeners();
-      void ensureClientContext()
-        .then(() => queueHeartbeat())
-        .catch((error) => {
-          console.error("Telemetry initialization failed:", error);
-        });
+  registerCrashListeners();
+  setTimeout(() => {
+    void ensureClientContext()
+      .then(() => queueHeartbeat())
+      .catch((error) => {
+        console.error("Telemetry initialization failed:", error);
+      });
 
-      if (!flushTimer) {
-        flushTimer = setInterval(() => {
-          void flushTelemetryQueue();
-        }, FLUSH_INTERVAL_MS);
-      }
+    if (!flushTimer) {
+      flushTimer = setInterval(() => {
+        void flushTelemetryQueue();
+      }, FLUSH_INTERVAL_MS);
+    }
 
-      if (!heartbeatTimer) {
-        heartbeatTimer = setInterval(() => {
-          void queueHeartbeat();
-        }, HEARTBEAT_INTERVAL_MS);
-      }
+    if (!heartbeatTimer) {
+      heartbeatTimer = setInterval(() => {
+        void queueHeartbeat();
+      }, HEARTBEAT_INTERVAL_MS);
+    }
+  }, STARTUP_DELAY_MS);
 
-      resolve();
-    }, STARTUP_DELAY_MS);
-  });
+  initializationPromise = Promise.resolve();
 
   return initializationPromise;
 }
