@@ -27,10 +27,15 @@ import { keymapRegistry } from "../utils/registry";
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
+const closeWindowShortcut = parseKeybinding("cmd+shift+w").parts[0];
 const INPUT_ALLOWED_COMMANDS = new Set(["file.quickOpen", "workbench.commandPalette"]);
 
 function isCloseTabShortcut(event: KeyboardEvent) {
   return keysMatch(eventToKey(event), closeTabShortcut);
+}
+
+function isCloseWindowShortcut(event: KeyboardEvent) {
+  return keysMatch(eventToKey(event), closeWindowShortcut);
 }
 
 export function useKeymaps() {
@@ -96,6 +101,13 @@ export function useKeymaps() {
 
       // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
       if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
+        return;
+      }
+
+      if (isCloseWindowShortcut(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        keymapRegistry.executeCommand("workbench.closeWindow");
         return;
       }
 

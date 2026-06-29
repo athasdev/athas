@@ -7,6 +7,7 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { isEditorContent } from "@/features/panes/types/pane-content.types";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
+import { REQUEST_WINDOW_CLOSE_EVENT } from "@/features/window/utils/request-window-close";
 
 interface PendingWindowClose {
   bufferId: string;
@@ -55,6 +56,7 @@ export function WindowCloseGuard() {
     let disposed = false;
     let unlistenClose: (() => void) | undefined;
     let unlistenQuit: (() => void) | undefined;
+    let unlistenMenuCloseWindow: (() => void) | undefined;
 
     const setupCloseGuard = async () => {
       const currentWindow = getCurrentWindow();
@@ -83,20 +85,28 @@ export function WindowCloseGuard() {
         void continueCloseOrPrompt();
       });
 
+      unlistenMenuCloseWindow = await currentWebviewWindow.listen("menu_close_window", () => {
+        void continueCloseOrPrompt();
+      });
+
       if (disposed) {
         unlistenClose();
         unlistenQuit();
+        unlistenMenuCloseWindow();
       }
     };
 
     void setupCloseGuard();
     window.addEventListener("beforeunload", persistActiveProjectSession);
+    window.addEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
 
     return () => {
       disposed = true;
       unlistenClose?.();
       unlistenQuit?.();
+      unlistenMenuCloseWindow?.();
       window.removeEventListener("beforeunload", persistActiveProjectSession);
+      window.removeEventListener(REQUEST_WINDOW_CLOSE_EVENT, continueCloseOrPrompt);
     };
   }, [continueCloseOrPrompt, persistActiveProjectSession, persistSessionSnapshot]);
 

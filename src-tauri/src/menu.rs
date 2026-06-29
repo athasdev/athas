@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::menu::{
-   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, PredefinedMenuItem, Submenu,
-   SubmenuBuilder, WINDOW_SUBMENU_ID,
+   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder,
+   WINDOW_SUBMENU_ID,
 };
 use tauri_plugin_store::StoreExt;
 
@@ -609,7 +609,13 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .maximize()
       .fullscreen()
       .separator()
-      .item(&PredefinedMenuItem::close_window(app, None)?)
+      .item(&MenuItem::with_id(
+         app,
+         "close_window",
+         "Close Window",
+         true,
+         Some("Cmd+Shift+W"),
+      )?)
       .build()?;
 
    #[cfg(not(target_os = "macos"))]

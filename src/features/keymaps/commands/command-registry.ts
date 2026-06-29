@@ -17,6 +17,7 @@ import {
 import {
   closeActiveTab,
   closeAllTabs,
+  closeCurrentWindow,
   closeOtherTabs,
   closeSavedTabs,
   closeTabsToLeft,
@@ -163,6 +164,13 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+w",
     execute: closeActiveTab,
+  },
+  {
+    id: "workbench.closeWindow",
+    title: "Close Window",
+    category: "Workbench",
+    keybinding: "cmd+shift+w",
+    execute: closeCurrentWindow,
   },
   {
     id: "file.closeAll",

@@ -3,6 +3,7 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { useKeymapStore } from "../stores/keymaps.store";
 
 function isTerminalFocused(): boolean {
@@ -72,7 +73,14 @@ export function closeActiveTab(): void {
   const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
   if (activeBuffer) {
     bufferStore.actions.closeBuffer(activeBuffer.id);
+    return;
   }
+
+  requestWindowClose();
+}
+
+export function closeCurrentWindow(): void {
+  requestWindowClose();
 }
 
 export function closeAllTabs(): void {

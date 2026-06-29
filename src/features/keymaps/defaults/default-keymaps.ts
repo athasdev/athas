@@ -43,6 +43,11 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
     when: "!terminalFocus",
   },
+  {
+    key: "cmd+shift+w",
+    command: "workbench.closeWindow",
+    source: "default",
+  },
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
   {
     key: "cmd+n",

@@ -9,6 +9,7 @@ const NATIVE_MENU_ACCELERATORS = [
   "cmd+shift+s",
   "cmd+alt+s",
   "cmd+w",
+  "cmd+shift+w",
   "cmd+shift+t",
   "cmd+q",
   "cmd+f",

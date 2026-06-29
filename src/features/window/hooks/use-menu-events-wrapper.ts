@@ -17,6 +17,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useMenuEvents } from "./use-menu-events";
@@ -194,7 +195,10 @@ export function useMenuEventsWrapper() {
 
       if (bufferIdToClose) {
         closeBuffer(bufferIdToClose);
+        return;
       }
+
+      requestWindowClose();
     },
     onUndo: () => {
       if (shouldRouteEditMenuToEditor()) {
