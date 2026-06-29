@@ -245,7 +245,7 @@ export function EmptyEditorState() {
             compact
           >
             <span className="shrink-0">{item.icon}</span>
-            <span className="text-text ui-text-xs">{item.label}</span>
+            <span className="text-text ui-text-sm">{item.label}</span>
           </Button>
         ))}
 
@@ -281,7 +281,7 @@ export function EmptyEditorState() {
                     className="h-auto min-w-0 flex-1 justify-start gap-3 p-0 hover:bg-transparent"
                   >
                     <Terminal className="shrink-0 text-text-light" />
-                    <span className="truncate text-text ui-text-xs">{action.name}</span>
+                    <span className="truncate text-text ui-text-sm">{action.name}</span>
                   </Button>
                   <Button
                     type="button"
@@ -331,7 +331,7 @@ export function EmptyEditorState() {
             compact
           >
             <Plus className="shrink-0 text-text-lighter" />
-            <span className="text-text-light ui-text-xs">Add custom action...</span>
+            <span className="text-text-light ui-text-sm">Add custom action...</span>
           </Button>
         )}
       </div>

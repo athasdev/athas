@@ -200,14 +200,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["root", "folder", "project", "workspace", "top level", "file explorer"],
   },
   {
-    id: "file-tree-density",
-    tab: "file-explorer",
-    section: "Display",
-    label: "Density",
-    description: "Choose file tree row spacing",
-    keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
-  },
-  {
     id: "file-tree-respect-gitignore",
     tab: "file-explorer",
     section: "Display",

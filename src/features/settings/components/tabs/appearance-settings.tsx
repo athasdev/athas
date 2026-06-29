@@ -172,7 +172,7 @@ export const AppearanceSettings = () => {
                 options={normalizedThemeOptions}
                 onChange={(value) => updateSetting("theme", value)}
                 className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
+                size="md"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -205,7 +205,7 @@ export const AppearanceSettings = () => {
                   options={lightThemeOptions}
                   onChange={(value) => updateSetting("autoThemeLight", value)}
                   className={SETTINGS_CONTROL_WIDTHS.wide}
-                  size="xs"
+                  size="md"
                   variant="default"
                   searchable
                   searchableTrigger="input"
@@ -235,7 +235,7 @@ export const AppearanceSettings = () => {
                   options={darkThemeOptions}
                   onChange={(value) => updateSetting("autoThemeDark", value)}
                   className={SETTINGS_CONTROL_WIDTHS.wide}
-                  size="xs"
+                  size="md"
                   variant="default"
                   searchable
                   searchableTrigger="input"
@@ -266,7 +266,7 @@ export const AppearanceSettings = () => {
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
             className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -302,7 +302,7 @@ export const AppearanceSettings = () => {
             value={settings.uiFontSize}
             onChange={(value) => updateSetting("uiFontSize", value)}
             className={cn(SETTINGS_CONTROL_WIDTHS.number, "tabular-nums")}
-            size="xs"
+            size="md"
             aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
           />
         </SettingRow>
@@ -320,7 +320,7 @@ export const AppearanceSettings = () => {
             options={sidebarOptions}
             onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -340,7 +340,7 @@ export const AppearanceSettings = () => {
             options={sidebarTabsPositionOptions}
             onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
             className={SETTINGS_CONTROL_WIDTHS.compact}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -409,7 +409,7 @@ export const AppearanceSettings = () => {
             options={titleBarProjectModeOptions}
             onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"

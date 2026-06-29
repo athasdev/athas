@@ -83,7 +83,7 @@ const ConnectionList = ({
     <div className="flex h-full select-none flex-col bg-secondary-bg">
       {/* Header */}
       <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
-        <h3 className="ui-font font-medium text-text ui-text-xs tracking-wide">Remote</h3>
+        <h3 className="ui-font font-medium text-text ui-text-sm tracking-wide">Remote</h3>
         <Button
           onClick={onAddNew}
           variant="ghost"
@@ -103,7 +103,7 @@ const ConnectionList = ({
         {connections.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-4 text-center">
             <Server className="mb-2 text-text-lighter" />
-            <p className="mb-3 text-text-lighter ui-text-xs">No remote connections</p>
+            <p className="mb-3 text-text-lighter ui-text-sm">No remote connections</p>
             <Button
               onClick={onAddNew}
               variant="default"
@@ -147,7 +147,7 @@ const ConnectionList = ({
                 {/* Connection Info */}
                 <div className="flex min-w-0 flex-1 items-center gap-1.5">
                   <span className="truncate">{connection.name}</span>
-                  <span className="ui-text-xs shrink-0 text-text-lighter">
+                  <span className="ui-text-sm shrink-0 text-text-lighter">
                     {connection.type.toUpperCase()}
                   </span>
                 </div>
@@ -162,7 +162,7 @@ const ConnectionList = ({
                         ? formatLastConnected(connection.lastConnected)
                         : "";
                   return (
-                    <span className="ui-text-xs shrink-0 text-text-lighter">{statusText}</span>
+                    <span className="ui-text-sm shrink-0 text-text-lighter">{statusText}</span>
                   );
                 })()}
 

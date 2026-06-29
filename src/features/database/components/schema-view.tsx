@@ -58,7 +58,7 @@ export default function SchemaView({
     <div className="flex-1 overflow-auto ui-font">
       <div className="px-3 py-3">
         <div className="ui-text-sm text-text">{tableName}</div>
-        <div className="ui-text-xs text-text-lighter">{columns.length} columns</div>
+        <div className="ui-text-sm text-text-lighter">{columns.length} columns</div>
       </div>
       <div className="mx-3 mb-3 divide-y divide-border/60 rounded-lg border border-border/60 bg-secondary-bg/40">
         {columns.map((column) => {
@@ -72,14 +72,14 @@ export default function SchemaView({
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 {getColumnIcon(column.type, column.primary_key, !!fk)}
                 <span className="truncate ui-text-sm text-text">{column.name}</span>
-                <span className="ui-text-xs text-text-lighter">{column.type}</span>
+                <span className="ui-text-sm text-text-lighter">{column.type}</span>
                 {constraintLabels.map((label) => (
-                  <span key={label} className="truncate ui-text-xs text-text-lighter">
+                  <span key={label} className="truncate ui-text-sm text-text-lighter">
                     {label}
                   </span>
                 ))}
                 {fk && (
-                  <span className="truncate ui-text-xs text-accent">
+                  <span className="truncate ui-text-sm text-accent">
                     {formatForeignKeyLabel(fk)}
                   </span>
                 )}

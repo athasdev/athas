@@ -36,7 +36,9 @@ function InitialWindowShell() {
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
 
-    void getCurrentWindow().startDragging().catch(() => {});
+    void getCurrentWindow()
+      .startDragging()
+      .catch(() => {});
   };
 
   return (

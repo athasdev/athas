@@ -189,23 +189,23 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-xs leading-5 text-text-lighter">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-sm leading-5 text-text-lighter">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-xs leading-5 text-text-lighter">
+          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-sm leading-5 text-text-lighter">
             {summary}
           </pre>
         </div>
       </div>
 
       <div className="border-t border-border/60 bg-secondary-bg/80 px-4 py-2">
-        <div className="truncate ui-text-xs font-medium text-text">
+        <div className="truncate ui-text-sm font-medium text-text">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
-        <div className="truncate ui-text-xs text-text-lighter">{buffer.path}</div>
+        <div className="truncate ui-text-sm text-text-lighter">{buffer.path}</div>
       </div>
     </div>
   );
@@ -227,12 +227,12 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
+              <span className="rounded-full border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-sm text-text-lighter">
                 #{buffer.prNumber ?? "--"}
               </span>
               <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-xs text-text-lighter">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-sm text-text-lighter">
               <span className="font-medium text-text-light">
                 {authorLogin ? `@${authorLogin}` : "Pull request"}
               </span>
@@ -240,7 +240,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <span>{commitCount ?? "--"} commits</span>
               <span>{commentCount ?? "--"} comments</span>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-xs">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-sm">
               <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
                 Description
               </span>
@@ -262,7 +262,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-xs text-text-lighter">
+        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-sm text-text-lighter">
           {buffer.path}
         </div>
       </div>
@@ -275,7 +275,7 @@ function WebViewerDisabledState() {
     <div className="flex size-full items-center justify-center bg-primary-bg px-6">
       <div className="max-w-sm text-center">
         <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
-        <div className="mt-1 ui-text-xs text-text-lighter">
+        <div className="mt-1 ui-text-sm text-text-lighter">
           Enable it in Settings &gt; Features to open URLs in embedded editor tabs.
         </div>
       </div>

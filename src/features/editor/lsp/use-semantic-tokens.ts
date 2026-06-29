@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { normalizeLineEndings } from "../utils/html";
+import { deferUntilAfterNextPaint } from "./deferred-lsp-work";
 import { LspClient } from "./lsp-client";
 
 export interface SemanticToken {
@@ -90,7 +91,9 @@ export const useSemanticTokens = (
   );
 
   useEffect(() => {
-    void fetchTokens();
+    return deferUntilAfterNextPaint(() => {
+      void fetchTokens();
+    });
   }, [fetchTokens]);
 
   useEffect(() => {

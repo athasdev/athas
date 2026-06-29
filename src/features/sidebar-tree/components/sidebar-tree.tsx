@@ -93,7 +93,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           depth={depth}
           indentSize={indentSize}
           baseIndent={baseIndent}
-          className={cn("h-6 gap-1.5 border border-transparent px-1.5 py-1", className)}
+          className={cn("gap-1.5 border border-transparent px-1.5 py-1 leading-[1.35]", className)}
           {...props}
         >
           {children}

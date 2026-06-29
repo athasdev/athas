@@ -461,7 +461,7 @@ export default function DataGrid({
                         </span>
                         {fk && (
                           <span
-                            className="ui-text-xs text-text-lighter"
+                            className="ui-text-sm text-text-lighter"
                             title={`FK: ${fk.to_table}.${fk.to_column}`}
                           >
                             FK
@@ -484,7 +484,7 @@ export default function DataGrid({
                         </Button>
                       </div>
                       {showColumnTypes && info && (
-                        <div className="ui-text-xs text-text-lighter">
+                        <div className="ui-text-sm text-text-lighter">
                           {info.type}
                           {info.primary_key && " PK"}
                           {info.notnull && " NN"}
@@ -588,7 +588,7 @@ export default function DataGrid({
                               if (e.key === "Escape") setEditing(null);
                             }}
                             onBlur={handleSubmit}
-                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 ui-text-xs focus:border-accent/60"
+                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 ui-text-sm focus:border-accent/60"
                           />
                         ) : (
                           <CellRenderer

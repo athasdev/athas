@@ -53,11 +53,6 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
-  it("normalizes unsupported file tree density values", () => {
-    expect(normalizeSettingValue("fileTreeDensity", "compact")).toBe("compact");
-    expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
-  });
-
   it("normalizes legacy custom editor engine settings", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
@@ -120,7 +115,7 @@ describe("settings normalization", () => {
     expect(normalized.coreFeatures.athasEditorEngine).toBe(false);
   });
 
-  it("migrates legacy icon theme aliases to Symbols", () => {
+  it("migrates legacy icon theme aliases", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       iconTheme: "colorful-material",
@@ -129,6 +124,9 @@ describe("settings normalization", () => {
     expect(normalized.iconTheme).toBe("symbols");
     expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("symbols");
     expect(normalizeSettingValue("iconTheme", "seti")).toBe("symbols");
+    expect(normalizeSettingValue("iconTheme", "athas-icons-dimmed")).toBe("athas-icons");
+    expect(normalizeSettingValue("iconTheme", "athas-icons-light")).toBe("athas-icons");
+    expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("athas-icons");
   });
 
   it("does not migrate legacy external editor settings into editor engine", () => {

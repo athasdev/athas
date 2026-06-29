@@ -55,7 +55,7 @@ export const CreateRowModal = ({
               <div key={column.name} className="space-y-1">
                 <label htmlFor={fieldId} className="ui-font block ui-text-sm text-text">
                   {column.name}
-                  <span className="ml-1 text-text-lighter ui-text-xs">({column.type})</span>
+                  <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
                 </label>
                 <Input
                   id={fieldId}
@@ -141,7 +141,7 @@ export const EditRowModal = ({
               <div key={column.name} className="space-y-1">
                 <label htmlFor={fieldId} className="ui-font block ui-text-sm text-text">
                   {column.name}
-                  <span className="ml-1 text-text-lighter ui-text-xs">({column.type})</span>
+                  <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
                 </label>
                 <Input
                   id={fieldId}
@@ -264,7 +264,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               />
               <label
                 htmlFor={`column-not-null-${index}`}
-                className="ui-font flex items-center gap-1 text-text ui-text-xs"
+                className="ui-font flex items-center gap-1 text-text ui-text-sm"
               >
                 <Checkbox
                   id={`column-not-null-${index}`}

@@ -83,9 +83,25 @@
   z-index: 2;
 }
 
+.file-navigator-view-mode-button svg {
+  width: var(--ui-text-base);
+  height: var(--ui-text-base);
+}
+
+.file-explorer-search-field svg {
+  left: 0.625rem;
+  width: var(--ui-text-base);
+  height: var(--ui-text-base);
+}
+
+.file-explorer-base-text,
+.file-explorer-base-text * {
+  font-size: var(--ui-text-base);
+}
+
 .file-tree-context-menu [role="menuitem"],
-.file-tree-context-menu [role="menuitem"] .ui-text-sm {
-  font-size: var(--ui-text-xs);
+.file-tree-context-menu [role="menuitem"] * {
+  font-size: var(--ui-text-base);
 }
 
 .file-tree-row:hover {

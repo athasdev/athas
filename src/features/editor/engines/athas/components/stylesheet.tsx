@@ -175,7 +175,7 @@ export function EditorStylesheet() {
 
         .editor-gutter .line-number {
           color: var(--color-text-lighter, #6b7280);
-          font-size: var(--ui-text-xs);
+          font-size: var(--ui-text-sm);
           font-family: inherit;
           user-select: none;
           -webkit-user-select: none;
@@ -302,7 +302,7 @@ export function EditorStylesheet() {
           color: var(--tooltip-text, white);
           padding: 4px 8px;
           border-radius: 4px;
-          font-size: var(--ui-text-xs);
+          font-size: var(--ui-text-sm);
           font-weight: 400;
           white-space: nowrap;
           z-index: 1000;

@@ -125,7 +125,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                   <span className="ui-font ui-text-sm truncate font-medium text-text">
                     {group.fileName}
                   </span>
-                  <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+                  <span className="ui-font ui-text-sm shrink-0 text-text-lighter">
                     {group.items.length}
                   </span>
                 </button>
@@ -137,7 +137,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                       onClick={() => void handleReferenceClick(ref)}
                       className="group flex w-full items-baseline gap-2 py-0.5 pr-2 pl-7 text-left transition-colors hover:bg-hover/50"
                     >
-                      <span className="ui-font ui-text-xs shrink-0 tabular-nums text-text-lighter">
+                      <span className="ui-font ui-text-sm shrink-0 tabular-nums text-text-lighter">
                         {ref.line + 1}
                       </span>
                       <span className="ui-font ui-text-sm truncate text-text-lighter group-hover:text-text">

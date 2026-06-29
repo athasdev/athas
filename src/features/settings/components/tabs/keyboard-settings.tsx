@@ -253,7 +253,7 @@ export const KeyboardSettings = () => {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 leftIcon={Search}
-                size="sm"
+                size="md"
                 containerClassName="w-full"
               />
             </div>
@@ -355,7 +355,7 @@ export const KeyboardSettings = () => {
                 value={keybindingPreset}
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
-                size="sm"
+                size="md"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -364,7 +364,7 @@ export const KeyboardSettings = () => {
             </SettingRow>
 
             {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
-              <div className="ui-font ui-text-sm rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
+              <div className="ui-font ui-text-base rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
                 This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
                 built-in command
                 {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still
@@ -378,7 +378,7 @@ export const KeyboardSettings = () => {
               </Button>
             </SettingRow>
             {userOverrideCount > 0 ? (
-              <div className="ui-font ui-text-sm px-1 text-text-lighter">
+              <div className="ui-font ui-text-base px-1 text-text-lighter">
                 {userOverrideCount} user override{userOverrideCount === 1 ? "" : "s"} currently
                 saved.
               </div>

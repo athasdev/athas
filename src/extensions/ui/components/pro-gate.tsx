@@ -29,7 +29,7 @@ export function ProGate({ children, fallback }: ProGateProps) {
           <p className="font-medium ui-text-sm text-text">Pro Feature</p>
           <ProBadge />
         </div>
-        <p className="mt-1 text-text-lighter ui-text-xs">Upgrade to Pro to unlock this feature.</p>
+        <p className="mt-1 text-text-lighter ui-text-sm">Upgrade to Pro to unlock this feature.</p>
       </div>
     </div>
   );

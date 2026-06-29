@@ -76,7 +76,7 @@ function FollowUpButton({
       aria-label={action.label}
     >
       <Icon className="size-3.5" />
-      <span className="ui-text-xs">{action.label}</span>
+      <span className="ui-text-sm">{action.label}</span>
     </Button>
   );
 }

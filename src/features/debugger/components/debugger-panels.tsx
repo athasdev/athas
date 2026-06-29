@@ -57,7 +57,7 @@ export function DebugSection({
             size={12}
             className={cn("shrink-0 transition-transform", isOpen && "rotate-90")}
           />
-          <span className="min-w-0 flex-1 truncate font-medium ui-text-xs uppercase">{title}</span>
+          <span className="min-w-0 flex-1 truncate font-medium ui-text-sm uppercase">{title}</span>
           {typeof count === "number" ? (
             <Badge size="compact" variant="muted" className="h-5 tabular-nums">
               {count}
@@ -75,7 +75,7 @@ export function DebugSection({
 
 export function DebugEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="ui-font px-3 py-6 text-center text-text-lighter ui-text-xs">{children}</div>
+    <div className="ui-font px-3 py-6 text-center text-text-lighter ui-text-sm">{children}</div>
   );
 }
 
@@ -113,7 +113,7 @@ export function DebugStackFrames({
             key={frame.id}
             type="button"
             className={cn(
-              "ui-font flex w-full items-start gap-2 px-3 py-1.5 text-left ui-text-xs hover:bg-hover/70",
+              "ui-font flex w-full items-start gap-2 px-3 py-1.5 text-left ui-text-sm hover:bg-hover/70",
               isSelected && "bg-selected/70",
             )}
             onClick={() => void onSelect(frame.id, frame.sourcePath, frame.line)}
@@ -121,7 +121,7 @@ export function DebugStackFrames({
             <Stack size={13} className="mt-0.5 shrink-0 text-text-lighter" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-text">{frame.name}</span>
-              <span className="block truncate ui-text-xs text-text-lighter">
+              <span className="block truncate ui-text-sm text-text-lighter">
                 {frame.sourcePath
                   ? `${getBaseName(frame.sourcePath, "file")}:${frame.line}`
                   : `Line ${frame.line}`}
@@ -154,7 +154,7 @@ export function DebugBreakpointsList({
       {breakpoints.map((breakpoint) => (
         <div
           key={breakpoint.id}
-          className="group ui-font flex items-center gap-2 px-3 py-1.5 ui-text-xs hover:bg-hover/70"
+          className="group ui-font flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-hover/70"
         >
           <button
             type="button"
@@ -171,7 +171,7 @@ export function DebugBreakpointsList({
             onClick={() => void onOpen(breakpoint)}
           >
             <div className="truncate text-text">{getBaseName(breakpoint.filePath, "file")}</div>
-            <div className="truncate ui-text-xs text-text-lighter">Line {breakpoint.line + 1}</div>
+            <div className="truncate ui-text-sm text-text-lighter">Line {breakpoint.line + 1}</div>
           </button>
           <Button
             variant="ghost"

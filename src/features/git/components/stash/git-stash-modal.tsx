@@ -96,7 +96,7 @@ const StashMessageModalContent = ({
           <Button
             onClick={onClose}
             variant="ghost"
-            className="text-text-lighter ui-text-xs hover:text-text"
+            className="text-text-lighter ui-text-sm hover:text-text"
             compact
           >
             Cancel
@@ -105,7 +105,7 @@ const StashMessageModalContent = ({
             onClick={handleConfirm}
             disabled={isLoading}
             variant="accent"
-            className="ui-text-xs disabled:opacity-50"
+            className="ui-text-sm disabled:opacity-50"
             compact
           >
             {isLoading ? "Stashing..." : "Stash"}

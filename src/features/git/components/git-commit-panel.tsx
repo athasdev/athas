@@ -360,7 +360,7 @@ const GitCommitPanel = ({
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
   const composerButtonClassName =
-    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
+    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
   const generateModeItems: MenuItem[] = [
     {
       id: "title",
@@ -383,7 +383,7 @@ const GitCommitPanel = ({
           <div
             className={cn(
               "mx-2 mt-2 flex items-center gap-2 rounded border border-error/30",
-              "bg-error/20 px-2 py-1 ui-text-xs text-error",
+              "bg-error/20 px-2 py-1 ui-text-sm text-error",
             )}
           >
             <AlertCircle />
@@ -410,7 +410,7 @@ const GitCommitPanel = ({
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <span className="px-1 ui-text-xs text-text-lighter">
+          <span className="px-1 ui-text-sm text-text-lighter">
             {stagedFilesCount > 0
               ? `${stagedFilesCount} file${stagedFilesCount !== 1 ? "s" : ""} staged`
               : "No files staged"}

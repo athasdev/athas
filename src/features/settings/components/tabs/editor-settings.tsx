@@ -79,7 +79,7 @@ export const EditorSettings = () => {
             value={settings.fontSize}
             onChange={(val) => updateSetting("fontSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -96,7 +96,7 @@ export const EditorSettings = () => {
             value={settings.editorLineHeight}
             onChange={(val) => updateSetting("editorLineHeight", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -112,7 +112,7 @@ export const EditorSettings = () => {
             value={settings.tabSize}
             onChange={(val) => updateSetting("tabSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
         <SettingRow
@@ -154,7 +154,7 @@ export const EditorSettings = () => {
               updateSetting("renderWhitespace", value as typeof settings.renderWhitespace)
             }
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
           />
         </SettingRow>
@@ -229,7 +229,7 @@ export const EditorSettings = () => {
             value={settings.maxOpenTabs}
             onChange={(val) => updateSetting("maxOpenTabs", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -270,7 +270,7 @@ export const EditorSettings = () => {
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"

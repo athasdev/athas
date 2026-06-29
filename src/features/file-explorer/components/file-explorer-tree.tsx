@@ -163,7 +163,6 @@ function FileExplorerTreeComponent({
 
   const fileTreeSettings = useSettingsStore(
     useShallow((state) => ({
-      fileTreeDensity: state.settings.fileTreeDensity,
       fileTreeIndentSize: state.settings.fileTreeIndentSize,
       hiddenDirectoryPatterns: state.settings.hiddenDirectoryPatterns,
       hiddenFilePatterns: state.settings.hiddenFilePatterns,
@@ -180,7 +179,6 @@ function FileExplorerTreeComponent({
     () => new Set(cutClipboardEntries?.map((entry) => entry.path) ?? []),
     [cutClipboardEntries],
   );
-  const fileTreeDensity = fileTreeSettings.fileTreeDensity;
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
   const removeFolderFromWorkspace = useFileSystemStore((state) => state.removeFolderFromWorkspace);
@@ -423,7 +421,7 @@ function FileExplorerTreeComponent({
         label: "Hidden Files",
         icon: <Eye />,
         keybinding: fileTreeSettings.showHiddenFilesInFileTree ? (
-          <Check className="size-3.5 text-accent" />
+          <Check className="ui-icon text-accent" />
         ) : null,
         onClick: () =>
           void updateSetting(
@@ -436,7 +434,7 @@ function FileExplorerTreeComponent({
         label: "Gitignored Files",
         icon: <GitBranch />,
         keybinding: fileTreeSettings.showGitignoredFilesInFileTree ? (
-          <Check className="size-3.5 text-accent" />
+          <Check className="ui-icon text-accent" />
         ) : null,
         onClick: () =>
           void updateSetting(
@@ -450,7 +448,7 @@ function FileExplorerTreeComponent({
         label: "Git Status",
         icon: <GitBranch />,
         keybinding: fileTreeSettings.showGitStatusInFileTree ? (
-          <Check className="size-3.5 text-accent" />
+          <Check className="ui-icon text-accent" />
         ) : null,
         onClick: () =>
           void updateSetting("showGitStatusInFileTree", !fileTreeSettings.showGitStatusInFileTree),
@@ -1254,6 +1252,8 @@ function FileExplorerTreeComponent({
         searchIcon={Search}
         placeholder="Search"
         searchAriaLabel="Filter files in tree"
+        searchClassName="h-8 ui-text-base pl-9"
+        searchContainerClassName="file-explorer-search-field"
         searchInputRef={searchInputRef}
         searchInputProps={{
           "aria-controls": "file-tree-results",
@@ -1282,8 +1282,9 @@ function FileExplorerTreeComponent({
         filterActive={hasActiveFileTreeFilters}
         filterTooltip="Filter Files"
         filterAriaLabel="Filter files"
+        filterButtonClassName="file-navigator-view-mode-button ui-text-base"
         filterCloseOnSelect={false}
-        filterMenuClassName="w-fit min-w-fit"
+        filterMenuClassName="file-tree-context-menu w-fit min-w-fit"
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       />
@@ -1293,6 +1294,8 @@ function FileExplorerTreeComponent({
             message="No folder open"
             actionLabel="Open Folder"
             onAction={handleOpenFolder}
+            className="file-explorer-base-text"
+            actionClassName="ui-text-base"
           />
         </div>
       ) : displayedFiles.length === 0 ? (
@@ -1305,6 +1308,7 @@ function FileExplorerTreeComponent({
                   ? "No matching files"
                   : "Folder is empty"
             }
+            className="file-explorer-base-text"
           />
         </div>
       ) : (
@@ -1350,7 +1354,6 @@ function FileExplorerTreeComponent({
                       previousDepth={previousRow?.depth ?? 0}
                       nextDepth={nextRow?.depth ?? 0}
                       indentSize={fileTreeSettings.fileTreeIndentSize}
-                      density={fileTreeDensity}
                       isExpanded={row.isExpanded}
                       isActive={highlightedPath === row.file.path}
                       isCut={cutFilePaths.has(row.file.path)}
@@ -1381,12 +1384,17 @@ function FileExplorerTreeComponent({
           icon={AlertTriangle}
           onClose={() => setAlertDialog(null)}
           footer={
-            <Button onClick={() => setAlertDialog(null)} variant="accent" compact>
+            <Button
+              onClick={() => setAlertDialog(null)}
+              variant="accent"
+              compact
+              className="ui-text-base"
+            >
               OK
             </Button>
           }
         >
-          <p className="text-text ui-text-xs">{alertDialog.message}</p>
+          <p className="text-text ui-text-base">{alertDialog.message}</p>
         </Dialog>
       )}
       {openAllFilesDialog && (
@@ -1402,6 +1410,7 @@ function FileExplorerTreeComponent({
                 onClick={() => setOpenAllFilesDialog(null)}
                 disabled={isOpeningAllFiles}
                 variant="default"
+                className="ui-text-base"
               >
                 Cancel
               </Button>
@@ -1409,13 +1418,14 @@ function FileExplorerTreeComponent({
                 onClick={() => void handleOpenAllFilesConfirm()}
                 disabled={isOpeningAllFiles}
                 variant="accent"
+                className="ui-text-base"
               >
                 {isOpeningAllFiles ? "Opening..." : "Open"}
               </Button>
             </>
           }
         >
-          <p className="text-text ui-text-xs">
+          <p className="text-text ui-text-base">
             {openAllFilesDialog.filePaths.length} files will be opened in tabs. Continue?
           </p>
         </Dialog>
@@ -1433,7 +1443,7 @@ function FileExplorerTreeComponent({
                 onClick={() => setDeleteCandidate(null)}
                 disabled={isDeletingPath}
                 variant="default"
-                className="disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-text-base disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </Button>
@@ -1441,14 +1451,14 @@ function FileExplorerTreeComponent({
                 onClick={() => void handleDeleteConfirm()}
                 disabled={isDeletingPath}
                 variant="danger"
-                className="disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-text-base disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingPath ? "Deleting..." : "Delete"}
               </Button>
             </>
           }
         >
-          <p className="text-text ui-text-xs">
+          <p className="text-text ui-text-base">
             {deleteCandidate.isDir
               ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
               : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}

@@ -1,12 +1,9 @@
 import type { MouseEvent } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Checkbox from "@/ui/checkbox";
-import {
-  SIDEBAR_TREE_ICON_SIZE,
-  SidebarTreeRow,
-} from "@/features/sidebar-tree/components/sidebar-tree";
+import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git.types";
 
@@ -72,12 +69,7 @@ export const GitFileItem = ({
     >
       <span className="relative z-1 flex size-3.5 shrink-0 items-center justify-center overflow-hidden text-text-lighter">
         {showFileIcon ? (
-          <FileExplorerIcon
-            fileName={fileName}
-            isDir={false}
-            className="text-text-lighter"
-            size={SIDEBAR_TREE_ICON_SIZE}
-          />
+          <ThemedFileIcon fileName={fileName} isDir={false} className="text-text-lighter" />
         ) : null}
       </span>
       <div

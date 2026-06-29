@@ -169,7 +169,7 @@ function MenubarShortcut({ className, ...props }: ComponentProps<"span">) {
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn("ml-auto shrink-0 text-text-lighter ui-text-xs", className)}
+      className={cn("ml-auto shrink-0 text-text-lighter ui-text-sm", className)}
       {...props}
     />
   );

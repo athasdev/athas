@@ -39,7 +39,7 @@ export default function SqlHistoryList({
       )}
     >
       <div className="flex items-center justify-between p-2">
-        <div className="px-2 py-1 ui-font ui-text-xs text-text-lighter uppercase">
+        <div className="px-2 py-1 ui-font ui-text-sm text-text-lighter uppercase">
           {title} ({queries.length})
         </div>
         <Button
@@ -69,7 +69,7 @@ export default function SqlHistoryList({
                 compact
                 className={cn(
                   "min-w-0 flex-1 justify-start truncate rounded-lg px-2.5 py-1.5 text-left",
-                  compact ? "ui-text-xs" : "ui-text-sm",
+                  "ui-text-sm",
                 )}
                 tooltip={query}
                 aria-label={`Open query: ${preview}`}

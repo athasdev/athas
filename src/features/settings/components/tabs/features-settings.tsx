@@ -39,7 +39,7 @@ export const FeaturesSettings = () => {
             label={feature.name}
             labelAccessory={
               feature.status === "experimental" ? (
-                <span className="rounded border border-accent/35 bg-accent/10 px-1 py-0.5 font-medium ui-text-xs text-accent uppercase leading-none tracking-normal">
+                <span className="rounded border border-accent/35 bg-accent/10 px-1 py-0.5 font-medium ui-text-base text-accent uppercase leading-none tracking-normal">
                   Experimental
                 </span>
               ) : undefined

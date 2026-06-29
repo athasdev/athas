@@ -2,7 +2,7 @@ import { cn } from "@/utils/cn";
 
 export function chatComposerControlClassName(className?: string) {
   return cn(
-    "inline-flex h-7 w-fit min-w-0 justify-start gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "inline-flex h-7 w-fit min-w-0 justify-start gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-normal text-text-lighter shadow-none [&_svg]:size-3",
     "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
@@ -13,7 +13,7 @@ export function chatComposerControlClassName(className?: string) {
 
 export function chatComposerIconButtonClassName(className?: string) {
   return cn(
-    "size-7 rounded-md border-transparent bg-transparent p-0 ui-text-xs leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "size-7 rounded-md border-transparent bg-transparent p-0 ui-text-sm leading-normal text-text-lighter shadow-none [&_svg]:size-3",
     "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
@@ -37,7 +37,7 @@ export const chatComposerDropdownListClassName =
 
 export function chatComposerDropdownItemClassName(className?: string) {
   return cn(
-    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-xs leading-[1.35] text-text",
+    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-sm leading-[1.35] text-text",
     "transition-[transform,background-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover focus:outline-none focus:ring-1 focus:ring-border-strong/35",
     className,

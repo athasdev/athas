@@ -113,9 +113,9 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
 
         <SidebarTreeIcon icon={<OutlineSymbolIcon kind={symbol.kind} />} />
         <span className="ml-1.5 min-w-0 flex-1 truncate">
-          <span className="ui-text-xs text-text">{symbol.name}</span>
+          <span className="ui-text-sm text-text">{symbol.name}</span>
           {symbol.detail ? (
-            <span className="ml-1.5 ui-text-xs text-text-lighter opacity-70">{symbol.detail}</span>
+            <span className="ml-1.5 ui-text-sm text-text-lighter opacity-70">{symbol.detail}</span>
           ) : null}
         </span>
       </SidebarTreeRow>

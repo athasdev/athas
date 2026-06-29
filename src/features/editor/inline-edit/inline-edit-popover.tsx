@@ -71,7 +71,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   : "inline-edit-description"
               }
               aria-invalid={state.inlineEditError ? true : undefined}
-              className="ui-font h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-xs placeholder:text-text-lighter/80 focus:bg-transparent"
+              className="ui-font h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-sm placeholder:text-text-lighter/80 focus:bg-transparent"
               placeholder={
                 selection && selection.start.offset !== selection.end.offset
                   ? "Edit selection..."
@@ -117,7 +117,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               id="inline-edit-error"
               role="alert"
               aria-live="assertive"
-              className="ui-font border-t border-border/50 bg-error/10 px-2 py-1 ui-text-xs text-error"
+              className="ui-font border-t border-border/50 bg-error/10 px-2 py-1 ui-text-sm text-error"
             >
               {state.inlineEditError}
             </div>

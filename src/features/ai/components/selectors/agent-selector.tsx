@@ -307,7 +307,7 @@ export function AgentSelector({
           type="button"
           variant="ghost"
           compact
-          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-xs transition-colors hover:bg-hover"
+          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
@@ -347,7 +347,7 @@ export function AgentSelector({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-1 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter ui-text-xs">No results found</div>
+            <div className="p-4 text-center text-text-lighter ui-text-sm">No results found</div>
           ) : (
             filteredItems.map((item) => {
               selectableIndex++;
@@ -370,7 +370,7 @@ export function AgentSelector({
                     }
                   }}
                   className={cn(
-                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 ui-text-xs transition-colors",
+                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 ui-text-sm transition-colors",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     !item.isInstalled && item.id !== "custom" && "text-text-lighter",
@@ -379,11 +379,11 @@ export function AgentSelector({
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-left text-text ui-text-xs leading-4">
+                      <div className="truncate text-left text-text ui-text-sm leading-4">
                         {item.name}
                       </div>
                       {!item.isInstalled && item.id !== "custom" ? (
-                        <div className="truncate text-left ui-text-xs text-text-lighter leading-3">
+                        <div className="truncate text-left ui-text-sm text-text-lighter leading-3">
                           {item.canInstall ? "Not installed" : item.description}
                         </div>
                       ) : null}
@@ -399,7 +399,7 @@ export function AgentSelector({
                         }}
                         variant="ghost"
                         compact
-                        className="h-6 px-2 ui-text-xs"
+                        className="h-6 px-2 ui-text-sm"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
                         {item.isInstalling ? (

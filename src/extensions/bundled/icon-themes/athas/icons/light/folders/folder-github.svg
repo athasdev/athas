@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="GitHub">
-  <path d="M3.2 8c0-1 .8-1.8 1.8-1.8h5l1.9 2.2H19c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8H5c-1 0-1.8-.8-1.8-1.8z" fill="#7E8799"/>
-  <path d="M4.7 9.5h14.6v1.8H4.7z" fill="#BAC0CC" opacity=".48"/>
-  <path d="M5.5 8.4h4.2l1.2 1.5H5.5z" fill="#BAC0CC" opacity=".8"/>
-  <g transform="translate(6.2 4.9) scale(.68)"><path d="m12 10.7 3.3 3.3-3.3 3.3L8.7 14z" fill="none" stroke="#BAC0CC" stroke-width="1.2"/><circle cx="11" cy="13" r=".7" fill="#BAC0CC"/><circle cx="13.1" cy="15.1" r=".7" fill="#BAC0CC"/></g>
-</svg>

@@ -217,8 +217,6 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
   const focusedNotificationIndex = focusedNotificationId
     ? visibleNotifications.findIndex((notification) => notification.id === focusedNotificationId)
     : -1;
-  const hasNotificationRows = filteredNotifications.length > 0;
-
   useEffect(() => {
     if (visibleNotifications.length === 0) {
       setFocusedNotificationId(null);
@@ -318,12 +316,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
 
   return (
     <>
-      <Command
-        isVisible={isVisible}
-        onClose={onClose}
-        title="Notifications"
-        className={cn("max-h-[calc(100vh-8rem)] w-[520px]", hasNotificationRows && "h-[480px]")}
-      >
+      <Command isVisible={isVisible} onClose={onClose} title="Notifications">
         <div
           className="flex h-full min-h-0 flex-col"
           onKeyDownCapture={handleNotificationsKeyDown}
@@ -466,7 +459,6 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
           setCopiedNotificationId(null);
         }}
         title="Notification details"
-        className="w-[520px]"
       >
         {activeNotification ? (
           <>

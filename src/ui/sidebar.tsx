@@ -305,7 +305,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "ui-font flex min-h-7 w-full min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
+        "ui-font flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
         "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
         active && "bg-hover/80 text-text",
         className,
@@ -338,7 +338,7 @@ export function SidebarSectionHeader({
     <button
       type="button"
       className={cn(
-        "ui-font ui-text-xs flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
+        "ui-font ui-text-sm flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
         className,
       )}
       aria-expanded={expanded}
@@ -350,7 +350,7 @@ export function SidebarSectionHeader({
       />
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {count !== undefined ? (
-        <span className="ui-text-xs shrink-0 rounded-full bg-hover/70 px-1.5 py-0.5">{count}</span>
+        <span className="ui-text-sm shrink-0 rounded-full bg-hover/70 px-1.5 py-0.5">{count}</span>
       ) : null}
     </button>
   );
@@ -370,7 +370,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "ui-font ui-text-xs flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
+        "ui-font ui-text-sm flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
         className,
       )}
       {...props}
@@ -507,7 +507,7 @@ export function SidebarSectionSwitcher({
             aria-label={item.label}
             disabled={item.disabled}
             className={cn(
-              "ui-font ui-text-xs flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
+              "ui-font ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
               selected
                 ? "max-w-32 bg-hover px-2 text-text"
                 : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
@@ -604,7 +604,7 @@ export function SidebarEmptyActionState({
         {message}
       </div>
       {description ? (
-        <div className="ui-text-xs max-w-[24ch] leading-[1.35] text-text-lighter">
+        <div className="ui-text-sm max-w-[24ch] leading-[1.35] text-text-lighter">
           {description}
         </div>
       ) : null}
@@ -613,7 +613,7 @@ export function SidebarEmptyActionState({
           type="button"
           variant="ghost"
           compact
-          className={cn("ui-text-xs h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
+          className={cn("ui-text-sm h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
           disabled={actionDisabled}
           onClick={onAction}
         >

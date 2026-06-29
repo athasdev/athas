@@ -87,7 +87,6 @@
     --editor-font-family: var(--editor-font);
     --app-ui-font-size: 15px;
     --app-ui-scale: 1;
-    --ui-text-xs: calc(var(--app-ui-font-size) * 0.79);
     --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
     --ui-text-base: var(--app-ui-font-size);
     --app-ui-control-icon-size: calc(var(--app-ui-font-size) * 0.86);

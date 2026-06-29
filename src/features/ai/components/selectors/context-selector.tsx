@@ -9,7 +9,7 @@ import {
   TerminalWindowIcon as TerminalWindow,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
@@ -41,7 +41,7 @@ function getBufferContextIcon(buffer: PaneContent) {
   if (buffer.type === "pullRequest") return <GitPullRequest />;
   if (buffer.type === "githubIssue") return <FileText />;
   if (buffer.type === "githubAction") return <PlayCircle />;
-  return <FileExplorerIcon fileName={buffer.name} isDir={false} size={10} />;
+  return <ThemedFileIcon fileName={buffer.name} isDir={false} />;
 }
 
 interface ContextSelectorProps {
@@ -265,7 +265,7 @@ function ContextSelectorDropdownContent({
           leadingContent={
             filteredContextBuffers.length > 0 ? (
               <>
-                <div className="ui-text-xs px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
+                <div className="ui-text-sm px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
                   Open tabs
                 </div>
                 {filteredContextBuffers.map((buffer) => {
@@ -282,7 +282,7 @@ function ContextSelectorDropdownContent({
                       }}
                       onMouseEnter={() => setSelectedContextIndex(index)}
                       className={cn(
-                        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left ui-text-xs leading-[1.35] transition-colors",
+                        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left ui-text-sm leading-[1.35] transition-colors",
                         boundedSelectedContextIndex === index
                           ? "bg-selected text-text"
                           : isSelected
@@ -305,7 +305,7 @@ function ContextSelectorDropdownContent({
                         </span>
                       </span>
                       {isSelected && (
-                        <span className="ui-text-xs shrink-0 rounded border border-border/60 px-1 leading-[1.35] text-text-lighter">
+                        <span className="ui-text-sm shrink-0 rounded border border-border/60 px-1 leading-[1.35] text-text-lighter">
                           added
                         </span>
                       )}

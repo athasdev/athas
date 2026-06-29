@@ -74,7 +74,7 @@ export function ImageResizeDialog({
     >
       {/* Width Input */}
       <div>
-        <label htmlFor="width" className="mb-1 block text-text-lighter ui-text-xs">
+        <label htmlFor="width" className="mb-1 block text-text-lighter ui-text-sm">
           Width (px)
         </label>
         <Input
@@ -89,7 +89,7 @@ export function ImageResizeDialog({
 
       {/* Height Input */}
       <div>
-        <label htmlFor="height" className="mb-1 block text-text-lighter ui-text-xs">
+        <label htmlFor="height" className="mb-1 block text-text-lighter ui-text-sm">
           Height (px)
         </label>
         <Input
@@ -109,13 +109,13 @@ export function ImageResizeDialog({
           checked={maintainAspectRatio}
           onChange={setMaintainAspectRatio}
         />
-        <label htmlFor="maintainAspectRatio" className="cursor-pointer text-text ui-text-xs">
+        <label htmlFor="maintainAspectRatio" className="cursor-pointer text-text ui-text-sm">
           Maintain aspect ratio
         </label>
       </div>
 
       {/* Info */}
-      <div className="ui-text-xs text-text-lighter">
+      <div className="ui-text-sm text-text-lighter">
         Original: {currentWidth} × {currentHeight}px
       </div>
     </Dialog>

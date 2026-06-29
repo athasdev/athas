@@ -1104,7 +1104,7 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text ui-text-xs ${className || ""}`}
+      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text ui-text-sm ${className || ""}`}
     >
       <ChatHeader
         chatId={effectiveChatId}
@@ -1130,7 +1130,7 @@ details: ${errorDetails || mainError}
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
             <p className="font-medium ui-text-sm text-text">AI chat is disabled</p>
-            <p className="mt-2 text-text-lighter ui-text-xs">
+            <p className="mt-2 text-text-lighter ui-text-sm">
               Your organization policy has disabled AI chat for this workspace.
             </p>
           </div>
@@ -1151,7 +1151,7 @@ details: ${errorDetails || mainError}
           </Conversation>
 
           {currentPermission && (
-            <div className="bg-transparent px-3 pt-2 ui-text-xs">
+            <div className="bg-transparent px-3 pt-2 ui-text-sm">
               <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-[var(--shadow-card)]">
                 <KeyRound className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
                 <div
@@ -1163,7 +1163,7 @@ details: ${errorDetails || mainError}
                   <span className="editor-font">{currentPermissionSummary}</span>
                 </div>
                 {permissionQueue.length > 1 ? (
-                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 ui-text-xs text-text-lighter">
+                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 ui-text-sm text-text-lighter">
                     +{permissionQueue.length - 1}
                   </span>
                 ) : null}

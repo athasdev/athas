@@ -1,5 +1,5 @@
 import type React from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
@@ -29,7 +29,7 @@ export function PathBreadcrumb({
       className={cn("flex min-w-0 items-center gap-0.5 overflow-x-auto scrollbar-none", className)}
     >
       <span className="flex size-5 shrink-0 items-center justify-center rounded text-text-lighter">
-        <FileExplorerIcon
+        <ThemedFileIcon
           fileName={fileName}
           isDir={false}
           isExpanded={false}
@@ -43,7 +43,7 @@ export function PathBreadcrumb({
         return (
           <div key={`${segment}-${index}`} className="flex shrink-0 items-center gap-0.5">
             {index > 0 && (
-              <span aria-hidden="true" className="mx-0.5 shrink-0 text-text-lighter ui-text-xs">
+              <span aria-hidden="true" className="mx-0.5 shrink-0 text-text-lighter ui-text-sm">
                 /
               </span>
             )}
@@ -54,7 +54,7 @@ export function PathBreadcrumb({
                 variant="ghost"
                 compact
                 className={cn(
-                  "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 ui-text-xs",
+                  "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 ui-text-sm",
                   isLast
                     ? "font-medium text-text hover:text-text"
                     : "text-text-lighter hover:text-text",
@@ -65,7 +65,7 @@ export function PathBreadcrumb({
             ) : (
               <span
                 className={cn(
-                  "truncate rounded px-1 py-0.5 ui-text-xs",
+                  "truncate rounded px-1 py-0.5 ui-text-sm",
                   isLast ? "font-medium text-text" : "text-text-lighter",
                 )}
               >

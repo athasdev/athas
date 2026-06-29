@@ -61,7 +61,6 @@ interface FolderIcon {
   label: string;
   color: string;
   accent: string;
-  mark?: string;
 }
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -724,127 +723,7 @@ fileIcons.push(
 
 const folderIcons: FolderIcon[] = [
   { id: "folder", label: "Folder", color: "#7F8EA3", accent: "#C5D0DE" },
-  { id: "folder-open", label: "Folder Open", color: "#7F8EA3", accent: "#D3DCE8", mark: "open" },
-  { id: "folder-src", label: "Source", color: "#4E91D9", accent: "#BBD9FF", mark: "src" },
-  {
-    id: "folder-components",
-    label: "Components",
-    color: "#47A7C7",
-    accent: "#BBEDFA",
-    mark: "grid",
-  },
-  { id: "folder-hooks", label: "Hooks", color: "#8B74D6", accent: "#D5CCFF", mark: "hook" },
-  { id: "folder-utils", label: "Utilities", color: "#7D8CA1", accent: "#D1DAE5", mark: "tool" },
-  { id: "folder-tests", label: "Tests", color: "#74A94D", accent: "#D5EDBE", mark: "check" },
-  { id: "folder-config", label: "Config", color: "#8491A2", accent: "#D2DAE5", mark: "gear" },
-  { id: "folder-assets", label: "Assets", color: "#44A994", accent: "#BEEFE3", mark: "image" },
-  { id: "folder-images", label: "Images", color: "#44A994", accent: "#BEEFE3", mark: "image" },
-  { id: "folder-docs", label: "Docs", color: "#5E8BD7", accent: "#C1D8FF", mark: "doc" },
-  { id: "folder-scripts", label: "Scripts", color: "#52A371", accent: "#BFEBCF", mark: "term" },
-  { id: "folder-rust", label: "Rust", color: "#CF7852", accent: "#F4C8B3", mark: "rs" },
-  { id: "folder-tauri", label: "Tauri", color: "#D49A38", accent: "#FFE0A3", mark: "tau" },
-  { id: "folder-node", label: "Node", color: "#5FAE64", accent: "#C7F0CA", mark: "pkg" },
-  { id: "folder-git", label: "Git", color: "#DB7354", accent: "#FFD1C2", mark: "git" },
-  { id: "folder-github", label: "GitHub", color: "#667085", accent: "#D2D8E2", mark: "git" },
-  { id: "folder-vscode", label: "VS Code", color: "#4E91D9", accent: "#BBD9FF", mark: "code" },
-  { id: "folder-build", label: "Build", color: "#C48940", accent: "#F6D4A8", mark: "box" },
-  { id: "folder-dist", label: "Dist", color: "#9A7D61", accent: "#E4D2BF", mark: "box" },
-  { id: "folder-database", label: "Database", color: "#4F8FC9", accent: "#C6E0FF", mark: "db" },
-  { id: "folder-api", label: "API", color: "#D86AAE", accent: "#FFC7E7", mark: "api" },
-  { id: "folder-routes", label: "Routes", color: "#45A978", accent: "#BCEFD6", mark: "route" },
-  { id: "folder-stores", label: "Stores", color: "#9A73F3", accent: "#D8C8FF", mark: "store" },
-  { id: "folder-features", label: "Features", color: "#E86F42", accent: "#FFD0B8", mark: "spark" },
 ];
-
-folderIcons.push(
-  { id: "folder-ui", label: "UI", color: "#9A73F3", accent: "#D8C8FF", mark: "grid" },
-  { id: "folder-pages", label: "Pages", color: "#5E8BD7", accent: "#C1D8FF", mark: "doc" },
-  { id: "folder-views", label: "Views", color: "#5E8BD7", accent: "#C1D8FF", mark: "doc" },
-  { id: "folder-lib", label: "Library", color: "#7D8CA1", accent: "#D1DAE5", mark: "box" },
-  { id: "folder-services", label: "Services", color: "#4B9B86", accent: "#BEEFE0", mark: "api" },
-  { id: "folder-types", label: "Types", color: "#3E86D9", accent: "#B9D7FF", mark: "ts" },
-  { id: "folder-styles", label: "Styles", color: "#D866A4", accent: "#F8C7DF", mark: "style" },
-  { id: "folder-locales", label: "Locales", color: "#4BA46C", accent: "#C4EBCF", mark: "lang" },
-  { id: "folder-terminal", label: "Terminal", color: "#52A371", accent: "#BFEBCF", mark: "term" },
-  { id: "folder-security", label: "Security", color: "#B38842", accent: "#F0D19A", mark: "lock" },
-  { id: "folder-ci", label: "CI", color: "#DB7354", accent: "#FFD1C2", mark: "check" },
-  { id: "folder-docker", label: "Docker", color: "#3E94D9", accent: "#B9DEFF", mark: "box" },
-  {
-    id: "folder-kubernetes",
-    label: "Kubernetes",
-    color: "#4F7EDB",
-    accent: "#C4D5FF",
-    mark: "net",
-  },
-  { id: "folder-cloud", label: "Cloud", color: "#35A7A0", accent: "#B9F0EC", mark: "cloud" },
-  { id: "folder-firebase", label: "Firebase", color: "#D79A35", accent: "#FFE0A0", mark: "spark" },
-  { id: "folder-supabase", label: "Supabase", color: "#4BA46C", accent: "#C4EBCF", mark: "db" },
-  { id: "folder-prisma", label: "Prisma", color: "#51758D", accent: "#C3D6E4", mark: "db" },
-  { id: "folder-cache", label: "Cache", color: "#C95D58", accent: "#FFC9C7", mark: "db" },
-  { id: "folder-logs", label: "Logs", color: "#7D8CA1", accent: "#D1DAE5", mark: "doc" },
-  { id: "folder-temp", label: "Temp", color: "#9A7D61", accent: "#E4D2BF", mark: "box" },
-  { id: "folder-mobile", label: "Mobile", color: "#45A978", accent: "#BCEFD6", mark: "mobile" },
-  { id: "folder-ios", label: "iOS", color: "#7D8CA1", accent: "#D1DAE5", mark: "mobile" },
-  { id: "folder-android", label: "Android", color: "#7EA84B", accent: "#DCEEBE", mark: "mobile" },
-  { id: "folder-storybook", label: "Storybook", color: "#D86AAE", accent: "#FFC7E7", mark: "doc" },
-  { id: "folder-fixtures", label: "Fixtures", color: "#74A94D", accent: "#D5EDBE", mark: "box" },
-  { id: "folder-mocks", label: "Mocks", color: "#74A94D", accent: "#D5EDBE", mark: "spark" },
-  {
-    id: "folder-generated",
-    label: "Generated",
-    color: "#9A7D61",
-    accent: "#E4D2BF",
-    mark: "spark",
-  },
-  {
-    id: "folder-benchmarks",
-    label: "Benchmarks",
-    color: "#D58D3A",
-    accent: "#FFD9A3",
-    mark: "graph",
-  },
-  {
-    id: "folder-extensions",
-    label: "Extensions",
-    color: "#8B74D6",
-    accent: "#D5CCFF",
-    mark: "puzzle",
-  },
-  { id: "folder-themes", label: "Themes", color: "#956FBB", accent: "#DEC9F7", mark: "style" },
-  { id: "folder-ai", label: "AI", color: "#657083", accent: "#D5DBE5", mark: "ai" },
-  { id: "folder-agents", label: "Agents", color: "#657083", accent: "#D5DBE5", mark: "ai" },
-  { id: "folder-codex", label: "Codex", color: "#657083", accent: "#D5DBE5", mark: "cx" },
-  { id: "folder-claude", label: "Claude", color: "#B87C59", accent: "#F3D0BA", mark: "ai" },
-  { id: "folder-packages", label: "Packages", color: "#C48940", accent: "#F6D4A8", mark: "pkg" },
-  { id: "folder-examples", label: "Examples", color: "#45A978", accent: "#BCEFD6", mark: "spark" },
-  {
-    id: "folder-playground",
-    label: "Playground",
-    color: "#8B74D6",
-    accent: "#D5CCFF",
-    mark: "spark",
-  },
-  { id: "folder-commands", label: "Commands", color: "#52A371", accent: "#BFEBCF", mark: "term" },
-  { id: "folder-plugins", label: "Plugins", color: "#8B74D6", accent: "#D5CCFF", mark: "puzzle" },
-  {
-    id: "folder-workflows",
-    label: "Workflows",
-    color: "#5E8BD7",
-    accent: "#C1D8FF",
-    mark: "check",
-  },
-  {
-    id: "folder-devcontainer",
-    label: "Dev Container",
-    color: "#4F83C6",
-    accent: "#C4DDF9",
-    mark: "box",
-  },
-  { id: "folder-web", label: "Web", color: "#35A7A0", accent: "#B9F0EC", mark: "net" },
-  { id: "folder-server", label: "Server", color: "#4F8FC9", accent: "#C6E0FF", mark: "db" },
-  { id: "folder-client", label: "Client", color: "#47A7C7", accent: "#BBEDFA", mark: "grid" },
-  { id: "folder-shared", label: "Shared", color: "#7D8CA1", accent: "#D1DAE5", mark: "link" },
-);
 
 const fileExtensions: Record<string, string> = {
   ".txt": "text",
@@ -1189,127 +1068,124 @@ Object.assign(filenames, {
 });
 
 const folders: Record<string, string> = {
-  src: "folder-src",
-  source: "folder-src",
-  components: "folder-components",
-  component: "folder-components",
-  hooks: "folder-hooks",
-  utils: "folder-utils",
-  util: "folder-utils",
-  tests: "folder-tests",
-  test: "folder-tests",
-  __tests__: "folder-tests",
-  config: "folder-config",
-  configs: "folder-config",
-  assets: "folder-assets",
-  public: "folder-assets",
-  images: "folder-images",
-  img: "folder-images",
-  docs: "folder-docs",
-  scripts: "folder-scripts",
-  crates: "folder-rust",
-  rust: "folder-rust",
-  "src-tauri": "folder-tauri",
-  tauri: "folder-tauri",
-  node_modules: "folder-node",
-  ".git": "folder-git",
-  ".github": "folder-github",
-  ".vscode": "folder-vscode",
-  build: "folder-build",
-  dist: "folder-dist",
-  database: "folder-database",
-  databases: "folder-database",
-  api: "folder-api",
-  routes: "folder-routes",
-  router: "folder-routes",
-  stores: "folder-stores",
-  store: "folder-stores",
-  features: "folder-features",
+  src: "folder",
+  source: "folder",
+  components: "folder",
+  component: "folder",
+  hooks: "folder",
+  utils: "folder",
+  util: "folder",
+  tests: "folder",
+  test: "folder",
+  __tests__: "folder",
+  config: "folder",
+  configs: "folder",
+  assets: "folder",
+  public: "folder",
+  images: "folder",
+  img: "folder",
+  docs: "folder",
+  scripts: "folder",
+  crates: "folder",
+  rust: "folder",
+  "src-tauri": "folder",
+  tauri: "folder",
+  node_modules: "folder",
+  ".git": "folder",
+  ".github": "folder",
+  ".vscode": "folder",
+  build: "folder",
+  dist: "folder",
+  database: "folder",
+  databases: "folder",
+  api: "folder",
+  routes: "folder",
+  router: "folder",
+  stores: "folder",
+  store: "folder",
+  features: "folder",
+  ui: "folder",
+  pages: "folder",
+  app: "folder",
+  views: "folder",
+  view: "folder",
+  lib: "folder",
+  libs: "folder",
+  services: "folder",
+  service: "folder",
+  types: "folder",
+  typings: "folder",
+  styles: "folder",
+  style: "folder",
+  css: "folder",
+  locales: "folder",
+  i18n: "folder",
+  terminal: "folder",
+  shell: "folder",
+  auth: "folder",
+  security: "folder",
+  ".circleci": "folder",
+  ".buildkite": "folder",
+  ".docker": "folder",
+  docker: "folder",
+  k8s: "folder",
+  kubernetes: "folder",
+  helm: "folder",
+  cloud: "folder",
+  ".firebase": "folder",
+  firebase: "folder",
+  ".supabase": "folder",
+  supabase: "folder",
+  prisma: "folder",
+  cache: "folder",
+  logs: "folder",
+  log: "folder",
+  tmp: "folder",
+  temp: "folder",
+  mobile: "folder",
+  ios: "folder",
+  android: "folder",
+  ".storybook": "folder",
+  storybook: "folder",
+  fixtures: "folder",
+  mocks: "folder",
+  mock: "folder",
+  generated: "folder",
+  gen: "folder",
+  benchmark: "folder",
+  benchmarks: "folder",
+  extensions: "folder",
+  extension: "folder",
+  themes: "folder",
+  theme: "folder",
+  ai: "folder",
+  ".agents": "folder",
+  agents: "folder",
+  ".codex": "folder",
+  codex: "folder",
+  ".claude": "folder",
+  claude: "folder",
+  packages: "folder",
+  package: "folder",
+  examples: "folder",
+  example: "folder",
+  playground: "folder",
+  play: "folder",
+  commands: "folder",
+  command: "folder",
+  plugins: "folder",
+  plugin: "folder",
+  workflows: "folder",
+  workflow: "folder",
+  ".devcontainer": "folder",
+  devcontainer: "folder",
+  web: "folder",
+  www: "folder",
+  server: "folder",
+  client: "folder",
+  shared: "folder",
+  common: "folder",
 };
-
-Object.assign(folders, {
-  ui: "folder-ui",
-  pages: "folder-pages",
-  app: "folder-pages",
-  views: "folder-views",
-  view: "folder-views",
-  lib: "folder-lib",
-  libs: "folder-lib",
-  services: "folder-services",
-  service: "folder-services",
-  types: "folder-types",
-  typings: "folder-types",
-  styles: "folder-styles",
-  style: "folder-styles",
-  css: "folder-styles",
-  locales: "folder-locales",
-  i18n: "folder-locales",
-  terminal: "folder-terminal",
-  shell: "folder-terminal",
-  auth: "folder-security",
-  security: "folder-security",
-  ".circleci": "folder-ci",
-  ".buildkite": "folder-ci",
-  ".docker": "folder-docker",
-  docker: "folder-docker",
-  k8s: "folder-kubernetes",
-  kubernetes: "folder-kubernetes",
-  helm: "folder-kubernetes",
-  cloud: "folder-cloud",
-  ".firebase": "folder-firebase",
-  firebase: "folder-firebase",
-  ".supabase": "folder-supabase",
-  supabase: "folder-supabase",
-  prisma: "folder-prisma",
-  cache: "folder-cache",
-  logs: "folder-logs",
-  log: "folder-logs",
-  tmp: "folder-temp",
-  temp: "folder-temp",
-  mobile: "folder-mobile",
-  ios: "folder-ios",
-  android: "folder-android",
-  ".storybook": "folder-storybook",
-  storybook: "folder-storybook",
-  fixtures: "folder-fixtures",
-  mocks: "folder-mocks",
-  mock: "folder-mocks",
-  generated: "folder-generated",
-  gen: "folder-generated",
-  benchmark: "folder-benchmarks",
-  benchmarks: "folder-benchmarks",
-  extensions: "folder-extensions",
-  extension: "folder-extensions",
-  themes: "folder-themes",
-  theme: "folder-themes",
-  ai: "folder-ai",
-  ".agents": "folder-agents",
-  agents: "folder-agents",
-  ".codex": "folder-codex",
-  codex: "folder-codex",
-  ".claude": "folder-claude",
-  claude: "folder-claude",
-  packages: "folder-packages",
-  package: "folder-packages",
-  examples: "folder-examples",
-  example: "folder-examples",
-  playground: "folder-playground",
-  play: "folder-playground",
-  commands: "folder-commands",
-  command: "folder-commands",
-  plugins: "folder-plugins",
-  plugin: "folder-plugins",
-  workflows: "folder-workflows",
-  workflow: "folder-workflows",
-  ".devcontainer": "folder-devcontainer",
-  devcontainer: "folder-devcontainer",
-  web: "folder-web",
-  www: "folder-web",
-  server: "folder-server",
-  client: "folder-client",
-  shared: "folder-shared",
-  common: "folder-shared",
-});
 
 function esc(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -1347,26 +1223,15 @@ function mixColor(from: string, to: string, amount: number) {
 const themeVariants: ThemeVariant[] = [
   {
     id: "athas-icons",
-    name: "Athas (Dark)",
+    name: "Dark assets",
     description: "Original duotone file and folder icons for dark Athas themes.",
     directory: "",
     background: "#11151B",
     transform: (icon) => icon,
   },
   {
-    id: "athas-icons-dimmed",
-    name: "Athas (Dimmed)",
-    description: "A softer, lower-saturation Athas icon palette for dimmed themes.",
-    directory: "dimmed",
-    background: "#151A22",
-    transform: (icon) => ({
-      color: mixColor(icon.color, "#7F8A9A", 0.34),
-      accent: mixColor(icon.accent, "#B7C1CF", 0.34),
-    }),
-  },
-  {
-    id: "athas-icons-light",
-    name: "Athas (Light)",
+    id: "athas-icons-light-assets",
+    name: "Light assets",
     description: "A brighter Athas icon palette tuned for light themes.",
     directory: "light",
     background: "#F6F8FB",
@@ -1471,7 +1336,7 @@ function fileGlyph(icon: FileIcon) {
 }
 
 function fileSvg(icon: FileIcon) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="${esc(icon.label)}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 2 18 20" role="img" aria-label="${esc(icon.label)}">
   <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="${icon.color}"/>
   <path d="M14.6 2.8v4.9h4.9Z" fill="${icon.accent}" opacity=".82"/>
   <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
@@ -1480,90 +1345,11 @@ function fileSvg(icon: FileIcon) {
 `;
 }
 
-function folderMarkGlyph(icon: FolderIcon) {
-  switch (icon.mark) {
-    case "open":
-      return `<path d="M5.2 14.7 6.7 11h12.1l-1.3 4.9c-.2.8-.9 1.3-1.7 1.3H6.4c-.8 0-1.4-.9-1.1-1.6z" fill="${icon.accent}"/>`;
-    case "src":
-    case "code":
-      return `<path d="m10.2 12-1.9 1.8 1.9 1.8M14.2 12l1.9 1.8-1.9 1.8" fill="none" stroke="${icon.accent}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`;
-    case "grid":
-      return `<path d="M9 11.3h2.1v2.1H9zM12.9 11.3H15v2.1h-2.1zM9 15h2.1v2.1H9zM12.9 15H15v2.1h-2.1z" fill="${icon.accent}"/>`;
-    case "hook":
-      return `<path d="M13.6 11.2v3.6a2.3 2.3 0 0 1-4.6 0v-.6M13.6 11.2a1.7 1.7 0 1 1 2.5 1.5" fill="none" stroke="${icon.accent}" stroke-width="1.35" stroke-linecap="round"/>`;
-    case "tool":
-      return `<path d="m9.1 16.6 5.8-5.8M13.8 10.8l1.6-.4.4-1.6 1.1 1.1-.4 1.6-1.6.4z" fill="none" stroke="${icon.accent}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`;
-    case "check":
-      return `<path d="m8.7 14.6 2 2 4.6-5" fill="none" stroke="${icon.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-    case "gear":
-      return `<circle cx="12" cy="14" r="1.8" fill="none" stroke="${icon.accent}" stroke-width="1.25"/><path d="M12 10.7v1M12 16.3v1M8.7 14h1M14.3 14h1M9.7 11.7l.7.7M13.6 15.6l.7.7M14.3 11.7l-.7.7M10.4 15.6l-.7.7" stroke="${icon.accent}" stroke-width="1.25" stroke-linecap="round"/>`;
-    case "image":
-      return `<rect x="8" y="11" width="8.2" height="5.6" rx="1" fill="none" stroke="${icon.accent}" stroke-width="1.2"/><path d="m8.8 16 2.2-2.1 1.5 1.4 1-1 1.8 1.7" fill="none" stroke="${icon.accent}" stroke-width="1.1" stroke-linecap="round"/>`;
-    case "doc":
-      return `<path d="M9 11.3h6M9 13.8h6M9 16.3h3.8" stroke="${icon.accent}" stroke-width="1.25" stroke-linecap="round"/>`;
-    case "term":
-      return `<path d="m9 12.1 2 1.9-2 1.9M12.4 16h3" fill="none" stroke="${icon.accent}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>`;
-    case "rs":
-    case "tau":
-    case "pkg":
-    case "db":
-    case "api":
-    case "ts":
-    case "ai":
-    case "cx":
-      return `<text x="12" y="16.1" text-anchor="middle" font-family="Arial,sans-serif" font-size="4.6" font-weight="700" fill="${icon.accent}">${icon.mark.toUpperCase()}</text>`;
-    case "link":
-      return `<path d="M10.4 15.5a2.1 2.1 0 0 1-3 0 2.1 2.1 0 0 1 0-3l1.8-1.8a2.1 2.1 0 0 1 3 0M13.6 12.5a2.1 2.1 0 0 1 3 0 2.1 2.1 0 0 1 0 3l-1.8 1.8a2.1 2.1 0 0 1-3 0M10 14l4-4" fill="none" stroke="${icon.accent}" stroke-width="1.2" stroke-linecap="round"/>`;
-    case "style":
-      return `<path d="M12 10.6a3.9 3.9 0 0 0 0 7.8h.8c.6 0 .9-.8.4-1.1-.4-.4-.1-1 .5-1h.7c1 0 1.7-.7 1.7-1.9a3.9 3.9 0 0 0-4.1-3.8z" fill="none" stroke="${icon.accent}" stroke-width="1.1"/><circle cx="10.3" cy="13.8" r=".45" fill="${icon.accent}"/><circle cx="12" cy="12.7" r=".45" fill="${icon.accent}"/><circle cx="13.7" cy="13.8" r=".45" fill="${icon.accent}"/>`;
-    case "lang":
-      return `<circle cx="12" cy="14.2" r="3.8" fill="none" stroke="${icon.accent}" stroke-width="1.15"/><path d="M8.5 14.2h7M12 10.5c1 1 1.5 2.2 1.5 3.7S13 16.9 12 18M12 10.5c-1 1-1.5 2.2-1.5 3.7S11 16.9 12 18" fill="none" stroke="${icon.accent}" stroke-width="1.05" stroke-linecap="round"/>`;
-    case "lock":
-      return `<rect x="8.5" y="13.2" width="7" height="4.4" rx="1.1" fill="${icon.accent}"/><path d="M10 13.2v-1.1a2 2 0 0 1 4 0v1.1" fill="none" stroke="${icon.accent}" stroke-width="1.2"/>`;
-    case "net":
-      return `<circle cx="9" cy="12" r="1.1" fill="${icon.accent}"/><circle cx="15" cy="12" r="1.1" fill="${icon.accent}"/><circle cx="12" cy="17" r="1.1" fill="${icon.accent}"/><path d="M10 12h4M9.6 13l1.8 3M14.4 13l-1.8 3" stroke="${icon.accent}" stroke-width="1.05" stroke-linecap="round"/>`;
-    case "cloud":
-      return `<path d="M9.3 16.7h5.5a2 2 0 0 0 .3-4 3.1 3.1 0 0 0-5.9.8 1.7 1.7 0 0 0 .1 3.2z" fill="none" stroke="${icon.accent}" stroke-width="1.15" stroke-linejoin="round"/>`;
-    case "mobile":
-      return `<rect x="9.6" y="10.3" width="4.8" height="7.2" rx="1" fill="none" stroke="${icon.accent}" stroke-width="1.15"/><path d="M11.2 11.5h1.6M11.5 16.4h1" stroke="${icon.accent}" stroke-width="1" stroke-linecap="round"/>`;
-    case "graph":
-      return `<path d="M8.7 17.2h7M9.8 16.8v-2.5M12 16.8v-5M14.2 16.8v-3.6" stroke="${icon.accent}" stroke-width="1.15" stroke-linecap="round"/>`;
-    case "puzzle":
-      return `<path d="M9.1 11.3h2.2c0-.9.6-1.5 1.4-1.5s1.4.6 1.4 1.5h1.8v2.2c-.9 0-1.5.6-1.5 1.4s.6 1.4 1.5 1.4v1.4H9.1v-1.8c.8 0 1.4-.6 1.4-1.4s-.6-1.4-1.4-1.4z" fill="none" stroke="${icon.accent}" stroke-width="1.05" stroke-linejoin="round"/>`;
-    case "git":
-      return `<path d="m12 10.7 3.3 3.3-3.3 3.3L8.7 14z" fill="none" stroke="${icon.accent}" stroke-width="1.2"/><circle cx="11" cy="13" r=".7" fill="${icon.accent}"/><circle cx="13.1" cy="15.1" r=".7" fill="${icon.accent}"/>`;
-    case "box":
-      return `<path d="m12 10.7 4 2.1v3.8l-4 2-4-2v-3.8zM8 12.8l4 2.1 4-2.1M12 14.9v3.7" fill="none" stroke="${icon.accent}" stroke-width="1.15" stroke-linejoin="round"/>`;
-    case "route":
-      return `<path d="M8.6 16.3c4.5 0 2.4-4.5 6.8-4.5M8.6 16.3l1.5-1.5M8.6 16.3l1.5 1.5M15.4 11.8l-1.5-1.5M15.4 11.8l-1.5 1.5" fill="none" stroke="${icon.accent}" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`;
-    case "store":
-      return `<path d="M8.3 12.3h7.4M8.3 14.2h7.4M8.3 16.1h7.4" stroke="${icon.accent}" stroke-width="1.25" stroke-linecap="round"/><path d="M9.4 10.5h5.2" stroke="${icon.accent}" stroke-width="1.25" stroke-linecap="round"/>`;
-    case "spark":
-      return `<path d="M12 10.2 13 13l2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1z" fill="${icon.accent}"/>`;
-    default:
-      return "";
-  }
-}
-
-function folderMark(icon: FolderIcon) {
-  if (!icon.mark || icon.mark === "open") {
-    return "";
-  }
-
-  return `<g transform="translate(6.2 4.9) scale(.68)">${folderMarkGlyph(icon)}</g>`;
-}
-
-function folderSvg(icon: FolderIcon, open = false) {
-  const body = open
-    ? `<path d="M3.2 8.1c0-1 .8-1.8 1.8-1.8h5l1.8 2.2H19c1 0 1.8.8 1.8 1.8v1.4H6.9c-.8 0-1.5.5-1.8 1.2l-1.9 4.7z" fill="${icon.color}"/>
-  <path d="M4.6 18.1c-.9 0-1.5-.8-1.2-1.7l1.7-4.7c.3-.7 1-1.2 1.8-1.2h13.5c.9 0 1.5.8 1.3 1.7L20.1 17c-.3.7-1 1.2-1.8 1.2H4.6Z" fill="${icon.color}"/>`
-    : `<path d="M3.2 8c0-1 .8-1.8 1.8-1.8h5l1.9 2.2H19c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8H5c-1 0-1.8-.8-1.8-1.8z" fill="${icon.color}"/>`;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="${esc(icon.label)}">
-  ${body}
-  <path d="M4.7 9.5h14.6v1.8H4.7z" fill="${icon.accent}" opacity=".48"/>
-  <path d="M5.5 8.4h4.2l1.2 1.5H5.5z" fill="${icon.accent}" opacity=".8"/>
-  ${folderMark(icon)}
+function folderSvg(icon: FolderIcon) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="${esc(icon.label)}">
+  <path d="M.7 4.4c0-1.1.9-2 2-2h6.1l2.1 2.5h6.4c1.1 0 2 .9 2 2v10.4c0 1.1-.9 2-2 2H2.7c-1.1 0-2-.9-2-2z" fill="${icon.color}"/>
+  <path d="M2.4 6.2h15.2v2H2.4z" fill="${icon.accent}" opacity=".48"/>
+  <path d="M3.2 4.9h5.1l1.4 1.7H3.2z" fill="${icon.accent}" opacity=".8"/>
 </svg>
 `;
 }
@@ -1606,19 +1392,25 @@ function iconDefinitions(variant: ThemeVariant) {
   ]);
 }
 
-function themeContribution(variant: ThemeVariant) {
+function themeContribution() {
+  const darkVariant =
+    themeVariants.find((variant) => variant.id === "athas-icons") ?? themeVariants[0];
+  const lightVariant =
+    themeVariants.find((variant) => variant.id === "athas-icons-light-assets") ?? darkVariant;
+
   return {
-    id: variant.id,
-    name: variant.name,
-    description: variant.description,
-    iconDefinitions: iconDefinitions(variant),
+    id: "athas-icons",
+    name: "Athas Icons",
+    description: "Original duotone file and folder icons for Athas.",
+    iconDefinitions: iconDefinitions(darkVariant),
+    lightIconDefinitions: iconDefinitions(lightVariant),
     fileExtensions,
     filenames,
-    folders,
-    expandedFolders: Object.fromEntries(Object.keys(folders).map((name) => [name, "folder-open"])),
+    folders: Object.fromEntries(Object.keys(folders).map((name) => [name, "folder"])),
+    expandedFolders: Object.fromEntries(Object.keys(folders).map((name) => [name, "folder"])),
     defaultFile: "file",
     defaultFolder: "folder",
-    defaultFolderOpen: "folder-open",
+    defaultFolderOpen: "folder",
   };
 }
 
@@ -1632,10 +1424,10 @@ function manifest() {
     description: "Original duotone file and folder icons for Athas.",
     publisher: "Athas",
     categories: ["Icon Theme"],
-    activationEvents: themeVariants.map((variant) => `onIconTheme:${variant.id}`),
+    activationEvents: ["onIconTheme:athas-icons"],
     license: "MIT",
     bundled: true,
-    icons: themeVariants.map(themeContribution),
+    icons: [themeContribution()],
   };
 }
 
@@ -1653,15 +1445,7 @@ function previewHtml() {
       muted: "#96A3B4",
       line: "#2A3442",
     },
-    "athas-icons-dimmed": {
-      bg: "#151A22",
-      panel: "#1B222C",
-      panel2: "#202934",
-      text: "#E4EAF2",
-      muted: "#9AA6B6",
-      line: "#303B4A",
-    },
-    "athas-icons-light": {
+    "athas-icons-light-assets": {
       bg: "#F6F8FB",
       panel: "#FFFFFF",
       panel2: "#EEF2F7",
@@ -1690,24 +1474,24 @@ function previewHtml() {
     .map(
       (
         icon,
-      ) => `<article class="card" data-type="folder" data-icon-id="${esc(icon.id)}" data-keywords="${esc(`${icon.label} ${icon.id} ${icon.mark ?? ""}`)}">
+      ) => `<article class="card" data-type="folder" data-icon-id="${esc(icon.id)}" data-keywords="${esc(`${icon.label} ${icon.id}`)}">
         <img src="${variantIconPath(initialVariant, "folders", icon.id)}" alt="" data-type="folder" data-icon-id="${esc(icon.id)}">
         <div>
           <strong>${esc(icon.label)}</strong>
-          <span>${esc(icon.id)} · ${esc(icon.mark ?? "base")}</span>
+          <span>${esc(icon.id)}</span>
         </div>
       </article>`,
     )
     .join("\n");
   const sampleRows = [
-    { type: "folder", id: "folder-codex", name: ".codex", detail: "AI workspace config", depth: 0 },
-    { type: "folder", id: "folder-src", name: "src", detail: "source", depth: 0 },
-    { type: "folder", id: "folder-components", name: "components", detail: "ui", depth: 1 },
+    { type: "folder", id: "folder", name: ".codex", detail: "AI workspace config", depth: 0 },
+    { type: "folder", id: "folder", name: "src", detail: "source", depth: 0 },
+    { type: "folder", id: "folder", name: "components", detail: "ui", depth: 1 },
     { type: "file", id: "react", name: "icon-preview.tsx", detail: "React component", depth: 2 },
     { type: "file", id: "typescript", name: "generate-icons.ts", detail: "TypeScript", depth: 1 },
     {
       type: "folder",
-      id: "folder-workflows",
+      id: "folder",
       name: ".github/workflows",
       detail: "automation",
       depth: 0,
@@ -1741,7 +1525,7 @@ function previewHtml() {
           <span>${esc(variant.id)}</span>
         </div>
         <div class="compare-icons">
-          <img src="./${fileRoot}/folders/folder-src.svg" alt="">
+          <img src="./${fileRoot}/folders/folder.svg" alt="">
           <img src="./${fileRoot}/files/typescript.svg" alt="">
           <img src="./${fileRoot}/files/react.svg" alt="">
           <img src="./${fileRoot}/files/codex.svg" alt="">
@@ -2279,10 +2063,7 @@ for (const variant of themeVariants) {
   }
 
   for (const icon of folderIcons) {
-    write(
-      join(foldersDir, `${icon.id}.svg`),
-      folderSvg(applyVariant(icon, variant), icon.id === "folder-open"),
-    );
+    write(join(foldersDir, `${icon.id}.svg`), folderSvg(applyVariant(icon, variant)));
   }
 }
 

@@ -197,7 +197,7 @@ function PrimitiveDialogHost({
           </Button>
         }
       >
-        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -220,7 +220,7 @@ function PrimitiveDialogHost({
           </>
         }
       >
-        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -246,7 +246,7 @@ function PrimitiveDialogHost({
           </>
         }
       >
-        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
       </Dialog>
     );
   }

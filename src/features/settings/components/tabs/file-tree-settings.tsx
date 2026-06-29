@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import {
-  FILE_TREE_DENSITY_OPTIONS,
-  type FileTreeDensity,
-} from "@/features/file-explorer/lib/file-tree-density";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
-import Select from "@/ui/select";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import { controlFieldSurfaceVariants } from "@/ui/control-field";
 import Switch from "@/ui/switch";
@@ -16,7 +11,6 @@ export const FileTreeSettings = () => {
   const settings = useSettingsStore(
     useShallow((state) => ({
       compactFoldersInFileTree: state.settings.compactFoldersInFileTree,
-      fileTreeDensity: state.settings.fileTreeDensity,
       fileTreeIndentSize: state.settings.fileTreeIndentSize,
       hiddenDirectoryPatterns: state.settings.hiddenDirectoryPatterns,
       hiddenFilePatterns: state.settings.hiddenFilePatterns,
@@ -73,23 +67,7 @@ export const FileTreeSettings = () => {
             value={settings.fileTreeIndentSize}
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Density"
-          description="Choose file tree row spacing"
-          onReset={() => updateSetting("fileTreeDensity", getDefaultSetting("fileTreeDensity"))}
-          canReset={settings.fileTreeDensity !== getDefaultSetting("fileTreeDensity")}
-        >
-          <Select
-            value={settings.fileTreeDensity}
-            options={FILE_TREE_DENSITY_OPTIONS}
-            onChange={(value) => updateSetting("fileTreeDensity", value as FileTreeDensity)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
-            variant="default"
+            size="md"
           />
         </SettingRow>
 
@@ -195,7 +173,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-sm w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "ui-font ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>
@@ -225,7 +203,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-sm w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "ui-font ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>

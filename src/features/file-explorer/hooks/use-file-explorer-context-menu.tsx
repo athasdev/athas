@@ -497,32 +497,35 @@ export function useFileExplorerContextMenu({
             title="Overwrite Env File"
             icon={Warning}
             onClose={() => setEnvOverwriteDialog(null)}
-            size="sm"
             footer={
               <>
-                <Button variant="ghost" onClick={() => setEnvOverwriteDialog(null)}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setEnvOverwriteDialog(null)}
+                  className="ui-text-base"
+                >
                   Cancel
                 </Button>
-                <Button variant="danger" onClick={handleEnvOverwriteConfirm} compact>
+                <Button
+                  variant="danger"
+                  onClick={handleEnvOverwriteConfirm}
+                  compact
+                  className="ui-text-base"
+                >
                   Overwrite
                 </Button>
               </>
             }
           >
-            <p className="ui-font ui-text-sm text-text">
+            <p className="ui-font ui-text-base text-text">
               {envOverwriteDialog.targetFileName} already exists. Overwrite it?
             </p>
           </Dialog>
         )}
 
         {propertiesDialog && (
-          <Dialog
-            title="Properties"
-            icon={Info}
-            onClose={() => setPropertiesDialog(null)}
-            size="md"
-          >
-            <dl className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2 ui-font ui-text-sm">
+          <Dialog title="Properties" icon={Info} onClose={() => setPropertiesDialog(null)}>
+            <dl className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2 ui-font ui-text-base">
               <dt className="text-text-lighter">File</dt>
               <dd className="min-w-0 break-words text-text">{propertiesDialog.fileName}</dd>
               <dt className="text-text-lighter">Path</dt>

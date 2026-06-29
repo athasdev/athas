@@ -10,7 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
@@ -19,10 +19,7 @@ import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
-import {
-  SIDEBAR_TREE_ICON_SIZE,
-  SidebarTreeRow,
-} from "@/features/sidebar-tree/components/sidebar-tree";
+import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
@@ -537,12 +534,11 @@ const GitStatusPanel = ({
                 });
               }}
             >
-              <FileExplorerIcon
+              <ThemedFileIcon
                 fileName={folderNode.name}
                 isDir
                 isExpanded={!isCollapsed}
                 className="relative z-1 shrink-0 text-text-lighter"
-                size={SIDEBAR_TREE_ICON_SIZE}
               />
               <span className="relative z-1 block min-w-0 truncate whitespace-nowrap leading-[1.35]">
                 {folderNode.name}

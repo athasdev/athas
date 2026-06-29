@@ -168,7 +168,7 @@ export function WebViewerToolbar({
             onChange={(e) => onInputUrlChange(e.target.value)}
             onKeyDown={handleUrlInputKeyDown}
             placeholder="Enter URL..."
-            className={`ui-text-xs h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
+            className={`ui-text-sm h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
               hasUrlError
                 ? "border-error/60 bg-error/5 focus:border-error"
                 : "border-border bg-primary-bg focus:border-accent"
@@ -261,7 +261,7 @@ export function WebViewerToolbar({
               className={dropdownItemClassName("justify-between")}
             >
               <span>Reset zoom</span>
-              <span className="text-text-lighter ui-text-xs">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-text-lighter ui-text-sm">{Math.round(zoomLevel * 100)}%</span>
             </Button>
           </div>
         </Dropdown>

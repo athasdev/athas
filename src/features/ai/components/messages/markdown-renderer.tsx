@@ -228,7 +228,7 @@ function CodeBlock({
       <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
-            <div className="editor-font text-text-lighter ui-text-xs">{languageLabel}</div>
+            <div className="editor-font text-text-lighter ui-text-sm">{languageLabel}</div>
           )}
           {code.trim() && (
             <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -246,7 +246,7 @@ function CodeBlock({
                   type="button"
                   variant="default"
                   onClick={() => onApplyCode(code)}
-                  className="h-5 px-1.5 ui-text-xs"
+                  className="h-5 px-1.5 ui-text-sm"
                   tooltip="Apply this code to current buffer"
                 >
                   Apply
@@ -255,7 +255,7 @@ function CodeBlock({
             </div>
           )}
         </div>
-        <code className="editor-font block whitespace-pre-wrap break-all text-text ui-text-xs">
+        <code className="editor-font block whitespace-pre-wrap break-all text-text ui-text-sm">
           {renderedCode}
         </code>
       </pre>
@@ -343,7 +343,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 
   return (
     <div className="my-1 rounded-lg border border-error/25 bg-error/8 px-2.5 py-2">
-      <div className="ui-text-xs flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="font-medium text-error">Error</span>
         <span className="text-text">{summary}</span>
         {code ? <span className="text-text-lighter">({code})</span> : null}
@@ -397,13 +397,13 @@ function ErrorBlock({ errorData }: { errorData: string }) {
               Open Terminal
             </Button>
           )}
-          <span className="ui-text-xs text-error/70">
+          <span className="ui-text-sm text-error/70">
             Complete login in the agent CLI, then retry.
           </span>
         </div>
       )}
       {normalizedDetails && isExpanded && (
-        <pre className="ui-text-xs editor-font mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
+        <pre className="ui-text-sm editor-font mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
           {(() => {
             try {
               const parsed = JSON.parse(normalizedDetails);
@@ -422,10 +422,10 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 const headerClasses: Record<number, string> = {
   1: "mt-3 mb-1.5 font-semibold ui-text-sm text-text",
   2: "ui-text-sm mt-2.5 mb-1 font-semibold text-text",
-  3: "mt-2 mb-1 font-semibold text-text ui-text-xs",
-  4: "mt-2 mb-0.5 font-medium text-text ui-text-xs",
-  5: "mt-1.5 mb-0.5 font-medium text-text-light ui-text-xs",
-  6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-xs",
+  3: "mt-2 mb-1 font-semibold text-text ui-text-sm",
+  4: "mt-2 mb-0.5 font-medium text-text ui-text-sm",
+  5: "mt-1.5 mb-0.5 font-medium text-text-light ui-text-sm",
+  6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-sm",
 };
 
 function renderHeader(level: number, text: string, key: string): React.ReactNode {
@@ -585,7 +585,7 @@ function getTableAlignmentClass(alignment: TableAlignment): string {
 function renderTable(table: MarkdownTable, key: string): React.ReactNode {
   return (
     <div key={key} className="my-2 max-w-full overflow-x-auto">
-      <table className="w-full min-w-max border-collapse ui-text-xs">
+      <table className="w-full min-w-max border-collapse ui-text-sm">
         <thead>
           <tr className="border-border border-b">
             {table.headers.map((header, index) => (

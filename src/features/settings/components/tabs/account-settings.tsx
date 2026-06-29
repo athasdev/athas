@@ -113,7 +113,7 @@ export const AccountSettings = () => {
               variant="default"
               onClick={signIn}
               disabled={isSigningIn}
-              className="ui-text-sm"
+              className="ui-text-base"
               compact
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
@@ -130,12 +130,12 @@ export const AccountSettings = () => {
           >
             <div className="mb-3">
               <div className="min-w-0">
-                <div id="account-ai-usage-label" className="ui-font ui-text-sm text-text">
+                <div id="account-ai-usage-label" className="ui-font ui-text-base text-text">
                   AI Usage
                 </div>
                 <div
                   id="account-ai-usage-description"
-                  className="ui-font ui-text-sm text-text-lighter"
+                  className="ui-font ui-text-base text-text-lighter"
                 >
                   Monthly hosted AI usage across chat, agents, inline edits, generation, and other
                   Athas AI features.
@@ -145,8 +145,8 @@ export const AccountSettings = () => {
             {autocompleteUsage ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="ui-font ui-text-xs text-text-lighter">Monthly usage</span>
-                  <span className="ui-font ui-text-sm font-medium text-text">
+                  <span className="ui-font ui-text-base text-text-lighter">Monthly usage</span>
+                  <span className="ui-font ui-text-base font-medium text-text">
                     {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                     {formatUsdFromCents(autocompleteUsage.budgetCents)}
                   </span>
@@ -158,17 +158,17 @@ export const AccountSettings = () => {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="ui-font ui-text-xs text-text-lighter/70">
+                  <span className="ui-font ui-text-base text-text-lighter/70">
                     {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                     {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
-                  <span className="ui-font ui-text-xs text-text-lighter/70">
+                  <span className="ui-font ui-text-base text-text-lighter/70">
                     Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="ui-font ui-text-xs text-text-lighter">Usage unavailable</div>
+              <div className="ui-font ui-text-base text-text-lighter">Usage unavailable</div>
             )}
           </div>
         )}
@@ -185,7 +185,7 @@ export const AccountSettings = () => {
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button variant="default" onClick={handleManagePlan} className="ui-text-sm" compact>
+              <Button variant="default" onClick={handleManagePlan} className="ui-text-base" compact>
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -223,7 +223,7 @@ export const AccountSettings = () => {
               <Button
                 variant="default"
                 onClick={() => void handleSyncNow()}
-                className="ui-text-sm"
+                className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
               >
                 {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
@@ -237,7 +237,7 @@ export const AccountSettings = () => {
               <Button
                 variant="default"
                 onClick={() => void handleRestoreFromCloud()}
-                className="ui-text-sm"
+                className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
               >
                 Restore
@@ -251,7 +251,12 @@ export const AccountSettings = () => {
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
           >
-            <Button variant="default" onClick={handleManageAccount} className="ui-text-sm" compact>
+            <Button
+              variant="default"
+              onClick={handleManageAccount}
+              className="ui-text-base"
+              compact
+            >
               Open Dashboard
             </Button>
           </SettingRow>
@@ -262,7 +267,7 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button variant="default" onClick={() => void logout()} className="ui-text-sm">
+            <Button variant="default" onClick={() => void logout()} className="ui-text-base">
               Sign Out
             </Button>
           </SettingRow>

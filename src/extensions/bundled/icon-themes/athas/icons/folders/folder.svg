@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Folder">
-  <path d="M3.2 8c0-1 .8-1.8 1.8-1.8h5l1.9 2.2H19c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8H5c-1 0-1.8-.8-1.8-1.8z" fill="#7F8EA3"/>
-  <path d="M4.7 9.5h14.6v1.8H4.7z" fill="#C5D0DE" opacity=".48"/>
-  <path d="M5.5 8.4h4.2l1.2 1.5H5.5z" fill="#C5D0DE" opacity=".8"/>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="Folder">
+  <path d="M.7 4.4c0-1.1.9-2 2-2h6.1l2.1 2.5h6.4c1.1 0 2 .9 2 2v10.4c0 1.1-.9 2-2 2H2.7c-1.1 0-2-.9-2-2z" fill="#7F8EA3"/>
+  <path d="M2.4 6.2h15.2v2H2.4z" fill="#C5D0DE" opacity=".48"/>
+  <path d="M3.2 4.9h5.1l1.4 1.7H3.2z" fill="#C5D0DE" opacity=".8"/>
 </svg>

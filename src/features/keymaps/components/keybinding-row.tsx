@@ -80,7 +80,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
     >
       <div className="min-w-0">
         <div className="ui-font ui-text-sm truncate text-text">{command.title}</div>
-        <div className="ui-font ui-text-xs mt-0.5 truncate text-text-lighter">
+        <div className="ui-font ui-text-sm mt-0.5 truncate text-text-lighter">
           {command.category} • {command.id}
         </div>
       </div>
@@ -111,7 +111,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
         )}
       </div>
 
-      <div className="ui-font ui-text-xs flex items-center truncate text-text-lighter">
+      <div className="ui-font ui-text-sm flex items-center truncate text-text-lighter">
         {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
       </div>
 
@@ -131,7 +131,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             type="button"
             onClick={handleReset}
             variant="ghost"
-            className="ui-text-xs text-text-lighter hover:text-text"
+            className="ui-text-sm text-text-lighter hover:text-text"
             tooltip="Reset to default"
             aria-label="Reset to default keybinding"
             compact
@@ -144,7 +144,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             type="button"
             onClick={handleRemove}
             variant="ghost"
-            className="ui-text-xs text-text-lighter hover:text-error"
+            className="ui-text-sm text-text-lighter hover:text-error"
             tooltip="Remove keybinding"
             aria-label="Remove keybinding"
             compact
@@ -155,7 +155,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </div>
 
       {hasConflict && (
-        <div className="ui-font ui-text-xs col-span-5 flex items-start gap-1.5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
+        <div className="ui-font ui-text-sm col-span-5 flex items-start gap-1.5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
           <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
           <span>Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}</span>
         </div>

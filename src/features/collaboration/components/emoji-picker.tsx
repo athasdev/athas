@@ -186,7 +186,7 @@ export function EmojiPicker({
 
       {visibleRecentEmojis.length > 0 ? (
         <div className="mt-2">
-          <div className="mb-1 px-1 ui-text-xs text-text-lighter uppercase">Recent</div>
+          <div className="mb-1 px-1 ui-text-sm text-text-lighter uppercase">Recent</div>
           <div
             className="grid gap-1"
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
@@ -204,7 +204,7 @@ export function EmojiPicker({
       </div>
 
       {filteredOptions.length === 0 ? (
-        <div className="mt-2 rounded-md border border-border/60 px-2 py-3 text-center ui-text-xs text-text-lighter">
+        <div className="mt-2 rounded-md border border-border/60 px-2 py-3 text-center ui-text-sm text-text-lighter">
           No matching emoji
         </div>
       ) : null}
@@ -212,7 +212,7 @@ export function EmojiPicker({
       {onClear ? (
         <button
           type="button"
-          className="mt-2 h-7 w-full rounded-md text-center ui-text-xs text-text-lighter hover:bg-hover hover:text-text"
+          className="mt-2 h-7 w-full rounded-md text-center ui-text-sm text-text-lighter hover:bg-hover hover:text-text"
           onClick={onClear}
         >
           {clearLabel}

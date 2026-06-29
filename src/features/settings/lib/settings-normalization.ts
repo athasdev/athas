@@ -1,7 +1,6 @@
 import { getProviderById } from "@/features/ai/types/providers.types";
 import { normalizeV0DesignSystems } from "@/extensions/v0/lib/v0-design-systems";
 import { isKeybindingPreset } from "@/features/keymaps/defaults/keybinding-presets";
-import { normalizeFileTreeDensity } from "@/features/file-explorer/lib/file-tree-density";
 import {
   DEFAULT_AI_AUTOCOMPLETE_MODEL_ID,
   DEFAULT_AI_MODEL_ID,
@@ -153,6 +152,24 @@ function normalizeFileTreeIndentSize(value: number): number {
 
   const snapped = Math.round(value);
   return Math.min(FILE_TREE_INDENT_SIZE_MAX, Math.max(FILE_TREE_INDENT_SIZE_MIN, snapped));
+}
+
+function normalizeIconTheme(value: string): string {
+  if (
+    value === "athas-icons-dimmed" ||
+    value === "athas-icons-light" ||
+    value === "athas-file-icons" ||
+    value === "athas-file-icons-dark" ||
+    value === "athas-file-icons-light"
+  ) {
+    return "athas-icons";
+  }
+
+  if (value === "colorful-material" || value === "seti") {
+    return "symbols";
+  }
+
+  return value;
 }
 
 function normalizeBaseUrl(value: string | undefined): string {
@@ -387,7 +404,7 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.fileTreeIndentSize = normalizeFileTreeIndentSize(
     normalizedSettings.fileTreeIndentSize,
   );
-  normalizedSettings.fileTreeDensity = normalizeFileTreeDensity(normalizedSettings.fileTreeDensity);
+  delete (normalizedSettings as { fileTreeDensity?: unknown }).fileTreeDensity;
   normalizedSettings.lastSettingsTab = normalizeSettingsSection(
     (normalizedSettings as { lastSettingsTab?: unknown }).lastSettingsTab,
   );
@@ -396,12 +413,7 @@ export function normalizeSettings(settings: Settings): Settings {
     normalizedSettings.keybindingPreset = "none";
   }
 
-  if (
-    normalizedSettings.iconTheme === "colorful-material" ||
-    normalizedSettings.iconTheme === "seti"
-  ) {
-    normalizedSettings.iconTheme = "symbols";
-  }
+  normalizedSettings.iconTheme = normalizeIconTheme(normalizedSettings.iconTheme);
 
   normalizedSettings.headerTrailingItemsOrder = normalizeItemOrder(
     normalizedSettings.headerTrailingItemsOrder,
@@ -463,16 +475,12 @@ export function normalizeSettingValue<K extends keyof Settings>(
     return normalizeFileTreeIndentSize(value as number) as Settings[K];
   }
 
-  if (key === "fileTreeDensity") {
-    return normalizeFileTreeDensity(value as string) as Settings[K];
-  }
-
   if (key === "lastSettingsTab") {
     return normalizeSettingsSection(value) as Settings[K];
   }
 
-  if (key === "iconTheme" && (value === "colorful-material" || value === "seti")) {
-    return "symbols" as Settings[K];
+  if (key === "iconTheme") {
+    return normalizeIconTheme(value as string) as Settings[K];
   }
 
   if (key === "keybindingPreset" && !isKeybindingPreset(value as string)) {

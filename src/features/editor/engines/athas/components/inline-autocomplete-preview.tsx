@@ -53,7 +53,7 @@ export const InlineAutocompletePreview = forwardRef<HTMLDivElement, InlineAutoco
 
 export function InlineAutocompleteHint() {
   return (
-    <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 ui-text-xs text-text-lighter/80">
+    <div className="pointer-events-none absolute right-3 bottom-3 z-40 rounded-md bg-primary-bg/80 px-2 py-1 ui-text-sm text-text-lighter/80">
       Tab to accept AI suggestion
     </div>
   );

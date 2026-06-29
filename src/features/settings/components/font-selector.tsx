@@ -146,7 +146,7 @@ export const FontSelector = ({
 
   if (error) {
     return (
-      <div className={cn("ui-font ui-text-sm text-error", className)}>
+      <div className={cn("ui-font ui-text-base text-error", className)}>
         Error loading fonts: {error}
       </div>
     );
@@ -159,7 +159,7 @@ export const FontSelector = ({
       onChange={handleFontChange}
       placeholder="Select font"
       className={className}
-      size="xs"
+      size="md"
       variant="default"
       searchable
       searchableTrigger="input"

@@ -126,7 +126,7 @@ export const ChatMessages = memo(
                 type="button"
                 variant="ghost"
                 onClick={() => handleSkillSelect(skill)}
-                className="ui-text-xs h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
+                className="ui-text-sm h-6 max-w-full rounded-md border border-dashed border-border/60 bg-transparent px-2 text-text-lighter/70 hover:border-border-strong hover:bg-transparent hover:text-text"
                 aria-label={`Use skill ${skill.title}`}
               >
                 <span className="min-w-0 truncate">{skill.title}</span>

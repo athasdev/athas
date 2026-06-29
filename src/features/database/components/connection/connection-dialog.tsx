@@ -406,7 +406,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   onChange={(checked) => updateConnectionField(setSaveCredential, checked)}
                   ariaLabel="Save password securely"
                 />
-                <span className="ui-font text-text-lighter ui-text-xs">Save password securely</span>
+                <span className="ui-font text-text-lighter ui-text-sm">Save password securely</span>
               </label>
             </>
           )}
@@ -427,13 +427,13 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       )}
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-xs">
+        <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
           {error}
         </div>
       )}
 
       {testResult === true && (
-        <div className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-success ui-text-xs">
+        <div className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-success ui-text-sm">
           Connection test successful
         </div>
       )}

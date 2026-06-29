@@ -98,6 +98,18 @@ function resolveIcon(
   return {};
 }
 
+function getIconDefinitionsForAppearance(contribution: IconThemeContribution) {
+  const currentThemeId =
+    themeRegistry.getCurrentTheme() || useSettingsStore.getState().settings.theme;
+  const currentTheme = themeRegistry.getTheme(currentThemeId);
+
+  if (currentTheme && !currentTheme.isDark) {
+    return contribution.lightIconDefinitions ?? contribution.iconDefinitions;
+  }
+
+  return contribution.iconDefinitions;
+}
+
 function getFileExtensionCandidates(fileName: string): string[] {
   const parts = fileName.toLowerCase().split(".");
   if (parts.length < 2 || parts[0] === "") {
@@ -121,6 +133,7 @@ function toIconThemeDefinition(
     name: contribution.name,
     description: contribution.description || "",
     getFileIcon: (fileName, isDir, isExpanded = false) => {
+      const iconDefinitions = getIconDefinitionsForAppearance(contribution);
       const normalizedName = fileName.split(/[\\/]/).pop()?.toLowerCase() || fileName.toLowerCase();
 
       if (isDir) {
@@ -130,7 +143,7 @@ function toIconThemeDefinition(
           (isExpanded ? contribution.defaultFolderOpen : undefined) ||
           contribution.defaultFolder;
 
-        return resolveIcon(contribution.iconDefinitions, folderIcon, extensionPath);
+        return resolveIcon(iconDefinitions, folderIcon, extensionPath);
       }
 
       const icon =
@@ -140,14 +153,16 @@ function toIconThemeDefinition(
           .find(Boolean) ||
         contribution.defaultFile;
 
-      return resolveIcon(contribution.iconDefinitions, icon, extensionPath);
+      return resolveIcon(iconDefinitions, icon, extensionPath);
     },
   };
 }
 
 function iconThemeUsesRelativePaths(iconThemes: IconThemeContribution[]): boolean {
   return iconThemes.some((theme) =>
-    Object.values(theme.iconDefinitions).some((definition) => definition.startsWith("./")),
+    [theme.iconDefinitions, theme.lightIconDefinitions].some((definitions) =>
+      Object.values(definitions ?? {}).some((definition) => definition.startsWith("./")),
+    ),
   );
 }
 

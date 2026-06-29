@@ -170,7 +170,7 @@
   "overrides": {
     "next": "15.5.19",
     "vite": "npm:@voidzero-dev/vite-plus-core@0.1.24",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.24"
+    "vitest": "4.1.9"
   },
   "simple-git-hooks": {
     "pre-commit": "bun pre-commit",

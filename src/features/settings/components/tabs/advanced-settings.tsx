@@ -163,7 +163,7 @@ export const AdvancedSettings = () => {
         {showTelemetryLog && (
           <div className="rounded-lg border border-border/70 bg-primary-bg/50">
             {telemetryLog.length === 0 ? (
-              <p className="ui-font ui-text-sm px-3 py-2 text-text-lighter">
+              <p className="ui-font ui-text-base px-3 py-2 text-text-lighter">
                 No telemetry entries yet.
               </p>
             ) : (
@@ -171,7 +171,7 @@ export const AdvancedSettings = () => {
                 {[...telemetryLog].reverse().map((entry) => (
                   <div
                     key={entry.id}
-                    className="ui-font ui-text-sm flex items-center gap-2 border-border/70 px-3 py-2 text-text not-last:border-b"
+                    className="ui-font ui-text-base flex items-center gap-2 border-border/70 px-3 py-2 text-text not-last:border-b"
                   >
                     <span className="min-w-0 flex-1 truncate font-medium">{entry.eventType}</span>
                     <span

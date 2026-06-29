@@ -489,7 +489,7 @@ export const AISettings = () => {
                 }
               }}
               placeholder="http://localhost:11434/v1"
-              size="xs"
+              size="md"
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               spellCheck={false}
               leftIcon={Globe}
@@ -509,7 +509,7 @@ export const AISettings = () => {
                 value={customChatApiKeyInput}
                 onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
                 placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
-                size="xs"
+                size="md"
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 spellCheck={false}
                 autoComplete="off"
@@ -710,7 +710,7 @@ export const AISettings = () => {
                   onChange={(value) =>
                     useAIChatStore.getState().changeSessionConfigOption(option.id, value)
                   }
-                  size="xs"
+                  size="md"
                   variant="default"
                   searchable
                   searchableTrigger="input"
@@ -801,7 +801,7 @@ export const AISettings = () => {
                     }
                   }}
                   placeholder="qwen2.5-coder:7b"
-                  size="xs"
+                  size="md"
                   className={SETTINGS_CONTROL_WIDTHS.xwide}
                   disabled={!aiCompletionAllowedByPolicy}
                 />
@@ -827,7 +827,7 @@ export const AISettings = () => {
                       label: model.name,
                     }))}
                     onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                    size="xs"
+                    size="md"
                     variant="default"
                     searchable
                     searchableTrigger="input"
@@ -872,7 +872,7 @@ export const AISettings = () => {
                       }
                     }}
                     placeholder="http://localhost:11434/v1"
-                    size="xs"
+                    size="md"
                     className={SETTINGS_CONTROL_WIDTHS.xwide}
                     disabled={!aiCompletionAllowedByPolicy}
                   />
@@ -893,7 +893,7 @@ export const AISettings = () => {
                         setCustomAutocompleteApiKeyInput(event.currentTarget.value)
                       }
                       placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
-                      size="xs"
+                      size="md"
                       className={SETTINGS_CONTROL_WIDTHS.wide}
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
                     />

@@ -47,7 +47,7 @@ const actionButtonClass = cn(
 );
 
 const statusChipClass =
-  "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-xs leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const menuTriggerClass = cn(
   buttonVariants({ variant: "ghost", compact: true }),
@@ -55,7 +55,7 @@ const menuTriggerClass = cn(
 );
 
 const menuItemClass =
-  "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left ui-text-xs text-text transition-colors hover:bg-hover";
+  "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left ui-text-sm text-text transition-colors hover:bg-hover";
 
 const menuItemDisabledClass = "cursor-not-allowed opacity-50 hover:bg-transparent";
 function getLanguageDisplayNameOrNull(languageId: string | null) {
@@ -494,7 +494,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               variant="ghost"
               showClear={false}
               showTrigger={false}
-              inputClassName="truncate ui-text-xs text-text-lighter group-hover/combobox-input:text-text"
+              inputClassName="truncate ui-text-sm text-text-lighter group-hover/combobox-input:text-text"
               className={cn(
                 statusChipClass,
                 "h-5 w-fit max-w-[240px] rounded-md bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
@@ -509,12 +509,12 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   <ComboboxItem
                     key={lang.id}
                     value={lang}
-                    className={cn("ui-text-xs", lang.id === currentFileLanguageId && "text-accent")}
+                    className={cn("ui-text-sm", lang.id === currentFileLanguageId && "text-accent")}
                   >
                     <span className="truncate">{lang.displayName}</span>
                   </ComboboxItem>
                 ))}
-                <ComboboxEmpty className="ui-text-xs">No languages found</ComboboxEmpty>
+                <ComboboxEmpty className="ui-text-sm">No languages found</ComboboxEmpty>
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
@@ -547,7 +547,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         >
           <div className="space-y-2">
             <div className="px-1">
-              <span className="font-medium text-text ui-text-xs">{projectName}</span>
+              <span className="font-medium text-text ui-text-sm">{projectName}</span>
             </div>
             {hasActiveServers || isCurrentFileLspAvailable ? (
               <div className="space-y-1">
@@ -559,7 +559,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       disabled={!canRunBulkLspAction}
                       variant="default"
                       compact
-                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                      className="flex-1 rounded-md px-2 ui-text-sm text-text-lighter"
                     >
                       {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
                     </Button>
@@ -569,7 +569,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       disabled={!canRunBulkLspAction}
                       variant="default"
                       compact
-                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                      className="flex-1 rounded-md px-2 ui-text-sm text-text-lighter"
                     >
                       {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
                     </Button>
@@ -584,7 +584,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <Zap className="shrink-0 text-success" weight="duotone" />
-                        <span className="truncate text-text ui-text-xs">{entry.displayName}</span>
+                        <span className="truncate text-text ui-text-sm">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
@@ -593,7 +593,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
-                          className="rounded-md px-2 ui-text-xs text-text-lighter"
+                          className="rounded-md px-2 ui-text-sm text-text-lighter"
                         >
                           {isBusy ? "..." : "Restart"}
                         </Button>
@@ -603,7 +603,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
-                          className="rounded-md px-2 ui-text-xs text-text-lighter"
+                          className="rounded-md px-2 ui-text-sm text-text-lighter"
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
                           <Square weight="duotone" />
@@ -616,7 +616,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   <div className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
                     <div className="flex min-w-0 items-center gap-2">
                       <ZapOff className="shrink-0 opacity-60" weight="duotone" />
-                      <span className="truncate text-text ui-text-xs">
+                      <span className="truncate text-text ui-text-sm">
                         {currentFileDisplayName}
                       </span>
                     </div>
@@ -627,7 +627,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
                         compact
-                        className="rounded-md px-2 ui-text-xs text-text-lighter"
+                        className="rounded-md px-2 ui-text-sm text-text-lighter"
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
                       </Button>
@@ -643,9 +643,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               <div className="space-y-2 px-1 py-1">
                 <div className="flex items-center gap-2 text-error">
                   <ZapOff weight="duotone" />
-                  <span className="ui-text-xs">Language server issue</span>
+                  <span className="ui-text-sm">Language server issue</span>
                 </div>
-                <div className="px-0.5 ui-text-xs text-text-lighter">
+                <div className="px-0.5 ui-text-sm text-text-lighter">
                   Check notifications for the latest error. Reinstall the affected language tools
                   from Extensions if the server binary is missing or failed to launch.
                 </div>
@@ -653,7 +653,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
             ) : (
               <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
                 <ZapOff className="opacity-50" weight="duotone" />
-                <span className="ui-text-xs">No active language servers</span>
+                <span className="ui-text-sm">No active language servers</span>
               </div>
             )}
           </div>

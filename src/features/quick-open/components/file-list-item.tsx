@@ -1,5 +1,5 @@
 import { ClockIcon } from "@phosphor-icons/react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "../types/quick-open.types";
@@ -32,9 +32,9 @@ export const FileListItem = ({
       onClick={() => onClick(file.path)}
       onMouseEnter={() => onMouseEnter?.(index, file.path)}
       isSelected={isSelected}
-      className="ui-font"
+      className="ui-font ui-text-base"
     >
-      <FileExplorerIcon fileName={file.name} isDir={false} className="shrink-0" />
+      <ThemedFileIcon fileName={file.name} isDir={false} className="shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="truncate ui-text-base">
           <span className="text-text">{file.name}</span>

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="React">
-  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#4F9EBC"/>
-  <path d="M14.6 2.8v4.9h4.9Z" fill="#B6E0EF" opacity=".82"/>
-  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
-  <circle cx="12" cy="12" r="1.5" fill="#B6E0EF"/><ellipse cx="12" cy="12" rx="6.5" ry="2.5" fill="none" stroke="#B6E0EF" stroke-width="1.25"/><ellipse cx="12" cy="12" rx="6.5" ry="2.5" fill="none" stroke="#B6E0EF" stroke-width="1.25" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="6.5" ry="2.5" fill="none" stroke="#B6E0EF" stroke-width="1.25" transform="rotate(120 12 12)"/>
-</svg>

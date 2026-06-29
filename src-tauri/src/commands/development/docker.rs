@@ -273,8 +273,10 @@ pub struct DockerDevContainer {
    pub mounts: Vec<String>,
    #[serde(default)]
    pub forward_ports: Vec<String>,
+   pub on_create_command: Option<String>,
    pub post_create_command: Option<String>,
    pub post_start_command: Option<String>,
+   pub post_attach_command: Option<String>,
    #[serde(default)]
    pub features: Vec<String>,
 }
@@ -1515,8 +1517,10 @@ fn read_dev_container(
       workspace_mount: string_value(&value, "workspaceMount"),
       mounts: string_array_or_single(&value, "mounts"),
       forward_ports,
+      on_create_command: command_value(&value, "onCreateCommand"),
       post_create_command: command_value(&value, "postCreateCommand"),
       post_start_command: command_value(&value, "postStartCommand"),
+      post_attach_command: command_value(&value, "postAttachCommand"),
       features,
    })
 }
@@ -1922,16 +1926,26 @@ async fn run_devcontainer_lifecycle_commands(
    include_post_create: bool,
 ) -> Result<String, String> {
    let mut output = String::new();
-   if include_post_create && let Some(command) = &dev_container.post_create_command {
+   if include_post_create
+      && (dev_container.on_create_command.is_some() || dev_container.post_create_command.is_some())
+   {
       let marker_path = lifecycle_marker_path(dev_container);
       let marker_exists = run_docker_exec_shell(container_id, &format!("test -f {}", marker_path))
          .await
          .is_ok();
       if !marker_exists {
-         output = join_command_output(
-            output,
-            run_docker_exec_command(container_id, command, dev_container).await?,
-         );
+         if let Some(command) = &dev_container.on_create_command {
+            output = join_command_output(
+               output,
+               run_docker_exec_command(container_id, command, dev_container).await?,
+            );
+         }
+         if let Some(command) = &dev_container.post_create_command {
+            output = join_command_output(
+               output,
+               run_docker_exec_command(container_id, command, dev_container).await?,
+            );
+         }
          run_docker_exec_shell(
             container_id,
             &format!("mkdir -p /tmp && touch {}", marker_path),
@@ -1940,6 +1954,12 @@ async fn run_devcontainer_lifecycle_commands(
       }
    }
    if let Some(command) = &dev_container.post_start_command {
+      output = join_command_output(
+         output,
+         run_docker_exec_command(container_id, command, dev_container).await?,
+      );
+   }
+   if let Some(command) = &dev_container.post_attach_command {
       output = join_command_output(
          output,
          run_docker_exec_command(container_id, command, dev_container).await?,
@@ -3246,8 +3266,10 @@ mod tests {
          ),
          mounts: Vec::new(),
          forward_ports: Vec::new(),
+         on_create_command: None,
          post_create_command: None,
          post_start_command: None,
+         post_attach_command: None,
          features: Vec::new(),
       };
 
@@ -3307,11 +3329,13 @@ mod tests {
            "mounts": [
              "source=cache,target=/cache,type=volume",
              "source=${localWorkspaceFolderBasename}-cache,target=${containerWorkspaceFolder}/.cache,type=volume"
-           ],
-           "forwardPorts": [3000, "9229/tcp"],
-           "postCreateCommand": "cargo fetch",
-           "postStartCommand": ["cargo", "test"],
-           "features": { "ghcr.io/devcontainers/features/node:1": {} }
+	           ],
+	           "forwardPorts": [3000, "9229/tcp"],
+	           "onCreateCommand": { "deps": "bun install", "setup": ["bun", "run", "setup"] },
+	           "postCreateCommand": "cargo fetch",
+	           "postStartCommand": ["cargo", "test"],
+	           "postAttachCommand": "echo attached",
+	           "features": { "ghcr.io/devcontainers/features/node:1": {} }
          }"#,
       )
       .expect("devcontainer json");
@@ -3371,12 +3395,20 @@ mod tests {
       );
       assert_eq!(definitions[0].forward_ports, vec!["3000", "9229/tcp"]);
       assert_eq!(
+         definitions[0].on_create_command.as_deref(),
+         Some("bun install && 'bun' 'run' 'setup'")
+      );
+      assert_eq!(
          definitions[0].post_create_command.as_deref(),
          Some("cargo fetch")
       );
       assert_eq!(
          definitions[0].post_start_command.as_deref(),
          Some("'cargo' 'test'")
+      );
+      assert_eq!(
+         definitions[0].post_attach_command.as_deref(),
+         Some("echo attached")
       );
    }
 

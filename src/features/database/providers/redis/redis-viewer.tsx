@@ -162,7 +162,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 {keyInfo.ttl > 0 && (
                   <span className="flex items-center gap-0.5 text-text-lighter">
                     <Clock />
-                    <span className="ui-text-xs">{keyInfo.ttl}s</span>
+                    <span className="ui-text-sm">{keyInfo.ttl}s</span>
                   </span>
                 )}
               </Button>
@@ -171,20 +171,20 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               <div
                 ref={loadMoreRef}
                 aria-label="Loading more keys"
-                className="px-2 py-1 text-text-lighter ui-text-xs"
+                className="px-2 py-1 text-text-lighter ui-text-sm"
               >
                 {store.isScanningKeys ? "Loading keys..." : "More keys..."}
               </div>
             )}
             {store.isScanningKeys && !store.hasMore && (
-              <div className="px-2 py-1 text-text-lighter ui-text-xs">Loading keys...</div>
+              <div className="px-2 py-1 text-text-lighter ui-text-sm">Loading keys...</div>
             )}
           </div>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-primary-bg/85">
           {store.error && (
-            <div className="mx-3 mt-3 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-xs">
+            <div className="mx-3 mt-3 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
               {store.error}
             </div>
           )}
@@ -198,12 +198,12 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {!store.isLoading && showInfo && store.serverInfo && (
             <div className="flex-1 overflow-auto p-3">
               <div className="rounded-2xl border border-border/60 bg-secondary-bg/40 p-3">
-                <div className="mb-3 text-text-lighter ui-text-xs uppercase tracking-[0.08em]">
+                <div className="mb-3 text-text-lighter ui-text-sm uppercase tracking-[0.08em]">
                   Server Info
                 </div>
                 <div className="space-y-2">
                   {Object.entries(store.serverInfo).map(([key, value]) => (
-                    <div key={key} className="flex gap-2 ui-text-xs">
+                    <div key={key} className="flex gap-2 ui-text-sm">
                       <span className="ui-font min-w-[140px] text-text-lighter">{key}</span>
                       <span className="ui-font">{value}</span>
                     </div>
@@ -217,7 +217,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <div className="flex flex-1 flex-col overflow-hidden">
               <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
                 <Key className="text-text-lighter" />
-                <span className="ui-font font-medium ui-text-xs">{store.selectedKey}</span>
+                <span className="ui-font font-medium ui-text-sm">{store.selectedKey}</span>
                 <Badge
                   className={cn(
                     "border-0 bg-secondary-bg/70 px-1.5 font-bold uppercase",
@@ -238,7 +238,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 </Button>
               </div>
               <div className="flex-1 overflow-auto p-3">
-                <pre className="ui-font whitespace-pre-wrap rounded-2xl bg-secondary-bg/40 p-3 ui-text-xs leading-5">
+                <pre className="ui-font whitespace-pre-wrap rounded-2xl bg-secondary-bg/40 p-3 ui-text-sm leading-5">
                   {typeof store.keyValue === "string"
                     ? store.keyValue
                     : JSON.stringify(store.keyValue, null, 2)}
@@ -251,7 +251,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <div className="flex flex-1 items-center justify-center px-6">
               <div className="rounded-2xl border border-border/60 bg-secondary-bg/40 px-5 py-4 text-center">
                 <div className="ui-text-sm">Select a key</div>
-                <div className="mt-1 text-text-lighter ui-text-xs">
+                <div className="mt-1 text-text-lighter ui-text-sm">
                   Pick a Redis key from the sidebar to inspect its value.
                 </div>
               </div>

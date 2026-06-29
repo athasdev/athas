@@ -52,7 +52,7 @@ type FooterItem<T extends string> = {
 };
 
 const footerCountPill = cva(
-  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 ui-text-xs leading-3",
+  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 ui-text-sm leading-3",
 );
 const footerGitTrigger = cva("h-6 w-fit rounded-md");
 const footerGitTriggerInput = cva("ui-text-sm");
@@ -395,7 +395,7 @@ const Footer = () => {
                 ) : (
                   <DownloadSimple weight="duotone" />
                 )}
-                <span className="ui-font ui-text-xs font-medium">
+                <span className="ui-font ui-text-sm font-medium">
                   {downloading
                     ? `Updating ${downloadProgress?.percentage ?? 0}%`
                     : installing

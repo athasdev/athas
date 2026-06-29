@@ -328,7 +328,7 @@ export default function DebuggerView() {
         <aside className="flex min-h-0 flex-col border-border/70 border-r">
           <div className="space-y-3 p-3">
             <div className="space-y-1.5">
-              <div className="ui-font text-text-lighter ui-text-xs">Configuration</div>
+              <div className="ui-font text-text-lighter ui-text-sm">Configuration</div>
               <Select
                 value={selectedConfig.id}
                 onChange={(value) => debuggerActions.setActiveConfigId(value)}
@@ -341,7 +341,7 @@ export default function DebuggerView() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="ui-font text-text-lighter ui-text-xs">Command</div>
+              <div className="ui-font text-text-lighter ui-text-sm">Command</div>
               {resolvedSelectedConfig.runtime === "custom" ? (
                 <Input
                   value={customCommand}
@@ -350,7 +350,7 @@ export default function DebuggerView() {
                   size="sm"
                 />
               ) : (
-                <div className="ui-font min-h-8 truncate rounded-md border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-xs text-text-lighter">
+                <div className="ui-font min-h-8 truncate rounded-md border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}
@@ -417,14 +417,14 @@ export default function DebuggerView() {
             </div>
 
             {startError ? (
-              <div className="ui-font rounded-md border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-xs">
+              <div className="ui-font rounded-md border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
                 {startError}
               </div>
             ) : null}
           </div>
 
           {activeSession && activeSession.status !== "idle" ? (
-            <div className="border-border/70 border-t px-3 py-2 ui-text-xs">
+            <div className="border-border/70 border-t px-3 py-2 ui-text-sm">
               <div className="flex items-center gap-2">
                 <DebugSessionStatusIcon status={activeSession.status} />
                 <span className="truncate font-medium">{activeSession.name}</span>
@@ -434,13 +434,13 @@ export default function DebuggerView() {
                   </Badge>
                 ) : null}
               </div>
-              <div className="mt-1 line-clamp-2 ui-text-xs text-text-lighter">
+              <div className="mt-1 line-clamp-2 ui-text-sm text-text-lighter">
                 {stoppedState?.description || stoppedState?.reason || activeSession.command}
               </div>
             </div>
           ) : null}
 
-          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-xs text-text-lighter">
+          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-sm text-text-lighter">
             <div className="flex items-center gap-1.5">
               <FolderOpen size={12} />
               <span className="truncate">
@@ -503,7 +503,7 @@ export default function DebuggerView() {
                   <div
                     key={`${output.sessionId}-${index}`}
                     className={cn(
-                      "whitespace-pre-wrap break-words px-3 py-1 font-mono ui-text-xs",
+                      "whitespace-pre-wrap break-words px-3 py-1 font-mono ui-text-sm",
                       output.stream === "stderr" ? "text-error" : "text-text-lighter",
                     )}
                   >

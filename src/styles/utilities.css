@@ -86,12 +86,30 @@ html[data-window-resize-dragging] * {
   font-size: var(--ui-text-sm);
 }
 
-.ui-text-xs {
-  font-size: var(--ui-text-xs);
-}
-
 .ui-text-base {
   font-size: var(--ui-text-base);
+}
+
+.themed-file-icon,
+.ui-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.themed-file-icon > svg,
+svg.themed-file-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.themed-file-icon-badge {
+  width: 0.72em;
+  height: 0.72em;
+  display: block;
 }
 
 @keyframes dropIndicatorPulse {
@@ -251,7 +269,7 @@ html[data-window-resize-dragging] * {
   margin-bottom: 0.25rem;
   font-weight: 400;
   color: rgb(239 68 68);
-  font-size: var(--ui-text-xs);
+  font-size: var(--ui-text-sm);
 }
 
 .error-title {
@@ -261,6 +279,6 @@ html[data-window-resize-dragging] * {
 
 .error-message {
   color: rgb(220 38 38);
-  font-size: var(--ui-text-xs);
+  font-size: var(--ui-text-sm);
   line-height: 1.3;
 }

@@ -267,6 +267,7 @@ export interface IconThemeContribution {
   name: string;
   description?: string;
   iconDefinitions: Record<string, string>;
+  lightIconDefinitions?: Record<string, string>;
   fileExtensions?: Record<string, string>;
   filenames?: Record<string, string>;
   folders?: Record<string, string>;

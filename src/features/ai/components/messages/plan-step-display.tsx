@@ -57,7 +57,7 @@ export const PlanStepDisplay = memo(function PlanStepDisplay({
         )}
       </Button>
       {isExpanded && step.description && (
-        <div className="border-border border-t px-3 py-2.5 text-text-light ui-text-xs">
+        <div className="border-border border-t px-3 py-2.5 text-text-light ui-text-sm">
           <MarkdownRenderer content={step.description} />
         </div>
       )}

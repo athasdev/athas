@@ -25,7 +25,7 @@ import Breadcrumb, {
 } from "@/features/editor/components/toolbar/breadcrumb";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
@@ -481,10 +481,9 @@ const DiffFileSection = memo(function DiffFileSection({
               style={{ height: `${lineHeight}px` }}
               aria-label={`Open ${filePath}`}
             >
-              <FileExplorerIcon
+              <ThemedFileIcon
                 fileName={fileName}
                 isDir={false}
-                size={iconSize}
                 className="shrink-0 text-text-lighter"
               />
               <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">

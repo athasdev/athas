@@ -637,7 +637,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 <dd
                   className={cn(
                     "min-w-0 truncate text-text",
-                    item.mono ? "editor-font ui-text-xs" : "ui-text-sm",
+                    item.mono ? "editor-font ui-text-sm" : "ui-text-sm",
                   )}
                 >
                   {item.value}
@@ -675,11 +675,11 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="ui-text-sm min-w-0 truncate text-text">{job.name}</span>
-                          <span className="ui-text-xs text-text-lighter">
+                          <span className="ui-text-sm text-text-lighter">
                             {getWorkflowRunStatus(job.status, job.conclusion).label}
                           </span>
                         </div>
-                        <div className="ui-text-xs mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                        <div className="ui-text-sm mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
                           {formatDuration(job.startedAt, job.completedAt) ? (
                             <span>{formatDuration(job.startedAt, job.completedAt)}</span>
                           ) : null}
@@ -733,7 +733,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                             <div className="ui-text-sm truncate text-text">
                               {selectedStep?.name ?? job.name}
                             </div>
-                            <div className="ui-text-xs text-text-lighter">
+                            <div className="ui-text-sm text-text-lighter">
                               {selectedStep
                                 ? getWorkflowRunStatus(selectedStep.status, selectedStep.conclusion)
                                     .label
@@ -745,7 +745,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               <input
                                 value={logSearchQuery}
                                 onChange={(event) => setLogSearchQuery(event.target.value)}
-                                className="h-6 w-40 rounded border border-border/70 bg-secondary-bg/40 px-2 ui-text-xs text-text outline-none placeholder:text-text-lighter focus:border-accent/70"
+                                className="h-6 w-40 rounded border border-border/70 bg-secondary-bg/40 px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/70"
                                 placeholder="Search logs"
                                 aria-label="Search logs"
                               />
@@ -811,7 +811,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               </Button>
                             </div>
                           ) : filteredStepLogs ? (
-                            <pre className="ui-text-xs whitespace-pre-wrap break-words font-mono leading-5 text-text-light">
+                            <pre className="ui-text-sm whitespace-pre-wrap break-words font-mono leading-5 text-text-light">
                               {filteredStepLogs.split(/\r?\n/).map((line, lineIndex, lines) => (
                                 <span key={`${lineIndex}-${line}`}>
                                   {getLogLineSegments(line, logSearchQuery).map(

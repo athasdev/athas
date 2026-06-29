@@ -273,13 +273,13 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                     {planLabel}
                   </Badge>
                 </div>
-                <span className="ui-text-xs text-text-lighter">{modeLabel}</span>
+                <span className="ui-text-sm text-text-lighter">{modeLabel}</span>
               </div>
               {autocompleteUsage ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-xs text-text-lighter">Hosted AI</span>
-                    <span className="ui-text-xs font-medium text-text">
+                    <span className="ui-text-sm text-text-lighter">Hosted AI</span>
+                    <span className="ui-text-sm font-medium text-text">
                       {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                       {formatUsdFromCents(autocompleteUsage.budgetCents)}
                     </span>
@@ -291,17 +291,17 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                     />
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-xs text-text-lighter/70">
+                    <span className="ui-text-sm text-text-lighter/70">
                       {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                       {formatUsageDate(autocompleteUsage.periodEnd)}
                     </span>
-                    <span className="ui-text-xs text-text-lighter/70">
+                    <span className="ui-text-sm text-text-lighter/70">
                       Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-text-lighter ui-text-xs">
+                <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
                   <CurrencyDollar weight="duotone" />
                   <span>Usage unavailable</span>
                 </div>

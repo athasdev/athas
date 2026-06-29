@@ -32,13 +32,16 @@ export const SETTINGS_CONTROL_WIDTHS = {
 export default function Section({ title, description, children, className }: SectionProps) {
   return (
     <section
-      className={cn("px-1 py-0.5 first:[&>.settings-section-header]:hidden", className)}
+      className={cn(
+        "px-1 py-0.5 [--app-ui-badge-font-size:var(--ui-text-base)] [--app-ui-button-font-size:var(--ui-text-base)] first:[&>.settings-section-header]:hidden",
+        className,
+      )}
       data-settings-section={title}
       data-settings-section-key={getSettingSearchTargetKey(title)}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
         <h4 className="ui-font ui-text-base text-text">{title}</h4>
-        {description && <p className="ui-font ui-text-sm text-text-lighter">{description}</p>}
+        {description && <p className="ui-font ui-text-base text-text-lighter">{description}</p>}
       </div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -177,7 +180,7 @@ export function SettingRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div id={labelId} className="ui-font ui-text-sm cursor-default text-text">
+          <div id={labelId} className="ui-font ui-text-base cursor-default text-text">
             {label}
           </div>
           {labelAccessory}
@@ -199,14 +202,14 @@ export function SettingRow({
           ) : null}
         </div>
         {description && (
-          <div id={descriptionId} className="ui-font ui-text-sm cursor-default text-text-lighter">
+          <div id={descriptionId} className="ui-font ui-text-base cursor-default text-text-lighter">
             {description}
           </div>
         )}
       </div>
       <div
         ref={controlRef}
-        className="ui-font ui-text-sm shrink-0 select-auto [--app-ui-badge-height:1.5rem] [--app-ui-button-compact-height:1.5rem] [--app-ui-button-compact-min-width:1.5rem] [--app-ui-button-height:1.5rem] [--app-ui-button-min-width:1.5rem] [--app-ui-control-font-size:var(--ui-text-sm)] max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
+        className="ui-font ui-text-base shrink-0 select-auto [--app-ui-badge-font-size:var(--ui-text-base)] [--app-ui-badge-height:1.5rem] [--app-ui-button-compact-height:1.5rem] [--app-ui-button-compact-min-width:1.5rem] [--app-ui-button-font-size:var(--ui-text-base)] [--app-ui-button-height:1.5rem] [--app-ui-button-min-width:1.5rem] max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
       >
         {children}
       </div>

@@ -164,12 +164,12 @@ const WorkflowRunRow = memo(
         </div>
         <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
           {run.workflowName ? (
-            <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+            <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
               <span className="truncate">{run.workflowName}</span>
             </span>
           ) : null}
           {run.headBranch ? (
-            <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+            <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
               <span className="truncate">{run.headBranch}</span>
             </span>
           ) : null}

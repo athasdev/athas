@@ -316,17 +316,17 @@ export const InlineGitBlame = ({
                 <span className="truncate font-medium ui-text-sm text-text">
                   {blameLine.author}
                 </span>
-                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-xs">
+                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-sm">
                   <Clock />
                   <span>{formatRelativeTime(blameLine.time)}</span>
                 </div>
               </div>
 
-              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-xs leading-relaxed">
+              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-sm leading-relaxed">
                 {blameLine.commit.trim()}
               </pre>
 
-              <div className="flex items-center gap-1.5 text-text-lighter ui-text-xs">
+              <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
                 <Button
                   type="button"
                   variant="ghost"

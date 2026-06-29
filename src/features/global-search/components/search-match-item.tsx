@@ -1,5 +1,5 @@
 import { type CSSProperties, memo } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { SearchMatch } from "@/features/global-search/lib/rust-api/search";
 import { Button } from "@/ui/button";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
@@ -50,15 +50,14 @@ export const SearchMatchItem = memo(
         data-item-index={index}
         onClick={() => onSelect(filePath, match.line_number)}
         onMouseEnter={onPreview ? () => onPreview(filePath) : undefined}
-        className={`h-auto w-full justify-start items-start gap-3 px-3 py-1 text-left ${isSelected ? "bg-hover" : ""}`}
+        className={`h-auto w-full justify-start items-start gap-3 px-3 py-1 text-left ui-text-sm ${isSelected ? "bg-hover" : ""}`}
         style={style}
       >
         {/* File icon, name and path */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <FileExplorerIcon
+          <ThemedFileIcon
             fileName={fileName}
             isDir={false}
-            size={12}
             className="shrink-0 text-text-lighter"
           />
           <span className="ui-text-sm shrink-0 text-text">{fileName}</span>

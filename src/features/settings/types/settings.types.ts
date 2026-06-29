@@ -145,7 +145,6 @@ export interface Settings {
   fileTreeIndentSize: number;
   compactFoldersInFileTree: boolean;
   hideRootFolderInFileTree: boolean;
-  fileTreeDensity: "compact" | "default" | "comfortable";
   showHiddenFilesInFileTree: boolean;
   showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];

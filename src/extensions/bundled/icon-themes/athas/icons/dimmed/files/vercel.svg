@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Vercel">
-  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#6E798B"/>
-  <path d="M14.6 2.8v4.9h4.9Z" fill="#CBD2DE" opacity=".82"/>
-  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
-  <path d="M8.2 15.8h7.6a3 3 0 0 0 .4-6 4.4 4.4 0 0 0-8.3 1.1 2.5 2.5 0 0 0 .3 4.9z" fill="none" stroke="#CBD2DE" stroke-width="1.45" stroke-linejoin="round"/><text x="12" y="14" text-anchor="middle" font-family="Arial,sans-serif" font-size="4.5" font-weight="700" fill="#CBD2DE">V</text>
-</svg>

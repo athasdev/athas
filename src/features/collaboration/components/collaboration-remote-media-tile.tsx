@@ -32,7 +32,7 @@ export function RemoteMediaTile({ share }: { share: RemoteMediaShare }) {
         />
       ) : null}
       <audio ref={setAudioElement} autoPlay />
-      <div className="ui-text-xs flex items-center justify-between px-2 py-1 text-text-lighter">
+      <div className="ui-text-sm flex items-center justify-between px-2 py-1 text-text-lighter">
         <span className="truncate">{share.deviceId}</span>
         <span>{hasVideo ? "screen" : "audio"}</span>
       </div>

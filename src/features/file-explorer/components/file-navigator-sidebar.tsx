@@ -21,7 +21,8 @@ import {
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
-import { FileExplorerIcon } from "./file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
 export type FileNavigatorSearchMode = "substring" | "fuzzy";
@@ -205,12 +206,11 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
       aria-current={isSelected ? "true" : undefined}
       title={title}
       active={isSelected}
-      className="h-7 min-h-0 gap-1.5 rounded px-2 py-0 ui-text-xs hover:bg-hover/40"
+      className="gap-1.5 rounded px-2 py-1 ui-text-base leading-[1.35] hover:bg-hover/40"
       leading={
-        <FileExplorerIcon
+        <ThemedFileIcon
           fileName={item.iconPath ?? item.path}
           isDir={false}
-          size={14}
           className={cn("shrink-0", item.iconClassName)}
         />
       }
@@ -245,12 +245,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
         <SidebarSectionLabel
           style={{ paddingLeft: 8 + depth * 12 }}
           leading={
-            <FileExplorerIcon
-              fileName={node.name}
-              isDir
-              size={14}
-              className="shrink-0 text-text-lighter"
-            />
+            <ThemedFileIcon fileName={node.name} isDir className="shrink-0 text-text-lighter" />
           }
         >
           {node.name}
@@ -280,13 +275,12 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
       aria-current={isSelected ? "true" : undefined}
       active={isSelected}
       title={item.path}
-      className="h-7 min-h-0 gap-1.5 rounded px-2 py-0 ui-text-xs hover:bg-hover/40"
+      className="gap-1.5 rounded px-2 py-1 ui-text-base leading-[1.35] hover:bg-hover/40"
       contentClassName="truncate"
       leading={
-        <FileExplorerIcon
+        <ThemedFileIcon
           fileName={item.iconPath ?? node.name}
           isDir={false}
-          size={14}
           className={cn("shrink-0", item.iconClassName)}
         />
       }
@@ -406,6 +400,8 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           searchIcon={Search}
           placeholder="Search"
           searchAriaLabel="Search files"
+          searchClassName="h-8 ui-text-base pl-9"
+          searchContainerClassName="file-explorer-search-field"
           className={cn(borderless ? "px-1" : "border-b border-border/60")}
           actions={
             <div
@@ -415,24 +411,30 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               )}
             >
               <SidebarHeaderIconButton
-                className={cn("size-5 rounded", viewMode === "flat" && "bg-selected text-text")}
+                className={cn(
+                  "file-navigator-view-mode-button rounded ui-text-base",
+                  viewMode === "flat" && "bg-selected text-text",
+                )}
                 onClick={() => onViewModeChange("flat")}
                 aria-label="Show flat file list"
                 aria-pressed={viewMode === "flat"}
                 tooltip="Flat list"
                 tooltipSide="bottom"
               >
-                <ListBullets size={13} />
+                <ListBullets />
               </SidebarHeaderIconButton>
               <SidebarHeaderIconButton
-                className={cn("size-5 rounded", viewMode === "tree" && "bg-selected text-text")}
+                className={cn(
+                  "file-navigator-view-mode-button rounded ui-text-base",
+                  viewMode === "tree" && "bg-selected text-text",
+                )}
                 onClick={() => onViewModeChange("tree")}
                 aria-label="Show file tree"
                 aria-pressed={viewMode === "tree"}
                 tooltip="File tree"
                 tooltipSide="bottom"
               >
-                <TreeStructure size={13} />
+                <TreeStructure />
               </SidebarHeaderIconButton>
             </div>
           }

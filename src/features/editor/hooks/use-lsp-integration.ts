@@ -10,6 +10,7 @@ import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useSnippetCompletion } from "@/features/editor/hooks/use-snippet-completion";
+import { deferUntilAfterNextPaint } from "@/features/editor/lsp/deferred-lsp-work";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useDefinitionLink } from "@/features/editor/lsp/use-definition-link";
@@ -236,9 +237,14 @@ export const useLspIntegration = ({
       }
     };
 
-    initLsp();
+    const cancelInitLsp = deferUntilAfterNextPaint(() => {
+      void initLsp();
+    });
 
-    return cleanupDocument;
+    return () => {
+      cancelInitLsp();
+      cleanupDocument();
+    };
   }, [enabled, filePath, isLspSupported, lspClient, rootFolderPath]);
 
   // Handle document content changes

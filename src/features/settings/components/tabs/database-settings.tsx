@@ -64,11 +64,11 @@ export const DatabaseSettings = () => {
         description="Saved entries are scoped to the workspace they were added from."
       >
         {isLoadingSaved ? (
-          <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
+          <div className="ui-font ui-text-base px-1 py-2 text-text-lighter">
             <LoadingIndicator label="Loading saved connections" showLabel compact />
           </div>
         ) : savedConnections.length === 0 ? (
-          <div className="ui-font ui-text-sm rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 text-text-lighter">
+          <div className="ui-font ui-text-base rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 text-text-lighter">
             No saved database connections yet.
           </div>
         ) : (
@@ -81,12 +81,12 @@ export const DatabaseSettings = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Database className="text-text-lighter" />
-                    <div className="ui-font ui-text-sm truncate text-text">{connection.name}</div>
+                    <div className="ui-font ui-text-base truncate text-text">{connection.name}</div>
                     <Badge variant="default" size="compact" className="uppercase">
                       {formatDbType(connection.db_type)}
                     </Badge>
                   </div>
-                  <div className="ui-font ui-text-sm mt-1 truncate text-text-lighter">
+                  <div className="ui-font ui-text-base mt-1 truncate text-text-lighter">
                     {connection.file_path
                       ? connection.file_path
                       : `${connection.host}:${connection.port}${connection.database ? ` / ${connection.database}` : ""}`}

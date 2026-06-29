@@ -1104,9 +1104,6 @@ export const useFileSystemStore = createSelectors(
         fileOpenBenchmark.ensureStarted(path, isPreview ? "preview" : "definite");
         fileOpenBenchmark.mark(path, "file-select-handler");
 
-        const { updateActivePath } = useSidebarStore.getState();
-        updateActivePath(path);
-
         const {
           buffers,
           actions: { convertPreviewToDefinite, setActiveBuffer },

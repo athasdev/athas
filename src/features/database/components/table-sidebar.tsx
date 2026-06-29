@@ -88,7 +88,7 @@ export default function TableSidebar({
                     onClick={() => onSelectTable(t.name)}
                     onContextMenu={(e) => onTableContextMenu(e, t.name, group.kind)}
                     className={cn(
-                      "h-auto items-start gap-1.5 rounded-lg px-2.5 py-1.5 ui-text-xs leading-[1.35]",
+                      "h-auto items-start gap-1.5 rounded-lg px-2.5 py-1.5 ui-text-sm leading-[1.35]",
                     )}
                     contentClassName="min-w-0"
                     active={selectedTable === t.name}

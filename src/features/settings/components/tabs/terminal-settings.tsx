@@ -129,7 +129,7 @@ export const TerminalSettings = () => {
               )
             }
             className={SETTINGS_CONTROL_WIDTHS.xwide}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -156,7 +156,7 @@ export const TerminalSettings = () => {
               )
             }
             className={SETTINGS_CONTROL_WIDTHS.xwide}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -170,7 +170,7 @@ export const TerminalSettings = () => {
       >
         <div className="space-y-3 px-1">
           <div className="flex items-center justify-between">
-            <div className="ui-font ui-text-sm text-text-lighter">
+            <div className="ui-font ui-text-base text-text-lighter">
               Built-in profiles are generated from detected shells. Custom profiles appear in the
               terminal toolbar profile picker.
             </div>
@@ -190,7 +190,7 @@ export const TerminalSettings = () => {
           </div>
 
           {profiles.length === 0 ? (
-            <div className="ui-font ui-text-sm rounded-xl border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
+            <div className="ui-font ui-text-base rounded-xl border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
               No custom terminal profiles yet.
             </div>
           ) : (
@@ -201,8 +201,8 @@ export const TerminalSettings = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="ui-font ui-text-sm mb-1 text-text">{profile.name}</div>
-                    <div className="ui-font ui-text-sm text-text-lighter">
+                    <div className="ui-font ui-text-base mb-1 text-text">{profile.name}</div>
+                    <div className="ui-font ui-text-base text-text-lighter">
                       Visible in the terminal profile picker.
                     </div>
                   </div>
@@ -217,7 +217,7 @@ export const TerminalSettings = () => {
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className="ui-font ui-text-sm text-text">Name</label>
+                    <label className="ui-font ui-text-base text-text">Name</label>
                     <Input
                       value={profile.name}
                       onChange={(event) =>
@@ -226,11 +226,11 @@ export const TerminalSettings = () => {
                         })
                       }
                       placeholder="My Profile"
-                      size="sm"
+                      size="md"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="ui-font ui-text-sm text-text">Shell</label>
+                    <label className="ui-font ui-text-base text-text">Shell</label>
                     <Select
                       value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
                       options={shellOptions}
@@ -240,7 +240,7 @@ export const TerminalSettings = () => {
                         })
                       }
                       className="w-full"
-                      size="sm"
+                      size="md"
                       variant="default"
                       searchable
                       searchableTrigger="input"
@@ -249,7 +249,7 @@ export const TerminalSettings = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="ui-font ui-text-sm text-text">Startup Directory</label>
+                  <label className="ui-font ui-text-base text-text">Startup Directory</label>
                   <Input
                     value={profile.startupDirectory || ""}
                     onChange={(event) =>
@@ -258,12 +258,12 @@ export const TerminalSettings = () => {
                       })
                     }
                     placeholder="Leave empty to use the current workspace directory"
-                    size="sm"
+                    size="md"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="ui-font ui-text-sm text-text">Startup Commands</label>
+                  <label className="ui-font ui-text-base text-text">Startup Commands</label>
                   <Textarea
                     value={(profile.startupCommands || []).join("\n")}
                     onChange={(event) =>
@@ -276,7 +276,7 @@ export const TerminalSettings = () => {
                     }
                     placeholder="One command per line"
                     rows={3}
-                    size="sm"
+                    size="md"
                   />
                 </div>
               </div>
@@ -300,7 +300,7 @@ export const TerminalSettings = () => {
               options={fontOptions}
               onChange={(val) => updateSetting("terminalFontFamily", val)}
               className={SETTINGS_CONTROL_WIDTHS.xwide}
-              size="xs"
+              size="md"
               variant="default"
               searchable
               searchableTrigger="input"
@@ -324,7 +324,7 @@ export const TerminalSettings = () => {
             value={settings.terminalFontSize}
             onChange={(val) => updateSetting("terminalFontSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -343,7 +343,7 @@ export const TerminalSettings = () => {
             value={settings.terminalLineHeight}
             onChange={(val) => updateSetting("terminalLineHeight", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -362,7 +362,7 @@ export const TerminalSettings = () => {
             value={settings.terminalLetterSpacing}
             onChange={(val) => updateSetting("terminalLetterSpacing", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -381,7 +381,7 @@ export const TerminalSettings = () => {
             value={settings.terminalScrollback}
             onChange={(val) => updateSetting("terminalScrollback", val)}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
           />
         </SettingRow>
       </Section>
@@ -406,7 +406,7 @@ export const TerminalSettings = () => {
               updateSetting("terminalCursorStyle", val as "block" | "underline" | "bar")
             }
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -442,7 +442,7 @@ export const TerminalSettings = () => {
             value={settings.terminalCursorWidth}
             onChange={(val) => updateSetting("terminalCursorWidth", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
-            size="xs"
+            size="md"
           />
         </SettingRow>
       </Section>

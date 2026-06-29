@@ -233,7 +233,7 @@ export function ModelSelector({
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("max-w-[176px]")
-      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
+      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-sm",
     triggerClassName,
   );
 
@@ -364,14 +364,14 @@ export function ModelSelector({
           onWheel={(event) => event.stopPropagation()}
         >
           {modelFetchError && (
-            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-xs">
+            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-sm">
               <WarningCircle className="shrink-0 text-warning" />
               <span>{modelFetchError}</span>
             </div>
           )}
 
           {filteredModels.length === 0 && !canUseCustomQueryModel ? (
-            <div className="p-4 text-center text-text-lighter ui-text-xs">
+            <div className="p-4 text-center text-text-lighter ui-text-sm">
               {isCustomProvider ? "Type a model name and press Enter" : "No models found"}
             </div>
           ) : (
@@ -405,7 +405,7 @@ export function ModelSelector({
                     disabled={isLocked}
                     className={cn(
                       dropdownItemClassName(),
-                      "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
+                      "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
                       isActive && "bg-hover",
                       isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     )}
@@ -434,7 +434,7 @@ export function ModelSelector({
                   onPointerMove={() => setActiveIndex(filteredModels.length)}
                   className={cn(
                     dropdownItemClassName(),
-                    "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
+                    "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
                     activeIndex === filteredModels.length && "bg-hover",
                   )}
                 >

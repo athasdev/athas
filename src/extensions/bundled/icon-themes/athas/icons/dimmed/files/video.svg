@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Video">
-  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#BA7688"/>
-  <path d="M14.6 2.8v4.9h4.9Z" fill="#E7C6D1" opacity=".82"/>
-  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
-  <rect x="6.2" y="8" width="9.1" height="8" rx="1.5" fill="none" stroke="#E7C6D1" stroke-width="1.45"/><path d="m15.3 10.6 3-1.8v6.4l-3-1.8z" fill="#E7C6D1"/>
-</svg>

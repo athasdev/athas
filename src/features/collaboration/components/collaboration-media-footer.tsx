@@ -55,7 +55,7 @@ export function CollaborationMediaFooter({
         >
           <Monitor />
         </Button>
-        <div className="ui-text-xs min-w-0 flex-1 truncate px-1">
+        <div className="ui-text-sm min-w-0 flex-1 truncate px-1">
           <span className="font-medium text-text">{workspaceName}</span>
           <span className="px-1 text-text-lighter">·</span>
           <span className="text-text-lighter">{onlineCount} online</span>
@@ -66,7 +66,7 @@ export function CollaborationMediaFooter({
           <Button
             type="button"
             variant="ghost"
-            className="ui-text-xs ml-auto h-6 px-2"
+            className="ui-text-sm ml-auto h-6 px-2"
             onClick={onStopFollowing}
           >
             Stop

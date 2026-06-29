@@ -37,7 +37,8 @@ name = "athas_text_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]
-tauri-build = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c", features = [] }
+tauri-build = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c", features = [
+] }
 
 [dependencies]
 anyhow = "1.0"

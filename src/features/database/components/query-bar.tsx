@@ -165,7 +165,7 @@ function SqlEditor({
               aria-label={`Insert SQL ${item.detail} ${item.label}`}
               tooltip={item.detail}
             >
-              <span className="ui-font ui-text-xs">{item.label}</span>
+              <span className="ui-font ui-text-sm">{item.label}</span>
             </Button>
           ))}
         </div>
@@ -271,7 +271,7 @@ export default function QueryBar({
           tableMeta={tableMeta}
         />
         <div className="flex items-center justify-between gap-2">
-          <div className="ui-font ui-text-xs text-text-lighter">
+          <div className="ui-font ui-text-sm text-text-lighter">
             {selectedQuery
               ? "Selection will run"
               : lastQueryExecutionMs !== null && lastQueryExecutionMs !== undefined

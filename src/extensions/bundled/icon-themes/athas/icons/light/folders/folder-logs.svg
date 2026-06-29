@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Logs">
-  <path d="M3.2 8c0-1 .8-1.8 1.8-1.8h5l1.9 2.2H19c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8H5c-1 0-1.8-.8-1.8-1.8z" fill="#929EB0"/>
-  <path d="M4.7 9.5h14.6v1.8H4.7z" fill="#B9C2CE" opacity=".48"/>
-  <path d="M5.5 8.4h4.2l1.2 1.5H5.5z" fill="#B9C2CE" opacity=".8"/>
-  <g transform="translate(6.2 4.9) scale(.68)"><path d="M9 11.3h6M9 13.8h6M9 16.3h3.8" stroke="#B9C2CE" stroke-width="1.25" stroke-linecap="round"/></g>
-</svg>

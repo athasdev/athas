@@ -165,8 +165,10 @@ export interface DockerDevContainer {
   workspaceMount?: string | null;
   mounts: string[];
   forwardPorts: string[];
+  onCreateCommand?: string | null;
   postCreateCommand?: string | null;
   postStartCommand?: string | null;
+  postAttachCommand?: string | null;
   features: string[];
 }
 

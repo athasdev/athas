@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Assets">
-  <path d="M3.2 8c0-1 .8-1.8 1.8-1.8h5l1.9 2.2H19c1 0 1.8.8 1.8 1.8v6.4c0 1-.8 1.8-1.8 1.8H5c-1 0-1.8-.8-1.8-1.8z" fill="#62B7A5"/>
-  <path d="M4.7 9.5h14.6v1.8H4.7z" fill="#A8D4CD" opacity=".48"/>
-  <path d="M5.5 8.4h4.2l1.2 1.5H5.5z" fill="#A8D4CD" opacity=".8"/>
-  <g transform="translate(6.2 4.9) scale(.68)"><rect x="8" y="11" width="8.2" height="5.6" rx="1" fill="none" stroke="#A8D4CD" stroke-width="1.2"/><path d="m8.8 16 2.2-2.1 1.5 1.4 1-1 1.8 1.7" fill="none" stroke="#A8D4CD" stroke-width="1.1" stroke-linecap="round"/></g>
-</svg>

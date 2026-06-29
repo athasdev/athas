@@ -666,10 +666,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="flex flex-1 flex-col justify-center gap-4">
           <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
             <p className="font-medium ui-text-sm text-text">{title}</p>
-            <p className="mt-1 text-text-lighter ui-text-xs">{description}</p>
+            <p className="mt-1 text-text-lighter ui-text-sm">{description}</p>
           </div>
 
-          <div className="grid gap-2 ui-text-xs text-text-lighter">
+          <div className="grid gap-2 ui-text-sm text-text-lighter">
             <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
               Sidebar views for custom tools and dashboards
             </div>
@@ -751,7 +751,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col gap-3">
           <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
             <p className="font-medium ui-text-sm text-text">Build a UI extension from a prompt</p>
-            <p className="mt-1 text-text-lighter ui-text-xs">
+            <p className="mt-1 text-text-lighter ui-text-sm">
               Choose where it should live, describe the workflow, then install it directly into
               Athas.
             </p>
@@ -768,7 +768,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium ui-text-sm text-text">{option.label}</p>
-                <p className="text-text-lighter ui-text-xs">{option.description}</p>
+                <p className="text-text-lighter ui-text-sm">{option.description}</p>
               </div>
               <ArrowRight className="ml-auto size-4 text-text-lighter" />
             </button>
@@ -782,7 +782,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             <p className="font-medium ui-text-sm text-text">
               {CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label}
             </p>
-            <p className="mt-1 text-text-lighter ui-text-xs">
+            <p className="mt-1 text-text-lighter ui-text-sm">
               Describe what it should show, what actions it should support, and how the user should
               interact with it.
             </p>
@@ -801,7 +801,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             autoFocus
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-text-lighter ui-text-xs">
+            <p className="text-text-lighter ui-text-sm">
               Hosted generation. No user API key required.
             </p>
             <Button
@@ -821,7 +821,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "generating" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
           <LoadingIndicator label="Generating" showLabel />
-          <p className="min-h-4 text-center text-text-lighter ui-text-xs">
+          <p className="min-h-4 text-center text-text-lighter ui-text-sm">
             {GENERATING_MESSAGES[generationMessageIndex]}
           </p>
         </div>
@@ -831,7 +831,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
             <div className="rounded-lg border border-error/30 bg-error/10 p-3">
-              <p className="text-error ui-text-xs">{error}</p>
+              <p className="text-error ui-text-sm">{error}</p>
             </div>
           ) : generatedExtension ? (
             <>
@@ -842,7 +842,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                     {generatedExtension.name}
                   </span>
                 </div>
-                <p className="text-text-lighter ui-text-xs">{generatedExtension.description}</p>
+                <p className="text-text-lighter ui-text-sm">{generatedExtension.description}</p>
               </div>
 
               {isInstalled ? (

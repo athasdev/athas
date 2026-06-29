@@ -43,7 +43,7 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
         </>
       }
     >
-      <p className="text-text ui-text-xs">
+      <p className="text-text ui-text-sm">
         Do you want to save the changes you made to <strong>{fileName}</strong>?
       </p>
     </Dialog>

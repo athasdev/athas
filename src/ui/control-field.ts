@@ -23,7 +23,7 @@ export const controlFieldSurfaceVariants = cva(
 export const controlFieldSizeVariants = cva("", {
   variants: {
     size: {
-      xs: "h-6 ui-text-xs",
+      xs: "h-6 ui-text-sm",
       sm: "h-7 ui-text-sm",
       md: "h-8 ui-text-base",
     },

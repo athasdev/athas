@@ -74,7 +74,7 @@ const DiffHeader = memo(
       return (
         <span
           className={cn(
-            "rounded px-1.5 py-0.5 font-medium ui-text-xs capitalize leading-none",
+            "rounded px-1.5 py-0.5 font-medium ui-text-sm capitalize leading-none",
             statusColors[status],
           )}
         >
@@ -101,7 +101,7 @@ const DiffHeader = memo(
             ) : (
               <>
                 {renderFileStatus()}
-                <div className="flex items-center gap-2 ui-text-xs">{renderStats()}</div>
+                <div className="flex items-center gap-2 ui-text-sm">{renderStats()}</div>
               </>
             )
           }

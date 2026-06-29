@@ -98,7 +98,7 @@ export default function TableToolbar({
             <Database className="text-text-lighter" />
             <span className="ui-font ui-text-sm min-w-0 truncate text-text">{fileName}</span>
             {dbInfo && (
-              <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+              <span className="ui-font ui-text-sm shrink-0 text-text-lighter">
                 {dbInfo.tables}t {dbInfo.indexes}i
               </span>
             )}
@@ -111,7 +111,7 @@ export default function TableToolbar({
                 variant={viewMode === mode ? "default" : "ghost"}
                 compact
                 className={cn(
-                  "rounded px-2.5 ui-text-xs text-text-lighter",
+                  "rounded px-2.5 ui-text-sm text-text-lighter",
                   viewMode === mode ? "text-text" : "text-text-lighter",
                 )}
                 aria-label={`Switch to ${label} view`}
@@ -136,7 +136,7 @@ export default function TableToolbar({
             </Button>
           )}
           {resultSummary && (
-            <span className="px-2 ui-font ui-text-xs text-text-lighter">{resultSummary}</span>
+            <span className="px-2 ui-font ui-text-sm text-text-lighter">{resultSummary}</span>
           )}
           {viewMode === "data" && (
             <Button

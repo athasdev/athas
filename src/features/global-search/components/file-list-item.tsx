@@ -1,6 +1,6 @@
 import { ClockIcon } from "@phosphor-icons/react";
 import { memo } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { CommandItem } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
@@ -45,11 +45,11 @@ export const FileListItem = memo(
         isSelected={isSelected}
         className={
           compact
-            ? "ui-font !h-auto min-h-7 !min-w-0 gap-2 rounded-md px-2 py-1 leading-[1.35]"
-            : "ui-font leading-[1.35]"
+            ? "ui-font !h-auto min-h-7 !min-w-0 gap-2 rounded-md px-2 py-1 ui-text-base leading-[1.35]"
+            : "ui-font ui-text-base leading-[1.35]"
         }
       >
-        <FileExplorerIcon fileName={file.name} isDir={false} className="shrink-0" />
+        <ThemedFileIcon fileName={file.name} isDir={false} className="shrink-0" />
         <div className="min-w-0 flex-1 overflow-hidden">
           <div
             className={cn(

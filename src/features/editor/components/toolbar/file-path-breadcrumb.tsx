@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -248,7 +248,7 @@ export function FilePathBreadcrumb({
               compact
               className={dropdownItemClassName("justify-start gap-2 font-normal")}
             >
-              <FileExplorerIcon
+              <ThemedFileIcon
                 fileName={item.name}
                 isDir={item.isDir}
                 isExpanded={false}

@@ -163,7 +163,7 @@ function sectionCount(inventory: DockerInventory, section: DockerSection) {
 }
 
 function ResourceMeta({ children }: { children: ReactNode }) {
-  return <div className="truncate ui-text-xs text-text-lighter">{children}</div>;
+  return <div className="truncate ui-text-sm text-text-lighter">{children}</div>;
 }
 
 function ResourceTitle({ children }: { children: ReactNode }) {
@@ -442,7 +442,7 @@ function ContainerRow({
           <ResourceTitle>{container.name}</ResourceTitle>
           <span
             className={cn(
-              "ui-text-xs shrink-0 rounded-full px-1.5 py-0.5 capitalize",
+              "ui-text-sm shrink-0 rounded-full px-1.5 py-0.5 capitalize",
               getContainerStateTone(container),
             )}
           >
@@ -612,7 +612,7 @@ function ComposeServiceRow({
           <ResourceTitle>{service.name}</ResourceTitle>
           <span
             className={cn(
-              "ui-text-xs shrink-0 rounded-full px-1.5 py-0.5 capitalize",
+              "ui-text-sm shrink-0 rounded-full px-1.5 py-0.5 capitalize",
               getComposeServiceTone(service),
             )}
           >
@@ -1801,7 +1801,7 @@ export function DockerSidebar() {
         />
 
         {error ? (
-          <div className="border-y border-border/60 bg-error/8 px-2 py-1.5 ui-text-xs text-error">
+          <div className="border-y border-border/60 bg-error/8 px-2 py-1.5 ui-text-sm text-error">
             {error}
           </div>
         ) : null}
@@ -1845,7 +1845,7 @@ export function DockerSidebar() {
                 ) : (
                   <>
                     <div className="flex items-center justify-between gap-2 px-2 py-1">
-                      <div className="min-w-0 truncate ui-text-xs text-text-lighter">
+                      <div className="min-w-0 truncate ui-text-sm text-text-lighter">
                         {composeProject.files.map(fileName).join(", ")}
                       </div>
                       <div className="flex items-center gap-1">
@@ -1853,7 +1853,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={busyComposeService !== null || composeEnvFilePaths.length === 0}
                           tooltip={
                             composeEnvFilePaths.length === 0
@@ -1870,7 +1870,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={busyComposeService !== null}
                           onClick={() => void handleSaveComposePreset()}
                         >
@@ -1880,7 +1880,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={busyComposeService !== null}
                           onClick={() => void handleComposeAction(null, "down")}
                         >
@@ -1937,7 +1937,7 @@ export function DockerSidebar() {
                         type="button"
                         variant="ghost"
                         compact
-                        className="h-6 px-1.5 ui-text-xs"
+                        className="h-6 px-1.5 ui-text-sm"
                         onClick={() => void handleOpenEnvFile()}
                       >
                         <FileIcon className="size-3.5" />
@@ -1947,7 +1947,7 @@ export function DockerSidebar() {
                         type="button"
                         variant="ghost"
                         compact
-                        className="h-6 px-1.5 ui-text-xs"
+                        className="h-6 px-1.5 ui-text-sm"
                         onClick={() => void handleSaveDebugPreset()}
                       >
                         <Bug className="size-3.5" />
@@ -1958,7 +1958,7 @@ export function DockerSidebar() {
                 ) : (
                   <>
                     <div className="flex items-center justify-between gap-2 px-2 py-1">
-                      <div className="min-w-0 truncate ui-text-xs text-text-lighter">
+                      <div className="min-w-0 truncate ui-text-sm text-text-lighter">
                         Project Docker settings
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
@@ -1966,7 +1966,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           onClick={() => void handleOpenEnvFile()}
                         >
                           <FileIcon className="size-3.5" />
@@ -1976,7 +1976,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           onClick={() => void handleSaveDebugPreset()}
                         >
                           <Bug className="size-3.5" />
@@ -2001,7 +2001,7 @@ export function DockerSidebar() {
                                 type="button"
                                 variant="ghost"
                                 compact
-                                className="h-6 px-1.5 ui-text-xs"
+                                className="h-6 px-1.5 ui-text-sm"
                                 disabled={
                                   busyDevContainerPath !== null ||
                                   devContainer.kind === "unsupported"
@@ -2028,8 +2028,10 @@ export function DockerSidebar() {
                             {devContainer.containerEnv.length > 0 ||
                             devContainer.workspaceMount ||
                             devContainer.mounts.length > 0 ||
+                            devContainer.onCreateCommand ||
                             devContainer.postCreateCommand ||
-                            devContainer.postStartCommand ? (
+                            devContainer.postStartCommand ||
+                            devContainer.postAttachCommand ? (
                               <ResourceMeta>
                                 {[
                                   devContainer.containerEnv.length > 0
@@ -2039,8 +2041,10 @@ export function DockerSidebar() {
                                     ? `${devContainer.mounts.length} mounts`
                                     : null,
                                   devContainer.workspaceMount ? "workspaceMount" : null,
+                                  devContainer.onCreateCommand ? "onCreate" : null,
                                   devContainer.postCreateCommand ? "postCreate" : null,
                                   devContainer.postStartCommand ? "postStart" : null,
+                                  devContainer.postAttachCommand ? "postAttach" : null,
                                 ]
                                   .filter(Boolean)
                                   .join(" · ")}
@@ -2063,7 +2067,7 @@ export function DockerSidebar() {
                                 type="button"
                                 variant="ghost"
                                 compact
-                                className="h-6 px-1.5 ui-text-xs"
+                                className="h-6 px-1.5 ui-text-sm"
                                 onClick={() => handleRunDebugPreset(preset)}
                               >
                                 Run
@@ -2092,7 +2096,7 @@ export function DockerSidebar() {
                                   type="button"
                                   variant="ghost"
                                   compact
-                                  className="h-6 px-1.5 ui-text-xs"
+                                  className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => handleRunDebugPreset(preset)}
                                 >
                                   Run
@@ -2136,7 +2140,7 @@ export function DockerSidebar() {
                                   type="button"
                                   variant="ghost"
                                   compact
-                                  className="h-6 px-1.5 ui-text-xs"
+                                  className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => void openEnvFile(envFile)}
                                 >
                                   Edit
@@ -2182,7 +2186,7 @@ export function DockerSidebar() {
                                   type="button"
                                   variant="ghost"
                                   compact
-                                  className="h-6 px-1.5 ui-text-xs"
+                                  className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => applyBuildPreset(preset)}
                                 >
                                   Use
@@ -2226,7 +2230,7 @@ export function DockerSidebar() {
                                   type="button"
                                   variant="ghost"
                                   compact
-                                  className="h-6 px-1.5 ui-text-xs"
+                                  className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => applyRunPreset(preset)}
                                 >
                                   Use
@@ -2270,7 +2274,7 @@ export function DockerSidebar() {
                                   type="button"
                                   variant="ghost"
                                   compact
-                                  className="h-6 px-1.5 ui-text-xs"
+                                  className="h-6 px-1.5 ui-text-sm"
                                   disabled={busyComposeService !== null}
                                   onClick={() => void handleRunComposePreset(preset)}
                                 >
@@ -2312,14 +2316,14 @@ export function DockerSidebar() {
                 "images",
                 <>
                   <div className="flex items-center justify-between gap-2 px-2 py-1">
-                    <div className="min-w-0 truncate ui-text-xs text-text-lighter">
+                    <div className="min-w-0 truncate ui-text-sm text-text-lighter">
                       Build and run local images
                     </div>
                     <Button
                       type="button"
                       variant="ghost"
                       compact
-                      className="h-6 px-1.5 ui-text-xs"
+                      className="h-6 px-1.5 ui-text-sm"
                       disabled={busyImageId !== null}
                       onClick={openBuildDialog}
                     >
@@ -2362,14 +2366,14 @@ export function DockerSidebar() {
                             if (event.key === "Enter") void handleRegistrySearch();
                           }}
                           placeholder="Search Docker Hub"
-                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-xs text-text outline-none placeholder:text-text-lighter"
+                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
                         />
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         compact
-                        className="h-6 px-1.5 ui-text-xs"
+                        className="h-6 px-1.5 ui-text-sm"
                         disabled={isRegistryBusy || !registryQuery.trim()}
                         onClick={() => void handleRegistrySearch()}
                       >
@@ -2404,7 +2408,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={isRegistryBusy || !registryDraft.image.trim()}
                           onClick={() => void handleRegistryPull(registryDraft.image)}
                         >
@@ -2414,7 +2418,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={isRegistryBusy || !registryDraft.image.trim()}
                           onClick={() => void handleRegistryPush()}
                         >
@@ -2424,7 +2428,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={
                             isRegistryBusy ||
                             !registryDraft.image.trim() ||
@@ -2476,7 +2480,7 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           compact
-                          className="h-6 px-1.5 ui-text-xs"
+                          className="h-6 px-1.5 ui-text-sm"
                           disabled={
                             isRegistryBusy ||
                             !registryDraft.username.trim() ||
@@ -2490,7 +2494,7 @@ export function DockerSidebar() {
                     </div>
                   </div>
                   {registryError ? (
-                    <div className="mx-2 mb-1 whitespace-pre-wrap rounded border border-error/30 bg-error/8 px-2 py-1 ui-text-xs text-error">
+                    <div className="mx-2 mb-1 whitespace-pre-wrap rounded border border-error/30 bg-error/8 px-2 py-1 ui-text-sm text-error">
                       {registryError}
                     </div>
                   ) : null}
@@ -2511,7 +2515,7 @@ export function DockerSidebar() {
                             type="button"
                             variant="ghost"
                             compact
-                            className="h-6 px-1.5 ui-text-xs"
+                            className="h-6 px-1.5 ui-text-sm"
                             disabled={isRegistryBusy}
                             onClick={() => void handleRegistryPull(result.name)}
                           >
@@ -2553,7 +2557,7 @@ export function DockerSidebar() {
                       type="button"
                       variant="ghost"
                       compact
-                      className="h-7 justify-start px-2 ui-text-xs"
+                      className="h-7 justify-start px-2 ui-text-sm"
                       disabled={busyPruneTarget !== null}
                       onClick={() => void handlePrune(target, target === "system")}
                     >
@@ -2593,10 +2597,10 @@ export function DockerSidebar() {
             <div className="max-h-72 shrink-0 border-t border-border/70 bg-secondary-bg/35">
               <div className="flex h-8 items-center justify-between gap-2 px-2">
                 <div className="min-w-0">
-                  <div className="truncate ui-text-xs font-medium text-text">
+                  <div className="truncate ui-text-sm font-medium text-text">
                     {selectedContainer ? selectedContainer.name : "Container details"}
                   </div>
-                  <div className="ui-text-xs text-text-lighter">
+                  <div className="ui-text-sm text-text-lighter">
                     {detailTab === "logs"
                       ? logStreamId
                         ? "Streaming logs"
@@ -2613,7 +2617,7 @@ export function DockerSidebar() {
                       type="button"
                       variant={detailTab === tab ? "accent" : "ghost"}
                       compact
-                      className="h-6 px-1.5 ui-text-xs capitalize"
+                      className="h-6 px-1.5 ui-text-sm capitalize"
                       disabled={!selectedContainer}
                       onClick={() => setDetailTab(tab)}
                     >
@@ -2625,7 +2629,7 @@ export function DockerSidebar() {
                       type="button"
                       variant="ghost"
                       compact
-                      className="h-6 px-1.5 ui-text-xs"
+                      className="h-6 px-1.5 ui-text-sm"
                       disabled={logLines.length === 0}
                       onClick={() => setLogLines([])}
                     >
@@ -2636,7 +2640,7 @@ export function DockerSidebar() {
                       type="button"
                       variant="ghost"
                       compact
-                      className="h-6 px-1.5 ui-text-xs"
+                      className="h-6 px-1.5 ui-text-sm"
                       disabled={!selectedContainer}
                       onClick={() => void handleCopyToContainer()}
                     >
@@ -2655,7 +2659,7 @@ export function DockerSidebar() {
                         value={logQuery}
                         onChange={(event) => setLogQuery(event.target.value)}
                         placeholder="Search logs"
-                        className="h-6 min-w-0 flex-1 bg-transparent ui-text-xs text-text outline-none placeholder:text-text-lighter"
+                        className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
                       />
                     </div>
                     {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
@@ -2664,7 +2668,7 @@ export function DockerSidebar() {
                         type="button"
                         variant={logFilter === filter ? "accent" : "ghost"}
                         compact
-                        className="h-6 px-1.5 ui-text-xs capitalize"
+                        className="h-6 px-1.5 ui-text-sm capitalize"
                         onClick={() => setLogFilter(filter)}
                       >
                         {filter === "stderr" ? "Err" : filter}
@@ -2672,7 +2676,7 @@ export function DockerSidebar() {
                     ))}
                   </div>
                   {logError ? (
-                    <div className="border-t border-border/50 px-2 py-1 ui-text-xs text-error">
+                    <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
                       {logError}
                     </div>
                   ) : null}
@@ -2707,7 +2711,7 @@ export function DockerSidebar() {
                       type="button"
                       variant="ghost"
                       compact
-                      className="h-6 px-1.5 ui-text-xs"
+                      className="h-6 px-1.5 ui-text-sm"
                       disabled={!selectedContainer || containerPath === "/"}
                       onClick={() => setContainerPath(parentContainerPath(containerPath))}
                     >
@@ -2720,7 +2724,7 @@ export function DockerSidebar() {
                       type="button"
                       variant="ghost"
                       compact
-                      className="h-6 px-1.5 ui-text-xs"
+                      className="h-6 px-1.5 ui-text-sm"
                       disabled={!selectedContainer || isFilesLoading}
                       onClick={() => void loadContainerFiles()}
                     >
@@ -2732,17 +2736,17 @@ export function DockerSidebar() {
                     </Button>
                   </div>
                   {filesError ? (
-                    <div className="border-t border-border/50 px-2 py-1 ui-text-xs text-error">
+                    <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
                       {filesError}
                     </div>
                   ) : null}
                   <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
                     {!selectedContainer ? (
-                      <div className="px-2 py-2 ui-text-xs text-text-lighter">
+                      <div className="px-2 py-2 ui-text-sm text-text-lighter">
                         Select a container to browse files.
                       </div>
                     ) : isFilesLoading ? (
-                      <div className="px-2 py-2 ui-text-xs text-text-lighter">Loading files...</div>
+                      <div className="px-2 py-2 ui-text-sm text-text-lighter">Loading files...</div>
                     ) : containerFiles.length > 0 ? (
                       containerFiles.map((entry) => (
                         <div
@@ -2773,8 +2777,8 @@ export function DockerSidebar() {
                             />
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="truncate ui-text-xs text-text">{entry.name}</div>
-                            <div className="truncate ui-text-xs text-text-lighter">
+                            <div className="truncate ui-text-sm text-text">{entry.name}</div>
+                            <div className="truncate ui-text-sm text-text-lighter">
                               {entry.isDirectory ? "Directory" : formatFileSize(entry.size)}
                               {entry.mode ? ` · ${entry.mode}` : ""}
                             </div>
@@ -2783,7 +2787,7 @@ export function DockerSidebar() {
                             type="button"
                             variant="ghost"
                             compact
-                            className="h-6 px-1.5 ui-text-xs"
+                            className="h-6 px-1.5 ui-text-sm"
                             tooltip="Copy to host"
                             tooltipSide="left"
                             aria-label={`Copy ${entry.name} to host`}
@@ -2797,7 +2801,7 @@ export function DockerSidebar() {
                         </div>
                       ))
                     ) : (
-                      <div className="px-2 py-2 ui-text-xs text-text-lighter">No files found.</div>
+                      <div className="px-2 py-2 ui-text-sm text-text-lighter">No files found.</div>
                     )}
                   </div>
                 </>

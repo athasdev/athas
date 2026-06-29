@@ -38,7 +38,7 @@ export default function InfoView({
         {/* Database stats */}
         <div className="p-3">
           <div className="mb-1 ui-text-sm text-text">{fileName}</div>
-          <div className="flex gap-4 ui-text-xs text-text-lighter">
+          <div className="flex gap-4 ui-text-sm text-text-lighter">
             <span>{dbInfo?.tables || 0} tables</span>
             <span>{dbInfo?.indexes || 0} indexes</span>
             <span>v{dbInfo?.version || "0"}</span>
@@ -49,11 +49,11 @@ export default function InfoView({
 
         {/* Tables */}
         <div className="p-3">
-          <div className="mb-2 ui-text-xs text-text-lighter">objects</div>
+          <div className="mb-2 ui-text-sm text-text-lighter">objects</div>
           <div className="space-y-3">
             {objectGroups.map((group) => (
               <div key={group.kind}>
-                <div className="mb-1 ui-text-xs text-text-lighter uppercase tracking-wide">
+                <div className="mb-1 ui-text-sm text-text-lighter uppercase tracking-wide">
                   {group.label} ({group.objects.length})
                 </div>
                 <div className="space-y-1">
@@ -72,7 +72,7 @@ export default function InfoView({
                         <span className="flex min-w-0 flex-col items-start">
                           <span className="max-w-full truncate">{table.name}</span>
                           {owner && (
-                            <span className="max-w-full truncate ui-text-xs text-text-lighter">
+                            <span className="max-w-full truncate ui-text-sm text-text-lighter">
                               on {owner}
                             </span>
                           )}

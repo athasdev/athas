@@ -468,13 +468,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const extensionView = extensionViews.get(currentView);
 
   return (
-    <Command
-      isVisible
-      onClose={onClose}
-      className={
-        currentView === "databases" ? "max-h-[min(720px,calc(100vh-7rem))] w-[640px]" : undefined
-      }
-    >
+    <Command isVisible onClose={onClose}>
       {currentView === "quick-question" ? (
         <QuickQuestionCommandContent
           onBack={popView}

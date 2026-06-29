@@ -93,7 +93,14 @@ const targets: Record<Identity, { config?: string; macosAppName: string }> = {
 const getLaunchPath = () => {
   switch (targetPlatform) {
     case "macos":
-      return `target/debug/bundle/macos/${targets[identity].macosAppName}`;
+      return path.resolve(
+        process.cwd(),
+        "target",
+        "debug",
+        "bundle",
+        "macos",
+        targets[identity].macosAppName,
+      );
     case "linux":
       return path.join(process.cwd(), "target", "debug", "athas");
     case "windows":
@@ -207,6 +214,7 @@ const buildArgs = ["tauri", "build", "--debug"];
 
 if (targetPlatform === "macos") {
   buildArgs.push("--bundles", "app");
+  buildArgs.push("--no-sign");
 } else {
   buildArgs.push("--no-bundle");
 }
@@ -218,6 +226,23 @@ if (targetPlatform === "macos") {
 if (target.config) {
   buildArgs.push("--config", target.config);
 }
+
+buildArgs.push(
+  "--config",
+  JSON.stringify({
+    bundle: {
+      createUpdaterArtifacts: false,
+      macOS: {
+        signingIdentity: null,
+      },
+    },
+    plugins: {
+      updater: {
+        active: false,
+      },
+    },
+  }),
+);
 
 if (targetPlatform === "linux") {
   await $`cargo ${buildArgs} -- --no-default-features --features linux`.cwd(process.cwd());

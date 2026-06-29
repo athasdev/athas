@@ -35,7 +35,7 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
           <AlertTriangle className="size-8 text-warning" />
           <div>
             <p className="font-medium ui-text-sm text-text">{this.props.name} crashed</p>
-            <p className="mt-1 text-text-lighter ui-text-xs">
+            <p className="mt-1 text-text-lighter ui-text-sm">
               {this.state.error?.message || "An unexpected error occurred"}
             </p>
           </div>

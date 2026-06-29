@@ -1,6 +1,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { iconThemeRegistry } from "./icon-theme-registry";
 import type { IconThemeDefinition } from "./types";
+import { getVisibleIconThemes } from "./icon-theme-normalization";
 
 const subscribeToIconThemeRegistry = (callback: () => void) =>
   iconThemeRegistry.onRegistryChange(callback);
@@ -14,5 +15,5 @@ export function useRegisteredIconThemes(): IconThemeDefinition[] {
     getIconThemeRegistrySnapshot,
   );
 
-  return useMemo(() => iconThemeRegistry.getAllThemes(), [registryVersion]);
+  return useMemo(() => getVisibleIconThemes(iconThemeRegistry.getAllThemes()), [registryVersion]);
 }

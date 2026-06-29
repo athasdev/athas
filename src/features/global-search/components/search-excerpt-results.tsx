@@ -11,7 +11,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-index";
 import { calculateTotalGutterWidth } from "@/features/editor/utils/gutter";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
@@ -401,29 +401,28 @@ function SearchExcerptItemComponent({
         tabIndex={0}
         onClick={openTarget}
         onKeyDown={handleHeaderKeyDown}
-        className="flex min-w-0 cursor-pointer items-center gap-2 border-border/70 border-b bg-secondary-bg/45 px-2.5 py-1.5 hover:bg-hover/35"
+        className="flex min-w-0 cursor-pointer items-center gap-2 border-border/70 border-b bg-secondary-bg/45 px-2.5 py-1.5 ui-text-sm hover:bg-hover/35"
       >
-        <FileExplorerIcon
+        <ThemedFileIcon
           fileName={excerpt.fileName}
           isDir={false}
-          size={15}
           className="shrink-0 text-text-lighter"
         />
         <div className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
           <span className="ui-text-sm shrink-0 font-medium text-text">{excerpt.fileName}</span>
           {excerpt.directoryPath ? (
-            <span className="ui-text-xs min-w-0 truncate text-text-lighter">
+            <span className="ui-text-sm min-w-0 truncate text-text-lighter">
               {excerpt.directoryPath}
             </span>
           ) : null}
           <CaretRight size={12} className="shrink-0 text-text-lighter/70" />
           {selectedMatch ? (
-            <span className="ui-text-xs shrink-0 text-text-lighter">
+            <span className="ui-text-sm shrink-0 text-text-lighter">
               :{selectedMatch.targetLine}
             </span>
           ) : null}
         </div>
-        <span className="ui-text-xs shrink-0 rounded border border-border/60 bg-primary-bg/70 px-1.5 py-0.5 text-text-lighter">
+        <span className="ui-text-sm shrink-0 rounded border border-border/60 bg-primary-bg/70 px-1.5 py-0.5 text-text-lighter">
           {excerpt.matchCount}
         </span>
         {(onExpandContext || onCollapseContext) && (

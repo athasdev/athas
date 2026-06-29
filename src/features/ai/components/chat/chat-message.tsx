@@ -88,7 +88,7 @@ export const ChatMessage = memo(function ChatMessage({
           </div>
         </MessageContent>
         <MessageMeta>
-          <span className="ui-text-xs text-text-lighter/55">{messageTime}</span>
+          <span className="ui-text-sm text-text-lighter/55">{messageTime}</span>
           <MessageAction
             onClick={() => void copyText(message.content)}
             label="Copy prompt"
@@ -142,7 +142,7 @@ export const ChatMessage = memo(function ChatMessage({
                 href={resource.uri}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent ui-text-xs hover:bg-hover"
+                className="inline-flex items-center gap-1 rounded border border-border bg-primary-bg/50 px-2 py-1 text-accent ui-text-sm hover:bg-hover"
               >
                 <span className="truncate">{resource.name || resource.uri}</span>
               </a>

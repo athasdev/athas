@@ -82,7 +82,7 @@ export function GitHubPRViewerHeader({
         <>
           <span>{`athas#${pr.number}`}</span>
           <span>&middot;</span>
-          <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+          <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
             <span className="min-w-0 truncate">{pr.baseRef}</span>
             <span className="shrink-0 px-1">&larr;</span>
             <span className="min-w-0 truncate">{pr.headRef}</span>

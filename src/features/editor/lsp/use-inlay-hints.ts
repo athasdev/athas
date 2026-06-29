@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { deferUntilAfterNextPaint } from "./deferred-lsp-work";
 import { LspClient } from "./lsp-client";
 
 export interface InlayHint {
@@ -37,6 +38,10 @@ export const useInlayHints = (
     }
 
     const lspClient = LspClient.getInstance();
+    if (!lspClient.getActiveServerEntryForFile(filePath)) {
+      setHints([]);
+      return;
+    }
 
     const result = await lspClient.getInlayHints(filePath, lineRange.startLine, lineRange.endLine);
 
@@ -46,7 +51,9 @@ export const useInlayHints = (
 
   // Fetch on file change
   useEffect(() => {
-    void fetchHints();
+    return deferUntilAfterNextPaint(() => {
+      void fetchHints();
+    });
   }, [fetchHints]);
 
   // Re-fetch after typing (debounced)

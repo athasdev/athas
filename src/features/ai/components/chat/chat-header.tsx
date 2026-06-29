@@ -78,7 +78,7 @@ function EditableChatTitle({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 ui-text-xs font-medium focus:border-accent/40 focus:bg-hover"
+        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 ui-text-sm font-medium focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );
@@ -86,7 +86,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 ui-text-xs font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -242,7 +242,7 @@ export function ChatHeader({
             className="h-7 rounded-lg bg-secondary-bg/45"
           />
 
-          <span className="min-w-10 shrink-0 text-right text-text-lighter ui-text-xs">
+          <span className="min-w-10 shrink-0 text-right text-text-lighter ui-text-sm">
             {messageSearchPosition}
           </span>
 

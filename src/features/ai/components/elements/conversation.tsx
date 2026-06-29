@@ -107,7 +107,7 @@ export function ConversationEmptyState({
             {icon ?? <MessageSquare className="size-4" />}
           </div>
           {title ? <p className="font-medium text-text ui-text-sm">{title}</p> : null}
-          {description ? <p className="mt-1 text-text-lighter ui-text-xs">{description}</p> : null}
+          {description ? <p className="mt-1 text-text-lighter ui-text-sm">{description}</p> : null}
         </div>
       )}
     </div>

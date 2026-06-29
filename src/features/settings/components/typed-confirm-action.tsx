@@ -50,7 +50,7 @@ export function TypedConfirmAction({
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder={`Type '${confirmWord}'`}
-          size="xs"
+          size="md"
           variant="default"
           className="w-28"
           onKeyDown={(event) => {

@@ -197,7 +197,7 @@ export const GitSettings = () => {
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"

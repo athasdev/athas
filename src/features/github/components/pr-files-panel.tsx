@@ -19,7 +19,7 @@ import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(
   buttonVariants({ variant: "ghost", compact: true }),
-  "h-5 rounded px-1.5 ui-text-xs text-text-lighter hover:bg-hover hover:text-text",
+  "h-5 rounded px-1.5 ui-text-sm text-text-lighter hover:bg-hover hover:text-text",
 );
 
 const statusClass: Record<DiffFileItem["status"], string> = {
@@ -180,7 +180,7 @@ export const PRFilesPanel = memo(
                   {filteredDiff.length} of {diffFiles.length} files
                 </span>
                 {diffDebugSummary.errorCount > 0 ? (
-                  <span className="ui-text-xs text-error">
+                  <span className="ui-text-sm text-error">
                     {diffDebugSummary.errorCount} patch errors
                   </span>
                 ) : null}

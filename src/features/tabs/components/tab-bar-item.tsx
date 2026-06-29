@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
 import { Tab } from "@/ui/tabs";
@@ -188,11 +188,10 @@ const TabBarItem = memo(function TabBarItem({
           ) : buffer.type === "references" ? (
             <Search className="text-text-lighter" />
           ) : (
-            <FileExplorerIcon
+            <ThemedFileIcon
               fileName={getDiffIconName() ?? buffer.name}
               isDir={false}
               className="text-text-lighter"
-              size={12}
             />
           )}
         </div>

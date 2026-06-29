@@ -1106,7 +1106,7 @@ export function CollaborationSidebarView() {
                       size="xs"
                       placeholder="channel-name"
                       disabled={isSending}
-                      className="h-6 min-w-0 bg-transparent ui-text-xs"
+                      className="h-6 min-w-0 bg-transparent ui-text-sm"
                       onChange={(event) => setNewChannelName(event.target.value)}
                       onKeyDown={(event) => {
                         if (event.key === "Escape") {
@@ -1119,7 +1119,7 @@ export function CollaborationSidebarView() {
                     <Button
                       type="submit"
                       variant="ghost"
-                      className="ui-text-xs h-6 px-2"
+                      className="ui-text-sm h-6 px-2"
                       disabled={!newChannelName.trim() || isSending}
                     >
                       Create
@@ -1130,18 +1130,18 @@ export function CollaborationSidebarView() {
                   <SidebarListItem
                     key={channel.id}
                     type="button"
-                    className={cn("min-h-8 py-1 ui-text-xs")}
+                    className={cn("min-h-8 py-1 ui-text-sm")}
                     active={selectedChannel?.id === channel.id}
                     onClick={() => openChannelChat(channel.id)}
                     onContextMenu={(event) => channelsContextMenu.open(event, channel)}
                     leading={
-                      <span className="ui-text-xs flex size-4 items-center justify-center">
+                      <span className="ui-text-sm flex size-4 items-center justify-center">
                         {renderChannelIcon(channelIcons[String(channel.id)])}
                       </span>
                     }
                     trailing={
                       <Tooltip content={`${channel.memberCount} members`} side="top">
-                        <span className="ui-text-xs">{channel.memberCount}</span>
+                        <span className="ui-text-sm">{channel.memberCount}</span>
                       </Tooltip>
                     }
                   >
@@ -1169,7 +1169,7 @@ export function CollaborationSidebarView() {
                     <SidebarListItem
                       key={participant.id}
                       type="button"
-                      className="min-h-8 ui-text-xs"
+                      className="min-h-8 ui-text-sm"
                       onClick={() => openPrivateChat(participant.id)}
                       onContextMenu={(event) => participantContextMenu.open(event, participant)}
                       leading={<CollaborationAvatar name={participant.name} />}
@@ -1209,11 +1209,11 @@ export function CollaborationSidebarView() {
                   type="button"
                   variant="ghost"
                   active={openChannel?.id === channel.id}
-                  className="h-7 max-w-[128px] rounded-md px-2 ui-text-xs"
+                  className="h-7 max-w-[128px] rounded-md px-2 ui-text-sm"
                   onClick={() => openChannelChat(channel.id)}
                   onContextMenu={(event) => channelsContextMenu.open(event, channel)}
                 >
-                  <span className="shrink-0 ui-text-xs">
+                  <span className="shrink-0 ui-text-sm">
                     {renderChannelIcon(channelIcons[String(channel.id)])}
                   </span>
                   <span className="truncate">#{channel.slug}</span>
@@ -1228,20 +1228,20 @@ export function CollaborationSidebarView() {
                   <div key={group.id} className="flex gap-2">
                     <CollaborationAvatar name={group.author} />
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="px-1 text-text-lighter ui-text-xs">{group.author}</div>
+                      <div className="px-1 text-text-lighter ui-text-sm">{group.author}</div>
                       <div className="space-y-px">
                         {group.entries.map((entry, index) => (
                           <div
                             key={entry.id}
                             className={cn(
-                              "border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-xs leading-5",
+                              "border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-sm leading-5",
                               index === 0 && "rounded-t-lg",
                               index === group.entries.length - 1 && "rounded-b-lg",
                               group.entries.length === 1 && "rounded-lg",
                             )}
                           >
                             {entry.kind === "document" ? (
-                              <span className="mb-0.5 flex items-center gap-1.5 text-text-lighter ui-text-xs">
+                              <span className="mb-0.5 flex items-center gap-1.5 text-text-lighter ui-text-sm">
                                 <FileText className="size-3" weight="duotone" />
                                 Document
                               </span>
@@ -1293,7 +1293,7 @@ export function CollaborationSidebarView() {
                   name={openPrivateParticipant.name}
                   online={openPrivateParticipant.online}
                 />
-                <div className="min-w-0 flex-1 truncate text-text ui-text-xs">
+                <div className="min-w-0 flex-1 truncate text-text ui-text-sm">
                   {openPrivateParticipant.name}
                 </div>
                 <PresenceStatusDot online={openPrivateParticipant.online} />
@@ -1312,8 +1312,8 @@ export function CollaborationSidebarView() {
                     <div key={entry.id} className="flex gap-2">
                       <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
-                        <div className="px-1 text-text-lighter ui-text-xs">{authorName}</div>
-                        <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-xs leading-5">
+                        <div className="px-1 text-text-lighter ui-text-sm">{authorName}</div>
+                        <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-sm leading-5">
                           {entry.body}
                         </div>
                       </div>
@@ -1371,7 +1371,7 @@ export function CollaborationSidebarView() {
           filteredParticipants.map((participant) => (
             <SidebarListItem
               key={participant.id}
-              className={cn("min-h-8 ui-text-xs", participant.online && "text-text")}
+              className={cn("min-h-8 ui-text-sm", participant.online && "text-text")}
               active={presenceTarget.followingUserId === participant.followableUserId}
               onContextMenu={(event) => participantContextMenu.open(event, participant)}
               onClick={() =>
@@ -1390,7 +1390,7 @@ export function CollaborationSidebarView() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-6 px-2 ui-text-xs"
+                      className="h-6 px-2 ui-text-sm"
                       onClick={(event) => {
                         event.stopPropagation();
                         void openParticipantFile(participant.activeFilePath!);
@@ -1440,7 +1440,7 @@ export function CollaborationSidebarView() {
             <SidebarListItem
               key={`${item.type}:${item.path}`}
               type="button"
-              className={cn("min-h-7 ui-text-xs")}
+              className={cn("min-h-7 ui-text-sm")}
               active={
                 (item.type === "file" &&
                   selectedNoteItemType === "file" &&

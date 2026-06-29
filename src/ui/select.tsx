@@ -59,9 +59,9 @@ const selectTriggerVariants = cva(
   {
     variants: {
       size: {
-        xs: "",
-        sm: "",
-        md: "",
+        xs: "ui-text-sm",
+        sm: "ui-text-sm",
+        md: "ui-text-base",
       },
       withIcon: {
         true: "",
@@ -80,11 +80,35 @@ const selectContentVariants = cva(
 );
 
 const selectItemVariants = cva(
-  "ui-font ui-text-sm flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
+  "ui-font flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
+  {
+    variants: {
+      size: {
+        xs: "ui-text-sm",
+        sm: "ui-text-sm",
+        md: "ui-text-base",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+    },
+  },
 );
 
 const selectSearchInputVariants = cva(
-  "ui-font ui-text-sm w-full border-none bg-transparent py-1 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
+  "ui-font w-full border-none bg-transparent py-1 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
+  {
+    variants: {
+      size: {
+        xs: "ui-text-sm",
+        sm: "ui-text-sm",
+        md: "ui-text-base",
+      },
+    },
+    defaultVariants: {
+      size: "sm",
+    },
+  },
 );
 
 const iconSizes = {
@@ -116,11 +140,13 @@ function SelectSearchField({
   onChange,
   inputRef,
   onKeyDown,
+  size,
 }: {
   value: string;
   onChange: (value: string) => void;
   inputRef: RefObject<HTMLInputElement | null>;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  size: "xs" | "sm" | "md";
 }) {
   const searchInputId = useId();
 
@@ -140,7 +166,7 @@ function SelectSearchField({
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search..."
           aria-label="Search options"
-          className={selectSearchInputVariants()}
+          className={selectSearchInputVariants({ size })}
           onKeyDown={(event) => {
             event.stopPropagation();
             onKeyDown?.(event);
@@ -154,9 +180,16 @@ function SelectSearchField({
   );
 }
 
-function SelectEmptyState() {
+function SelectEmptyState({ size }: { size: "xs" | "sm" | "md" }) {
   return (
-    <div className="ui-font ui-text-sm p-3 text-center text-text-lighter">No matching options</div>
+    <div
+      className={cn(
+        "ui-font p-3 text-center text-text-lighter",
+        size === "md" ? "ui-text-base" : "ui-text-sm",
+      )}
+    >
+      No matching options
+    </div>
   );
 }
 
@@ -193,9 +226,10 @@ const InputTriggerOptionRow = forwardRef<
     isSelected: boolean;
     onMouseEnter: () => void;
     onSelect: () => void;
+    size: "xs" | "sm" | "md";
   }
 >(function InputTriggerOptionRow(
-  { option, optionId, isHovered, isSelected, onMouseEnter, onSelect },
+  { option, optionId, isHovered, isSelected, onMouseEnter, onSelect, size },
   ref,
 ) {
   return (
@@ -210,7 +244,7 @@ const InputTriggerOptionRow = forwardRef<
       onMouseDown={(event) => event.preventDefault()}
       onClick={onSelect}
       className={cn(
-        selectItemVariants(),
+        selectItemVariants({ size }),
         isHovered && "bg-hover",
         isSelected && "bg-selected/70 text-text",
       )}
@@ -451,7 +485,7 @@ export default function Select({
             onWheel={handleListWheel}
           >
             {filteredOptions.length === 0 ? (
-              <SelectEmptyState />
+              <SelectEmptyState size={size} />
             ) : (
               <div className="space-y-1">
                 {filteredOptions.map((option, index) => (
@@ -470,6 +504,7 @@ export default function Select({
                       handleOpenChange(false);
                       openedByFocusRef.current = false;
                     }}
+                    size={size}
                   />
                 ))}
               </div>
@@ -585,6 +620,7 @@ export default function Select({
             value={searchQuery}
             onChange={setSearchQuery}
             inputRef={searchInputRef}
+            size={size}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 event.preventDefault();
@@ -625,7 +661,7 @@ export default function Select({
           onWheel={handleListWheel}
         >
           {filteredOptions.length === 0 ? (
-            <SelectEmptyState />
+            <SelectEmptyState size={size} />
           ) : (
             <div className="space-y-1">
               {filteredOptions.map((option, index) => {
@@ -648,7 +684,7 @@ export default function Select({
                       handleOpenChange(false);
                     }}
                     className={cn(
-                      selectItemVariants(),
+                      selectItemVariants({ size }),
                       isHovered && "bg-hover",
                       isSelected && "bg-selected/70 text-text",
                     )}

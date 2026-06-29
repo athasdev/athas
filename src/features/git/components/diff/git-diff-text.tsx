@@ -133,7 +133,7 @@ const TextDiffViewer = memo(
 
     if (diff.lines.length === 0) {
       return (
-        <div className="flex items-center justify-center py-8 text-text-lighter ui-text-xs">
+        <div className="flex items-center justify-center py-8 text-text-lighter ui-text-sm">
           No changes in this file
         </div>
       );

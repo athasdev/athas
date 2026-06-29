@@ -257,7 +257,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                 navigateToSearchResult(firstResult);
               }}
               leftIcon={Search}
-              size="sm"
+              size="md"
               className="w-full"
             />
           </div>
@@ -327,15 +327,15 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                     isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                   ].join(" ")}
                 >
-                  <span className="ui-text-sm w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-xs w-full truncate text-text-lighter">
+                  <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
+                  <span className="ui-text-base w-full truncate text-text-lighter">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>
               );
             })
           ) : (
-            <div className="ui-font ui-text-sm px-3 py-2 text-text-lighter">
+            <div className="ui-font ui-text-base px-3 py-2 text-text-lighter">
               No matching settings
             </div>
           )}

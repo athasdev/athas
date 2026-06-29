@@ -461,9 +461,9 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     >
       {renderHeader()}
 
-      <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
+      <CommandList>
         {mode === "choose-provider" ? (
-          <CommandList>
+          <>
             {installedDbTypes.length === 0 ? (
               <CommandEmpty>
                 <div className="space-y-2">
@@ -488,9 +488,9 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                 </CommandItem>
               ))
             )}
-          </CommandList>
+          </>
         ) : mode === "file-provider" ? (
-          <div className="p-1">
+          <div>
             <button
               type="button"
               className={cn(
@@ -506,68 +506,64 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             </button>
           </div>
         ) : mode === "network-provider" ? (
-          <CommandList>
-            <div className="space-y-2 p-2">
-              <CommandInput
-                value={name}
-                onChange={setName}
-                placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
-                className="h-7 rounded-md bg-secondary-bg px-2"
+          <div className="space-y-2">
+            <CommandInput
+              value={name}
+              onChange={setName}
+              placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
+              className="h-7 rounded-md bg-secondary-bg px-2"
+            />
+            <div className="flex gap-2">
+              <Input
+                value={host}
+                onChange={(event) => setHost(event.target.value)}
+                placeholder="Host"
+                className="h-7 flex-1"
               />
-              <div className="flex gap-2">
-                <Input
-                  value={host}
-                  onChange={(event) => setHost(event.target.value)}
-                  placeholder="Host"
-                  className="h-7 flex-1"
-                />
-                <Input
-                  type="number"
-                  value={port}
-                  onChange={(event) => setPort(Number(event.target.value))}
-                  placeholder="Port"
-                  className="h-7 w-20"
-                />
-              </div>
-              {selectedDbType !== "redis" ? (
-                <Input
-                  value={databaseName}
-                  onChange={(event) => setDatabaseName(event.target.value)}
-                  placeholder="Database"
-                  className="h-7"
-                />
-              ) : null}
-              <div className="flex gap-2">
-                <Input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Username"
-                  className="h-7 flex-1"
-                />
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Password"
-                  className="h-7 flex-1"
-                />
-              </div>
-              <label
-                htmlFor="database-sidebar-save-password"
-                className="flex items-center gap-2 px-1"
-              >
-                <Checkbox
-                  id="database-sidebar-save-password"
-                  checked={saveCredential}
-                  onChange={setSaveCredential}
-                  ariaLabel="Save password securely"
-                />
-                <span className="ui-font text-text-lighter ui-text-base">
-                  Save password securely
-                </span>
-              </label>
+              <Input
+                type="number"
+                value={port}
+                onChange={(event) => setPort(Number(event.target.value))}
+                placeholder="Port"
+                className="h-7 w-20"
+              />
             </div>
-          </CommandList>
+            {selectedDbType !== "redis" ? (
+              <Input
+                value={databaseName}
+                onChange={(event) => setDatabaseName(event.target.value)}
+                placeholder="Database"
+                className="h-7"
+              />
+            ) : null}
+            <div className="flex gap-2">
+              <Input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Username"
+                className="h-7 flex-1"
+              />
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                className="h-7 flex-1"
+              />
+            </div>
+            <label
+              htmlFor="database-sidebar-save-password"
+              className="flex items-center gap-2 px-1"
+            >
+              <Checkbox
+                id="database-sidebar-save-password"
+                checked={saveCredential}
+                onChange={setSaveCredential}
+                ariaLabel="Save password securely"
+              />
+              <span className="ui-font text-text-lighter ui-text-base">Save password securely</span>
+            </label>
+          </div>
         ) : !rootFolderPath ? (
           <CommandEmpty>Open a workspace to add databases.</CommandEmpty>
         ) : isLoadingSaved ? (
@@ -648,7 +644,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             ))}
           </div>
         )}
-      </div>
+      </CommandList>
 
       {mode === "network-provider" ? (
         <CommandFooter>

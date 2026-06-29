@@ -11,7 +11,7 @@ function getCollaborationInitials(name: string) {
 
 export function CollaborationAvatar({ name, online }: { name: string; online?: boolean }) {
   return (
-    <span className="ui-text-xs relative flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary-bg font-medium text-text">
+    <span className="ui-text-sm relative flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary-bg font-medium text-text">
       {getCollaborationInitials(name)}
       {online !== undefined ? (
         <span

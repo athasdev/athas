@@ -11,6 +11,7 @@ import {
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
+import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
 import { useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
@@ -170,7 +171,7 @@ const ExtensionRow = ({
             {getCategoryLabel(extension.category)}
           </Badge>
           {extension.version && (
-            <span className="ui-font ui-text-sm text-text-lighter">v{extension.version}</span>
+            <span className="ui-font ui-text-base text-text-lighter">v{extension.version}</span>
           )}
           {hasLocalOverride && (
             <Badge
@@ -182,16 +183,16 @@ const ExtensionRow = ({
             </Badge>
           )}
         </div>
-        <p className="ui-font ui-text-sm text-text-lighter">{extension.description}</p>
+        <p className="ui-font ui-text-base text-text-lighter">{extension.description}</p>
         {extension.runtimeIssues && extension.runtimeIssues.length > 0 && (
           <div className="mt-1 rounded-lg border border-error/20 bg-error/8 px-2 py-1.5">
-            <div className="ui-font ui-text-sm flex items-start gap-1.5 text-error">
+            <div className="ui-font ui-text-base flex items-start gap-1.5 text-error">
               <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
               <span>{extension.runtimeIssues[0].message}</span>
             </div>
           </div>
         )}
-        <div className="ui-font ui-text-sm mt-1 flex items-center gap-2 text-text-lighter">
+        <div className="ui-font ui-text-base mt-1 flex items-center gap-2 text-text-lighter">
           {extension.publisher && <span>by {extension.publisher}</span>}
           {extension.publisher && extensionLabels && extensionLabels.length > 0 && <span>·</span>}
           {extensionLabels && extensionLabels.length > 0 && (
@@ -215,7 +216,7 @@ const ExtensionRow = ({
           </Badge>
         </div>
       ) : isInstalling ? (
-        <span className="ui-font ui-text-sm shrink-0 text-accent">Installing</span>
+        <span className="ui-font ui-text-base shrink-0 text-accent">Installing</span>
       ) : isUnavailableAgent ? (
         <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           <Button disabled variant="default" tooltip="Unavailable" compact>
@@ -446,7 +447,7 @@ export const ExtensionsSettings = () => {
       });
     });
 
-    iconThemeRegistry.getAllThemes().forEach((iconTheme) => {
+    getVisibleIconThemes(iconThemeRegistry.getAllThemes()).forEach((iconTheme) => {
       if (iconThemeRegistry.getThemeSource(iconTheme.id)) {
         return;
       }
@@ -806,10 +807,10 @@ export const ExtensionsSettings = () => {
     );
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col [--app-ui-badge-font-size:var(--ui-text-base)] [--app-ui-button-font-size:var(--ui-text-base)]">
       <div className="mb-3">
         <p className="ui-font ui-text-base font-medium text-text">Extensions</p>
-        <p className="mt-1 ui-font ui-text-sm text-text-lighter">
+        <p className="mt-1 ui-font ui-text-base text-text-lighter">
           Install built-in tools, manage marketplace extensions, skills, and agents.
         </p>
       </div>
@@ -820,7 +821,7 @@ export const ExtensionsSettings = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           leftIcon={Search}
-          size="sm"
+          size="md"
           containerClassName="flex-1"
         />
       </div>
@@ -860,7 +861,7 @@ export const ExtensionsSettings = () => {
           {filteredExtensions.length === 0 ? (
             <div className="py-8 text-center text-text-lighter">
               <Package className="mx-auto mb-1.5 opacity-50" />
-              <p className="ui-font ui-text-sm">No extensions found matching your search.</p>
+              <p className="ui-font ui-text-base">No extensions found matching your search.</p>
             </div>
           ) : (
             <div className="space-y-2">
