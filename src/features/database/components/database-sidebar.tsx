@@ -3,13 +3,12 @@ import {
   DatabaseIcon as Database,
   FilePlusIcon as FilePlus,
   FolderOpenIcon as FolderOpen,
-  MagnifyingGlassIcon as MagnifyingGlass,
   PlugsConnectedIcon as PlugsConnected,
   PlusIcon as Plus,
   TrashIcon as Trash,
 } from "@phosphor-icons/react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
@@ -17,30 +16,27 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import {
+  CommandEmpty,
   CommandFooter,
   CommandFooterAction,
+  CommandHeader,
   CommandInput,
+  CommandItemBadge,
+  CommandItemContent,
+  CommandItemDescription,
+  CommandItemIcon,
   CommandItem,
+  CommandItemTitle,
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
-import {
-  SidebarEmptyActionState,
-  SidebarEmptyState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarSearchFilterRow,
-} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../types/provider.types";
 import { PROVIDER_REGISTRY } from "../providers/provider-registry";
 import { type SavedConnection, useConnectionStore } from "../stores/connection.store";
-import {
-  DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
-  getDatabaseTypeForFilePath,
-} from "../utils/database-file-drop";
+import { getDatabaseTypeForFilePath } from "../utils/database-file-drop";
 import {
   getDatabaseFilePathKey,
   getSavedFileConnectionPathKeys,
@@ -69,7 +65,13 @@ function getConnectionSubtitle(connection: SavedConnection) {
   return `${provider.label} ${connection.host}:${connection.port}${database}`;
 }
 
-export function DatabaseSidebar() {
+interface DatabaseCommandContentProps {
+  isActive: boolean;
+  onBack: () => void;
+  onClose: () => void;
+}
+
+export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCommandContentProps) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const filesVersion = useFileSystemStore((state) => state.filesVersion);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
@@ -101,10 +103,19 @@ export function DatabaseSidebar() {
   const [error, setError] = useState<string | null>(null);
   const [workspaceDatabaseFiles, setWorkspaceDatabaseFiles] = useState<WorkspaceDatabaseFile[]>([]);
   const [isScanningWorkspaceDatabases, setIsScanningWorkspaceDatabases] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadSavedConnections();
   }, [loadSavedConnections, rootFolderPath]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    setQuery("");
+    setMode("list");
+    setError(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [isActive]);
 
   const installedDbTypes = useMemo(() => getInstalledDatabaseTypes(new Map()), []);
   const savedFileConnectionPathKeys = useMemo(
@@ -231,13 +242,14 @@ export function DatabaseSidebar() {
         await saveConnection(config);
         openDatabaseBuffer(filePath, config.name, dbType);
         setMode("list");
+        onClose();
       } catch (err) {
         setError(normalizeDatabaseError(err));
       } finally {
         setBusyConnectionId(null);
       }
     },
-    [openDatabaseBuffer, rootFolderPath, saveConnection],
+    [onClose, openDatabaseBuffer, rootFolderPath, saveConnection],
   );
 
   const chooseDatabaseFile = async (dbType: DatabaseType) => {
@@ -304,6 +316,7 @@ export function DatabaseSidebar() {
       const connectionId = await connect(config, password || undefined);
       openDatabaseBuffer(`connection://${connectionId}`, config.name, selectedDbType, connectionId);
       setMode("list");
+      onClose();
     } catch (err) {
       setError(normalizeDatabaseError(err));
     } finally {
@@ -324,21 +337,6 @@ export function DatabaseSidebar() {
 
     await saveFileConnection(databasePath);
   };
-
-  useEffect(() => {
-    const handleNativeDatabaseDrop = (event: Event) => {
-      const paths = (event as CustomEvent<{ paths?: string[] }>).detail?.paths ?? [];
-      const databasePath = paths.find((path) => getDatabaseTypeForFilePath(path));
-      if (databasePath) {
-        void saveFileConnection(databasePath);
-      }
-    };
-
-    window.addEventListener(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, handleNativeDatabaseDrop);
-    return () => {
-      window.removeEventListener(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, handleNativeDatabaseDrop);
-    };
-  }, [saveFileConnection]);
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     if (!Array.from(event.dataTransfer.types).includes("Files")) return;
@@ -363,6 +361,7 @@ export function DatabaseSidebar() {
       }
 
       openDatabaseBuffer(connection.file_path, connection.name, connection.db_type);
+      onClose();
       return;
     }
 
@@ -379,6 +378,7 @@ export function DatabaseSidebar() {
         connection.db_type,
         connectionId,
       );
+      onClose();
     } catch (err) {
       setError(normalizeDatabaseError(err));
     } finally {
@@ -389,6 +389,7 @@ export function DatabaseSidebar() {
   const openDetectedDatabase = (file: WorkspaceDatabaseFile) => {
     setError(null);
     openDatabaseBuffer(file.path, file.name, file.dbType);
+    onClose();
   };
 
   const handleDeleteConnection = async (connectionId: string) => {
@@ -403,69 +404,87 @@ export function DatabaseSidebar() {
     }
   };
 
+  const renderHeader = () =>
+    mode === "list" ? (
+      <CommandHeader onClose={onClose}>
+        <Button type="button" variant="ghost" className="rounded" onClick={onBack} compact>
+          <ArrowLeft />
+        </Button>
+        <CommandInput
+          ref={inputRef}
+          value={query}
+          onChange={setQuery}
+          placeholder="Search databases"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          className="rounded"
+          onClick={showProviderStep}
+          compact
+          aria-label="Add database"
+        >
+          <Plus />
+        </Button>
+      </CommandHeader>
+    ) : (
+      <CommandHeader onClose={onClose}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="min-w-0 flex-1 justify-start gap-1.5 rounded px-1.5 text-text-lighter"
+          onClick={() => setMode("list")}
+          compact
+        >
+          <ArrowLeft />
+          <span className="ui-font truncate ui-text-base">Databases</span>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="rounded"
+          onClick={showProviderStep}
+          compact
+          aria-label="Add database"
+        >
+          <Plus />
+        </Button>
+      </CommandHeader>
+    );
+
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col bg-primary-bg"
+      className="relative flex min-h-0 flex-1 flex-col bg-primary-bg"
       onDrop={(event) => void handleDrop(event)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      {mode === "list" ? (
-        <SidebarSearchFilterRow
-          value={query}
-          onChange={setQuery}
-          searchIcon={MagnifyingGlass}
-          placeholder="Search"
-          searchAriaLabel="Search databases"
-          actions={
-            <SidebarHeaderIconButton
-              tooltip="Add Database"
-              tooltipSide="bottom"
-              onClick={showProviderStep}
-            >
-              <Plus />
-            </SidebarHeaderIconButton>
-          }
-        />
-      ) : (
-        <SidebarHeader>
-          <Button
-            type="button"
-            variant="ghost"
-            compact
-            className="h-6 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1.5 text-text-lighter"
-            onClick={() => setMode("list")}
-          >
-            <ArrowLeft />
-            <span className="ui-font truncate ui-text-xs">Databases</span>
-          </Button>
-          <SidebarHeaderIconButton
-            tooltip="Add Database"
-            tooltipSide="bottom"
-            onClick={showProviderStep}
-          >
-            <Plus />
-          </SidebarHeaderIconButton>
-        </SidebarHeader>
-      )}
+      {renderHeader()}
 
       <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
         {mode === "choose-provider" ? (
           <CommandList>
             {installedDbTypes.length === 0 ? (
-              <SidebarEmptyActionState
-                className="min-h-0"
-                message="No database providers installed."
-                actionLabel="Open Extensions"
-                onAction={() => openSettingsDialog("extensions")}
-              />
+              <CommandEmpty>
+                <div className="space-y-2">
+                  <div>No database providers installed.</div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    compact
+                    onClick={() => openSettingsDialog("extensions")}
+                  >
+                    Open Extensions
+                  </Button>
+                </div>
+              </CommandEmpty>
             ) : (
               installedDbTypes.map((type) => (
                 <CommandItem key={type} onClick={() => chooseProvider(type)}>
-                  <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-                  <span className="ui-font ui-text-xs text-text">
-                    {PROVIDER_REGISTRY[type].label}
-                  </span>
+                  <CommandItemIcon>
+                    <Database className="size-4" weight="duotone" />
+                  </CommandItemIcon>
+                  <CommandItemTitle>{PROVIDER_REGISTRY[type].label}</CommandItemTitle>
                 </CommandItem>
               ))
             )}
@@ -481,7 +500,7 @@ export function DatabaseSidebar() {
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
               <FolderOpen className="size-5" weight="duotone" />
-              <span className="ui-font ui-text-xs">
+              <span className="ui-font ui-text-base">
                 Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
               </span>
             </button>
@@ -543,50 +562,56 @@ export function DatabaseSidebar() {
                   onChange={setSaveCredential}
                   ariaLabel="Save password securely"
                 />
-                <span className="ui-font text-text-lighter ui-text-xs">Save password securely</span>
+                <span className="ui-font text-text-lighter ui-text-base">
+                  Save password securely
+                </span>
               </label>
             </div>
           </CommandList>
         ) : !rootFolderPath ? (
-          <SidebarEmptyState>Open a workspace to add databases.</SidebarEmptyState>
+          <CommandEmpty>Open a workspace to add databases.</CommandEmpty>
         ) : isLoadingSaved ? (
-          <SidebarEmptyState>
+          <CommandEmpty>
             <LoadingIndicator label="Loading databases" showLabel compact />
-          </SidebarEmptyState>
+          </CommandEmpty>
         ) : workspaceConnections.length === 0 &&
           detectedWorkspaceDatabases.length === 0 &&
           isScanningWorkspaceDatabases ? (
-          <SidebarEmptyState>
+          <CommandEmpty>
             <LoadingIndicator label="Loading databases" showLabel compact />
-          </SidebarEmptyState>
+          </CommandEmpty>
         ) : workspaceConnections.length === 0 && detectedWorkspaceDatabases.length === 0 ? (
-          <SidebarEmptyState>
+          <CommandEmpty>
             {query.trim() ? "No matching databases." : "No databases in this workspace."}
-          </SidebarEmptyState>
+          </CommandEmpty>
         ) : (
           <div className="space-y-0.5">
             {workspaceConnections.map((connection) => {
               const status = getActiveStatus(connection.id);
               const isBusy = busyConnectionId === connection.id || status === "connecting";
               return (
-                <div
-                  key={connection.id}
-                  className="group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
-                >
-                  <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+                <CommandItem key={connection.id} as="div" className="group" disabled={isBusy}>
                   <button
                     type="button"
-                    className="min-w-0 flex-1 text-left"
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
                     onClick={() => void openConnection(connection)}
                     disabled={isBusy}
                   >
-                    <div className="ui-font truncate text-text ui-text-xs">{connection.name}</div>
-                    <div className="ui-font truncate ui-text-xs text-text-lighter">
-                      {getConnectionSubtitle(connection)}
-                    </div>
+                    <CommandItemIcon>
+                      <Database className="size-4" weight="duotone" />
+                    </CommandItemIcon>
+                    <CommandItemContent>
+                      <CommandItemTitle>{connection.name}</CommandItemTitle>
+                      <CommandItemDescription>
+                        {getConnectionSubtitle(connection)}
+                      </CommandItemDescription>
+                    </CommandItemContent>
                   </button>
                   {status === "connected" ? (
-                    <PlugsConnected className="size-3.5 shrink-0 text-accent" weight="duotone" />
+                    <CommandItemBadge className="flex items-center gap-1 text-accent">
+                      <PlugsConnected className="size-3.5" weight="duotone" />
+                      Connected
+                    </CommandItemBadge>
                   ) : null}
                   <Button
                     type="button"
@@ -597,30 +622,29 @@ export function DatabaseSidebar() {
                       "size-6 shrink-0 p-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
                       isBusy && "pointer-events-none opacity-40",
                     )}
-                    onClick={() => void handleDeleteConnection(connection.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleDeleteConnection(connection.id);
+                    }}
                   >
                     <Trash />
                   </Button>
-                </div>
+                </CommandItem>
               );
             })}
             {detectedWorkspaceDatabases.map((file) => (
-              <div
-                key={file.id}
-                className="group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
-              >
-                <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() => openDetectedDatabase(file)}
-                >
-                  <div className="ui-font truncate text-text ui-text-xs">{file.name}</div>
-                  <div className="ui-font truncate ui-text-xs text-text-lighter">
+              <CommandItem key={file.id} onClick={() => openDetectedDatabase(file)}>
+                <CommandItemIcon>
+                  <Database className="size-4" weight="duotone" />
+                </CommandItemIcon>
+                <CommandItemContent>
+                  <CommandItemTitle>{file.name}</CommandItemTitle>
+                  <CommandItemDescription>
                     {PROVIDER_REGISTRY[file.dbType].label} / {file.relativePath}
-                  </div>
-                </button>
-              </div>
+                  </CommandItemDescription>
+                </CommandItemContent>
+                <CommandItemBadge>Detected</CommandItemBadge>
+              </CommandItem>
             ))}
           </div>
         )}
@@ -642,11 +666,11 @@ export function DatabaseSidebar() {
       ) : null}
 
       {error ? (
-        <div className="border-border border-t px-2 py-1.5 text-error ui-text-xs">{error}</div>
+        <div className="border-border border-t px-2 py-1.5 text-error ui-text-base">{error}</div>
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border border-accent bg-primary-bg/85 text-accent ui-text-xs backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border border-accent bg-primary-bg/85 text-accent ui-text-base backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}

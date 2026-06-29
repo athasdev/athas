@@ -4,7 +4,8 @@ export type BuiltInCommandPaletteViewId =
   | "color-theme"
   | "icon-theme"
   | "local-history"
-  | "outline";
+  | "outline"
+  | "databases";
 
 export type ExtensionCommandPaletteViewId = `extension:${string}`;
 

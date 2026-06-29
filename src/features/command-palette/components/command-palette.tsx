@@ -9,6 +9,7 @@ import { IconThemeSelectorContent } from "@/features/command-palette/components/
 import { ThemeSelectorContent } from "@/features/command-palette/components/theme-selector";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { QuickQuestionCommandContent } from "@/features/ai/components/quick-question-command";
+import { DatabaseCommandContent } from "@/features/database/components/database-sidebar";
 import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { isMarkdownFile } from "@/features/editor/utils/lines";
@@ -78,10 +79,8 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const setActiveView = useUIState((state) => state.setActiveView);
-  const setActiveRightSidebarView = useUIState((state) => state.setActiveRightSidebarView);
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
-  const setIsRightSidebarVisible = useUIState((state) => state.setIsRightSidebarVisible);
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const { openQuickEdit } = useEditorAppStore.use.actions();
   const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
@@ -377,11 +376,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       onClose,
     }),
     ...createDatabaseActions({
-      onClose,
-      openDatabaseSidebar: () => {
-        setActiveRightSidebarView("databases");
-        setIsRightSidebarVisible(true);
-      },
+      openDatabaseCommand: () => pushView("databases"),
     }),
     ...createAdvancedActions({
       lspStatus,
@@ -473,7 +468,13 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const extensionView = extensionViews.get(currentView);
 
   return (
-    <Command isVisible onClose={onClose}>
+    <Command
+      isVisible
+      onClose={onClose}
+      className={
+        currentView === "databases" ? "max-h-[min(720px,calc(100vh-7rem))] w-[640px]" : undefined
+      }
+    >
       {currentView === "quick-question" ? (
         <QuickQuestionCommandContent
           onBack={popView}
@@ -510,6 +511,12 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       ) : currentView === "outline" ? (
         <OutlineCommandContent
           isActive={currentView === "outline"}
+          onBack={popView}
+          onClose={onClose}
+        />
+      ) : currentView === "databases" ? (
+        <DatabaseCommandContent
+          isActive={currentView === "databases"}
           onBack={popView}
           onClose={onClose}
         />

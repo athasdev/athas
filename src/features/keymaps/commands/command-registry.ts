@@ -965,9 +965,7 @@ const databaseCommands: Command[] = [
     title: "Show Databases",
     category: "Database",
     execute: () => {
-      const state = useUIState.getState();
-      state.setActiveRightSidebarView("databases");
-      state.setIsRightSidebarVisible(true);
+      useUIState.getState().openCommandPaletteView("databases");
     },
   },
 ];

@@ -5,10 +5,6 @@ import { useChatInitialization } from "@/features/ai/hooks/use-chat-initializati
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import CommandPalette from "@/features/command-palette/components/command-palette";
 import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
-import {
-  DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
-  getDroppedDatabaseFilePaths,
-} from "@/features/database/utils/database-file-drop";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
@@ -91,18 +87,6 @@ export function MainLayout() {
   const hasRestoredWorkspace = useRef(false);
   const { isDraggingOver } = useFileSystemFolderDrop(async (paths) => {
     if (!paths || paths.length === 0) return;
-
-    if (isRightSidebarVisible && activeRightSidebarView === "databases" && rootFolderPath) {
-      const databasePaths = getDroppedDatabaseFilePaths(paths);
-      if (databasePaths.length > 0) {
-        window.dispatchEvent(
-          new CustomEvent(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, {
-            detail: { paths: databasePaths },
-          }),
-        );
-        return;
-      }
-    }
 
     const result = await openDroppedWorkspacePaths(paths, {
       getPathInfo: getSymlinkInfo,

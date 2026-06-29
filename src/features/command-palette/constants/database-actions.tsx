@@ -2,12 +2,11 @@ import { DatabaseIcon as Database } from "@phosphor-icons/react";
 import type { Action } from "../types/action.types";
 
 interface DatabaseActionsParams {
-  onClose: () => void;
-  openDatabaseSidebar: () => void;
+  openDatabaseCommand: () => void;
 }
 
 export const createDatabaseActions = (params: DatabaseActionsParams): Action[] => {
-  const { onClose, openDatabaseSidebar } = params;
+  const { openDatabaseCommand } = params;
 
   return [
     {
@@ -18,8 +17,7 @@ export const createDatabaseActions = (params: DatabaseActionsParams): Action[] =
       category: "Database",
       commandId: "database.connect",
       action: () => {
-        onClose();
-        openDatabaseSidebar();
+        openDatabaseCommand();
       },
     },
   ];

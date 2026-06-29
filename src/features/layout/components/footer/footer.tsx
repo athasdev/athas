@@ -130,11 +130,14 @@ const Footer = () => {
   );
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
+  const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
+  const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
   const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
   const requestTerminalFocus = useUIState((state) => state.requestTerminalFocus);
+  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const hasTeamsCollaborationAccess = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
@@ -438,7 +441,7 @@ const Footer = () => {
   );
   const shouldShowOutline = outlineEnabled;
   const isOutlineActive = isRightSidebarVisible && activeRightSidebarView === "outline";
-  const isDatabasesActive = isRightSidebarVisible && activeRightSidebarView === "databases";
+  const isDatabasesActive = isCommandPaletteVisible && commandPaletteInitialView === "databases";
   const isCollaborationActive = isRightSidebarVisible && activeRightSidebarView === "collaboration";
   const footerTrailingOrder = useMemo<FooterTrailingItemId[]>(() => {
     return normalizeItemOrder(
@@ -479,7 +482,7 @@ const Footer = () => {
           className={chromeControl()}
           commandId="database.connect"
           onClick={() => {
-            openSidebarView("databases", { triggerSide: "right" });
+            openCommandPaletteView("databases");
           }}
         >
           <Database className={chromeIcon()} weight="duotone" />
