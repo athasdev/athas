@@ -217,28 +217,21 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
    match event.id().0.as_str() {
       "new_window" => {
-         let app_handle = app_handle.clone();
          let received_at = Instant::now();
          log::info!("[window-open:menu] new_window:received");
-         std::thread::spawn(move || {
-            log::info!(
-               "[window-open:menu] new_window:worker:start elapsedMs={}",
+         match commands::ui::window::create_app_window_internal(app_handle, None) {
+            Ok(label) => log::info!(
+               "[window-open:{label}] menu:create:end totalMs={}",
                received_at.elapsed().as_millis()
-            );
-            match commands::ui::window::create_app_window_internal(&app_handle, None) {
-               Ok(label) => log::info!(
-                  "[window-open:{label}] menu:create:end totalMs={}",
-                  received_at.elapsed().as_millis()
-               ),
-               Err(error) => {
-                  log::error!(
-                     "[window-open:menu] new_window:error totalMs={} error={}",
-                     received_at.elapsed().as_millis(),
-                     error
-                  );
-               }
+            ),
+            Err(error) => {
+               log::error!(
+                  "[window-open:menu] new_window:error totalMs={} error={}",
+                  received_at.elapsed().as_millis(),
+                  error
+               );
             }
-         });
+         }
       }
       event_id => {
          if let Some(window) = get_active_webview_window(app_handle) {
