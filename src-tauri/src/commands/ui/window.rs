@@ -15,10 +15,14 @@ use std::{
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
-use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy, clear_vibrancy};
+use window_vibrancy::{
+   NSVisualEffectMaterial, NSVisualEffectState, apply_vibrancy, clear_vibrancy,
+};
 
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Menu;
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
+const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::Active;
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 const EMBEDDED_WEBVIEW_CORNER_RADIUS: f64 = 7.0;
 
@@ -213,7 +217,12 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-      if let Err(error) = apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None) {
+      if let Err(error) = apply_vibrancy(
+         window,
+         ATHAS_WINDOW_MATERIAL,
+         Some(ATHAS_WINDOW_STATE),
+         None,
+      ) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
       }
    }
@@ -317,8 +326,13 @@ fn sync_macos_window_appearance(
    if transparency_enabled {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
       let _ = clear_vibrancy(window);
-      apply_vibrancy(window, ATHAS_WINDOW_MATERIAL, None, None)
-         .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
+      apply_vibrancy(
+         window,
+         ATHAS_WINDOW_MATERIAL,
+         Some(ATHAS_WINDOW_STATE),
+         None,
+      )
+      .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
    } else {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
       let _ = clear_vibrancy(window);
@@ -363,7 +377,12 @@ pub fn set_window_transparency_enabled(
       if enabled {
          let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
          let _ = clear_vibrancy(&window);
-         if let Err(error) = apply_vibrancy(&window, ATHAS_WINDOW_MATERIAL, None, None) {
+         if let Err(error) = apply_vibrancy(
+            &window,
+            ATHAS_WINDOW_MATERIAL,
+            Some(ATHAS_WINDOW_STATE),
+            None,
+         ) {
             log::warn!("Failed to apply macOS window vibrancy: {error}");
          }
       } else {

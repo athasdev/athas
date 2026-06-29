@@ -15,7 +15,6 @@ html.platform-macos:not([data-window-transparency="disabled"]) {
     var(--color-secondary-bg) 6%,
     transparent
   );
-  --athas-macos-glass-chrome-filter: saturate(1.2) blur(20px);
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text-light) 78%, transparent);
   --athas-chrome-icon-hover-color: var(--color-text);
   --athas-chrome-icon-active-color: var(--color-text);
@@ -40,7 +39,6 @@ html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="
     var(--color-primary-bg) 10%,
     transparent
   );
-  --athas-macos-glass-chrome-filter: saturate(1.08) blur(24px);
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text) 66%, transparent);
   --athas-chrome-icon-hover-color: color-mix(
     in srgb,
@@ -62,8 +60,8 @@ html.platform-macos:not([data-window-transparency="disabled"]) .window-container
 
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-layout-shell {
   background: var(--athas-macos-glass-shell-bg) !important;
-  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
-  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-resizable-pane,
@@ -79,6 +77,8 @@ html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-bar,
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-footer-bar {
   background: var(--athas-macos-glass-chrome-overlay-bg) !important;
   border-color: var(--athas-macos-glass-chrome-border);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html.platform-macos:not([data-window-transparency="disabled"])
@@ -88,8 +88,8 @@ html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-proj
   border-color: var(--athas-macos-glass-control-border) !important;
   background: var(--athas-macos-glass-control-bg) !important;
   color: var(--athas-chrome-icon-color) !important;
-  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
-  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html.platform-macos:not([data-window-transparency="disabled"])
@@ -112,15 +112,15 @@ html.platform-macos:not([data-window-transparency="disabled"])
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-project-tabs-list {
   border-color: var(--athas-macos-glass-control-border) !important;
   background: color-mix(in srgb, var(--athas-macos-glass-control-bg) 82%, transparent) !important;
-  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
-  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-project-picker-command {
   border-color: var(--athas-macos-glass-popover-border) !important;
   background: var(--athas-macos-glass-popover-bg) !important;
-  -webkit-backdrop-filter: var(--athas-macos-glass-chrome-filter);
-  backdrop-filter: var(--athas-macos-glass-chrome-filter);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 html.platform-macos:not([data-window-transparency="disabled"])
