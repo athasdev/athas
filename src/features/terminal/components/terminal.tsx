@@ -15,12 +15,14 @@ import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import {
   createTerminalAddons,
   injectLinkStyles,
   loadWebLinksAddon,
+  registerFileLinksProvider,
   removeLinkStyles,
   type TerminalAddons,
 } from "../hooks/use-terminal-addons";
@@ -84,10 +86,15 @@ export const XtermTerminal = ({
   const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceRootRef = useRef(rootFolderPath);
   const { getTerminalTheme } = useTerminalTheme();
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
+
+  useEffect(() => {
+    workspaceRootRef.current = rootFolderPath;
+  }, [rootFolderPath]);
 
   const fitTerminal = useCallback((attempts = 1) => {
     let attempt = 0;
@@ -275,6 +282,14 @@ export const XtermTerminal = ({
       }
 
       loadWebLinksAddon(terminal);
+      registerFileLinksProvider(terminal, {
+        getWorkspaceRoot: () => workspaceRootRef.current,
+        openFile: async (link) => {
+          await useFileSystemStore
+            .getState()
+            .handleFileSelect(link.path, false, link.line, link.column);
+        },
+      });
       terminal.unicode.activeVersion = "11";
       injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
 

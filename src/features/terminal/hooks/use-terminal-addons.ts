@@ -6,7 +6,11 @@ import { SerializeAddon } from "@xterm/addon-serialize";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
-import type { Terminal } from "@xterm/xterm";
+import type { ILink, ILinkProvider, Terminal } from "@xterm/xterm";
+import {
+  parseTerminalFileLinks,
+  type TerminalFileLink,
+} from "@/features/terminal/utils/terminal-file-links";
 
 export interface TerminalAddons {
   fitAddon: FitAddon;
@@ -65,6 +69,50 @@ export function loadWebLinksAddon(terminal: Terminal): void {
     }
   });
   terminal.loadAddon(webLinksAddon);
+}
+
+interface FileLinksProviderOptions {
+  getWorkspaceRoot: () => string | undefined;
+  openFile: (link: TerminalFileLink) => void | Promise<void>;
+}
+
+export function registerFileLinksProvider(
+  terminal: Terminal,
+  options: FileLinksProviderOptions,
+): void {
+  const provider: ILinkProvider = {
+    provideLinks: (bufferLineNumber, callback) => {
+      const line = terminal.buffer.active.getLine(bufferLineNumber - 1);
+      if (!line) {
+        callback(undefined);
+        return;
+      }
+
+      const links = parseTerminalFileLinks(
+        line.translateToString(true),
+        options.getWorkspaceRoot(),
+      );
+      if (links.length === 0) {
+        callback(undefined);
+        return;
+      }
+
+      callback(
+        links.map<ILink>((link) => ({
+          range: {
+            start: { x: link.startIndex + 1, y: bufferLineNumber },
+            end: { x: link.endIndex, y: bufferLineNumber },
+          },
+          text: link.text,
+          activate: () => {
+            void options.openFile(link);
+          },
+        })),
+      );
+    },
+  };
+
+  terminal.registerLinkProvider(provider);
 }
 
 export function injectLinkStyles(sessionId: string, containerId: string): void {
