@@ -20,12 +20,12 @@ import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import Badge from "@/ui/badge";
 import Command, {
   CommandEmpty,
   CommandFooter,
   CommandFooterAction,
   CommandHeader,
+  CommandHeaderBadge,
   CommandInput,
   CommandItem,
   CommandItemMeta,
@@ -430,9 +430,7 @@ export function ExtensionGenerationCommand() {
               <div className="min-w-0 truncate ui-font ui-text-base text-text">
                 Generate Extension
               </div>
-              <Badge variant="muted" size="compact">
-                Hosted
-              </Badge>
+              <CommandHeaderBadge>Hosted</CommandHeaderBadge>
             </div>
           </CommandHeader>
           <CommandList>
@@ -453,7 +451,6 @@ export function ExtensionGenerationCommand() {
             <CommandFooterAction onClick={close}>Close</CommandFooterAction>
             {isAuthenticated ? (
               <CommandFooterAction
-                variant="accent"
                 onClick={() =>
                   window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
                 }
@@ -461,11 +458,7 @@ export function ExtensionGenerationCommand() {
                 Upgrade
               </CommandFooterAction>
             ) : (
-              <CommandFooterAction
-                variant="accent"
-                onClick={() => void signIn()}
-                disabled={isSigningIn}
-              >
+              <CommandFooterAction onClick={() => void signIn()} disabled={isSigningIn}>
                 {isSigningIn ? "Signing in..." : "Sign in"}
               </CommandFooterAction>
             )}
@@ -569,11 +562,7 @@ export function ExtensionGenerationCommand() {
               <ArrowLeft />
               Choice
             </CommandFooterAction>
-            <CommandFooterAction
-              variant="accent"
-              onClick={() => void generate()}
-              disabled={!canGenerate}
-            >
+            <CommandFooterAction onClick={() => void generate()} disabled={!canGenerate}>
               <Sparkles />
               Generate
             </CommandFooterAction>
@@ -617,9 +606,7 @@ export function ExtensionGenerationCommand() {
             </div>
           </CommandList>
           <CommandFooter>
-            <CommandFooterAction onClick={close} variant="accent">
-              Done
-            </CommandFooterAction>
+            <CommandFooterAction onClick={close}>Done</CommandFooterAction>
             <CommandFooterAction onClick={openExtensions}>Extensions</CommandFooterAction>
           </CommandFooter>
         </>
@@ -682,15 +669,9 @@ export function ExtensionGenerationCommand() {
               Details
             </CommandFooterAction>
             {error ? (
-              <CommandFooterAction variant="danger" onClick={() => void generate()}>
-                Try again
-              </CommandFooterAction>
+              <CommandFooterAction onClick={() => void generate()}>Try again</CommandFooterAction>
             ) : (
-              <CommandFooterAction
-                variant="accent"
-                onClick={install}
-                disabled={!result || isInstalling}
-              >
+              <CommandFooterAction onClick={install} disabled={!result || isInstalling}>
                 {isInstalling ? "Installing..." : result?.preview?.primaryAction || "Install"}
               </CommandFooterAction>
             )}

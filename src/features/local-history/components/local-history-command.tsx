@@ -22,7 +22,13 @@ import {
 import { useLocalHistoryStore } from "@/features/local-history/stores/local-history.store";
 import { createLocalHistoryDiff } from "@/features/local-history/utils/local-history-diff";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandList,
+} from "@/ui/command";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -373,24 +379,21 @@ export function LocalHistoryCommandContent({
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Button aria-label="Back" onClick={onBack} variant="ghost" className="rounded" compact>
-          <ArrowLeft className="text-text-lighter" />
-        </Button>
+        <CommandHeaderAction aria-label="Back" onClick={onBack}>
+          <ArrowLeft />
+        </CommandHeaderAction>
         <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
         <div className="min-w-0 flex-1">
           <div className="truncate ui-font ui-text-base text-text">Local History: {fileName}</div>
           <div className="truncate ui-font ui-text-base text-text-lighter">{targetPath}</div>
         </div>
-        <Button
+        <CommandHeaderAction
           aria-label="Create local history entry"
           onClick={() => void createSnapshot()}
-          variant="ghost"
-          compact
-          className="rounded"
           tooltip="Create entry"
         >
-          <Plus className="text-text-lighter" />
-        </Button>
+          <Plus />
+        </CommandHeaderAction>
       </CommandHeader>
 
       <div className="border-border border-b px-4 py-2">

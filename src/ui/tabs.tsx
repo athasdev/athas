@@ -109,9 +109,9 @@ const tabVariants = cva(
   {
     variants: {
       size: {
-        xs: "ui-text-sm flex h-5 items-center gap-1 px-2.5",
-        sm: "ui-text-sm flex h-7 items-center gap-1 px-2.5",
-        md: "ui-text-base flex h-8 items-center gap-1 px-3",
+        xs: "ui-text-sm flex min-h-5 items-center gap-1 px-2.5",
+        sm: "ui-text-sm flex min-h-7 items-center gap-1 px-2.5",
+        md: "ui-text-base flex min-h-8 items-center gap-1 px-3",
       },
       variant: {
         default: "rounded-md",
@@ -188,7 +188,7 @@ const tabsListVariants = cva("flex rounded-lg border border-border/70 bg-primary
     variant: {
       default: "items-center gap-0.5 p-0.5",
       pill: "items-center gap-0.5 p-0.5",
-      segmented: "h-6 items-stretch overflow-hidden",
+      segmented: "min-h-6 items-stretch overflow-hidden",
     },
   },
   defaultVariants: {

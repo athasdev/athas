@@ -20,6 +20,7 @@ import {
   CommandFooter,
   CommandFooterAction,
   CommandHeader,
+  CommandHeaderAction,
   CommandInput,
   CommandItemBadge,
   CommandItemContent,
@@ -407,48 +408,28 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
   const renderHeader = () =>
     mode === "list" ? (
       <CommandHeader onClose={onClose}>
-        <Button type="button" variant="ghost" className="rounded" onClick={onBack} compact>
+        <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
           <ArrowLeft />
-        </Button>
+        </CommandHeaderAction>
         <CommandInput
           ref={inputRef}
           value={query}
           onChange={setQuery}
           placeholder="Search databases"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          className="rounded"
-          onClick={showProviderStep}
-          compact
-          aria-label="Add database"
-        >
+        <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
           <Plus />
-        </Button>
+        </CommandHeaderAction>
       </CommandHeader>
     ) : (
       <CommandHeader onClose={onClose}>
-        <Button
-          type="button"
-          variant="ghost"
-          className="min-w-0 flex-1 justify-start gap-1.5 rounded px-1.5 text-text-lighter"
-          onClick={() => setMode("list")}
-          compact
-        >
+        <CommandHeaderAction type="button" onClick={() => setMode("list")}>
           <ArrowLeft />
-          <span className="ui-font truncate ui-text-base">Databases</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="rounded"
-          onClick={showProviderStep}
-          compact
-          aria-label="Add database"
-        >
+          <span>Databases</span>
+        </CommandHeaderAction>
+        <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
           <Plus />
-        </Button>
+        </CommandHeaderAction>
       </CommandHeader>
     );
 
@@ -650,8 +631,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
         <CommandFooter>
           <CommandFooterAction
             type="button"
-            variant="default"
-            className="w-full justify-center gap-1.5"
             disabled={busyConnectionId !== null}
             onClick={() => void saveNetworkConnection()}
           >

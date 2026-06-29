@@ -21,7 +21,13 @@ import {
   formatNotificationText,
 } from "@/features/notifications/utils/notification-formatters";
 import { Button } from "@/ui/button";
-import Command, { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandList,
+} from "@/ui/command";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { ItemGroup } from "@/ui/item";
@@ -341,19 +347,16 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                 }}
               />
             </div>
-            <Tooltip content="Filter Notifications" side="bottom" triggerClassName="size-6">
-              <Button
+            <Tooltip content="Filter Notifications" side="bottom" triggerClassName="size-7">
+              <CommandHeaderAction
                 ref={filterButtonRef}
                 type="button"
-                variant="ghost"
-                compact
                 active={notificationFilter !== "all"}
-                className="shrink-0 rounded"
                 aria-label="Filter Notifications"
                 onClick={() => setIsFilterMenuOpen(true)}
               >
                 <Funnel />
-              </Button>
+              </CommandHeaderAction>
             </Tooltip>
           </CommandHeader>
           {notifications.length === 0 ? (

@@ -25,6 +25,7 @@ import Command, {
   CommandFooter,
   CommandFooterAction,
   CommandHeader,
+  CommandHeaderAction,
   CommandInput,
   CommandItem,
   CommandList,
@@ -32,7 +33,6 @@ import Command, {
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
-import { cn } from "@/utils/cn";
 
 interface SkillsCommandProps {
   isOpen: boolean;
@@ -342,38 +342,23 @@ export function SkillsCommand({
               placeholder={view === "browse" ? "Search available skills..." : "Search skills..."}
             />
             {view === "list" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={openNewSkill}
-                className="w-20 shrink-0 ui-text-base"
-                compact
-              >
+              <CommandHeaderAction type="button" onClick={openNewSkill}>
                 <Plus />
                 <span>New</span>
-              </Button>
+              </CommandHeaderAction>
             ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setView("list")}
-                className="w-20 shrink-0 ui-text-base"
-                compact
-              >
+              <CommandHeaderAction type="button" onClick={() => setView("list")}>
                 <span>My skills</span>
-              </Button>
+              </CommandHeaderAction>
             )}
-            <Button
+            <CommandHeaderAction
               type="button"
-              variant="ghost"
               onClick={openBrowseSkills}
-              className="w-20 shrink-0 ui-text-base"
               active={view === "browse"}
-              compact
             >
               <CloudArrowDown />
               <span>Browse</span>
-            </Button>
+            </CommandHeaderAction>
           </CommandHeader>
 
           <CommandList ref={resultsRef}>
@@ -519,11 +504,7 @@ export function SkillsCommand({
           </CommandList>
 
           <CommandFooter>
-            <CommandFooterAction
-              type="button"
-              onClick={openAccountSyncSettings}
-              className="mr-auto max-w-[180px]"
-            >
+            <CommandFooterAction type="button" onClick={openAccountSyncSettings}>
               <SyncIcon />
               <span className="truncate">{getSyncLabel(syncEnabled, syncStatus)}</span>
             </CommandFooterAction>
@@ -582,15 +563,13 @@ export function SkillsCommand({
           </div>
 
           <CommandFooter>
-            <CommandFooterAction type="button" onClick={closeEditor} className="ml-auto">
+            <CommandFooterAction type="button" onClick={closeEditor}>
               Cancel
             </CommandFooterAction>
             <CommandFooterAction
               type="button"
-              variant="accent"
               onClick={() => void handleSave()}
               disabled={!canSave}
-              className={cn(!canSave && "opacity-50")}
             >
               Save
             </CommandFooterAction>

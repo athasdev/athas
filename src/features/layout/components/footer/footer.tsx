@@ -9,8 +9,7 @@ import {
   UsersThreeIcon as UsersThree,
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
-import { cva } from "class-variance-authority";
-import { type ReactNode, type Ref, useMemo, useRef, useState } from "react";
+import { Children, type ReactNode, type Ref, useMemo, useRef, useState } from "react";
 import { Tab, TabsList } from "@/ui/tabs";
 import { LoadingIndicator } from "@/ui/loading";
 import Tooltip from "@/ui/tooltip";
@@ -51,12 +50,6 @@ type FooterItem<T extends string> = {
   content: ReactNode;
 };
 
-const footerCountPill = cva(
-  "flex h-3 min-w-3 items-center justify-center rounded-full px-0.5 ui-text-sm leading-3",
-);
-const footerGitTrigger = cva("h-6 w-fit rounded-md");
-const footerGitTriggerInput = cva("ui-text-sm");
-
 function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const orderedItems = orderedIds
@@ -85,6 +78,10 @@ function FooterTabControl({
   children: ReactNode;
 }) {
   const shortcut = useCommandShortcut(commandId);
+  const controlClassName = cn(
+    chromeControl({ shape: Children.count(children) > 1 ? "pill" : "icon" }),
+    className,
+  );
 
   return (
     <TabsList variant="segmented" className={chromeControlGroup()}>
@@ -97,7 +94,7 @@ function FooterTabControl({
           isActive={active}
           size="xs"
           variant="segmented"
-          className={className}
+          className={controlClassName}
           onClick={onClick}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -135,7 +132,6 @@ const Footer = () => {
   const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
   const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
-  const requestTerminalFocus = useUIState((state) => state.requestTerminalFocus);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const hasTeamsCollaborationAccess = useAuthStore(
@@ -233,8 +229,7 @@ const Footer = () => {
               currentBranch={footerBranch}
               repoPath={footerRepoPath}
               paletteTarget
-              triggerClassName={footerGitTrigger()}
-              triggerInputClassName={cn(footerGitTriggerInput(), "max-w-[220px]")}
+              triggerClassName={chromeControl({ shape: "pill" })}
               onBranchChange={async () => {
                 const status = await getGitStatus(footerRepoPath);
                 actions.setWorkspaceGitStatus(status, footerRepoPath);
@@ -273,18 +268,11 @@ const Footer = () => {
             <FooterTabControl
               tooltip="Toggle Terminal"
               active={isBottomPaneVisible && bottomPaneActiveTab === "terminal"}
-              className={chromeControl()}
               commandId="workbench.toggleTerminal"
               onClick={() => {
                 setBottomPaneActiveTab("terminal");
                 const showingTerminal = !isBottomPaneVisible || bottomPaneActiveTab !== "terminal";
                 setIsBottomPaneVisible(showingTerminal);
-
-                if (showingTerminal) {
-                  setTimeout(() => {
-                    requestTerminalFocus();
-                  }, 100);
-                }
               }}
             >
               <TerminalWindow weight="duotone" />
@@ -300,7 +288,6 @@ const Footer = () => {
             <FooterTabControl
               tooltip="Toggle Run and Debug"
               active={isBottomPaneVisible && bottomPaneActiveTab === "debugger"}
-              className={chromeControl()}
               commandId="workbench.showDebugger"
               onClick={() => {
                 setBottomPaneActiveTab("debugger");
@@ -325,18 +312,15 @@ const Footer = () => {
                   : "Open Diagnostics"
               }
               active={isDiagnosticsBufferActive}
-              className={cn(
-                chromeControl({ shape: "pill" }),
-                !isDiagnosticsBufferActive && diagnosticsCount > 0 && "text-warning",
-              )}
+              className={
+                !isDiagnosticsBufferActive && diagnosticsCount > 0 ? "text-warning" : undefined
+              }
               commandId="workbench.toggleDiagnostics"
               onClick={() => openDiagnosticsBuffer()}
             >
               <WarningCircle weight="duotone" />
               {diagnosticsCount > 0 && (
-                <span className="ui-font ui-text-sm font-medium tabular-nums text-current">
-                  {diagnosticsCount}
-                </span>
+                <span className="ui-font  tabular-nums text-current">{diagnosticsCount}</span>
               )}
             </FooterTabControl>
           ),
@@ -349,11 +333,11 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className={cn(chromeControl({ shape: "pill" }), "text-accent hover:text-accent")}
+              className="text-accent hover:text-accent"
               onClick={() => openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className={cn(footerCountPill(), "bg-accent text-primary-bg")}>
+              <span className="flex h-3 min-w-3 items-center justify-center rounded-full bg-accent px-0.5  leading-3 text-primary-bg">
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
               </span>
             </FooterTabControl>
@@ -377,7 +361,6 @@ const Footer = () => {
                         : `Update available: ${updateInfo.version}`
                 }
                 className={cn(
-                  chromeControl({ shape: "pill" }),
                   downloading || installing
                     ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
                     : updateError
@@ -395,7 +378,7 @@ const Footer = () => {
                 ) : (
                   <DownloadSimple weight="duotone" />
                 )}
-                <span className="ui-font ui-text-sm font-medium">
+                <span className="ui-font ">
                   {downloading
                     ? `Updating ${downloadProgress?.percentage ?? 0}%`
                     : installing
@@ -409,7 +392,6 @@ const Footer = () => {
                 tooltip="Update Options"
                 active={isUpdateMenuOpen}
                 className={cn(
-                  chromeControl(),
                   updateError
                     ? "text-error hover:bg-error/10 hover:text-error"
                     : "text-accent hover:bg-accent/10 hover:text-accent",
@@ -426,7 +408,7 @@ const Footer = () => {
                 anchorSide="top"
                 anchorAlign="start"
                 items={updateMenuItems}
-                className="min-w-[210px]"
+                className="min-w-52.5"
               />
             </div>
           ),
@@ -457,7 +439,6 @@ const Footer = () => {
               <FooterTabControl
                 tooltip="Outline"
                 active={isOutlineActive}
-                className={chromeControl()}
                 commandId="workbench.focusOutline"
                 onClick={() => {
                   openSidebarView("outline", { triggerSide: "right" });
@@ -476,7 +457,6 @@ const Footer = () => {
         <FooterTabControl
           tooltip="Databases"
           active={isDatabasesActive}
-          className={chromeControl()}
           commandId="database.connect"
           onClick={() => {
             openCommandPaletteView("databases");
@@ -495,7 +475,6 @@ const Footer = () => {
               <FooterTabControl
                 tooltip="Collaboration"
                 active={isCollaborationActive}
-                className={chromeControl()}
                 onClick={() => {
                   openSidebarView("collaboration", { triggerSide: "right" });
                 }}
@@ -515,7 +494,7 @@ const Footer = () => {
 
   return (
     <div className="athas-footer-bar relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
-      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
+      <div className="ui-font flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
           <div key={item.id} className={chromeItemWrapper()}>
             {item.content}
@@ -523,7 +502,7 @@ const Footer = () => {
         ))}
       </div>
 
-      <div className="ui-font ui-text-sm flex items-center gap-1 text-text-lighter">
+      <div className="ui-font  flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerTrailingItems, footerTrailingOrder).map((item) => (
           <div key={item.id} className={chromeItemWrapper()}>
             {item.content}

@@ -583,12 +583,7 @@ ${statusSummary}`;
 
       <CommandFooter>
         {mode === "labels" ? (
-          <CommandFooterAction
-            type="button"
-            variant="default"
-            className="ml-auto"
-            onClick={closePicker}
-          >
+          <CommandFooterAction type="button" onClick={closePicker}>
             Done
           </CommandFooterAction>
         ) : (
@@ -599,7 +594,6 @@ ${statusSummary}`;
             {kind !== "action" ? (
               <CommandFooterAction
                 type="button"
-                variant="ghost"
                 disabled={mode !== "form" || isGenerating || isSubmitting}
                 onClick={handleGenerateDraft}
               >
@@ -609,7 +603,6 @@ ${statusSummary}`;
             ) : null}
             <CommandFooterAction
               type="button"
-              variant="default"
               disabled={mode !== "form" || !canSubmit || isSubmitting}
               onClick={handleSubmit}
             >

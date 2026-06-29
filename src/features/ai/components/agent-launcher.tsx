@@ -170,7 +170,6 @@ export function AgentLauncher() {
     <Command
       isVisible={isVisible}
       onClose={close}
-      placement="bottom"
       className="w-[min(820px,calc(100vw-32px))] overflow-visible rounded-[14px] border border-border/70 bg-primary-bg/96 p-2 shadow-[0_34px_110px_-48px_rgba(0,0,0,0.72)]"
     >
       <div ref={launcherRef} className="flex items-center gap-1.5 rounded-[10px] px-1 py-1">

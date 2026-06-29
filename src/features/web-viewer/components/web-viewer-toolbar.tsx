@@ -183,7 +183,7 @@ export function WebViewerToolbar({
               tooltip={isLoading ? "Stop loading" : "Refresh"}
               compact
             >
-              {isLoading ? <X className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
             </Button>
             <Button
               type="button"
@@ -194,11 +194,7 @@ export function WebViewerToolbar({
               tooltip="Copy URL"
               compact
             >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-success" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
+              {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
             </Button>
           </div>
         </div>
@@ -222,7 +218,7 @@ export function WebViewerToolbar({
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setShowZoomPopover(false)}
-          className="w-[144px] overflow-hidden rounded-lg p-1.5"
+          className="w-36 overflow-hidden rounded-lg p-1.5"
         >
           <div className="space-y-1">
             <Button

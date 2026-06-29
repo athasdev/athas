@@ -5,7 +5,7 @@ export const chromeControlGroup = cva(
 );
 
 export const chromeControl = cva(
-  "athas-chrome-control h-6 min-w-7 rounded-md border-0 bg-transparent leading-none focus-visible:rounded-md [&_svg]:size-4 [&_svg]:min-h-4 [&_svg]:min-w-4",
+  "athas-chrome-control min-h-6 min-w-7 rounded-md border-0 bg-transparent leading-[1.35] focus-visible:rounded-md [&_svg]:size-4 [&_svg]:min-h-4 [&_svg]:min-w-4",
   {
     variants: {
       shape: {
@@ -23,4 +23,4 @@ export const chromeControl = cva(
 
 export const chromeIcon = cva("size-4");
 
-export const chromeItemWrapper = cva("flex h-6 items-center");
+export const chromeItemWrapper = cva("flex min-h-6 items-center");

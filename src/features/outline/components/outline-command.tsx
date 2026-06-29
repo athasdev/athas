@@ -1,7 +1,13 @@
 import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
-import { Button } from "@/ui/button";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandHeaderBadge,
+  CommandInput,
+  CommandList,
+} from "@/ui/command";
 import { getBaseName } from "@/utils/path-helpers";
 import { useDocumentOutline } from "../hooks/use-document-outline";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
@@ -76,9 +82,9 @@ export function OutlineCommandContent({ isActive, onBack, onClose }: OutlineComm
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Button variant="ghost" className="rounded" onClick={onBack} compact>
+        <CommandHeaderAction onClick={onBack} aria-label="Back to commands">
           <ArrowLeft />
-        </Button>
+        </CommandHeaderAction>
         <CommandInput
           ref={inputRef}
           value={query}
@@ -86,9 +92,7 @@ export function OutlineCommandContent({ isActive, onBack, onClose }: OutlineComm
           onKeyDown={handleKeyDown}
           placeholder={filePath ? `Outline: ${getBaseName(filePath)}` : "Outline"}
         />
-        <span className="ui-font ui-text-base shrink-0 text-text-lighter">
-          {isLoading ? "..." : `${visibleSymbols.length}`}
-        </span>
+        <CommandHeaderBadge>{isLoading ? "..." : visibleSymbols.length}</CommandHeaderBadge>
       </CommandHeader>
 
       <CommandList ref={listRef}>

@@ -1,4 +1,9 @@
-import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import Command, {
+  CommandHeader,
+  CommandHeaderBadge,
+  CommandInput,
+  CommandList,
+} from "@/ui/command";
 import { useQuickOpen } from "../hooks/use-quick-open";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";
@@ -50,9 +55,9 @@ const QuickOpen = () => {
           className="ui-font"
         />
         {isSymbolMode ? (
-          <span className="ui-font ui-text-base shrink-0 text-text-lighter">
+          <CommandHeaderBadge>
             {isLoadingSymbols ? "..." : `${symbols.length} symbols`}
-          </span>
+          </CommandHeaderBadge>
         ) : (
           <FileCountBadge
             totalFiles={files.length}

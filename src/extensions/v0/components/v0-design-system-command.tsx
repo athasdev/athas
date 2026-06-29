@@ -22,11 +22,11 @@ import {
 import type { V0DesignSystemProfile } from "@/extensions/v0/types/v0-design-system.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import {
   CommandEmpty,
   CommandFooter,
   CommandFooterAction,
+  CommandHeaderAction,
   CommandHeader,
   CommandInput,
   CommandItem,
@@ -405,19 +405,16 @@ export function V0DesignSystemCommandContent({
     return (
       <>
         <CommandHeader onClose={onClose}>
-          <Button
+          <CommandHeaderAction
             type="button"
-            variant="ghost"
-            className="rounded"
             onClick={() => {
               setMode("list");
               requestAnimationFrame(() => searchInputRef.current?.focus());
             }}
             aria-label="Back to v0 design systems"
-            compact
           >
-            <CaretLeft className="text-text-lighter" />
-          </Button>
+            <CaretLeft />
+          </CommandHeaderAction>
           <Palette className="shrink-0 text-text-lighter" size={15} weight="duotone" />
           <div className="min-w-0 flex-1 truncate ui-text-base text-text">Add v0 design system</div>
         </CommandHeader>
@@ -454,7 +451,6 @@ export function V0DesignSystemCommandContent({
         <CommandFooter>
           <CommandFooterAction
             onClick={() => void saveProfile()}
-            variant="accent"
             disabled={Boolean(savingRegistryUrl)}
           >
             {savingRegistryUrl ? "Saving..." : "Save and use"}
@@ -469,16 +465,9 @@ export function V0DesignSystemCommandContent({
     <>
       <CommandHeader onClose={onClose}>
         <div className="flex w-full items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded"
-            onClick={onBack}
-            aria-label="Back to commands"
-            compact
-          >
-            <CaretLeft className="text-text-lighter" />
-          </Button>
+          <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
+            <CaretLeft />
+          </CommandHeaderAction>
           <Palette className="shrink-0 text-text-lighter" size={15} weight="duotone" />
           <CommandInput
             ref={searchInputRef}
@@ -488,26 +477,16 @@ export function V0DesignSystemCommandContent({
             placeholder="Search v0 design systems..."
             className="flex-1"
           />
-          <Button
+          <CommandHeaderAction
             type="button"
-            variant="ghost"
-            className="rounded"
             onClick={() => void loadDirectorySuggestions()}
             tooltip="Refresh public registries"
-            compact
           >
-            <RefreshCw className="text-text-lighter" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded"
-            onClick={openAddForm}
-            tooltip="Add registry"
-            compact
-          >
-            <Plus className="text-text-lighter" />
-          </Button>
+            <RefreshCw />
+          </CommandHeaderAction>
+          <CommandHeaderAction type="button" onClick={openAddForm} tooltip="Add registry">
+            <Plus />
+          </CommandHeaderAction>
         </div>
       </CommandHeader>
 

@@ -14,7 +14,14 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
 import { writeClipboardText } from "@/utils/clipboard";
 
 interface QuickQuestionCommandContentProps {
@@ -175,16 +182,9 @@ export function QuickQuestionCommandContent({
       }}
     >
       <CommandHeader onClose={onClose}>
-        <Button
-          type="button"
-          variant="ghost"
-          className="rounded"
-          onClick={onBack}
-          aria-label="Back to commands"
-          compact
-        >
-          <CaretLeft className="text-text-lighter" />
-        </Button>
+        <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
+          <CaretLeft />
+        </CommandHeaderAction>
         <Sparkles className="shrink-0 text-text-lighter" size={15} weight="duotone" />
         <CommandInput
           ref={inputRef}

@@ -19,6 +19,7 @@ import Command, {
   CommandFooter,
   CommandFooterAction,
   CommandHeader,
+  CommandHeaderAction,
   CommandInput,
   CommandItem,
   CommandList,
@@ -196,15 +197,9 @@ export const InlineEditModelSelector = ({
       >
         <CommandHeader onClose={closeSelector}>
           {selectedProvider ? (
-            <Button
-              type="button"
-              variant="ghost"
-              compact
-              onClick={handleBack}
-              aria-label="Back to providers"
-            >
+            <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to providers">
               <CaretLeft />
-            </Button>
+            </CommandHeaderAction>
           ) : (
             <Search className="shrink-0 text-text-lighter" size={14} />
           )}
@@ -249,11 +244,7 @@ export const InlineEditModelSelector = ({
             </CommandList>
             {providerNeedsApiKey && (
               <CommandFooter>
-                <CommandFooterAction
-                  type="button"
-                  onClick={() => setIsApiKeyOpen(true)}
-                  className="px-1.5 text-text-lighter hover:text-text"
-                >
+                <CommandFooterAction type="button" onClick={() => setIsApiKeyOpen(true)}>
                   Add API key
                 </CommandFooterAction>
               </CommandFooter>

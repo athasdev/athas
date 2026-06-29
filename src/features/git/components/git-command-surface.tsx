@@ -1,6 +1,6 @@
 import type { KeyboardEventHandler, ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import Command, { CommandHeader, CommandInput } from "@/ui/command";
+import Command, { CommandHeader, CommandHeaderBadge, CommandInput } from "@/ui/command";
 
 interface GitCommandSurfaceProps {
   isOpen: boolean;
@@ -11,7 +11,6 @@ interface GitCommandSurfaceProps {
   placeholder: string;
   meta?: ReactNode;
   headerAddon?: ReactNode;
-  placement?: "top" | "bottom";
   children: ReactNode;
 }
 
@@ -24,7 +23,6 @@ const GitCommandSurface = ({
   placeholder,
   meta,
   headerAddon,
-  placement = "top",
   children,
 }: GitCommandSurfaceProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,7 +39,7 @@ const GitCommandSurface = ({
   }, [isOpen]);
 
   return (
-    <Command isVisible={isOpen} onClose={onClose} placement={placement}>
+    <Command isVisible={isOpen} onClose={onClose}>
       <CommandHeader onClose={onClose}>
         <CommandInput
           ref={inputRef}
@@ -51,9 +49,7 @@ const GitCommandSurface = ({
           placeholder={placeholder}
           className="ui-font"
         />
-        {meta ? (
-          <div className="ui-font ui-text-base shrink-0 text-text-lighter">{meta}</div>
-        ) : null}
+        {meta ? <CommandHeaderBadge>{meta}</CommandHeaderBadge> : null}
       </CommandHeader>
       {headerAddon}
       {children}

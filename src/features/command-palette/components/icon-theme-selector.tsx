@@ -2,9 +2,15 @@ import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@phosphor-ic
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
-import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
 import Badge from "@/ui/badge";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface IconThemeInfo {
@@ -164,16 +170,9 @@ export const IconThemeSelectorContent = ({
     <>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded"
-            onClick={handleBack}
-            aria-label="Back to commands"
-            compact
-          >
-            <CaretLeft className="text-text-lighter" />
-          </Button>
+          <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
+            <CaretLeft />
+          </CommandHeaderAction>
           <CommandInput
             ref={inputRef}
             value={query}

@@ -13,8 +13,14 @@ import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
@@ -229,16 +235,9 @@ export const ThemeSelectorContent = ({
     <>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded"
-            onClick={handleBack}
-            aria-label="Back to commands"
-            compact
-          >
-            <CaretLeft className="text-text-lighter" />
-          </Button>
+          <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
+            <CaretLeft />
+          </CommandHeaderAction>
           <CommandInput
             ref={inputRef}
             value={query}
@@ -247,27 +246,18 @@ export const ThemeSelectorContent = ({
             placeholder="Search themes..."
             className="flex-1"
           />
-          <Button
-            onClick={handleUploadTheme}
-            variant="ghost"
-            className="shrink-0 gap-1 px-2"
-            aria-label="Upload theme"
-            compact
-          >
+          <CommandHeaderAction onClick={handleUploadTheme} aria-label="Upload theme">
             <Upload />
-          </Button>
-          <Button
+          </CommandHeaderAction>
+          <CommandHeaderAction
             onClick={() => {
               onClose();
               useUIState.getState().openSettingsDialog("appearance");
             }}
-            variant="ghost"
-            compact
-            className="shrink-0 gap-1 px-2"
             aria-label="Open appearance settings"
           >
             <Settings />
-          </Button>
+          </CommandHeaderAction>
         </div>
       </CommandHeader>
 

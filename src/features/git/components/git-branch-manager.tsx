@@ -41,7 +41,6 @@ interface GitBranchManagerProps {
   paletteTarget?: boolean;
   openEventName?: string;
   triggerClassName?: string;
-  triggerInputClassName?: string;
 }
 
 type GitBranchManagerTab = "branches" | "worktrees" | "repositories";
@@ -131,7 +130,6 @@ const GitBranchManager = ({
   paletteTarget = false,
   openEventName = "athas:open-branch-manager",
   triggerClassName,
-  triggerInputClassName,
 }: GitBranchManagerProps) => {
   const [branches, setBranches] = useState<string[]>([]);
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
@@ -429,12 +427,20 @@ const GitBranchManager = ({
           ...(createBranchName
             ? [{ type: "create-branch" as const, value: createBranchName }]
             : []),
-          ...filteredBranches.map((branch) => ({ type: "branch" as const, value: branch })),
+          ...filteredBranches.map((branch) => ({
+            type: "branch" as const,
+            value: branch,
+          })),
         ]
       : activeTab === "worktrees"
         ? [
             ...(createWorktreePath
-              ? [{ type: "create-worktree" as const, value: createWorktreePath }]
+              ? [
+                  {
+                    type: "create-worktree" as const,
+                    value: createWorktreePath,
+                  },
+                ]
               : []),
             ...filteredWorktrees.map((worktree) => ({
               type: "worktree" as const,
@@ -517,7 +523,7 @@ const GitBranchManager = ({
       >
         <GitBranch className="shrink-0" />
         <span
-          className={cn("ui-text-base min-w-0 truncate font-normal", triggerInputClassName)}
+          className="min-w-0 truncate font-normal"
           style={{ maxWidth: `${triggerTextWidthCh}ch` }}
         >
           {currentBranch}
@@ -550,7 +556,7 @@ const GitBranchManager = ({
           <div
             role="tablist"
             aria-label="Git selector sections"
-            className="flex shrink-0 items-center justify-start gap-1 bg-primary-bg px-2 py-1"
+            className="flex shrink-0 items-center justify-start gap-1 bg-primary-bg pt-2 px-2"
           >
             {tabItems.map((item) => (
               <Tab

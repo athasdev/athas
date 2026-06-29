@@ -6,7 +6,7 @@ import { useCallback, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
-import { Button, type ButtonProps, type ButtonVariant } from "@/ui/button";
+import { Button, type ButtonProps } from "@/ui/button";
 import { instantTransition, motionEase, motionDuration } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 
@@ -15,7 +15,6 @@ interface CommandProps {
   children: React.ReactNode;
   className?: string;
   onClose?: () => void;
-  placement?: "top" | "bottom";
   title?: string;
   autoFocus?: boolean;
 }
@@ -57,22 +56,40 @@ const commandInputClassName = cva(
   "ui-font ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
 );
 
+type CommandHeaderActionProps = Omit<ButtonProps, "className" | "compact" | "variant">;
+
+export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
+  <Button
+    variant="ghost"
+    compact
+    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded px-2 text-text-lighter hover:text-text [--app-ui-control-icon-size:1rem]"
+    {...props}
+  />
+);
+
+CommandHeaderAction.displayName = "CommandHeaderAction";
+
+type CommandHeaderBadgeProps = Omit<React.ComponentProps<"span">, "className">;
+
+export const CommandHeaderBadge = (props: CommandHeaderBadgeProps) => (
+  <span
+    className="ui-font ui-text-base inline-flex min-h-7 max-w-40 shrink-0 items-center rounded-md border border-border/70 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter"
+    {...props}
+  />
+);
+
+CommandHeaderBadge.displayName = "CommandHeaderBadge";
+
 const Command = ({
   isVisible,
   children,
   className,
   onClose,
-  placement = "top",
   title = "Command palette",
   autoFocus = true,
 }: CommandProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
-  const containerClassName =
-    placement === "bottom"
-      ? "pointer-events-none fixed inset-0 z-[10060] flex items-end justify-center px-4 pb-12"
-      : "pointer-events-none fixed inset-0 z-[10060] flex items-start justify-center pt-16";
-  const motionY = placement === "bottom" ? 8 : -8;
   const getInitialFocusTarget = useCallback(
     () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
     [],
@@ -83,7 +100,15 @@ const Command = ({
       {isVisible && (
         <DialogPrimitive.Root open={isVisible} onOpenChange={(open) => !open && onClose?.()}>
           <DialogPrimitive.Portal>
-            <div className={containerClassName}>
+            <div
+              className="fixed inset-0 z-[10060] flex items-start justify-center pt-16"
+              onMouseDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                event.preventDefault();
+                event.stopPropagation();
+                onClose?.();
+              }}
+            >
               <DialogPrimitive.Popup
                 ref={popupRef}
                 aria-describedby={undefined}
@@ -93,13 +118,13 @@ const Command = ({
                     initial={
                       prefersReducedMotion
                         ? false
-                        : { opacity: 0, scale: 0.98, y: motionY, filter: "blur(2px)" }
+                        : { opacity: 0, scale: 0.98, y: -8, filter: "blur(2px)" }
                     }
                     animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
                     exit={
                       prefersReducedMotion
                         ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
-                        : { opacity: 0, scale: 0.98, y: motionY, filter: "blur(2px)" }
+                        : { opacity: 0, scale: 0.98, y: -8, filter: "blur(2px)" }
                     }
                     transition={
                       prefersReducedMotion
@@ -146,25 +171,13 @@ export const CommandHeader = ({
     <div data-command-header className={cn("border-border border-b", className)}>
       <div className={cn(commandHeaderContentVariants({ density }), contentClassName)}>
         {children}
-        <Button
-          aria-label="Close command palette"
-          onClick={onClose}
-          variant="ghost"
-          className="rounded"
-          compact
-        >
-          <X className="text-text-lighter" />
-        </Button>
+        <CommandHeaderAction aria-label="Close command palette" onClick={onClose}>
+          <X />
+        </CommandHeaderAction>
         {showClearButton && (
-          <Button
-            aria-label="Clear persisted actions"
-            onClick={clearActionsStack}
-            variant="ghost"
-            className="rounded"
-            compact
-          >
-            <RefreshCwIcon className="text-text-lighter" />
-          </Button>
+          <CommandHeaderAction aria-label="Clear persisted actions" onClick={clearActionsStack}>
+            <RefreshCwIcon />
+          </CommandHeaderAction>
         )}
       </div>
     </div>
@@ -196,7 +209,7 @@ export const CommandFooter = ({ children }: CommandFooterProps) => (
     data-command-footer
     className="sticky bottom-0 border-border border-t bg-primary-bg px-3 py-3"
   >
-    <div className="flex items-center gap-2">{children}</div>
+    <div className="flex flex-wrap items-center gap-2">{children}</div>
   </div>
 );
 
@@ -374,23 +387,13 @@ export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<"
 
 CommandItemBadge.displayName = "CommandItemBadge";
 
-type CommandFooterActionProps = Omit<ButtonProps, "compact" | "variant"> & {
-  variant?: ButtonVariant;
-};
+type CommandFooterActionProps = Omit<ButtonProps, "className" | "compact" | "variant">;
 
-export const CommandFooterAction = ({
-  className,
-  variant = "ghost",
-  ...props
-}: CommandFooterActionProps) => (
+export const CommandFooterAction = (props: CommandFooterActionProps) => (
   <Button
-    variant={variant}
+    variant="default"
     compact
-    className={cn(
-      "ui-text-base h-8 min-w-0 justify-start px-3 leading-[1.35]",
-      variant === "ghost" && "text-text-lighter hover:text-text",
-      className,
-    )}
+    className="ui-text-base min-h-8 min-w-0 justify-center gap-1.5 px-3 [--app-ui-control-icon-size:1rem]"
     {...props}
   />
 );
