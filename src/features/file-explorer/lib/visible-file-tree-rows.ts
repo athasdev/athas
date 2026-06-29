@@ -5,6 +5,7 @@ export interface VisibleFileTreeRow {
   depth: number;
   isExpanded: boolean;
   displayName?: string;
+  guideAncestors?: Array<VisibleFileTreeRow | null>;
 }
 
 export interface BuildVisibleFileTreeRowsOptions {
@@ -22,6 +23,62 @@ export interface FilterFileTreeForSearchResult {
 
 export interface FileTreeSearchHit {
   path: string;
+}
+
+export interface FilterFileTreeEntriesOptions {
+  isAlwaysHidden: (name: string) => boolean;
+  isGitIgnored: (path: string, isDir: boolean) => boolean;
+  isHiddenName: (name: string) => boolean;
+  isUserHidden: (path: string, isDir: boolean) => boolean;
+  showGitignoredFiles: boolean;
+  showHiddenFiles: boolean;
+}
+
+export function filterFileTreeEntries(
+  files: FileEntry[],
+  options: FilterFileTreeEntriesOptions,
+): FileEntry[] {
+  let changed = false;
+  const filteredItems: FileEntry[] = [];
+
+  for (const item of files) {
+    const ignored = options.isGitIgnored(item.path, item.isDir);
+
+    if (options.isAlwaysHidden(item.name) || options.isUserHidden(item.path, item.isDir)) {
+      changed = true;
+      continue;
+    }
+
+    if (!options.showHiddenFiles && options.isHiddenName(item.name)) {
+      changed = true;
+      continue;
+    }
+
+    if (!options.showGitignoredFiles && ignored) {
+      changed = true;
+      continue;
+    }
+
+    const filteredChildren = item.children
+      ? filterFileTreeEntries(item.children, options)
+      : undefined;
+    const childrenChanged = filteredChildren !== item.children;
+    const ignoredChanged = item.ignored !== ignored && (ignored || item.ignored !== undefined);
+
+    if (childrenChanged || ignoredChanged) {
+      changed = true;
+      filteredItems.push({
+        ...item,
+        ignored,
+        children: filteredChildren,
+      });
+      continue;
+    }
+
+    filteredItems.push(item);
+  }
+
+  return changed ? filteredItems : files;
 }
 
 export function collectFileTreeSearchHits(
@@ -82,7 +139,11 @@ export function buildVisibleFileTreeRows(
       ? (files[0].children ?? [])
       : files;
 
-  const walk = (items: FileEntry[], depth: number) => {
+  const walk = (
+    items: FileEntry[],
+    depth: number,
+    guideAncestors: Array<VisibleFileTreeRow | null>,
+  ) => {
     for (const item of items) {
       let rowFile = item;
       const displayNameParts = [item.name];
@@ -98,20 +159,22 @@ export function buildVisibleFileTreeRows(
       }
 
       const isExpanded = rowFile.isDir && expandedPaths.has(rowFile.path);
-      rows.push({
+      const row: VisibleFileTreeRow = {
         file: rowFile,
         depth,
         isExpanded,
         displayName: displayNameParts.length > 1 ? displayNameParts.join("/") : undefined,
-      });
+        guideAncestors,
+      };
+      rows.push(row);
 
       if (rowFile.isDir && isExpanded && rowFile.children) {
-        walk(rowFile.children, depth + 1);
+        walk(rowFile.children, depth + 1, [...guideAncestors, row]);
       }
     }
   };
 
-  walk(rootItems, 0);
+  walk(rootItems, 0, []);
   return rows;
 }
 
@@ -198,6 +261,10 @@ export function getGuideAncestorRows(
   const row = rows[rowIndex];
   if (!row || row.depth === 0) {
     return [];
+  }
+
+  if (row.guideAncestors) {
+    return row.guideAncestors;
   }
 
   const ancestors: Array<VisibleFileTreeRow | null> = Array.from({ length: row.depth }, () => null);

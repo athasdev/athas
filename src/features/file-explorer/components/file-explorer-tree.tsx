@@ -15,6 +15,7 @@ import { useFileClipboardStore } from "@/features/file-explorer/stores/file-expl
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import {
   collectFileTreeSearchHits,
+  filterFileTreeEntries,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
 } from "@/features/file-explorer/lib/visible-file-tree-rows";
@@ -348,35 +349,14 @@ function FileExplorerTreeComponent({
 
   const filteredFiles = useMemo(() => {
     const startedAt = performance.now();
-    const process = (items: FileEntry[]): FileEntry[] => {
-      const filteredItems: FileEntry[] = [];
-
-      for (const item of items) {
-        const ignored = isGitIgnored(item.path, item.isDir);
-
-        if (isAlwaysHiddenFileName(item.name) || isUserHidden(item.path, item.isDir)) {
-          continue;
-        }
-
-        if (!fileTreeSettings.showHiddenFilesInFileTree && isHiddenFileTreeName(item.name)) {
-          continue;
-        }
-
-        if (!fileTreeSettings.showGitignoredFilesInFileTree && ignored) {
-          continue;
-        }
-
-        filteredItems.push({
-          ...item,
-          ignored,
-          children: item.children ? process(item.children) : undefined,
-        });
-      }
-
-      return filteredItems;
-    };
-
-    const result = process(files);
+    const result = filterFileTreeEntries(files, {
+      isAlwaysHidden: isAlwaysHiddenFileName,
+      isGitIgnored,
+      isHiddenName: isHiddenFileTreeName,
+      isUserHidden,
+      showGitignoredFiles: fileTreeSettings.showGitignoredFilesInFileTree,
+      showHiddenFiles: fileTreeSettings.showHiddenFilesInFileTree,
+    });
     frontendTrace("info", "file-tree", "filteredFiles:computed", {
       rootItems: files.length,
       filteredRootItems: result.length,
@@ -1342,6 +1322,7 @@ function FileExplorerTreeComponent({
                   const row = visibleRows[vi.index];
                   const previousRow = visibleRows[vi.index - 1];
                   const nextRow = visibleRows[vi.index + 1];
+                  const isEditingRow = row.file.isEditing || row.file.isRenaming;
                   const guideTargets: Array<FileTreeGuideTarget | null> = getGuideAncestorRows(
                     visibleRows,
                     vi.index,
@@ -1373,9 +1354,9 @@ function FileExplorerTreeComponent({
                       isExpanded={row.isExpanded}
                       isActive={highlightedPath === row.file.path}
                       isCut={cutFilePaths.has(row.file.path)}
-                      dragOverPath={dragState.dragOverPath}
+                      isDragOver={dragState.dragOverPath === row.file.path}
                       isDragging={dragState.isDragging}
-                      editingValue={editingValue}
+                      editingValue={isEditingRow ? editingValue : undefined}
                       onEditingValueChange={setEditingValue}
                       onKeyDown={handleKeyDown}
                       onBlur={handleBlur}

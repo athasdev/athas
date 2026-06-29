@@ -52,9 +52,9 @@ interface FileExplorerTreeItemProps {
   isExpanded: boolean;
   isActive: boolean;
   isCut: boolean;
-  dragOverPath: string | null;
+  isDragOver: boolean;
   isDragging: boolean;
-  editingValue: string;
+  editingValue?: string;
   onEditingValueChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
@@ -97,7 +97,7 @@ function FileExplorerTreeItemComponent({
   isExpanded,
   isActive,
   isCut,
-  dragOverPath,
+  isDragOver,
   isDragging,
   editingValue,
   onEditingValueChange,
@@ -175,7 +175,7 @@ function FileExplorerTreeItemComponent({
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
-            value={editingValue}
+            value={editingValue ?? ""}
             onFocus={() => {
               if (file.isRenaming) {
                 onEditingValueChange(file.name);
@@ -215,8 +215,7 @@ function FileExplorerTreeItemComponent({
         }
         className={cn(
           densityConfig.rowClassName,
-          dragOverPath === file.path &&
-            "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
+          isDragOver && "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",
@@ -261,7 +260,7 @@ export const FileExplorerTreeItem = memo(
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
     prev.isCut === next.isCut &&
-    prev.dragOverPath === next.dragOverPath &&
+    prev.isDragOver === next.isDragOver &&
     prev.isDragging === next.isDragging &&
     prev.editingValue === next.editingValue &&
     prev.onEditingValueChange === next.onEditingValueChange &&

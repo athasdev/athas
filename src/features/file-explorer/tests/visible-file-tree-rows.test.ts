@@ -2,6 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   buildVisibleFileTreeRows,
   collectFileTreeSearchHits,
+  filterFileTreeEntries,
   filterFileTreeForFffHits,
   getGuideAncestorRows,
 } from "../lib/visible-file-tree-rows";
@@ -160,6 +161,55 @@ describe("collectFileTreeSearchHits", () => {
 
   test("limits collected matches", () => {
     expect(collectFileTreeSearchHits(tree, "src", 1)).toEqual([{ path: "/root/src" }]);
+  });
+});
+
+describe("filterFileTreeEntries", () => {
+  const baseOptions = {
+    isAlwaysHidden: () => false,
+    isGitIgnored: () => false,
+    isHiddenName: () => false,
+    isUserHidden: () => false,
+    showGitignoredFiles: true,
+    showHiddenFiles: true,
+  };
+
+  test("preserves tree references when nothing is filtered or decorated", () => {
+    const result = filterFileTreeEntries(tree, baseOptions);
+
+    expect(result).toBe(tree);
+    expect(result[0]).toBe(tree[0]);
+    expect(result[0]!.children?.[0]).toBe(tree[0]!.children?.[0]);
+  });
+
+  test("only clones branches affected by hidden descendants", () => {
+    const result = filterFileTreeEntries(tree, {
+      ...baseOptions,
+      isHiddenName: (name) => name === "file-tree.tsx",
+      showHiddenFiles: false,
+    });
+
+    expect(result).not.toBe(tree);
+    expect(result[0]).not.toBe(tree[0]);
+    expect(result[0]!.children?.[0]).not.toBe(tree[0]!.children?.[0]);
+    expect(result[0]!.children?.[0].children?.[0].children?.[0].children).toEqual([]);
+  });
+
+  test("decorates ignored entries without cloning unaffected siblings", () => {
+    const sibling = {
+      name: "package.json",
+      path: "/root/package.json",
+      isDir: false,
+    };
+    const files = [{ ...tree[0]!, children: [...(tree[0]!.children ?? []), sibling] }];
+    const result = filterFileTreeEntries(files, {
+      ...baseOptions,
+      isGitIgnored: (path) => path === sibling.path,
+    });
+
+    expect(result[0]).not.toBe(files[0]);
+    expect(result[0]!.children?.[0]).toBe(files[0]!.children?.[0]);
+    expect(result[0]!.children?.[1]).toEqual({ ...sibling, ignored: true, children: undefined });
   });
 });
 
