@@ -21,6 +21,8 @@ mod terminal;
 
 #[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
+   let _ = rustls::crypto::ring::default_provider().install_default();
+
    #[cfg(target_os = "linux")]
    if cfg!(not(feature = "linux")) && std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
       // SAFETY: Called at program start before any threads are spawned
