@@ -9,6 +9,7 @@ use std::{
       LazyLock, Mutex,
       atomic::{AtomicU32, Ordering},
    },
+   time::{Instant, SystemTime, UNIX_EPOCH},
 };
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 use tauri::TitleBarStyle;
@@ -60,14 +61,23 @@ pub struct CreateAppWindowRequest {
    pub remote_connection_name: Option<String>,
 }
 
-fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
+fn append_window_trace_params(url: String, label: &str, created_at_ms: u128) -> String {
+   let separator = if url.contains('?') { '&' } else { '?' };
+   format!("{url}{separator}athasWindowTraceId={label}&athasWindowCreatedAtMs={created_at_ms}")
+}
+
+fn build_window_open_url(
+   request: Option<&CreateAppWindowRequest>,
+   label: &str,
+   created_at_ms: u128,
+) -> String {
    let Some(request) = request else {
-      return "/".to_string();
+      return append_window_trace_params("/".to_string(), label, created_at_ms);
    };
 
    let has_payload = request.path.is_some() || request.remote_connection_id.is_some();
    if !has_payload {
-      return "/".to_string();
+      return append_window_trace_params("/".to_string(), label, created_at_ms);
    }
 
    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
@@ -96,7 +106,25 @@ fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
       }
    }
 
-   format!("/?{}", serializer.finish())
+   append_window_trace_params(format!("/?{}", serializer.finish()), label, created_at_ms)
+}
+
+fn window_open_request_kind(request: Option<&CreateAppWindowRequest>) -> &'static str {
+   match request {
+      Some(request) if request.remote_connection_id.is_some() => "remote",
+      Some(request) if request.path.is_some() && request.is_directory.unwrap_or(false) => {
+         "directory"
+      }
+      Some(request) if request.path.is_some() => "file",
+      _ => "empty",
+   }
+}
+
+fn window_open_created_at_ms() -> u128 {
+   SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .unwrap_or_default()
+      .as_millis()
 }
 
 fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String {
@@ -358,8 +386,14 @@ fn create_labeled_app_window_internal(
    label: String,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
-   let url = build_window_open_url(request.as_ref());
+   let started_at = Instant::now();
+   let created_at_ms = window_open_created_at_ms();
+   let request_kind = window_open_request_kind(request.as_ref());
+   log::info!("[window-open:{label}] create:start kind={request_kind}");
+
+   let url = build_window_open_url(request.as_ref(), &label, created_at_ms);
    let title = window_title_for_request(request.as_ref());
+   let trace_label = label.clone();
 
    let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
       .title(title)
@@ -369,7 +403,17 @@ fn create_labeled_app_window_internal(
       .decorations(true)
       .transparent(cfg!(target_os = "macos"))
       .resizable(true)
-      .shadow(true);
+      .shadow(true)
+      .on_page_load(move |_window, payload| {
+         let event = match payload.event() {
+            PageLoadEvent::Started => "started",
+            PageLoadEvent::Finished => "finished",
+         };
+         log::info!(
+            "[window-open:{trace_label}] page-load:{event} elapsedMs={}",
+            started_at.elapsed().as_millis()
+         );
+      });
 
    #[cfg(any(
       target_os = "windows",
@@ -383,13 +427,32 @@ fn create_labeled_app_window_internal(
       .title_bar_style(TitleBarStyle::Overlay)
       .traffic_light_position(tauri::LogicalPosition::new(14.0, 20.0));
 
+   let build_started_at = Instant::now();
    let window = builder
       .build()
       .map_err(|e| format!("Failed to create app window: {e}"))?;
+   log::info!(
+      "[window-open:{label}] build:end durationMs={} totalMs={}",
+      build_started_at.elapsed().as_millis(),
+      started_at.elapsed().as_millis()
+   );
 
+   let configure_started_at = Instant::now();
    configure_app_window(&window);
+   log::info!(
+      "[window-open:{label}] configure:end durationMs={} totalMs={}",
+      configure_started_at.elapsed().as_millis(),
+      started_at.elapsed().as_millis()
+   );
+
+   let show_started_at = Instant::now();
    let _ = window.show();
    let _ = window.set_focus();
+   log::info!(
+      "[window-open:{label}] show-focus:end durationMs={} totalMs={}",
+      show_started_at.elapsed().as_millis(),
+      started_at.elapsed().as_millis()
+   );
 
    Ok(label)
 }
@@ -411,7 +474,21 @@ pub async fn create_app_window(
    app: tauri::AppHandle<AthasRuntime>,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
-   create_app_window_internal(&app, request)
+   let started_at = Instant::now();
+   let request_kind = window_open_request_kind(request.as_ref());
+   log::info!("[window-open:command] create_app_window:start kind={request_kind}");
+   let result = create_app_window_internal(&app, request);
+   match &result {
+      Ok(label) => log::info!(
+         "[window-open:{label}] create_app_window:end durationMs={}",
+         started_at.elapsed().as_millis()
+      ),
+      Err(error) => log::error!(
+         "[window-open:command] create_app_window:error durationMs={} error={error}",
+         started_at.elapsed().as_millis()
+      ),
+   }
+   result
 }
 
 fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {

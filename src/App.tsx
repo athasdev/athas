@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { useAppBootstrap } from "@/bootstrap/use-app-bootstrap";
+import { traceWindowOpen } from "@/features/window/utils/window-open-diagnostics";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
@@ -9,6 +11,18 @@ import { WindowResizeBorder } from "./features/window/components/window-resize-b
 
 function App() {
   useAppBootstrap();
+
+  useEffect(() => {
+    const mountedAt = performance.now();
+    traceWindowOpen("app:mounted");
+    const frame = window.requestAnimationFrame(() => {
+      traceWindowOpen("app:firstFrame", {
+        durationMs: Math.round((performance.now() - mountedAt) * 100) / 100,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <TooltipProvider>

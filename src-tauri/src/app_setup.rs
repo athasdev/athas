@@ -10,7 +10,7 @@ use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Instant};
 use tauri::{Emitter, Manager};
 #[cfg(target_os = "macos")]
 use tauri_plugin_os::platform;
@@ -218,10 +218,25 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
    match event.id().0.as_str() {
       "new_window" => {
          let app_handle = app_handle.clone();
+         let received_at = Instant::now();
+         log::info!("[window-open:menu] new_window:received");
          std::thread::spawn(move || {
-            if let Err(error) = commands::ui::window::create_app_window_internal(&app_handle, None)
-            {
-               log::error!("Failed to create app window from menu: {}", error);
+            log::info!(
+               "[window-open:menu] new_window:worker:start elapsedMs={}",
+               received_at.elapsed().as_millis()
+            );
+            match commands::ui::window::create_app_window_internal(&app_handle, None) {
+               Ok(label) => log::info!(
+                  "[window-open:{label}] menu:create:end totalMs={}",
+                  received_at.elapsed().as_millis()
+               ),
+               Err(error) => {
+                  log::error!(
+                     "[window-open:menu] new_window:error totalMs={} error={}",
+                     received_at.elapsed().as_millis(),
+                     error
+                  );
+               }
             }
          });
       }
