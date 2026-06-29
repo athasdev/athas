@@ -7,6 +7,7 @@ import {
   XIcon as X,
 } from "@phosphor-icons/react";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
+import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
 import { LoadingIndicator } from "@/ui/loading";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -56,6 +57,22 @@ interface ToastState {
 
 const DISMISS_ANIMATION_MS = 300;
 const MAX_NOTIFICATIONS = 20;
+
+function withDefaultErrorAction(toast: Omit<Toast, "id">): Omit<Toast, "id"> {
+  if (toast.type !== "error" || toast.action) return toast;
+
+  return {
+    ...toast,
+    action: {
+      label: "Open Log",
+      onClick: () => {
+        void openAthasLogBuffer().catch((error) => {
+          console.error("Failed to open Athas log", error);
+        });
+      },
+    },
+  };
+}
 
 function removeToastLater(id: string) {
   setTimeout(() => {
@@ -138,12 +155,13 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
   notifications: [],
   actions: {
     show: (toast) => {
-      const existingToast = toast.key
-        ? get().toasts.find((item) => item.key === toast.key)
+      const nextToastInput = withDefaultErrorAction(toast);
+      const existingToast = nextToastInput.key
+        ? get().toasts.find((item) => item.key === nextToastInput.key)
         : undefined;
 
       if (existingToast) {
-        const updatedToast = { ...existingToast, ...toast };
+        const updatedToast = { ...existingToast, ...nextToastInput };
         set((state) => ({
           toasts: state.toasts.map((item) => (item.id === existingToast.id ? updatedToast : item)),
           notifications: upsertNotification(state.notifications, updatedToast),
@@ -153,7 +171,7 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
       }
 
       const id = globalThis.crypto?.randomUUID?.() ?? Date.now().toString();
-      const nextToast: Toast = { ...toast, id };
+      const nextToast: Toast = { ...nextToastInput, id };
       set((state) => ({
         toasts: [...state.toasts, nextToast],
         notifications: upsertNotification(state.notifications, nextToast),

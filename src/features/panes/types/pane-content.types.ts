@@ -56,6 +56,7 @@ export interface EditorContent extends PaneContentBase {
   savedContent: string;
   isDirty: boolean;
   isVirtual: boolean;
+  readOnly?: boolean;
   language?: string;
   languageOverride?: string;
   tokens: TokenEntry[];
@@ -315,6 +316,7 @@ export type OpenContentSpec =
       content: string;
       isVirtual?: boolean;
       isPreview?: boolean;
+      readOnly?: boolean;
       language?: string;
     }
   | {

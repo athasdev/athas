@@ -38,6 +38,7 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
   const { markPendingSave } = useFileWatcherStore.getState();
   const activeBuffer = getBufferById(buffers, bufferId);
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
+  if (activeBuffer.readOnly) return false;
 
   const { parseCollaborationNoteBufferPath } =
     await import("@/features/collaboration/lib/collaboration-sidebar-model");
@@ -193,7 +194,8 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
 
 function getDirtyEditorBuffers(buffers: PaneContent[]): EditorContent[] {
   return buffers.filter(
-    (buffer): buffer is EditorContent => isEditorContent(buffer) && buffer.isDirty,
+    (buffer): buffer is EditorContent =>
+      isEditorContent(buffer) && buffer.isDirty && !buffer.readOnly,
   );
 }
 
@@ -324,7 +326,7 @@ export const useEditorAppStore = createSelectors(
         handleSave: async () => {
           const { activeBufferId, buffers } = useBufferStore.getState();
           const activeBuffer = getBufferById(buffers, activeBufferId);
-          if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+          if (!activeBuffer || !isEditorContent(activeBuffer) || activeBuffer.readOnly) return;
 
           await saveEditorBufferById(activeBuffer.id);
         },

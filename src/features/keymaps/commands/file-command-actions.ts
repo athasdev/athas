@@ -25,7 +25,7 @@ export async function saveActiveFileAs(): Promise<void> {
   const bufferStore = useBufferStore.getState();
   const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
 
-  if (!activeBuffer) return;
+  if (!activeBuffer || (activeBuffer.type === "editor" && activeBuffer.readOnly)) return;
 
   const result = await save({
     title: "Save As",

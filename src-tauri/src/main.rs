@@ -54,6 +54,7 @@ fn main() {
       .setup(configure_app)
       .invoke_handler(tauri::generate_handler![
          // File system commands
+         read_athas_log,
          open_file_external,
          open_folder_dialog,
          move_file,

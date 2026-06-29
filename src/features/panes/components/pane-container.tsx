@@ -110,7 +110,7 @@ const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
 
-type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
+type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
 type PaneRenderState = {
   activeBuffer: PaneRenderBuffer | null;
@@ -121,7 +121,12 @@ const editorBufferShellCache = new Map<string, EditorBufferShell>();
 
 function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
   const cached = editorBufferShellCache.get(buffer.id);
-  if (cached && cached.path === buffer.path && cached.name === buffer.name) {
+  if (
+    cached &&
+    cached.path === buffer.path &&
+    cached.name === buffer.name &&
+    cached.readOnly === buffer.readOnly
+  ) {
     return cached;
   }
 
@@ -130,6 +135,7 @@ function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
     path: buffer.path,
     name: buffer.name,
     type: buffer.type,
+    readOnly: buffer.readOnly,
   } satisfies EditorBufferShell;
   editorBufferShellCache.set(buffer.id, shell);
   return shell;
@@ -962,7 +968,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         default:
           return (
-            <CodeEditor paneId={pane.id} bufferId={buffer.id} isActiveSurface={isActivePane} />
+            <CodeEditor
+              paneId={pane.id}
+              bufferId={buffer.id}
+              isActiveSurface={isActivePane}
+              readOnly={buffer.type === "editor" ? buffer.readOnly : undefined}
+            />
           );
       }
     },
@@ -1073,6 +1084,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           paneId={pane.id}
                           bufferId={buffer.id}
                           isActiveSurface={isActivePane && isActiveBuffer}
+                          readOnly={buffer.readOnly}
                           showToolbar={false}
                           className={isActiveBuffer ? undefined : "pointer-events-none"}
                         />

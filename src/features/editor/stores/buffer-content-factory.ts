@@ -21,6 +21,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isDirty: false,
         isVirtual: spec.isVirtual ?? false,
         isPreview: spec.isPreview ?? false,
+        readOnly: spec.readOnly,
         language: spec.language ?? detectLanguageFromFileName(spec.name),
         tokens: [],
       };
