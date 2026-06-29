@@ -407,8 +407,8 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     tab: "appearance",
     section: "Layout",
     label: "Sidebar Tabs",
-    description: "Show sidebar activity tabs across the top or in a left rail",
-    keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
+    description: "Show sidebar activity tabs across the top or beside the sidebar",
+    keywords: ["sidebar", "tabs", "activity", "top", "side", "left", "right", "rail", "layout"],
   },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [

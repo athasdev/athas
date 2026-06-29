@@ -314,7 +314,6 @@ export function MainLayout() {
 
           {sidebarPosition === "right" ? (
             <>
-              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
               <ResizablePane
                 position="right"
                 widthKey="sidebarWidth"
@@ -323,6 +322,7 @@ export function MainLayout() {
               >
                 <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
+              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
             </>
           ) : null}
 

@@ -55,7 +55,7 @@ export const AppearanceSettings = () => {
   ];
   const sidebarTabsPositionOptions = [
     { value: "top", label: "Top" },
-    { value: "left", label: "Left" },
+    { value: "left", label: "Side" },
   ];
 
   const themeOptions = useMemo(
@@ -329,7 +329,7 @@ export const AppearanceSettings = () => {
 
         <SettingRow
           label="Sidebar Tabs"
-          description="Show sidebar activity tabs across the top or in a left rail"
+          description="Show sidebar activity tabs across the top or beside the sidebar"
           onReset={() =>
             updateSetting("sidebarTabsPosition", getDefaultSetting("sidebarTabsPosition"))
           }
