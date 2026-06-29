@@ -1,16 +1,9 @@
-import { useEffect, useRef } from "react";
-import AIChat from "@/features/ai/components/chat/ai-chat";
-import { AgentLauncher } from "@/features/ai/components/agent-launcher";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
-import CommandPalette from "@/features/command-palette/components/command-palette";
-import { ConnectionDialog } from "@/features/database/components/connection/connection-dialog";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import LinuxFolderPickerDialog from "@/features/file-system/components/linux-folder-picker-dialog";
-import { ProjectNameMenu } from "@/features/file-system/components/project-name-menu";
-import { ExtensionGenerationCommand } from "@/features/generate/components/extension-generation-command";
 import { getSymlinkInfo } from "@/features/file-system/controllers/platform";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -21,32 +14,76 @@ import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.stor
 import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import QuickOpen from "@/features/quick-open/components/quick-open";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import VimCommandBar from "@/features/vim/components/vim-command-bar";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
-import { WindowCloseGuard } from "@/features/window/components/window-close-guard";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { ExtensionDialogs } from "@/extensions/ui/components/extension-dialog";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
-import { VimSearchBar } from "../../vim/components/vim-search-bar";
 import CustomTitleBarWithSettings from "../../window/components/title-bar/custom-title-bar";
-import { TerminalHost } from "@/features/terminal/components/terminal-host";
-import BottomPane from "./bottom-pane/bottom-pane";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
+
+const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
+const AgentLauncher = lazy(() =>
+  import("@/features/ai/components/agent-launcher").then((module) => ({
+    default: module.AgentLauncher,
+  })),
+);
+const CommandPalette = lazy(() => import("@/features/command-palette/components/command-palette"));
+const ConnectionDialog = lazy(() =>
+  import("@/features/database/components/connection/connection-dialog").then((module) => ({
+    default: module.ConnectionDialog,
+  })),
+);
+const LinuxFolderPickerDialog = lazy(
+  () => import("@/features/file-system/components/linux-folder-picker-dialog"),
+);
+const ProjectNameMenu = lazy(() =>
+  import("@/features/file-system/components/project-name-menu").then((module) => ({
+    default: module.ProjectNameMenu,
+  })),
+);
+const ExtensionGenerationCommand = lazy(() =>
+  import("@/features/generate/components/extension-generation-command").then((module) => ({
+    default: module.ExtensionGenerationCommand,
+  })),
+);
+const QuickOpen = lazy(() => import("@/features/quick-open/components/quick-open"));
+const VimCommandBar = lazy(() => import("@/features/vim/components/vim-command-bar"));
+const VimSearchBar = lazy(() =>
+  import("@/features/vim/components/vim-search-bar").then((module) => ({
+    default: module.VimSearchBar,
+  })),
+);
+const WindowCloseGuard = lazy(() =>
+  import("@/features/window/components/window-close-guard").then((module) => ({
+    default: module.WindowCloseGuard,
+  })),
+);
+const ExtensionDialogs = lazy(() =>
+  import("@/extensions/ui/components/extension-dialog").then((module) => ({
+    default: module.ExtensionDialogs,
+  })),
+);
+const TerminalHost = lazy(() =>
+  import("@/features/terminal/components/terminal-host").then((module) => ({
+    default: module.TerminalHost,
+  })),
+);
+const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 const EMPTY_BUFFERS: PaneContent[] = [];
 
 export function MainLayout() {
+  const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
+
   useChatInitialization();
   usePaneKeyboard();
   useCollaborationPresence();
@@ -109,6 +146,14 @@ export function MainLayout() {
 
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   const showLeftSidebarTabs = sidebarTabsPosition === "left";
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.setTimeout(() => setDeferredSurfacesReady(true), 0);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     void initializeDebuggerEventBridge();
@@ -281,18 +326,24 @@ export function MainLayout() {
             <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
-            {terminalWidthMode === "editor" && <BottomPane />}
+            {terminalWidthMode === "editor" && deferredSurfacesReady && (
+              <Suspense fallback={null}>
+                <BottomPane />
+              </Suspense>
+            )}
           </div>
 
           {/* Right side panes are ordered from inner to edge. */}
-          {showInlineAiChat ? (
+          {showInlineAiChat && deferredSurfacesReady ? (
             <ResizablePane position="right" widthKey="aiChatWidth">
-              <AIChat
-                mode="chat"
-                activeBuffer={activeBuffer}
-                buffers={buffers}
-                allProjectFiles={allProjectFiles}
-              />
+              <Suspense fallback={null}>
+                <AIChat
+                  mode="chat"
+                  activeBuffer={activeBuffer}
+                  buffers={buffers}
+                  allProjectFiles={allProjectFiles}
+                />
+              </Suspense>
             </ResizablePane>
           ) : null}
 
@@ -321,9 +372,11 @@ export function MainLayout() {
           </ResizablePane>
         </div>
 
-        {terminalWidthMode === "full" && (
+        {terminalWidthMode === "full" && deferredSurfacesReady && (
           <div className="px-2">
-            <BottomPane />
+            <Suspense fallback={null}>
+              <BottomPane />
+            </Suspense>
           </div>
         )}
       </div>
@@ -331,23 +384,26 @@ export function MainLayout() {
       <Footer />
 
       {/* Global modals and overlays */}
-      <QuickOpen />
-      <VimCommandBar />
-      <VimSearchBar />
-      <CommandPalette />
-      <ExtensionGenerationCommand />
-      <AgentLauncher />
-      <ProjectNameMenu />
+      {deferredSurfacesReady ? (
+        <Suspense fallback={null}>
+          <QuickOpen />
+          <VimCommandBar />
+          <VimSearchBar />
+          <CommandPalette />
+          <ExtensionGenerationCommand />
+          <AgentLauncher />
+          <ProjectNameMenu />
 
-      {/* Dialog components */}
-      <ConnectionDialog
-        isOpen={isDatabaseConnectionVisible}
-        onClose={() => setIsDatabaseConnectionVisible(false)}
-      />
-      <LinuxFolderPickerDialog />
-      <WindowCloseGuard />
-      <ExtensionDialogs />
-      <TerminalHost />
+          <ConnectionDialog
+            isOpen={isDatabaseConnectionVisible}
+            onClose={() => setIsDatabaseConnectionVisible(false)}
+          />
+          <LinuxFolderPickerDialog />
+          <WindowCloseGuard />
+          <ExtensionDialogs />
+          <TerminalHost />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
