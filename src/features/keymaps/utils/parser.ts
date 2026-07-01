@@ -71,9 +71,11 @@ export function parseKeyCombination(combo: string): ParsedKey {
 /**
  * Parse a full keybinding string (may include chords like "cmd+k cmd+t")
  */
-export function parseKeybinding(binding: string): ParsedKeybinding {
-  // Normalize for platform (cmd -> ctrl on Windows/Linux)
-  const normalized = normalizeKey(binding);
+export function parseKeybinding(binding: string, { normalize = true } = {}): ParsedKeybinding {
+  // Normalize for platform (cmd -> ctrl on Windows/Linux) unless explicitly disabled.
+  // Native menu accelerators are declared in macOS terms and must stay literal so that
+  // the frontend can intercept them on macOS without being affected by Linux/Windows normalization.
+  const normalized = normalize ? normalizeKey(binding) : binding;
 
   // Split by space to detect chords
   const parts = normalized

@@ -47,7 +47,7 @@ const NATIVE_MENU_ACCELERATORS = [
 ] as const;
 
 const parsedNativeMenuAccelerators = NATIVE_MENU_ACCELERATORS.map((shortcut) =>
-  parseKeybinding(shortcut),
+  parseKeybinding(shortcut, { normalize: false }),
 );
 
 export function isNativeMenuAccelerator(event: KeyboardEvent) {
