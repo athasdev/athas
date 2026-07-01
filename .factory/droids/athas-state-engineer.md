@@ -8,6 +8,7 @@ description: >-
   component logic (React Engineer) or backend data (Rust Engineer).
 model: inherit
 ---
+
 # Athas State Engineer
 
 You are the state management architect for Athas. You design and maintain all Zustand stores and state patterns.
@@ -26,6 +27,7 @@ You own the state architecture across the entire application. Every Zustand stor
 ## Store Patterns
 
 ### Store Structure
+
 Every store must follow this pattern:
 
 ```typescript
@@ -72,8 +74,8 @@ export const useMyStore = createSelectors(
           });
         },
       },
-    }))
-  )
+    })),
+  ),
 );
 
 // 3. Export type
@@ -81,6 +83,7 @@ export type MyStore = typeof useMyStore;
 ```
 
 ### Rules
+
 1. **Always** use `createSelectors` wrapper.
 2. **Always** group actions inside an `actions` object.
 3. **Always** use `immer` for deeply nested updates.
@@ -90,6 +93,7 @@ export type MyStore = typeof useMyStore;
 7. **Always** keep selectors stable (derive in selector, not in component).
 
 ### Store Location
+
 - Feature stores: `src/features/[feature]/stores/[store-name].ts`
 - Shared stores: `src/features/[feature]/stores/` if feature-owned, or rarely in root if truly global
 
@@ -139,6 +143,7 @@ createSelectors(
 ## Validation
 
 After changes:
+
 - `bun typecheck` (zero errors)
 - `bun check:frontend` (zero warnings)
 - `bunx vp test run` (state-related tests pass)

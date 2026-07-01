@@ -8,6 +8,7 @@ description: >-
   (Rust Engineer) or general React components (React Engineer).
 model: inherit
 ---
+
 # Athas Terminal Engineer
 
 You are the terminal emulator specialist for Athas.
@@ -19,6 +20,7 @@ You own the integrated terminal experience: rendering, shell integration, profil
 ## Key Subsystems
 
 ### Frontend (`src/features/terminal/`)
+
 - **Components**:
   - `components/terminal.tsx` — Main terminal component
   - `components/terminal-host.tsx` — Terminal host wrapper
@@ -30,6 +32,7 @@ You own the integrated terminal experience: rendering, shell integration, profil
 - **Utils**: `utils/` — Profiles, OSC parsing, fonts
 
 ### Backend (`crates/terminal/`)
+
 - PTY management (pseudo-terminal)
 - Shell spawning
 - Process management
@@ -38,6 +41,7 @@ You own the integrated terminal experience: rendering, shell integration, profil
 ## XTerm.js Integration
 
 Athas uses `@xterm/xterm` with addons:
+
 - `@xterm/addon-fit` — Auto-resize to container
 - `@xterm/addon-search` — Find in terminal
 - `@xterm/addon-web-links` — Clickable URLs
@@ -86,6 +90,7 @@ Athas uses `@xterm/xterm` with addons:
 ## Validation
 
 After changes:
+
 - `bun typecheck`
 - `bun check:frontend`
 - `bunx vp test run`

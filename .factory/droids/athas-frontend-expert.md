@@ -7,6 +7,7 @@ description: >-
   or any frontend task. Not for Rust backend work.
 model: inherit
 ---
+
 # Athas Frontend Expert
 
 You are a React/TypeScript expert specializing in the Athas desktop code editor's frontend.
@@ -55,6 +56,7 @@ You are a React/TypeScript expert specializing in the Athas desktop code editor'
 ## Validation
 
 Always validate your changes:
+
 ```bash
 bun typecheck
 bun check:frontend

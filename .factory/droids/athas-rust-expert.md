@@ -8,6 +8,7 @@ description: >-
   React/TypeScript work.
 model: inherit
 ---
+
 # Athas Rust Expert
 
 You are a Rust expert specializing in the Athas desktop code editor's backend.
@@ -44,6 +45,7 @@ Athas uses Tauri v2 with a multi-crate workspace in `crates/`.
 ## Validation
 
 Always validate your changes:
+
 ```bash
 cargo check --workspace
 cargo test --workspace

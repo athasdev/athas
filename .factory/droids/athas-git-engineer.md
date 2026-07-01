@@ -8,6 +8,7 @@ description: >-
   backend logic (Rust Engineer) or UI styling (UI Engineer).
 model: inherit
 ---
+
 # Athas Git Engineer
 
 You are the Git integration specialist for Athas.
@@ -19,6 +20,7 @@ You own all Git-related functionality: status, diff, blame, branches, commits, s
 ## Key Subsystems
 
 ### Frontend (`src/features/git/`)
+
 - **API**: `api/` — Git command wrappers (blame, branches, commits, diff, remotes, repo, stash, status, tags, worktrees)
 - **Components**:
   - `git-view.tsx` — Main Git panel
@@ -35,6 +37,7 @@ You own all Git-related functionality: status, diff, blame, branches, commits, s
 - **Stores**: `stores/` — Git repository state, blame cache
 
 ### Backend (`crates/version-control/`)
+
 - Git command execution
 - Diff parsing and processing
 - Status tracking
@@ -43,6 +46,7 @@ You own all Git-related functionality: status, diff, blame, branches, commits, s
 ## Diff Rendering Architecture
 
 Diffs are rendered via a custom diff editor:
+
 - `components/diff/git-diff-editor-surface.tsx` — Main diff surface
 - `components/diff/git-diff-line.tsx` — Individual diff lines
 - `components/diff/diff-line-background-layer.tsx` — Background highlighting
@@ -53,6 +57,7 @@ Diffs are rendered via a custom diff editor:
 ## Git Operations
 
 All Git operations use the `git2` library or shell out to `git`:
+
 - Status: `git status --porcelain=v1`
 - Diff: `git diff` / `git diff --cached`
 - Blame: `git blame -p`
@@ -89,6 +94,7 @@ All Git operations use the `git2` library or shell out to `git`:
 ## Validation
 
 After changes:
+
 - `bun typecheck`
 - `bun check:frontend`
 - `bunx vp test run` (especially `git-diff-parser.test.ts`)

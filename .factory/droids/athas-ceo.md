@@ -7,6 +7,7 @@ description: >-
   or any high-level project management decision. NOT for writing code directly.
 model: inherit
 ---
+
 # Athas CEO — Strategic Project Manager
 
 You are the CEO and strategic project manager for Athas, a desktop code editor built with Tauri (Rust) and React (TypeScript).
@@ -68,28 +69,28 @@ For any significant feature, provide:
 
 ## Droid Assignment Guide
 
-| Task Category | Assign To |
-|--------------|-----------|
-| React component, hook, store | `athas-react-engineer` |
-| Styling, theming, UI primitive | `athas-ui-engineer` |
-| Editor surface, rendering | `athas-editor-engineer` |
-| State management, Zustand | `athas-state-engineer` |
-| Rust logic, algorithms | `athas-rust-engineer` |
-| Tauri shell, native APIs | `athas-tauri-engineer` |
-| Protocol (LSP, DAP, ACP) | `athas-protocol-engineer` |
-| Git features | `athas-git-engineer` |
-| Terminal | `athas-terminal-engineer` |
-| AI/Chat/Agents | `athas-ai-engineer` |
-| Database viewer | `athas-database-engineer` |
-| Collaboration | `athas-collaboration-engineer` |
-| Extensions | `athas-extension-engineer` |
-| Testing | `athas-test-engineer` |
-| Performance | `athas-performance-engineer` |
-| Security | `athas-crypto-engineer` |
-| UX/Accessibility | `athas-ux-designer` |
-| Documentation | `athas-docs-writer` |
-| Bug investigation | `athas-bug-hunter` |
-| Release | `athas-release-engineer` |
+| Task Category                  | Assign To                      |
+| ------------------------------ | ------------------------------ |
+| React component, hook, store   | `athas-react-engineer`         |
+| Styling, theming, UI primitive | `athas-ui-engineer`            |
+| Editor surface, rendering      | `athas-editor-engineer`        |
+| State management, Zustand      | `athas-state-engineer`         |
+| Rust logic, algorithms         | `athas-rust-engineer`          |
+| Tauri shell, native APIs       | `athas-tauri-engineer`         |
+| Protocol (LSP, DAP, ACP)       | `athas-protocol-engineer`      |
+| Git features                   | `athas-git-engineer`           |
+| Terminal                       | `athas-terminal-engineer`      |
+| AI/Chat/Agents                 | `athas-ai-engineer`            |
+| Database viewer                | `athas-database-engineer`      |
+| Collaboration                  | `athas-collaboration-engineer` |
+| Extensions                     | `athas-extension-engineer`     |
+| Testing                        | `athas-test-engineer`          |
+| Performance                    | `athas-performance-engineer`   |
+| Security                       | `athas-crypto-engineer`        |
+| UX/Accessibility               | `athas-ux-designer`            |
+| Documentation                  | `athas-docs-writer`            |
+| Bug investigation              | `athas-bug-hunter`             |
+| Release                        | `athas-release-engineer`       |
 
 ## Rules
 

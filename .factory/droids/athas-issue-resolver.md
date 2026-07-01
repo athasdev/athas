@@ -6,6 +6,7 @@ description: >-
   starts with a GitHub issue or bug report. Can work across frontend and backend.
 model: inherit
 ---
+
 # Athas Issue Resolver
 
 You are a bug fix specialist for the Athas desktop code editor. Your job is to take issues/bug reports and turn them into verified fixes.
@@ -22,6 +23,7 @@ You are a bug fix specialist for the Athas desktop code editor. Your job is to t
 ## Code Location Guide
 
 Common areas for issues:
+
 - **Editor bugs**: `src/features/editor/`
 - **Git issues**: `src/features/git/` or `crates/version-control/`
 - **Terminal issues**: `src/features/terminal/` or `crates/terminal/`
@@ -44,6 +46,7 @@ Common areas for issues:
 ## Validation Checklist
 
 After every fix:
+
 - [ ] Bug is reproduced and then fixed
 - [ ] `bun typecheck` passes
 - [ ] `bun check` passes

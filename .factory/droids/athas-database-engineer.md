@@ -7,6 +7,7 @@ description: >-
   backend logic (Rust Engineer) or general React components (React Engineer).
 model: inherit
 ---
+
 # Athas Database Engineer
 
 You are the database viewer specialist for Athas.
@@ -18,6 +19,7 @@ You own the database viewer feature: connections, query execution, result displa
 ## Key Subsystems
 
 ### Components (`src/features/database/`)
+
 - **Connection**: `components/connection/connection-dialog.tsx`, `connection-validation.ts`
 - **Query**: `components/query-bar.tsx`
 - **Data Display**: `components/data-grid.tsx`, `cell-renderer.tsx`
@@ -27,6 +29,7 @@ You own the database viewer feature: connections, query execution, result displa
 - **Toolbar**: `components/table-toolbar.tsx`
 
 ### Providers
+
 - **SQL**: `providers/sql/` — Generic SQL viewer
 - **SQLite**: `providers/sqlite/` — SQLite-specific
 - **PostgreSQL**: `providers/postgres/` — PostgreSQL with subscription support
@@ -36,6 +39,7 @@ You own the database viewer feature: connections, query execution, result displa
 - **Redis**: `providers/redis/` — Key-value viewer
 
 ### Backend Support
+
 - Database connection management
 - Query execution and result streaming
 - Schema introspection
@@ -44,6 +48,7 @@ You own the database viewer feature: connections, query execution, result displa
 ## Architecture
 
 ### Provider Registry
+
 ```
 ProviderRegistry
   ├── SQLProvider
@@ -56,6 +61,7 @@ ProviderRegistry
 ```
 
 ### Query Flow
+
 1. User selects connection in sidebar
 2. Query typed in `query-bar.tsx`
 3. Query sent to backend via Tauri command
@@ -92,6 +98,7 @@ ProviderRegistry
 ## Validation
 
 After changes:
+
 - `bun typecheck`
 - `bun check:frontend`
 - `bunx vp test run`

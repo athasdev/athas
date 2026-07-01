@@ -134,20 +134,21 @@ Reports findings with severity, file refs, and fixes.
 
 ## Droid Selection Guide
 
-| Task Type | Who to Call | How |
-|-----------|-------------|-----|
-| Rust bug in Git operations | athas-rust-expert | `delegate to athas-rust-expert: fix...` |
-| New React component for settings | athas-frontend-expert | `delegate to athas-frontend-expert: add...` |
-| Missing tests for database viewer | athas-qa-tester | `delegate to athas-qa-tester: write tests...` |
-| Crash report #456 | athas-issue-resolver | `delegate to athas-issue-resolver: fix issue 456` |
-| New release v0.8.0 | athas-release-manager | `delegate to athas-release-manager: prepare release` |
-| PR with auth changes | athas-security-reviewer | `delegate to athas-security-reviewer: review auth PR` |
-| Large feature (multi-crate) | paseo-epic | `/paseo-epic Implement...` |
-| Stuck on architecture decision | paseo-committee | `/paseo-committee Should we use X or Y for...` |
+| Task Type                         | Who to Call             | How                                                   |
+| --------------------------------- | ----------------------- | ----------------------------------------------------- |
+| Rust bug in Git operations        | athas-rust-expert       | `delegate to athas-rust-expert: fix...`               |
+| New React component for settings  | athas-frontend-expert   | `delegate to athas-frontend-expert: add...`           |
+| Missing tests for database viewer | athas-qa-tester         | `delegate to athas-qa-tester: write tests...`         |
+| Crash report #456                 | athas-issue-resolver    | `delegate to athas-issue-resolver: fix issue 456`     |
+| New release v0.8.0                | athas-release-manager   | `delegate to athas-release-manager: prepare release`  |
+| PR with auth changes              | athas-security-reviewer | `delegate to athas-security-reviewer: review auth PR` |
+| Large feature (multi-crate)       | paseo-epic              | `/paseo-epic Implement...`                            |
+| Stuck on architecture decision    | paseo-committee         | `/paseo-committee Should we use X or Y for...`        |
 
 ## MCP Integration Patterns
 
 ### GitHub MCP
+
 ```
 > List open issues with label "good first issue"
 > Create a branch for issue #123
@@ -156,6 +157,7 @@ Reports findings with severity, file refs, and fixes.
 ```
 
 ### Linear MCP
+
 ```
 > List Linear issues assigned to me
 > Update ENG-123 status to "In Progress"
@@ -163,6 +165,7 @@ Reports findings with severity, file refs, and fixes.
 ```
 
 ### Playwright MCP
+
 ```
 > Test the new file explorer drag-and-drop feature
 > Take a screenshot of the settings dialog
@@ -182,15 +185,15 @@ Every vibe coding session must pass these gates before completion:
 
 ## Escalation Paths
 
-| Situation | Action |
-|-----------|--------|
-| Simple, well-defined task | Direct to Droid, self-plan |
-| Medium complexity | Droid plans, asks for confirmation |
-| Large/multi-feature | `/paseo-epic` for structured orchestration |
-| Unclear requirements | `/paseo-committee` to clarify approach |
-| Security-critical | Always `athas-security-reviewer` |
-| Stuck/dead-end | `/paseo-committee` for fresh perspective |
-| Handoff needed | `/paseo-handoff` to another agent |
+| Situation                 | Action                                     |
+| ------------------------- | ------------------------------------------ |
+| Simple, well-defined task | Direct to Droid, self-plan                 |
+| Medium complexity         | Droid plans, asks for confirmation         |
+| Large/multi-feature       | `/paseo-epic` for structured orchestration |
+| Unclear requirements      | `/paseo-committee` to clarify approach     |
+| Security-critical         | Always `athas-security-reviewer`           |
+| Stuck/dead-end            | `/paseo-committee` for fresh perspective   |
+| Handoff needed            | `/paseo-handoff` to another agent          |
 
 ## Tips for Maximum Velocity
 
@@ -205,6 +208,7 @@ Every vibe coding session must pass these gates before completion:
 ## Customization
 
 Add your own droids to `.factory/droids/`:
+
 ```yaml
 ---
 name: my-custom-droid

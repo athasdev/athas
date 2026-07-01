@@ -5,6 +5,7 @@
 ## Project Summary
 
 **Athas** is a lightweight, cross-platform desktop code editor built with:
+
 - **Frontend**: React 19 + TypeScript + Tailwind CSS + Zustand (in `src/`)
 - **Backend**: Rust + Tauri v2 (in `src-tauri/` and `crates/`)
 - **Key Features**: AI agents, Git integration, LSP support, Vim keybindings, integrated terminal, database viewers, collaboration, enterprise policy controls
@@ -12,30 +13,33 @@
 ## Quick Reference: Factory Capabilities
 
 ### Built-in Skills (Invoke with `/`)
-| Skill | When to Use |
-|-------|-------------|
-| `review` | Code review for PRs or local changes |
-| `simplify` | Refactor for reuse, quality, and efficiency |
-| `security-review` | STRIDE, OWASP, supply chain security audit |
-| `wiki` | Generate comprehensive codebase documentation |
-| `install-wiki` | Auto-refresh wiki on every push |
-| `install-qa` | Set up end-to-end automated QA testing |
-| `install-code-review` | Auto code review on GitHub PRs |
-| `paseo-epic` | Heavy-ceremony orchestration for big features |
-| `paseo-committee` | Get a second opinion when stuck |
-| `paseo-handoff` | Hand off current task to another agent |
+
+| Skill                 | When to Use                                   |
+| --------------------- | --------------------------------------------- |
+| `review`              | Code review for PRs or local changes          |
+| `simplify`            | Refactor for reuse, quality, and efficiency   |
+| `security-review`     | STRIDE, OWASP, supply chain security audit    |
+| `wiki`                | Generate comprehensive codebase documentation |
+| `install-wiki`        | Auto-refresh wiki on every push               |
+| `install-qa`          | Set up end-to-end automated QA testing        |
+| `install-code-review` | Auto code review on GitHub PRs                |
+| `paseo-epic`          | Heavy-ceremony orchestration for big features |
+| `paseo-committee`     | Get a second opinion when stuck               |
+| `paseo-handoff`       | Hand off current task to another agent        |
 
 ### Quick-Reference Droids (General)
-| Droid | Purpose | Invoke |
-|-------|---------|--------|
-| `athas-rust-expert` | General Rust/Tauri backend work | `delegate to athas-rust-expert` |
-| `athas-frontend-expert` | General React/TS/UI work | `delegate to athas-frontend-expert` |
-| `athas-qa-tester` | General testing and validation | `delegate to athas-qa-tester` |
-| `athas-issue-resolver` | Bug triage and fixes | `delegate to athas-issue-resolver` |
-| `athas-release-manager` | Release prep and validation | `delegate to athas-release-manager` |
-| `athas-security-reviewer` | Security code review | `delegate to athas-security-reviewer` |
+
+| Droid                     | Purpose                         | Invoke                                |
+| ------------------------- | ------------------------------- | ------------------------------------- |
+| `athas-rust-expert`       | General Rust/Tauri backend work | `delegate to athas-rust-expert`       |
+| `athas-frontend-expert`   | General React/TS/UI work        | `delegate to athas-frontend-expert`   |
+| `athas-qa-tester`         | General testing and validation  | `delegate to athas-qa-tester`         |
+| `athas-issue-resolver`    | Bug triage and fixes            | `delegate to athas-issue-resolver`    |
+| `athas-release-manager`   | Release prep and validation     | `delegate to athas-release-manager`   |
+| `athas-security-reviewer` | Security code review            | `delegate to athas-security-reviewer` |
 
 ### Full Company Roster (30 Specialized Droids)
+
 See `COMPANY_ROSTER.md` for the complete org chart. Key departments:
 
 **Executive**: `athas-ceo`, `athas-chief-architect`
@@ -49,40 +53,46 @@ See `COMPANY_ROSTER.md` for the complete org chart. Key departments:
 **Cross-Functional**: `athas-code-reviewer`, `athas-refactoring-specialist`, `athas-migration-engineer`, `athas-bug-hunter`
 
 ### Recommended MCPs
-| MCP | Purpose | Install Command |
-|-----|---------|-----------------|
-| **GitHub** | Issue/PR management, repo operations | `droid mcp add github https://api.github.com/mcp` |
-| **Linear** | Issue tracking integration | `droid mcp add linear https://mcp.linear.app/mcp` |
-| **Slack** | Notifications and team comms | `droid mcp add slack https://mcp.slack.dev/sse` |
-| **Playwright** | Browser/E2E testing | `droid mcp add playwright npx @playwright/mcp@latest` |
+
+| MCP            | Purpose                              | Install Command                                       |
+| -------------- | ------------------------------------ | ----------------------------------------------------- |
+| **GitHub**     | Issue/PR management, repo operations | `droid mcp add github https://api.github.com/mcp`     |
+| **Linear**     | Issue tracking integration           | `droid mcp add linear https://mcp.linear.app/mcp`     |
+| **Slack**      | Notifications and team comms         | `droid mcp add slack https://mcp.slack.dev/sse`       |
+| **Playwright** | Browser/E2E testing                  | `droid mcp add playwright npx @playwright/mcp@latest` |
 
 ## Vibe Coding Workflow
 
 ### 1. Issue to Fix
+
 ```
 > Use the GitHub MCP to list open issues. Pick one.
 > Delegate to athas-issue-resolver to analyze and fix.
 ```
 
 ### 2. Feature to Build
+
 ```
 > Use /paseo-epic for large features (multi-file, multi-phase)
 > Or: describe the feature, let Droid plan and execute
 ```
 
 ### 3. Code Review
+
 ```
 > /review on local changes before committing
 > Or delegate to athas-security-reviewer for security-critical changes
 ```
 
 ### 4. Testing
+
 ```
 > Delegate to athas-qa-tester to write tests for new code
 > Run `bunx vp test run` to validate
 ```
 
 ### 5. Release
+
 ```
 > Delegate to athas-release-manager for version bumps and validation
 > Use `bun scripts/release.ts <bump> --dry-run` first
@@ -91,6 +101,7 @@ See `COMPANY_ROSTER.md` for the complete org chart. Key departments:
 ## Validation Checklist
 
 Before any Droid completes work on Athas:
+
 - [ ] `bun check` passes (frontend + rust)
 - [ ] `bun typecheck` passes (TypeScript)
 - [ ] `bunx vp test run` passes (unit tests)
@@ -104,6 +115,7 @@ Before any Droid completes work on Athas:
 ## Architecture Boundaries
 
 ### Frontend (`src/`)
+
 - `src/features/[feature]/` - Feature-specific code (components, hooks, stores, utils, tests)
 - `src/ui/` - Reusable UI primitives only
 - `src/hooks/` - Shared hooks only
@@ -111,6 +123,7 @@ Before any Droid completes work on Athas:
 - `src/extensions/` - Extension system code
 
 ### Backend (`crates/`)
+
 - `crates/ai` - AI agent protocol
 - `crates/database` - Database viewer engine
 - `crates/debugger` - Debug adapter protocol
@@ -126,6 +139,7 @@ Before any Droid completes work on Athas:
 - `crates/version-control` - Git operations
 
 ### Tauri App Shell (`src-tauri/`)
+
 - App wiring, window management, system integration
 - Keep thin; delegate feature logic to `crates/`
 
@@ -152,6 +166,7 @@ bun release:check                # Pre-release validation
 ## Context for Droids
 
 When starting work, Droid automatically reads `AGENTS.md`. Key facts to remember:
+
 - **Package manager**: Bun 1.3.2 (never npm/yarn)
 - **Node**: >= 22
 - **Test runner**: Vitest (via `bunx vp`)

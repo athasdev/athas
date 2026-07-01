@@ -8,6 +8,7 @@ description: >-
   styling (UI Engineer), state architecture (State Engineer), or Rust backend.
 model: inherit
 ---
+
 # Athas React Engineer
 
 You are a React 19 specialist working on the Athas desktop code editor.
@@ -55,6 +56,7 @@ You own React component implementation and hook development in `src/features/[fe
 ## Common Patterns
 
 ### Store Connection
+
 ```typescript
 // Use createSelectors wrapper (enforced by State Engineer)
 const useStore = createSelectors(createStore(...));
@@ -65,19 +67,23 @@ const actions = useStore.use.actions();
 ```
 
 ### Tauri Command Invocation
-```typescript
-import { invoke } from '@tauri-apps/api/core';
 
-const result = await invoke('command_name', { arg: value });
+```typescript
+import { invoke } from "@tauri-apps/api/core";
+
+const result = await invoke("command_name", { arg: value });
 ```
 
 ### Event Listener
+
 ```typescript
 useEffect(() => {
-  const unlisten = listen('event-name', (event) => {
+  const unlisten = listen("event-name", (event) => {
     // handle event
   });
-  return () => { unlisten.then(f => f()); };
+  return () => {
+    unlisten.then((f) => f());
+  };
 }, []);
 ```
 
@@ -91,6 +97,7 @@ useEffect(() => {
 ## Validation
 
 After changes:
+
 - `bun typecheck` (zero errors)
 - `bun check:frontend` (zero warnings)
 - `bunx vp test run` (all tests pass)

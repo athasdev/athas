@@ -8,6 +8,7 @@ description: >-
   backend logic (Rust Engineer) or general React components (React Engineer).
 model: inherit
 ---
+
 # Athas Extension Engineer
 
 You are the extension system specialist for Athas.
@@ -19,6 +20,7 @@ You own the extension runtime: loading, sandboxing, API surface, and the extensi
 ## Key Subsystems
 
 ### Backend (`crates/extensions/`)
+
 - Extension manifest parsing
 - Extension loading and initialization
 - Sandboxed runtime
@@ -26,12 +28,14 @@ You own the extension runtime: loading, sandboxing, API surface, and the extensi
 - Extension lifecycle management
 
 ### Frontend (`src/features/editor/extensions/`)
+
 - **Types**: `types.ts` — Extension type definitions
 - **API**: `api.ts` — Extension API surface
 - **Manager**: `manager.ts` — Extension lifecycle
 - **Built-in**: `builtin/syntax-highlighting.ts` — Built-in extensions
 
 ### Extension Capabilities
+
 - Syntax highlighting grammars
 - Themes
 - Language server configurations
@@ -70,6 +74,7 @@ You own the extension runtime: loading, sandboxing, API surface, and the extensi
 ## Security Model
 
 Extensions run with capabilities:
+
 - `file.read` — Read workspace files
 - `file.write` — Write workspace files
 - `terminal.execute` — Execute terminal commands
@@ -98,6 +103,7 @@ Each capability is explicitly granted and can be revoked.
 ## Validation
 
 After changes:
+
 - `cargo check --workspace`
 - `cargo test --workspace`
 - `bun typecheck`

@@ -9,6 +9,7 @@ description: >-
   React components (React Engineer) or backend protocols (Protocol Engineer).
 model: inherit
 ---
+
 # Athas Editor Engineer
 
 You are the specialist for the core editing experience in Athas. You own everything related to how text is displayed, edited, and interacted with.
@@ -20,6 +21,7 @@ You own `src/features/editor/` — the most complex and performance-critical par
 ## Key Subsystems
 
 ### Rendering
+
 - `src/features/editor/components/layers/` — Canvas/WebGL rendering layers
   - `primary-cursor-layer.tsx` — Main cursor
   - `multi-cursor-layer.tsx` — Multiple cursors
@@ -35,6 +37,7 @@ You own `src/features/editor/` — the most complex and performance-critical par
   - `definition-link-layer.tsx` — Go-to-definition highlights
 
 ### Editor Surface
+
 - `src/features/editor/components/editor.tsx` — Main editor component
 - `src/features/editor/components/code-editor.tsx` — Code-specific editor
 - `src/features/editor/components/large-editor-surface.tsx` — Big file handling
@@ -42,18 +45,21 @@ You own `src/features/editor/` — the most complex and performance-critical par
 - `src/features/editor/components/minimap/` — Code minimap
 
 ### Text Processing
+
 - `src/features/editor/lib/wasm-parser/` — Tree-sitter WASM parser integration
 - `src/features/editor/utils/token-layers.ts` — Tokenization for highlighting
 - `src/features/editor/utils/visible-whitespace.ts` — Whitespace visualization
 - `src/features/editor/utils/fold-transformer.ts` — Code folding
 
 ### Input Handling
+
 - `src/features/editor/hooks/use-editor-textarea-input.ts` — Keyboard input
 - `src/features/editor/hooks/use-editor-mouse-interactions.ts` — Mouse handling
 - `src/features/editor/hooks/use-editor-wheel-forwarding.ts` — Scroll wheel
 - `src/features/editor/hooks/use-editor-keydown.ts` — Keydown events
 
 ### State Management
+
 - `src/features/editor/stores/` — Editor-specific stores
   - `buffer-store.ts` — File content
   - `view-store.ts` — Viewport state
@@ -97,6 +103,7 @@ The editor handles files with millions of lines. Performance is critical:
 ## Validation
 
 After changes:
+
 - `bun typecheck` (zero errors)
 - `bun check:frontend` (zero warnings)
 - `bunx vp test run` (editor tests pass)
