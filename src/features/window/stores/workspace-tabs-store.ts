@@ -40,11 +40,25 @@ interface WorkspaceTabsActions {
   setProjectIcon: (projectId: string, iconPath: string | undefined) => void;
 }
 
-const currentWebviewWindow = getCurrentWebviewWindow();
+let currentWebviewWindow: { label: string };
+
+try {
+  currentWebviewWindow = getCurrentWebviewWindow();
+} catch {
+  // Outside of a Tauri webview (e.g. unit tests) there is no current window.
+  // Use a fallback label so the store can still be imported and persisted
+  // against localStorage without throwing at module load time.
+  currentWebviewWindow = { label: "no-webview" };
+}
+
 const workspaceTabsStorageKey = getWorkspaceTabsStorageKey(currentWebviewWindow.label);
 
 void (async () => {
   try {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") {
+      return;
+    }
+
     const activeWindowLabels = new Set(
       (await getAllWebviewWindows()).map((window) => window.label),
     );
