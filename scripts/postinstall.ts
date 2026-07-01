@@ -86,6 +86,7 @@ const BUNDLED_PARSERS: Record<string, ParserSource> = {
   rust: { package: "tree-sitter-rust" },
   scala: { package: "tree-sitter-scala" },
   solidity: { package: "tree-sitter-solidity" },
+  astro: { package: "tree-sitter-astro" },
   svelte: { package: "tree-sitter-svelte" },
   sql: { package: "@derekstride/tree-sitter-sql" },
   swift: { package: "tree-sitter-swift" },

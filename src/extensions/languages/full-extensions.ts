@@ -14,6 +14,44 @@ const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/e
  */
 export const fullExtensions: ExtensionManifest[] = [
   {
+    id: "athas.astro",
+    name: "Astro",
+    displayName: "Astro",
+    description:
+      "Full Astro language support with IntelliSense, diagnostics, and syntax highlighting via the official Astro language server",
+    version: "1.0.0",
+    publisher: "Athas",
+    categories: ["Language"],
+    languages: [
+      {
+        id: "astro",
+        extensions: [".astro"],
+        aliases: ["Astro", "astro"],
+      },
+    ],
+    activationEvents: ["onLanguage:astro"],
+    grammar: {
+      wasmPath: "/tree-sitter/parsers/astro/parser.wasm",
+      scopeName: "source.astro",
+      languageId: "astro",
+    },
+    lsp: {
+      name: "astro-ls",
+      runtime: "node",
+      package: "@astrojs/language-server",
+      server: { default: "astro-ls" },
+      args: ["--stdio"],
+      fileExtensions: [".astro"],
+      languageIds: ["astro"],
+    },
+    installation: {
+      downloadUrl: "/tree-sitter/parsers/astro/parser.wasm",
+      size: 0,
+      checksum: "",
+      minEditorVersion: "0.2.0",
+    },
+  },
+  {
     id: "athas.php",
     name: "PHP",
     displayName: "PHP",

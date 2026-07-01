@@ -28,6 +28,13 @@ const LANGUAGE_INJECTIONS: Record<string, InjectionRule[]> = {
     { parentType: "*", contentType: "raw_text_each", language: "javascript" },
     { parentType: "*", contentType: "raw_text_expr", language: "javascript" },
   ],
+  astro: [
+    { parentType: "frontmatter", contentType: "frontmatter_js_block", language: "typescript" },
+    { parentType: "script_element", contentType: "raw_text", language: "typescript" },
+    { parentType: "style_element", contentType: "raw_text", language: "css" },
+    { parentType: "*", contentType: "attribute_js_expr", language: "typescript" },
+    { parentType: "*", contentType: "permissible_text", language: "typescript" },
+  ],
   markdown: [{ parentType: "*", contentType: "html_block", language: "html" }],
 };
 
@@ -93,6 +100,10 @@ export function resolveInjectedLanguage(
 
   if (parentLanguageId === "svelte" && (lang === "tsx" || lang === "jsx")) {
     return lang === "tsx" ? "typescriptreact" : "javascriptreact";
+  }
+
+  if (parentLanguageId === "astro" && !lang) {
+    return "typescript";
   }
 
   return rule.language;

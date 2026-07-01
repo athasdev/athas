@@ -113,6 +113,8 @@ impl ToolInstaller {
          // and exits during LSP initialize if it cannot resolve it locally.
          "typescript-language-server" => &["typescript"],
          "@vtsls/language-server" => &["typescript"],
+         // The Astro language server requires TypeScript for .astro file support.
+         "@astrojs/language-server" => &["typescript"],
          _ => &[],
       }
    }
@@ -1399,6 +1401,10 @@ mod tests {
       assert_eq!(
          ToolInstaller::node_packages_to_install("@vtsls/language-server", &[]),
          vec!["@vtsls/language-server@0.3.0", "typescript@6.0.3"]
+      );
+      assert_eq!(
+         ToolInstaller::node_packages_to_install("@astrojs/language-server", &[]),
+         vec!["@astrojs/language-server", "typescript@6.0.3"]
       );
       assert_eq!(
          ToolInstaller::node_packages_to_install(
