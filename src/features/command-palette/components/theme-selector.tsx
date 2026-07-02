@@ -12,13 +12,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Badge from "@/ui/badge";
 import {
   CommandEmpty,
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -270,7 +270,7 @@ export const ThemeSelectorContent = ({
             const isCurrent = theme.id === initialTheme;
 
             return (
-              <CommandItem
+              <CommandItemRow
                 key={theme.id}
                 data-index={index}
                 onClick={() => {
@@ -282,20 +282,10 @@ export const ThemeSelectorContent = ({
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}
-                className="gap-3 px-2 py-1.5"
-              >
-                <div className="shrink-0 text-text-lighter">{theme.icon || <Moon />}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 truncate ui-text-base">
-                    <span className="truncate">{theme.name}</span>
-                    {isCurrent && (
-                      <Badge variant="accent" size="compact">
-                        Current
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CommandItem>
+                icon={<span className="text-text-lighter">{theme.icon || <Moon />}</span>}
+                title={theme.name}
+                accessory={isCurrent ? <CommandItemBadge>Current</CommandItemBadge> : undefined}
+              />
             );
           })
         )}

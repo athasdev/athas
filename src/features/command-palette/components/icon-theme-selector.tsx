@@ -2,13 +2,13 @@ import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@phosphor-ic
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
-import Badge from "@/ui/badge";
 import {
   CommandEmpty,
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -194,7 +194,7 @@ export const IconThemeSelectorContent = ({
             const isPreviewing = previewTheme !== null;
 
             return (
-              <CommandItem
+              <CommandItemRow
                 key={theme.id}
                 data-index={index}
                 onClick={() => {
@@ -216,20 +216,14 @@ export const IconThemeSelectorContent = ({
                   }
                 }}
                 isSelected={isSelected}
-                className="gap-3 px-2 py-1.5"
-              >
-                <div className="shrink-0 text-text-lighter">{theme.icon || <Palette />}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 truncate ui-text-base">
-                    <span className="truncate">{theme.name}</span>
-                    {isCurrent && !isPreviewing && (
-                      <Badge variant="accent" className="px-1 py-0.5">
-                        current
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CommandItem>
+                icon={<span className="text-text-lighter">{theme.icon || <Palette />}</span>}
+                title={theme.name}
+                accessory={
+                  isCurrent && !isPreviewing ? (
+                    <CommandItemBadge>current</CommandItemBadge>
+                  ) : undefined
+                }
+              />
             );
           })
         )}

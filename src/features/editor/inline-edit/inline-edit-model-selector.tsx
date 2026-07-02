@@ -21,7 +21,7 @@ import Command, {
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -222,22 +222,20 @@ export const InlineEditModelSelector = ({
                 filteredModels.map((model) => {
                   const isSelected = selectedProvider.id === providerId && model.id === modelId;
                   return (
-                    <CommandItem
+                    <CommandItemRow
                       key={model.id}
                       isSelected={isSelected}
                       onClick={() => handleModelSelect(model.id)}
-                      className="px-2 py-2"
-                    >
-                      <ProviderIcon
-                        providerId={selectedProvider.id}
-                        size={14}
-                        className="shrink-0 text-text-lighter"
-                      />
-                      <span className="min-w-0 flex-1 truncate ui-text-base text-text">
-                        {model.name}
-                      </span>
-                      {isSelected && <Check className="shrink-0 text-accent" size={13} />}
-                    </CommandItem>
+                      icon={
+                        <ProviderIcon
+                          providerId={selectedProvider.id}
+                          size={14}
+                          className="text-text-lighter"
+                        />
+                      }
+                      title={model.name}
+                      accessory={isSelected ? <Check className="text-accent" size={13} /> : null}
+                    />
                   );
                 })
               )}
@@ -256,20 +254,18 @@ export const InlineEditModelSelector = ({
               <CommandEmpty>No providers found</CommandEmpty>
             ) : (
               filteredProviders.map((provider) => (
-                <CommandItem
+                <CommandItemRow
                   key={provider.id}
                   onClick={() => handleProviderSelect(provider.id)}
-                  className="px-2 py-2"
-                >
-                  <ProviderIcon
-                    providerId={provider.id}
-                    size={14}
-                    className="shrink-0 text-text-lighter"
-                  />
-                  <span className="min-w-0 flex-1 truncate ui-text-base text-text">
-                    {provider.name}
-                  </span>
-                </CommandItem>
+                  icon={
+                    <ProviderIcon
+                      providerId={provider.id}
+                      size={14}
+                      className="text-text-lighter"
+                    />
+                  }
+                  title={provider.name}
+                />
               ))
             )}
           </CommandList>

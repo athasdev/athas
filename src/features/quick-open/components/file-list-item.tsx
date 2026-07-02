@@ -1,6 +1,6 @@
 import { ClockIcon } from "@phosphor-icons/react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { CommandItem } from "@/ui/command";
+import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "../types/quick-open.types";
 
@@ -26,35 +26,24 @@ export const FileListItem = ({
   const directoryPath = getDirectoryPath(file.path, rootFolderPath);
 
   return (
-    <CommandItem
+    <CommandItemRow
       key={`${category}-${file.path}`}
       data-item-index={index}
       onClick={() => onClick(file.path)}
       onMouseEnter={() => onMouseEnter?.(index, file.path)}
       isSelected={isSelected}
-      className="ui-font ui-text-base"
-    >
-      <ThemedFileIcon fileName={file.name} isDir={false} className="shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="truncate ui-text-base">
-          <span className="text-text">{file.name}</span>
-          {directoryPath && (
-            <span className="ml-1.5 ui-text-base text-text-lighter opacity-60">
-              {directoryPath}
-            </span>
-          )}
-        </div>
-      </div>
-      {category === "open" && (
-        <span className="rounded-full bg-accent/20 px-1 py-0.5 font-medium ui-text-base text-accent">
-          open
-        </span>
-      )}
-      {category === "recent" && (
-        <span className="rounded px-1 py-0.5 font-medium ui-text-base text-text-lighter">
-          <ClockIcon />
-        </span>
-      )}
-    </CommandItem>
+      icon={<ThemedFileIcon fileName={file.name} isDir={false} />}
+      title={file.name}
+      description={directoryPath}
+      accessory={
+        category === "open" ? (
+          <CommandItemBadge>open</CommandItemBadge>
+        ) : category === "recent" ? (
+          <CommandItemBadge>
+            <ClockIcon />
+          </CommandItemBadge>
+        ) : undefined
+      }
+    />
   );
 };

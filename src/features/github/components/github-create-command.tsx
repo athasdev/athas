@@ -17,7 +17,7 @@ import Command, {
   CommandFooterAction,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
@@ -415,19 +415,16 @@ ${statusSummary}`;
             filteredWorkflows.map((workflow) => {
               const selected = workflow.id.toString() === workflowId;
               return (
-                <CommandItem
+                <CommandItemRow
                   key={workflow.id}
                   isSelected={selected}
                   onClick={() => {
                     setWorkflowId(workflow.id.toString());
                     closePicker();
                   }}
-                >
-                  <span className="min-w-0 flex-1 truncate ui-text-base">
-                    {workflow.name || workflow.path}
-                  </span>
-                  {selected ? <Check className="size-3.5 text-accent" /> : null}
-                </CommandItem>
+                  title={workflow.name || workflow.path}
+                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                />
               );
             })
           )}
@@ -442,7 +439,7 @@ ${statusSummary}`;
             filteredLabels.map((label) => {
               const selected = selectedLabels.has(label.name);
               return (
-                <CommandItem
+                <CommandItemRow
                   key={label.name}
                   isSelected={selected}
                   onClick={() => {
@@ -456,14 +453,15 @@ ${statusSummary}`;
                       return next;
                     });
                   }}
-                >
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: label.color ? `#${label.color}` : undefined }}
-                  />
-                  <span className="min-w-0 flex-1 truncate ui-text-base">{label.name}</span>
-                  {selected ? <Check className="size-3.5 text-accent" /> : null}
-                </CommandItem>
+                  icon={
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: label.color ? `#${label.color}` : undefined }}
+                    />
+                  }
+                  title={label.name}
+                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                />
               );
             })
           )}
@@ -483,7 +481,7 @@ ${statusSummary}`;
                     ? branch === base
                     : branch === workflowRef;
               return (
-                <CommandItem
+                <CommandItemRow
                   key={branch}
                   isSelected={selected}
                   onClick={() => {
@@ -492,10 +490,9 @@ ${statusSummary}`;
                     if (mode === "ref") setWorkflowRef(branch);
                     closePicker();
                   }}
-                >
-                  <span className="min-w-0 flex-1 truncate ui-text-base">{branch}</span>
-                  {selected ? <Check className="size-3.5 text-accent" /> : null}
-                </CommandItem>
+                  title={branch}
+                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                />
               );
             })
           )}

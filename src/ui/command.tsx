@@ -458,7 +458,24 @@ export const CommandItemTrailing = ({ className, ...props }: React.ComponentProp
 
 CommandItemTrailing.displayName = "CommandItemTrailing";
 
-interface CommandItemRowProps extends Omit<CommandItemProps, "children"> {
+interface CommandItemRowProps
+  extends
+    Omit<CommandItemProps, "children">,
+    Omit<
+      React.ComponentProps<typeof Button>,
+      | "children"
+      | "className"
+      | "disabled"
+      | "ref"
+      | "onClick"
+      | "onKeyDown"
+      | "onMouseEnter"
+      | "onMouseLeave"
+      | "size"
+      | "title"
+      | "type"
+      | "variant"
+    > {
   icon?: React.ReactNode;
   iconClassName?: string;
   iconVariant?: CommandItemIconProps["variant"];

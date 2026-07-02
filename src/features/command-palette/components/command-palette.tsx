@@ -40,7 +40,7 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import Keybinding from "@/ui/keybinding";
@@ -541,25 +541,17 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                   ? keymapRegistry.getKeybinding(action.commandId)?.key
                   : undefined;
                 return (
-                  <CommandItem
+                  <CommandItemRow
                     key={action.id}
                     onClick={() => {
                       action.action();
                       pushAction(action.id);
                     }}
                     isSelected={index === selectedIndex}
-                    className="px-3 py-1.5"
-                  >
-                    {isRecent && <History className="shrink-0 text-text-lighter" />}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-base">{action.label}</div>
-                    </div>
-                    {binding && (
-                      <div className="shrink-0">
-                        <Keybinding binding={binding} />
-                      </div>
-                    )}
-                  </CommandItem>
+                    icon={isRecent ? <History className="text-text-lighter" /> : undefined}
+                    title={action.label}
+                    accessory={binding ? <Keybinding binding={binding} /> : undefined}
+                  />
                 );
               })
             )}

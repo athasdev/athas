@@ -10,7 +10,7 @@ import {
   FunctionIcon as Variable,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { CommandItem } from "@/ui/command";
+import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import type { SymbolItem } from "../hooks/use-symbol-search";
 
 const SYMBOL_ICONS: Record<string, ReactNode> = {
@@ -47,30 +47,20 @@ export const SymbolListItem = ({
   const icon = SYMBOL_ICONS[symbol.kind] || <Code2 size={14} className="text-text-lighter" />;
 
   return (
-    <CommandItem
+    <CommandItemRow
       data-item-index={index}
       onClick={() => onClick(symbol)}
       onMouseEnter={() => onMouseEnter?.(index)}
       isSelected={isSelected}
-      className="ui-font"
-    >
-      <span className="shrink-0">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <div className="truncate ui-text-base">
-          <span className="text-text">{symbol.name}</span>
-          {symbol.containerName && (
-            <span className="ml-1.5 ui-text-base text-text-lighter opacity-60">
-              {symbol.containerName}
-            </span>
-          )}
-        </div>
-      </div>
-      <span className="rounded px-1 py-0.5 font-medium ui-text-base text-text-lighter">
-        {symbol.kind}
-      </span>
-      <span className="tabular-nums ui-text-base text-text-lighter opacity-50">
-        :{symbol.line + 1}
-      </span>
-    </CommandItem>
+      icon={icon}
+      title={symbol.name}
+      description={symbol.containerName}
+      accessory={
+        <>
+          <CommandItemBadge>{symbol.kind}</CommandItemBadge>
+          <CommandItemBadge>:{symbol.line + 1}</CommandItemBadge>
+        </>
+      }
+    />
   );
 };
