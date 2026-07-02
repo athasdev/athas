@@ -1,4 +1,5 @@
 import {
+  CaretDownIcon as CaretDown,
   CaretRightIcon as CaretRight,
   FunnelIcon as Funnel,
   MagnifyingGlassIcon as Search,
@@ -13,6 +14,7 @@ import {
   type Ref,
   type ReactNode,
   useRef,
+  useMemo,
 } from "react";
 import { Button, type ButtonProps } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
@@ -482,13 +484,96 @@ export function SidebarSectionSwitcher({
   onChange,
   className,
   itemClassName,
+  compactBelowWidth,
 }: {
   items: SidebarSectionSwitcherItem[];
   value: string;
   onChange: (value: string) => void;
   className?: string;
   itemClassName?: string;
+  compactBelowWidth?: number;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
+  const activeItem = items.find((item) => item.id === value) ?? items[0];
+
+  useEffect(() => {
+    if (!compactBelowWidth) return;
+
+    const element = containerRef.current;
+    if (!element) return;
+
+    const updateCompactState = () => {
+      setIsCompact(element.clientWidth < compactBelowWidth);
+    };
+
+    updateCompactState();
+    const resizeObserver = new ResizeObserver(updateCompactState);
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, [compactBelowWidth]);
+
+  const dropdownItems = useMemo<MenuItem[]>(
+    () =>
+      items.map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        disabled: item.disabled,
+        onClick: () => {
+          onChange(item.id);
+          setIsDropdownOpen(false);
+        },
+        className: item.id === value ? "bg-hover text-text" : undefined,
+      })),
+    [items, onChange, value],
+  );
+
+  if (compactBelowWidth) {
+    return (
+      <div ref={containerRef} className={cn("min-w-0 shrink-0", className)}>
+        {isCompact && activeItem ? (
+          <>
+            <button
+              ref={dropdownTriggerRef}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={isDropdownOpen}
+              className="ui-font ui-text-sm flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
+              onClick={() => setIsDropdownOpen((open) => !open)}
+            >
+              {activeItem.icon ? (
+                <span className="flex size-4 shrink-0 items-center justify-center">
+                  {activeItem.icon}
+                </span>
+              ) : null}
+              <span className="min-w-0 truncate whitespace-nowrap">{activeItem.label}</span>
+              <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+            </button>
+            <Dropdown
+              isOpen={isDropdownOpen}
+              anchorRef={dropdownTriggerRef}
+              anchorSide="bottom"
+              anchorAlign="start"
+              items={dropdownItems}
+              onClose={() => setIsDropdownOpen(false)}
+            />
+          </>
+        ) : (
+          <SidebarSectionSwitcher
+            items={items}
+            value={value}
+            onChange={onChange}
+            className="w-full"
+            itemClassName={itemClassName}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       role="tablist"
