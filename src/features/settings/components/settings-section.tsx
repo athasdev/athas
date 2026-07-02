@@ -57,6 +57,7 @@ interface SettingRowProps {
   onReset?: () => void;
   canReset?: boolean;
   resetLabel?: string;
+  activateOnClick?: boolean;
 }
 
 export function SettingRow({
@@ -68,6 +69,7 @@ export function SettingRow({
   onReset,
   canReset = !!onReset,
   resetLabel,
+  activateOnClick = true,
 }: SettingRowProps) {
   const controlRef = useRef<HTMLDivElement>(null);
   const rowId = useId();
@@ -176,7 +178,7 @@ export function SettingRow({
         "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 focus:outline-none data-[settings-search-active=true]:bg-accent/10 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-accent/35 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
         className,
       )}
-      onClick={handleRowClick}
+      onClick={activateOnClick ? handleRowClick : undefined}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">

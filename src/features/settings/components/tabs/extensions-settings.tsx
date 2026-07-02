@@ -44,6 +44,7 @@ import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { SegmentedControl } from "@/ui/segmented-control";
 import { PLATFORM_ARCH } from "@/utils/platform";
+import { SettingRow } from "../settings-section";
 
 interface UnifiedExtension {
   id: string;
@@ -163,17 +164,17 @@ const ExtensionRow = ({
       : extension.extensions?.map((ext) => `.${ext}`);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border px-1 py-3 transition-colors hover:bg-hover max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          <span className="ui-font ui-text-base text-text">{extension.name}</span>
+    <SettingRow
+      label={extension.name}
+      labelAccessory={
+        <>
           <Badge variant="default" size="compact">
             {getCategoryLabel(extension.category)}
           </Badge>
-          {extension.version && (
+          {extension.version ? (
             <span className="ui-font ui-text-base text-text-lighter">v{extension.version}</span>
-          )}
-          {hasLocalOverride && (
+          ) : null}
+          {hasLocalOverride ? (
             <Badge
               variant="default"
               size="compact"
@@ -181,34 +182,42 @@ const ExtensionRow = ({
             >
               Local override
             </Badge>
-          )}
-        </div>
-        <p className="ui-font ui-text-base text-text-lighter">{extension.description}</p>
-        {extension.runtimeIssues && extension.runtimeIssues.length > 0 && (
-          <div className="mt-1 rounded-lg border border-error/20 bg-error/8 px-2 py-1.5">
-            <div className="ui-font ui-text-base flex items-start gap-1.5 text-error">
-              <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
-              <span>{extension.runtimeIssues[0].message}</span>
-            </div>
-          </div>
-        )}
-        <div className="ui-font ui-text-base mt-1 flex items-center gap-2 text-text-lighter">
-          {extension.publisher && <span>by {extension.publisher}</span>}
-          {extension.publisher && extensionLabels && extensionLabels.length > 0 && <span>·</span>}
-          {extensionLabels && extensionLabels.length > 0 && (
-            <span>
-              {extensionLabels.slice(0, 5).join(" ")}
-              {extensionLabels.length > 5 && ` +${extensionLabels.length - 5}`}
-            </span>
-          )}
-          {extension.packageSize ? (
-            <>
-              <span>·</span>
-              <span>{formatBytes(extension.packageSize)}</span>
-            </>
           ) : null}
+        </>
+      }
+      description={
+        <div className="space-y-1">
+          <p>{extension.description}</p>
+          {extension.runtimeIssues && extension.runtimeIssues.length > 0 ? (
+            <div className="rounded-lg border border-error/20 bg-error/8 px-2 py-1.5">
+              <div className="ui-font ui-text-base flex items-start gap-1.5 text-error">
+                <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
+                <span>{extension.runtimeIssues[0].message}</span>
+              </div>
+            </div>
+          ) : null}
+          <div className="ui-font ui-text-base flex flex-wrap items-center gap-2 text-text-lighter">
+            {extension.publisher ? <span>by {extension.publisher}</span> : null}
+            {extension.publisher && extensionLabels && extensionLabels.length > 0 ? (
+              <span>·</span>
+            ) : null}
+            {extensionLabels && extensionLabels.length > 0 ? (
+              <span>
+                {extensionLabels.slice(0, 5).join(" ")}
+                {extensionLabels.length > 5 && ` +${extensionLabels.length - 5}`}
+              </span>
+            ) : null}
+            {extension.packageSize ? (
+              <>
+                <span>·</span>
+                <span>{formatBytes(extension.packageSize)}</span>
+              </>
+            ) : null}
+          </div>
         </div>
-      </div>
+      }
+      activateOnClick={false}
+    >
       {extension.isBundled ? (
         <div className="flex shrink-0 items-center gap-2 max-[640px]:justify-end">
           <Badge variant="accent" size="compact">
@@ -240,13 +249,7 @@ const ExtensionRow = ({
               Reset
             </Button>
           )}
-          <Button
-            onClick={onToggle}
-            variant="danger"
-            className="border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error"
-            tooltip={uninstallLabel}
-            compact
-          >
+          <Button onClick={onToggle} variant="danger" tooltip={uninstallLabel} compact>
             {uninstallLabel}
           </Button>
         </div>
@@ -257,7 +260,7 @@ const ExtensionRow = ({
           </Button>
         </div>
       )}
-    </div>
+    </SettingRow>
   );
 };
 

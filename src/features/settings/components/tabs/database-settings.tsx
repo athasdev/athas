@@ -1,8 +1,4 @@
-import {
-  DatabaseIcon as Database,
-  PlusIcon as Plus,
-  TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+import { PlusIcon as Plus, TrashIcon as Trash2 } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { useConnectionStore } from "@/features/database/stores/connection.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -47,12 +43,7 @@ export const DatabaseSettings = () => {
         description="Manage saved database connections for the current workspace."
       >
         <SettingRow label="New Connection" description="Add a database to this workspace.">
-          <Button
-            onClick={() => setIsDatabaseConnectionVisible(true)}
-            variant="default"
-            compact
-            className="gap-1.5"
-          >
+          <Button onClick={() => setIsDatabaseConnectionVisible(true)} variant="default" compact>
             <Plus />
             Connect
           </Button>
@@ -74,34 +65,30 @@ export const DatabaseSettings = () => {
         ) : (
           <div className="space-y-2">
             {savedConnections.map((connection) => (
-              <div
+              <SettingRow
                 key={connection.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-secondary-bg/40 px-4 py-3 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2"
+                label={connection.name}
+                labelAccessory={
+                  <Badge variant="default" size="compact" className="uppercase">
+                    {formatDbType(connection.db_type)}
+                  </Badge>
+                }
+                description={
+                  connection.file_path
+                    ? connection.file_path
+                    : `${connection.host}:${connection.port}${connection.database ? ` / ${connection.database}` : ""}`
+                }
+                activateOnClick={false}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <Database className="text-text-lighter" />
-                    <div className="ui-font ui-text-base truncate text-text">{connection.name}</div>
-                    <Badge variant="default" size="compact" className="uppercase">
-                      {formatDbType(connection.db_type)}
-                    </Badge>
-                  </div>
-                  <div className="ui-font ui-text-base mt-1 truncate text-text-lighter">
-                    {connection.file_path
-                      ? connection.file_path
-                      : `${connection.host}:${connection.port}${connection.database ? ` / ${connection.database}` : ""}`}
-                  </div>
-                </div>
                 <Button
                   onClick={() => void deleteConnection(connection.id)}
                   variant="danger"
                   compact
-                  className="gap-1.5"
                 >
                   <Trash2 />
                   Remove
                 </Button>
-              </div>
+              </SettingRow>
             ))}
           </div>
         )}
