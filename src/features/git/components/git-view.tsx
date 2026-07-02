@@ -14,13 +14,7 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import {
-  CommandEmpty,
-  CommandItem,
-  CommandItemBadge,
-  CommandItemRow,
-  CommandList,
-} from "@/ui/command";
+import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
@@ -1349,25 +1343,20 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 const shortHash = commit.hash.substring(0, 7);
 
                 return (
-                  <CommandItem
+                  <CommandItemRow
                     key={commit.hash}
                     type="button"
+                    icon={<ClockCounterClockwise size={14} className="text-text-lighter" />}
+                    title={commit.message}
+                    accessory={<CommandItemBadge>{shortHash}</CommandItemBadge>}
                     onClick={() => {
                       void handleViewCommitDiff(commit.hash);
                       setShowCommitDiffList(false);
                       setCommitDiffSearchQuery("");
                     }}
                     disabled={isLoadingCommitDiff}
-                    className="ui-font"
-                  >
-                    <ClockCounterClockwise size={14} className="shrink-0 text-text-lighter" />
-                    <span className="ui-text-base min-w-0 flex-1 truncate text-text">
-                      {commit.message}
-                    </span>
-                    <span className="ui-text-base shrink-0 editor-font text-text-lighter">
-                      {shortHash}
-                    </span>
-                  </CommandItem>
+                    className="min-h-9"
+                  />
                 );
               })}
             </div>
@@ -1393,19 +1382,16 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           ) : (
             <div className="space-y-1">
               {filteredBranchDiffBranches.map((branch) => (
-                <CommandItem
+                <CommandItemRow
                   key={branch}
                   type="button"
+                  icon={<GitBranch size={14} className="text-text-lighter" />}
+                  title={branch}
+                  description={`compare with ${gitStatus.branch}`}
                   onClick={() => void handleViewBranchDiff(branch)}
                   disabled={isLoadingBranchDiff}
-                  className="ui-font"
-                >
-                  <GitBranch size={14} className="shrink-0 text-text-lighter" />
-                  <span className="ui-text-base min-w-0 flex-1 truncate text-text">{branch}</span>
-                  <span className="ui-text-base shrink-0 text-text-lighter">
-                    compare with {gitStatus.branch}
-                  </span>
-                </CommandItem>
+                  className="min-h-9"
+                />
               ))}
             </div>
           )}

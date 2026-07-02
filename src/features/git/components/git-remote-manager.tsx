@@ -5,7 +5,7 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
+import { CommandEmpty, CommandItemRow, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
@@ -150,32 +150,30 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             const isActionLoading = actionLoading.has(remote.name);
 
             return (
-              <CommandItem
+              <CommandItemRow
                 key={remote.name}
                 as="div"
-                className="ui-font h-auto min-h-8 items-start whitespace-normal px-2 py-1.5 leading-normal"
-              >
-                <Globe className="mt-0.5 size-4 shrink-0 text-text-lighter" />
-                <div className="min-w-0 flex-1">
-                  <div className="ui-text-base break-words text-text">{remote.name}</div>
-                  <div className="ui-text-base mt-0.5 break-all text-text-lighter">
-                    {remote.url}
-                  </div>
-                </div>
-                <Button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void handleRemoveRemote(remote.name);
-                  }}
-                  disabled={isActionLoading}
-                  variant="ghost"
-                  compact
-                  className="shrink-0 text-error hover:bg-error/10 hover:text-error"
-                  aria-label={`Remove ${remote.name}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              </CommandItem>
+                icon={<Globe className="size-4 text-text-lighter" />}
+                title={remote.name}
+                description={remote.url}
+                contentLayout="stacked"
+                className="min-h-11"
+                action={
+                  <Button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleRemoveRemote(remote.name);
+                    }}
+                    disabled={isActionLoading}
+                    variant="ghost"
+                    compact
+                    className="shrink-0 text-error hover:bg-error/10 hover:text-error"
+                    aria-label={`Remove ${remote.name}`}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                }
+              />
             );
           })
         )}

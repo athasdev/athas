@@ -443,7 +443,7 @@ export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<t
   <Badge
     size="compact"
     className={cn(
-      "h-auto max-w-32 shrink-0 truncate rounded-full border-border/70 bg-secondary-bg/70 text-text-lighter",
+      "h-auto max-w-32 shrink-0 gap-1 truncate rounded-full border-border/70 bg-secondary-bg/70 text-text-lighter",
       className,
     )}
     {...props}

@@ -11,7 +11,8 @@ import {
   CommandEmpty,
   CommandFooter,
   CommandFooterAction,
-  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { cn } from "@/utils/cn";
@@ -236,22 +237,22 @@ function RepositoryRow({
   const relativePath = workspaceRootPath ? getRelativePath(repoPath, workspaceRootPath) : repoPath;
 
   return (
-    <CommandItem type="button" onClick={onSelect} isSelected={isCurrent}>
-      {isCurrent ? (
-        <Check className="size-3.5 shrink-0 text-success" />
-      ) : (
-        <FolderOpen className="size-3.5 shrink-0 text-text-lighter" />
-      )}
-      <span className="min-w-0 flex flex-1 items-baseline gap-1.5">
-        <span className="ui-text-base min-w-0 max-w-[45%] shrink-0 truncate text-text">
-          {getFolderName(repoPath)}
-        </span>
-        <span className="ui-text-base min-w-0 flex-1 truncate text-text-lighter/75">
-          {relativePath === "." ? repoPath : relativePath}
-        </span>
-      </span>
-      {isAdded ? <span className="ui-text-base shrink-0 text-text-lighter/75">added</span> : null}
-    </CommandItem>
+    <CommandItemRow
+      type="button"
+      onClick={onSelect}
+      isSelected={isCurrent}
+      icon={
+        isCurrent ? (
+          <Check className="size-3.5 text-success" />
+        ) : (
+          <FolderOpen className="size-3.5 text-text-lighter" />
+        )
+      }
+      title={getFolderName(repoPath)}
+      description={relativePath === "." ? repoPath : relativePath}
+      accessory={isAdded ? <CommandItemBadge>added</CommandItemBadge> : null}
+      className="min-h-9"
+    />
   );
 }
 
