@@ -1,0 +1,32 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.astro",
+  "name": "Astro",
+  "displayName": "Astro",
+  "version": "1.0.0",
+  "description": "Astro language support with LSP and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "astro",
+      "extensions": [".astro"],
+      "aliases": ["Astro"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "astro-ls",
+      "runtime": "bun",
+      "package": "@astrojs/language-server",
+      "args": ["--stdio"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "packages": ["prettier-plugin-astro"],
+      "args": ["--plugin", "prettier-plugin-astro", "--stdin-filepath", "${file}"]
+    }
+  }
+}

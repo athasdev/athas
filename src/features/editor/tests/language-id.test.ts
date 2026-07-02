@@ -68,6 +68,7 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageIdFromPath("/tmp/message.proto")).toBe("protobuf");
     expect(getLanguageIdFromPath("/tmp/query.ql")).toBe("ql");
     expect(getLanguageIdFromPath("/tmp/main.tf")).toBe("terraform");
+    expect(getLanguageIdFromPath("/tmp/page.astro")).toBe("astro");
     expect(getLanguageIdFromPath("/tmp/icon.svg")).toBe("xml");
     expect(getLanguageIdFromPath("/tmp/project.csproj")).toBe("xml");
     expect(getLanguageDisplayName("diff")).toBe("Diff");
@@ -78,6 +79,7 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageDisplayName("r")).toBe("R");
     expect(getLanguageDisplayName("rmarkdown")).toBe("R Markdown");
     expect(getLanguageDisplayName("jupyter-notebook")).toBe("Jupyter Notebook");
+    expect(getLanguageDisplayName("astro")).toBe("Astro");
   });
 
   it("maps Monaco-highlighted extensions to registered Monaco language ids", () => {

@@ -131,6 +131,7 @@
     "concurrently": "^10.0.3",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.3.1",
+    "tree-sitter-astro": "github:virchau13/tree-sitter-astro",
     "tree-sitter-bash": "^0.25.1",
     "tree-sitter-c": "^0.24.1",
     "tree-sitter-c-sharp": "^0.23.5",
