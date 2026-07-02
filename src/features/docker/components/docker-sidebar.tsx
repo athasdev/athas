@@ -36,9 +36,10 @@ import {
   SidebarEmptyState,
   SidebarHeaderIconButton,
   SidebarListItem,
+  SidebarPanel,
   SidebarSearchFilterRow,
-  SidebarSectionHeader,
   SidebarSectionLabel,
+  SidebarSectionSwitcher,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import {
@@ -105,18 +106,15 @@ type DockerLogFilter = "all" | "stdout" | "stderr" | "errors";
 type DockerLogLine = DockerLogEvent & { id: number };
 type DockerDialogMode = "build" | "run" | "env" | null;
 type DockerDetailTab = "logs" | "files";
+type DockerTab = "resources" | "compose" | "project" | "registry";
 
-const dockerSections: DockerSection[] = [
-  "containers",
-  "compose",
-  "project",
-  "images",
-  "registry",
-  "volumes",
-  "networks",
-  "cleanup",
-];
 const maxLogLines = 1_000;
+const dockerTabSections: Record<DockerTab, DockerSection[]> = {
+  resources: ["containers", "images", "cleanup", "volumes", "networks"],
+  compose: ["compose"],
+  project: ["project"],
+  registry: ["registry"],
+};
 const emptyComposeProject: DockerComposeProject = {
   workspacePath: null,
   files: [],
@@ -152,14 +150,6 @@ function getContainerStateTone(container: DockerContainer) {
 function includesQuery(values: Array<string | null | undefined>, query: string) {
   if (!query) return true;
   return values.some((value) => value?.toLowerCase().includes(query));
-}
-
-function sectionCount(inventory: DockerInventory, section: DockerSection) {
-  if (section === "compose") return 0;
-  if (section === "project") return 0;
-  if (section === "cleanup") return 5;
-  if (section === "registry") return 0;
-  return inventory[section].length;
 }
 
 function ResourceMeta({ children }: { children: ReactNode }) {
@@ -719,9 +709,7 @@ export function DockerSidebar() {
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
-  const [expandedSections, setExpandedSections] = useState<Set<DockerSection>>(
-    () => new Set(dockerSections),
-  );
+  const [activeTab, setActiveTab] = useState<DockerTab>("resources");
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<DockerLogLine[]>([]);
   const [logQuery, setLogQuery] = useState("");
@@ -1009,18 +997,6 @@ export function DockerSidebar() {
     if (!normalizedLogQuery) return true;
     return entry.line.toLowerCase().includes(normalizedLogQuery);
   });
-
-  const toggleSection = (section: DockerSection) => {
-    setExpandedSections((current) => {
-      const next = new Set(current);
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
-      }
-      return next;
-    });
-  };
 
   const handleContainerAction = async (
     container: DockerContainer,
@@ -1750,34 +1726,45 @@ export function DockerSidebar() {
     }
   };
 
-  const renderSection = (section: DockerSection, rows: ReactNode, filteredCount: number) => {
-    const expanded = expandedSections.has(section);
-    const totalCount =
-      section === "compose"
-        ? composeProject.services.length
-        : section === "project"
-          ? projectConfigItemCount
-          : section === "registry"
-            ? registryResults.length
-            : sectionCount(inventory, section);
+  const sectionTabs = useMemo(
+    () => [
+      {
+        id: "resources",
+        label: "Resources",
+        icon: <ContainerIcon size={16} weight="duotone" />,
+      },
+      { id: "compose", label: "Compose", icon: <Restart size={16} weight="duotone" /> },
+      { id: "project", label: "Project", icon: <FolderIcon size={16} weight="duotone" /> },
+      { id: "registry", label: "Registry", icon: <Upload size={16} weight="duotone" /> },
+    ],
+    [],
+  );
+
+  const renderSection = (section: DockerSection, rows: ReactNode, _filteredCount?: number) => {
+    const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
+    const isVisible = dockerTabSections[activeTab].includes(section);
+
     return (
-      <div key={section} className="min-w-0">
-        <SidebarSectionHeader
-          expanded={expanded}
-          count={normalizedQuery ? `${filteredCount}/${totalCount}` : filteredCount}
-          onToggle={() => toggleSection(section)}
-          className="capitalize"
-        >
-          {section}
-        </SidebarSectionHeader>
-        {expanded ? <div className="space-y-0.5 px-1">{rows}</div> : null}
+      <div key={section} className={cn("min-w-0", !isVisible && "hidden")}>
+        <SidebarSectionLabel className="px-1 ui-text-sm font-medium text-text">
+          {title}
+        </SidebarSectionLabel>
+        <div className="space-y-0.5">{rows}</div>
       </div>
     );
   };
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col">
+      <SidebarPanel className="ui-font select-none gap-2 p-2">
+        <SidebarSectionSwitcher
+          items={sectionTabs}
+          value={activeTab}
+          onChange={(tab) => setActiveTab(tab as DockerTab)}
+          className="w-full"
+          itemClassName="flex-1"
+        />
+
         <SidebarSearchFilterRow
           value={query}
           onChange={setQuery}
@@ -1810,7 +1797,7 @@ export function DockerSidebar() {
           <SidebarEmptyState className="flex-1">Loading Docker resources...</SidebarEmptyState>
         ) : (
           <>
-            <div className="min-h-0 flex-1 overflow-auto py-1">
+            <div className="scrollbar-hidden min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto p-1">
               {renderSection(
                 "containers",
                 filteredContainers.length > 0 ? (
@@ -2594,95 +2581,91 @@ export function DockerSidebar() {
               )}
             </div>
 
-            <div className="max-h-72 shrink-0 border-t border-border/70 bg-secondary-bg/35">
-              <div className="flex h-8 items-center justify-between gap-2 px-2">
-                <div className="min-w-0">
-                  <div className="truncate ui-text-sm font-medium text-text">
-                    {selectedContainer ? selectedContainer.name : "Container details"}
-                  </div>
-                  <div className="ui-text-sm text-text-lighter">
-                    {detailTab === "logs"
-                      ? logStreamId
-                        ? "Streaming logs"
-                        : selectedContainer
-                          ? "Logs stopped"
-                          : "No container"
-                      : containerPath}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {(["logs", "files"] as DockerDetailTab[]).map((tab) => (
-                    <Button
-                      key={tab}
-                      type="button"
-                      variant={detailTab === tab ? "accent" : "ghost"}
-                      compact
-                      className="h-6 px-1.5 ui-text-sm capitalize"
-                      disabled={!selectedContainer}
-                      onClick={() => setDetailTab(tab)}
-                    >
-                      {tab}
-                    </Button>
-                  ))}
-                  {detailTab === "logs" ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      compact
-                      className="h-6 px-1.5 ui-text-sm"
-                      disabled={logLines.length === 0}
-                      onClick={() => setLogLines([])}
-                    >
-                      Clear
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      compact
-                      className="h-6 px-1.5 ui-text-sm"
-                      disabled={!selectedContainer}
-                      onClick={() => void handleCopyToContainer()}
-                    >
-                      <Upload className="size-3.5" />
-                      Copy In
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {detailTab === "logs" ? (
-                <>
-                  <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
-                    <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-primary-bg px-1.5">
-                      <Search className="size-3.5 shrink-0 text-text-lighter" />
-                      <input
-                        value={logQuery}
-                        onChange={(event) => setLogQuery(event.target.value)}
-                        placeholder="Search logs"
-                        className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
-                      />
+            {activeTab === "resources" && selectedContainer ? (
+              <div className="max-h-72 shrink-0 border-t border-border/70 bg-secondary-bg/35">
+                <div className="flex h-8 items-center justify-between gap-2 px-2">
+                  <div className="min-w-0">
+                    <div className="truncate ui-text-sm font-medium text-text">
+                      {selectedContainer.name}
                     </div>
-                    {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
+                    <div className="ui-text-sm text-text-lighter">
+                      {detailTab === "logs"
+                        ? logStreamId
+                          ? "Streaming logs"
+                          : "Logs stopped"
+                        : containerPath}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {(["logs", "files"] as DockerDetailTab[]).map((tab) => (
                       <Button
-                        key={filter}
+                        key={tab}
                         type="button"
-                        variant={logFilter === filter ? "accent" : "ghost"}
+                        variant={detailTab === tab ? "accent" : "ghost"}
                         compact
                         className="h-6 px-1.5 ui-text-sm capitalize"
-                        onClick={() => setLogFilter(filter)}
+                        onClick={() => setDetailTab(tab)}
                       >
-                        {filter === "stderr" ? "Err" : filter}
+                        {tab}
                       </Button>
                     ))}
+                    {detailTab === "logs" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        compact
+                        className="h-6 px-1.5 ui-text-sm"
+                        disabled={logLines.length === 0}
+                        onClick={() => setLogLines([])}
+                      >
+                        Clear
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        compact
+                        className="h-6 px-1.5 ui-text-sm"
+                        onClick={() => void handleCopyToContainer()}
+                      >
+                        <Upload className="size-3.5" />
+                        Copy In
+                      </Button>
+                    )}
                   </div>
-                  {logError ? (
-                    <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
-                      {logError}
+                </div>
+                {detailTab === "logs" ? (
+                  <>
+                    <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
+                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-primary-bg px-1.5">
+                        <Search className="size-3.5 shrink-0 text-text-lighter" />
+                        <input
+                          value={logQuery}
+                          onChange={(event) => setLogQuery(event.target.value)}
+                          placeholder="Search logs"
+                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
+                        />
+                      </div>
+                      {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
+                        <Button
+                          key={filter}
+                          type="button"
+                          variant={logFilter === filter ? "accent" : "ghost"}
+                          compact
+                          className="h-6 px-1.5 ui-text-sm capitalize"
+                          onClick={() => setLogFilter(filter)}
+                        >
+                          {filter === "stderr" ? "Err" : filter}
+                        </Button>
+                      ))}
                     </div>
-                  ) : null}
-                  <div className="max-h-36 overflow-auto border-t border-border/50 px-2 py-1 font-mono text-[11px] leading-4">
-                    {selectedContainer ? (
-                      filteredLogLines.length > 0 ? (
+                    {logError ? (
+                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
+                        {logError}
+                      </div>
+                    ) : null}
+                    <div className="max-h-36 overflow-auto border-t border-border/50 px-2 py-1 font-mono text-[11px] leading-4">
+                      {filteredLogLines.length > 0 ? (
                         filteredLogLines.map((entry) => (
                           <div
                             key={entry.id}
@@ -2698,118 +2681,116 @@ export function DockerSidebar() {
                         <div className="text-text-lighter">
                           {logLines.length > 0 ? "No matching log lines." : "Waiting for logs."}
                         </div>
-                      )
-                    ) : (
-                      <div className="text-text-lighter">Select a container to view logs.</div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      compact
-                      className="h-6 px-1.5 ui-text-sm"
-                      disabled={!selectedContainer || containerPath === "/"}
-                      onClick={() => setContainerPath(parentContainerPath(containerPath))}
-                    >
-                      Up
-                    </Button>
-                    <div className="min-w-0 flex-1 truncate rounded border border-border/70 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
-                      {containerPath}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      compact
-                      className="h-6 px-1.5 ui-text-sm"
-                      disabled={!selectedContainer || isFilesLoading}
-                      onClick={() => void loadContainerFiles()}
-                    >
-                      {isFilesLoading ? (
-                        <LoadingIndicator compact />
-                      ) : (
-                        <Refresh className="size-3.5" />
                       )}
-                    </Button>
-                  </div>
-                  {filesError ? (
-                    <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
-                      {filesError}
                     </div>
-                  ) : null}
-                  <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
-                    {!selectedContainer ? (
-                      <div className="px-2 py-2 ui-text-sm text-text-lighter">
-                        Select a container to browse files.
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        compact
+                        className="h-6 px-1.5 ui-text-sm"
+                        disabled={containerPath === "/"}
+                        onClick={() => setContainerPath(parentContainerPath(containerPath))}
+                      >
+                        Up
+                      </Button>
+                      <div className="min-w-0 flex-1 truncate rounded border border-border/70 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+                        {containerPath}
                       </div>
-                    ) : isFilesLoading ? (
-                      <div className="px-2 py-2 ui-text-sm text-text-lighter">Loading files...</div>
-                    ) : containerFiles.length > 0 ? (
-                      containerFiles.map((entry) => (
-                        <div
-                          key={entry.path}
-                          role="button"
-                          tabIndex={entry.isDirectory ? 0 : -1}
-                          className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-hover"
-                          onClick={() => {
-                            if (entry.isDirectory) setContainerPath(entry.path);
-                          }}
-                          onKeyDown={(event) => {
-                            if (!entry.isDirectory) return;
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setContainerPath(entry.path);
-                            }
-                          }}
-                        >
-                          {entry.isDirectory ? (
-                            <FolderIcon
-                              className="size-4 shrink-0 text-text-lighter"
-                              weight="duotone"
-                            />
-                          ) : (
-                            <FileIcon
-                              className="size-4 shrink-0 text-text-lighter"
-                              weight="duotone"
-                            />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate ui-text-sm text-text">{entry.name}</div>
-                            <div className="truncate ui-text-sm text-text-lighter">
-                              {entry.isDirectory ? "Directory" : formatFileSize(entry.size)}
-                              {entry.mode ? ` · ${entry.mode}` : ""}
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            compact
-                            className="h-6 px-1.5 ui-text-sm"
-                            tooltip="Copy to host"
-                            tooltipSide="left"
-                            aria-label={`Copy ${entry.name} to host`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleCopyFromContainer(entry);
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        compact
+                        className="h-6 px-1.5 ui-text-sm"
+                        disabled={isFilesLoading}
+                        onClick={() => void loadContainerFiles()}
+                      >
+                        {isFilesLoading ? (
+                          <LoadingIndicator compact />
+                        ) : (
+                          <Refresh className="size-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                    {filesError ? (
+                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
+                        {filesError}
+                      </div>
+                    ) : null}
+                    <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
+                      {isFilesLoading ? (
+                        <div className="px-2 py-2 ui-text-sm text-text-lighter">
+                          Loading files...
+                        </div>
+                      ) : containerFiles.length > 0 ? (
+                        containerFiles.map((entry) => (
+                          <div
+                            key={entry.path}
+                            role="button"
+                            tabIndex={entry.isDirectory ? 0 : -1}
+                            className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-hover"
+                            onClick={() => {
+                              if (entry.isDirectory) setContainerPath(entry.path);
+                            }}
+                            onKeyDown={(event) => {
+                              if (!entry.isDirectory) return;
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setContainerPath(entry.path);
+                              }
                             }}
                           >
-                            <Download className="size-3.5" />
-                          </Button>
+                            {entry.isDirectory ? (
+                              <FolderIcon
+                                className="size-4 shrink-0 text-text-lighter"
+                                weight="duotone"
+                              />
+                            ) : (
+                              <FileIcon
+                                className="size-4 shrink-0 text-text-lighter"
+                                weight="duotone"
+                              />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate ui-text-sm text-text">{entry.name}</div>
+                              <div className="truncate ui-text-sm text-text-lighter">
+                                {entry.isDirectory ? "Directory" : formatFileSize(entry.size)}
+                                {entry.mode ? ` · ${entry.mode}` : ""}
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              compact
+                              className="h-6 px-1.5 ui-text-sm"
+                              tooltip="Copy to host"
+                              tooltipSide="left"
+                              aria-label={`Copy ${entry.name} to host`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleCopyFromContainer(entry);
+                              }}
+                            >
+                              <Download className="size-3.5" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-2 py-2 ui-text-sm text-text-lighter">
+                          No files found.
                         </div>
-                      ))
-                    ) : (
-                      <div className="px-2 py-2 ui-text-sm text-text-lighter">No files found.</div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
           </>
         )}
-      </div>
+      </SidebarPanel>
 
       {dialogMode ? (
         <Dialog

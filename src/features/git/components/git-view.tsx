@@ -1236,8 +1236,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           />
 
           <div className="flex min-w-0 shrink-0 items-end gap-2 overflow-hidden">
-            <div className="flex min-w-0 shrink flex-col gap-0.5">
-              <span className="ui-text-base px-1 text-text-lighter">Branch</span>
+            <div className="flex min-w-0 shrink flex-col">
               <GitBranchManager
                 currentBranch={gitStatus.branch}
                 repoPath={activeRepoPath}
