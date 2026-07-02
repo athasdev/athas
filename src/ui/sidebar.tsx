@@ -292,6 +292,7 @@ export function SidebarSearchFilterRow({
 export function SidebarListItem({
   children,
   active = false,
+  description,
   leading,
   trailing,
   className,
@@ -300,6 +301,7 @@ export function SidebarListItem({
 }: ComponentProps<"button"> & {
   children: ReactNode;
   active?: boolean;
+  description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
   contentClassName?: string;
@@ -318,7 +320,12 @@ export function SidebarListItem({
       {leading ? (
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
-      <span className={cn("min-w-0 flex-1", contentClassName)}>{children}</span>
+      <span className={cn("min-w-0 flex-1", description && "flex flex-col", contentClassName)}>
+        <span className="max-w-full truncate">{children}</span>
+        {description ? (
+          <span className="max-w-full truncate text-text-lighter">{description}</span>
+        ) : null}
+      </span>
       {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
     </button>
   );

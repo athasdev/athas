@@ -87,20 +87,12 @@ export default function TableSidebar({
                     key={t.name}
                     onClick={() => onSelectTable(t.name)}
                     onContextMenu={(e) => onTableContextMenu(e, t.name, group.kind)}
-                    className={cn(
-                      "h-auto items-start gap-1.5 rounded-lg px-2.5 py-1.5 ui-text-sm leading-[1.35]",
-                    )}
-                    contentClassName="min-w-0"
                     active={selectedTable === t.name}
                     aria-label={`Select ${group.kind} ${t.name}`}
                     leading={<Icon className="mt-0.5 shrink-0" />}
+                    description={owner ? `on ${owner}` : undefined}
                   >
-                    <span className="flex min-w-0 flex-col items-start leading-[1.35]">
-                      <span className="max-w-full truncate">{t.name}</span>
-                      {owner && (
-                        <span className="max-w-full truncate text-text-lighter">on {owner}</span>
-                      )}
-                    </span>
+                    {t.name}
                   </SidebarListItem>
                 );
               })}

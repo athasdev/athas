@@ -206,7 +206,6 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
       aria-current={isSelected ? "true" : undefined}
       title={title}
       active={isSelected}
-      className="gap-1.5 rounded px-2 py-1 ui-text-base leading-[1.35] hover:bg-hover/40"
       leading={
         <ThemedFileIcon
           fileName={item.iconPath ?? item.path}
@@ -215,15 +214,9 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
         />
       }
       trailing={<FileNavigatorMetadata item={item} />}
+      description={directoryPath}
     >
-      <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <span className="min-w-0 max-w-[58%] shrink-0 truncate font-medium text-text">
-          {fileName}
-        </span>
-        {directoryPath ? (
-          <span className="min-w-0 flex-1 truncate text-text-lighter">{directoryPath}</span>
-        ) : null}
-      </span>
+      {fileName}
     </SidebarListItem>
   );
 });
@@ -275,8 +268,6 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
       aria-current={isSelected ? "true" : undefined}
       active={isSelected}
       title={item.path}
-      className="gap-1.5 rounded px-2 py-1 ui-text-base leading-[1.35] hover:bg-hover/40"
-      contentClassName="truncate"
       leading={
         <ThemedFileIcon
           fileName={item.iconPath ?? node.name}
