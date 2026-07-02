@@ -14,7 +14,13 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
@@ -1427,92 +1433,86 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
               const isActionLoading = stashActionLoading.has(stash.index);
 
               return (
-                <div
+                <CommandItemRow
                   key={stash.index}
-                  role="button"
-                  tabIndex={0}
-                  className="group/stash ui-font ui-text-base mb-1 flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left leading-[1.35] transition-colors hover:bg-hover focus:bg-hover focus:outline-none"
+                  as="div"
+                  icon={<Archive size={14} className="text-text-lighter" />}
+                  title={displayTitle}
+                  description={
+                    <>
+                      <span className="shrink-0">{formatRelativeDate(stash.date)}</span>
+                      <CommandItemBadge>{getStashPositionLabel(stash.index)}</CommandItemBadge>
+                    </>
+                  }
+                  contentLayout="inline"
+                  disabled={isActionLoading}
+                  className="group/stash min-h-9 text-text-lighter hover:text-text"
+                  titleClassName="text-text"
+                  descriptionClassName="flex shrink-0 items-center gap-1.5 text-text-lighter/80"
                   onClick={() => {
                     void handleViewStashDiff(stash.index);
                     setShowStashList(false);
                     setStashSearchQuery("");
                   }}
-                  onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget) return;
-                    if (event.key !== "Enter" && event.key !== " ") return;
-                    event.preventDefault();
-                    void handleViewStashDiff(stash.index);
-                    setShowStashList(false);
-                    setStashSearchQuery("");
-                  }}
-                >
-                  <Archive size={14} className="shrink-0 text-text-lighter" />
-                  <span className="min-w-0 flex-1 truncate text-text" title={displayTitle}>
-                    {displayTitle}
-                  </span>
-                  <span className="shrink-0 text-text-lighter/80">
-                    {formatRelativeDate(stash.date)}
-                  </span>
-                  <span className="shrink-0 rounded border border-border/50 px-1 ui-text-base leading-4 text-text-lighter/80">
-                    {getStashPositionLabel(stash.index)}
-                  </span>
-                  <div className="ml-1 flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/stash:opacity-100 sm:group-focus-within/stash:opacity-100">
-                    <Button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleStashListAction(
-                          () => applyStash(activeRepoPath!, stash.index),
-                          stash.index,
-                          "Apply stash",
-                        );
-                      }}
-                      disabled={isActionLoading}
-                      variant="ghost"
-                      compact
-                      className="size-6 rounded text-text-lighter disabled:opacity-50"
-                      tooltip="Apply stash"
-                    >
-                      <Download />
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleStashListAction(
-                          () => popStash(activeRepoPath!, stash.index),
-                          stash.index,
-                          "Pop stash",
-                        );
-                      }}
-                      disabled={isActionLoading}
-                      variant="ghost"
-                      compact
-                      className="size-6 rounded text-text-lighter disabled:opacity-50"
-                      tooltip="Pop stash"
-                    >
-                      <Upload />
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleStashListAction(
-                          () => dropStash(activeRepoPath!, stash.index),
-                          stash.index,
-                          "Drop stash",
-                        );
-                      }}
-                      disabled={isActionLoading}
-                      variant="ghost"
-                      compact
-                      className="size-6 rounded text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
-                      tooltip="Drop stash"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </div>
+                  action={
+                    <div className="ml-auto flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/stash:opacity-100 sm:group-focus-within/stash:opacity-100">
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleStashListAction(
+                            () => applyStash(activeRepoPath!, stash.index),
+                            stash.index,
+                            "Apply stash",
+                          );
+                        }}
+                        disabled={isActionLoading}
+                        variant="ghost"
+                        compact
+                        className="size-6 rounded text-text-lighter disabled:opacity-50"
+                        tooltip="Apply stash"
+                      >
+                        <Download />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleStashListAction(
+                            () => popStash(activeRepoPath!, stash.index),
+                            stash.index,
+                            "Pop stash",
+                          );
+                        }}
+                        disabled={isActionLoading}
+                        variant="ghost"
+                        compact
+                        className="size-6 rounded text-text-lighter disabled:opacity-50"
+                        tooltip="Pop stash"
+                      >
+                        <Upload />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleStashListAction(
+                            () => dropStash(activeRepoPath!, stash.index),
+                            stash.index,
+                            "Drop stash",
+                          );
+                        }}
+                        disabled={isActionLoading}
+                        variant="ghost"
+                        compact
+                        className="size-6 rounded text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        tooltip="Drop stash"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  }
+                />
               );
             })
           )}
