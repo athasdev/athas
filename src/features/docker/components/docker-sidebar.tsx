@@ -18,12 +18,14 @@ import {
   TerminalWindowIcon as Terminal,
   TrashIcon as Trash,
   UploadSimpleIcon as Upload,
+  CaretDownIcon as ChevronDown,
 } from "@phosphor-icons/react";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -109,6 +111,7 @@ type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
 
 const maxLogLines = 1_000;
+const compactDockerTabsWidth = 520;
 const dockerTabSections: Record<DockerTab, DockerSection[]> = {
   resources: ["containers", "images", "cleanup", "volumes", "networks"],
   compose: ["compose"],
@@ -740,6 +743,10 @@ export function DockerSidebar() {
   const [registryError, setRegistryError] = useState<string | null>(null);
   const [registryOutput, setRegistryOutput] = useState<string | null>(null);
   const [isRegistryBusy, setIsRegistryBusy] = useState(false);
+  const [isTabMenuOpen, setIsTabMenuOpen] = useState(false);
+  const [useCompactTabs, setUseCompactTabs] = useState(false);
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+  const tabDropdownRef = useRef<HTMLButtonElement>(null);
   const [buildDraft, setBuildDraft] = useState({
     contextPath: "",
     dockerfilePath: "",
@@ -829,6 +836,20 @@ export function DockerSidebar() {
   useEffect(() => {
     void loadProjectConfig();
   }, [loadProjectConfig]);
+
+  useEffect(() => {
+    const element = tabContainerRef.current;
+    if (!element) return;
+
+    const updateCompactTabs = () => {
+      setUseCompactTabs(element.clientWidth < compactDockerTabsWidth);
+    };
+
+    updateCompactTabs();
+    const resizeObserver = new ResizeObserver(updateCompactTabs);
+    resizeObserver.observe(element);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   const refreshDocker = useCallback(() => {
     void loadInventory();
@@ -1727,7 +1748,7 @@ export function DockerSidebar() {
   };
 
   const sectionTabs = useMemo(
-    () => [
+    (): Array<{ id: DockerTab; label: string; icon: ReactNode }> => [
       {
         id: "resources",
         label: "Resources",
@@ -1738,6 +1759,21 @@ export function DockerSidebar() {
       { id: "registry", label: "Registry", icon: <Upload size={16} weight="duotone" /> },
     ],
     [],
+  );
+  const activeTabItem = sectionTabs.find((item) => item.id === activeTab) ?? sectionTabs[0];
+  const tabMenuItems = useMemo<MenuItem[]>(
+    () =>
+      sectionTabs.map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        onClick: () => {
+          setActiveTab(item.id);
+          setIsTabMenuOpen(false);
+        },
+        className: item.id === activeTab ? "bg-hover text-text" : undefined,
+      })),
+    [activeTab, sectionTabs],
   );
 
   const renderSection = (section: DockerSection, rows: ReactNode, _filteredCount?: number) => {
@@ -1757,13 +1793,45 @@ export function DockerSidebar() {
   return (
     <>
       <SidebarPanel className="ui-font select-none gap-2 p-2">
-        <SidebarSectionSwitcher
-          items={sectionTabs}
-          value={activeTab}
-          onChange={(tab) => setActiveTab(tab as DockerTab)}
-          className="w-full"
-          itemClassName="flex-1"
-        />
+        <div ref={tabContainerRef} className="min-w-0 shrink-0">
+          {useCompactTabs ? (
+            <>
+              <button
+                ref={tabDropdownRef}
+                type="button"
+                className="ui-font ui-text-sm flex h-7 w-full min-w-0 items-center justify-between gap-2 rounded-full bg-secondary-bg/45 p-0.5 text-text-lighter outline-none transition-colors hover:bg-secondary-bg/65 hover:text-text"
+                aria-haspopup="menu"
+                aria-expanded={isTabMenuOpen}
+                onClick={() => setIsTabMenuOpen((open) => !open)}
+              >
+                <span className="flex min-w-0 items-center gap-1.5 rounded-full bg-hover px-2 text-text">
+                  <span className="flex size-4 shrink-0 items-center justify-center">
+                    {activeTabItem.icon}
+                  </span>
+                  <span className="min-w-0 truncate">{activeTabItem.label}</span>
+                </span>
+                <ChevronDown className="mr-2 size-3.5 shrink-0" />
+              </button>
+              <Dropdown
+                isOpen={isTabMenuOpen}
+                anchorRef={tabDropdownRef}
+                anchorSide="bottom"
+                anchorAlign="start"
+                items={tabMenuItems}
+                onClose={() => setIsTabMenuOpen(false)}
+                matchAnchorWidth
+              />
+            </>
+          ) : (
+            <SidebarSectionSwitcher
+              items={sectionTabs}
+              value={activeTab}
+              onChange={(tab) => setActiveTab(tab as DockerTab)}
+              className="w-full"
+              itemClassName="flex-1"
+            />
+          )}
+        </div>
 
         <SidebarSearchFilterRow
           value={query}
