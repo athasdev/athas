@@ -9,6 +9,7 @@ import { useGitHubStore } from "../stores/github.store";
 
 export function GitHubAuthStatusMessage() {
   const githubAccountStatus = useGitHubStore((s) => s.githubAccountStatus);
+  const authError = useGitHubStore((s) => s.authError);
   const isCheckingAuth = useGitHubStore((s) => s.isCheckingAuth);
   const checkAuth = useGitHubStore((s) => s.actions.checkAuth);
   const isAthasAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -41,6 +42,9 @@ export function GitHubAuthStatusMessage() {
         <p className="ui-text-sm mt-1 text-text-lighter">
           Sign in to Athas to use your connected GitHub account.
         </p>
+        {authError ? (
+          <p className="ui-text-sm mt-2 max-w-64 text-balance text-text-lighter">{authError}</p>
+        ) : null}
         <Button
           onClick={() => void signIn().catch(() => undefined)}
           variant="ghost"
@@ -63,6 +67,9 @@ export function GitHubAuthStatusMessage() {
         <p className="ui-text-sm mt-1 text-text-lighter">
           Connect your account to use PRs, Issues, Actions, and Releases.
         </p>
+        {authError ? (
+          <p className="ui-text-sm mt-2 max-w-64 text-balance text-text-lighter">{authError}</p>
+        ) : null}
         <div className="mt-2 flex items-center gap-2">
           <Button
             onClick={openGitHubConnection}
@@ -93,6 +100,9 @@ export function GitHubAuthStatusMessage() {
       <AlertCircle className="mb-2 text-text-lighter" />
       <p className="ui-text-sm text-text">GitHub not authenticated</p>
       <p className="ui-text-sm mt-1 text-text-lighter">Connect GitHub, then retry this view.</p>
+      {authError ? (
+        <p className="ui-text-sm mt-2 max-w-64 text-balance text-text-lighter">{authError}</p>
+      ) : null}
       <div className="mt-2 flex items-center gap-2">
         <Button
           onClick={openGitHubConnection}

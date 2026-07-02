@@ -13,18 +13,15 @@ import { useOverlayManager } from "@/features/editor/hooks/use-overlay-manager";
 import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import "@/features/editor/styles/overlay-card.css";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
-import { getCommitDiff } from "../api/git-diff-api";
 import { useGitBlameStore } from "../stores/git-blame.store";
-import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitBlameLine } from "../types/git.types";
-import { countDiffStats } from "../utils/git-diff-helpers";
+import { openCommitDiffBuffer } from "../utils/open-commit-diff-buffer";
 
 interface InlineGitBlameProps {
   blameLine: GitBlameLine;
@@ -144,37 +141,10 @@ export const InlineGitBlame = ({
     if (!repoPath) return;
 
     try {
-      const diffs = await getCommitDiff(repoPath, blameLine.commit_hash);
-
-      if (diffs && diffs.length > 0) {
-        const { additions, deletions } = countDiffStats(diffs);
-
-        const multiDiff: MultiFileDiff = {
-          title: `Commit ${blameLine.commit_hash.substring(0, 7)}`,
-          repoPath,
-          commitHash: blameLine.commit_hash,
-          files: diffs,
-          totalFiles: diffs.length,
-          totalAdditions: additions,
-          totalDeletions: deletions,
-        };
-
-        const virtualPath = `diff://commit/${blameLine.commit_hash}/all-files`;
-        const displayName = `Commit ${blameLine.commit_hash.substring(0, 7)} (${diffs.length} files)`;
-
-        useBufferStore
-          .getState()
-          .actions.openBuffer(
-            virtualPath,
-            displayName,
-            "",
-            false,
-            undefined,
-            true,
-            true,
-            multiDiff,
-          );
-      }
+      await openCommitDiffBuffer({
+        repoPath,
+        commitHash: blameLine.commit_hash,
+      });
     } catch (error) {
       console.error("Error getting commit diff:", error);
     }

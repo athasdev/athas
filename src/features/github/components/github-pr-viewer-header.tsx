@@ -1,12 +1,15 @@
 import {
+  ChatCircleIcon as MessageCircle,
   CheckCircleIcon as CheckCircle2,
   CopyIcon as Copy,
   FileCodeIcon as FileCode2,
   GitBranchIcon as GitBranch,
+  GitMergeIcon as GitMerge,
   GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
   PencilSimpleIcon as Pencil,
   ArrowClockwiseIcon as RefreshCw,
+  XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
@@ -40,6 +43,11 @@ interface GitHubPRViewerHeaderProps {
   onCopyBranchName: () => void;
   onToggleFilesView: () => void;
   onEdit: () => void;
+  onComment: () => void;
+  onApprove: () => void;
+  onRequestChanges: () => void;
+  onMerge: () => void;
+  onClosePR: () => void;
 }
 
 interface OverviewFieldProps {
@@ -74,7 +82,15 @@ export function GitHubPRViewerHeader({
   onCopyBranchName,
   onToggleFilesView,
   onEdit,
+  onComment,
+  onApprove,
+  onRequestChanges,
+  onMerge,
+  onClosePR,
 }: GitHubPRViewerHeaderProps) {
+  const isClosed = pr.state === "closed";
+  const canMerge = !isClosed && !pr.isDraft && pr.mergeable !== "CONFLICTING";
+
   return (
     <GitHubViewerHeader
       title={pr.title}
@@ -114,6 +130,61 @@ export function GitHubPRViewerHeader({
           <Tooltip content="Edit pull request" side="bottom">
             <Button onClick={onEdit} variant="ghost" aria-label="Edit pull request" compact>
               <Pencil />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Add comment" side="bottom">
+            <Button
+              onClick={onComment}
+              disabled={isClosed}
+              variant="ghost"
+              aria-label="Add PR comment"
+              compact
+            >
+              <MessageCircle />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Approve pull request" side="bottom">
+            <Button
+              onClick={onApprove}
+              disabled={isClosed}
+              variant="ghost"
+              aria-label="Approve pull request"
+              compact
+            >
+              <CheckCircle2 />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Request changes" side="bottom">
+            <Button
+              onClick={onRequestChanges}
+              disabled={isClosed}
+              variant="ghost"
+              aria-label="Request pull request changes"
+              compact
+            >
+              <XCircle />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Merge pull request" side="bottom">
+            <Button
+              onClick={onMerge}
+              disabled={!canMerge}
+              variant="ghost"
+              aria-label="Merge pull request"
+              compact
+            >
+              <GitMerge />
+            </Button>
+          </Tooltip>
+          <Tooltip content="Close pull request" side="bottom">
+            <Button
+              onClick={onClosePR}
+              disabled={isClosed}
+              variant="ghost"
+              aria-label="Close pull request"
+              compact
+            >
+              <XCircle />
             </Button>
           </Tooltip>
           <Tooltip content="Open on GitHub" side="bottom">

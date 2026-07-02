@@ -1,9 +1,10 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { getCommitDiff, getFileDiff } from "@/features/git/api/git-diff-api";
+import { getFileDiff } from "@/features/git/api/git-diff-api";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import { countDiffStats } from "@/features/git/utils/git-diff-helpers";
 import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
+import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
 import { getFolderName } from "@/utils/path-helpers";
 import type { SidebarDragResource } from "./sidebar-resource-drag";
 
@@ -65,34 +66,16 @@ const openWorkingTreeDiffBuffer = async (
     .actions.openBuffer(virtualPath, displayName, "", false, undefined, true, true, multiDiff);
 };
 
-const openCommitDiffBuffer = async (
+const openSidebarCommitDiffBuffer = async (
   resource: Extract<SidebarDragResource, { type: "git-commit" }>,
 ): Promise<string | null> => {
-  const diffs = await getCommitDiff(resource.repoPath, resource.commitHash);
-  if (!diffs || diffs.length === 0) {
-    return null;
-  }
-
-  const { additions, deletions } = countDiffStats(diffs);
-  const multiDiff: MultiFileDiff = {
-    title: `Commit ${resource.commitHash.substring(0, 7)}`,
+  return openCommitDiffBuffer({
     repoPath: resource.repoPath,
     commitHash: resource.commitHash,
-    commitMessage: resource.message,
-    commitAuthor: resource.author,
-    commitDate: resource.date,
-    files: diffs,
-    totalFiles: diffs.length,
-    totalAdditions: additions,
-    totalDeletions: deletions,
-  };
-
-  const virtualPath = `diff://commit/${resource.commitHash}/all-files`;
-  const displayName = `Commit ${resource.commitHash.substring(0, 7)} (${diffs.length} files)`;
-
-  return useBufferStore
-    .getState()
-    .actions.openBuffer(virtualPath, displayName, "", false, undefined, true, true, multiDiff);
+    message: resource.message,
+    author: resource.author,
+    date: resource.date,
+  });
 };
 
 export const openSidebarResourceBuffer = async (
@@ -112,7 +95,7 @@ export const openSidebarResourceBuffer = async (
       return openWorkingTreeDiffBuffer(resource);
 
     case "git-commit":
-      return openCommitDiffBuffer(resource);
+      return openSidebarCommitDiffBuffer(resource);
 
     case "git-worktree":
       await openGitWorktreeWorkspace(resource.path);

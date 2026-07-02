@@ -47,6 +47,7 @@ interface GitHubState {
   isCheckingAuth: boolean;
   authStatus: GitHubAuthStatus;
   githubAccountStatus: GitHubAccountStatus;
+  authError: string | null;
   currentUser: string | null;
   // Selected PR state
   selectedPRNumber: number | null;
@@ -72,6 +73,7 @@ const initialState: GitHubState = {
   isCheckingAuth: false,
   authStatus: "notAuthenticated" as GitHubAuthStatus,
   githubAccountStatus: "unknown" as GitHubAccountStatus,
+  authError: null,
   currentUser: null,
   // Selected PR state
   selectedPRNumber: null,
@@ -111,6 +113,20 @@ function getAccountStatus(syncStatus: GitHubTokenSyncStatus): GitHubAccountStatu
   if (syncStatus === "synced") return "connected";
   if (syncStatus === "notSignedIn") return "notSignedIn";
   return "notConnected";
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return String(error);
 }
 
 function normalizePullRequestFiles(files: unknown): PullRequestFile[] {
@@ -207,7 +223,7 @@ export const useGitHubStore = create(
           return;
         }
 
-        set({ isCheckingAuth: true });
+        set({ isCheckingAuth: true, authError: null });
 
         try {
           const status = await invoke<GitHubAuthStatus>("github_check_auth");
@@ -220,6 +236,7 @@ export const useGitHubStore = create(
               githubAccountStatus: "connected",
               currentUser: user,
               error: null,
+              authError: null,
             });
           } else {
             let githubAccountStatus = get().githubAccountStatus;
@@ -241,6 +258,7 @@ export const useGitHubStore = create(
                       githubAccountStatus,
                       currentUser: user,
                       error: null,
+                      authError: null,
                     });
                     authCheckedAt = Date.now();
                     return;
@@ -252,12 +270,16 @@ export const useGitHubStore = create(
                     authStatus: syncedStatus,
                     githubAccountStatus,
                     currentUser: null,
+                    authError:
+                      "A GitHub token was synced from your Athas account, but GitHub rejected it.",
                   });
                   authCheckedAt = Date.now();
                   return;
                 }
               } catch (error) {
-                console.warn("Failed to sync GitHub account token:", error);
+                const message = getErrorMessage(error);
+                console.error("Failed to sync GitHub account token:", error);
+                set({ authError: `Failed to sync GitHub account token: ${message}` });
               }
             }
 
@@ -267,15 +289,23 @@ export const useGitHubStore = create(
               authStatus: status,
               githubAccountStatus,
               currentUser: null,
+              authError:
+                get().authError ??
+                (status === "notAuthenticated"
+                  ? "No valid GitHub token is available for this workspace."
+                  : null),
             });
           }
           authCheckedAt = Date.now();
-        } catch {
+        } catch (error) {
+          const message = getErrorMessage(error);
+          console.error("Failed to check GitHub authentication:", error);
           set({
             isAuthenticated: false,
             isCheckingAuth: false,
             authStatus: "notAuthenticated",
             githubAccountStatus: get().githubAccountStatus,
+            authError: message,
             currentUser: null,
           });
           authCheckedAt = Date.now();
@@ -330,12 +360,14 @@ export const useGitHubStore = create(
           const isAuthError = /unauthorized|forbidden|401|403|credential|auth|token/i.test(message);
 
           if (isAuthError) {
+            console.warn("GitHub pull request fetch failed authentication:", err);
             authCheckedAt = 0;
             set({
               isAuthenticated: false,
               currentUser: null,
               isLoading: false,
               error: null,
+              authError: message,
             });
             return;
           }

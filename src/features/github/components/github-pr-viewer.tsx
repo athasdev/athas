@@ -30,6 +30,7 @@ import { useGitHubStore } from "../stores/github.store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
 import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
+import { GitHubPRActionDialog, type GitHubPRActionKind } from "./github-pr-action-dialog";
 import { GitHubTitleBodyForm } from "./github-title-body-form";
 import {
   GitHubViewerHeader,
@@ -118,6 +119,8 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [activeAction, setActiveAction] = useState<GitHubPRActionKind | null>(null);
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
 
   useEffect(() => {
@@ -134,6 +137,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     setSelectedFilePath(deepLinkedFilePath ?? null);
     setFilePatches({});
     setIsEditingDetails(false);
+    setActiveAction(null);
   }, [prNumber, repoPath]);
 
   useEffect(() => {
@@ -428,6 +432,69 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     [fetchPRs, prBuffer, prNumber, repoPath, selectPR, selectedPRDetails, updateBuffer],
   );
 
+  const refreshAfterPRAction = useCallback(
+    async (mode: "comments" | "full" = "full") => {
+      if (!repoPath) return;
+
+      await selectPR(repoPath, prNumber, { force: true });
+      void fetchPRs(repoPath, { force: true });
+      void fetchPRContent(repoPath, prNumber, { force: true, mode });
+    },
+    [fetchPRContent, fetchPRs, prNumber, repoPath, selectPR],
+  );
+
+  const handleSubmitAction = useCallback(
+    async ({ body, method }: { body: string; method?: "merge" | "squash" | "rebase" }) => {
+      if (!repoPath || !activeAction) return;
+
+      setIsSubmittingAction(true);
+      try {
+        if (activeAction === "comment") {
+          await invoke("github_add_pr_comment", { repoPath, prNumber, body });
+          await refreshAfterPRAction("comments");
+          toast.success("Comment added");
+        } else if (activeAction === "approve") {
+          await invoke("github_submit_pr_review", {
+            repoPath,
+            prNumber,
+            event: "APPROVE",
+            body,
+          });
+          await refreshAfterPRAction("comments");
+          toast.success("Pull request approved");
+        } else if (activeAction === "request-changes") {
+          await invoke("github_submit_pr_review", {
+            repoPath,
+            prNumber,
+            event: "REQUEST_CHANGES",
+            body,
+          });
+          await refreshAfterPRAction("comments");
+          toast.success("Changes requested");
+        } else if (activeAction === "merge") {
+          await invoke("github_merge_pull_request", {
+            repoPath,
+            prNumber,
+            method: method ?? "squash",
+          });
+          await refreshAfterPRAction("full");
+          toast.success("Pull request merged");
+        } else if (activeAction === "close") {
+          await invoke("github_close_pull_request", { repoPath, prNumber });
+          await refreshAfterPRAction("full");
+          toast.success("Pull request closed");
+        }
+
+        setActiveAction(null);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Pull request action failed");
+      } finally {
+        setIsSubmittingAction(false);
+      }
+    },
+    [activeAction, prNumber, refreshAfterPRAction, repoPath],
+  );
+
   const handleToggleFilesView = useCallback(() => {
     if (!selectedPRDiff || !selectedPRDetails) {
       // Diff not loaded yet — fetch first, then open
@@ -601,9 +668,28 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
             setActiveTab("activity");
             setIsEditingDetails(true);
           }}
+          onComment={() => setActiveAction("comment")}
+          onApprove={() => setActiveAction("approve")}
+          onRequestChanges={() => setActiveAction("request-changes")}
+          onMerge={() => setActiveAction("merge")}
+          onClosePR={() => setActiveAction("close")}
         />
       }
     >
+      {activeAction ? (
+        <GitHubPRActionDialog
+          kind={activeAction}
+          prNumber={prNumber}
+          isSubmitting={isSubmittingAction}
+          onClose={() => {
+            if (!isSubmittingAction) {
+              setActiveAction(null);
+            }
+          }}
+          onSubmit={(value) => void handleSubmitAction(value)}
+        />
+      ) : null}
+
       {detailsError && (
         <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
           <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
