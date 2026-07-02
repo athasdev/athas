@@ -20,6 +20,7 @@ import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
 import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
+import { SplitActionButton } from "@/ui/split-action-button";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
@@ -664,37 +665,19 @@ const GitStatusPanel = ({
         <>
           <div className="flex min-h-7 shrink-0 items-center justify-between gap-1.5 bg-primary-bg px-2.5 py-1">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
-              <div
+              <SplitActionButton
                 ref={diffMenuAnchorRef}
-                className={cn(
-                  "flex h-6 min-w-0 flex-1 overflow-hidden rounded-md border border-transparent text-text transition-colors",
-                  "hover:border-border/60 hover:bg-hover/70",
-                  isDiffMenuOpen && "border-border/70 bg-hover/80",
-                  (!onViewDiff || isLoading) && "opacity-50",
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => openScopedDiff("all")}
-                  disabled={!onViewDiff || isLoading}
-                  className="ui-font ui-text-sm flex h-full min-w-0 flex-1 items-center px-2 font-medium outline-none transition-colors hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none"
-                  aria-label="View all diffs"
-                >
-                  <span className="min-w-0 truncate whitespace-nowrap">View Diff</span>
-                </button>
-                <div className="my-1 w-px bg-border/70" />
-                <button
-                  type="button"
-                  onClick={() => setIsDiffMenuOpen((open) => !open)}
-                  disabled={isLoading}
-                  className="flex h-full w-5 shrink-0 items-center justify-center outline-none transition-colors hover:bg-hover/80 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none"
-                  aria-label="Choose diff source"
-                  aria-haspopup="menu"
-                  aria-expanded={isDiffMenuOpen}
-                >
-                  <CaretDown className="size-3" />
-                </button>
-              </div>
+                label="View Diff"
+                actionAriaLabel="View all diffs"
+                menuAriaLabel="Choose diff source"
+                menuIcon={<CaretDown className="size-3" />}
+                onAction={() => openScopedDiff("all")}
+                onMenu={() => setIsDiffMenuOpen((open) => !open)}
+                disabled={!onViewDiff || isLoading}
+                menuDisabled={isLoading}
+                active={isDiffMenuOpen}
+                expanded={isDiffMenuOpen}
+              />
               <Dropdown
                 isOpen={isDiffMenuOpen}
                 anchorRef={diffMenuAnchorRef}
