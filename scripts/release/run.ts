@@ -220,6 +220,7 @@ async function release() {
   const rawArgs = process.argv.slice(2);
   const isDryRun = rawArgs.includes("--dry-run");
   const releaseArgs = rawArgs.filter((arg) => arg !== "--dry-run");
+  const tagOnly = process.env.RELEASE_TAG_ONLY === "1";
 
   if (!process.env.RELEASE_SKIP_CHECKS) {
     log("Running release checks...\n", "magenta");
@@ -264,6 +265,10 @@ async function release() {
   if (isDryRun) {
     log("  2. Verify the working tree diff locally", "yellow");
     log("  3. Restore all touched files without commit, tag, or push\n", "yellow");
+  } else if (tagOnly) {
+    log("  2. Create a local commit with these changes", "yellow");
+    log(`  3. Create and push tag v${newVersion}`, "yellow");
+    log("  4. Let the tag push trigger GitHub Actions to build a draft release\n", "yellow");
   } else {
     log("  2. Create a commit with these changes", "yellow");
     log(`  3. Create and push tag v${newVersion}`, "yellow");
@@ -322,8 +327,12 @@ async function release() {
     success(`Created tag: v${newVersion}`);
 
     log("\nPushing to remote...\n", "magenta");
-    await $`git push origin main`;
-    success("Pushed commits");
+    if (tagOnly) {
+      info("Skipping main push because RELEASE_TAG_ONLY is set");
+    } else {
+      await $`git push origin main`;
+      success("Pushed commits");
+    }
 
     await $`git push origin v${newVersion}`;
     success("Pushed tag");
