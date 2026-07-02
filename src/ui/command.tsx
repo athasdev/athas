@@ -6,6 +6,7 @@ import { useCallback, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
+import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
 import { instantTransition, motionEase, motionDuration } from "@/ui/motion";
 import { cn } from "@/utils/cn";
@@ -69,11 +70,14 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
 
 CommandHeaderAction.displayName = "CommandHeaderAction";
 
-type CommandHeaderBadgeProps = Omit<React.ComponentProps<"span">, "className">;
+type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 
-export const CommandHeaderBadge = (props: CommandHeaderBadgeProps) => (
-  <span
-    className="ui-font ui-text-base inline-flex min-h-7 max-w-40 shrink-0 items-center rounded-md border border-border/70 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter"
+export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
+  <Badge
+    className={cn(
+      "h-auto min-h-7 max-w-40 shrink-0 rounded-full border-border/70 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter ui-text-base",
+      className,
+    )}
     {...props}
   />
 );
@@ -376,9 +380,10 @@ export const CommandItemIcon = ({ className, ...props }: React.ComponentProps<"s
 CommandItemIcon.displayName = "CommandItemIcon";
 
 export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<"span">) => (
-  <span
+  <Badge
+    size="compact"
     className={cn(
-      "max-w-32 shrink-0 truncate rounded-md border border-border/70 bg-secondary-bg/70 px-1.5 py-0.5 text-text-lighter",
+      "h-auto max-w-32 shrink-0 truncate rounded-full border-border/70 bg-secondary-bg/70 text-text-lighter",
       className,
     )}
     {...props}

@@ -8,9 +8,18 @@ import {
   ArrowClockwiseIcon as RefreshCw,
   TrashIcon as Trash2,
 } from "@phosphor-icons/react";
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   CommandEmpty,
@@ -141,6 +150,7 @@ const GitBranchManager = ({
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const commandInputRef = useRef<HTMLInputElement>(null);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
@@ -227,7 +237,7 @@ const GitBranchManager = ({
 
     window.addEventListener(openEventName, handleOpenFromPalette);
     return () => window.removeEventListener(openEventName, handleOpenFromPalette);
-  }, [openEventName, paletteTarget, repoPath, loadBranches]);
+  }, [openEventName, paletteTarget, repoPath, loadBranches, loadWorktrees]);
 
   useEffect(() => {
     if (!isDropdownOpen) {
@@ -410,6 +420,18 @@ const GitBranchManager = ({
     onRepositoryChange?.(useRepositoryStore.getState().activeRepoPath);
   };
 
+  const focusCommandInput = useCallback(() => {
+    requestAnimationFrame(() => commandInputRef.current?.focus());
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tab: GitBranchManagerTab) => {
+      setActiveTab(tab);
+      focusCommandInput();
+    },
+    [focusCommandInput],
+  );
+
   if (!currentBranch) {
     return null;
   }
@@ -458,21 +480,21 @@ const GitBranchManager = ({
       label: "Repositories",
       icon: <FolderOpen className={gitCommandIconClassName} />,
       isActive: activeTab === "repositories",
-      onClick: () => setActiveTab("repositories"),
+      onClick: () => handleTabChange("repositories"),
     },
     {
       id: "branches",
       label: "Branches",
       icon: <GitBranch className={gitCommandIconClassName} />,
       isActive: activeTab === "branches",
-      onClick: () => setActiveTab("branches"),
+      onClick: () => handleTabChange("branches"),
     },
     {
       id: "worktrees",
       label: "Worktrees",
       icon: <GitFork className={gitCommandIconClassName} />,
       isActive: activeTab === "worktrees",
-      onClick: () => setActiveTab("worktrees"),
+      onClick: () => handleTabChange("worktrees"),
     },
   ];
 
@@ -536,6 +558,7 @@ const GitBranchManager = ({
         query={branchQuery}
         onQueryChange={setBranchQuery}
         onInputKeyDown={handleCommandKeyDown}
+        inputRef={commandInputRef}
         placeholder={
           activeTab === "branches"
             ? "Search branches..."
@@ -584,25 +607,22 @@ const GitBranchManager = ({
         }
       >
         <CommandList>
-          {activeTab === "branches" && branches.length === 0 ? (
-            <CommandEmpty>No branches found</CommandEmpty>
+          {activeTab === "branches" && !createBranchName && filteredBranches.length === 0 ? (
+            <CommandEmpty>
+              {branchQuery.trim() ? "No matching branches" : "No branches found"}
+            </CommandEmpty>
           ) : null}
-          {activeTab === "branches" && branches.length > 0 ? (
+          {activeTab === "branches" && (createBranchName || filteredBranches.length > 0) ? (
             <div className="space-y-1">
               {createBranchName ? (
-                <CommandItem
-                  type="button"
-                  onClick={() => void handleCreateBranch(createBranchName)}
+                <GitSelectorRow
+                  icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
+                  title={`Create new branch "${createBranchName}"`}
+                  onSelect={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
                   isSelected={selectedIndex === 0}
                   onMouseEnter={() => setSelectedIndex(0)}
-                  className="ui-font"
-                >
-                  <Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />
-                  <span className="ui-text-base min-w-0 flex-1 truncate text-text">
-                    Create new branch "{createBranchName}"
-                  </span>
-                </CommandItem>
+                />
               ) : null}
               {filteredBranches.map((branch, index) => (
                 <BranchRow
@@ -618,27 +638,26 @@ const GitBranchManager = ({
               ))}
             </div>
           ) : null}
-          {activeTab === "worktrees" && filteredWorktrees.length === 0 ? (
+          {activeTab === "worktrees" && !createWorktreePath && filteredWorktrees.length === 0 ? (
             <CommandEmpty>
-              {isLoadingWorktrees ? "Loading worktrees..." : "No worktrees found"}
+              {isLoadingWorktrees
+                ? "Loading worktrees..."
+                : branchQuery.trim()
+                  ? "No matching worktrees"
+                  : "No worktrees found"}
             </CommandEmpty>
           ) : null}
-          {activeTab === "worktrees" && worktrees.length > 0 ? (
+          {activeTab === "worktrees" && (createWorktreePath || filteredWorktrees.length > 0) ? (
             <div className="space-y-1">
               {createWorktreePath ? (
-                <CommandItem
-                  type="button"
-                  onClick={() => void handleCreateWorktree(createWorktreePath)}
+                <GitSelectorRow
+                  icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
+                  title={`Create worktree "${createWorktreePath}"`}
+                  onSelect={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoadingWorktrees}
                   isSelected={selectedIndex === 0}
                   onMouseEnter={() => setSelectedIndex(0)}
-                  className="ui-font"
-                >
-                  <Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />
-                  <span className="ui-text-base min-w-0 flex-1 truncate text-text">
-                    Create worktree "{createWorktreePath}"
-                  </span>
-                </CommandItem>
+                />
               ) : null}
               {filteredWorktrees.map((worktree, index) => (
                 <WorktreeRow
@@ -677,40 +696,165 @@ const GitBranchManager = ({
             </div>
           ) : null}
         </CommandList>
-        {activeTab === "repositories" ? (
-          <CommandFooter>
-            <CommandFooterAction
-              type="button"
-              onClick={() => void handleBrowseRepository()}
-              disabled={isSelectingRepo}
-            >
-              <Plus />
-              {isSelectingRepo ? "Adding..." : "Add"}
-            </CommandFooterAction>
-            <CommandFooterAction
-              type="button"
-              onClick={() => void refreshWorkspaceRepositories()}
-              disabled={isDiscoveringRepos}
-            >
-              <RefreshCw />
-              Refresh
-            </CommandFooterAction>
-            {manualRepoPaths.length > 0 ? (
-              <CommandFooterAction type="button" onClick={handleClearAddedRepositories}>
-                Clear Added
+        <CommandFooter>
+          {activeTab === "branches" ? (
+            <>
+              <CommandFooterAction
+                type="button"
+                onClick={() => createBranchName && void handleCreateBranch(createBranchName)}
+                disabled={!createBranchName || isLoading}
+              >
+                <Plus />
+                New Branch
               </CommandFooterAction>
-            ) : null}
-            {selectionError ? (
-              <span className="ui-text-base min-w-0 flex-1 truncate text-error/90">
-                {selectionError}
-              </span>
-            ) : null}
-          </CommandFooter>
-        ) : null}
+              <CommandFooterAction
+                type="button"
+                onClick={() => void loadBranches()}
+                disabled={isLoading}
+              >
+                <RefreshCw />
+                Refresh
+              </CommandFooterAction>
+            </>
+          ) : null}
+          {activeTab === "worktrees" ? (
+            <>
+              <CommandFooterAction
+                type="button"
+                onClick={() => createWorktreePath && void handleCreateWorktree(createWorktreePath)}
+                disabled={!createWorktreePath || isLoadingWorktrees}
+              >
+                <Plus />
+                {isLoadingWorktrees ? "Adding..." : "Add"}
+              </CommandFooterAction>
+              <CommandFooterAction
+                type="button"
+                onClick={() => void loadWorktrees()}
+                disabled={isLoadingWorktrees}
+              >
+                <RefreshCw />
+                Refresh
+              </CommandFooterAction>
+            </>
+          ) : null}
+          {activeTab === "repositories" ? (
+            <>
+              <CommandFooterAction
+                type="button"
+                onClick={() => void handleBrowseRepository()}
+                disabled={isSelectingRepo}
+              >
+                <Plus />
+                {isSelectingRepo ? "Adding..." : "Add"}
+              </CommandFooterAction>
+              <CommandFooterAction
+                type="button"
+                onClick={() => void refreshWorkspaceRepositories()}
+                disabled={isDiscoveringRepos}
+              >
+                <RefreshCw />
+                Refresh
+              </CommandFooterAction>
+              {manualRepoPaths.length > 0 ? (
+                <CommandFooterAction type="button" onClick={handleClearAddedRepositories}>
+                  Clear Added
+                </CommandFooterAction>
+              ) : null}
+              {selectionError ? (
+                <span className="ui-text-base min-w-0 flex-1 truncate text-error/90">
+                  {selectionError}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+        </CommandFooter>
       </GitCommandSurface>
     </>
   );
 };
+
+interface GitSelectorRowProps {
+  icon: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  accessory?: ReactNode;
+  action?: ReactNode;
+  isCurrent?: boolean;
+  isSelected: boolean;
+  disabled?: boolean;
+  onMouseEnter: () => void;
+  onSelect: () => void;
+  titleClassName?: string;
+  descriptionClassName?: string;
+}
+
+function GitSelectorRow({
+  icon,
+  title,
+  description,
+  accessory,
+  action,
+  isCurrent = false,
+  isSelected,
+  disabled = false,
+  onMouseEnter,
+  onSelect,
+  titleClassName,
+  descriptionClassName,
+}: GitSelectorRowProps) {
+  return (
+    <CommandItem
+      as="div"
+      isSelected={isSelected}
+      disabled={disabled}
+      onMouseEnter={onMouseEnter}
+      onClick={onSelect}
+      className={cn(
+        "group ui-font min-h-9 gap-2.5 px-3 py-2",
+        isCurrent ? "text-text" : "text-text-lighter hover:text-text",
+      )}
+    >
+      {icon}
+      <span className="min-w-0 flex flex-1 items-center gap-1.5">
+        <span className={cn("ui-text-base min-w-0 truncate text-text", titleClassName)}>
+          {title}
+        </span>
+        {description ? (
+          <span
+            className={cn(
+              "ui-text-base min-w-0 flex-1 truncate text-text-lighter/75",
+              descriptionClassName,
+            )}
+          >
+            {description}
+          </span>
+        ) : null}
+      </span>
+      {accessory}
+      {action}
+    </CommandItem>
+  );
+}
+
+function GitCurrentBadge() {
+  return (
+    <Badge
+      variant="accent"
+      size="compact"
+      className="shrink-0 border border-success/30 bg-success/10 text-success"
+    >
+      current
+    </Badge>
+  );
+}
+
+function GitSecondaryBadge({ children }: { children: ReactNode }) {
+  return (
+    <Badge variant="default" size="compact" className="shrink-0 text-text-lighter/75">
+      {children}
+    </Badge>
+  );
+}
 
 function BranchRow({
   branch,
@@ -729,68 +873,51 @@ function BranchRow({
   onSelect: () => void;
   onDelete: () => void;
 }) {
-  const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (isLoading) return;
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onSelect();
-  };
-
   return (
-    <div
-      role="button"
-      tabIndex={isLoading ? -1 : 0}
-      aria-disabled={isLoading}
+    <GitSelectorRow
+      icon={
+        isCurrent ? (
+          <Check className={cn(gitCommandIconClassName, "text-success")} />
+        ) : (
+          <GitBranch className={cn(gitCommandIconClassName, "text-text-lighter")} />
+        )
+      }
+      title={branch}
+      isCurrent={isCurrent}
+      isSelected={isSelected}
+      disabled={isLoading}
       onMouseEnter={onMouseEnter}
-      onClick={() => {
-        if (!isLoading) {
-          onSelect();
-        }
-      }}
-      onKeyDown={handleSelectKeyDown}
-      className={cn(
-        "group ui-font ui-text-base mb-1 flex min-h-7 w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-1.5 text-left leading-[1.35] transition-colors",
-        isSelected ? "bg-selected text-text" : "bg-transparent text-text hover:bg-hover",
-        isCurrent ? "text-text" : "text-text-lighter hover:text-text",
-        isLoading && "cursor-not-allowed opacity-50",
-      )}
-    >
-      {isCurrent ? (
-        <Check className={cn(gitCommandIconClassName, "text-success")} />
-      ) : (
-        <GitBranch className={cn(gitCommandIconClassName, "text-text-lighter")} />
-      )}
-      <span className="ui-text-base min-w-0 flex-1 truncate text-text">{branch}</span>
-      {isCurrent ? (
-        <span className="ui-text-base ml-auto shrink-0 text-success">current</span>
-      ) : null}
-      {!isCurrent ? (
-        <Button
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onDelete();
-          }}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          disabled={isLoading}
-          variant="ghost"
-          compact
-          className={cn(
-            "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
-            "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
-            "disabled:opacity-50 sm:group-hover:opacity-100",
-          )}
-          tooltip={`Delete ${branch}`}
-          aria-label={`Delete branch ${branch}`}
-          type="button"
-        >
-          <Trash2 />
-        </Button>
-      ) : null}
-    </div>
+      onSelect={onSelect}
+      accessory={isCurrent ? <GitCurrentBadge /> : null}
+      action={
+        !isCurrent ? (
+          <Button
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onDelete();
+            }}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            disabled={isLoading}
+            variant="ghost"
+            compact
+            className={cn(
+              "text-git-deleted opacity-100 transition-opacity sm:opacity-0",
+              "hover:bg-git-deleted/10 hover:opacity-80 hover:text-git-deleted",
+              "disabled:opacity-50 sm:group-hover:opacity-100",
+            )}
+            tooltip={`Delete ${branch}`}
+            aria-label={`Delete branch ${branch}`}
+            type="button"
+          >
+            <Trash2 />
+          </Button>
+        ) : null
+      }
+    />
   );
 }
 
@@ -814,28 +941,28 @@ function RepositoryRow({
   const relativePath = workspaceRootPath ? getRelativePath(repoPath, workspaceRootPath) : repoPath;
 
   return (
-    <CommandItem
-      type="button"
-      onClick={onSelect}
-      onMouseEnter={onMouseEnter}
+    <GitSelectorRow
+      icon={
+        isCurrent ? (
+          <Check className={cn(gitCommandIconClassName, "text-success")} />
+        ) : (
+          <FolderOpen className={cn(gitCommandIconClassName, "text-text-lighter")} />
+        )
+      }
+      title={getFolderName(repoPath)}
+      description={relativePath === "." ? repoPath : relativePath}
+      isCurrent={isCurrent}
       isSelected={isSelected}
-      className={cn("group ui-font", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
-    >
-      {isCurrent ? (
-        <Check className={cn(gitCommandIconClassName, "text-success")} />
-      ) : (
-        <FolderOpen className={cn(gitCommandIconClassName, "text-text-lighter")} />
-      )}
-      <span className="min-w-0 flex flex-1 items-baseline gap-1.5">
-        <span className="ui-text-base min-w-0 max-w-[45%] shrink-0 truncate text-text">
-          {getFolderName(repoPath)}
+      onMouseEnter={onMouseEnter}
+      onSelect={onSelect}
+      titleClassName="max-w-[45%] shrink-0"
+      accessory={
+        <span className="flex shrink-0 items-center gap-1.5">
+          {isCurrent ? <GitCurrentBadge /> : null}
+          {isAdded ? <GitSecondaryBadge>added</GitSecondaryBadge> : null}
         </span>
-        <span className="ui-text-base min-w-0 flex-1 truncate text-text-lighter/75">
-          {relativePath === "." ? repoPath : relativePath}
-        </span>
-      </span>
-      {isAdded ? <span className="ui-text-base shrink-0 text-text-lighter/75">added</span> : null}
-    </CommandItem>
+      }
+    />
   );
 }
 
@@ -853,28 +980,28 @@ function WorktreeRow({
   onSelect: () => void;
 }) {
   return (
-    <CommandItem
+    <GitSelectorRow
+      icon={
+        isCurrent ? (
+          <Check className={cn(gitCommandIconClassName, "text-success")} />
+        ) : (
+          <GitFork className={cn(gitCommandIconClassName, "text-text-lighter")} />
+        )
+      }
+      title={getFolderName(worktree.path)}
+      description={
+        <>
+          <GitBranch className={gitCommandIconClassName} />
+          <span className="truncate">{getBranchLabel(worktree)}</span>
+        </>
+      }
+      isCurrent={isCurrent}
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
-      onClick={onSelect}
-      className={cn("group ui-font", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
-    >
-      {isCurrent ? (
-        <Check className={cn(gitCommandIconClassName, "text-success")} />
-      ) : (
-        <GitFork className={cn(gitCommandIconClassName, "text-text-lighter")} />
-      )}
-      <span className="ui-text-base min-w-0 flex-1 truncate text-text">
-        {getFolderName(worktree.path)}
-      </span>
-      <span className="ui-text-base flex max-w-[45%] shrink min-w-0 items-center gap-1.5 text-text-lighter/80">
-        <GitBranch className={gitCommandIconClassName} />
-        <span className="truncate">{getBranchLabel(worktree)}</span>
-      </span>
-      {isCurrent ? (
-        <span className="ui-text-base ml-auto shrink-0 text-success">current</span>
-      ) : null}
-    </CommandItem>
+      onSelect={onSelect}
+      descriptionClassName="flex max-w-[45%] shrink items-center gap-1.5 text-text-lighter/80"
+      accessory={isCurrent ? <GitCurrentBadge /> : null}
+    />
   );
 }
 
