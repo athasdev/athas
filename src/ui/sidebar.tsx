@@ -526,7 +526,10 @@ export function SidebarSectionSwitcher({
           onChange(item.id);
           setIsDropdownOpen(false);
         },
-        className: item.id === value ? "bg-hover text-text" : undefined,
+        className: cn(
+          "h-7 justify-start gap-2 rounded-[9px] px-2 py-0",
+          item.id === value && "bg-hover text-text",
+        ),
       })),
     [items, onChange, value],
   );
@@ -575,6 +578,7 @@ export function SidebarSectionSwitcher({
             anchorSide="bottom"
             anchorAlign="start"
             items={dropdownItems}
+            className="!min-w-0 w-max max-w-[min(220px,calc(100vw-16px))] rounded-[14px] p-1"
             onClose={() => setIsDropdownOpen(false)}
           />
         </>
