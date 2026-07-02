@@ -27,9 +27,7 @@ import Command, {
   CommandHeader,
   CommandHeaderBadge,
   CommandInput,
-  CommandItem,
-  CommandItemMeta,
-  CommandItemTitle,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { LoadingIndicator } from "@/ui/loading";
@@ -402,17 +400,15 @@ export function ExtensionGenerationCommand() {
     onSelect: () => void,
     Icon?: ContributionOption["icon"],
   ) => (
-    <CommandItem
+    <CommandItemRow
       key={option.id}
       isSelected={index === selectedIndex}
       onClick={onSelect}
       onMouseEnter={() => setSelectedIndex(index)}
-      className="h-8 px-3 py-1"
-    >
-      {Icon ? <Icon className="size-4 shrink-0 text-text-lighter" /> : null}
-      <CommandItemTitle className="flex-1">{option.label}</CommandItemTitle>
-      <CommandItemMeta className="ml-auto max-w-44 truncate">{option.description}</CommandItemMeta>
-    </CommandItem>
+      icon={Icon ? <Icon className="size-4 text-text-lighter" /> : undefined}
+      title={option.label}
+      description={option.description}
+    />
   );
 
   return (

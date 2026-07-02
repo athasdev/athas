@@ -8,7 +8,7 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -270,33 +270,31 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
             <CommandEmpty>No import option matches "{query}".</CommandEmpty>
           ) : (
             filteredCapabilities.map((capability, index) => (
-              <CommandItem
+              <CommandItemRow
                 key={capability.id}
                 isSelected={index === selectedIndex}
                 onMouseEnter={() => setSelectedIndex(index)}
                 onClick={() => handleToggleCapability(capability)}
-                className="h-8 items-center justify-between px-3"
-              >
-                <span className="ui-font ui-text-base truncate text-text">{capability.label}</span>
-                <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-accent">
-                  {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
-                </span>
-              </CommandItem>
+                title={capability.label}
+                accessory={
+                  <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-accent">
+                    {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
+                  </span>
+                }
+              />
             ))
           )
         ) : filteredSources.length === 0 ? (
           <CommandEmpty>No import source matches "{query}".</CommandEmpty>
         ) : (
           filteredSources.map((source, index) => (
-            <CommandItem
+            <CommandItemRow
               key={source.id}
               isSelected={index === selectedIndex}
               onMouseEnter={() => setSelectedIndex(index)}
               onClick={() => handleSelectSource(source)}
-              className="h-8 items-center px-3"
-            >
-              <span className="ui-font ui-text-base truncate text-text">{source.name}</span>
-            </CommandItem>
+              title={source.name}
+            />
           ))
         )}
       </CommandList>

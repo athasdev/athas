@@ -31,9 +31,8 @@ import Command, {
   CommandFooterAction,
   CommandHeader,
   CommandInput,
-  CommandItem,
-  CommandItemMeta,
-  CommandItemTitle,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { toast } from "@/ui/toast";
@@ -305,41 +304,38 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                 const entryIndex = getEntryIndex(`recent:${folder.path}`);
 
                 return (
-                  <CommandItem
+                  <CommandItemRow
                     key={folder.path}
                     isSelected={selectedIndex === entryIndex}
                     onMouseEnter={() => setSelectedIndex(entryIndex)}
                     onClick={() => handleRecentFolderClick(folder)}
-                    className={cn("px-3 py-1.5", folder.missing && "text-text-lighter")}
-                  >
-                    {iconPath ? (
-                      <img
-                        src={convertFileSrc(iconPath)}
-                        alt=""
-                        className="shrink-0 rounded-sm object-contain"
-                        style={{
-                          width: "var(--app-ui-font-size)",
-                          height: "var(--app-ui-font-size)",
-                        }}
-                      />
-                    ) : folder.missing ? (
-                      <WarningCircle className="shrink-0 text-warning" />
-                    ) : (
-                      <Folder className="shrink-0 text-text-lighter" />
-                    )}
-                    <div className="flex min-w-0 flex-1 items-baseline">
-                      <CommandItemTitle>{folder.name}</CommandItemTitle>
-                      <CommandItemMeta>{folder.path}</CommandItemMeta>
-                    </div>
-                    {folder.pinned ? (
-                      <PushPin className="shrink-0 fill-current text-accent" />
-                    ) : null}
-                    {folder.missing ? (
-                      <span className="shrink-0 rounded-full bg-warning/10 px-1 py-0.5 font-medium ui-text-base text-warning">
-                        Missing
-                      </span>
-                    ) : null}
-                  </CommandItem>
+                    className={folder.missing ? "text-text-lighter" : undefined}
+                    icon={
+                      iconPath ? (
+                        <img
+                          src={convertFileSrc(iconPath)}
+                          alt=""
+                          className="rounded-sm object-contain"
+                          style={{
+                            width: "var(--app-ui-font-size)",
+                            height: "var(--app-ui-font-size)",
+                          }}
+                        />
+                      ) : folder.missing ? (
+                        <WarningCircle className="text-warning" />
+                      ) : (
+                        <Folder className="text-text-lighter" />
+                      )
+                    }
+                    title={folder.name}
+                    description={folder.path}
+                    accessory={
+                      <>
+                        {folder.pinned ? <PushPin className="fill-current text-accent" /> : null}
+                        {folder.missing ? <CommandItemBadge>Missing</CommandItemBadge> : null}
+                      </>
+                    }
+                  />
                 );
               })}
             </div>
@@ -351,39 +347,43 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                 const entryIndex = getEntryIndex(`remote:${connection.id}`);
 
                 return (
-                  <CommandItem
+                  <CommandItemRow
                     key={connection.id}
                     isSelected={selectedIndex === entryIndex}
                     onMouseEnter={() => setSelectedIndex(entryIndex)}
                     onClick={() => handleConnect(connection.id)}
-                    className={cn(
-                      "px-3 py-1.5",
-                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
-                    )}
+                    className={
+                      connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : undefined
+                    }
                     disabled={!!connectingMap[connection.id]}
-                  >
-                    <Server className="shrink-0 text-text-lighter" />
-                    <div className="flex min-w-0 flex-1 items-baseline">
-                      <CommandItemTitle>{connection.name}</CommandItemTitle>
-                      <CommandItemMeta>{connection.type.toUpperCase()}</CommandItemMeta>
-                      <CommandItemMeta>
-                        {connectingMap[connection.id]
-                          ? "Connecting..."
-                          : statusMap[connection.id] === "error"
-                            ? "Connection failed"
-                            : `${connection.username}@${connection.host}`}
-                      </CommandItemMeta>
-                    </div>
-                    <span
-                      className={cn(
-                        "size-2 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-success" : "bg-text-lighter/40",
-                      )}
-                    />
-                    <span className="sr-only">
-                      {connection.isConnected ? "Connected" : "Disconnected"}
-                    </span>
-                  </CommandItem>
+                    icon={<Server className="text-text-lighter" />}
+                    title={connection.name}
+                    description={
+                      <>
+                        <span>{connection.type.toUpperCase()}</span>
+                        <span>
+                          {connectingMap[connection.id]
+                            ? "Connecting..."
+                            : statusMap[connection.id] === "error"
+                              ? "Connection failed"
+                              : `${connection.username}@${connection.host}`}
+                        </span>
+                      </>
+                    }
+                    accessory={
+                      <>
+                        <span
+                          className={cn(
+                            "size-2 rounded-full",
+                            connection.isConnected ? "bg-success" : "bg-text-lighter/40",
+                          )}
+                        />
+                        <span className="sr-only">
+                          {connection.isConnected ? "Connected" : "Disconnected"}
+                        </span>
+                      </>
+                    }
+                  />
                 );
               })}
             </div>
@@ -395,28 +395,26 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                 const entryIndex = getEntryIndex(`wsl:${distribution.name}`);
 
                 return (
-                  <CommandItem
+                  <CommandItemRow
                     key={distribution.name}
                     isSelected={selectedIndex === entryIndex}
                     onMouseEnter={() => setSelectedIndex(entryIndex)}
                     onClick={() => handleOpenWslDistribution(distribution)}
-                    className="px-3 py-1.5"
-                  >
-                    <Server className="shrink-0 text-text-lighter" />
-                    <div className="flex min-w-0 flex-1 items-baseline">
-                      <CommandItemTitle>{distribution.name}</CommandItemTitle>
-                      <CommandItemMeta>WSL</CommandItemMeta>
-                      <CommandItemMeta>
-                        {distribution.state ?? "Installed"}
-                        {distribution.version ? `, WSL ${distribution.version}` : ""}
-                      </CommandItemMeta>
-                    </div>
-                    {distribution.is_default ? (
-                      <span className="shrink-0 rounded-full bg-accent/10 px-1 py-0.5 font-medium ui-text-base text-accent">
-                        Default
-                      </span>
-                    ) : null}
-                  </CommandItem>
+                    icon={<Server className="text-text-lighter" />}
+                    title={distribution.name}
+                    description={
+                      <>
+                        <span>WSL</span>
+                        <span>
+                          {distribution.state ?? "Installed"}
+                          {distribution.version ? `, WSL ${distribution.version}` : ""}
+                        </span>
+                      </>
+                    }
+                    accessory={
+                      distribution.is_default ? <CommandItemBadge>Default</CommandItemBadge> : null
+                    }
+                  />
                 );
               })}
             </div>

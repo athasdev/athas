@@ -23,11 +23,7 @@ import {
   CommandHeaderAction,
   CommandInput,
   CommandItemBadge,
-  CommandItemContent,
-  CommandItemDescription,
-  CommandItemIcon,
-  CommandItem,
-  CommandItemTitle,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
@@ -461,12 +457,12 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               </CommandEmpty>
             ) : (
               installedDbTypes.map((type) => (
-                <CommandItem key={type} onClick={() => chooseProvider(type)}>
-                  <CommandItemIcon>
-                    <Database className="size-4" weight="duotone" />
-                  </CommandItemIcon>
-                  <CommandItemTitle>{PROVIDER_REGISTRY[type].label}</CommandItemTitle>
-                </CommandItem>
+                <CommandItemRow
+                  key={type}
+                  onClick={() => chooseProvider(type)}
+                  icon={<Database className="size-4" weight="duotone" />}
+                  title={PROVIDER_REGISTRY[type].label}
+                />
               ))
             )}
           </>
@@ -567,61 +563,53 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               const status = getActiveStatus(connection.id);
               const isBusy = busyConnectionId === connection.id || status === "connecting";
               return (
-                <CommandItem key={connection.id} as="div" className="group" disabled={isBusy}>
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                    onClick={() => void openConnection(connection)}
-                    disabled={isBusy}
-                  >
-                    <CommandItemIcon>
-                      <Database className="size-4" weight="duotone" />
-                    </CommandItemIcon>
-                    <CommandItemContent>
-                      <CommandItemTitle>{connection.name}</CommandItemTitle>
-                      <CommandItemDescription>
-                        {getConnectionSubtitle(connection)}
-                      </CommandItemDescription>
-                    </CommandItemContent>
-                  </button>
-                  {status === "connected" ? (
-                    <CommandItemBadge className="flex items-center gap-1 text-accent">
-                      <PlugsConnected className="size-3.5" weight="duotone" />
-                      Connected
-                    </CommandItemBadge>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    compact
-                    aria-label={`Delete ${connection.name}`}
-                    className={cn(
-                      "size-6 shrink-0 p-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
-                      isBusy && "pointer-events-none opacity-40",
-                    )}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleDeleteConnection(connection.id);
-                    }}
-                  >
-                    <Trash />
-                  </Button>
-                </CommandItem>
+                <CommandItemRow
+                  key={connection.id}
+                  as="div"
+                  className="group"
+                  disabled={isBusy}
+                  onClick={() => void openConnection(connection)}
+                  icon={<Database className="size-4" weight="duotone" />}
+                  title={connection.name}
+                  description={getConnectionSubtitle(connection)}
+                  accessory={
+                    status === "connected" ? (
+                      <CommandItemBadge>
+                        <PlugsConnected className="size-3.5" weight="duotone" />
+                        Connected
+                      </CommandItemBadge>
+                    ) : null
+                  }
+                  action={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      compact
+                      aria-label={`Delete ${connection.name}`}
+                      className={cn(
+                        "size-6 shrink-0 p-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
+                        isBusy && "pointer-events-none opacity-40",
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleDeleteConnection(connection.id);
+                      }}
+                    >
+                      <Trash />
+                    </Button>
+                  }
+                />
               );
             })}
             {detectedWorkspaceDatabases.map((file) => (
-              <CommandItem key={file.id} onClick={() => openDetectedDatabase(file)}>
-                <CommandItemIcon>
-                  <Database className="size-4" weight="duotone" />
-                </CommandItemIcon>
-                <CommandItemContent>
-                  <CommandItemTitle>{file.name}</CommandItemTitle>
-                  <CommandItemDescription>
-                    {PROVIDER_REGISTRY[file.dbType].label} / {file.relativePath}
-                  </CommandItemDescription>
-                </CommandItemContent>
-                <CommandItemBadge>Detected</CommandItemBadge>
-              </CommandItem>
+              <CommandItemRow
+                key={file.id}
+                onClick={() => openDetectedDatabase(file)}
+                icon={<Database className="size-4" weight="duotone" />}
+                title={file.name}
+                description={`${PROVIDER_REGISTRY[file.dbType].label} / ${file.relativePath}`}
+                accessory={<CommandItemBadge>Detected</CommandItemBadge>}
+              />
             ))}
           </div>
         )}
