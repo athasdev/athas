@@ -15,7 +15,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { WorkflowRunDetails, WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
@@ -575,40 +574,37 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
           }
           actions={
             <>
-              <Tooltip content="Refresh action run" side="bottom">
-                <Button
-                  onClick={() => void fetchWorkflowRun(true)}
-                  variant="ghost"
-                  compact
-                  aria-label="Refresh action run"
-                >
-                  {isLoading && details ? (
-                    <LoadingIndicator label="Loading action run" compact />
-                  ) : (
-                    <RefreshCw />
-                  )}
-                </Button>
-              </Tooltip>
-              <Tooltip content="Open on GitHub" side="bottom">
-                <Button
-                  onClick={handleOpenInBrowser}
-                  variant="ghost"
-                  aria-label="Open action run on GitHub"
-                  compact
-                >
-                  <GithubLogo />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Copy run link" side="bottom">
-                <Button
-                  onClick={handleCopyRunLink}
-                  variant="ghost"
-                  aria-label="Copy run link"
-                  compact
-                >
-                  <Copy />
-                </Button>
-              </Tooltip>
+              <Button
+                onClick={() => void fetchWorkflowRun(true)}
+                variant="ghost"
+                tooltip="Refresh action run"
+                tooltipSide="bottom"
+                compact
+              >
+                {isLoading && details ? (
+                  <LoadingIndicator label="Loading action run" compact />
+                ) : (
+                  <RefreshCw />
+                )}
+              </Button>
+              <Button
+                onClick={handleOpenInBrowser}
+                variant="ghost"
+                tooltip="Open action run on GitHub"
+                tooltipSide="bottom"
+                compact
+              >
+                <GithubLogo />
+              </Button>
+              <Button
+                onClick={handleCopyRunLink}
+                variant="ghost"
+                tooltip="Copy run link"
+                tooltipSide="bottom"
+                compact
+              >
+                <Copy />
+              </Button>
             </>
           }
         />
@@ -755,7 +751,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               onClick={handleToggleLogSearch}
                               variant="ghost"
                               compact
-                              aria-label={isLogSearchVisible ? "Hide log search" : "Search logs"}
+                              tooltip={isLogSearchVisible ? "Hide log search" : "Search logs"}
                             >
                               <Search />
                             </Button>
@@ -765,7 +761,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="ghost"
                                 compact
-                                aria-label="Refresh job logs"
+                                tooltip="Refresh job logs"
                                 disabled={!areJobLogsDownloadable(job)}
                               >
                                 {loadingJobLogId === job.id ? (
@@ -779,7 +775,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               type="button"
                               onClick={handleCopySelectedLogs}
                               variant="ghost"
-                              aria-label="Copy job logs"
+                              tooltip="Copy job logs"
                               disabled={!job.id || !selectedStepLogs}
                               compact
                             >

@@ -14,7 +14,6 @@ import {
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
-import Tooltip from "@/ui/tooltip";
 import type { PullRequestDetails } from "../types/github.types";
 import {
   AssigneesList,
@@ -108,111 +107,115 @@ export function GitHubPRViewerHeader({
       }
       actions={
         <>
-          <Tooltip content="Refresh PR data" side="bottom">
-            <Button
-              onClick={onRefresh}
-              disabled={isRefreshingDetails}
-              variant="ghost"
-              aria-label="Refresh PR data"
-              compact
-            >
-              {isRefreshingDetails ? (
-                <LoadingIndicator label="Refreshing PR" compact />
-              ) : (
-                <RefreshCw />
-              )}
-            </Button>
-          </Tooltip>
-          <Tooltip content="Checkout PR branch" side="bottom">
-            <Button onClick={onCheckout} variant="ghost" aria-label="Checkout PR branch" compact>
-              <GitBranch />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Edit pull request" side="bottom">
-            <Button onClick={onEdit} variant="ghost" aria-label="Edit pull request" compact>
-              <Pencil />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Add comment" side="bottom">
-            <Button
-              onClick={onComment}
-              disabled={isClosed}
-              variant="ghost"
-              aria-label="Add PR comment"
-              compact
-            >
-              <MessageCircle />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Approve pull request" side="bottom">
-            <Button
-              onClick={onApprove}
-              disabled={isClosed}
-              variant="ghost"
-              aria-label="Approve pull request"
-              compact
-            >
-              <CheckCircle2 />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Request changes" side="bottom">
-            <Button
-              onClick={onRequestChanges}
-              disabled={isClosed}
-              variant="ghost"
-              aria-label="Request pull request changes"
-              compact
-            >
-              <XCircle />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Merge pull request" side="bottom">
-            <Button
-              onClick={onMerge}
-              disabled={!canMerge}
-              variant="ghost"
-              aria-label="Merge pull request"
-              compact
-            >
-              <GitMerge />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Close pull request" side="bottom">
-            <Button
-              onClick={onClosePR}
-              disabled={isClosed}
-              variant="ghost"
-              aria-label="Close pull request"
-              compact
-            >
-              <XCircle />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Open on GitHub" side="bottom">
-            <Button
-              onClick={onOpenInBrowser}
-              variant="ghost"
-              aria-label="Open pull request in browser"
-              compact
-            >
-              <GithubLogo />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Copy PR link" side="bottom">
-            <Button onClick={onCopyPRLink} variant="ghost" aria-label="Copy PR link" compact>
-              <Copy />
-            </Button>
-          </Tooltip>
-          <Tooltip content="Copy branch name" side="bottom">
-            <Button
-              onClick={onCopyBranchName}
-              variant="ghost"
-              aria-label="Copy branch name"
-              compact
-            >
-              <GitBranch />
-            </Button>
-          </Tooltip>
+          <Button
+            onClick={onRefresh}
+            disabled={isRefreshingDetails}
+            variant="ghost"
+            tooltip="Refresh PR data"
+            tooltipSide="bottom"
+            compact
+          >
+            {isRefreshingDetails ? (
+              <LoadingIndicator label="Refreshing PR" compact />
+            ) : (
+              <RefreshCw />
+            )}
+          </Button>
+          <Button
+            onClick={onCheckout}
+            variant="ghost"
+            tooltip="Checkout PR branch"
+            tooltipSide="bottom"
+            compact
+          >
+            <GitBranch />
+          </Button>
+          <Button
+            onClick={onEdit}
+            variant="ghost"
+            tooltip="Edit pull request"
+            tooltipSide="bottom"
+            compact
+          >
+            <Pencil />
+          </Button>
+          <Button
+            onClick={onComment}
+            disabled={isClosed}
+            variant="ghost"
+            tooltip="Add PR comment"
+            tooltipSide="bottom"
+            compact
+          >
+            <MessageCircle />
+          </Button>
+          <Button
+            onClick={onApprove}
+            disabled={isClosed}
+            variant="ghost"
+            tooltip="Approve pull request"
+            tooltipSide="bottom"
+            compact
+          >
+            <CheckCircle2 />
+          </Button>
+          <Button
+            onClick={onRequestChanges}
+            disabled={isClosed}
+            variant="ghost"
+            tooltip="Request pull request changes"
+            tooltipSide="bottom"
+            compact
+          >
+            <XCircle />
+          </Button>
+          <Button
+            onClick={onMerge}
+            disabled={!canMerge}
+            variant="ghost"
+            tooltip="Merge pull request"
+            tooltipSide="bottom"
+            compact
+          >
+            <GitMerge />
+          </Button>
+          <Button
+            onClick={onClosePR}
+            disabled={isClosed}
+            variant="ghost"
+            tooltip="Close pull request"
+            tooltipSide="bottom"
+            compact
+          >
+            <XCircle />
+          </Button>
+          <Button
+            onClick={onOpenInBrowser}
+            variant="ghost"
+            tooltip="Open pull request in browser"
+            tooltipSide="bottom"
+            compact
+          >
+            <GithubLogo />
+          </Button>
+          <Button
+            onClick={onCopyPRLink}
+            variant="ghost"
+            tooltip="Copy PR link"
+            tooltipSide="bottom"
+            compact
+          >
+            <Copy />
+          </Button>
+          <Button
+            onClick={onCopyBranchName}
+            variant="ghost"
+            tooltip="Copy branch name"
+            tooltipSide="bottom"
+            compact
+          >
+            <GitBranch />
+          </Button>
         </>
       }
     >

@@ -12,7 +12,6 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
-import Tooltip from "@/ui/tooltip";
 import type { IssueDetails } from "../types/github.types";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
@@ -250,50 +249,46 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           }
           actions={
             <>
-              <Tooltip content="Refresh issue" side="bottom">
-                <Button
-                  onClick={() => void fetchIssue(true)}
-                  variant="ghost"
-                  compact
-                  aria-label="Refresh issue"
-                >
-                  {isLoading && details ? (
-                    <LoadingIndicator label="Loading issue" compact />
-                  ) : (
-                    <RefreshCw />
-                  )}
-                </Button>
-              </Tooltip>
-              <Tooltip content="Open on GitHub" side="bottom">
-                <Button
-                  onClick={handleOpenInBrowser}
-                  variant="ghost"
-                  aria-label="Open issue on GitHub"
-                  compact
-                >
-                  <GithubLogo />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Edit issue" side="bottom">
-                <Button
-                  onClick={() => setIsEditingDetails(true)}
-                  variant="ghost"
-                  aria-label="Edit issue"
-                  compact
-                >
-                  <Pencil />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Copy issue link" side="bottom">
-                <Button
-                  onClick={handleCopyIssueLink}
-                  variant="ghost"
-                  aria-label="Copy issue link"
-                  compact
-                >
-                  <Copy />
-                </Button>
-              </Tooltip>
+              <Button
+                onClick={() => void fetchIssue(true)}
+                variant="ghost"
+                tooltip="Refresh issue"
+                tooltipSide="bottom"
+                compact
+              >
+                {isLoading && details ? (
+                  <LoadingIndicator label="Loading issue" compact />
+                ) : (
+                  <RefreshCw />
+                )}
+              </Button>
+              <Button
+                onClick={handleOpenInBrowser}
+                variant="ghost"
+                tooltip="Open issue on GitHub"
+                tooltipSide="bottom"
+                compact
+              >
+                <GithubLogo />
+              </Button>
+              <Button
+                onClick={() => setIsEditingDetails(true)}
+                variant="ghost"
+                tooltip="Edit issue"
+                tooltipSide="bottom"
+                compact
+              >
+                <Pencil />
+              </Button>
+              <Button
+                onClick={handleCopyIssueLink}
+                variant="ghost"
+                tooltip="Copy issue link"
+                tooltipSide="bottom"
+                compact
+              >
+                <Copy />
+              </Button>
             </>
           }
         >
