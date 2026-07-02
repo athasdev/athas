@@ -108,7 +108,35 @@ function bumpStableBase(version: ParsedVersion, bump: ReleaseBump): ParsedVersio
   }
 }
 
-function bumpVersion(currentVersion: string, args: string[]): string {
+function sameStableBase(left: ParsedVersion, right: ParsedVersion): boolean {
+  return left.major === right.major && left.minor === right.minor && left.patch === right.patch;
+}
+
+async function getLatestPreviewNumber(baseVersion: ParsedVersion): Promise<number> {
+  const base = `${baseVersion.major}.${baseVersion.minor}.${baseVersion.patch}`;
+  const result = await $`git tag --list ${`v${base}-preview.*`}`.quiet().nothrow();
+
+  if (result.exitCode !== 0) {
+    return 0;
+  }
+
+  const tags = result.stdout
+    .toString()
+    .trim()
+    .split("\n")
+    .filter((line) => line.length > 0);
+
+  return tags.reduce((latest, tag) => {
+    const version = parseVersion(tag.replace(/^v/, ""));
+    if (version.prerelease?.channel !== "preview" || !sameStableBase(version, baseVersion)) {
+      return latest;
+    }
+
+    return Math.max(latest, version.prerelease.number);
+  }, 0);
+}
+
+async function bumpVersion(currentVersion: string, args: string[]): Promise<string> {
   const current = parseVersion(currentVersion);
   const [channel = "stable", bump = "patch"] = args;
 
@@ -123,18 +151,19 @@ function bumpVersion(currentVersion: string, args: string[]): string {
   }
 
   if (channel === "preview") {
-    const shouldIncrementExisting =
+    const currentPreviewNumber =
       current.prerelease?.channel === "preview" &&
       bump === "patch" &&
-      current.major === baseVersion.major &&
-      current.minor === baseVersion.minor &&
-      current.patch === baseVersion.patch;
+      sameStableBase(current, baseVersion)
+        ? current.prerelease.number
+        : 0;
+    const latestPreviewNumber = await getLatestPreviewNumber(baseVersion);
 
     return formatVersion({
       ...baseVersion,
       prerelease: {
         channel: "preview",
-        number: shouldIncrementExisting ? current.prerelease.number + 1 : 1,
+        number: Math.max(currentPreviewNumber, latestPreviewNumber) + 1,
       },
     });
   }
@@ -238,7 +267,7 @@ async function release() {
 
   info(`Current version: ${currentVersion}`);
 
-  const newVersion = bumpVersion(currentVersion, releaseArgs);
+  const newVersion = await bumpVersion(currentVersion, releaseArgs);
   const parsedNewVersion = parseVersion(newVersion);
   info(`New version: ${newVersion}`);
 
