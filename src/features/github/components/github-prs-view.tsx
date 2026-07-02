@@ -49,7 +49,6 @@ import {
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
-import { cn } from "@/utils/cn";
 import { useGitHubStore } from "../stores/github.store";
 import type {
   IssueFilter,
@@ -126,9 +125,6 @@ const PRListItem = memo(
             name: `PR #${pr.number}`,
           });
         }}
-        className={cn(
-          "items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]",
-        )}
         active={isActive}
         leading={
           <GitHubAvatar
@@ -138,18 +134,14 @@ const PRListItem = memo(
             className="size-5"
           />
         }
+        description={`#${pr.number} by ${pr.author.login}`}
+        trailing={
+          <span className="editor-font max-w-40 truncate">
+            {pr.baseRef} &larr; {pr.headRef}
+          </span>
+        }
       >
-        <div className="min-w-0 flex-1">
-          <div className="ui-text-sm truncate text-text leading-4">{pr.title}</div>
-          <div className="ui-text-sm mt-1 text-text-lighter">{`#${pr.number} by ${pr.author.login}`}</div>
-          <div className="mt-1">
-            <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
-              <span className="min-w-0 truncate">{pr.baseRef}</span>
-              <span className="shrink-0 px-1">&larr;</span>
-              <span className="min-w-0 truncate">{pr.headRef}</span>
-            </span>
-          </div>
-        </div>
+        {pr.title}
       </SidebarListItem>
     );
   },

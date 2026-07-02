@@ -59,7 +59,6 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
       });
     }}
     active={isActive}
-    className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
     leading={
       <GitHubAvatar
         login={issue.author.login}
@@ -68,11 +67,9 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
         className="size-5"
       />
     }
+    description={`#${issue.number} by ${issue.author.login}`}
   >
-    <div className="min-w-0 flex-1">
-      <div className="ui-text-sm truncate leading-4 text-text">{issue.title}</div>
-      <div className="ui-text-sm mt-1 text-text-lighter">{`#${issue.number} by ${issue.author.login}`}</div>
-    </div>
+    {issue.title}
   </SidebarListItem>
 ));
 
