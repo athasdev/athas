@@ -22,7 +22,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
   const shortSha = commit.oid.slice(0, 7);
   const authorName = author?.login || author?.name || "Unknown";
   const avatarLogin = (author?.login || "").trim();
-  const canOpenCommit = Boolean((repoPath && commit.oid) || commit.url);
+  const canOpenCommit = Boolean(repoPath && commit.oid);
   const bodyPreview = commit.messageBody.replace(/\s+/g, " ").trim();
 
   const openCommitInBrowser = () => {
@@ -32,23 +32,21 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
   };
 
   const openCommit = async () => {
-    if (repoPath && commit.oid) {
-      const bufferId = await openCommitDiffBuffer({
-        repoPath,
-        commitHash: commit.oid,
-        message: commit.messageHeadline,
-        description: commit.messageBody,
-        author: authorName,
-        date: commit.authoredDate,
-      });
-
-      if (bufferId) {
-        return;
-      }
+    if (!repoPath || !commit.oid) {
+      toast.error("Commit diff is not available.");
+      return;
     }
 
-    if (commit.url) {
-      await openUrl(commit.url);
+    const bufferId = await openCommitDiffBuffer({
+      repoPath,
+      commitHash: commit.oid,
+      message: commit.messageHeadline,
+      description: commit.messageBody,
+      author: authorName,
+      date: commit.authoredDate,
+    });
+
+    if (bufferId) {
       return;
     }
 
