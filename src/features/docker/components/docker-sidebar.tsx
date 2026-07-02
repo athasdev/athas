@@ -595,25 +595,24 @@ function ComposeServiceRow({
           onOpenUrl={onOpenUrl}
         />
       }
-      contentClassName="overflow-hidden"
-    >
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <ResourceTitle>{service.name}</ResourceTitle>
-          <span
-            className={cn(
-              "ui-text-sm shrink-0 rounded-full px-1.5 py-0.5 capitalize",
-              getComposeServiceTone(service),
-            )}
-          >
-            {service.health ?? service.state}
-          </span>
-        </div>
-        <ResourceMeta>
+      description={
+        <>
           {service.containerName ?? service.status}
           {service.ports ? ` · ${service.ports}` : ""}
-        </ResourceMeta>
-      </div>
+        </>
+      }
+    >
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate">{service.name}</span>
+        <span
+          className={cn(
+            "ui-text-sm shrink-0 rounded-full px-1.5 py-0.5 capitalize",
+            getComposeServiceTone(service),
+          )}
+        >
+          {service.health ?? service.state}
+        </span>
+      </span>
     </SidebarListItem>
   );
 }
@@ -669,36 +668,46 @@ function ImageRow({
           </Button>
         </div>
       }
+      description={
+        <>
+          {image.size}
+          {image.createdSince ? ` · ${image.createdSince}` : ""}
+        </>
+      }
     >
-      <ResourceTitle>{label}</ResourceTitle>
-      <ResourceMeta>
-        {image.size}
-        {image.createdSince ? ` · ${image.createdSince}` : ""}
-      </ResourceMeta>
+      {label}
     </SidebarListItem>
   );
 }
 
 function VolumeRow({ volume }: { volume: DockerVolume }) {
   return (
-    <SidebarListItem leading={<VolumeIcon className="size-4 text-text-lighter" weight="duotone" />}>
-      <ResourceTitle>{volume.name}</ResourceTitle>
-      <ResourceMeta>
-        {volume.driver}
-        {volume.mountpoint ? ` · ${volume.mountpoint}` : ""}
-      </ResourceMeta>
+    <SidebarListItem
+      leading={<VolumeIcon className="size-4 text-text-lighter" weight="duotone" />}
+      description={
+        <>
+          {volume.driver}
+          {volume.mountpoint ? ` · ${volume.mountpoint}` : ""}
+        </>
+      }
+    >
+      {volume.name}
     </SidebarListItem>
   );
 }
 
 function NetworkRow({ network }: { network: DockerNetwork }) {
   return (
-    <SidebarListItem leading={<Network className="size-4 text-text-lighter" weight="duotone" />}>
-      <ResourceTitle>{network.name}</ResourceTitle>
-      <ResourceMeta>
-        {network.driver}
-        {network.scope ? ` · ${network.scope}` : ""}
-      </ResourceMeta>
+    <SidebarListItem
+      leading={<Network className="size-4 text-text-lighter" weight="duotone" />}
+      description={
+        <>
+          {network.driver}
+          {network.scope ? ` · ${network.scope}` : ""}
+        </>
+      }
+    >
+      {network.name}
     </SidebarListItem>
   );
 }
