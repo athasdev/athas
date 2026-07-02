@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { getTimeAgo } from "../utils/github-viewer-utils";
+import { GitHubAvatar } from "./github-avatar";
 import GitHubMarkdown from "./github-markdown";
 
 interface CommentItemProps {
@@ -17,12 +18,7 @@ export const CommentItem = memo(({ comment, issueBaseUrl, repoPath }: CommentIte
 
   return (
     <div className="flex gap-2.5 px-1 py-1.5">
-      <img
-        src={`https://github.com/${authorLogin}.png?size=40`}
-        alt={authorLogin}
-        className="size-6 shrink-0 rounded-full bg-secondary-bg"
-        loading="lazy"
-      />
+      <GitHubAvatar login={authorLogin} size={40} className="size-6" />
       <div className="min-w-0 flex-1">
         <div className="ui-text-sm flex items-center gap-2">
           <span className="text-text">{authorLogin}</span>

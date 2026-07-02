@@ -32,6 +32,7 @@ import { PRFilesPanel } from "./pr-files-panel";
 import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
 import { GitHubPRActionDialog, type GitHubPRActionKind } from "./github-pr-action-dialog";
 import { GitHubTitleBodyForm } from "./github-title-body-form";
+import { GitHubAvatar } from "./github-avatar";
 import {
   GitHubViewerHeader,
   GitHubViewerLoadingState,
@@ -583,11 +584,10 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
             meta={detailsError && !isLoadingDetails ? detailsError : `Pull request #${prNumber}`}
             leading={
               prBuffer?.authorAvatarUrl ? (
-                <img
-                  src={prBuffer.authorAvatarUrl}
-                  alt=""
-                  className="size-6 rounded-full bg-secondary-bg"
-                  loading="lazy"
+                <GitHubAvatar
+                  name={prBuffer.name}
+                  avatarUrl={prBuffer.authorAvatarUrl}
+                  className="size-6"
                 />
               ) : null
             }

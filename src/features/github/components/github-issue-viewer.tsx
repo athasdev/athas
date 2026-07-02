@@ -21,6 +21,7 @@ import {
 } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
+import { GitHubAvatar } from "./github-avatar";
 import GitHubMarkdown from "./github-markdown";
 import { GitHubTitleBodyForm } from "./github-title-body-form";
 import { AssigneesList, LabelBadges } from "./pr-status";
@@ -223,14 +224,11 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 <>
                   <span>&middot;</span>
                   <span className="inline-flex items-center gap-2">
-                    <img
-                      src={
-                        details.author.avatarUrl ||
-                        `https://github.com/${encodeURIComponent(details.author.login)}.png?size=32`
-                      }
-                      alt={details.author.login}
-                      className="size-4 rounded-full bg-secondary-bg"
-                      loading="lazy"
+                    <GitHubAvatar
+                      login={details.author.login}
+                      avatarUrl={details.author.avatarUrl}
+                      size={32}
+                      className="size-4"
                     />
                     <span>{details.author.login}</span>
                   </span>

@@ -60,6 +60,7 @@ import type {
   WorkflowRunListItem,
 } from "../types/github.types";
 import GitHubActionsView from "./github-actions-view";
+import { GitHubAvatar } from "./github-avatar";
 import { GitHubCreateCommand, type GitHubCreateKind } from "./github-create-command";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarState } from "./github-sidebar-state";
@@ -130,14 +131,11 @@ const PRListItem = memo(
         )}
         active={isActive}
         leading={
-          <img
-            src={
-              pr.author.avatarUrl ||
-              `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=40`
-            }
-            alt={pr.author.login}
-            className="size-5 rounded-full bg-secondary-bg"
-            loading="lazy"
+          <GitHubAvatar
+            login={pr.author.login}
+            avatarUrl={pr.author.avatarUrl}
+            size={40}
+            className="size-5"
           />
         }
       >

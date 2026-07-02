@@ -20,6 +20,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.types";
+import { GitHubAvatar } from "./github-avatar";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   GITHUB_ISSUE_LIST_TTL_MS,
@@ -60,14 +61,11 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
     active={isActive}
     className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
     leading={
-      <img
-        src={
-          issue.author.avatarUrl ||
-          `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=40`
-        }
-        alt={issue.author.login}
-        className="size-5 rounded-full bg-secondary-bg"
-        loading="lazy"
+      <GitHubAvatar
+        login={issue.author.login}
+        avatarUrl={issue.author.avatarUrl}
+        size={40}
+        className="size-5"
       />
     }
   >

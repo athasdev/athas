@@ -24,6 +24,7 @@ import {
   MergeStatusBadge,
 } from "./pr-status";
 import { GitHubViewerHeader } from "./github-viewer-shell";
+import { GitHubAvatar } from "./github-avatar";
 
 interface GitHubPRViewerHeaderProps {
   pr: PullRequestDetails;
@@ -218,14 +219,11 @@ export function GitHubPRViewerHeader({
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <OverviewField>
           <span className="inline-flex min-w-0 items-center gap-2">
-            <img
-              src={
-                pr.author.avatarUrl ||
-                `https://github.com/${encodeURIComponent(pr.author.login || "github")}.png?size=32`
-              }
-              alt={pr.author.login}
-              className="size-4 shrink-0 rounded-full bg-secondary-bg"
-              loading="lazy"
+            <GitHubAvatar
+              login={pr.author.login}
+              avatarUrl={pr.author.avatarUrl}
+              size={32}
+              className="size-4"
             />
             <span className="truncate text-text-light">{pr.author.login}</span>
           </span>
@@ -267,15 +265,12 @@ export function GitHubPRViewerHeader({
               </span>
               <span className="inline-flex min-w-0 items-center gap-1.5">
                 {pr.reviewRequests.slice(0, 3).map((reviewer) => (
-                  <img
+                  <GitHubAvatar
                     key={reviewer.login}
-                    src={
-                      reviewer.avatarUrl ||
-                      `https://github.com/${encodeURIComponent(reviewer.login || "github")}.png?size=32`
-                    }
-                    alt={reviewer.login}
-                    className="size-4 shrink-0 rounded-full bg-secondary-bg"
-                    loading="lazy"
+                    login={reviewer.login}
+                    avatarUrl={reviewer.avatarUrl}
+                    size={32}
+                    className="size-4"
                   />
                 ))}
                 <span className="truncate text-text-light">{reviewerLogins.join(", ")}</span>

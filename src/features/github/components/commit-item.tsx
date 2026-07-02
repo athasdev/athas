@@ -9,6 +9,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
+import { GitHubAvatar } from "./github-avatar";
 
 interface CommitItemProps {
   commit: Commit;
@@ -23,7 +24,6 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
   const avatarLogin = (author?.login || "").trim();
   const canOpenCommit = Boolean((repoPath && commit.oid) || commit.url);
   const bodyPreview = commit.messageBody.replace(/\s+/g, " ").trim();
-  const avatarInitial = authorName.trim().charAt(0).toUpperCase() || "?";
 
   const openCommitInBrowser = () => {
     if (commit.url) {
@@ -78,21 +78,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
       )}
       aria-label={canOpenCommit ? `Open commit ${shortSha}` : undefined}
     >
-      {avatarLogin ? (
-        <img
-          src={`https://github.com/${encodeURIComponent(avatarLogin)}.png?size=32`}
-          alt={authorName}
-          className="size-5 shrink-0 rounded-full bg-secondary-bg"
-          loading="lazy"
-        />
-      ) : (
-        <span
-          className="ui-text-sm flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary-bg text-text-lighter"
-          aria-hidden="true"
-        >
-          {avatarInitial}
-        </span>
-      )}
+      <GitHubAvatar login={avatarLogin} name={authorName} size={32} className="size-5" />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <code className="ui-text-sm shrink-0 rounded bg-primary-bg px-1.5 py-0.5 editor-font text-text-lighter">

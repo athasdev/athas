@@ -57,6 +57,15 @@ const TabBarItem = memo(function TabBarItem({
   handleTabPin,
 }: TabBarItemProps) {
   const [faviconError, setFaviconError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+  const authorAvatarUrl =
+    buffer.type === "pullRequest" || buffer.type === "githubIssue"
+      ? buffer.authorAvatarUrl
+      : undefined;
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [authorAvatarUrl]);
 
   const getDiffIconName = () => {
     if (buffer.type !== "diff") return buffer.name;
@@ -158,23 +167,25 @@ const TabBarItem = memo(function TabBarItem({
           ) : buffer.type === "database" ? (
             <Database className="text-text-lighter" />
           ) : buffer.type === "pullRequest" ? (
-            buffer.authorAvatarUrl ? (
+            authorAvatarUrl && !avatarError ? (
               <img
-                src={buffer.authorAvatarUrl}
+                src={authorAvatarUrl}
                 alt=""
                 className="size-3 rounded-full object-cover"
                 loading="lazy"
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <GitPullRequest className="text-text-lighter" />
             )
           ) : buffer.type === "githubIssue" ? (
-            buffer.authorAvatarUrl ? (
+            authorAvatarUrl && !avatarError ? (
               <img
-                src={buffer.authorAvatarUrl}
+                src={authorAvatarUrl}
                 alt=""
                 className="size-3 rounded-full object-cover"
                 loading="lazy"
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <MessageSquare className="text-text-lighter" />
