@@ -8,27 +8,20 @@ import {
   ArrowClockwiseIcon as RefreshCw,
   TrashIcon as Trash2,
 } from "@phosphor-icons/react";
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   CommandEmpty,
   CommandFooter,
   CommandFooterAction,
-  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
+  CommandTabs,
+  useCommandListNavigation,
 } from "@/ui/command";
-import { Tab, type TabsItem } from "@/ui/tabs";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -144,7 +137,6 @@ const GitBranchManager = ({
   const [worktrees, setWorktrees] = useState<GitWorktree[]>([]);
   const [branchQuery, setBranchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<GitBranchManagerTab>("branches");
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingWorktrees, setIsLoadingWorktrees] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
@@ -242,13 +234,8 @@ const GitBranchManager = ({
   useEffect(() => {
     if (!isDropdownOpen) {
       setBranchQuery("");
-      setSelectedIndex(0);
     }
   }, [isDropdownOpen]);
-
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [activeTab, branchQuery]);
 
   useEffect(() => {
     if (!isDropdownOpen || !hasBlockingModalOpen) return;
@@ -432,10 +419,6 @@ const GitBranchManager = ({
     [focusCommandInput],
   );
 
-  if (!currentBranch) {
-    return null;
-  }
-
   const handleOpenDropdown = async () => {
     if (!repoPath || isDropdownOpen) return;
     setActiveTab("branches");
@@ -443,78 +426,52 @@ const GitBranchManager = ({
     await Promise.all([loadBranches(), loadWorktrees()]);
   };
 
-  const commandEntries =
-    activeTab === "branches"
-      ? [
-          ...(createBranchName
-            ? [{ type: "create-branch" as const, value: createBranchName }]
-            : []),
-          ...filteredBranches.map((branch) => ({
-            type: "branch" as const,
-            value: branch,
-          })),
-        ]
-      : activeTab === "worktrees"
+  const commandEntries = useMemo(
+    () =>
+      activeTab === "branches"
         ? [
-            ...(createWorktreePath
-              ? [
-                  {
-                    type: "create-worktree" as const,
-                    value: createWorktreePath,
-                  },
-                ]
+            ...(createBranchName
+              ? [{ type: "create-branch" as const, value: createBranchName }]
               : []),
-            ...filteredWorktrees.map((worktree) => ({
-              type: "worktree" as const,
-              value: worktree.path,
+            ...filteredBranches.map((branch) => ({
+              type: "branch" as const,
+              value: branch,
             })),
           ]
-        : filteredRepoPaths.map((repository) => ({
-            type: "repository" as const,
-            value: repository,
-          }));
+        : activeTab === "worktrees"
+          ? [
+              ...(createWorktreePath
+                ? [
+                    {
+                      type: "create-worktree" as const,
+                      value: createWorktreePath,
+                    },
+                  ]
+                : []),
+              ...filteredWorktrees.map((worktree) => ({
+                type: "worktree" as const,
+                value: worktree.path,
+              })),
+            ]
+          : filteredRepoPaths.map((repository) => ({
+              type: "repository" as const,
+              value: repository,
+            })),
+    [
+      activeTab,
+      createBranchName,
+      createWorktreePath,
+      filteredBranches,
+      filteredRepoPaths,
+      filteredWorktrees,
+    ],
+  );
 
-  const tabItems: TabsItem[] = [
-    {
-      id: "repositories",
-      label: "Repositories",
-      icon: <FolderOpen className={gitCommandIconClassName} />,
-      isActive: activeTab === "repositories",
-      onClick: () => handleTabChange("repositories"),
-    },
-    {
-      id: "branches",
-      label: "Branches",
-      icon: <GitBranch className={gitCommandIconClassName} />,
-      isActive: activeTab === "branches",
-      onClick: () => handleTabChange("branches"),
-    },
-    {
-      id: "worktrees",
-      label: "Worktrees",
-      icon: <GitFork className={gitCommandIconClassName} />,
-      isActive: activeTab === "worktrees",
-      onClick: () => handleTabChange("worktrees"),
-    },
-  ];
-
-  const handleCommandKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setSelectedIndex((index) => Math.min(index + 1, Math.max(commandEntries.length - 1, 0)));
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setSelectedIndex((index) => Math.max(index - 1, 0));
-      return;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const selectedEntry = commandEntries[selectedIndex];
+  const handleCommandSelect = useCallback(
+    (index: number) => {
+      const selectedEntry = commandEntries[index];
       if (!selectedEntry) return;
+
       if (selectedEntry.type === "create-branch") {
         void handleCreateBranch(selectedEntry.value);
       } else if (selectedEntry.type === "create-worktree") {
@@ -526,8 +483,47 @@ const GitBranchManager = ({
       } else {
         void handleBranchChange(selectedEntry.value);
       }
-    }
-  };
+    },
+    [commandEntries],
+  );
+
+  const {
+    selectedIndex,
+    setSelectedIndex,
+    onInputKeyDown: handleCommandKeyDown,
+  } = useCommandListNavigation({
+    itemCount: commandEntries.length,
+    resetKey: `${activeTab}:${branchQuery}`,
+    onSelect: handleCommandSelect,
+  });
+
+  if (!currentBranch) {
+    return null;
+  }
+
+  const tabItems = [
+    {
+      id: "repositories",
+      label: "Repositories",
+      icon: <FolderOpen className={gitCommandIconClassName} />,
+      isActive: activeTab === "repositories",
+      onSelect: () => handleTabChange("repositories"),
+    },
+    {
+      id: "branches",
+      label: "Branches",
+      icon: <GitBranch className={gitCommandIconClassName} />,
+      isActive: activeTab === "branches",
+      onSelect: () => handleTabChange("branches"),
+    },
+    {
+      id: "worktrees",
+      label: "Worktrees",
+      icon: <GitFork className={gitCommandIconClassName} />,
+      isActive: activeTab === "worktrees",
+      onSelect: () => handleTabChange("worktrees"),
+    },
+  ];
 
   return (
     <>
@@ -575,36 +571,7 @@ const GitBranchManager = ({
                   availableRepoPaths.length === 1 ? "y" : "ies"
                 }`
         }
-        headerAddon={
-          <div
-            role="tablist"
-            aria-label="Git selector sections"
-            className="flex shrink-0 items-center justify-start gap-1 bg-primary-bg pt-2 px-2"
-          >
-            {tabItems.map((item) => (
-              <Tab
-                key={item.id}
-                role="tab"
-                aria-selected={item.isActive}
-                tabIndex={0}
-                isActive={Boolean(item.isActive)}
-                size="md"
-                variant="pill"
-                className="w-fit justify-start rounded-full"
-                onClick={item.onClick}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    item.onClick?.();
-                  }
-                }}
-              >
-                {item.icon}
-                {item.label}
-              </Tab>
-            ))}
-          </div>
-        }
+        headerAddon={<CommandTabs items={tabItems} ariaLabel="Git selector sections" />}
       >
         <CommandList>
           {activeTab === "branches" && !createBranchName && filteredBranches.length === 0 ? (
@@ -615,13 +582,15 @@ const GitBranchManager = ({
           {activeTab === "branches" && (createBranchName || filteredBranches.length > 0) ? (
             <div className="space-y-1">
               {createBranchName ? (
-                <GitSelectorRow
+                <CommandItemRow
+                  as="div"
                   icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
                   title={`Create new branch "${createBranchName}"`}
-                  onSelect={() => void handleCreateBranch(createBranchName)}
+                  onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
                   isSelected={selectedIndex === 0}
                   onMouseEnter={() => setSelectedIndex(0)}
+                  className="min-h-9"
                 />
               ) : null}
               {filteredBranches.map((branch, index) => (
@@ -650,13 +619,15 @@ const GitBranchManager = ({
           {activeTab === "worktrees" && (createWorktreePath || filteredWorktrees.length > 0) ? (
             <div className="space-y-1">
               {createWorktreePath ? (
-                <GitSelectorRow
+                <CommandItemRow
+                  as="div"
                   icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
                   title={`Create worktree "${createWorktreePath}"`}
-                  onSelect={() => void handleCreateWorktree(createWorktreePath)}
+                  onClick={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoadingWorktrees}
                   isSelected={selectedIndex === 0}
                   onMouseEnter={() => setSelectedIndex(0)}
+                  className="min-h-9"
                 />
               ) : null}
               {filteredWorktrees.map((worktree, index) => (
@@ -773,89 +744,6 @@ const GitBranchManager = ({
   );
 };
 
-interface GitSelectorRowProps {
-  icon: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-  accessory?: ReactNode;
-  action?: ReactNode;
-  isCurrent?: boolean;
-  isSelected: boolean;
-  disabled?: boolean;
-  onMouseEnter: () => void;
-  onSelect: () => void;
-  titleClassName?: string;
-  descriptionClassName?: string;
-}
-
-function GitSelectorRow({
-  icon,
-  title,
-  description,
-  accessory,
-  action,
-  isCurrent = false,
-  isSelected,
-  disabled = false,
-  onMouseEnter,
-  onSelect,
-  titleClassName,
-  descriptionClassName,
-}: GitSelectorRowProps) {
-  return (
-    <CommandItem
-      as="div"
-      isSelected={isSelected}
-      disabled={disabled}
-      onMouseEnter={onMouseEnter}
-      onClick={onSelect}
-      className={cn(
-        "group ui-font min-h-9 gap-2.5 px-3 py-2",
-        isCurrent ? "text-text" : "text-text-lighter hover:text-text",
-      )}
-    >
-      {icon}
-      <span className="min-w-0 flex flex-1 items-center gap-1.5">
-        <span className={cn("ui-text-base min-w-0 truncate text-text", titleClassName)}>
-          {title}
-        </span>
-        {description ? (
-          <span
-            className={cn(
-              "ui-text-base min-w-0 flex-1 truncate text-text-lighter/75",
-              descriptionClassName,
-            )}
-          >
-            {description}
-          </span>
-        ) : null}
-      </span>
-      {accessory}
-      {action}
-    </CommandItem>
-  );
-}
-
-function GitCurrentBadge() {
-  return (
-    <Badge
-      variant="accent"
-      size="compact"
-      className="shrink-0 border border-success/30 bg-success/10 text-success"
-    >
-      current
-    </Badge>
-  );
-}
-
-function GitSecondaryBadge({ children }: { children: ReactNode }) {
-  return (
-    <Badge variant="default" size="compact" className="shrink-0 text-text-lighter/75">
-      {children}
-    </Badge>
-  );
-}
-
 function BranchRow({
   branch,
   isCurrent,
@@ -874,7 +762,8 @@ function BranchRow({
   onDelete: () => void;
 }) {
   return (
-    <GitSelectorRow
+    <CommandItemRow
+      as="div"
       icon={
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
@@ -883,12 +772,18 @@ function BranchRow({
         )
       }
       title={branch}
-      isCurrent={isCurrent}
       isSelected={isSelected}
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
-      onSelect={onSelect}
-      accessory={isCurrent ? <GitCurrentBadge /> : null}
+      onClick={onSelect}
+      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      accessory={
+        isCurrent ? (
+          <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
+            current
+          </CommandItemBadge>
+        ) : null
+      }
       action={
         !isCurrent ? (
           <Button
@@ -941,7 +836,8 @@ function RepositoryRow({
   const relativePath = workspaceRootPath ? getRelativePath(repoPath, workspaceRootPath) : repoPath;
 
   return (
-    <GitSelectorRow
+    <CommandItemRow
+      as="div"
       icon={
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
@@ -951,16 +847,20 @@ function RepositoryRow({
       }
       title={getFolderName(repoPath)}
       description={relativePath === "." ? repoPath : relativePath}
-      isCurrent={isCurrent}
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
-      onSelect={onSelect}
+      onClick={onSelect}
+      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
       titleClassName="max-w-[45%] shrink-0"
       accessory={
-        <span className="flex shrink-0 items-center gap-1.5">
-          {isCurrent ? <GitCurrentBadge /> : null}
-          {isAdded ? <GitSecondaryBadge>added</GitSecondaryBadge> : null}
-        </span>
+        <>
+          {isCurrent ? (
+            <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
+              current
+            </CommandItemBadge>
+          ) : null}
+          {isAdded ? <CommandItemBadge>added</CommandItemBadge> : null}
+        </>
       }
     />
   );
@@ -980,7 +880,8 @@ function WorktreeRow({
   onSelect: () => void;
 }) {
   return (
-    <GitSelectorRow
+    <CommandItemRow
+      as="div"
       icon={
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
@@ -995,12 +896,18 @@ function WorktreeRow({
           <span className="truncate">{getBranchLabel(worktree)}</span>
         </>
       }
-      isCurrent={isCurrent}
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
-      onSelect={onSelect}
+      onClick={onSelect}
+      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
       descriptionClassName="flex max-w-[45%] shrink items-center gap-1.5 text-text-lighter/80"
-      accessory={isCurrent ? <GitCurrentBadge /> : null}
+      accessory={
+        isCurrent ? (
+          <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
+            current
+          </CommandItemBadge>
+        ) : null
+      }
     />
   );
 }

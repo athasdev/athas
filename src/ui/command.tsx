@@ -2,13 +2,14 @@ import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
 import { instantTransition, motionEase, motionDuration } from "@/ui/motion";
+import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -252,7 +253,7 @@ export const CommandInput = ({
 
 CommandInput.displayName = "CommandInput";
 
-interface CommandItemProps {
+export interface CommandItemProps {
   children: React.ReactNode;
   isSelected?: boolean;
   as?: "button" | "div";
@@ -340,6 +341,56 @@ export const CommandItem = ({
 
 CommandItem.displayName = "CommandItem";
 
+interface CommandTabsItem {
+  id: string;
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  isActive: boolean;
+  onSelect: () => void;
+}
+
+interface CommandTabsProps {
+  items: CommandTabsItem[];
+  ariaLabel: string;
+  className?: string;
+}
+
+export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) => (
+  <div
+    role="tablist"
+    aria-label={ariaLabel}
+    className={cn(
+      "flex shrink-0 items-center justify-start gap-1 bg-primary-bg px-2 pt-2",
+      className,
+    )}
+  >
+    {items.map((item) => (
+      <Tab
+        key={item.id}
+        role="tab"
+        aria-selected={item.isActive}
+        tabIndex={0}
+        isActive={item.isActive}
+        size="md"
+        variant="pill"
+        className="w-fit justify-start rounded-full"
+        onClick={item.onSelect}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            item.onSelect();
+          }
+        }}
+      >
+        {item.icon}
+        {item.label}
+      </Tab>
+    ))}
+  </div>
+);
+
+CommandTabs.displayName = "CommandTabs";
+
 export const CommandItemTitle = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span className={cn("min-w-0 truncate text-text", className)} {...props} />
 );
@@ -367,10 +418,19 @@ export const CommandItemDescription = ({ className, ...props }: React.ComponentP
 
 CommandItemDescription.displayName = "CommandItemDescription";
 
-export const CommandItemIcon = ({ className, ...props }: React.ComponentProps<"span">) => (
+type CommandItemIconProps = React.ComponentProps<"span"> & {
+  variant?: "framed" | "plain";
+};
+
+export const CommandItemIcon = ({
+  className,
+  variant = "framed",
+  ...props
+}: CommandItemIconProps) => (
   <span
     className={cn(
-      "inline-flex size-5 shrink-0 items-center justify-center rounded-md border border-border/70 bg-secondary-bg/70 text-text-lighter",
+      "inline-flex size-5 shrink-0 items-center justify-center text-text-lighter",
+      variant === "framed" && "rounded-md border border-border/70 bg-secondary-bg/70",
       className,
     )}
     {...props}
@@ -379,7 +439,7 @@ export const CommandItemIcon = ({ className, ...props }: React.ComponentProps<"s
 
 CommandItemIcon.displayName = "CommandItemIcon";
 
-export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<"span">) => (
+export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<typeof Badge>) => (
   <Badge
     size="compact"
     className={cn(
@@ -391,6 +451,114 @@ export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<"
 );
 
 CommandItemBadge.displayName = "CommandItemBadge";
+
+export const CommandItemTrailing = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span className={cn("flex shrink-0 items-center gap-1.5", className)} {...props} />
+);
+
+CommandItemTrailing.displayName = "CommandItemTrailing";
+
+interface CommandItemRowProps extends Omit<CommandItemProps, "children"> {
+  icon?: React.ReactNode;
+  iconClassName?: string;
+  iconVariant?: CommandItemIconProps["variant"];
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  accessory?: React.ReactNode;
+  action?: React.ReactNode;
+  contentLayout?: "inline" | "stacked";
+  contentClassName?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
+  trailingClassName?: string;
+}
+
+export const CommandItemRow = ({
+  icon,
+  iconClassName,
+  iconVariant = "plain",
+  title,
+  description,
+  accessory,
+  action,
+  contentLayout = "inline",
+  contentClassName,
+  titleClassName,
+  descriptionClassName,
+  trailingClassName,
+  ...props
+}: CommandItemRowProps) => (
+  <CommandItem {...props}>
+    {icon ? (
+      <CommandItemIcon variant={iconVariant} className={iconClassName}>
+        {icon}
+      </CommandItemIcon>
+    ) : null}
+    <CommandItemContent
+      className={cn(contentLayout === "inline" && "flex items-center gap-1.5", contentClassName)}
+    >
+      <CommandItemTitle className={titleClassName}>{title}</CommandItemTitle>
+      {description ? (
+        <CommandItemDescription
+          className={cn(
+            contentLayout === "inline" && "mt-0 flex flex-1 items-center gap-1.5",
+            descriptionClassName,
+          )}
+        >
+          {description}
+        </CommandItemDescription>
+      ) : null}
+    </CommandItemContent>
+    {accessory ? (
+      <CommandItemTrailing className={trailingClassName}>{accessory}</CommandItemTrailing>
+    ) : null}
+    {action}
+  </CommandItem>
+);
+
+CommandItemRow.displayName = "CommandItemRow";
+
+interface UseCommandListNavigationOptions {
+  itemCount: number;
+  resetKey?: string;
+  onSelect: (index: number) => void;
+}
+
+export function useCommandListNavigation({
+  itemCount,
+  resetKey,
+  onSelect,
+}: UseCommandListNavigationOptions) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [resetKey]);
+
+  const onInputKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedIndex((index) => Math.min(index + 1, Math.max(itemCount - 1, 0)));
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedIndex((index) => Math.max(index - 1, 0));
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        onSelect(selectedIndex);
+      }
+    },
+    [itemCount, onSelect, selectedIndex],
+  );
+
+  return { selectedIndex, setSelectedIndex, onInputKeyDown };
+}
 
 type CommandFooterActionProps = Omit<ButtonProps, "className" | "compact" | "variant">;
 
