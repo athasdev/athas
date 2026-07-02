@@ -1,38 +1,19 @@
 import {
   BugBeetleIcon as BugBeetle,
-  CaretUpIcon as CaretUp,
   DatabaseIcon as Database,
-  DownloadSimpleIcon as DownloadSimple,
   ListBulletsIcon as ListBullets,
   PuzzlePieceIcon as PuzzlePiece,
   TerminalWindowIcon as TerminalWindow,
   UsersThreeIcon as UsersThree,
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
-import { Children, type ReactNode, type Ref, useMemo, useRef, useState } from "react";
-import { Tab, TabsList } from "@/ui/tabs";
-import { LoadingIndicator } from "@/ui/loading";
-import Tooltip from "@/ui/tooltip";
-import { Dropdown } from "@/ui/dropdown";
+import { useMemo } from "react";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import {
-  chromeControl,
-  chromeControlGroup,
-  chromeIcon,
-  chromeItemWrapper,
-} from "@/features/layout/components/chrome-control-styles";
+import { chromeItemWrapper } from "@/features/layout/components/chrome-control-styles";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
-import { getGitStatus } from "@/features/git/api/git-status-api";
-import GitBranchManager from "@/features/git/components/git-branch-manager";
-import { useGitStore } from "@/features/git/stores/git.store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
-import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-import { cn } from "@/utils/cn";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
@@ -42,73 +23,10 @@ import {
   type FooterLeadingItemId,
   type FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
-import { useFileSystemStore } from "../../../file-system/stores/file-system.store";
-
-type FooterItem<T extends string> = {
-  id: T;
-  label: string;
-  content: ReactNode;
-};
-
-function orderFooterItems<T extends string>(items: Array<FooterItem<T>>, orderedIds: T[]) {
-  const itemMap = new Map(items.map((item) => [item.id, item]));
-  const orderedItems = orderedIds
-    .map((id) => itemMap.get(id))
-    .filter((item): item is FooterItem<T> => Boolean(item));
-  const orderedIdSet = new Set(orderedIds);
-  const missingItems = items.filter((item) => !orderedIdSet.has(item.id));
-  return [...orderedItems, ...missingItems];
-}
-
-function FooterTabControl({
-  tooltip,
-  active = false,
-  className,
-  onClick,
-  commandId,
-  controlRef,
-  children,
-}: {
-  tooltip: string;
-  active?: boolean;
-  className?: string;
-  onClick: () => void;
-  commandId?: string;
-  controlRef?: Ref<HTMLDivElement>;
-  children: ReactNode;
-}) {
-  const shortcut = useCommandShortcut(commandId);
-  const controlClassName = cn(
-    chromeControl({ shape: Children.count(children) > 1 ? "pill" : "icon" }),
-    className,
-  );
-
-  return (
-    <TabsList variant="segmented" className={chromeControlGroup()}>
-      <Tooltip content={tooltip} shortcut={shortcut} side="top">
-        <Tab
-          ref={controlRef}
-          role="button"
-          aria-label={tooltip}
-          tabIndex={0}
-          isActive={active}
-          size="xs"
-          variant="segmented"
-          className={controlClassName}
-          onClick={onClick}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              onClick();
-            }
-          }}
-        >
-          {children}
-        </Tab>
-      </Tooltip>
-    </TabsList>
-  );
-}
+import { orderFooterItems, type FooterItem } from "./footer-items";
+import { useFooterGitBranchItem } from "./footer-git-branch-item";
+import { FooterControlBadge, FooterTabControl } from "./footer-tab-control";
+import { useFooterUpdateItem } from "./footer-update-item";
 
 const Footer = () => {
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
@@ -146,28 +64,8 @@ const Footer = () => {
     );
   });
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
-  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const gitStatus = useGitStore((state) => state.gitStatus);
-  const workspaceGitStatus = useGitStore((state) => state.workspaceGitStatus);
-  const currentRepoPath = useGitStore((state) => state.currentRepoPath);
-  const currentWorkspaceRepoPath = useGitStore((state) => state.currentWorkspaceRepoPath);
-  const actions = useGitStore((state) => state.actions);
-  const {
-    showUpdateIndicator,
-    downloading,
-    installing,
-    error: updateError,
-    updateInfo,
-    downloadProgress,
-    onDownload: downloadAndInstall,
-    onDismiss: dismissUpdate,
-    onRemindLater,
-    onSkipVersion,
-    onViewReleaseNotes,
-  } = useAutoUpdate();
-  const [isUpdateMenuOpen, setIsUpdateMenuOpen] = useState(false);
-  const updateMenuRef = useRef<HTMLDivElement>(null);
+  const branchItem = useFooterGitBranchItem();
+  const updateItem = useFooterUpdateItem();
 
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
@@ -175,91 +73,9 @@ const Footer = () => {
     (total, diagnostics) => total + diagnostics.length,
     0,
   );
-  const footerRepoPath = activeRepoPath ?? currentWorkspaceRepoPath ?? rootFolderPath;
-  const footerGitStatus =
-    activeRepoPath && currentRepoPath === activeRepoPath && gitStatus
-      ? gitStatus
-      : workspaceGitStatus;
-  const footerBranch = footerGitStatus?.branch;
-  const updateMenuItems = useMemo(
-    () => [
-      {
-        id: "release-notes",
-        label: "View Release Notes",
-        onClick: onViewReleaseNotes,
-        disabled: downloading || installing,
-      },
-      {
-        id: "download-later",
-        label: "Download Later",
-        onClick: dismissUpdate,
-        disabled: downloading || installing,
-      },
-      {
-        id: "remind-later",
-        label: "Remind Me Tomorrow",
-        onClick: onRemindLater,
-        disabled: downloading || installing,
-      },
-      {
-        id: "skip-version",
-        label: `Skip ${updateInfo?.version ?? "Version"}`,
-        onClick: onSkipVersion,
-        disabled: downloading || installing,
-      },
-    ],
-    [
-      dismissUpdate,
-      downloading,
-      installing,
-      onRemindLater,
-      onSkipVersion,
-      onViewReleaseNotes,
-      updateInfo?.version,
-    ],
-  );
 
   const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
-    footerRepoPath && footerBranch
-      ? {
-          id: "branch",
-          label: "Git branch",
-          content: (
-            <GitBranchManager
-              currentBranch={footerBranch}
-              repoPath={footerRepoPath}
-              paletteTarget
-              triggerClassName={chromeControl({ shape: "pill" })}
-              onBranchChange={async () => {
-                const status = await getGitStatus(footerRepoPath);
-                actions.setWorkspaceGitStatus(status, footerRepoPath);
-                if (currentRepoPath === footerRepoPath) {
-                  actions.setGitStatus(status);
-                }
-              }}
-              onWorktreeChange={async (worktreePath) => {
-                const opened = await openGitWorktreeWorkspace(worktreePath);
-                if (!opened) return;
-
-                const status = await getGitStatus(worktreePath);
-                actions.setWorkspaceGitStatus(status, worktreePath);
-                if (currentRepoPath === footerRepoPath) {
-                  actions.setGitStatus(status);
-                }
-              }}
-              onRepositoryChange={async (repoPath) => {
-                if (!repoPath) return;
-
-                const status = await getGitStatus(repoPath);
-                actions.setWorkspaceGitStatus(status, repoPath);
-                if (currentRepoPath === repoPath) {
-                  actions.setGitStatus(status);
-                }
-              }}
-            />
-          ),
-        }
-      : null,
+    branchItem,
     terminalEnabled
       ? {
           id: "terminal",
@@ -312,16 +128,12 @@ const Footer = () => {
                   : "Open Diagnostics"
               }
               active={isDiagnosticsBufferActive}
-              className={
-                !isDiagnosticsBufferActive && diagnosticsCount > 0 ? "text-warning" : undefined
-              }
+              tone={!isDiagnosticsBufferActive && diagnosticsCount > 0 ? "warning" : "default"}
               commandId="workbench.toggleDiagnostics"
               onClick={() => openDiagnosticsBuffer()}
             >
               <WarningCircle weight="duotone" />
-              {diagnosticsCount > 0 && (
-                <span className="ui-font  tabular-nums text-current">{diagnosticsCount}</span>
-              )}
+              {diagnosticsCount > 0 && <span className="tabular-nums">{diagnosticsCount}</span>}
             </FooterTabControl>
           ),
         }
@@ -333,87 +145,18 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              className="text-accent hover:text-accent"
+              tone="accent"
               onClick={() => openSettingsDialog("extensions")}
             >
               <PuzzlePiece weight="duotone" />
-              <span className="flex h-3 min-w-3 items-center justify-center rounded-full bg-accent px-0.5  leading-3 text-primary-bg">
+              <FooterControlBadge>
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
-              </span>
+              </FooterControlBadge>
             </FooterTabControl>
           ),
         }
       : null,
-    showUpdateIndicator && updateInfo
-      ? {
-          id: "updates",
-          label: "App updates",
-          content: (
-            <div className="flex items-center gap-0.5">
-              <FooterTabControl
-                tooltip={
-                  updateError
-                    ? updateError
-                    : downloading
-                      ? `Updating Athas ${downloadProgress?.percentage ?? 0}%`
-                      : installing
-                        ? "Installing update..."
-                        : `Update available: ${updateInfo.version}`
-                }
-                className={cn(
-                  downloading || installing
-                    ? "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent"
-                    : updateError
-                      ? "text-error hover:bg-error/10 hover:text-error"
-                      : "text-accent hover:bg-accent/10 hover:text-accent",
-                )}
-                onClick={() => {
-                  if (!downloading && !installing) {
-                    void downloadAndInstall();
-                  }
-                }}
-              >
-                {downloading || installing ? (
-                  <LoadingIndicator label={downloading ? "Downloading" : "Installing"} compact />
-                ) : (
-                  <DownloadSimple weight="duotone" />
-                )}
-                <span className="ui-font ">
-                  {downloading
-                    ? `Updating ${downloadProgress?.percentage ?? 0}%`
-                    : installing
-                      ? "Installing"
-                      : updateError
-                        ? "Update failed"
-                        : "Update available"}
-                </span>
-              </FooterTabControl>
-              <FooterTabControl
-                tooltip="Update Options"
-                active={isUpdateMenuOpen}
-                className={cn(
-                  updateError
-                    ? "text-error hover:bg-error/10 hover:text-error"
-                    : "text-accent hover:bg-accent/10 hover:text-accent",
-                )}
-                controlRef={updateMenuRef}
-                onClick={() => setIsUpdateMenuOpen((open) => !open)}
-              >
-                <CaretUp weight="bold" />
-              </FooterTabControl>
-              <Dropdown
-                isOpen={isUpdateMenuOpen}
-                onClose={() => setIsUpdateMenuOpen(false)}
-                anchorRef={updateMenuRef}
-                anchorSide="top"
-                anchorAlign="start"
-                items={updateMenuItems}
-                className="min-w-52.5"
-              />
-            </div>
-          ),
-        }
-      : null,
+    updateItem,
   ];
   const footerLeadingItems = footerLeadingItemsSource.filter(
     (item): item is FooterItem<FooterLeadingItemId> => item !== null,
@@ -444,7 +187,7 @@ const Footer = () => {
                   openSidebarView("outline", { triggerSide: "right" });
                 }}
               >
-                <ListBullets className={chromeIcon()} weight="duotone" />
+                <ListBullets weight="duotone" />
               </FooterTabControl>
             ),
           },
@@ -462,7 +205,7 @@ const Footer = () => {
             openCommandPaletteView("databases");
           }}
         >
-          <Database className={chromeIcon()} weight="duotone" />
+          <Database weight="duotone" />
         </FooterTabControl>
       ),
     },
@@ -479,7 +222,7 @@ const Footer = () => {
                   openSidebarView("collaboration", { triggerSide: "right" });
                 }}
               >
-                <UsersThree className={chromeIcon()} weight="duotone" />
+                <UsersThree weight="duotone" />
               </FooterTabControl>
             ),
           },
@@ -493,7 +236,7 @@ const Footer = () => {
   ];
 
   return (
-    <div className="athas-footer-bar relative z-20 flex h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+    <div className="athas-footer-bar relative z-20 flex min-h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
       <div className="ui-font flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
           <div key={item.id} className={chromeItemWrapper()}>
@@ -502,7 +245,7 @@ const Footer = () => {
         ))}
       </div>
 
-      <div className="ui-font  flex items-center gap-1 text-text-lighter">
+      <div className="ui-font flex items-center gap-1 text-text-lighter">
         {orderFooterItems(footerTrailingItems, footerTrailingOrder).map((item) => (
           <div key={item.id} className={chromeItemWrapper()}>
             {item.content}
