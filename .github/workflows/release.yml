@@ -432,7 +432,7 @@ jobs:
 
       - name: Create or update release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
           RELEASE_NAME: ${{ needs.release-metadata.outputs.release_name }}
           IS_PRERELEASE: ${{ needs.release-metadata.outputs.is_prerelease }}
@@ -487,7 +487,7 @@ jobs:
 
       - name: Upload release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           gh release upload "${TAG_NAME}" \
@@ -497,7 +497,7 @@ jobs:
 
       - name: Validate release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           bun scripts/release/release-assets.mjs verify \
