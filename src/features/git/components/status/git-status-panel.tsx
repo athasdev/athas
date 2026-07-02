@@ -663,11 +663,11 @@ const GitStatusPanel = ({
       {hasFiles ? (
         <>
           <div className="flex min-h-7 shrink-0 items-center justify-between gap-1.5 bg-primary-bg px-2.5 py-1">
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <div
                 ref={diffMenuAnchorRef}
                 className={cn(
-                  "flex h-6 overflow-hidden rounded-md border border-transparent text-text transition-colors",
+                  "flex h-6 min-w-0 flex-1 overflow-hidden rounded-md border border-transparent text-text transition-colors",
                   "hover:border-border/60 hover:bg-hover/70",
                   isDiffMenuOpen && "border-border/70 bg-hover/80",
                   (!onViewDiff || isLoading) && "opacity-50",
@@ -677,17 +677,17 @@ const GitStatusPanel = ({
                   type="button"
                   onClick={() => openScopedDiff("all")}
                   disabled={!onViewDiff || isLoading}
-                  className="ui-font ui-text-sm flex h-full items-center px-2 font-medium outline-none transition-colors hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none"
+                  className="ui-font ui-text-sm flex h-full min-w-0 flex-1 items-center px-2 font-medium outline-none transition-colors hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none"
                   aria-label="View all diffs"
                 >
-                  View Diff
+                  <span className="min-w-0 truncate whitespace-nowrap">View Diff</span>
                 </button>
                 <div className="my-1 w-px bg-border/70" />
                 <button
                   type="button"
                   onClick={() => setIsDiffMenuOpen((open) => !open)}
                   disabled={isLoading}
-                  className="flex h-full w-5 items-center justify-center outline-none transition-colors hover:bg-hover/80 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none"
+                  className="flex h-full w-5 shrink-0 items-center justify-center outline-none transition-colors hover:bg-hover/80 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none"
                   aria-label="Choose diff source"
                   aria-haspopup="menu"
                   aria-expanded={isDiffMenuOpen}
@@ -703,7 +703,7 @@ const GitStatusPanel = ({
                 items={diffMenuItems}
                 className="min-w-[150px]"
               />
-              {renderDiffStatsBadge(allDiffStats)}
+              {renderDiffStatsBadge(allDiffStats, "shrink-0")}
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {unstagedFiles.length > 0 && (
