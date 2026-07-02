@@ -198,7 +198,7 @@ async function updateCargoToml(newVersion: string) {
 }
 
 async function updateCargoLock() {
-  const result = await $`cargo check -p athas`.quiet().nothrow().cwd(process.cwd());
+  const result = await $`cargo check -p athas`.nothrow().cwd(process.cwd());
 
   if (result.exitCode !== 0) {
     error("Could not refresh Cargo.lock");

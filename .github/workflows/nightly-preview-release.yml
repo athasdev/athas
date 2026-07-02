@@ -28,8 +28,8 @@ jobs:
         with:
           bun-version: "1.3.2"
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Use latest main and tags
         run: |
