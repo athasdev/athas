@@ -1447,8 +1447,6 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   contentLayout="inline"
                   disabled={isActionLoading}
                   className="group/stash min-h-9 text-text-lighter hover:text-text"
-                  titleClassName="text-text"
-                  descriptionClassName="flex shrink-0 items-center gap-1.5 text-text-lighter/80"
                   onClick={() => {
                     void handleViewStashDiff(stash.index);
                     setShowStashList(false);

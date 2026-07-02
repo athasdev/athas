@@ -468,8 +468,6 @@ interface CommandItemRowProps extends Omit<CommandItemProps, "children"> {
   action?: React.ReactNode;
   contentLayout?: "inline" | "stacked";
   contentClassName?: string;
-  titleClassName?: string;
-  descriptionClassName?: string;
   trailingClassName?: string;
 }
 
@@ -483,8 +481,6 @@ export const CommandItemRow = ({
   action,
   contentLayout = "inline",
   contentClassName,
-  titleClassName,
-  descriptionClassName,
   trailingClassName,
   ...props
 }: CommandItemRowProps) => (
@@ -497,12 +493,12 @@ export const CommandItemRow = ({
     <CommandItemContent
       className={cn(contentLayout === "inline" && "flex items-center gap-1.5", contentClassName)}
     >
-      <CommandItemTitle className={titleClassName}>{title}</CommandItemTitle>
+      <CommandItemTitle>{title}</CommandItemTitle>
       {description ? (
         <CommandItemDescription
           className={cn(
-            contentLayout === "inline" && "mt-0 flex flex-1 items-center gap-1.5",
-            descriptionClassName,
+            contentLayout === "inline" &&
+              "mt-0 flex min-w-0 shrink items-center gap-1.5 text-text-lighter/80",
           )}
         >
           {description}

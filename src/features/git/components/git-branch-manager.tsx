@@ -851,7 +851,6 @@ function RepositoryRow({
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
       className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
-      titleClassName="max-w-[45%] shrink-0"
       accessory={
         <>
           {isCurrent ? (
@@ -900,7 +899,6 @@ function WorktreeRow({
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
       className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
-      descriptionClassName="flex max-w-[45%] shrink items-center gap-1.5 text-text-lighter/80"
       accessory={
         isCurrent ? (
           <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
