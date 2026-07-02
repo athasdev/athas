@@ -9,6 +9,7 @@ import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,
   useEffect,
+  useLayoutEffect,
   useState,
   type ComponentProps,
   type Ref,
@@ -482,38 +483,37 @@ export function SidebarSectionSwitcher({
   items,
   value,
   onChange,
-  className,
-  itemClassName,
-  compactBelowWidth,
 }: {
   items: SidebarSectionSwitcherItem[];
   value: string;
   onChange: (value: string) => void;
-  className?: string;
-  itemClassName?: string;
-  compactBelowWidth?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLDivElement>(null);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const activeItem = items.find((item) => item.id === value) ?? items[0];
 
-  useEffect(() => {
-    if (!compactBelowWidth) return;
-
-    const element = containerRef.current;
-    if (!element) return;
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const measurement = measurementRef.current;
+    if (!container || !measurement) return;
 
     const updateCompactState = () => {
-      setIsCompact(element.clientWidth < compactBelowWidth);
+      setIsCompact(measurement.scrollWidth > container.clientWidth);
     };
 
     updateCompactState();
     const resizeObserver = new ResizeObserver(updateCompactState);
-    resizeObserver.observe(element);
+    resizeObserver.observe(container);
+    resizeObserver.observe(measurement);
     return () => resizeObserver.disconnect();
-  }, [compactBelowWidth]);
+  }, []);
+
+  useEffect(() => {
+    if (!isCompact) setIsDropdownOpen(false);
+  }, [isCompact]);
 
   const dropdownItems = useMemo<MenuItem[]>(
     () =>
@@ -531,89 +531,93 @@ export function SidebarSectionSwitcher({
     [items, onChange, value],
   );
 
-  if (compactBelowWidth) {
-    return (
-      <div ref={containerRef} className={cn("min-w-0 shrink-0", className)}>
-        {isCompact && activeItem ? (
-          <>
-            <button
-              ref={dropdownTriggerRef}
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={isDropdownOpen}
-              className="ui-font ui-text-sm flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
-              onClick={() => setIsDropdownOpen((open) => !open)}
-            >
-              {activeItem.icon ? (
-                <span className="flex size-4 shrink-0 items-center justify-center">
-                  {activeItem.icon}
-                </span>
-              ) : null}
-              <span className="min-w-0 truncate whitespace-nowrap">{activeItem.label}</span>
-              <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
-            </button>
-            <Dropdown
-              isOpen={isDropdownOpen}
-              anchorRef={dropdownTriggerRef}
-              anchorSide="bottom"
-              anchorAlign="start"
-              items={dropdownItems}
-              onClose={() => setIsDropdownOpen(false)}
-            />
-          </>
-        ) : (
-          <SidebarSectionSwitcher
-            items={items}
-            value={value}
-            onChange={onChange}
-            className="w-full"
-            itemClassName={itemClassName}
-          />
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div
-      role="tablist"
-      className={cn(
-        "mx-auto flex h-7 w-fit max-w-full shrink-0 select-none items-center justify-center gap-1 rounded-full bg-secondary-bg/45 p-0.5",
-        className,
-      )}
-    >
-      {items.map((item) => {
-        const selected = item.id === value;
-        const button = (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            aria-label={item.label}
-            disabled={item.disabled}
-            className={cn(
-              "ui-font ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
-              selected
-                ? "max-w-32 bg-hover px-2 text-text"
-                : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
-              item.disabled && "cursor-not-allowed opacity-50",
-              itemClassName,
-            )}
-            onClick={() => onChange(item.id)}
+    <div ref={containerRef} className="relative mx-auto w-full min-w-0 max-w-full shrink-0">
+      <div
+        ref={measurementRef}
+        aria-hidden
+        className="pointer-events-none invisible absolute flex h-7 w-max items-center gap-1 p-0.5"
+      >
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="ui-font ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-full px-2"
           >
             {item.icon ? (
               <span className="flex size-4 shrink-0 items-center justify-center">{item.icon}</span>
             ) : null}
-            <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
-          </button>
-        );
+            <span className="whitespace-nowrap">{item.label}</span>
+          </div>
+        ))}
+      </div>
 
-        return (
-          <Tooltip key={item.id} content={item.label} side="bottom">
-            {button}
-          </Tooltip>
-        );
-      })}
+      {isCompact && activeItem ? (
+        <>
+          <button
+            ref={dropdownTriggerRef}
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={isDropdownOpen}
+            className="ui-font ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
+            onClick={() => setIsDropdownOpen((open) => !open)}
+          >
+            {activeItem.icon ? (
+              <span className="flex size-4 shrink-0 items-center justify-center">
+                {activeItem.icon}
+              </span>
+            ) : null}
+            <span className="min-w-0 truncate whitespace-nowrap">{activeItem.label}</span>
+            <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+          </button>
+          <Dropdown
+            isOpen={isDropdownOpen}
+            anchorRef={dropdownTriggerRef}
+            anchorSide="bottom"
+            anchorAlign="start"
+            items={dropdownItems}
+            onClose={() => setIsDropdownOpen(false)}
+          />
+        </>
+      ) : (
+        <div
+          role="tablist"
+          className="mx-auto flex h-7 w-fit max-w-full select-none items-center justify-center gap-1 rounded-full bg-secondary-bg/45 p-0.5"
+        >
+          {items.map((item) => {
+            const selected = item.id === value;
+            const button = (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-label={item.label}
+                disabled={item.disabled}
+                className={cn(
+                  "ui-font ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
+                  selected
+                    ? "max-w-32 bg-hover px-2 text-text"
+                    : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
+                  item.disabled && "cursor-not-allowed opacity-50",
+                )}
+                onClick={() => onChange(item.id)}
+              >
+                {item.icon ? (
+                  <span className="flex size-4 shrink-0 items-center justify-center">
+                    {item.icon}
+                  </span>
+                ) : null}
+                <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
+              </button>
+            );
+
+            return (
+              <Tooltip key={item.id} content={item.label} side="bottom">
+                {button}
+              </Tooltip>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

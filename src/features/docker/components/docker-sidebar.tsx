@@ -109,7 +109,6 @@ type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
 
 const maxLogLines = 1_000;
-const compactDockerTabsWidth = 520;
 const dockerTabSections: Record<DockerTab, DockerSection[]> = {
   resources: ["containers", "images", "cleanup", "volumes", "networks"],
   compose: ["compose"],
@@ -1762,9 +1761,6 @@ export function DockerSidebar() {
           items={sectionTabs}
           value={activeTab}
           onChange={(tab) => setActiveTab(tab as DockerTab)}
-          className="w-full"
-          itemClassName="flex-1"
-          compactBelowWidth={compactDockerTabsWidth}
         />
 
         <SidebarSearchFilterRow
