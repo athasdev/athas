@@ -1,6 +1,7 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
+import Keybinding from "@/ui/keybinding";
 import { cn } from "@/utils/cn";
 
 interface MenubarContextValue {
@@ -165,13 +166,15 @@ function MenubarSeparator({ className, ...props }: ComponentProps<typeof Menu.Se
   );
 }
 
-function MenubarShortcut({ className, ...props }: ComponentProps<"span">) {
+function MenubarShortcut({ className, children, ...props }: ComponentProps<"span">) {
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn("ml-auto shrink-0 text-text-lighter ui-text-sm", className)}
+      className={cn("editor-font ml-auto shrink-0 text-text-lighter/75 ui-text-sm", className)}
       {...props}
-    />
+    >
+      {typeof children === "string" ? <Keybinding binding={children} /> : children}
+    </span>
   );
 }
 
