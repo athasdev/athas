@@ -6,13 +6,9 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
   CommandItemBadge,
-  CommandItemContent,
-  CommandItemDescription,
-  CommandItemIcon,
   CommandItemMeta,
-  CommandItemTitle,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 
@@ -146,29 +142,28 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       {filteredCommands.length > 0 ? (
         <CommandList ref={listRef} role="listbox" aria-label="Slash command suggestions">
           {filteredCommands.map((command, index) => (
-            <CommandItem
+            <CommandItemRow
               key={command.name}
               type="button"
               data-item-index={index}
               isSelected={index === selectedIndex}
               onClick={() => onSelect(command)}
               onMouseEnter={() => setSlashCommandSelectedIndex(index)}
-              className="px-3 py-2"
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
-            >
-              <CommandItemIcon>/</CommandItemIcon>
-              <CommandItemContent>
-                <CommandItemTitle className="block font-medium">{command.name}</CommandItemTitle>
-                <CommandItemDescription>{command.description}</CommandItemDescription>
-              </CommandItemContent>
-              {command.input?.hint ? (
-                <CommandItemBadge>{command.input.hint}</CommandItemBadge>
-              ) : index === selectedIndex ? (
-                <CommandItemMeta>Enter</CommandItemMeta>
-              ) : null}
-            </CommandItem>
+              icon={<span>/</span>}
+              title={command.name}
+              description={command.description}
+              contentLayout="stacked"
+              accessory={
+                command.input?.hint ? (
+                  <CommandItemBadge>{command.input.hint}</CommandItemBadge>
+                ) : index === selectedIndex ? (
+                  <CommandItemMeta>Enter</CommandItemMeta>
+                ) : null
+              }
+            />
           ))}
         </CommandList>
       ) : (

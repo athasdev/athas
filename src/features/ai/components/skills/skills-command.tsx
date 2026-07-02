@@ -27,7 +27,8 @@ import Command, {
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -380,7 +381,7 @@ export function SkillsCommand({
                   const isInstalled = isMarketplaceSkillInstalled(skills, skill.id);
 
                   return (
-                    <CommandItem
+                    <CommandItemRow
                       key={skill.id}
                       as="div"
                       isSelected={isSelected}
@@ -388,48 +389,41 @@ export function SkillsCommand({
                         isInstalled ? undefined : void handleInstallMarketplaceSkill(skill)
                       }
                       onMouseEnter={() => setSelectedIndex(index)}
-                      className="group mb-1 px-3 py-2 last:mb-0"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <div className="truncate ui-text-base text-text">{skill.title}</div>
+                      className="group"
+                      title={skill.title}
+                      description={
+                        <>
+                          <span>{skill.description}</span>
+                          {skill.author ? <span>by {skill.author}</span> : null}
+                        </>
+                      }
+                      contentLayout="stacked"
+                      accessory={
+                        <>
                           {skill.version ? (
-                            <span className="ui-text-base shrink-0 text-text-lighter">
-                              v{skill.version}
-                            </span>
+                            <CommandItemBadge>v{skill.version}</CommandItemBadge>
                           ) : null}
-                        </div>
-                        <div className="ui-text-base mt-0.5 truncate text-text-lighter">
-                          {skill.description}
-                        </div>
-                        {(skill.author || skill.tags.length > 0) && (
-                          <div className="ui-text-base mt-1 flex flex-wrap items-center gap-1.5 text-text-lighter/80">
-                            {skill.author ? <span>by {skill.author}</span> : null}
-                            {skill.tags.slice(0, 3).map((tag) => (
-                              <span
-                                key={tag}
-                                className="rounded border border-border/60 bg-primary-bg/50 px-1"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        type="button"
-                        variant={isInstalled ? "default" : "default"}
-                        disabled={isInstalled}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (!isInstalled) {
-                            void handleInstallMarketplaceSkill(skill);
-                          }
-                        }}
-                      >
-                        {isInstalled ? "Added" : "Add"}
-                      </Button>
-                    </CommandItem>
+                          {skill.tags.slice(0, 3).map((tag) => (
+                            <CommandItemBadge key={tag}>{tag}</CommandItemBadge>
+                          ))}
+                        </>
+                      }
+                      action={
+                        <Button
+                          type="button"
+                          variant={isInstalled ? "default" : "default"}
+                          disabled={isInstalled}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (!isInstalled) {
+                              void handleInstallMarketplaceSkill(skill);
+                            }
+                          }}
+                        >
+                          {isInstalled ? "Added" : "Add"}
+                        </Button>
+                      }
+                    />
                   );
                 })
               )
@@ -444,60 +438,57 @@ export function SkillsCommand({
                 const hasLocalOverride = hasSkillLocalOverride(skill);
 
                 return (
-                  <CommandItem
+                  <CommandItemRow
                     key={skill.id}
                     as="div"
                     isSelected={isSelected}
                     onClick={() => handleSelectSkill(skill)}
                     onMouseEnter={() => setSelectedIndex(index)}
-                    className="group mb-1 px-3 py-2 last:mb-0"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-base text-text">{skill.title}</div>
-                      {(skill.source === "marketplace" || hasLocalOverride) && (
-                        <div className="ui-text-base mt-1 flex items-center gap-1.5 text-text-lighter">
-                          {skill.source === "marketplace" ? <span>Marketplace</span> : null}
-                          {hasLocalOverride ? (
-                            <span className="rounded border border-warning/25 bg-warning/10 px-1 text-warning">
-                              Local override
-                            </span>
-                          ) : null}
-                        </div>
-                      )}
-                      {preview && (
-                        <div className="ui-text-base mt-0.5 truncate text-text-lighter">
-                          {preview}
-                        </div>
-                      )}
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openSkillEditor(skill);
-                      }}
-                      className="opacity-0 focus:opacity-100 group-hover:opacity-100"
-                      tooltip="Edit skill"
-                      aria-label={`Edit ${skill.title}`}
-                    >
-                      <PencilSimple size={13} />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleDelete(skill.id);
-                      }}
-                      className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
-                      tooltip="Delete skill"
-                      aria-label={`Delete ${skill.title}`}
-                    >
-                      <Trash size={13} />
-                    </Button>
-                  </CommandItem>
+                    className="group"
+                    title={skill.title}
+                    description={preview}
+                    contentLayout="stacked"
+                    accessory={
+                      <>
+                        {skill.source === "marketplace" ? (
+                          <CommandItemBadge>Marketplace</CommandItemBadge>
+                        ) : null}
+                        {hasLocalOverride ? (
+                          <CommandItemBadge>Local override</CommandItemBadge>
+                        ) : null}
+                      </>
+                    }
+                    action={
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openSkillEditor(skill);
+                          }}
+                          className="opacity-0 focus:opacity-100 group-hover:opacity-100"
+                          tooltip="Edit skill"
+                          aria-label={`Edit ${skill.title}`}
+                        >
+                          <PencilSimple size={13} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleDelete(skill.id);
+                          }}
+                          className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
+                          tooltip="Delete skill"
+                          aria-label={`Delete ${skill.title}`}
+                        >
+                          <Trash size={13} />
+                        </Button>
+                      </>
+                    }
+                  />
                 );
               })
             )}

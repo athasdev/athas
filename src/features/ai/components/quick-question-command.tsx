@@ -19,7 +19,7 @@ import {
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -231,19 +231,13 @@ export function QuickQuestionCommandContent({
         ) : isLoading ? (
           <CommandEmpty>Thinking...</CommandEmpty>
         ) : (
-          <CommandItem
+          <CommandItemRow
             isSelected
             onClick={() => void handleSubmit()}
-            className="h-8 px-3 py-0"
             disabled={!question.trim()}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="shrink-0 truncate ui-text-base leading-none">Ask quick question</div>
-              <div className="min-w-0 truncate ui-text-base leading-none text-text-lighter">
-                {modelLabel}
-              </div>
-            </div>
-          </CommandItem>
+            title="Ask quick question"
+            description={modelLabel}
+          />
         )}
       </CommandList>
     </div>

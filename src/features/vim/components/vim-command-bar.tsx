@@ -9,7 +9,7 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 
@@ -169,23 +169,20 @@ const VimCommandBar = () => {
                 : command.name;
 
               return (
-                <CommandItem
+                <CommandItemRow
                   key={command.name}
                   data-item-index={index}
                   onClick={() => handleItemSelect(command)}
                   isSelected={isSelected}
-                  className="ui-font"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate ui-text-base">
+                  title={
+                    <>
                       <span className="text-accent">:</span>
-                      <span className="text-text">{displayName}</span>
-                    </div>
-                    <div className="mt-0.5 truncate ui-text-base text-text-lighter opacity-60">
-                      {command.description}
-                    </div>
-                  </div>
-                </CommandItem>
+                      {displayName}
+                    </>
+                  }
+                  description={command.description}
+                  contentLayout="stacked"
+                />
               );
             })}
           </div>

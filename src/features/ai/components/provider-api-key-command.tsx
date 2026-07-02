@@ -16,7 +16,7 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
@@ -185,7 +185,7 @@ function ProviderApiKeyCommandContent({
               const hasKey = hasProviderApiKey(provider.id);
 
               return (
-                <CommandItem
+                <CommandItemRow
                   key={provider.id}
                   isSelected={isSelected}
                   onClick={() => {
@@ -195,22 +195,22 @@ function ProviderApiKeyCommandContent({
                     setErrorMessage("");
                     requestAnimationFrame(() => apiKeyInputRef.current?.focus());
                   }}
-                  className="mb-1 px-2 py-2 last:mb-0"
-                >
-                  <ProviderIcon
-                    providerId={provider.id}
-                    size={14}
-                    className="shrink-0 text-text-lighter"
-                  />
-                  <span className="min-w-0 flex-1 truncate ui-text-base text-text">
-                    {provider.name}
-                  </span>
-                  {hasKey ? (
-                    <CheckCircle className="shrink-0 text-success" size={13} />
-                  ) : (
-                    <WarningCircle className="shrink-0 text-warning" size={13} />
-                  )}
-                </CommandItem>
+                  icon={
+                    <ProviderIcon
+                      providerId={provider.id}
+                      size={14}
+                      className="text-text-lighter"
+                    />
+                  }
+                  title={provider.name}
+                  accessory={
+                    hasKey ? (
+                      <CheckCircle className="text-success" size={13} />
+                    ) : (
+                      <WarningCircle className="text-warning" size={13} />
+                    )
+                  }
+                />
               );
             })
           )}

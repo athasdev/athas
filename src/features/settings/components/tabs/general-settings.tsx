@@ -10,7 +10,7 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -357,18 +357,14 @@ function ReportBugCommandDialog({
           <CommandEmpty>No report channel matches "{query}".</CommandEmpty>
         ) : (
           channels.map((channel, index) => (
-            <CommandItem
+            <CommandItemRow
               key={channel.id}
               isSelected={index === selectedIndex}
               onClick={() => onSelect(channel)}
               onMouseEnter={() => setSelectedIndex(index)}
-              className="h-8 items-center justify-between px-3"
-            >
-              <span className="ui-font ui-text-base text-text">{channel.label}</span>
-              <span className="ui-font ui-text-base shrink-0 text-text-lighter">
-                {channel.detail}
-              </span>
-            </CommandItem>
+              title={channel.label}
+              description={channel.detail}
+            />
           ))
         )}
       </CommandList>
