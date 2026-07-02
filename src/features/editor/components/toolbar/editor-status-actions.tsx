@@ -25,7 +25,8 @@ import {
 } from "@/features/editor/utils/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Button, buttonVariants } from "@/ui/button";
+import { chromeControl } from "@/features/layout/components/chrome-control-styles";
+import { Button } from "@/ui/button";
 import {
   Combobox,
   ComboboxContent,
@@ -41,18 +42,12 @@ import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
-const actionButtonClass = cn(
-  buttonVariants({ variant: "ghost", compact: true }),
-  "rounded text-text-lighter",
-);
+const actionButtonClass = cn(chromeControl(), "text-text-lighter");
 
 const statusChipClass =
   "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
-const menuTriggerClass = cn(
-  buttonVariants({ variant: "ghost", compact: true }),
-  "rounded text-text-lighter",
-);
+const menuTriggerClass = cn(chromeControl(), "text-text-lighter");
 
 const menuItemClass =
   "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left ui-text-sm text-text transition-colors hover:bg-hover";
