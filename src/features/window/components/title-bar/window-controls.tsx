@@ -5,6 +5,7 @@ import {
   MinusIcon as Minus,
   XIcon as X,
 } from "@/ui/icons";
+import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { Button } from "@/ui/button";
 import { ChromeGroup } from "@/ui/chrome";
 
@@ -39,12 +40,8 @@ export function WindowControls({
     }
   };
 
-  const handleClose = async () => {
-    try {
-      await currentWindow?.close();
-    } catch (error) {
-      console.error("Error closing window:", error);
-    }
+  const handleClose = () => {
+    requestWindowClose();
   };
 
   return (

@@ -97,10 +97,12 @@ type MenubarContentProps = ComponentProps<typeof Menu.Popup> & {
   side?: ComponentProps<typeof Menu.Positioner>["side"];
   sideOffset?: ComponentProps<typeof Menu.Positioner>["sideOffset"];
   collisionPadding?: ComponentProps<typeof Menu.Positioner>["collisionPadding"];
+  positionerClassName?: ComponentProps<typeof Menu.Positioner>["className"];
 };
 
 function MenubarContent({
   className,
+  positionerClassName,
   align = "start",
   alignOffset = -4,
   side = "bottom",
@@ -116,7 +118,7 @@ function MenubarContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
-        className="z-[10031]"
+        className={cn("z-[10031]", positionerClassName)}
       >
         <Menu.Popup
           data-slot="menubar-content"
@@ -208,6 +210,7 @@ type MenubarSubContentProps = MenubarContentProps;
 
 function MenubarSubContent({
   className,
+  positionerClassName,
   align = "start",
   side = "right",
   sideOffset = 4,
@@ -221,7 +224,7 @@ function MenubarSubContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
-        className="z-[10050]"
+        className={cn("z-[10050]", positionerClassName)}
       >
         <Menu.Popup
           data-slot="menubar-sub-content"
