@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   ArchiveIcon as Archive,
+  CaretDownIcon as CaretDown,
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   DownloadIcon as Download,
   DotsThreeIcon as MoreHorizontal,
@@ -15,6 +16,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
@@ -27,6 +29,7 @@ import {
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
+import { SplitActionButton } from "@/ui/split-action-button";
 import { toast } from "@/ui/toast";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -40,6 +43,7 @@ import {
   getStatusDiffStats,
 } from "../api/git-diff-api";
 import { clearRepositoryDiscoveryCache, resolveRepositoryPath } from "../api/git-repo-api";
+import { fetchChanges, pullChanges, pushChanges } from "../api/git-remotes-api";
 import { applyStash, dropStash, getStashes, popStash } from "../api/git-stash-api";
 import { getGitStatus, initRepository } from "../api/git-status-api";
 import { useRepositoryStore } from "../stores/git-repository.store";
@@ -75,9 +79,16 @@ const GIT_VIEW_BRANCH_MANAGER_EVENT = "athas:open-git-view-branch-manager";
 type WorkingTreeDiffScope = "all" | "unstaged" | "staged";
 type WorkingTreeDiffEntry = readonly [fileKey: string, file: GitFile];
 type LoadedWorkingTreeDiff = { fileKey: string; diff: GitDiff };
+type GitRemoteAction = "push" | "pull" | "fetch";
 
 const WORKING_TREE_DIFF_BATCH_SIZE = 8;
 const WORKING_TREE_DIFF_FILE_LIMIT = 1_000;
+
+const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: string }> = {
+  push: { present: "Pushing", past: "Pushed" },
+  pull: { present: "Pulling", past: "Pulled" },
+  fetch: { present: "Fetching", past: "Fetched" },
+};
 
 type GitPaletteAction =
   | { type: "select-repository" }
@@ -183,6 +194,9 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const [gitActionsMenuAnchor, setGitActionsMenuAnchor] = useState<GitActionsMenuAnchorRect | null>(
     null,
   );
+  const syncMenuAnchorRef = useRef<HTMLDivElement>(null);
+  const [isSyncMenuOpen, setIsSyncMenuOpen] = useState(false);
+  const [remoteAction, setRemoteAction] = useState<GitRemoteAction | null>(null);
 
   const [showRemoteManager, setShowRemoteManager] = useState(false);
   const [showTagManager, setShowTagManager] = useState(false);
@@ -391,6 +405,91 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setIsRefreshing(false);
     }
   }, [refreshGitData, refreshWorkspaceRepositories, setIsRefreshing]);
+
+  const handleRemoteAction = useCallback(
+    async (action: GitRemoteAction) => {
+      if (!activeRepoPath) {
+        toast.error("No repository open");
+        return;
+      }
+
+      setIsSyncMenuOpen(false);
+      setRemoteAction(action);
+      const label = REMOTE_ACTION_LABELS[action];
+      const toastId = toast.show({
+        message: `${label.present} changes...`,
+        type: "info",
+        duration: Infinity,
+      });
+
+      try {
+        const result =
+          action === "push"
+            ? await pushChanges(activeRepoPath)
+            : action === "pull"
+              ? await pullChanges(activeRepoPath)
+              : await fetchChanges(activeRepoPath);
+
+        toast.dismiss(toastId);
+
+        if (result.success) {
+          toast.success(`${label.past} changes successfully.`);
+          await handleManualRefresh();
+          return;
+        }
+
+        toast.error(result.error || `Failed to ${action} changes.`);
+      } catch (error) {
+        toast.dismiss(toastId);
+        toast.error(error instanceof Error ? error.message : `Failed to ${action} changes.`);
+      } finally {
+        setRemoteAction(null);
+      }
+    },
+    [activeRepoPath, handleManualRefresh],
+  );
+
+  const aheadCount = gitStatus?.ahead ?? 0;
+  const behindCount = gitStatus?.behind ?? 0;
+  const primaryRemoteAction: GitRemoteAction =
+    aheadCount > 0 ? "push" : behindCount > 0 ? "pull" : "fetch";
+  const syncActionLabel =
+    remoteAction !== null
+      ? REMOTE_ACTION_LABELS[remoteAction].present
+      : primaryRemoteAction === "push"
+        ? `Push ${aheadCount}`
+        : primaryRemoteAction === "pull"
+          ? `Pull ${behindCount}`
+          : "Fetch";
+  const isRemoteActionLoading = remoteAction !== null;
+
+  const syncMenuItems = useMemo<MenuItem[]>(
+    () => [
+      {
+        id: "push",
+        label: aheadCount > 0 ? `Push ${aheadCount} commit${aheadCount !== 1 ? "s" : ""}` : "Push",
+        icon: <Upload />,
+        disabled: isRemoteActionLoading,
+        onClick: () => void handleRemoteAction("push"),
+      },
+      {
+        id: "pull",
+        label:
+          behindCount > 0 ? `Pull ${behindCount} commit${behindCount !== 1 ? "s" : ""}` : "Pull",
+        icon: <Download />,
+        disabled: isRemoteActionLoading,
+        onClick: () => void handleRemoteAction("pull"),
+      },
+      {
+        id: "fetch",
+        label: "Fetch",
+        icon: <RefreshCw />,
+        disabled: isRemoteActionLoading,
+        onClick: () => void handleRemoteAction("fetch"),
+      },
+    ],
+    [aheadCount, behindCount, handleRemoteAction, isRemoteActionLoading],
+  );
 
   useEffect(() => {
     void syncWorkspaceRepositories(repoPath ?? null);
@@ -1249,6 +1348,27 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1 pb-0.5">
+              <SplitActionButton
+                ref={syncMenuAnchorRef}
+                label={syncActionLabel}
+                actionAriaLabel={`${syncActionLabel} remote changes`}
+                menuAriaLabel="Choose remote action"
+                menuIcon={<CaretDown className="size-3" />}
+                onAction={() => void handleRemoteAction(primaryRemoteAction)}
+                onMenu={() => setIsSyncMenuOpen((open) => !open)}
+                disabled={!activeRepoPath || isRemoteActionLoading}
+                menuDisabled={!activeRepoPath || isRemoteActionLoading}
+                active={isSyncMenuOpen}
+                expanded={isSyncMenuOpen}
+              />
+              <Dropdown
+                isOpen={isSyncMenuOpen}
+                anchorRef={syncMenuAnchorRef}
+                anchorAlign="end"
+                onClose={() => setIsSyncMenuOpen(false)}
+                items={syncMenuItems}
+                className="min-w-[132px]"
+              />
               <SidebarHeaderIconButton
                 onClick={handleManualRefresh}
                 disabled={isLoadingGitData || isRefreshing}
@@ -1298,6 +1418,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                     onViewCommitDiff={handleViewCommitDiff}
                     repoPath={activeRepoPath}
                     showHeader={false}
+                    ahead={gitStatus.ahead}
+                    behind={gitStatus.behind}
                   />
                 ),
               },
