@@ -155,6 +155,8 @@ export const useLspIntegration = ({
     getDefinition: lspClient.getDefinition.bind(lspClient),
     isLanguageSupported: (fp) => isFileSupported(fp),
     filePath: activeFilePath || "",
+    content: value,
+    rootFolderPath,
     lineHeight,
     charWidth,
     resolveEditorPosition,
@@ -164,6 +166,7 @@ export const useLspIntegration = ({
   const definitionLinkHandlers = useDefinitionLink({
     filePath: activeFilePath || "",
     content: enabled ? value : "",
+    rootFolderPath,
     lineHeight,
     charWidth,
     isLanguageSupported: enabled && isLspSupported,

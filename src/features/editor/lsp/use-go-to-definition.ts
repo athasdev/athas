@@ -10,6 +10,7 @@ import { calculateOffsetFromContentPosition } from "@/features/editor/utils/posi
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { logger } from "../utils/logger";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
+import { getFileReferenceAtPosition } from "./file-reference-navigation";
 
 interface Definition {
   uri: string;
@@ -27,6 +28,8 @@ interface UseGoToDefinitionProps {
   ) => Promise<Definition[] | null>;
   isLanguageSupported?: (filePath: string) => boolean;
   filePath: string;
+  content: string;
+  rootFolderPath?: string;
   lineHeight: number;
   charWidth: number;
   resolveEditorPosition?: EditorCoordinateResolver;
@@ -36,6 +39,8 @@ export const useGoToDefinition = ({
   getDefinition,
   isLanguageSupported,
   filePath,
+  content,
+  rootFolderPath,
   lineHeight,
   charWidth,
   resolveEditorPosition,
@@ -48,12 +53,6 @@ export const useGoToDefinition = ({
       if (!e.metaKey && !e.ctrlKey) {
         return;
       }
-
-      if (!getDefinition || !isLanguageSupported?.(filePath || "")) {
-        return;
-      }
-
-      e.preventDefault();
 
       const editor = e.currentTarget;
       if (!editor) return;
@@ -77,6 +76,75 @@ export const useGoToDefinition = ({
         resolvedPosition?.column ?? Math.floor((x - contentOffsetX + scrollLeft) / charWidth);
 
       if (line >= 0 && character >= 0) {
+        const fileReference = getFileReferenceAtPosition({
+          content,
+          sourceFilePath: filePath,
+          rootFolderPath,
+          line,
+          column: character,
+        });
+
+        if (fileReference) {
+          e.preventDefault();
+          let didOpenFileReference = false;
+
+          try {
+            const bufferStore = useBufferStore.getState();
+            const existingBuffer = getBufferByPath(bufferStore.buffers, fileReference.targetPath);
+            const targetContent = existingBuffer
+              ? null
+              : await readFileContent(fileReference.targetPath);
+
+            const activeBufferId = bufferStore.activeBufferId;
+            if (activeBufferId && filePath) {
+              const editorState = useEditorStateStore.getState();
+              useJumpListStore.getState().actions.pushEntry({
+                bufferId: activeBufferId,
+                filePath,
+                line: editorState.cursorPosition.line,
+                column: editorState.cursorPosition.column,
+                offset: editorState.cursorPosition.offset,
+                scrollTop: editorState.scrollTop,
+                scrollLeft: editorState.scrollLeft,
+              });
+            }
+
+            if (existingBuffer) {
+              bufferStore.actions.setActiveBuffer(existingBuffer.id);
+            } else {
+              const fileName = fileReference.targetPath.split("/").pop() || "untitled";
+              const bufferId = bufferStore.actions.openBuffer(
+                fileReference.targetPath,
+                fileName,
+                targetContent ?? "",
+              );
+              bufferStore.actions.setActiveBuffer(bufferId);
+            }
+
+            setTimeout(() => {
+              editorAPI.setCursorPosition({ line: 0, column: 0, offset: 0 });
+              requestAnimationFrame(() => {
+                centerCursorInViewport(0);
+              });
+            }, 100);
+            didOpenFileReference = true;
+          } catch (error) {
+            logger.debug(
+              "Editor",
+              `File reference target not found: ${fileReference.targetPath}`,
+              error,
+            );
+          }
+
+          if (didOpenFileReference) return;
+        }
+
+        if (!getDefinition || !isLanguageSupported?.(filePath || "")) {
+          return;
+        }
+
+        e.preventDefault();
+
         try {
           logger.info("Editor", `Go to definition at ${filePath}:${line}:${character}`);
           const definitions = await getDefinition(filePath || "", line, character);
@@ -147,6 +215,8 @@ export const useGoToDefinition = ({
       getDefinition,
       isLanguageSupported,
       filePath,
+      content,
+      rootFolderPath,
       lineHeight,
       charWidth,
       centerCursorInViewport,

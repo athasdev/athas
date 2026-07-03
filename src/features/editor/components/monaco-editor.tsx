@@ -3,7 +3,13 @@ import "../monaco/language-contributions";
 import "monaco-editor/min/vs/editor/editor.main.css";
 import "../styles/monaco-editor.css";
 
-import { editor as monacoEditor, KeyCode, KeyMod, Range as MonacoRange } from "monaco-editor";
+import {
+  editor as monacoEditor,
+  KeyCode,
+  KeyMod,
+  MarkerSeverity,
+  Range as MonacoRange,
+} from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import { initVimMode, type VimAdapterInstance } from "monaco-vim";
 import {
@@ -19,6 +25,8 @@ import {
 import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
+import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
+import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
@@ -27,6 +35,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { useContextMenu } from "@/ui/context-menu";
 import { formatRelativeTime } from "@/utils/date";
+import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
 import EditorContextMenu from "../context-menu/context-menu";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
@@ -56,6 +65,11 @@ import {
 import { defineActiveMonacoTheme, defineMonacoTheme } from "../monaco/theme";
 import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
 import { registerAthasVimCommands, toAthasVimMode } from "../monaco/vim-commands";
+import { registerMonacoLspProviders } from "../monaco/lsp-providers";
+
+registerMonacoLspProviders();
+
+const EMPTY_DIAGNOSTICS: Diagnostic[] = [];
 
 interface MonacoEditorProps {
   bufferId?: string;
@@ -158,6 +172,9 @@ export function MonacoEditor({
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentSearchMatchIndex = useEditorUIStore.use.currentMatchIndex();
   const { getBlameForLine } = useGitBlame(inlineGitBlameEnabled && filePath ? filePath : undefined);
+  const diagnosticsForFile = useDiagnosticsStore((state) =>
+    filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
+  );
 
   const modelUri = useMemo(
     () => createModelUri(activeBufferId ?? undefined, filePath),
@@ -557,20 +574,17 @@ export function MonacoEditor({
       if (!isSelectAllShortcut) return;
 
       const target = event.target;
-      const targetElement = target instanceof HTMLElement ? target : null;
       const activeElement = document.activeElement;
+      if (isNativeTextInputTarget(target, activeElement)) return;
+
       const isInsideEditor =
         editor.hasTextFocus() ||
         (target instanceof Node && container.contains(target)) ||
         (activeElement instanceof Node && container.contains(activeElement));
 
       if (!isInsideEditor) {
-        const isTextField =
-          targetElement instanceof HTMLInputElement ||
-          targetElement instanceof HTMLTextAreaElement ||
-          targetElement?.isContentEditable;
-
-        if (isTextField || targetElement?.closest(".terminal-container")) return;
+        const targetElement = target instanceof HTMLElement ? target : null;
+        if (targetElement?.closest(".terminal-container")) return;
         if (!isActiveSurface) return;
       }
 
@@ -743,6 +757,37 @@ export function MonacoEditor({
 
     monacoEditor.setModelLanguage(model, monacoLanguageId);
   }, [monacoLanguageId]);
+
+  useEffect(() => {
+    const model = modelRef.current;
+    if (!model) return;
+
+    monacoEditor.setModelMarkers(
+      model,
+      "athas",
+      diagnosticsForFile.map((diagnostic) => ({
+        severity:
+          diagnostic.severity === "error"
+            ? MarkerSeverity.Error
+            : diagnostic.severity === "warning"
+              ? MarkerSeverity.Warning
+              : MarkerSeverity.Info,
+        message: diagnostic.message,
+        source: diagnostic.source,
+        code: diagnostic.code,
+        startLineNumber: diagnostic.line + 1,
+        startColumn: diagnostic.column + 1,
+        endLineNumber: diagnostic.endLine + 1,
+        endColumn: Math.max(diagnostic.endColumn + 1, diagnostic.column + 2),
+      })),
+    );
+
+    return () => {
+      if (!model.isDisposed()) {
+        monacoEditor.setModelMarkers(model, "athas", []);
+      }
+    };
+  }, [diagnosticsForFile]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -1162,6 +1207,7 @@ export function MonacoEditor({
             onMoveLineUp={canEdit ? () => executeEditorCommand("editor.moveLineUp") : undefined}
             onMoveLineDown={canEdit ? () => executeEditorCommand("editor.moveLineDown") : undefined}
             onGoToDefinition={() => executeEditorCommand("editor.goToDefinition")}
+            onGoToTypeDefinition={() => executeEditorCommand("editor.goToTypeDefinition")}
             onFindReferences={() => executeEditorCommand("editor.goToReferences")}
             onRenameSymbol={canEdit ? () => executeEditorCommand("editor.renameSymbol") : undefined}
             onQuickFix={canEdit ? () => executeEditorCommand("editor.quickFix") : undefined}

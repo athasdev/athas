@@ -3,6 +3,7 @@ import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { deferUntilAfterNextPaint } from "./deferred-lsp-work";
 import { LspClient } from "./lsp-client";
+import { useLspStore } from "./stores/lsp.store";
 
 export interface InlayHint {
   line: number;
@@ -28,6 +29,10 @@ export const useInlayHints = (
   const [hints, setHints] = useState<InlayHint[]>([]);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
+  const lspStatusRevision = useLspStore((state) => {
+    const { status, activeWorkspaces, supportedLanguages } = state.lspStatus;
+    return `${status}:${activeWorkspaces.join("|")}:${supportedLanguages?.join("|") ?? ""}`;
+  });
 
   const fetchHints = useCallback(async () => {
     const id = ++requestIdRef.current;
@@ -54,7 +59,7 @@ export const useInlayHints = (
     return deferUntilAfterNextPaint(() => {
       void fetchHints();
     });
-  }, [fetchHints]);
+  }, [fetchHints, lspStatusRevision]);
 
   // Re-fetch after typing (debounced)
   useEffect(() => {

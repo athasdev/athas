@@ -108,7 +108,14 @@ function isBenignHoverError(error: unknown): boolean {
 
 function isCanceledLspRequest(error: unknown): boolean {
   const message = stringifyLspError(error).toLowerCase();
-  return message === "canceled" || message.includes("canceled: canceled");
+  return (
+    message === "canceled" ||
+    message.includes("canceled: canceled") ||
+    message.includes("request canceled") ||
+    message.includes("request cancelled") ||
+    message.includes("content modified") ||
+    message.includes("-32801")
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

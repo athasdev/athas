@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
+import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useEditorUIStore } from "../stores/ui.store";
 import type { EditorCoordinateResolver } from "../view-model/view-layout";
+import { getFileReferenceAtPosition } from "./file-reference-navigation";
 
 interface Definition {
   uri: string;
@@ -14,6 +16,7 @@ interface Definition {
 interface UseDefinitionLinkProps {
   filePath: string;
   content: string;
+  rootFolderPath?: string;
   lineHeight: number;
   charWidth: number;
   isLanguageSupported: boolean;
@@ -72,6 +75,7 @@ function getWordBoundaries(
 export const useDefinitionLink = ({
   filePath,
   content,
+  rootFolderPath,
   lineHeight,
   charWidth,
   isLanguageSupported,
@@ -144,7 +148,7 @@ export const useDefinitionLink = ({
   // Makes async LSP call to validate the symbol has a definition
   const updateDefinitionLink = useCallback(
     (x: number, y: number, editor: HTMLElement) => {
-      if (!isLanguageSupported || !filePath || !getDefinition) {
+      if (!filePath) {
         currentWordRef.current = null;
         actions.setDefinitionLinkRange(null);
         setPointerCursor(editor, false);
@@ -153,6 +157,70 @@ export const useDefinitionLink = ({
 
       const pos = calculatePosition(x, y, editor);
       if (!pos) {
+        currentWordRef.current = null;
+        actions.setDefinitionLinkRange(null);
+        setPointerCursor(editor, false);
+        return;
+      }
+
+      const fileReference = getFileReferenceAtPosition({
+        content: latestContentRef.current,
+        sourceFilePath: filePath,
+        rootFolderPath,
+        line: pos.line,
+        column: pos.column,
+      });
+
+      if (fileReference) {
+        const currentWord = currentWordRef.current;
+        if (
+          currentWord &&
+          currentWord.line === fileReference.range.line &&
+          currentWord.startColumn === fileReference.range.startColumn &&
+          currentWord.endColumn === fileReference.range.endColumn
+        ) {
+          return;
+        }
+
+        currentWordRef.current = {
+          line: fileReference.range.line,
+          startColumn: fileReference.range.startColumn,
+          endColumn: fileReference.range.endColumn,
+        };
+
+        if (pendingRequestRef.current) {
+          pendingRequestRef.current.cancelled = true;
+          pendingRequestRef.current = null;
+        }
+
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = null;
+        }
+
+        actions.setDefinitionLinkRange(null);
+        setPointerCursor(editor, false);
+
+        const request = { cancelled: false };
+        pendingRequestRef.current = request;
+
+        readFileContent(fileReference.targetPath)
+          .then(() => {
+            if (request.cancelled) return;
+            actions.setDefinitionLinkRange(fileReference.range);
+            setPointerCursor(editor, true);
+          })
+          .catch(() => {
+            if (!request.cancelled) {
+              actions.setDefinitionLinkRange(null);
+              setPointerCursor(editor, false);
+            }
+          });
+
+        return;
+      }
+
+      if (!isLanguageSupported || !filePath || !getDefinition) {
         currentWordRef.current = null;
         actions.setDefinitionLinkRange(null);
         setPointerCursor(editor, false);
@@ -228,7 +296,15 @@ export const useDefinitionLink = ({
           }
         });
     },
-    [filePath, isLanguageSupported, getDefinition, calculatePosition, actions, setPointerCursor],
+    [
+      filePath,
+      rootFolderPath,
+      isLanguageSupported,
+      getDefinition,
+      calculatePosition,
+      actions,
+      setPointerCursor,
+    ],
   );
 
   // Handle mouse move - track position and update highlight if modifier held

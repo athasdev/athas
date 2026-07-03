@@ -4,6 +4,7 @@ import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { normalizeLineEndings } from "../utils/html";
 import { deferUntilAfterNextPaint } from "./deferred-lsp-work";
 import { LspClient } from "./lsp-client";
+import { useLspStore } from "./stores/lsp.store";
 
 export interface SemanticToken {
   line: number;
@@ -62,6 +63,10 @@ export const useSemanticTokens = (
   const contentRef = useRef(content);
   const timerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
+  const lspStatusRevision = useLspStore((state) => {
+    const { status, activeWorkspaces, supportedLanguages } = state.lspStatus;
+    return `${status}:${activeWorkspaces.join("|")}:${supportedLanguages?.join("|") ?? ""}`;
+  });
 
   useEffect(() => {
     contentRef.current = content;
@@ -94,7 +99,7 @@ export const useSemanticTokens = (
     return deferUntilAfterNextPaint(() => {
       void fetchTokens();
     });
-  }, [fetchTokens]);
+  }, [fetchTokens, lspStatusRevision]);
 
   useEffect(() => {
     if (!filePath || !enabled || !extensionRegistry.isLspSupported(filePath)) {

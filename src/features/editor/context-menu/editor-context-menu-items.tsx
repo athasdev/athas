@@ -28,6 +28,7 @@ export interface EditorContextMenuHandlers {
   onFind?: () => void;
   onGoToLine?: () => void;
   onGoToDefinition?: () => void;
+  onGoToTypeDefinition?: () => void;
   onFindReferences?: () => void;
   onRenameSymbol?: () => void;
   onSelectNextOccurrence?: () => void;
@@ -75,6 +76,7 @@ export function buildEditorContextMenuItems({
   onFind,
   onGoToLine,
   onGoToDefinition,
+  onGoToTypeDefinition,
   onFindReferences,
   onRenameSymbol,
   onSelectNextOccurrence,
@@ -240,6 +242,13 @@ export function buildEditorContextMenuItems({
       keybinding: <Keybinding keys={["Shift", "F12"]} className="opacity-60" />,
       disabled: isDisabled(onFindReferences),
       onClick: onFindReferences ?? noop,
+    },
+    {
+      id: "go-to-type-definition",
+      label: "Go to Type Definition",
+      icon: <Code />,
+      disabled: isDisabled(onGoToTypeDefinition),
+      onClick: onGoToTypeDefinition ?? noop,
     },
     {
       id: "rename-symbol",

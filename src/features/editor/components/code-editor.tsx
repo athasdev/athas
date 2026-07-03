@@ -42,6 +42,7 @@ import { LspClient } from "../lsp/lsp-client";
 import RenameInput from "../lsp/rename-input";
 import { SignatureHelpTooltip } from "../lsp/signature-help-tooltip";
 import type { CodeLensItem } from "../lsp/use-code-lens";
+import { useCodeLens } from "../lsp/use-code-lens";
 import { useInlayHints } from "../lsp/use-inlay-hints";
 import { useRename } from "../lsp/use-rename";
 import { useSemanticTokens } from "../lsp/use-semantic-tokens";
@@ -341,6 +342,7 @@ const CodeEditor = ({
     enableSemanticTokens,
     value,
   );
+  const lspCodeLenses = useCodeLens(enableCodeLens ? filePath : undefined, enableCodeLens);
 
   // Inline lenses are reserved for Athas-owned actions that do not require LSP layout support.
   const pythonScriptCells = useMemo(
@@ -374,8 +376,8 @@ const CodeEditor = ({
   );
   const visibleCodeLenses = useMemo(
     () =>
-      codeLensEnabled ? [...pythonScriptCellLenses, ...rMarkdownChunkLenses] : [],
-    [codeLensEnabled, pythonScriptCellLenses, rMarkdownChunkLenses],
+      codeLensEnabled ? [...lspCodeLenses, ...pythonScriptCellLenses, ...rMarkdownChunkLenses] : [],
+    [codeLensEnabled, lspCodeLenses, pythonScriptCellLenses, rMarkdownChunkLenses],
   );
 
   const handleCodeLensExecute = useCallback(
