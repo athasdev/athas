@@ -2,10 +2,20 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 
 const MONACO_HOVER_MIN_WIDTH = 120;
 const MONACO_HOVER_MAX_WIDTH = 720;
+const MONACO_HOVER_MIN_HEIGHT = 48;
 
 function setStyleProperty(
   element: HTMLElement,
-  property: "background" | "border" | "boxShadow" | "left" | "maxWidth" | "width",
+  property:
+    | "background"
+    | "border"
+    | "boxShadow"
+    | "height"
+    | "left"
+    | "maxHeight"
+    | "maxWidth"
+    | "top"
+    | "width",
   value: string,
 ) {
   if (element.style[property] === value) return;
@@ -16,6 +26,12 @@ function getMonacoHoverMaxWidth(container: HTMLElement) {
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
   const availableWidth = Math.max(MONACO_HOVER_MIN_WIDTH, container.clientWidth - margin * 2);
   return Math.min(MONACO_HOVER_MAX_WIDTH, availableWidth);
+}
+
+function getMonacoHoverMaxHeight(container: HTMLElement) {
+  const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
+  const availableHeight = Math.max(MONACO_HOVER_MIN_HEIGHT, container.clientHeight - margin * 2);
+  return Math.min(EDITOR_CONSTANTS.HOVER_TOOLTIP_HEIGHT, availableHeight);
 }
 
 function getMonacoHoverContentWidth(nodes: Array<HTMLElement | null>) {
@@ -40,6 +56,7 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
 
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
   const maxWidth = getMonacoHoverMaxWidth(container);
+  const maxHeight = getMonacoHoverMaxHeight(container);
   const widgetNodes = container.querySelectorAll<HTMLElement>(
     '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]',
   );
@@ -56,6 +73,7 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
 
     for (const node of [widgetNode, hoverNode, scrollNode, contentNode]) {
       if (!node) continue;
+      setStyleProperty(node, "maxHeight", `${maxHeight}px`);
       setStyleProperty(node, "maxWidth", `${maxWidth}px`);
       if (node.getBoundingClientRect().width !== nextWidth) {
         setStyleProperty(node, "width", `${nextWidth}px`);
@@ -75,6 +93,31 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
     }
     if (nextLeft !== currentLeft) {
       setStyleProperty(widgetNode, "left", `${nextLeft}px`);
+    }
+
+    const nextWidgetRect = widgetNode.getBoundingClientRect();
+    const currentTop = nextWidgetRect.top - containerRect.top;
+    const nextHeight = Math.min(
+      maxHeight,
+      Math.max(MONACO_HOVER_MIN_HEIGHT, nextWidgetRect.height),
+    );
+    let nextTop = currentTop;
+
+    if (currentTop + nextHeight > container.clientHeight - margin) {
+      nextTop = container.clientHeight - nextHeight - margin;
+    }
+    if (nextTop < margin) {
+      nextTop = margin;
+    }
+    if (nextTop !== currentTop) {
+      setStyleProperty(widgetNode, "top", `${nextTop}px`);
+    }
+
+    if (nextWidgetRect.height > maxHeight) {
+      for (const node of [widgetNode, hoverNode, scrollNode]) {
+        if (!node) continue;
+        setStyleProperty(node, "height", `${maxHeight}px`);
+      }
     }
   }
 }
