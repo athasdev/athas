@@ -95,7 +95,7 @@ export const GitFileItem = ({
         {hasDiffStats && (
           <div
             className={cn(
-              "flex w-[5.25rem] shrink-0 items-center justify-end overflow-hidden leading-[1.35] tabular-nums",
+              "flex max-w-[4.75rem] shrink-0 items-center justify-end overflow-hidden leading-[1.35] tabular-nums",
               compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >
