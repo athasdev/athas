@@ -1,5 +1,8 @@
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 
+const MONACO_HOVER_MIN_WIDTH = 120;
+const MONACO_HOVER_MAX_WIDTH = 720;
+
 function setStyleProperty(
   element: HTMLElement,
   property: "left" | "maxWidth" | "width",
@@ -9,9 +12,14 @@ function setStyleProperty(
   element.style[property] = value;
 }
 
-export function syncMonacoHoverBounds(container: HTMLElement) {
+function getMonacoHoverMaxWidth(container: HTMLElement) {
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-  const maxWidth = Math.max(120, container.clientWidth - margin * 2);
+  const availableWidth = Math.max(MONACO_HOVER_MIN_WIDTH, container.clientWidth - margin * 2);
+  return Math.min(MONACO_HOVER_MAX_WIDTH, availableWidth);
+}
+
+export function syncMonacoHoverBounds(container: HTMLElement) {
+  const maxWidth = getMonacoHoverMaxWidth(container);
   container.style.setProperty("--athas-monaco-hover-max-width", `${maxWidth}px`);
 }
 
@@ -19,7 +27,7 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
   syncMonacoHoverBounds(container);
 
   const margin = EDITOR_CONSTANTS.HOVER_TOOLTIP_MARGIN;
-  const maxWidth = Math.max(120, container.clientWidth - margin * 2);
+  const maxWidth = getMonacoHoverMaxWidth(container);
   const widgetNodes = container.querySelectorAll<HTMLElement>(
     '[widgetid="editor.contrib.resizableContentHoverWidget"], [widgetid="editor.contrib.modesGlyphHoverWidget"]',
   );
