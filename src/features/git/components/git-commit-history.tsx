@@ -1,7 +1,6 @@
 import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
-import Badge from "@/ui/badge";
 import type { MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import { SidebarSearchFilterRow } from "@/ui/sidebar";
@@ -69,6 +68,8 @@ const CommitItem = memo(
           onClick={handleCommitClick}
           className={cn(
             "ui-text-sm flex w-full cursor-pointer items-start rounded-lg border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
+            syncState === "local" &&
+              "border-accent/25 bg-accent/8 hover:border-accent/40 hover:bg-accent/12",
             isSelected && "border-accent/35 bg-accent/8",
           )}
           draggable={!!repoPath}
@@ -88,9 +89,6 @@ const CommitItem = memo(
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate text-text leading-tight">{commit.message}</span>
-              <Badge variant={syncState === "local" ? "accent" : "default"} size="compact">
-                {syncState === "local" ? "Local" : "Pushed"}
-              </Badge>
             </span>
             <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
               <span className="truncate">{commit.author}</span>
