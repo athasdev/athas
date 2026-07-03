@@ -86,12 +86,16 @@ const CommitItem = memo(
         >
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-text leading-tight">{commit.message}</span>
+              <span
+                className={cn(
+                  "truncate leading-tight",
+                  syncState === "local" ? "text-accent" : "text-text",
+                )}
+              >
+                {commit.message}
+              </span>
               {syncState === "local" ? (
-                <span className="inline-flex shrink-0 items-center gap-1 text-accent">
-                  <span className="size-1.5 rounded-full bg-accent" />
-                  <span className="ui-text-sm">Unpushed</span>
-                </span>
+                <span className="size-1.5 shrink-0 rounded-full bg-accent" />
               ) : null}
             </span>
             <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
