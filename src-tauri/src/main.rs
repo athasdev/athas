@@ -24,17 +24,17 @@ fn main() {
    let _ = rustls::crypto::ring::default_provider().install_default();
 
    #[cfg(target_os = "linux")]
-   if cfg!(not(feature = "linux")) && std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
-      // SAFETY: Called at program start before any threads are spawned
-      unsafe {
-         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-      }
-   }
+   bootstrap::linux::configure_graphics_fallback();
 
    #[cfg(target_os = "macos")]
    bootstrap::macos::disable_macos_autofill_heuristics();
 
-   tauri::Builder::<AthasRuntime>::new()
+   let builder = tauri::Builder::<AthasRuntime>::new();
+
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   let builder = builder.command_line_args(bootstrap::linux::cef_command_line_args());
+
+   builder
       .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
          app_setup::handle_single_instance_open(app, args, cwd);
       }))
