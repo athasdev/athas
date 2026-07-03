@@ -27,6 +27,10 @@ let removeThemeSyncListener: (() => void) | null = null;
 let latestThemeSyncSettings: Settings | null = null;
 let cancelPendingThemeApplication: (() => void) | null = null;
 
+function getCurrentThemeType(): "light" | "dark" {
+  return document.documentElement.getAttribute("data-theme-type") === "light" ? "light" : "dark";
+}
+
 function applyWindowTransparency(enabled: boolean) {
   if (typeof document === "undefined") return;
 
@@ -35,7 +39,10 @@ function applyWindowTransparency(enabled: boolean) {
     enabled ? "enabled" : "disabled",
   );
 
-  void invoke("set_window_transparency_enabled", { enabled }).catch((error) => {
+  void invoke("set_window_transparency_enabled", {
+    enabled,
+    themeType: getCurrentThemeType(),
+  }).catch((error) => {
     console.warn("Failed to sync window transparency", error);
   });
 }
@@ -82,7 +89,7 @@ export async function applyTheme(theme: Theme) {
       const appliedTheme = themeRegistry.getTheme(theme);
       if (appliedTheme) {
         cacheThemeForBootstrap(appliedTheme);
-        syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+        syncNativeWindowAppearance(appliedTheme.isDark ? "dark" : "light");
       }
     };
 
@@ -121,14 +128,14 @@ export async function applyTheme(theme: Theme) {
   }
 }
 
-function syncMacOSWindowAppearance(themeType: "light" | "dark") {
+function syncNativeWindowAppearance(themeType: "light" | "dark") {
   const transparencyEnabled =
     typeof document === "undefined"
       ? true
       : document.documentElement.getAttribute("data-window-transparency") !== "disabled";
 
-  void invoke("set_macos_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
-    console.warn("Failed to sync macOS window appearance", error);
+  void invoke("set_native_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
+    console.warn("Failed to sync native window appearance", error);
   });
 }
 

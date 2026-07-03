@@ -14,6 +14,8 @@ use std::{
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
+#[cfg(target_os = "windows")]
+use window_vibrancy::{Color as VibrancyColor, apply_acrylic, clear_acrylic};
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 use window_vibrancy::{
    NSVisualEffectMaterial, NSVisualEffectState, apply_vibrancy, clear_vibrancy,
@@ -25,6 +27,10 @@ const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Me
 const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::Active;
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
 const EMBEDDED_WEBVIEW_CORNER_RADIUS: f64 = 7.0;
+#[cfg(target_os = "windows")]
+const ATHAS_WINDOWS_DARK_ACRYLIC_TINT: VibrancyColor = (18, 18, 18, 125);
+#[cfg(target_os = "windows")]
+const ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT: VibrancyColor = (245, 245, 245, 125);
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -227,7 +233,7 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
       }
    }
 
-   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
    }
@@ -235,12 +241,41 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    #[cfg(target_os = "windows")]
    {
       let _ = window.set_decorations(false);
+      if let Err(error) = set_windows_window_transparency(window, true, None) {
+         log::warn!("Failed to initialize Windows window transparency: {error}");
+      }
    }
 
    #[cfg(all(target_os = "linux", not(feature = "linux")))]
    {
       let _ = window.set_decorations(false);
    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_acrylic_tint(theme_type: Option<&str>) -> VibrancyColor {
+   match theme_type {
+      Some("light") => ATHAS_WINDOWS_LIGHT_ACRYLIC_TINT,
+      _ => ATHAS_WINDOWS_DARK_ACRYLIC_TINT,
+   }
+}
+
+#[cfg(target_os = "windows")]
+fn set_windows_window_transparency(
+   window: &tauri::WebviewWindow<AthasRuntime>,
+   enabled: bool,
+   theme_type: Option<&str>,
+) -> Result<(), String> {
+   if enabled {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+      apply_acrylic(window, Some(windows_acrylic_tint(theme_type)))
+         .map_err(|e| format!("Failed to apply Windows acrylic: {e}"))?;
+   } else {
+      let _ = clear_acrylic(window);
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+   }
+
+   Ok(())
 }
 
 #[cfg(all(target_os = "macos", not(feature = "linux")))]
@@ -347,7 +382,7 @@ pub fn uses_native_window_chrome() -> bool {
 }
 
 #[command]
-pub fn set_macos_window_appearance(
+pub fn set_native_window_appearance(
    window: tauri::WebviewWindow<AthasRuntime>,
    theme_type: String,
    transparency_enabled: Option<bool>,
@@ -357,7 +392,16 @@ pub fn set_macos_window_appearance(
       sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(false))?;
    }
 
-   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   #[cfg(target_os = "windows")]
+   {
+      set_windows_window_transparency(
+         &window,
+         transparency_enabled.unwrap_or(true),
+         Some(theme_type.as_str()),
+      )?;
+   }
+
+   #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
    {
       let _ = window;
       let _ = theme_type;
@@ -371,9 +415,11 @@ pub fn set_macos_window_appearance(
 pub fn set_window_transparency_enabled(
    window: tauri::WebviewWindow<AthasRuntime>,
    enabled: bool,
+   theme_type: Option<String>,
 ) -> Result<(), String> {
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
+      let _ = theme_type;
       if enabled {
          let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
          let _ = clear_vibrancy(&window);
@@ -391,10 +437,16 @@ pub fn set_window_transparency_enabled(
       }
    }
 
-   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   #[cfg(target_os = "windows")]
+   {
+      set_windows_window_transparency(&window, enabled, theme_type.as_deref())?;
+   }
+
+   #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
    {
       let _ = window;
       let _ = enabled;
+      let _ = theme_type;
    }
 
    Ok(())
@@ -420,7 +472,7 @@ fn create_labeled_app_window_internal(
       .min_inner_size(400.0, 400.0)
       .center()
       .decorations(true)
-      .transparent(cfg!(target_os = "macos"))
+      .transparent(cfg!(any(target_os = "macos", target_os = "windows")))
       .resizable(true)
       .shadow(true)
       .on_page_load(move |_window, payload| {
