@@ -342,22 +342,23 @@ export function EditorStylesheet() {
         .diff-accordion-line {
           display: flex;
           align-items: center;
-          min-height: 100%;
-          padding: 2px 10px 8px 0;
+          height: 100%;
+          padding: 1px 8px 1px 0;
         }
 
         .diff-accordion-card {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 7px;
           width: 100%;
-          min-height: calc(100% - 4px);
+          height: calc(100% - 2px);
+          min-height: 20px;
           border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
           border-left: none;
-          border-radius: 0 10px 10px 0;
-          background: color-mix(in srgb, var(--color-secondary-bg, #1f1f1f) 84%, white 16%);
-          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
-          padding: 0 12px;
+          border-radius: 0 6px 6px 0;
+          background: color-mix(in srgb, var(--color-secondary-bg, #1f1f1f) 92%, white 8%);
+          box-shadow: none;
+          padding: 0 8px;
           color: var(--color-text, #d4d4d4);
         }
 
@@ -368,12 +369,12 @@ export function EditorStylesheet() {
 
         .diff-accordion-gutter-card {
           position: absolute;
-          inset: 2px -1px 8px 10px;
+          inset: 1px -1px 1px 10px;
           border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
           border-right: none;
-          border-radius: 10px 0 0 10px;
-          background: color-mix(in srgb, var(--color-secondary-bg, #1f1f1f) 84%, white 16%);
-          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
+          border-radius: 6px 0 0 6px;
+          background: color-mix(in srgb, var(--color-secondary-bg, #1f1f1f) 92%, white 8%);
+          box-shadow: none;
           pointer-events: none;
         }
 
@@ -389,6 +390,7 @@ export function EditorStylesheet() {
         .diff-accordion-name {
           color: var(--git-added, #2ea043);
           font-weight: 500;
+          line-height: 1;
           flex-shrink: 0;
         }
 

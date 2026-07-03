@@ -413,8 +413,8 @@ const DiffFileSection = memo(function DiffFileSection({
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = editorFontSize * zoomLevel;
   const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
-  const iconSize = Math.max(12, Math.min(16, Math.round(fontSize * 0.72)));
   const headerHeight = lineHeight + 6;
+  const iconSize = Math.max(12, Math.min(16, Math.round(fontSize * 0.72)));
   const headerStyle = useMemo(
     () => ({
       fontSize: `${fontSize}px`,
@@ -873,9 +873,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               ariaLabel="Changed files"
               viewMode={fileNavigatorViewMode}
               onViewModeChange={setFileNavigatorViewMode}
-              className="my-2 ml-2 h-auto self-stretch rounded-md border border-border/70 bg-secondary-bg/20"
               borderless
+              className="my-2 ml-2 h-auto self-stretch rounded-md border border-border/70 bg-secondary-bg/20"
               searchMode="fuzzy"
+              compactRows
             />
           ) : null}
 

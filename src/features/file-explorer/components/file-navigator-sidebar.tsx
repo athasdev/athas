@@ -68,6 +68,7 @@ interface FileNavigatorSidebarProps {
   onViewModeChange?: (viewMode: FileNavigatorViewMode) => void;
   borderless?: boolean;
   searchMode?: FileNavigatorSearchMode;
+  compactRows?: boolean;
 }
 
 function createDirectoryNode(name: string, path: string): FileNavigatorNode {
@@ -192,10 +193,12 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
   item,
   selectedKey,
   onSelect,
+  compactRows,
 }: {
   item: FileNavigatorItem;
   selectedKey: string | null;
   onSelect: (key: string) => void;
+  compactRows?: boolean;
 }) {
   const isSelected = selectedKey === item.key;
   const { fileName, directoryPath, title } = getFlatItemParts(item);
@@ -214,7 +217,8 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
         />
       }
       trailing={<FileNavigatorMetadata item={item} />}
-      description={directoryPath}
+      description={compactRows ? undefined : directoryPath}
+      className={cn(compactRows && "py-1 ui-text-sm")}
     >
       {fileName}
     </SidebarListItem>
@@ -226,11 +230,13 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   depth,
   selectedKey,
   onSelect,
+  compactRows,
 }: {
   node: FileNavigatorNode;
   depth: number;
   selectedKey: string | null;
   onSelect: (key: string) => void;
+  compactRows?: boolean;
 }) {
   if (node.isDir) {
     return (
@@ -250,6 +256,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
             depth={depth + 1}
             selectedKey={selectedKey}
             onSelect={onSelect}
+            compactRows={compactRows}
           />
         ))}
       </div>
@@ -276,6 +283,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
         />
       }
       trailing={<FileNavigatorMetadata item={item} />}
+      className={cn(compactRows && "py-1 ui-text-sm")}
     >
       {node.name}
     </SidebarListItem>
@@ -292,6 +300,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   onViewModeChange,
   borderless = false,
   searchMode = "substring",
+  compactRows = false,
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
@@ -447,6 +456,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               item={item}
               selectedKey={selectedKey}
               onSelect={onSelect}
+              compactRows={compactRows}
             />
           ))
         ) : (
@@ -457,6 +467,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               depth={0}
               selectedKey={selectedKey}
               onSelect={onSelect}
+              compactRows={compactRows}
             />
           ))
         )}
