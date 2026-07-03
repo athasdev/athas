@@ -3,6 +3,7 @@ export type SidebarView =
   | "git"
   | "github-prs"
   | "docker"
+  | "extensions"
   | "outline"
   | "databases"
   | "collaboration"

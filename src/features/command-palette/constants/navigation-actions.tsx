@@ -127,12 +127,13 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-extensions",
       label: "View: Show Extensions",
-      description: "Open extensions in settings",
+      description: "Open the extensions sidebar",
       icon: <Package />,
       category: "Navigation",
       action: () => {
         onClose();
-        openSettingsDialog("extensions");
+        setIsSidebarVisible(true);
+        setActiveView("extensions");
       },
     },
     {

@@ -4,6 +4,7 @@ import {
   GitPullRequestIcon as GitPullRequest,
   MagnifyingGlassIcon as MagnifyingGlass,
   CubeIcon as Cube,
+  PuzzlePieceIcon as PuzzlePiece,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
@@ -54,7 +55,7 @@ export const SidebarPaneSelector = ({
   orientation = "horizontal",
 }: SidebarPaneSelectorProps) => {
   const isVertical = orientation === "vertical";
-  const tooltipSide = compact ? "bottom" : isVertical ? "right" : "bottom";
+  const tooltipSide = isVertical ? "right" : "bottom";
   const iconClassName = compact ? "size-4" : isVertical ? "size-[18px]" : undefined;
   const tabClassName = compact
     ? chromeControl()
@@ -152,6 +153,19 @@ export const SidebarPaneSelector = ({
             } satisfies TabsItem,
           ]
         : []),
+      {
+        id: "extensions",
+        icon: <PuzzlePiece className={iconClassName} weight="duotone" />,
+        isActive: activeSidebarView === "extensions",
+        onClick: () => onViewChange("extensions"),
+        role: "tab",
+        ariaLabel: "Extensions",
+        className: tabClassName,
+        tooltip: {
+          content: "Extensions",
+          side: tooltipSide,
+        },
+      },
       ...Array.from(extensionViews.values()).map(
         (view) =>
           ({

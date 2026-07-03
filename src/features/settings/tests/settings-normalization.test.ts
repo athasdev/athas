@@ -90,6 +90,8 @@ describe("settings normalization", () => {
 
     expect(normalized.lastSettingsTab).toBe("general");
     expect(normalizeSettingValue("lastSettingsTab", "appearance")).toBe("appearance");
+    expect(normalizeSettingValue("lastSettingsTab", "features" as never)).toBe("advanced");
+    expect(normalizeSettingValue("lastSettingsTab", "extensions" as never)).toBe("general");
   });
 
   it("fills missing core feature flags from defaults", () => {

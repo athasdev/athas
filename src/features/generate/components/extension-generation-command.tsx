@@ -175,7 +175,6 @@ function getPreviewHighlights(
 export function ExtensionGenerationCommand() {
   const isVisible = useGenerateStore.use.isExtensionGenerationVisible();
   const { closeExtensionGeneration } = useGenerateStore.use.actions();
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const setActiveView = useUIState((state) => state.setActiveView);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const { isAuthenticated, isPro } = useProFeature();
@@ -361,7 +360,8 @@ export function ExtensionGenerationCommand() {
 
   const openExtensions = () => {
     close();
-    openSettingsDialog("extensions");
+    setActiveView("extensions");
+    setIsSidebarVisible(true);
   };
 
   const moveSelection = (delta: number) => {

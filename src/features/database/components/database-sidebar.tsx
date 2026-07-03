@@ -84,7 +84,8 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     storeCredential,
   } = useConnectionStore.use.actions();
   const openDatabaseBuffer = useBufferStore.use.actions().openDatabaseBuffer;
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
+  const setActiveView = useUIState((state) => state.setActiveView);
+  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<SidebarMode>("list");
   const [selectedDbType, setSelectedDbType] = useState<DatabaseType>("sqlite");
@@ -449,7 +450,10 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                     type="button"
                     variant="ghost"
                     compact
-                    onClick={() => openSettingsDialog("extensions")}
+                    onClick={() => {
+                      setActiveView("extensions");
+                      setIsSidebarVisible(true);
+                    }}
                   >
                     Open Extensions
                   </Button>

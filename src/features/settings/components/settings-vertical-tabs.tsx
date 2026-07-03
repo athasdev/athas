@@ -1,15 +1,12 @@
 import {
   ArrowSquareUpIcon as ArrowSquareUp,
   CodeBlockIcon as CodeBlock,
-  DatabaseIcon as Database,
   GearIcon as Gear,
   GearSixIcon as GearSix,
   GitBranchIcon as GitBranch,
   KeyboardIcon as Keyboard,
   PaintBrushIcon as PaintBrush,
-  PuzzlePieceIcon as PuzzlePiece,
   ShieldCheckIcon as ShieldCheck,
-  SlidersHorizontalIcon as SlidersHorizontal,
   SparkleIcon as Sparkle,
   TerminalWindowIcon as TerminalWindow,
   TreeStructureIcon as TreeStructure,
@@ -59,11 +56,6 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     icon: PaintBrush,
   },
   {
-    id: "features",
-    label: "Features",
-    icon: SlidersHorizontal,
-  },
-  {
     id: "editor",
     label: "Editor",
     icon: CodeBlock,
@@ -87,16 +79,6 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     id: "keyboard",
     label: "Keybindings",
     icon: Keyboard,
-  },
-  {
-    id: "extensions",
-    label: "Extensions",
-    icon: PuzzlePiece,
-  },
-  {
-    id: "databases",
-    label: "Database",
-    icon: Database,
   },
   {
     id: "ai",

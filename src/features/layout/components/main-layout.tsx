@@ -309,7 +309,7 @@ export function MainLayout() {
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           {sidebarPosition === "left" ? (
             <>
-              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
+              {showLeftSidebarTabs ? <SidebarActivityRail compact={!isSidebarVisible} /> : null}
               <ResizablePane
                 position="left"
                 widthKey="sidebarWidth"
@@ -357,7 +357,7 @@ export function MainLayout() {
               >
                 <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
               </ResizablePane>
-              {showLeftSidebarTabs ? <SidebarActivityRail /> : null}
+              {showLeftSidebarTabs ? <SidebarActivityRail compact={!isSidebarVisible} /> : null}
             </>
           ) : null}
 

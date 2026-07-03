@@ -44,6 +44,8 @@ const Footer = () => {
   );
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
+  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
   const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
@@ -51,7 +53,6 @@ const Footer = () => {
   const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
   const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const hasTeamsCollaborationAccess = useAuthStore(
     (state) => state.subscription?.collaboration?.enabled === true,
   );
@@ -145,8 +146,9 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
+              active={isSidebarVisible && activeSidebarView === "extensions"}
               tone="accent"
-              onClick={() => openSettingsDialog("extensions")}
+              onClick={() => openSidebarView("extensions", { triggerSide: "current" })}
             >
               <PuzzlePiece weight="duotone" />
               <FooterControlBadge>

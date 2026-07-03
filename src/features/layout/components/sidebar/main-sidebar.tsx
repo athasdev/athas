@@ -1,6 +1,7 @@
 import { memo, type ReactNode } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
+import { ExtensionsSidebar } from "@/features/extensions/components/extensions-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import GitView from "@/features/git/components/git-view";
@@ -31,7 +32,11 @@ interface SidebarPaneEntry {
   content: ReactNode;
 }
 
-export const SidebarActivityRail = memo(() => {
+interface SidebarActivityRailProps {
+  compact?: boolean;
+}
+
+export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRailProps) => {
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
@@ -44,7 +49,12 @@ export const SidebarActivityRail = memo(() => {
   };
 
   return (
-    <div className="athas-sidebar-rail flex shrink-0 items-start px-1 pt-0 pb-1.5">
+    <div
+      className={cn(
+        "athas-sidebar-rail flex shrink-0 items-start pb-1.5",
+        compact ? "px-0.5 pt-1" : "px-1 pt-0",
+      )}
+    >
       <SidebarPaneSelector
         activeSidebarView={activeSidebarView}
         isGitViewActive={isGitViewActive}
@@ -52,6 +62,7 @@ export const SidebarActivityRail = memo(() => {
         coreFeatures={coreFeatures}
         onViewChange={handleSidebarViewChange}
         onSearchClick={() => openGlobalSearchBuffer()}
+        compact={compact}
         orientation="vertical"
       />
     </div>
@@ -123,6 +134,10 @@ export const MainSidebar = memo(
             },
           ]
         : []),
+      {
+        id: "extensions",
+        content: <ExtensionsSidebar />,
+      },
       {
         id: "files",
         content: <FileExplorerPane />,

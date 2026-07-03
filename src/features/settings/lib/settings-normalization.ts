@@ -124,11 +124,8 @@ const SETTINGS_SECTIONS = new Set<SettingsSection>([
   "editor",
   "git",
   "appearance",
-  "databases",
-  "extensions",
   "ai",
   "keyboard",
-  "features",
   "collaboration",
   "enterprise",
   "advanced",
@@ -214,6 +211,10 @@ function normalizeExternalEditor(
 }
 
 function normalizeSettingsSection(value: unknown): SettingsSection {
+  if (value === "features") {
+    return "advanced";
+  }
+
   if (typeof value === "string" && SETTINGS_SECTIONS.has(value as SettingsSection)) {
     return value as SettingsSection;
   }

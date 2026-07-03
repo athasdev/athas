@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { createCoreFeaturesList } from "@/features/settings/config/features";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { createSettingsExportPayload } from "@/features/settings/lib/settings-import-export";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { CoreFeature } from "@/features/settings/types/feature.types";
 import {
   clearTelemetryLogEntries,
   getTelemetryLogEntries,
@@ -20,6 +22,7 @@ const telemetryDescription =
 const telemetryLearnMoreUrl = "https://athas.dev/docs/telemetry";
 
 export const AdvancedSettings = () => {
+  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const resetToDefaults = useSettingsStore((state) => state.resetToDefaults);
@@ -35,6 +38,24 @@ export const AdvancedSettings = () => {
   const handleResetSettings = () => {
     resetToDefaults();
     showToast({ message: "Settings reset to defaults", type: "success" });
+  };
+  const defaultCoreFeatures = getDefaultSetting("coreFeatures");
+  const coreFeaturesList = createCoreFeaturesList(coreFeatures).filter(
+    (feature: CoreFeature) => feature.id !== "git",
+  );
+
+  const handleCoreFeatureToggle = (featureId: string, enabled: boolean) => {
+    updateSetting("coreFeatures", {
+      ...coreFeatures,
+      [featureId]: enabled,
+    });
+  };
+
+  const handleResetFeature = (featureId: string) => {
+    updateSetting("coreFeatures", {
+      ...coreFeatures,
+      [featureId]: defaultCoreFeatures[featureId as keyof typeof defaultCoreFeatures],
+    });
   };
 
   const handleClearTelemetryLog = async () => {
@@ -106,6 +127,33 @@ export const AdvancedSettings = () => {
 
   return (
     <div className="space-y-4">
+      <Section title="Features" description="Toggle application features on or off">
+        {coreFeaturesList.map((feature: CoreFeature) => (
+          <SettingRow
+            key={feature.id}
+            label={feature.name}
+            labelAccessory={
+              feature.status === "experimental" ? (
+                <span className="rounded border border-accent/35 bg-accent/10 px-1 py-0.5 font-medium ui-text-base text-accent uppercase leading-none tracking-normal">
+                  Experimental
+                </span>
+              ) : undefined
+            }
+            description={feature.description}
+            onReset={() => handleResetFeature(feature.id)}
+            canReset={
+              feature.enabled !==
+              defaultCoreFeatures[feature.id as keyof typeof defaultCoreFeatures]
+            }
+          >
+            <Switch
+              checked={feature.enabled}
+              onChange={(checked) => handleCoreFeatureToggle(feature.id, checked)}
+              size="sm"
+            />
+          </SettingRow>
+        ))}
+      </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
           <Button variant="default" onClick={() => void handleExportSettings()}>
