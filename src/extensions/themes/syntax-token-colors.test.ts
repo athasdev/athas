@@ -40,6 +40,22 @@ describe("syntax token colors", () => {
     expect(syntax.punctuation).toBe("#9fa2aa");
   });
 
+  it("rescues near-foreground syntax colors that look like plain text", () => {
+    const syntax = normalizeSyntaxColors(
+      {
+        variable: "#e9edf2",
+        property: "#edf1f6",
+        function: "#7cc7ff",
+      },
+      { text: "#e6edf3" },
+      "dark",
+    );
+
+    expect(syntax.variable).toBe("#c8a7db");
+    expect(syntax.property).toBe("#93bde9");
+    expect(syntax.function).toBe("#7cc7ff");
+  });
+
   it("builds raw and tailwind-compatible variables from normalized syntax", () => {
     const variables = toSyntaxTokenVariables(
       {

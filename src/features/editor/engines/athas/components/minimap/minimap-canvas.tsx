@@ -25,8 +25,13 @@ const CSS_VAR_MAP: Record<string, string> = {
   "token-punctuation": "--syntax-punctuation",
   "token-operator": "--syntax-punctuation",
   "token-constant": "--syntax-constant",
+  "token-boolean": "--syntax-boolean",
+  "token-null": "--syntax-null",
+  "token-regex": "--syntax-regex",
   "token-tag": "--syntax-tag",
   "token-attribute": "--syntax-attribute",
+  "token-jsx": "--syntax-jsx",
+  "token-jsx-attribute": "--syntax-jsx-attribute",
 };
 
 function resolveTokenColors(): Record<string, string> {

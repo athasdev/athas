@@ -463,9 +463,7 @@ async function getToolPath(
       tools: getLanguageToolConfigSet(manifest),
     });
   } catch (error) {
-    if (isExpectedMissingToolError(error)) {
-      console.debug(`Failed to resolve ${toolType} path for ${languageId}:`, error);
-    } else {
+    if (!isExpectedMissingToolError(error)) {
       console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
     }
     return null;

@@ -54,6 +54,38 @@ function normalizeColor(value: string | undefined): string | null {
   return normalized;
 }
 
+function parseColor(value: string | undefined): [number, number, number] | null {
+  const normalized = normalizeColor(value);
+  if (!normalized) return null;
+
+  const hex = normalized.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/);
+  if (hex) {
+    const value = hex[1];
+    return [
+      Number.parseInt(value.slice(0, 2), 16),
+      Number.parseInt(value.slice(2, 4), 16),
+      Number.parseInt(value.slice(4, 6), 16),
+    ];
+  }
+
+  const rgb = normalized.match(/^rgba?\(([\d.]+),([\d.]+),([\d.]+)(?:,[\d.]+)?\)$/);
+  if (!rgb) return null;
+
+  return [
+    Math.max(0, Math.min(255, Number(rgb[1]))),
+    Math.max(0, Math.min(255, Number(rgb[2]))),
+    Math.max(0, Math.min(255, Number(rgb[3]))),
+  ];
+}
+
+function colorDistance(left: [number, number, number], right: [number, number, number]): number {
+  const red = left[0] - right[0];
+  const green = left[1] - right[1];
+  const blue = left[2] - right[2];
+
+  return Math.sqrt(red * red + green * green + blue * blue);
+}
+
 function getRawSyntaxName(key: string): string {
   if (key.startsWith("--color-syntax-")) return key.slice("--color-syntax-".length);
   if (key.startsWith("--syntax-")) return key.slice("--syntax-".length);
@@ -65,10 +97,15 @@ function getColorValue(colors: Record<string, string>, key: string): string | un
 }
 
 function isForegroundColor(value: string, colors: Record<string, string>): boolean {
+  const foreground = getColorValue(colors, "text") ?? getColorValue(colors, "foreground");
   const normalized = normalizeColor(value);
-  const text = normalizeColor(getColorValue(colors, "text") ?? getColorValue(colors, "foreground"));
+  const text = normalizeColor(foreground);
+  if (normalized && text && normalized === text) return true;
 
-  return !!normalized && !!text && normalized === text;
+  const parsedValue = parseColor(value);
+  const parsedText = parseColor(foreground);
+
+  return !!parsedValue && !!parsedText && colorDistance(parsedValue, parsedText) < 28;
 }
 
 export function normalizeSyntaxColors(
