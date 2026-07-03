@@ -158,6 +158,7 @@ export const PRFilesPanel = memo(
             viewMode={fileNavigatorViewMode}
             onViewModeChange={setFileNavigatorViewMode}
             borderless
+            className="my-2 ml-2 h-auto self-stretch rounded-md border border-border/70 bg-secondary-bg/20"
             searchMode="fuzzy"
           />
         ) : null}

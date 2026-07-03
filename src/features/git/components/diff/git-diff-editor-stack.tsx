@@ -88,13 +88,6 @@ const statusTextClass: Record<string, string> = {
   renamed: "text-git-renamed",
 };
 
-const statusBadgeClass: Record<string, string> = {
-  added: "bg-git-added/12 text-git-added",
-  deleted: "bg-git-deleted/12 text-git-deleted",
-  modified: "bg-git-modified/12 text-git-modified",
-  renamed: "bg-git-renamed/12 text-git-renamed",
-};
-
 function getDiffSectionKey(multiDiff: MultiFileDiff, diff: GitDiff, index: number): string {
   return multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
 }
@@ -421,7 +414,7 @@ const DiffFileSection = memo(function DiffFileSection({
   const fontSize = editorFontSize * zoomLevel;
   const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
   const iconSize = Math.max(12, Math.min(16, Math.round(fontSize * 0.72)));
-  const badgeHeight = Math.max(16, Math.round(fontSize + 4));
+  const headerHeight = lineHeight + 6;
   const headerStyle = useMemo(
     () => ({
       fontSize: `${fontSize}px`,
@@ -429,14 +422,6 @@ const DiffFileSection = memo(function DiffFileSection({
       lineHeight: `${lineHeight}px`,
     }),
     [editorFontFamily, fontSize, lineHeight],
-  );
-  const badgeStyle = useMemo(
-    () => ({
-      fontSize: `${Math.max(11, fontSize - 2)}px`,
-      height: `${badgeHeight}px`,
-      lineHeight: `${badgeHeight}px`,
-    }),
-    [badgeHeight, fontSize],
   );
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
@@ -468,7 +453,7 @@ const DiffFileSection = memo(function DiffFileSection({
               type="button"
               onClick={handleToggle}
               className="relative z-50 flex shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
-              style={{ width: `${lineHeight}px`, height: `${lineHeight}px` }}
+              style={{ width: `${headerHeight}px`, height: `${headerHeight}px` }}
               aria-label={expanded ? "Collapse file diff" : "Expand file diff"}
               aria-expanded={expanded}
             >
@@ -478,7 +463,7 @@ const DiffFileSection = memo(function DiffFileSection({
               type="button"
               onClick={handleOpenFile}
               className="relative z-50 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left hover:bg-hover/30"
-              style={{ height: `${lineHeight}px` }}
+              style={{ height: `${headerHeight}px` }}
               aria-label={`Open ${filePath}`}
             >
               <ThemedFileIcon
@@ -500,14 +485,6 @@ const DiffFileSection = memo(function DiffFileSection({
               <span className="ml-auto flex shrink-0 items-center gap-1.5">
                 {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
                 {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
-                <Badge
-                  size="compact"
-                  variant="muted"
-                  className={`rounded-full px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
-                  style={badgeStyle}
-                >
-                  {status}
-                </Badge>
               </span>
             </button>
           </div>
@@ -896,6 +873,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               ariaLabel="Changed files"
               viewMode={fileNavigatorViewMode}
               onViewModeChange={setFileNavigatorViewMode}
+              className="my-2 ml-2 h-auto self-stretch rounded-md border border-border/70 bg-secondary-bg/20"
               borderless
               searchMode="fuzzy"
             />
@@ -907,7 +885,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             data-diff-stack-scroll-container
             onWheelCapture={handleStackWheelCapture}
           >
-            <div className="flex min-w-0 max-w-full flex-col gap-1.5 rounded-md">
+            <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
               {multiDiff.files.map((diff, index) => {
                 const sectionKey = getDiffSectionKey(multiDiff, diff, index);
 
