@@ -134,7 +134,9 @@ class EditorAPIImpl implements EditorAPI {
     const newContent = before + text + after;
 
     const newOffset = pos.offset + text.length;
-    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState);
+    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState, {
+      skipUndoGrouping: true,
+    });
   }
 
   deleteRange(range: Range): void {
@@ -150,7 +152,9 @@ class EditorAPIImpl implements EditorAPI {
     const newContent = before + after;
 
     const newOffset = range.start.offset;
-    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState);
+    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState, {
+      skipUndoGrouping: true,
+    });
   }
 
   replaceRange(range: Range, text: string): void {
@@ -165,7 +169,9 @@ class EditorAPIImpl implements EditorAPI {
     const after = content.substring(range.end.offset);
     const newOffset = range.start.offset + text.length;
 
-    this.applyContentEdit(content, before + text + after, newOffset, newOffset, editorState);
+    this.applyContentEdit(content, before + text + after, newOffset, newOffset, editorState, {
+      skipUndoGrouping: true,
+    });
   }
 
   // Selection operations
@@ -356,6 +362,7 @@ class EditorAPIImpl implements EditorAPI {
       result.selectionStart,
       result.selectionEnd,
       editorState,
+      { skipUndoGrouping: true },
     );
   }
 
@@ -395,6 +402,7 @@ class EditorAPIImpl implements EditorAPI {
       result.cursorOffset,
       result.cursorOffset,
       editorState,
+      { skipUndoGrouping: true },
     );
   }
 
@@ -810,6 +818,7 @@ class EditorAPIImpl implements EditorAPI {
     selectionStart: number,
     selectionEnd: number,
     editorState = useEditorStateStore.getState(),
+    options: { skipUndoGrouping?: boolean } = {},
   ): void {
     if (nextContent === previousContent) {
       this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
@@ -824,8 +833,18 @@ class EditorAPIImpl implements EditorAPI {
       textarea.selectionStart = selectionStart;
       textarea.selectionEnd = selectionEnd;
 
-      const inputEvent = new Event("input", { bubbles: true });
-      textarea.dispatchEvent(inputEvent);
+      if (options.skipUndoGrouping) {
+        void editorState.onChange(
+          nextContent,
+          previousContent,
+          editorState.cursorPosition,
+          editorState.selection,
+          { skipUndoGrouping: true },
+        );
+      } else {
+        const inputEvent = new Event("input", { bubbles: true });
+        textarea.dispatchEvent(inputEvent);
+      }
       this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
       return;
     }
@@ -835,6 +854,7 @@ class EditorAPIImpl implements EditorAPI {
       previousContent,
       editorState.cursorPosition,
       editorState.selection,
+      options.skipUndoGrouping ? { skipUndoGrouping: true } : undefined,
     );
     this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
   }
@@ -862,6 +882,7 @@ class EditorAPIImpl implements EditorAPI {
       result.selectionStart,
       result.selectionEnd,
       editorState,
+      { skipUndoGrouping: true },
     );
   }
 

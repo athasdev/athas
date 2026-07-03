@@ -57,6 +57,7 @@ import {
 } from "@/features/editor/engines/athas/hooks/use-viewport-lines";
 import type { InlayHint } from "@/features/editor/lsp/use-inlay-hints";
 import type { SemanticTokenState } from "@/features/editor/lsp/use-semantic-tokens";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { useMinimapStore } from "@/features/editor/stores/minimap.store";
@@ -1226,12 +1227,19 @@ export function AthasEditor({
       const newLines = [...lines];
       newLines[lineIndex] = originalContent;
       const newContent = newLines.join("\n");
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: content,
+        nextContent: newContent,
+        previousCursorPosition: cursorPosition,
+        previousSelection: selection,
+      });
       updateBufferContent(bufferId, newContent);
       if (inputRef.current) {
         inputRef.current.value = newContent;
       }
     },
-    [lines, bufferId, updateBufferContent],
+    [bufferId, content, cursorPosition, lines, selection, updateBufferContent],
   );
 
   const inlineAutocompletePreview = useMemo(() => {
@@ -1690,6 +1698,9 @@ export function AthasEditor({
             }}
             onGoToDefinition={() => {
               void keymapRegistry.executeCommand("editor.goToDefinition");
+            }}
+            onGoToTypeDefinition={() => {
+              void keymapRegistry.executeCommand("editor.goToTypeDefinition");
             }}
             onFindReferences={() => {
               void keymapRegistry.executeCommand("editor.goToReferences");

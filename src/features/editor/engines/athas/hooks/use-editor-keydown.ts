@@ -7,6 +7,7 @@ import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import { useEditorDecorationsStore } from "@/features/editor/stores/decorations.store";
 import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
 import { evaluateWhenClause } from "@/features/keymaps/utils/context";
@@ -277,6 +278,12 @@ export function useEditorKeyDown({
         e.preventDefault();
 
         if (bufferId) {
+          trackImmediateBufferHistoryChange({
+            bufferId,
+            currentContent: content,
+            nextContent: multiCursorEdit.newContent,
+            previousCursorPosition: cursorPosition,
+          });
           updateBufferContent(bufferId, multiCursorEdit.newContent);
         }
 

@@ -5,6 +5,7 @@ import {
   type TextOperationResult,
   toggleCaseText,
 } from "@/features/editor/utils/text-operations";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
 import {
   readEditorClipboardText,
   writeEditorClipboardText,
@@ -35,9 +36,14 @@ export function useEditorOperations({
       textarea.value = result.content;
       textarea.selectionStart = result.selectionStart;
       textarea.selectionEnd = result.selectionEnd;
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: content,
+        nextContent: result.content,
+      });
       handleInput(result.content);
     },
-    [bufferId, handleInput, inputRef],
+    [bufferId, content, handleInput, inputRef],
   );
 
   const copy = useCallback(() => {
@@ -64,6 +70,11 @@ export function useEditorOperations({
       const newContent = content.substring(0, start) + content.substring(end);
       textarea.value = newContent;
       textarea.selectionStart = textarea.selectionEnd = start;
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: content,
+        nextContent: newContent,
+      });
       handleInput(newContent);
     })();
   }, [bufferId, content, handleInput, inputRef]);
@@ -83,6 +94,11 @@ export function useEditorOperations({
       const newPosition = start + text.length;
       textarea.selectionStart = textarea.selectionEnd = newPosition;
 
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: content,
+        nextContent: newContent,
+      });
       handleInput(newContent);
     } catch (error) {
       console.error("Failed to paste:", error);
@@ -104,6 +120,11 @@ export function useEditorOperations({
       if (!bufferId) return;
       textarea.value = newContent;
       textarea.selectionStart = textarea.selectionEnd = start;
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: content,
+        nextContent: newContent,
+      });
       handleInput(newContent);
     }
   }, [content, bufferId, handleInput, inputRef]);

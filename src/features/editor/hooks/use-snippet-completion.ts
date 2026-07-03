@@ -10,6 +10,7 @@ import {
 } from "@/features/editor/snippets/snippet-expander";
 import type { SnippetSession } from "@/features/editor/types/snippet.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { trackImmediateBufferHistoryChange } from "@/features/editor/stores/buffer-history-tracking";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import type { Position } from "@/features/editor/types/editor.types";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
@@ -103,6 +104,12 @@ export function useSnippetCompletion(filePath: string | undefined) {
         session.parsedSnippet.expandedBody +
         afterCursor;
 
+      trackImmediateBufferHistoryChange({
+        bufferId: activeBufferId,
+        currentContent: content,
+        nextContent: newContent,
+        previousCursorPosition: cursorPosition,
+      });
       updateBufferContent(activeBufferId, newContent, true);
 
       // If snippet has tab stops, activate session

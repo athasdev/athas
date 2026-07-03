@@ -135,6 +135,7 @@ describe("editor API model operations", () => {
       "alpha\nbeta",
       { line: 1, column: 2, offset: "alpha\nbe".length },
       undefined,
+      { skipUndoGrouping: true },
     );
     expect(useEditorStateStore.getState().cursorPosition).toEqual(
       calculateCursorPositionFromContent("alpha\nbeX".length, "alpha\nbeXta"),
@@ -225,6 +226,7 @@ describe("editor API model operations", () => {
       "alpha\nbeta",
       { line: 1, column: 2, offset: "alpha\nbe".length },
       undefined,
+      { skipUndoGrouping: true },
     );
   });
 
@@ -264,6 +266,7 @@ describe("editor API model operations", () => {
       "alpha\nbeta",
       { line: 0, column: 1, offset: 1 },
       undefined,
+      { skipUndoGrouping: true },
     );
   });
 
@@ -332,7 +335,9 @@ describe("editor API model operations", () => {
 
     editorAPI.removeBrackets();
 
-    expect(onChange).toHaveBeenCalledWith(nextContent, content, cursor, undefined);
+    expect(onChange).toHaveBeenCalledWith(nextContent, content, cursor, undefined, {
+      skipUndoGrouping: true,
+    });
     expect(useEditorStateStore.getState().selection).toBeUndefined();
     expect(useEditorStateStore.getState().cursorPosition).toEqual(
       calculateCursorPositionFromContent("var x = (3 + 5".length, nextContent),
@@ -438,6 +443,7 @@ describe("editor API model operations", () => {
       "alpha\nbeta",
       { line: 1, column: 2, offset: "alpha\nbe".length },
       undefined,
+      { skipUndoGrouping: true },
     );
     expect(useEditorStateStore.getState().cursorPosition).toEqual(
       calculateCursorPositionFromContent("alpha\nB".length, "alpha\nBa"),
