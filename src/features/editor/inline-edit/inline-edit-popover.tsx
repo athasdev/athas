@@ -51,16 +51,34 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                 }
               }}
               onKeyDown={(event) => {
+                if (
+                  (event.metaKey || event.ctrlKey) &&
+                  !event.altKey &&
+                  event.key.toLowerCase() === "a"
+                ) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.currentTarget.select();
+                  return;
+                }
+
                 if (event.key === "Enter") {
                   event.preventDefault();
+                  event.stopPropagation();
                   void state.handleApplyInlineEdit();
+                  return;
                 }
+
                 if (event.key === "Escape") {
                   event.preventDefault();
+                  event.stopPropagation();
                   if (!state.isInlineEditRunning) {
                     state.inlineEditToolbarActions.hide();
                   }
+                  return;
                 }
+
+                event.stopPropagation();
               }}
               variant="ghost"
               size="sm"

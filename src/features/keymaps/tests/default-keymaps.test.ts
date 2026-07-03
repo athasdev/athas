@@ -1,7 +1,23 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vite-plus/test";
+import { registerCommands } from "../commands/command-registry";
 import { defaultKeymaps } from "../defaults/default-keymaps";
+import { keymapRegistry } from "../utils/registry";
+
+function expectKeybinding(command: string, key: string, when?: string) {
+  expect(defaultKeymaps).toContainEqual(
+    expect.objectContaining({
+      command,
+      key,
+      ...(when ? { when } : {}),
+    }),
+  );
+}
 
 describe("default keymaps", () => {
+  afterEach(() => {
+    keymapRegistry.clear();
+  });
+
   it("registers editor navigation and folding shortcuts", () => {
     const byCommand = new Map(defaultKeymaps.map((keybinding) => [keybinding.command, keybinding]));
 
@@ -85,5 +101,26 @@ describe("default keymaps", () => {
       key: "cmd+alt+s",
       when: "editorFocus",
     });
+  });
+
+  it("registers basic edit shortcuts", () => {
+    expectKeybinding("editor.selectAll", "cmd+a", "editorFocus");
+    expectKeybinding("editor.undo", "cmd+z", "editorFocus");
+    expectKeybinding("editor.redo", "cmd+shift+z", "editorFocus");
+    expectKeybinding("editor.redo", "cmd+y", "editorFocus");
+    expectKeybinding("editor.copy", "cmd+c", "editorFocus");
+    expectKeybinding("editor.cut", "cmd+x", "editorFocus");
+    expectKeybinding("editor.paste", "cmd+v", "editorFocus");
+  });
+
+  it("has registered commands for every default keybinding", () => {
+    keymapRegistry.clear();
+    registerCommands();
+
+    const missingCommands = defaultKeymaps
+      .filter((keybinding) => !keymapRegistry.getCommand(keybinding.command))
+      .map((keybinding) => `${keybinding.key} -> ${keybinding.command}`);
+
+    expect(missingCommands).toEqual([]);
   });
 });
