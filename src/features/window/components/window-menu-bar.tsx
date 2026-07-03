@@ -8,6 +8,7 @@ import type { ComponentProps } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import {
   Menubar,
   MenubarContent as BaseMenubarContent,
@@ -252,6 +253,11 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     [handleClickEmit],
   );
 
+  const handleNewWindow = useCallback(() => {
+    void createAppWindow();
+    setActiveMenu(null);
+  }, [setActiveMenu]);
+
   const menus = useMemo(
     () => ({
       File: (
@@ -259,7 +265,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenubarItem shortcut="mod+n" onClick={() => handleCommand("workbench.newTab")}>
             New Tab
           </MenubarItem>
-          <MenubarItem shortcut="mod+shift+n" onClick={() => handleClickEmit("menu_new_window")}>
+          <MenubarItem shortcut="mod+shift+n" onClick={handleNewWindow}>
             New Window
           </MenubarItem>
           <MenubarItem onClick={() => handleClickEmit("menu_new_file")}>New File</MenubarItem>
@@ -637,7 +643,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         </MenubarContent>
       ),
     }),
-    [handleClickEmit, handleCommand, setActiveMenu, themes],
+    [handleClickEmit, handleCommand, handleNewWindow, setActiveMenu, themes],
   );
 
   if (compactMenuBar && !activeMenu) return null;

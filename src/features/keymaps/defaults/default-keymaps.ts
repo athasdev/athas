@@ -20,6 +20,11 @@ export const defaultKeymaps: Keybinding[] = [
     when: "!terminalFocus",
   },
   {
+    key: "cmd+shift+n",
+    command: "workbench.newWindow",
+    source: "default",
+  },
+  {
     key: "cmd+s",
     command: "file.save",
     source: "default",

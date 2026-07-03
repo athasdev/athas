@@ -128,4 +128,14 @@ describe("default keymaps", () => {
 
     expect(missingCommands).toEqual([]);
   });
+
+  it("binds the new window shortcut to a registered command", () => {
+    keymapRegistry.clear();
+    registerCommands();
+
+    expectKeybinding("workbench.newWindow", "cmd+shift+n");
+    expect(keymapRegistry.getCommand("workbench.newWindow")).toMatchObject({
+      title: "New Window",
+    });
+  });
 });

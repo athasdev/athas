@@ -38,6 +38,7 @@ const WEBVIEW_GLOBAL_SHORTCUT_COMMANDS: Record<string, string> = {
   "close-tab": "file.close",
   "reopen-tab": "file.reopenClosed",
   "new-tab": "workbench.newTab",
+  "new-window": "workbench.newWindow",
   find: "workbench.showFind",
   "find-in-files": "workbench.showGlobalSearch",
 };
@@ -46,11 +47,6 @@ function handleEmbeddedWebviewGlobalShortcut(shortcut: string) {
   if (!shortcut.startsWith("global:")) return;
 
   const globalShortcut = shortcut.replace("global:", "");
-
-  if (globalShortcut === "new-window") {
-    void createAppWindow();
-    return;
-  }
 
   if (globalShortcut === "settings") {
     useUIState.getState().openSettingsDialog("general");

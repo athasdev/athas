@@ -1,4 +1,5 @@
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { isLinux, isMac } from "@/utils/platform";
 
 export function toggleFullscreen(): void {
@@ -9,6 +10,10 @@ export function toggleFullscreenMac(): void {
   if (isMac()) {
     window.dispatchEvent(new CustomEvent("toggle-fullscreen"));
   }
+}
+
+export function createNewWindow(): void {
+  void createAppWindow();
 }
 
 export function minimizeWindow(): void {

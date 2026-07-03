@@ -84,6 +84,7 @@ export const keybindingPresetDefinitions: Record<KeybindingPreset, KeybindingPre
   jetbrains: createPresetDefinition({
     label: "JetBrains",
     description: "Match common JetBrains IDE shortcuts.",
+    disabledCommands: ["workbench.newWindow"],
     overrides: [
       { key: "cmd+shift+a", command: "workbench.commandPalette", source: "preset" },
       { key: "cmd+shift+n", command: "file.quickOpen", source: "preset" },

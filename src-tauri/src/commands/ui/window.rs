@@ -683,9 +683,9 @@ fn build_webview_bridge_script(
       shortcut = 'global:reopen-tab';
     }} else if (isMod && !isShift && key === 't') {{
       shortcut = 'global:new-tab';
-    }} else if (isMod && isShift && key === 'n') {{
-      shortcut = 'global:new-private-window';
     }} else if (isMod && !isShift && key === 'n') {{
+      shortcut = 'global:new-tab';
+    }} else if (isMod && isShift && key === 'n') {{
       shortcut = 'global:new-window';
     }} else if (isMod && isShift && key === 'f') {{
       shortcut = 'global:find-in-files';

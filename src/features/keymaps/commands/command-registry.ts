@@ -109,6 +109,7 @@ import {
   zoomOut,
 } from "./view-command-actions";
 import {
+  createNewWindow,
   maximizeWindow,
   minimizeWindow,
   minimizeWindowAlt,
@@ -129,6 +130,13 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+n",
     execute: showNewTab,
+  },
+  {
+    id: "workbench.newWindow",
+    title: "New Window",
+    category: "File",
+    keybinding: "cmd+shift+n",
+    execute: createNewWindow,
   },
   {
     id: "file.save",
