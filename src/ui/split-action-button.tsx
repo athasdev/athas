@@ -36,7 +36,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
         ref={ref}
         data-active={active}
         className={cn(
-          "flex h-6 min-w-0 flex-1 overflow-hidden rounded-md border border-transparent text-text transition-colors",
+          "inline-flex h-6 w-fit max-w-full flex-none overflow-hidden rounded-md border border-transparent text-text transition-colors",
           "hover:border-border/60 hover:bg-hover/70",
           "data-[active=true]:border-border/70 data-[active=true]:bg-hover/80",
           disabled && "opacity-50",
@@ -48,7 +48,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
           compact
           onClick={onAction}
           disabled={disabled}
-          className="h-full min-h-0 min-w-0 flex-1 justify-start rounded-none border-0 bg-transparent px-2 font-medium hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none disabled:opacity-100"
+          className="h-full min-h-0 min-w-0 flex-none justify-start rounded-none border-0 bg-transparent px-2 font-medium hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none disabled:opacity-100"
           aria-label={actionAriaLabel}
         >
           <span className="min-w-0 truncate whitespace-nowrap">{label}</span>
