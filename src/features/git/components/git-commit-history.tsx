@@ -264,18 +264,16 @@ const GitCommitHistory = ({
           showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
         )}
       >
-        <div className="shrink-0 py-1">
-          {showHeader ? (
+        {showHeader ? (
+          <div className="shrink-0 py-1">
             <GitSidebarSectionHeader
               title="History"
               collapsible
               isCollapsed={isCollapsed}
               onToggle={onToggle}
             />
-          ) : (
-            <GitSidebarSectionHeader title="History" />
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {!isCollapsed && (
           <>
