@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::{env, path::Path};
+use std::{
+   env,
+   path::{Path, PathBuf},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Shell {
@@ -13,19 +16,24 @@ pub struct Shell {
 
 // Helper function to find appropriate executable for specific os
 fn shell_exe_in_path(exe: &str) -> Option<String> {
-   env::var("PATH")
+   let path_match = env::var("PATH")
       .ok()
-      .and_then(|paths| {
-         env::split_paths(&paths).find_map(|p| {
-            let full_path = p.join(exe);
-            if full_path.exists() {
-               Some(full_path.to_string_lossy().into_owned())
-            } else {
-               None
-            }
-         })
-      })
-      .or_else(|| windows_known_shell_path(exe))
+      .and_then(|paths| path_from_list(exe, env::split_paths(&paths)));
+   let known_match = windows_known_shell_path(exe);
+
+   resolve_shell_executable(exe, path_match, known_match)
+}
+
+fn resolve_shell_executable(
+   exe: &str,
+   path_match: Option<String>,
+   known_match: Option<String>,
+) -> Option<String> {
+   if cfg!(target_os = "windows") && exe.eq_ignore_ascii_case("bash.exe") {
+      return known_match.or(path_match);
+   }
+
+   path_match.or(known_match)
 }
 
 #[cfg(target_os = "windows")]
@@ -42,7 +50,7 @@ fn windows_known_shell_path(_exe: &str) -> Option<String> {
 }
 
 #[cfg(target_os = "windows")]
-fn windows_known_shell_candidates(exe: &str) -> Vec<std::path::PathBuf> {
+fn windows_known_shell_candidates(exe: &str) -> Vec<PathBuf> {
    let mut candidates = Vec::new();
 
    if matches!(exe, "cmd.exe" | "powershell.exe")
@@ -77,12 +85,61 @@ fn windows_known_shell_candidates(exe: &str) -> Vec<std::path::PathBuf> {
       }
    }
 
+   if exe.eq_ignore_ascii_case("bash.exe") {
+      for key in ["ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"] {
+         if let Ok(base_dir) = env::var(key) {
+            push_git_bash_candidates(&mut candidates, Path::new(&base_dir).join("Git"), exe);
+         }
+      }
+
+      if let Ok(base_dir) = env::var("LOCALAPPDATA") {
+         push_git_bash_candidates(
+            &mut candidates,
+            Path::new(&base_dir).join("Programs").join("Git"),
+            exe,
+         );
+      }
+
+      for key in ["SCOOP", "SCOOP_GLOBAL"] {
+         if let Ok(base_dir) = env::var(key) {
+            push_git_bash_candidates(
+               &mut candidates,
+               Path::new(&base_dir)
+                  .join("apps")
+                  .join("git")
+                  .join("current"),
+               exe,
+            );
+         }
+      }
+
+      if let Ok(user_profile) = env::var("USERPROFILE") {
+         push_git_bash_candidates(
+            &mut candidates,
+            Path::new(&user_profile)
+               .join("scoop")
+               .join("apps")
+               .join("git")
+               .join("current"),
+            exe,
+         );
+      }
+   }
+
    candidates
 }
 
-#[cfg(test)]
-fn path_from_list_for_test(exe: &str, paths: &[std::path::PathBuf]) -> Option<String> {
-   paths.iter().find_map(|p| {
+#[cfg(target_os = "windows")]
+fn push_git_bash_candidates(candidates: &mut Vec<PathBuf>, git_root: PathBuf, exe: &str) {
+   candidates.push(git_root.join("bin").join(exe));
+   candidates.push(git_root.join("usr").join("bin").join(exe));
+}
+
+fn path_from_list<I>(exe: &str, paths: I) -> Option<String>
+where
+   I: IntoIterator<Item = PathBuf>,
+{
+   paths.into_iter().find_map(|p| {
       let full_path = p.join(exe);
       if full_path.exists() {
          Some(full_path.to_string_lossy().into_owned())
@@ -94,7 +151,10 @@ fn path_from_list_for_test(exe: &str, paths: &[std::path::PathBuf]) -> Option<St
 
 #[cfg(test)]
 fn shell_exe_in_path_for_test(exe: &str, paths: &[std::path::PathBuf]) -> Option<String> {
-   path_from_list_for_test(exe, paths).or_else(|| windows_known_shell_path(exe))
+   let path_match = path_from_list(exe, paths.iter().cloned());
+   let known_match = windows_known_shell_path(exe);
+
+   resolve_shell_executable(exe, path_match, known_match)
 }
 
 impl Shell {
@@ -254,6 +314,30 @@ mod tests {
       assert_eq!(found, Some(executable.to_string_lossy().into_owned()));
 
       fs::remove_dir_all(test_dir).unwrap();
+   }
+
+   #[cfg(target_os = "windows")]
+   #[test]
+   fn git_bash_prefers_known_install_over_path_shims() {
+      let path_match = Some(r"C:\Users\me\scoop\shims\bash.exe".to_string());
+      let known_match = Some(r"C:\Users\me\scoop\apps\git\current\bin\bash.exe".to_string());
+
+      assert_eq!(
+         resolve_shell_executable("bash.exe", path_match, known_match.clone()),
+         known_match
+      );
+   }
+
+   #[cfg(target_os = "windows")]
+   #[test]
+   fn non_bash_shells_prefer_path_entries() {
+      let path_match = Some(r"C:\tools\pwsh.exe".to_string());
+      let known_match = Some(r"C:\Program Files\PowerShell\7\pwsh.exe".to_string());
+
+      assert_eq!(
+         resolve_shell_executable("pwsh.exe", path_match.clone(), known_match),
+         path_match
+      );
    }
 
    #[cfg(not(target_os = "windows"))]
