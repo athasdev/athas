@@ -326,7 +326,9 @@ export function SidebarListItem({
           <span className="max-w-full truncate text-text-lighter">{description}</span>
         ) : null}
       </span>
-      {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
+      {trailing ? (
+        <span className="min-w-0 max-w-[38%] shrink text-text-lighter">{trailing}</span>
+      ) : null}
     </button>
   );
 }

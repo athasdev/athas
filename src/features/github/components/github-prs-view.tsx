@@ -136,7 +136,10 @@ const PRListItem = memo(
         }
         description={`#${pr.number} by ${pr.author.login}`}
         trailing={
-          <span className="editor-font max-w-40 truncate">
+          <span
+            className="editor-font block min-w-0 truncate text-xs"
+            title={`${pr.baseRef} ← ${pr.headRef}`}
+          >
             {pr.baseRef} &larr; {pr.headRef}
           </span>
         }
