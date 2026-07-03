@@ -18,6 +18,13 @@ function getMonacoHoverMaxWidth(container: HTMLElement) {
   return Math.min(MONACO_HOVER_MAX_WIDTH, availableWidth);
 }
 
+function getMonacoHoverContentWidth(nodes: Array<HTMLElement | null>) {
+  return nodes.reduce((width, node) => {
+    if (!node) return width;
+    return Math.max(width, node.scrollWidth, node.getBoundingClientRect().width);
+  }, MONACO_HOVER_MIN_WIDTH);
+}
+
 export function syncMonacoHoverBounds(container: HTMLElement) {
   const maxWidth = getMonacoHoverMaxWidth(container);
   container.style.setProperty("--athas-monaco-hover-max-width", `${maxWidth}px`);
@@ -36,12 +43,15 @@ export function clampMonacoHoverWidgets(container: HTMLElement) {
     const hoverNode = widgetNode.querySelector<HTMLElement>(".monaco-hover") ?? widgetNode;
     const scrollNode = hoverNode.querySelector<HTMLElement>(".monaco-scrollable-element");
     const contentNode = hoverNode.querySelector<HTMLElement>(".monaco-hover-content");
-    const nextWidth = Math.min(maxWidth, Math.max(120, hoverNode.getBoundingClientRect().width));
+    const nextWidth = Math.min(
+      maxWidth,
+      getMonacoHoverContentWidth([widgetNode, hoverNode, scrollNode, contentNode]),
+    );
 
     for (const node of [widgetNode, hoverNode, scrollNode, contentNode]) {
       if (!node) continue;
       setStyleProperty(node, "maxWidth", `${maxWidth}px`);
-      if (node.getBoundingClientRect().width > maxWidth) {
+      if (node.getBoundingClientRect().width !== nextWidth) {
         setStyleProperty(node, "width", `${nextWidth}px`);
       }
     }
