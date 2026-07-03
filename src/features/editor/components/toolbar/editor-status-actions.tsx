@@ -164,6 +164,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
+  const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
+  const codeLens = useSettingsStore((state) => state.settings.codeLens);
+  const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const vimMode = useSettingsStore((state) => state.settings.vimMode);
   const enableGitGutter = useSettingsStore((state) => state.settings.enableGitGutter);
   const enableInlineGitBlame = useSettingsStore((state) => state.settings.enableInlineGitBlame);
@@ -435,6 +438,30 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       checked: autoCompletion,
       shortcut: null,
       onToggle: () => updateSetting("autoCompletion", !autoCompletion),
+      disabled: false,
+    },
+    {
+      id: "inlay-hints",
+      label: "Inlay Hints",
+      checked: inlayHints,
+      shortcut: null,
+      onToggle: () => updateSetting("inlayHints", !inlayHints),
+      disabled: false,
+    },
+    {
+      id: "code-lens",
+      label: "Code Lens",
+      checked: codeLens,
+      shortcut: null,
+      onToggle: () => updateSetting("codeLens", !codeLens),
+      disabled: false,
+    },
+    {
+      id: "semantic-tokens",
+      label: "Semantic Tokens",
+      checked: semanticTokens,
+      shortcut: null,
+      onToggle: () => updateSetting("semanticTokens", !semanticTokens),
       disabled: false,
     },
     {

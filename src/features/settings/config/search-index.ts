@@ -718,6 +718,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show function parameter hints",
     keywords: ["parameter", "hints", "intellisense", "function"],
   },
+  {
+    id: "language-inlay-hints",
+    tab: "editor",
+    section: "IntelliSense",
+    label: "Inlay Hints",
+    description: "Show inline type and parameter hints from language servers",
+    keywords: ["inlay", "hints", "types", "parameters", "lsp"],
+  },
+  {
+    id: "language-code-lens",
+    tab: "editor",
+    section: "IntelliSense",
+    label: "Code Lens",
+    description: "Show inline code actions above symbols",
+    keywords: ["code", "lens", "actions", "lsp"],
+  },
+  {
+    id: "language-semantic-tokens",
+    tab: "editor",
+    section: "IntelliSense",
+    label: "Semantic Tokens",
+    description: "Use language server semantic highlighting",
+    keywords: ["semantic", "tokens", "highlighting", "lsp"],
+  },
 
   // Features Settings
   {

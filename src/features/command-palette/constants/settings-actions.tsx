@@ -32,10 +32,13 @@ type CommandPaletteSettings = Pick<
   | "autoCompletion"
   | "autoDetectLanguage"
   | "autoSave"
+  | "codeLens"
   | "coreFeatures"
   | "formatOnSave"
+  | "inlayHints"
   | "lineNumbers"
   | "parameterHints"
+  | "semanticTokens"
   | "showMinimap"
   | "telemetry"
   | "vimMode"
@@ -377,6 +380,47 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       category: "Language",
       action: () => {
         updateSetting("parameterHints", !settings.parameterHints);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-inlay-hints",
+      label: settings.inlayHints ? "Language: Disable Inlay Hints" : "Language: Enable Inlay Hints",
+      description: settings.inlayHints
+        ? "Hide inline type and parameter hints from language servers"
+        : "Show inline type and parameter hints from language servers",
+      icon: <Lightbulb />,
+      category: "Language",
+      action: () => {
+        updateSetting("inlayHints", !settings.inlayHints);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-code-lens",
+      label: settings.codeLens ? "Language: Disable Code Lens" : "Language: Enable Code Lens",
+      description: settings.codeLens
+        ? "Hide inline code actions above symbols"
+        : "Show inline code actions above symbols",
+      icon: <ListBullets />,
+      category: "Language",
+      action: () => {
+        updateSetting("codeLens", !settings.codeLens);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-semantic-tokens",
+      label: settings.semanticTokens
+        ? "Language: Disable Semantic Tokens"
+        : "Language: Enable Semantic Tokens",
+      description: settings.semanticTokens
+        ? "Disable language server semantic highlighting"
+        : "Use language server semantic highlighting",
+      icon: <Palette />,
+      category: "Language",
+      action: () => {
+        updateSetting("semanticTokens", !settings.semanticTokens);
         onClose();
       },
     },

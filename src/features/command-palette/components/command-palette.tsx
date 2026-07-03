@@ -136,13 +136,16 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const autoDetectLanguage = useSettingsStore((state) => state.settings.autoDetectLanguage);
   const autoSave = useSettingsStore((state) => state.settings.autoSave);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
+  const codeLens = useSettingsStore((state) => state.settings.codeLens);
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const formatOnSave = useSettingsStore((state) => state.settings.formatOnSave);
   const iconTheme = useSettingsStore((state) => state.settings.iconTheme);
+  const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
   const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
   const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
   const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
@@ -190,13 +193,16 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       autoDetectLanguage,
       autoSave,
       compactMenuBar,
+      codeLens,
       coreFeatures,
       formatOnSave,
       iconTheme,
+      inlayHints,
       isAIChatVisible,
       lineNumbers,
       nativeMenuBar,
       parameterHints,
+      semanticTokens,
       showGitHubActions,
       showGitHubIssues,
       showGitHubPullRequests,
@@ -215,13 +221,16 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       autoDetectLanguage,
       autoSave,
       compactMenuBar,
+      codeLens,
       coreFeatures,
       formatOnSave,
       iconTheme,
+      inlayHints,
       isAIChatVisible,
       lineNumbers,
       nativeMenuBar,
       parameterHints,
+      semanticTokens,
       showGitHubActions,
       showGitHubIssues,
       showGitHubPullRequests,

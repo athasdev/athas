@@ -21,12 +21,15 @@ export const EditorSettings = () => {
       formatOnSave: state.settings.formatOnSave,
       highlightOccurrences: state.settings.highlightOccurrences,
       horizontalTabScroll: state.settings.horizontalTabScroll,
+      codeLens: state.settings.codeLens,
+      inlayHints: state.settings.inlayHints,
       lineNumbers: state.settings.lineNumbers,
       lintOnSave: state.settings.lintOnSave,
       maxOpenTabs: state.settings.maxOpenTabs,
       parameterHints: state.settings.parameterHints,
       renderIndentGuides: state.settings.renderIndentGuides,
       renderWhitespace: state.settings.renderWhitespace,
+      semanticTokens: state.settings.semanticTokens,
       showMinimap: state.settings.showMinimap,
       tabSize: state.settings.tabSize,
       vimRelativeLineNumbers: state.settings.vimRelativeLineNumbers,
@@ -340,6 +343,45 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.parameterHints}
             onChange={(checked) => updateSetting("parameterHints", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Inlay Hints"
+          description="Show inline type and parameter hints from language servers"
+          onReset={() => updateSetting("inlayHints", getDefaultSetting("inlayHints"))}
+          canReset={settings.inlayHints !== getDefaultSetting("inlayHints")}
+        >
+          <Switch
+            checked={settings.inlayHints}
+            onChange={(checked) => updateSetting("inlayHints", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Code Lens"
+          description="Show inline code actions above symbols"
+          onReset={() => updateSetting("codeLens", getDefaultSetting("codeLens"))}
+          canReset={settings.codeLens !== getDefaultSetting("codeLens")}
+        >
+          <Switch
+            checked={settings.codeLens}
+            onChange={(checked) => updateSetting("codeLens", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Semantic Tokens"
+          description="Use language server semantic highlighting"
+          onReset={() => updateSetting("semanticTokens", getDefaultSetting("semanticTokens"))}
+          canReset={settings.semanticTokens !== getDefaultSetting("semanticTokens")}
+        >
+          <Switch
+            checked={settings.semanticTokens}
+            onChange={(checked) => updateSetting("semanticTokens", checked)}
             size="sm"
           />
         </SettingRow>

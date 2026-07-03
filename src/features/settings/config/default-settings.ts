@@ -37,6 +37,9 @@ export const defaultSettings: Settings = {
   renderIndentGuides: true,
   highlightOccurrences: true,
   showMinimap: false,
+  inlayHints: true,
+  codeLens: true,
+  semanticTokens: true,
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
   terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,

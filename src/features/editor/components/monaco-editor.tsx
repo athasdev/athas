@@ -146,6 +146,7 @@ export function MonacoEditor({
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
   const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
@@ -417,7 +418,7 @@ export function MonacoEditor({
       contextmenu: false,
       overviewRulerLanes: 0,
       fixedOverflowWidgets: false,
-      "semanticHighlighting.enabled": true,
+      "semanticHighlighting.enabled": semanticTokens,
       scrollbar: {
         vertical: scrollable ? "auto" : "hidden",
         horizontal: scrollable ? "auto" : "hidden",
@@ -724,6 +725,7 @@ export function MonacoEditor({
     renderIndentGuides,
     renderWhitespace,
     scrollable,
+    semanticTokens,
     setScrollForBuffer,
     setViewportHeight,
     syncCursorAndSelection,
@@ -833,7 +835,7 @@ export function MonacoEditor({
       parameterHints: { enabled: parameterHints },
       cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
       cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
-      "semanticHighlighting.enabled": true,
+      "semanticHighlighting.enabled": semanticTokens,
       scrollbar: {
         vertical: scrollable ? "auto" : "hidden",
         horizontal: scrollable ? "auto" : "hidden",
@@ -865,6 +867,7 @@ export function MonacoEditor({
     renderIndentGuides,
     renderWhitespace,
     scrollable,
+    semanticTokens,
     tabSize,
     themeId,
     vimCurrentMode,

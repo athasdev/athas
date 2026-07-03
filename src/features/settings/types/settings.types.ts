@@ -45,6 +45,9 @@ export interface Settings {
   renderIndentGuides: boolean;
   highlightOccurrences: boolean;
   showMinimap: boolean;
+  inlayHints: boolean;
+  codeLens: boolean;
+  semanticTokens: boolean;
   // Terminal
   terminalFontFamily: string;
   terminalFontSize: number;

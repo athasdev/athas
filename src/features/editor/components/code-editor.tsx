@@ -199,7 +199,9 @@ const CodeEditor = ({
   const athasEditorEngineEnabled = useSettingsStore(
     (state) => state.settings.coreFeatures.athasEditorEngine,
   );
-  const parameterHintsEnabled = useSettingsStore((state) => state.settings.parameterHints);
+  const inlayHintsEnabled = useSettingsStore((state) => state.settings.inlayHints);
+  const codeLensEnabled = useSettingsStore((state) => state.settings.codeLens);
+  const semanticTokensEnabled = useSettingsStore((state) => state.settings.semanticTokens);
   const isFindVisible = useUIState((state) => state.isFindVisible);
   const lspClient = useMemo(() => LspClient.getInstance(), []);
   const searchInputSignature = useMemo(
@@ -233,7 +235,9 @@ const CodeEditor = ({
   const largeEditorModeInfo = useLargeEditorModeInfo(value);
   const largeContentMode = useAthasEditor && largeEditorModeInfo.largeContentMode;
   const enableRichEditorServices = enableInteractiveServices && !largeContentMode;
-  const enableInlayHints = useAthasEditor && enableRichEditorServices && parameterHintsEnabled;
+  const enableInlayHints = useAthasEditor && enableRichEditorServices && inlayHintsEnabled;
+  const enableCodeLens = enableRichEditorServices && codeLensEnabled;
+  const enableSemanticTokens = useAthasEditor && enableRichEditorServices && semanticTokensEnabled;
 
   const showMarkdownPreview = activeBuffer?.type === "markdownPreview";
   const showHtmlPreview = activeBuffer?.type === "htmlPreview";
@@ -333,8 +337,8 @@ const CodeEditor = ({
     lspVisibleLineRange,
   );
   const semanticTokens = useSemanticTokens(
-    useAthasEditor && enableRichEditorServices ? filePath : undefined,
-    useAthasEditor && enableRichEditorServices,
+    enableSemanticTokens ? filePath : undefined,
+    enableSemanticTokens,
     value,
   );
 
@@ -369,8 +373,9 @@ const CodeEditor = ({
     [rMarkdownChunks],
   );
   const visibleCodeLenses = useMemo(
-    () => [...pythonScriptCellLenses, ...rMarkdownChunkLenses],
-    [pythonScriptCellLenses, rMarkdownChunkLenses],
+    () =>
+      codeLensEnabled ? [...pythonScriptCellLenses, ...rMarkdownChunkLenses] : [],
+    [codeLensEnabled, pythonScriptCellLenses, rMarkdownChunkLenses],
   );
 
   const handleCodeLensExecute = useCallback(
@@ -734,7 +739,7 @@ const CodeEditor = ({
           {enableRichEditorServices && useAthasEditor && <CompletionDropdown />}
 
           {/* Code Lens */}
-          {enableRichEditorServices && visibleCodeLenses.length > 0 && (
+          {enableCodeLens && visibleCodeLenses.length > 0 && (
             <CodeLensOverlay
               ref={codeLensRef}
               lenses={visibleCodeLenses}
