@@ -34,6 +34,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         name: spec.name ?? "Terminal",
         isPreview: false,
         sessionId,
+        shell: spec.shell,
         initialCommand: spec.command,
         workingDirectory: spec.workingDirectory,
         remoteConnectionId: spec.remoteConnectionId,

@@ -25,6 +25,7 @@ interface TerminalBufferSession {
   name: string;
   isPinned: boolean;
   sessionId: string;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;

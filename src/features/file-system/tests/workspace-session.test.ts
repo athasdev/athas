@@ -58,6 +58,7 @@ describe("buildWorkspaceRestorePlan", () => {
           name: "Claude Code",
           isPinned: false,
           sessionId: "terminal-tab-1",
+          shell: "bash",
           workingDirectory: "/next",
           initialCommand: "claude",
         },
@@ -71,6 +72,7 @@ describe("buildWorkspaceRestorePlan", () => {
       name: "Claude Code",
       isPinned: false,
       sessionId: "terminal-tab-1",
+      shell: "bash",
       workingDirectory: "/next",
       initialCommand: "claude",
     });

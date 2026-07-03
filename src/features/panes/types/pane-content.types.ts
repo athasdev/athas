@@ -66,6 +66,7 @@ export interface EditorContent extends PaneContentBase {
 export interface TerminalContent extends PaneContentBase {
   type: "terminal";
   sessionId: string;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
@@ -329,6 +330,7 @@ export type OpenContentSpec =
   | {
       type: "terminal";
       name?: string;
+      shell?: string;
       command?: string;
       workingDirectory?: string;
       remoteConnectionId?: string;

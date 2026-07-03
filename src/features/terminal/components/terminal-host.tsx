@@ -135,6 +135,7 @@ function XtermPortal({ sessionId }: { sessionId: string }) {
       sessionId={sessionId}
       isActive={slot?.isActive ?? false}
       isVisible={slot?.isVisible ?? true}
+      shell={slot?.shell}
       initialCommand={slot?.initialCommand}
       workingDirectory={slot?.workingDirectory}
       remoteConnectionId={slot?.remoteConnectionId}

@@ -601,6 +601,7 @@ const TerminalTabBar = ({
       source: "terminal-panel",
       terminalId: terminal.id,
       name: terminal.name,
+      shell: terminal.shell,
       initialCommand: terminal.initialCommand,
       currentDirectory: terminal.currentDirectory,
       remoteConnectionId: terminal.remoteConnectionId,
@@ -638,6 +639,7 @@ const TerminalTabBar = ({
       const bufferId = openTerminalBuffer({
         sessionId: terminal.id,
         name: terminal.name,
+        shell: terminal.shell,
         command: terminal.initialCommand,
         workingDirectory: terminal.currentDirectory,
         remoteConnectionId: terminal.remoteConnectionId,

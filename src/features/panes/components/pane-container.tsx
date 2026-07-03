@@ -682,6 +682,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       let source: string | undefined;
       let terminalId: string | undefined;
       let terminalName: string | undefined;
+      let shell: string | undefined;
       let initialCommand: string | undefined;
       let currentDirectory: string | undefined;
       let remoteConnectionId: string | undefined;
@@ -692,6 +693,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         source = tabData.source;
         terminalId = tabData.terminalId;
         terminalName = tabData.name;
+        shell = tabData.shell;
         initialCommand = tabData.initialCommand;
         currentDirectory = tabData.currentDirectory;
         remoteConnectionId = tabData.remoteConnectionId;
@@ -706,6 +708,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           const newBufferId = openTerminalBuffer({
             sessionId: terminalId,
             name: terminalName,
+            shell,
             command: initialCommand,
             workingDirectory: currentDirectory,
             remoteConnectionId,
@@ -734,6 +737,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         const newBufferId = openTerminalBuffer({
           sessionId: terminalId,
           name: terminalName,
+          shell,
           command: initialCommand,
           workingDirectory: currentDirectory,
           remoteConnectionId,
@@ -907,6 +911,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               sessionId={buffer.sessionId}
               bufferId={buffer.id}
               paneId={pane.id}
+              shell={buffer.shell}
               initialCommand={buffer.initialCommand}
               workingDirectory={buffer.workingDirectory}
               remoteConnectionId={buffer.remoteConnectionId}
@@ -1147,8 +1152,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                             sessionId={buffer.sessionId}
                             bufferId={buffer.id}
                             paneId={pane.id}
+                            shell={buffer.shell}
                             initialCommand={buffer.initialCommand}
                             workingDirectory={buffer.workingDirectory}
+                            remoteConnectionId={buffer.remoteConnectionId}
                             isActive={isActivePane && isActiveBuffer}
                             isVisible={true}
                           />
@@ -1214,8 +1221,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           sessionId={b.sessionId}
                           bufferId={b.id}
                           paneId={pane.id}
+                          shell={b.shell}
                           initialCommand={b.initialCommand}
                           workingDirectory={b.workingDirectory}
+                          remoteConnectionId={b.remoteConnectionId}
                           isActive={isActive && isActivePane}
                           isVisible={isActive}
                         />

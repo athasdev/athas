@@ -149,6 +149,7 @@ const BottomPane = () => {
               source?: "pane" | "terminal-panel";
               terminalId?: string;
               name?: string;
+              shell?: string;
               initialCommand?: string;
               currentDirectory?: string;
               remoteConnectionId?: string;
@@ -161,6 +162,7 @@ const BottomPane = () => {
           const bufferId = openTerminalBuffer({
             sessionId: tabData.terminalId,
             name: tabData.name,
+            shell: tabData.shell,
             command: tabData.initialCommand,
             workingDirectory: tabData.currentDirectory,
             remoteConnectionId: tabData.remoteConnectionId,

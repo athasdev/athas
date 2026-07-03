@@ -31,6 +31,7 @@ const serializeBufferForSession = (
       name: buffer.name,
       isPinned: buffer.isPinned,
       sessionId: buffer.sessionId,
+      shell: buffer.shell,
       initialCommand: buffer.initialCommand,
       workingDirectory: buffer.workingDirectory,
       remoteConnectionId: buffer.remoteConnectionId,

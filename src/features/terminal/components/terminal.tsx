@@ -50,6 +50,7 @@ interface XtermTerminalProps {
   onReady?: () => void;
   onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
@@ -62,6 +63,7 @@ export const XtermTerminal = ({
   onReady,
   onTerminalRef,
   onTerminalExit,
+  shell,
   initialCommand,
   workingDirectory,
   remoteConnectionId,
@@ -359,7 +361,9 @@ export const XtermTerminal = ({
               config: {
                 workingDirectory: targetDirectory || undefined,
                 shell:
-                  existingSession?.shell || (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
+                  shell ||
+                  existingSession?.shell ||
+                  (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
                 wslDistribution: wslInfo?.distro,
                 wslWorkingDirectory: wslInfo?.linuxPath,
                 size,
@@ -416,6 +420,7 @@ export const XtermTerminal = ({
     pasteIntoTerminal,
     rootFolderPath,
     remoteConnectionId,
+    shell,
     sessionId,
     terminalCursorBlink,
     terminalCursorInactiveStyle,

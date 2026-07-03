@@ -159,6 +159,7 @@ interface BufferActions {
   }) => string;
   openTerminalBuffer: (options?: {
     name?: string;
+    shell?: string;
     command?: string;
     workingDirectory?: string;
     remoteConnectionId?: string;
@@ -1112,6 +1113,7 @@ const createBufferStore = (workspaceId: string) => {
 
         openTerminalBuffer: (options?: {
           name?: string;
+          shell?: string;
           command?: string;
           workingDirectory?: string;
           remoteConnectionId?: string;
@@ -1120,6 +1122,7 @@ const createBufferStore = (workspaceId: string) => {
           return get().actions.openContent({
             type: "terminal",
             name: options?.name,
+            shell: options?.shell,
             command: options?.command,
             workingDirectory: options?.workingDirectory,
             remoteConnectionId: options?.remoteConnectionId,

@@ -14,6 +14,7 @@ export interface WorkspaceSessionBuffer {
   history?: string[];
   historyIndex?: number;
   sessionId?: string;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
