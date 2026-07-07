@@ -40,6 +40,7 @@ export function FooterTabControl({
   tone = "default",
   busy = false,
   onClick,
+  onContextMenu,
   commandId,
   controlRef,
   children,
@@ -49,6 +50,7 @@ export function FooterTabControl({
   tone?: FooterControlTone;
   busy?: boolean;
   onClick: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
   commandId?: string;
   controlRef?: Ref<HTMLDivElement>;
   children: ReactNode;
@@ -68,6 +70,7 @@ export function FooterTabControl({
           variant="segmented"
           className={footerControlClassName(tone, busy)}
           onClick={onClick}
+          onContextMenu={onContextMenu}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();

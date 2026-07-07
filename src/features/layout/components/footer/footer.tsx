@@ -1,13 +1,18 @@
 import {
+  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
   BugBeetleIcon as BugBeetle,
   DatabaseIcon as Database,
   ListBulletsIcon as ListBullets,
   PuzzlePieceIcon as PuzzlePiece,
   TerminalWindowIcon as TerminalWindow,
+  TrashIcon as Trash,
   UsersThreeIcon as UsersThree,
   WarningCircleIcon as WarningCircle,
 } from "@phosphor-icons/react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -17,7 +22,9 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import {
+  FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
   normalizeItemOrder,
   type FooterLeadingItemId,
@@ -27,6 +34,8 @@ import { orderFooterItems, type FooterItem } from "./footer-items";
 import { useFooterGitBranchItem } from "./footer-git-branch-item";
 import { FooterControlBadge, FooterTabControl } from "./footer-tab-control";
 import { useFooterUpdateItem } from "./footer-update-item";
+
+const DEBUGGER_FOOTER_ITEM_ID: FooterLeadingItemId = "debugger";
 
 const Footer = () => {
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
@@ -42,6 +51,7 @@ const Footer = () => {
   const footerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.footerTrailingItemsOrder,
   );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
@@ -67,12 +77,141 @@ const Footer = () => {
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
   const branchItem = useFooterGitBranchItem();
   const updateItem = useFooterUpdateItem();
+  const debuggerContextMenu = useContextMenu<"debugger">();
 
+  const debuggerBreakpointsCount = useDebuggerStore((state) => state.breakpoints.length);
+  const debuggerWatchExpressionsCount = useDebuggerStore((state) => state.watchExpressions.length);
+  const debuggerTranscriptCount = useDebuggerStore(
+    (state) => state.adapterMessages.length + state.adapterOutput.length,
+  );
+  const debuggerActions = useDebuggerStore.use.actions();
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
     0,
+  );
+  const normalizedFooterLeadingOrder = useMemo<FooterLeadingItemId[]>(() => {
+    return normalizeItemOrder(
+      footerLeadingItemsOrder,
+      FOOTER_LEADING_ITEM_IDS,
+    ) as FooterLeadingItemId[];
+  }, [footerLeadingItemsOrder]);
+  const debuggerFooterIndex = normalizedFooterLeadingOrder.indexOf(DEBUGGER_FOOTER_ITEM_ID);
+  const openDebuggerPane = useCallback(() => {
+    setBottomPaneActiveTab("debugger");
+    setIsBottomPaneVisible(true);
+  }, [setBottomPaneActiveTab, setIsBottomPaneVisible]);
+  const toggleDebuggerPane = useCallback(() => {
+    const showingDebugger = isBottomPaneVisible && bottomPaneActiveTab === "debugger";
+    if (showingDebugger) {
+      setIsBottomPaneVisible(false);
+      return;
+    }
+
+    openDebuggerPane();
+  }, [bottomPaneActiveTab, isBottomPaneVisible, openDebuggerPane, setIsBottomPaneVisible]);
+  const moveDebuggerFooterItem = useCallback(
+    (direction: -1 | 1) => {
+      const currentIndex = normalizedFooterLeadingOrder.indexOf(DEBUGGER_FOOTER_ITEM_ID);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= normalizedFooterLeadingOrder.length) {
+        return;
+      }
+
+      const nextOrder = [...normalizedFooterLeadingOrder];
+      const [debuggerItem] = nextOrder.splice(currentIndex, 1);
+      if (!debuggerItem) return;
+
+      nextOrder.splice(nextIndex, 0, debuggerItem);
+      void updateSetting("footerLeadingItemsOrder", nextOrder);
+    },
+    [normalizedFooterLeadingOrder, updateSetting],
+  );
+  const resetFooterOrder = useCallback(() => {
+    void updateSetting("footerLeadingItemsOrder", [...FOOTER_LEADING_ITEM_IDS]);
+  }, [updateSetting]);
+  const debuggerContextMenuItems = useMemo<ContextMenuItem[]>(
+    () => [
+      {
+        id: "toggle-debugger",
+        label:
+          isBottomPaneVisible && bottomPaneActiveTab === "debugger"
+            ? "Hide Run and Debug"
+            : "Show Run and Debug",
+        icon: <BugBeetle />,
+        onClick: toggleDebuggerPane,
+      },
+      {
+        id: "debugger-actions-separator",
+        label: "",
+        onClick: () => {},
+        separator: true,
+      },
+      {
+        id: "clear-breakpoints",
+        label: "Clear Breakpoints",
+        icon: <Trash />,
+        disabled: debuggerBreakpointsCount === 0,
+        onClick: debuggerActions.clearBreakpoints,
+      },
+      {
+        id: "clear-watch-expressions",
+        label: "Clear Watch Expressions",
+        icon: <Trash />,
+        disabled: debuggerWatchExpressionsCount === 0,
+        onClick: debuggerActions.clearWatchExpressions,
+      },
+      {
+        id: "clear-debug-console",
+        label: "Clear Debug Console",
+        icon: <Trash />,
+        disabled: debuggerTranscriptCount === 0,
+        onClick: debuggerActions.clearAdapterTranscript,
+      },
+      {
+        id: "debugger-footer-separator",
+        label: "",
+        onClick: () => {},
+        separator: true,
+      },
+      {
+        id: "move-debugger-left",
+        label: "Move Left",
+        icon: <ArrowLeft />,
+        disabled: debuggerFooterIndex <= 0,
+        onClick: () => moveDebuggerFooterItem(-1),
+      },
+      {
+        id: "move-debugger-right",
+        label: "Move Right",
+        icon: <ArrowRight />,
+        disabled:
+          debuggerFooterIndex < 0 || debuggerFooterIndex >= normalizedFooterLeadingOrder.length - 1,
+        onClick: () => moveDebuggerFooterItem(1),
+      },
+      {
+        id: "reset-footer-order",
+        label: "Reset Footer Order",
+        icon: <ArrowCounterClockwise />,
+        onClick: resetFooterOrder,
+      },
+    ],
+    [
+      bottomPaneActiveTab,
+      debuggerActions.clearAdapterTranscript,
+      debuggerActions.clearBreakpoints,
+      debuggerActions.clearWatchExpressions,
+      debuggerBreakpointsCount,
+      debuggerFooterIndex,
+      debuggerTranscriptCount,
+      debuggerWatchExpressionsCount,
+      isBottomPaneVisible,
+      moveDebuggerFooterItem,
+      normalizedFooterLeadingOrder.length,
+      resetFooterOrder,
+      toggleDebuggerPane,
+    ],
   );
 
   const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
@@ -106,11 +245,8 @@ const Footer = () => {
               tooltip="Toggle Run and Debug"
               active={isBottomPaneVisible && bottomPaneActiveTab === "debugger"}
               commandId="workbench.showDebugger"
-              onClick={() => {
-                setBottomPaneActiveTab("debugger");
-                const showingDebugger = !isBottomPaneVisible || bottomPaneActiveTab !== "debugger";
-                setIsBottomPaneVisible(showingDebugger);
-              }}
+              onClick={toggleDebuggerPane}
+              onContextMenu={(event) => debuggerContextMenu.open(event, "debugger")}
             >
               <BugBeetle weight="duotone" />
             </FooterTabControl>
@@ -238,23 +374,31 @@ const Footer = () => {
   ];
 
   return (
-    <div className="athas-footer-bar relative z-20 flex min-h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
-      <div className="ui-font flex items-center gap-1 text-text-lighter">
-        {orderFooterItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
-          <div key={item.id} className={chromeItemWrapper()}>
-            {item.content}
-          </div>
-        ))}
-      </div>
+    <>
+      <div className="athas-footer-bar relative z-20 flex min-h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+        <div className="ui-font flex items-center gap-1 text-text-lighter">
+          {orderFooterItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
+            <div key={item.id} className={chromeItemWrapper()}>
+              {item.content}
+            </div>
+          ))}
+        </div>
 
-      <div className="ui-font flex items-center gap-1 text-text-lighter">
-        {orderFooterItems(footerTrailingItems, footerTrailingOrder).map((item) => (
-          <div key={item.id} className={chromeItemWrapper()}>
-            {item.content}
-          </div>
-        ))}
+        <div className="ui-font flex items-center gap-1 text-text-lighter">
+          {orderFooterItems(footerTrailingItems, footerTrailingOrder).map((item) => (
+            <div key={item.id} className={chromeItemWrapper()}>
+              {item.content}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      <ContextMenu
+        isOpen={debuggerContextMenu.isOpen}
+        position={debuggerContextMenu.position}
+        items={debuggerContextMenuItems}
+        onClose={debuggerContextMenu.close}
+      />
+    </>
   );
 };
 
