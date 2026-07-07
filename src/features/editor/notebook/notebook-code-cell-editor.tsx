@@ -1,5 +1,5 @@
-import "../monaco/monaco-environment";
-import "../monaco/language-contributions";
+import "../engines/monaco/monaco-environment";
+import "../engines/monaco/language-contributions";
 import "monaco-editor/min/vs/editor/editor.main.css";
 import "../styles/monaco-editor.css";
 
@@ -7,9 +7,9 @@ import { editor as monacoEditor, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { toMonacoLanguageId } from "../monaco/language";
-import { defineActiveMonacoTheme, defineMonacoTheme } from "../monaco/theme";
-import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
+import { toMonacoLanguageId } from "../engines/monaco/language";
+import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/theme";
+import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
 
 interface NotebookCodeCellEditorProps {
   id: string;

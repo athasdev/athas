@@ -15,7 +15,7 @@ import {
   MONACO_HIGHLIGHT_LANGUAGE_IDS,
   MONACO_LANGUAGE_BY_ATHAS_ID,
   toMonacoLanguageId,
-} from "../monaco/language";
+} from "../engines/monaco/language";
 import { getLanguageOverlayTokens } from "../lib/wasm-parser/language-overlays";
 
 describe("getLanguageIdFromPath", () => {

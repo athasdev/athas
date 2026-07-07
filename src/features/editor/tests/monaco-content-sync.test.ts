@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { consumeLocalContentSnapshot, rememberLocalContentSnapshot } from "../monaco/content-sync";
+import {
+  consumeLocalContentSnapshot,
+  rememberLocalContentSnapshot,
+} from "../engines/monaco/content-sync";
 
 describe("Monaco content sync", () => {
   it("recognizes stale local content echoes without applying them twice", () => {

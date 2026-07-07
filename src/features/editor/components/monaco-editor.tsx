@@ -1,5 +1,5 @@
-import "../monaco/monaco-environment";
-import "../monaco/language-contributions";
+import "../engines/monaco/monaco-environment";
+import "../engines/monaco/language-contributions";
 import "monaco-editor/min/vs/editor/editor.main.css";
 import "../styles/monaco-editor.css";
 
@@ -49,10 +49,13 @@ import type {
   EditorCoordinateResolver,
   EditorModelPositionResolver,
 } from "../view-model/view-layout";
-import { syncContainedEditorFontOptions } from "../monaco/contained-editors";
-import { consumeLocalContentSnapshot, rememberLocalContentSnapshot } from "../monaco/content-sync";
-import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../monaco/hover-widgets";
-import { toMonacoLanguageId } from "../monaco/language";
+import { syncContainedEditorFontOptions } from "../engines/monaco/contained-editors";
+import {
+  consumeLocalContentSnapshot,
+  rememberLocalContentSnapshot,
+} from "../engines/monaco/content-sync";
+import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../engines/monaco/hover-widgets";
+import { toMonacoLanguageId } from "../engines/monaco/language";
 import {
   buildLineOffsets,
   clampMonacoPosition,
@@ -61,11 +64,11 @@ import {
   toEditorPosition,
   toEditorRange,
   toMonacoRange,
-} from "../monaco/position";
-import { defineActiveMonacoTheme, defineMonacoTheme } from "../monaco/theme";
-import { useMonacoEditorSettings } from "../monaco/use-monaco-editor-settings";
-import { registerAthasVimCommands, toAthasVimMode } from "../monaco/vim-commands";
-import { registerMonacoLspProviders } from "../monaco/lsp-providers";
+} from "../engines/monaco/position";
+import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/theme";
+import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
+import { registerAthasVimCommands, toAthasVimMode } from "../engines/monaco/vim-commands";
+import { registerMonacoLspProviders } from "../engines/monaco/lsp-providers";
 
 registerMonacoLspProviders();
 
@@ -219,7 +222,9 @@ export function MonacoEditor({
 
     const position = editor.getPosition();
     if (position) {
-      setCursorPosition(toEditorPosition(model, position), { ensureVisible: false });
+      setCursorPosition(toEditorPosition(model, position), {
+        ensureVisible: false,
+      });
     }
     const selection = editor.getSelection();
     setSelection(selection ? toEditorRange(model, selection) : undefined);
@@ -532,7 +537,10 @@ export function MonacoEditor({
             return;
           }
 
-          const currentPosition = editor.getPosition() ?? { lineNumber: 1, column: 1 };
+          const currentPosition = editor.getPosition() ?? {
+            lineNumber: 1,
+            column: 1,
+          };
           executeTextEdit(
             new MonacoRange(
               currentPosition.lineNumber,
@@ -1118,7 +1126,10 @@ export function MonacoEditor({
       .getState()
       .actions.getCachedViewState(viewStateKey ?? activeBufferId ?? "");
     if (cached) {
-      editor.setScrollPosition({ scrollTop: cached.scrollTop, scrollLeft: cached.scrollLeft });
+      editor.setScrollPosition({
+        scrollTop: cached.scrollTop,
+        scrollLeft: cached.scrollLeft,
+      });
       const model = editor.getModel();
       if (!model) return;
 

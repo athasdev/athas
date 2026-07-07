@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
-import { initializeAppBootstrap } from "@/bootstrap/initialize-app-bootstrap";
-import { useAppBootstrap } from "@/bootstrap/use-app-bootstrap";
+import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
+import { useAppBootstrap } from "@/features/bootstrap/use-app-bootstrap";
 import {
   traceWindowOpen,
   traceWindowOpenAfterFrame,

@@ -123,9 +123,7 @@ function toCompletionItem(
 ): Monaco.languages.CompletionItem {
   const label = completionLabelText(item.label);
   const insertText =
-    item.textEdit && "newText" in item.textEdit
-      ? item.textEdit.newText
-      : item.insertText || label;
+    item.textEdit && "newText" in item.textEdit ? item.textEdit.newText : item.insertText || label;
 
   return {
     label,
@@ -133,10 +131,7 @@ function toCompletionItem(
     detail: item.detail,
     documentation: markupDocumentation(item.documentation),
     insertText,
-    range:
-      item.textEdit && "range" in item.textEdit
-        ? toMonacoRange(item.textEdit.range)
-        : range,
+    range: item.textEdit && "range" in item.textEdit ? toMonacoRange(item.textEdit.range) : range,
     sortText: item.sortText,
     filterText: item.filterText,
     commitCharacters: item.commitCharacters,
@@ -197,7 +192,7 @@ export function registerMonacoLspProviders() {
   const lspClient = LspClient.getInstance();
 
   languages.registerCompletionItemProvider(selector, {
-    triggerCharacters: [".", ":", "<", "\"", "'", "/", "@", "#"],
+    triggerCharacters: [".", ":", "<", '"', "'", "/", "@", "#"],
     async provideCompletionItems(model, position) {
       if (!isLspModel(model)) return { suggestions: [] };
 
@@ -302,7 +297,15 @@ export function registerMonacoLspProviders() {
   languages.registerRenameProvider(selector, {
     async resolveRenameLocation(model, position) {
       if (!isLspModel(model)) {
-        return { range: new MonacoRange(position.lineNumber, position.column, position.lineNumber, position.column), text: "" };
+        return {
+          range: new MonacoRange(
+            position.lineNumber,
+            position.column,
+            position.lineNumber,
+            position.column,
+          ),
+          text: "",
+        };
       }
 
       const prepared = await lspClient.prepareRename(
@@ -318,8 +321,18 @@ export function registerMonacoLspProviders() {
         const word = model.getWordAtPosition(position);
         return {
           range: word
-            ? new MonacoRange(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn)
-            : new MonacoRange(position.lineNumber, position.column, position.lineNumber, position.column),
+            ? new MonacoRange(
+                position.lineNumber,
+                word.startColumn,
+                position.lineNumber,
+                word.endColumn,
+              )
+            : new MonacoRange(
+                position.lineNumber,
+                position.column,
+                position.lineNumber,
+                position.column,
+              ),
           text: prepared?.placeholder || word?.word || "",
         };
       }

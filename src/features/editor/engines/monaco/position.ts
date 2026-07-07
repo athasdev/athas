@@ -1,6 +1,6 @@
 import { Range as MonacoRange, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
-import type { Position, Range } from "../types/editor.types";
+import type { Position, Range } from "../../types/editor.types";
 
 export function toEditorPosition(
   model: Monaco.editor.ITextModel,

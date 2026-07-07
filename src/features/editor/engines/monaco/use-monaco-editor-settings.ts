@@ -1,6 +1,6 @@
 import { useZoomStore } from "@/features/window/stores/zoom.store";
-import { useEditorSettingsStore } from "../stores/settings.store";
-import { calculateLineHeight } from "../utils/lines";
+import { useEditorSettingsStore } from "../../stores/settings.store";
+import { calculateLineHeight } from "../../utils/lines";
 
 export function useMonacoEditorSettings() {
   const baseFontSize = useEditorSettingsStore.use.fontSize();
