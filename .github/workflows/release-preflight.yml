@@ -22,11 +22,6 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.16.0
-
       - name: Validate release configuration
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -58,11 +53,10 @@ jobs:
 
           bun scripts/release/release-assets.mjs
 
-      - name: Validate Rust targets and Zig
+      - name: Validate Rust targets
         run: |
           set -euo pipefail
           rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-pc-windows-msvc
-          bun scripts/check-zig.ts
 
   macos-readiness:
     runs-on: macos-latest

@@ -49,11 +49,6 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.16.0
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:

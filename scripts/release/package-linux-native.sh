@@ -224,7 +224,6 @@ await Bun.write(
 
 config_args+=(--config "$native_config")
 
-bun scripts/check-zig.ts
 cargo tauri build \
   --bundles "$bundles" \
   "${config_args[@]}" \

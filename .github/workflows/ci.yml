@@ -61,10 +61,5 @@ jobs:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           version: 1.0
 
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.16.0
-
       - name: Run Rust checks
         run: bash scripts/check/rust.sh
