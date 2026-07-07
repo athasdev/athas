@@ -5,12 +5,14 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { CsvPreview } from "@/extensions/viewers/csv/csv-preview";
+import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useLargeEditorModeInfo } from "@/features/editor/hooks/use-large-editor-mode-info";
 import { useLspIntegration } from "@/features/editor/hooks/use-lsp-integration";
 import { useEditorScroll } from "@/features/editor/hooks/use-scroll";
@@ -174,6 +176,9 @@ const CodeEditor = ({
   const lspScrollRafRef = useRef<number | null>(null);
   const editorCoordinateResolverRef = useRef<EditorCoordinateResolver | null>(null);
   const editorModelPositionResolverRef = useRef<EditorModelPositionResolver | null>(null);
+  const [codeLensContentLeft, setCodeLensContentLeft] = useState<number>(
+    EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+  );
   const [lspVisibleLineRange, setLspVisibleLineRange] = useState({
     startLine: 0,
     endLine: 120,
@@ -318,6 +323,54 @@ const CodeEditor = ({
     },
     [],
   );
+  const getCodeLensLineText = useCallback((line: number) => {
+    return valueRef.current.split("\n")[line];
+  }, []);
+  const measureCodeLensContentLeft = useCallback(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const contentContainer = container.querySelector<HTMLElement>(
+      "[data-editor-content-container]",
+    );
+    if (contentContainer) {
+      const contentRect = contentContainer.getBoundingClientRect();
+      setCodeLensContentLeft(Math.max(0, contentRect.left - containerRect.left));
+      return;
+    }
+
+    const monacoContent = container.querySelector<HTMLElement>(".monaco-editor .view-lines");
+    if (monacoContent) {
+      const contentRect = monacoContent.getBoundingClientRect();
+      setCodeLensContentLeft(Math.max(0, contentRect.left - containerRect.left));
+      return;
+    }
+
+    setCodeLensContentLeft(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
+  }, []);
+
+  useLayoutEffect(() => {
+    const container = editorRef.current;
+    if (!container) return;
+
+    measureCodeLensContentLeft();
+    const animationFrame = requestAnimationFrame(measureCodeLensContentLeft);
+    const resizeObserver = new ResizeObserver(measureCodeLensContentLeft);
+    resizeObserver.observe(container);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+    };
+  }, [
+    activeBufferId,
+    measureCodeLensContentLeft,
+    showToolbar,
+    useAthasEditor,
+    zoomedFontSize,
+    zoomedLineHeight,
+  ]);
 
   // Consolidated LSP integration (document lifecycle, completions, hover, go-to-definition)
   const { hoverHandlers, goToDefinitionHandlers, definitionLinkHandlers } = useLspIntegration({
@@ -749,6 +802,8 @@ const CodeEditor = ({
               lineHeight={zoomedLineHeight}
               scrollTop={editorRef.current?.querySelector("textarea")?.scrollTop ?? 0}
               viewportHeight={editorRef.current?.clientHeight ?? 600}
+              contentLeft={codeLensContentLeft}
+              getLineText={getCodeLensLineText}
               onExecute={handleCodeLensExecute}
               resolveModelPosition={resolveModelPosition}
             />

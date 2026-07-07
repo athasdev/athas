@@ -1,4 +1,4 @@
-import { type ForwardedRef, forwardRef, useEffect, useMemo, useState } from "react";
+import { type ForwardedRef, forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import type { CodeLensItem } from "./use-code-lens";
@@ -9,8 +9,15 @@ interface CodeLensOverlayProps {
   lineHeight: number;
   scrollTop: number;
   viewportHeight: number;
+  contentLeft: number;
+  getLineText?: (line: number) => string | undefined;
   onExecute?: (lens: CodeLensItem) => void;
   resolveModelPosition?: EditorModelPositionResolver;
+}
+
+interface ResolvedLensPosition {
+  top: number;
+  left: number;
 }
 
 const CodeLensOverlay = forwardRef(
@@ -21,29 +28,57 @@ const CodeLensOverlay = forwardRef(
       lineHeight,
       scrollTop,
       viewportHeight,
+      contentLeft,
+      getLineText,
       onExecute,
       resolveModelPosition,
     }: CodeLensOverlayProps,
     ref: ForwardedRef<HTMLDivElement>,
   ) => {
-    const [resolvedTops, setResolvedTops] = useState<Map<number, number>>(new Map());
+    const [resolvedPositions, setResolvedPositions] = useState<Map<number, ResolvedLensPosition>>(
+      new Map(),
+    );
 
     useEffect(() => {
       if (!resolveModelPosition || lenses.length === 0) {
-        setResolvedTops(new Map());
+        setResolvedPositions(new Map());
         return;
       }
 
-      const nextTops = new Map<number, number>();
+      const nextPositions = new Map<number, ResolvedLensPosition>();
       for (const line of new Set(lenses.map((lens) => lens.line))) {
-        const resolvedTop = resolveModelPosition(line, 0)?.top;
-        if (typeof resolvedTop === "number") {
-          nextTops.set(line, resolvedTop);
-        }
+        const startPosition = resolveModelPosition(line, 0);
+        if (!startPosition || typeof startPosition.top !== "number") continue;
+
+        const lineText = getLineText?.(line) ?? "";
+        const endPosition = lineText ? resolveModelPosition(line, lineText.length) : startPosition;
+        const inlineLeft =
+          typeof endPosition?.left === "number"
+            ? endPosition.left
+            : typeof startPosition.left === "number"
+              ? startPosition.left
+              : 0;
+
+        nextPositions.set(line, {
+          top: startPosition.top,
+          left: contentLeft + Math.max(0, inlineLeft) + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        });
       }
 
-      setResolvedTops(nextTops);
-    }, [lenses, resolveModelPosition]);
+      setResolvedPositions(nextPositions);
+    }, [contentLeft, getLineText, lenses, resolveModelPosition]);
+
+    const getLensPosition = useCallback(
+      (line: number) => {
+        const resolved = resolvedPositions.get(line);
+        if (resolved) return resolved;
+        return {
+          top: EDITOR_CONSTANTS.EDITOR_PADDING_TOP + line * lineHeight,
+          left: contentLeft + EDITOR_CONSTANTS.EDITOR_PADDING_LEFT,
+        };
+      },
+      [contentLeft, lineHeight, resolvedPositions],
+    );
 
     // Group lenses by line and only render visible ones
     const visibleGroups = useMemo(() => {
@@ -55,16 +90,14 @@ const CodeLensOverlay = forwardRef(
       for (const lens of lenses) {
         if (!lens.command) continue;
 
-        const top =
-          resolvedTops.get(lens.line) ??
-          EDITOR_CONSTANTS.EDITOR_PADDING_TOP + lens.line * lineHeight;
+        const top = getLensPosition(lens.line).top;
         if (top < visibleTop || top > visibleBottom) continue;
         const existing = byLine.get(lens.line) || [];
         existing.push(lens);
         byLine.set(lens.line, existing);
       }
       return byLine;
-    }, [lenses, scrollTop, viewportHeight, lineHeight, resolvedTops]);
+    }, [getLensPosition, lenses, scrollTop, viewportHeight]);
 
     if (visibleGroups.size === 0) return null;
 
@@ -75,12 +108,9 @@ const CodeLensOverlay = forwardRef(
         style={{ zIndex: 4 }}
       >
         {Array.from(visibleGroups.entries()).map(([line, items]) => {
-          const top = Math.max(
-            0,
-            (resolvedTops.get(line) ?? EDITOR_CONSTANTS.EDITOR_PADDING_TOP + line * lineHeight) -
-              lineHeight * 0.2,
-          );
-          const left = EDITOR_CONSTANTS.EDITOR_PADDING_LEFT;
+          const position = getLensPosition(line);
+          const top = Math.max(0, position.top + lineHeight * 0.1);
+          const left = Math.max(contentLeft, position.left);
 
           return (
             <div
@@ -91,6 +121,7 @@ const CodeLensOverlay = forwardRef(
                 left: `${left}px`,
                 fontSize: `${fontSize * 0.8}px`,
                 lineHeight: `${lineHeight * 0.8}px`,
+                maxWidth: `calc(100% - ${left + 16}px)`,
               }}
             >
               {items.map((item, i) => (
