@@ -50,7 +50,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          latest_preview="$(git tag --merged HEAD --list 'v*-preview.*' --sort=-creatordate | head -n 1 || true)"
+          # Preview tags point at tag-only release commits whose parent is main,
+          # so they are not considered merged into HEAD.
+          latest_preview="$(git tag --list 'v*-preview.*' --sort=-creatordate | head -n 1 || true)"
           if [[ -n "$latest_preview" ]]; then
             range="${latest_preview}..HEAD"
           else
