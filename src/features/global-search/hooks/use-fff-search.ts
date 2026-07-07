@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { fffSearchFiles, type FffSearchHit } from "../lib/rust-api/search";
 import { MAX_RESULTS } from "../constants/limits";
-
-const canUseFffSearch = (rootPath: string | null | undefined): rootPath is string =>
-  Boolean(rootPath) &&
-  !rootPath?.startsWith("remote://") &&
-  !rootPath?.startsWith("wsl://") &&
-  !rootPath?.startsWith("diff://");
+import { canUseNativeFileSearch } from "../utils/file-search-paths";
 
 export const useFffSearch = (
   query: string,
@@ -15,7 +10,7 @@ export const useFffSearch = (
   limit = MAX_RESULTS,
 ) => {
   const trimmedQuery = query.trim();
-  const searchRootPath = canUseFffSearch(rootPath) ? rootPath : null;
+  const searchRootPath = canUseNativeFileSearch(rootPath) ? rootPath : null;
   const searchKey =
     enabled && trimmedQuery && searchRootPath
       ? JSON.stringify([searchRootPath, trimmedQuery, limit])
@@ -57,5 +52,6 @@ export const useFffSearch = (
     hits: hasCurrentResult ? searchState.hits : [],
     error: hasCurrentResult ? searchState.error : null,
     isSearching: searchKey !== null && searchState.key !== searchKey,
+    canSearch: searchRootPath !== null,
   };
 };

@@ -399,8 +399,11 @@ function FileExplorerTreeComponent({
     [debouncedTreeSearchQuery, filteredFiles, rootFolderPath, treeSearchHits],
   );
   const treeSearchResult = useMemo(
-    () => filterFileTreeForFffHits(filteredFiles, effectiveTreeSearchHits),
-    [effectiveTreeSearchHits, filteredFiles],
+    () =>
+      filterFileTreeForFffHits(filteredFiles, effectiveTreeSearchHits, {
+        rootPath: rootFolderPath,
+      }),
+    [effectiveTreeSearchHits, filteredFiles, rootFolderPath],
   );
   const displayedFiles =
     isTreeSearchActive && !isTreeSearchSearching

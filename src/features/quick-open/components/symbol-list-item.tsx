@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from "react";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import type { SymbolItem } from "../hooks/use-symbol-search";
+import { SearchMatchHighlight } from "./search-match-highlight";
 
 const SYMBOL_ICONS: Record<string, ReactNode> = {
   function: <Code2 size={14} className="text-symbol-function" />,
@@ -35,6 +36,7 @@ interface SymbolListItemProps {
   isSelected: boolean;
   onClick: (symbol: SymbolItem) => void;
   onMouseEnter?: (index: number) => void;
+  searchQuery: string;
 }
 
 export const SymbolListItem = ({
@@ -43,6 +45,7 @@ export const SymbolListItem = ({
   isSelected,
   onClick,
   onMouseEnter,
+  searchQuery,
 }: SymbolListItemProps) => {
   const icon = SYMBOL_ICONS[symbol.kind] || <Code2 size={14} className="text-text-lighter" />;
 
@@ -53,8 +56,12 @@ export const SymbolListItem = ({
       onMouseEnter={() => onMouseEnter?.(index)}
       isSelected={isSelected}
       icon={icon}
-      title={symbol.name}
-      description={symbol.containerName}
+      title={<SearchMatchHighlight text={symbol.name} query={searchQuery} />}
+      description={
+        symbol.containerName ? (
+          <SearchMatchHighlight text={symbol.containerName} query={searchQuery} />
+        ) : undefined
+      }
       accessory={
         <>
           <CommandItemBadge>{symbol.kind}</CommandItemBadge>

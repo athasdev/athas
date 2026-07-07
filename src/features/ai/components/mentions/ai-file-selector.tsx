@@ -12,6 +12,7 @@ import {
 import { useDebounce } from "use-debounce";
 import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
+import { canUseNativeFileSearch } from "@/features/global-search/utils/file-search-paths";
 import { FileListItem } from "@/features/global-search/components/file-list-item";
 import type { FileCategory, FileItem } from "@/features/global-search/types/global-search.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -59,9 +60,6 @@ function flattenFileSearchResults(categorizedFiles: ReturnType<typeof useFileSea
   return result;
 }
 
-const canUseBackendFileSearch = (rootPath: string | null | undefined): rootPath is string =>
-  Boolean(rootPath) && !rootPath?.startsWith("remote://") && !rootPath?.startsWith("diff://");
-
 const categoryLabels: Record<FileCategory, string> = {
   open: "Open",
   recent: "Recent",
@@ -91,7 +89,7 @@ export function AIFileSelector({
   const lastEmittedResultsSignatureRef = useRef<string | null>(null);
   const [debouncedQuery] = useDebounce(query, 50);
   const isBackendSearchActive =
-    useBackendSearch && debouncedQuery.trim().length > 0 && canUseBackendFileSearch(rootFolderPath);
+    useBackendSearch && debouncedQuery.trim().length > 0 && canUseNativeFileSearch(rootFolderPath);
   const { hits: backendHits } = useFffSearch(debouncedQuery, isBackendSearchActive, rootFolderPath);
   const fileItems = useMemo<FileItem[]>(() => {
     if (isBackendSearchActive) return [];

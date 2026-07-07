@@ -2,15 +2,22 @@ import { useMemo } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer-search-snapshot";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
+import type { RecentFile } from "@/features/file-system/types/recent-files.types";
+import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
+import { pathStartsWithRoot } from "@/utils/path-helpers";
 import {
   MAX_OPEN_BUFFERS_SHOWN,
   MAX_OTHER_FILES_SHOWN,
   MAX_RECENT_FILES_NO_QUERY,
   MAX_RESULTS,
 } from "../constants/limits";
-import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
 import type { CategorizedFiles, FileItem, SearchResult } from "../types/quick-open.types";
 import { fuzzyScore } from "../utils/fuzzy-search";
+
+interface FileSearchOptions {
+  rootFolderPath?: string | null;
+  useBackendResults?: boolean;
+}
 
 function insertSortedLimited<T>(
   items: T[],
@@ -41,10 +48,64 @@ function insertSortedLimited<T>(
   }
 }
 
+function recentFileToItem(file: RecentFile): FileItem {
+  return {
+    name: file.name,
+    path: file.path,
+    isDir: false,
+  };
+}
+
+function isRecentFileInWorkspace(file: RecentFile, rootFolderPath: string | null | undefined) {
+  if (!rootFolderPath) return true;
+  if (file.workspacePath === rootFolderPath) return true;
+  return pathStartsWithRoot(file.path, rootFolderPath);
+}
+
+function categorizeBackendHits(
+  hits: readonly FffSearchHit[],
+  activeBufferPath: string | undefined,
+  openBufferPaths: ReadonlySet<string>,
+  recentFilePaths: ReadonlySet<string>,
+): CategorizedFiles {
+  const openBuffers: FileItem[] = [];
+  const recent: FileItem[] = [];
+  const others: FileItem[] = [];
+
+  for (const hit of hits) {
+    const file = { name: hit.name, path: hit.path, isDir: false };
+    if (openBufferPaths.has(file.path)) {
+      if (openBuffers.length < MAX_RESULTS) {
+        openBuffers.push(file);
+      }
+    } else if (recentFilePaths.has(file.path)) {
+      if (recent.length < MAX_RESULTS) {
+        recent.push(file);
+      }
+    } else if (file.path !== activeBufferPath && others.length < MAX_OTHER_FILES_SHOWN) {
+      others.push(file);
+    }
+  }
+
+  const openBufferFiles = openBuffers.slice(0, MAX_RESULTS);
+  const recentFilesInResults = recent.slice(0, Math.max(0, MAX_RESULTS - openBufferFiles.length));
+  const otherFiles = others.slice(
+    0,
+    Math.max(0, MAX_OTHER_FILES_SHOWN - openBufferFiles.length - recentFilesInResults.length),
+  );
+
+  return {
+    openBufferFiles,
+    recentFilesInResults,
+    otherFiles,
+  };
+}
+
 export const useFileSearch = (
   files: FileItem[],
   debouncedQuery: string,
   fffHits: FffSearchHit[] | null = null,
+  options: FileSearchOptions = {},
 ) => {
   const bufferSearchSnapshot = useBufferStore((state) =>
     getOpenBufferSearchSnapshot(state.buffers, state.activeBufferId),
@@ -54,11 +115,13 @@ export const useFileSearch = (
   );
 
   const categorizedFiles = useMemo((): CategorizedFiles => {
-    const { activeBufferPath, openBufferPaths } = bufferSearchSnapshot;
-
-    const recentFiles = getRecentFilesOrderedByFrecency();
+    const { activeBufferPath, openBufferPaths, openBuffers } = bufferSearchSnapshot;
+    const recentFiles = getRecentFilesOrderedByFrecency().filter((file) =>
+      isRecentFileInWorkspace(file, options.rootFolderPath),
+    );
     const recentFilePaths = new Set<string>();
     const recentFileIndices = new Map<string, number>();
+
     for (let index = 0; index < recentFiles.length; index++) {
       const recentFile = recentFiles[index];
       if (!recentFile) continue;
@@ -69,54 +132,61 @@ export const useFileSearch = (
     }
 
     if (!debouncedQuery.trim()) {
-      const openBuffersShown: FileItem[] = [];
-      const recentCandidates: FileItem[] = [];
+      const openBufferFiles = openBuffers.slice(0, MAX_OPEN_BUFFERS_SHOWN).map((file) => ({
+        name: file.name,
+        path: file.path,
+        isDir: false,
+      }));
+      const openAndActivePaths = new Set(openBufferPaths);
+      if (activeBufferPath) openAndActivePaths.add(activeBufferPath);
+
+      const recentFilesInResults = recentFiles
+        .filter((file) => !openAndActivePaths.has(file.path))
+        .slice(
+          0,
+          Math.min(MAX_RECENT_FILES_NO_QUERY, Math.max(0, MAX_RESULTS - openBufferFiles.length)),
+        )
+        .map(recentFileToItem);
+
+      const excludedPaths = new Set([
+        ...openAndActivePaths,
+        ...recentFilesInResults.map((file) => file.path),
+      ]);
       const otherCandidates: FileItem[] = [];
 
       for (const file of files) {
-        if (openBufferPaths.has(file.path)) {
-          if (openBuffersShown.length < MAX_OPEN_BUFFERS_SHOWN) {
-            openBuffersShown.push(file);
-          }
-          continue;
-        }
-
-        if (recentFilePaths.has(file.path)) {
-          insertSortedLimited(
-            recentCandidates,
-            file,
-            (a, b) =>
-              (recentFileIndices.get(a.path) ?? Number.MAX_VALUE) -
-              (recentFileIndices.get(b.path) ?? Number.MAX_VALUE),
-            MAX_RECENT_FILES_NO_QUERY,
-          );
-          continue;
-        }
-
-        if (file.path !== activeBufferPath) {
-          insertSortedLimited(
-            otherCandidates,
-            file,
-            (a, b) => a.name.localeCompare(b.name),
-            MAX_RESULTS,
-          );
-        }
+        if (excludedPaths.has(file.path)) continue;
+        insertSortedLimited(
+          otherCandidates,
+          file,
+          (a, b) => a.name.localeCompare(b.name),
+          MAX_RESULTS,
+        );
       }
 
-      const recentFilesShown = recentCandidates.slice(
+      const otherFiles = otherCandidates.slice(
         0,
-        Math.min(MAX_RECENT_FILES_NO_QUERY, Math.max(0, MAX_RESULTS - openBuffersShown.length)),
-      );
-      const otherFilesShown = otherCandidates.slice(
-        0,
-        Math.max(0, MAX_RESULTS - openBuffersShown.length - recentFilesShown.length),
+        Math.max(0, MAX_RESULTS - openBufferFiles.length - recentFilesInResults.length),
       );
 
       return {
-        openBufferFiles: openBuffersShown,
-        recentFilesInResults: recentFilesShown,
-        otherFiles: otherFilesShown,
+        openBufferFiles,
+        recentFilesInResults,
+        otherFiles,
       };
+    }
+
+    if (options.useBackendResults) {
+      return categorizeBackendHits(
+        fffHits ?? [],
+        activeBufferPath,
+        openBufferPaths,
+        recentFilePaths,
+      );
+    }
+
+    if (fffHits && fffHits.length > 0) {
+      return categorizeBackendHits(fffHits, activeBufferPath, openBufferPaths, recentFilePaths);
     }
 
     const compareScoredFiles = (a: SearchResult, b: SearchResult) => {
@@ -139,40 +209,6 @@ export const useFileSearch = (
       return a.file.name.localeCompare(b.file.name);
     };
 
-    if (fffHits && fffHits.length > 0) {
-      const openBuffers: FileItem[] = [];
-      const recent: FileItem[] = [];
-      const others: FileItem[] = [];
-
-      for (const hit of fffHits) {
-        const file = { name: hit.name, path: hit.path, isDir: false };
-        if (openBufferPaths.has(file.path)) {
-          if (openBuffers.length < MAX_RESULTS) {
-            openBuffers.push(file);
-          }
-        } else if (recentFilePaths.has(file.path)) {
-          if (recent.length < MAX_RESULTS) {
-            recent.push(file);
-          }
-        } else if (file.path !== activeBufferPath && others.length < MAX_OTHER_FILES_SHOWN) {
-          others.push(file);
-        }
-      }
-
-      const openBuffersShown = openBuffers.slice(0, MAX_RESULTS);
-      const recentFilesShown = recent.slice(0, Math.max(0, MAX_RESULTS - openBuffersShown.length));
-      const otherFilesShown = others.slice(
-        0,
-        Math.max(0, MAX_OTHER_FILES_SHOWN - openBuffersShown.length - recentFilesShown.length),
-      );
-
-      return {
-        openBufferFiles: openBuffersShown,
-        recentFilesInResults: recentFilesShown,
-        otherFiles: otherFilesShown,
-      };
-    }
-
     const openCandidates: SearchResult[] = [];
     const recentCandidates: SearchResult[] = [];
     const otherCandidates: SearchResult[] = [];
@@ -193,23 +229,31 @@ export const useFileSearch = (
       }
     }
 
-    const openBuffersShown = openCandidates.slice(0, MAX_RESULTS).map(({ file }) => file);
-    const recentFilesShown = recentCandidates
-      .slice(0, Math.max(0, MAX_RESULTS - openBuffersShown.length))
+    const openBufferFiles = openCandidates.slice(0, MAX_RESULTS).map(({ file }) => file);
+    const recentFilesInResults = recentCandidates
+      .slice(0, Math.max(0, MAX_RESULTS - openBufferFiles.length))
       .map(({ file }) => file);
-    const otherFilesShown = otherCandidates
+    const otherFiles = otherCandidates
       .slice(
         0,
-        Math.max(0, MAX_OTHER_FILES_SHOWN - openBuffersShown.length - recentFilesShown.length),
+        Math.max(0, MAX_OTHER_FILES_SHOWN - openBufferFiles.length - recentFilesInResults.length),
       )
       .map(({ file }) => file);
 
     return {
-      openBufferFiles: openBuffersShown,
-      recentFilesInResults: recentFilesShown,
-      otherFiles: otherFilesShown,
+      openBufferFiles,
+      recentFilesInResults,
+      otherFiles,
     };
-  }, [files, debouncedQuery, bufferSearchSnapshot, getRecentFilesOrderedByFrecency, fffHits]);
+  }, [
+    files,
+    debouncedQuery,
+    bufferSearchSnapshot,
+    getRecentFilesOrderedByFrecency,
+    fffHits,
+    options.rootFolderPath,
+    options.useBackendResults,
+  ]);
 
   return categorizedFiles;
 };

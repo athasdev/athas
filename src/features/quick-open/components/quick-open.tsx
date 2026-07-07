@@ -17,6 +17,7 @@ const QuickOpen = () => {
     setQuery,
     debouncedQuery,
     inputRef,
+    handleInputKeyDown,
     scrollContainerRef,
     onClose,
     files,
@@ -43,6 +44,7 @@ const QuickOpen = () => {
   const hasResults =
     openBufferFiles.length > 0 || recentFilesInResults.length > 0 || otherFiles.length > 0;
   const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
+  const symbolSearchQuery = query.startsWith("@") ? query.slice(1).trim() : query;
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
@@ -51,6 +53,7 @@ const QuickOpen = () => {
           ref={inputRef}
           value={query}
           onChange={setQuery}
+          onKeyDown={handleInputKeyDown}
           placeholder={isSymbolMode ? "Type to filter symbols..." : "Type to search files..."}
           className="ui-font"
         />
@@ -85,6 +88,7 @@ const QuickOpen = () => {
                 isSelected={index === selectedIndex}
                 onClick={handleSymbolSelect}
                 onMouseEnter={(idx) => setSelectedIndex(idx)}
+                searchQuery={symbolSearchQuery}
               />
             ))
           )
@@ -111,6 +115,7 @@ const QuickOpen = () => {
                     onClick={handleItemSelect}
                     onMouseEnter={handleItemHover}
                     rootFolderPath={rootFolderPath}
+                    searchQuery={debouncedQuery}
                   />
                 ))}
               </div>
@@ -130,6 +135,7 @@ const QuickOpen = () => {
                       onClick={handleItemSelect}
                       onMouseEnter={handleItemHover}
                       rootFolderPath={rootFolderPath}
+                      searchQuery={debouncedQuery}
                     />
                   );
                 })}
@@ -150,6 +156,7 @@ const QuickOpen = () => {
                       onClick={handleItemSelect}
                       onMouseEnter={handleItemHover}
                       rootFolderPath={rootFolderPath}
+                      searchQuery={debouncedQuery}
                     />
                   );
                 })}

@@ -7,7 +7,7 @@ use nucleo_matcher::{
 use serde::{Deserialize, Serialize};
 use std::{
    path::{Path, PathBuf},
-   sync::{Mutex, OnceLock},
+   sync::{Mutex, MutexGuard, OnceLock},
 };
 use tauri::{Manager, State};
 
@@ -207,6 +207,7 @@ pub fn filter_completions(request: CompletionFilterRequest) -> Vec<FilteredCompl
 
 pub struct FffSearchState {
    fff: OnceLock<FffSearch>,
+   operation_lock: Mutex<()>,
    workspace_path: Mutex<Option<PathBuf>>,
 }
 
@@ -223,8 +224,16 @@ impl FffSearchState {
    pub fn new() -> Self {
       Self {
          fff: OnceLock::new(),
+         operation_lock: Mutex::new(()),
          workspace_path: Mutex::new(None),
       }
+   }
+
+   pub(crate) fn lock_operation(&self) -> Result<MutexGuard<'_, ()>, String> {
+      self
+         .operation_lock
+         .lock()
+         .map_err(|e| format!("fff operation lock: {e}"))
    }
 
    pub(crate) fn get_or_init(&self, app: &AppHandle) -> Result<&FffSearch, String> {
@@ -297,7 +306,10 @@ impl FffSearchState {
 }
 
 fn should_skip_fff_path(path: &str) -> bool {
-   path.starts_with("remote://") || path.starts_with("diff://") || path.trim().is_empty()
+   path.starts_with("remote://")
+      || path.starts_with("wsl://")
+      || path.starts_with("diff://")
+      || path.trim().is_empty()
 }
 
 #[tauri::command]
@@ -310,6 +322,7 @@ pub fn fff_set_workspace(
       return Ok(());
    }
 
+   let _operation_guard = state.lock_operation()?;
    state.ensure_workspace(&app, Path::new(&base_path))
 }
 
@@ -325,6 +338,7 @@ pub fn fff_search_files(
       return Ok(Vec::new());
    }
 
+   let _operation_guard = state.lock_operation()?;
    if let Some(root_path) = root_path.as_deref() {
       if should_skip_fff_path(root_path) {
          return Ok(Vec::new());
@@ -354,6 +368,7 @@ pub fn fff_scan_status(
       });
    }
 
+   let _operation_guard = state.lock_operation()?;
    state.scan_status(&app, Some(Path::new(&root_path)))
 }
 

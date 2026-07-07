@@ -6,6 +6,7 @@ const BUFFER_SEARCH_KEY_SEPARATOR = "\u0000";
 export interface OpenBufferSearchSnapshot {
   activeBufferPath: string | undefined;
   openBufferPaths: ReadonlySet<string>;
+  openBuffers: Array<{ name: string; path: string }>;
 }
 
 let lastBuffers: readonly PaneContent[] | null = null;
@@ -49,18 +50,21 @@ export function getOpenBufferSearchSnapshot(
 
   let activeBufferPath: string | undefined;
   const openBufferPaths = new Set<string>();
+  const openBuffers: Array<{ name: string; path: string }> = [];
 
   for (const buffer of buffers) {
     if (buffer.id === activeBufferId) {
       activeBufferPath = buffer.path;
     } else if (!isVirtualContent(buffer) && buffer.path) {
       openBufferPaths.add(buffer.path);
+      openBuffers.push({ name: buffer.name, path: buffer.path });
     }
   }
 
   const snapshot = {
     activeBufferPath,
     openBufferPaths,
+    openBuffers,
   };
 
   lastBuffers = buffers;

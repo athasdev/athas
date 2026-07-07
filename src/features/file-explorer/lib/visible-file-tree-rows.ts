@@ -1,4 +1,5 @@
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import { getBaseName, getRelativePath, joinPath, pathStartsWithRoot } from "@/utils/path-helpers";
 
 export interface VisibleFileTreeRow {
   file: FileEntry;
@@ -23,6 +24,10 @@ export interface FilterFileTreeForSearchResult {
 
 export interface FileTreeSearchHit {
   path: string;
+}
+
+export interface FilterFileTreeForFffHitsOptions {
+  rootPath?: string | null;
 }
 
 export interface FilterFileTreeEntriesOptions {
@@ -187,6 +192,7 @@ function normalizeSearchPath(path: string): string {
 export function filterFileTreeForFffHits(
   files: FileEntry[],
   hits: readonly FileTreeSearchHit[],
+  options: FilterFileTreeForFffHitsOptions = {},
 ): FilterFileTreeForSearchResult {
   const expandedPaths = new Set<string>();
   const matchedPaths = new Set<string>();
@@ -235,6 +241,104 @@ export function filterFileTreeForFffHits(
   };
 
   const filteredFiles = walk(files);
+
+  const cloneByPath = new Map<string, FileEntry>();
+  const getMutableItem = (item: FileEntry): FileEntry => {
+    const existing = cloneByPath.get(item.path);
+    if (existing) return existing;
+
+    const clone = {
+      ...item,
+      children: item.children ? [...item.children] : item.isDir ? [] : undefined,
+    };
+    cloneByPath.set(item.path, clone);
+    return clone;
+  };
+  const findRootForHit = (hitPath: string): FileEntry | undefined => {
+    const candidates = files.filter(
+      (item) =>
+        item.isDir &&
+        pathStartsWithRoot(hitPath, item.path) &&
+        (!options.rootPath ||
+          pathStartsWithRoot(item.path, options.rootPath) ||
+          item.path === options.rootPath),
+    );
+    return candidates.sort((a, b) => b.path.length - a.path.length)[0];
+  };
+  const ensureRootInFilteredTree = (root: FileEntry): FileEntry => {
+    const existingIndex = filteredFiles.findIndex((item) => item.path === root.path);
+    if (existingIndex >= 0) {
+      const clone = getMutableItem(filteredFiles[existingIndex]!);
+      filteredFiles[existingIndex] = clone;
+      return clone;
+    }
+
+    const clone = getMutableItem({ ...root, children: [] });
+    filteredFiles.push(clone);
+    return clone;
+  };
+  const ensureSyntheticHit = (hitPath: string) => {
+    const root = findRootForHit(hitPath);
+    if (!root) {
+      const file = {
+        name: getBaseName(hitPath, hitPath),
+        path: hitPath,
+        isDir: false,
+      };
+      filteredFiles.push(file);
+      matchedPaths.add(hitPath);
+      matchedTreePathByHitPath.set(normalizeSearchPath(hitPath), hitPath);
+      return;
+    }
+
+    const rootClone = ensureRootInFilteredTree(root);
+    expandedPaths.add(rootClone.path);
+
+    const relativePath = getRelativePath(hitPath, rootClone.path);
+    const segments = relativePath.split("/").filter(Boolean);
+    let parent = rootClone;
+    let parentPath = rootClone.path;
+
+    for (let index = 0; index < segments.length; index++) {
+      const segment = segments[index]!;
+      const isLast = index === segments.length - 1;
+      const childPath = joinPath(parentPath, segment);
+      const children = parent.children ?? [];
+      const existingIndex = children.findIndex((item) => item.path === childPath);
+      let child: FileEntry;
+
+      if (existingIndex >= 0) {
+        child = getMutableItem(children[existingIndex]!);
+        children[existingIndex] = child;
+      } else {
+        child = {
+          name: segment,
+          path: childPath,
+          isDir: !isLast,
+          children: isLast ? undefined : [],
+        };
+        children.push(child);
+      }
+
+      parent.children = children;
+      if (isLast) {
+        matchedPaths.add(child.path);
+        matchedTreePathByHitPath.set(normalizeSearchPath(hitPath), child.path);
+        return;
+      }
+
+      expandedPaths.add(child.path);
+      parent = child;
+      parentPath = child.path;
+    }
+  };
+
+  for (const hitPath of hitPaths) {
+    if (!matchedTreePathByHitPath.has(hitPath)) {
+      ensureSyntheticHit(hitPath);
+    }
+  }
+
   const orderedMatchedPaths: string[] = [];
   const seenOrderedPaths = new Set<string>();
 

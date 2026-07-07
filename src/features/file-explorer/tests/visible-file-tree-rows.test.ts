@@ -249,4 +249,21 @@ describe("filterFileTreeForFffHits", () => {
     expect(result.matchCount).toBe(0);
     expect(result.expandedPaths.size).toBe(0);
   });
+
+  test("synthesizes fff hits missing from the loaded tree", () => {
+    const result = filterFileTreeForFffHits(tree, [{ path: "/root/src/generated/new-file.ts" }], {
+      rootPath: "/root",
+    });
+    const rows = buildVisibleFileTreeRows(result.files, result.expandedPaths);
+
+    expect(rows.map((row) => row.file.path)).toEqual([
+      "/root",
+      "/root/src",
+      "/root/src/generated",
+      "/root/src/generated/new-file.ts",
+    ]);
+    expect(Array.from(result.matchedPaths)).toEqual(["/root/src/generated/new-file.ts"]);
+    expect(result.orderedMatchedPaths).toEqual(["/root/src/generated/new-file.ts"]);
+    expect(result.matchCount).toBe(1);
+  });
 });

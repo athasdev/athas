@@ -138,6 +138,7 @@ pub fn search_files_content(
       return Ok(empty_search_response(false, 0));
    }
 
+   let _operation_guard = state.lock_operation()?;
    state.ensure_workspace(&app, std::path::Path::new(&request.root_path))?;
    let fff = state.get_or_init(&app)?;
    let wait_started = Instant::now();

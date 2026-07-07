@@ -3,6 +3,7 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "../types/quick-open.types";
+import { SearchMatchHighlight } from "./search-match-highlight";
 
 interface FileListItemProps {
   file: FileItem;
@@ -12,6 +13,7 @@ interface FileListItemProps {
   onClick: (path: string) => void;
   onMouseEnter?: (index: number, path: string) => void;
   rootFolderPath: string | null | undefined;
+  searchQuery: string;
 }
 
 export const FileListItem = ({
@@ -22,6 +24,7 @@ export const FileListItem = ({
   onClick,
   onMouseEnter,
   rootFolderPath,
+  searchQuery,
 }: FileListItemProps) => {
   const directoryPath = getDirectoryPath(file.path, rootFolderPath);
 
@@ -33,12 +36,10 @@ export const FileListItem = ({
       onMouseEnter={() => onMouseEnter?.(index, file.path)}
       isSelected={isSelected}
       icon={<ThemedFileIcon fileName={file.name} isDir={false} />}
-      title={file.name}
-      description={directoryPath}
+      title={<SearchMatchHighlight text={file.name} query={searchQuery} />}
+      description={<SearchMatchHighlight text={directoryPath} query={searchQuery} />}
       accessory={
-        category === "open" ? (
-          <CommandItemBadge>open</CommandItemBadge>
-        ) : category === "recent" ? (
+        category === "recent" ? (
           <CommandItemBadge>
             <ClockIcon />
           </CommandItemBadge>
