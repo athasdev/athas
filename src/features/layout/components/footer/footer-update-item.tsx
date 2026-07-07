@@ -102,7 +102,7 @@ export function useFooterUpdateItem(): FooterItem<FooterLeadingItemId> | null {
           {updateBusy ? (
             <LoadingIndicator label={downloading ? "Downloading" : "Installing"} compact />
           ) : (
-            <DownloadSimple weight="duotone" />
+            <DownloadSimple weight="fill" />
           )}
           <span>{updateLabel}</span>
         </FooterTabControl>

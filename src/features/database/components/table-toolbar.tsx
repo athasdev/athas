@@ -209,7 +209,7 @@ export default function TableToolbar({
                 tooltip={exportTooltip}
                 compact
               >
-                <Download />
+                <Download weight="fill" />
               </Button>
               <Button
                 onClick={copyAsJSON}

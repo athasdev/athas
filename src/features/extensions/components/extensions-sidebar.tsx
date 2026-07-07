@@ -19,14 +19,7 @@ import {
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -222,13 +215,7 @@ const ExtensionRow = ({
       <LoadingIndicator label="Installing" compact />
     </span>
   ) : isUnavailableAgent ? (
-    <Button
-      disabled
-      variant="ghost"
-      tooltip="Unavailable"
-      compact
-      className="h-7 w-7 min-w-0 p-0"
-    >
+    <Button disabled variant="ghost" tooltip="Unavailable" compact className="h-7 w-7 min-w-0 p-0">
       <XCircle className="size-4" weight="duotone" />
     </Button>
   ) : extension.isInstalled ? (
@@ -273,7 +260,7 @@ const ExtensionRow = ({
       compact
       className="h-7 w-7 min-w-0 p-0"
     >
-      <Download className="size-4" weight="duotone" />
+      <Download className="size-4" weight="fill" />
     </Button>
   );
 
@@ -998,7 +985,7 @@ export const ExtensionsSidebar = () => {
       icon: extension.isInstalled ? (
         <Trash className="size-3.5" weight="duotone" />
       ) : (
-        <Download className="size-3.5" weight="duotone" />
+        <Download className="size-3.5" weight="fill" />
       ),
       disabled: isInstalling || isUnavailableAgent,
       className: extension.isInstalled ? "text-error hover:text-error" : undefined,

@@ -476,7 +476,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         id: "pull",
         label:
           behindCount > 0 ? `Pull ${behindCount} commit${behindCount !== 1 ? "s" : ""}` : "Pull",
-        icon: <Download />,
+        icon: <Download weight="fill" />,
         disabled: isRemoteActionLoading,
         onClick: () => void handleRemoteAction("pull"),
       },
@@ -1578,7 +1578,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         className="size-6 rounded text-text-lighter disabled:opacity-50"
                         tooltip="Apply stash"
                       >
-                        <Download />
+                        <Download weight="fill" />
                       </Button>
                       <Button
                         type="button"

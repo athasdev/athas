@@ -2781,7 +2781,7 @@ export function DockerSidebar() {
                                 void handleCopyFromContainer(entry);
                               }}
                             >
-                              <Download className="size-3.5" />
+                              <Download className="size-3.5" weight="fill" />
                             </Button>
                           </div>
                         ))

@@ -77,7 +77,7 @@ const TerminalTabContextMenu = ({
         {
           id: "export",
           label: "Export Output",
-          icon: <Download />,
+          icon: <Download weight="fill" />,
           onClick: () => onExport(terminal.id),
         },
         { id: "sep-2", label: "", separator: true, onClick: () => {} },

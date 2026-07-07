@@ -132,7 +132,7 @@ export function CsvPreview() {
               tooltip="Copy as CSV"
               compact
             >
-              <Download /> CSV
+              <Download weight="fill" /> CSV
             </Button>
 
             {/* Copy JSON */}

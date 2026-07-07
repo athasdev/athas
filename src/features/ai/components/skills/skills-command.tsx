@@ -357,7 +357,7 @@ export function SkillsCommand({
               onClick={openBrowseSkills}
               active={view === "browse"}
             >
-              <CloudArrowDown />
+              <CloudArrowDown weight="fill" />
               <span>Browse</span>
             </CommandHeaderAction>
           </CommandHeader>

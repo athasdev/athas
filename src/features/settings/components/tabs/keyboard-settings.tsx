@@ -282,7 +282,7 @@ export const KeyboardSettings = () => {
                   {
                     value: "preset",
                     label: "Preset",
-                    icon: <DownloadSimple size={14} weight="duotone" />,
+                    icon: <DownloadSimple size={14} weight="fill" />,
                   },
                   {
                     value: "preset-changes",

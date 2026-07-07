@@ -233,7 +233,7 @@ const GitActionsMenu = ({
         {
           id: "pull",
           label: "Pull Changes",
-          icon: <Download />,
+          icon: <Download weight="fill" />,
           disabled: isLoading,
           onClick: handlePull,
         },
