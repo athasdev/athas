@@ -419,14 +419,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["window", "transparency", "transparent", "translucent", "glass", "chrome"],
   },
   {
-    id: "appearance-title-bar-project-mode",
-    tab: "appearance",
-    section: "Layout",
-    label: "Title Bar Project Mode",
-    description: "Show project tabs or a single window-style title in the custom title bar",
-    keywords: ["title", "bar", "project", "tabs", "window", "mode"],
-  },
-  {
     id: "appearance-open-folders-new-window",
     tab: "appearance",
     section: "Layout",

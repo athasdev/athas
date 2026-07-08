@@ -32,7 +32,6 @@ import { AccountMenu } from "../account-menu";
 import ProjectPicker from "../project-picker";
 import RunActionsButton from "../run-actions-button";
 import { type HeaderItem, orderHeaderItems, placeHeaderItemsBeforeAccount } from "./header-items";
-import { TitleBarProjectArea } from "./title-bar-project-area";
 import { WindowControls } from "./window-controls";
 import WindowMenuBar from "../window-menu-bar";
 
@@ -43,7 +42,6 @@ interface CustomTitleBarProps {
 
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
-  const titleBarProjectMode = useSettingsStore((state) => state.settings.titleBarProjectMode);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
   const headerTrailingItemsOrder = useSettingsStore(
@@ -331,8 +329,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           {sidebarToggle}
         </div>
 
-        <TitleBarProjectArea mode={titleBarProjectMode} />
-
         {/* Account menu */}
         <div className="flex h-8 items-center">
           <div className="flex items-center gap-1">
@@ -369,9 +365,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           </div>
         </div>
       </div>
-
-      <TitleBarProjectArea mode={titleBarProjectMode} />
-
       {/* Right side */}
       <div className="z-20 flex items-center">
         <div className="flex items-center gap-1">

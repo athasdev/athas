@@ -555,11 +555,7 @@ export const useFileSystemStore = createSelectors(
         const hasOpenWorkspace =
           !!get().rootFolderPath || useWorkspaceTabsStore.getState().projectTabs.length > 0;
 
-        if (
-          settings.openFoldersInNewWindow &&
-          settings.titleBarProjectMode === "window" &&
-          hasOpenWorkspace
-        ) {
+        if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
           await createAppWindow({
             path: selected,
             isDirectory: true,

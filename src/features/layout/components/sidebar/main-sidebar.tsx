@@ -1,3 +1,9 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
+import {
+  FolderIcon as Folder,
+  HardDrivesIcon as HardDrives,
+  PlusIcon as Plus,
+} from "@phosphor-icons/react";
 import { memo, type ReactNode } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
@@ -12,9 +18,11 @@ import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
+import { Button } from "@/ui/button";
 import { SidebarPanel } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
@@ -32,6 +40,58 @@ interface SidebarPaneEntry {
 
 interface SidebarActivityRailProps {
   expanded?: boolean;
+}
+
+const getProjectNameFromPath = (path?: string) => {
+  if (!path) return "Open Project";
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts[parts.length - 1] || path;
+};
+
+const isRemoteProjectPath = (path?: string) => path?.startsWith("remote://") === true;
+
+function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
+  const activeProject = projectTabs.find((tab) => tab.isActive);
+  const projectName = activeProject?.name || getProjectNameFromPath(rootFolderPath);
+  const projectPath = activeProject?.path || rootFolderPath;
+  const customIcon = activeProject?.customIcon;
+  const isRemote = isRemoteProjectPath(projectPath);
+
+  const icon = customIcon ? (
+    <img
+      src={convertFileSrc(customIcon)}
+      alt=""
+      className="size-4 shrink-0 rounded-[var(--app-radius-control-sm)] object-contain"
+    />
+  ) : isRemote ? (
+    <HardDrives className="size-4" weight="duotone" />
+  ) : projectPath ? (
+    <Folder className="size-4" weight="duotone" />
+  ) : (
+    <Plus className="size-4" weight="duotone" />
+  );
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      tooltip={expanded ? undefined : projectName}
+      tooltipSide="right"
+      onClick={() => setIsProjectPickerVisible(true)}
+      className={cn(
+        expanded
+          ? "h-9 w-full justify-start gap-2 px-2.5"
+          : "min-h-6 min-w-7 rounded-[var(--app-radius-control-sm)] px-0",
+      )}
+      aria-label="Switch project"
+    >
+      {icon}
+      {expanded ? <span className="min-w-0 truncate">{projectName}</span> : null}
+    </Button>
+  );
 }
 
 export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRailProps) => {
@@ -54,10 +114,12 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   return (
     <div
       className={cn(
-        "athas-sidebar-rail flex shrink-0 items-start pb-1.5 transition-[width] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+        "athas-sidebar-rail flex shrink-0 flex-col items-start pb-1.5",
         expanded ? "w-40 px-1.5 pt-1" : "w-[3.5rem] px-0.5 pt-1",
       )}
     >
+      <SidebarProjectSwitcher expanded={expanded} />
+      <div className={cn("my-1 h-px shrink-0 bg-border/60", expanded ? "w-full" : "mx-auto w-7")} />
       <SidebarPaneSelector
         activeSidebarView={activeSidebarView}
         isGitViewActive={isGitViewActive}

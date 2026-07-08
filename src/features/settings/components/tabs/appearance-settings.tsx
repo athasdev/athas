@@ -33,7 +33,6 @@ export const AppearanceSettings = () => {
       openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
       syncSystemTheme: state.settings.syncSystemTheme,
       theme: state.settings.theme,
-      titleBarProjectMode: state.settings.titleBarProjectMode,
       uiFontFamily: state.settings.uiFontFamily,
       uiFontSize: state.settings.uiFontSize,
       windowTransparency: state.settings.windowTransparency,
@@ -42,11 +41,6 @@ export const AppearanceSettings = () => {
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const registeredThemes = useRegisteredThemes();
   const registeredIconThemes = useRegisteredIconThemes();
-
-  const titleBarProjectModeOptions = [
-    { value: "tabs", label: "Tabs" },
-    { value: "window", label: "Window" },
-  ];
 
   const themeOptions = useMemo(
     () =>
@@ -349,28 +343,8 @@ export const AppearanceSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Title Bar Project Mode"
-          description="Show project tabs or a single window-style title in the custom title bar"
-          onReset={() =>
-            updateSetting("titleBarProjectMode", getDefaultSetting("titleBarProjectMode"))
-          }
-          canReset={settings.titleBarProjectMode !== getDefaultSetting("titleBarProjectMode")}
-        >
-          <Select
-            value={settings.titleBarProjectMode}
-            options={titleBarProjectModeOptions}
-            onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
-            className={SETTINGS_CONTROL_WIDTHS.default}
-            size="md"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
-        <SettingRow
           label="Open Projects In New Window"
-          description="In window title mode, opening another folder uses a separate window when a project is already open"
+          description="Opening another folder uses a separate window when a project is already open"
           onReset={() =>
             updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
           }
