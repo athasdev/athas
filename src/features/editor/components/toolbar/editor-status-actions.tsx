@@ -35,7 +35,7 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
-import { Dropdown } from "@/ui/dropdown";
+import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -45,14 +45,19 @@ import { getFilenameFromPath } from "@/features/file-system/controllers/file-uti
 const actionButtonClass = cn(chromeControl(), "text-text-lighter");
 
 const statusChipClass =
-  "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "ui-font inline-flex h-5 items-center self-center rounded-[var(--app-radius-pill)] border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const menuTriggerClass = cn(chromeControl(), "text-text-lighter");
 
-const menuItemClass =
-  "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left ui-text-sm text-text transition-colors hover:bg-hover";
+const editorMenuItemClass = dropdownItemClassName("min-h-7");
 
-const menuItemDisabledClass = "cursor-not-allowed opacity-50 hover:bg-transparent";
+const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-text-lighter";
+
+const editorMenuRowClass =
+  "group flex items-center justify-between gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 transition-colors hover:bg-hover";
+
+const editorMenuMutedRowClass =
+  "flex items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-2 text-text-lighter";
 function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
   return getLanguageDisplayName(languageId);
@@ -519,13 +524,13 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               inputClassName="truncate ui-text-sm text-text-lighter group-hover/combobox-input:text-text"
               className={cn(
                 statusChipClass,
-                "h-5 w-fit max-w-[240px] rounded-md bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
+                "h-5 w-fit max-w-[240px] bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
               )}
               inputStyle={{
                 width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
               }}
             />
-            <ComboboxContent align="end" className="w-[220px] min-w-[220px] rounded-lg">
+            <ComboboxContent align="end" className="w-[220px] min-w-[220px]">
               <ComboboxList className="max-h-[220px] p-1.5">
                 {allLanguages.map((lang) => (
                   <ComboboxItem
@@ -565,7 +570,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsLspOpen(false)}
-          className="w-[260px] overflow-hidden rounded-lg p-2"
+          className="w-[260px] p-2"
         >
           <div className="space-y-2">
             <div className="px-1">
@@ -581,7 +586,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       disabled={!canRunBulkLspAction}
                       variant="default"
                       compact
-                      className="flex-1 rounded-md px-2 ui-text-sm text-text-lighter"
+                      className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
                     </Button>
@@ -591,7 +596,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       disabled={!canRunBulkLspAction}
                       variant="default"
                       compact
-                      className="flex-1 rounded-md px-2 ui-text-sm text-text-lighter"
+                      className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
                     </Button>
@@ -600,10 +605,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 {activeServerEntries.map((entry) => {
                   const isBusy = busyServerKey === entry.key;
                   return (
-                    <div
-                      key={entry.key}
-                      className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
-                    >
+                    <div key={entry.key} className={editorMenuRowClass}>
                       <div className="flex min-w-0 items-center gap-2">
                         <Zap className="shrink-0 text-success" weight="duotone" />
                         <span className="truncate text-text ui-text-sm">{entry.displayName}</span>
@@ -615,7 +617,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
-                          className="rounded-md px-2 ui-text-sm text-text-lighter"
+                          className={editorMenuActionButtonClass}
                         >
                           {isBusy ? "..." : "Restart"}
                         </Button>
@@ -625,7 +627,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
                           compact
-                          className="rounded-md px-2 ui-text-sm text-text-lighter"
+                          className={editorMenuActionButtonClass}
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
                           <Square weight="duotone" />
@@ -635,7 +637,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   );
                 })}
                 {!currentServerEntry && isCurrentFileLspAvailable && currentFileDisplayName && (
-                  <div className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
+                  <div className={editorMenuRowClass}>
                     <div className="flex min-w-0 items-center gap-2">
                       <ZapOff className="shrink-0 opacity-60" weight="duotone" />
                       <span className="truncate text-text ui-text-sm">
@@ -649,7 +651,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
                         compact
-                        className="rounded-md px-2 ui-text-sm text-text-lighter"
+                        className={editorMenuActionButtonClass}
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
                       </Button>
@@ -658,7 +660,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 )}
               </div>
             ) : lspStatus.status === "connecting" ? (
-              <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
+              <div className={editorMenuMutedRowClass}>
                 <LoadingIndicator label="Connecting" showLabel compact />
               </div>
             ) : lspStatus.status === "error" ? (
@@ -673,7 +675,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
+              <div className={editorMenuMutedRowClass}>
                 <ZapOff className="opacity-50" weight="duotone" />
                 <span className="ui-text-sm">No active language servers</span>
               </div>
@@ -706,7 +708,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsViewMenuOpen(false)}
-          className="w-[220px] overflow-hidden rounded-lg p-1.5"
+          className="w-[220px] p-1.5"
         >
           <div className="space-y-0.5">
             {displayOptions.slice(0, 2).map((option) => (
@@ -716,7 +718,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
                 compact
-                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                className={editorMenuItemClass}
                 disabled={option.disabled}
               >
                 <span>{option.label}</span>
@@ -738,7 +740,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
                 compact
-                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                className={editorMenuItemClass}
                 disabled={option.disabled}
               >
                 <span>{option.label}</span>
@@ -755,7 +757,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
                 compact
-                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                className={editorMenuItemClass}
                 disabled={option.disabled}
               >
                 <span>{option.label}</span>
