@@ -278,16 +278,16 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 <Button
                   type="button"
                   onClick={() => removeColumn(index)}
-                  variant="ghost"
+                  variant="danger"
                   compact
-                  className="rounded-md text-error"
+                  aria-label={`Remove ${column.name || `column ${index + 1}`}`}
                 >
                   <XIcon size="14" />
                 </Button>
               )}
             </div>
           ))}
-          <Button type="button" onClick={addColumn} variant="ghost" className="rounded-md" compact>
+          <Button type="button" onClick={addColumn} variant="ghost" compact>
             <PlusIcon size="12" />
             Add Column
           </Button>
