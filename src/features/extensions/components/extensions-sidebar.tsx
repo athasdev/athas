@@ -247,9 +247,9 @@ const ExtensionRow = ({
       ? extension.extensions
       : extension.extensions?.map((ext) => `.${ext}`);
   const actionContent = extension.isBundled ? (
-    <span className="rounded-full border border-border/70 bg-secondary-bg/70 px-2 py-1 font-medium text-text-lighter ui-text-sm">
+    <Badge variant="default" size="default" className="border-border/70 bg-secondary-bg/70 px-2">
       Built-in
-    </span>
+    </Badge>
   ) : isInstalling ? (
     <span className="flex h-8 w-8 items-center justify-center text-accent">
       <LoadingIndicator label="Installing" compact />
@@ -260,10 +260,14 @@ const ExtensionRow = ({
     </Button>
   ) : isAppearance && extension.isInstalled ? (
     extension.isActive ? (
-      <span className="inline-flex h-8 items-center gap-1 rounded-md border border-accent/25 bg-accent/10 px-2 font-medium text-accent ui-text-sm">
+      <Badge
+        variant="accent"
+        size="default"
+        className="h-8 gap-1 border-accent/25 bg-accent/10 px-2"
+      >
         <Check className="size-3.5" weight="bold" />
         Active
-      </span>
+      </Badge>
     ) : (
       <Button
         onClick={(event) => {
@@ -341,7 +345,7 @@ const ExtensionRow = ({
   return (
     <div
       className={cn(
-        "group flex min-w-0 flex-col rounded-md border bg-primary-bg text-text-lighter transition-colors",
+        "group flex min-w-0 flex-col rounded-[var(--app-radius-card)] border bg-primary-bg text-text-lighter transition-colors",
         "hover:border-border/90 hover:bg-secondary-bg/35 hover:text-text",
         selected ? "border-accent/50 ring-1 ring-accent/20" : "border-border/65",
       )}
@@ -358,7 +362,7 @@ const ExtensionRow = ({
       }}
     >
       <div className="flex min-w-0 items-start gap-3 p-3 pb-2">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-secondary-bg/55">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/55">
           {getCategoryIcon(extension.category)}
         </span>
         <div className="min-w-0 flex-1">
@@ -402,7 +406,7 @@ const ExtensionRow = ({
           </p>
         ) : null}
         {extension.runtimeIssues && extension.runtimeIssues.length > 0 ? (
-          <div className="rounded-md border border-error/20 bg-error/8 px-2 py-1">
+          <div className="rounded-[var(--app-radius-control)] border border-error/20 bg-error/8 px-2 py-1">
             <div className="ui-font ui-text-sm flex items-start gap-1.5 text-error">
               <WarningCircle className="mt-0.5 shrink-0" size={13} weight="duotone" />
               <span className="min-w-0 truncate">{extension.runtimeIssues[0].message}</span>
@@ -1368,7 +1372,7 @@ export const ExtensionsSidebar = () => {
           {selectedExtension ? (
             <div className="space-y-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border/70 bg-primary-bg">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg">
                   {getCategoryIcon(selectedExtension.category)}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -1417,7 +1421,7 @@ export const ExtensionsSidebar = () => {
               ) : null}
 
               {selectedExtension.runtimeIssues?.length ? (
-                <div className="rounded-md border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
+                <div className="rounded-[var(--app-radius-control)] border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
                   {selectedExtension.runtimeIssues[0]?.message}
                 </div>
               ) : null}
@@ -1498,12 +1502,9 @@ export const ExtensionsSidebar = () => {
                       ? selectedExtension.extensions
                       : [getCategoryLabel(selectedExtension.category)]
                   ).map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-md border border-border/60 bg-primary-bg px-2 py-1 text-text-lighter ui-text-sm"
-                    >
+                    <Badge key={item} variant="default" size="default" className="bg-primary-bg">
                       {item}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
