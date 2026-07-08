@@ -44,7 +44,7 @@ function normalizeMarketplaceSkill(entry: SkillRegistryEntry): MarketplaceSkill 
     description:
       asString(entry.description) ||
       content.replace(/\s+/g, " ").trim().slice(0, 160) ||
-      "Reusable AI chat instructions.",
+      "Reusable Agent instructions.",
     content,
     author: asString(entry.author) || asString(entry.publisher),
     version: asString(entry.version),

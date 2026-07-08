@@ -150,11 +150,11 @@ export const EnterpriseSettings = () => {
           />
         </SettingRow>
 
-        <SettingRow label="Enable AI Chat" description="Enable AI chat panel for enterprise users.">
+        <SettingRow label="Enable Agent" description="Enable Agent panel for enterprise users.">
           <Switch
             checked={policy.aiChatEnabled}
             onChange={(checked) =>
-              savePolicyPatch({ aiChatEnabled: checked }, "AI chat policy updated.")
+              savePolicyPatch({ aiChatEnabled: checked }, "Agent policy updated.")
             }
             size="sm"
             disabled={!isAdmin || isSaving || !policy.managedMode}

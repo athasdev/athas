@@ -392,10 +392,10 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           </MenubarItem>
         </MenubarContent>
       ),
-      AI: (
+      Agent: (
         <MenubarContent>
           <MenubarItem shortcut="mod+r" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
-            Toggle AI Chat
+            Toggle Agent
           </MenubarItem>
           <MenubarItem
             shortcut="mod+shift+space"

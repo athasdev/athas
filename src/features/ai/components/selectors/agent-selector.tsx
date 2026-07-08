@@ -26,7 +26,7 @@ import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 const ATHAS_AGENT_OPTION = {
   id: "custom",
   name: "Athas Agent",
-  description: "Use Athas chat settings and provider configuration",
+  description: "Use Athas Agent settings and provider configuration",
   isAcp: false,
 };
 
@@ -295,7 +295,7 @@ export function AgentSelector({
           type="button"
           variant="ghost"
           compact
-          tooltip={triggerTooltip ?? "New chat"}
+          tooltip={triggerTooltip ?? "New session"}
           className={triggerClassName}
         >
           <Plus />

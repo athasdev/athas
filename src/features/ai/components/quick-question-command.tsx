@@ -128,7 +128,7 @@ export function QuickQuestionCommandContent({
     if (!trimmedQuestion || isLoading) return;
 
     if (isBlockedByPolicy) {
-      setError("AI chat is disabled by enterprise policy.");
+      setError("Agent is disabled by enterprise policy.");
       return;
     }
 
@@ -190,7 +190,7 @@ export function QuickQuestionCommandContent({
           ref={inputRef}
           value={question}
           onChange={setQuestion}
-          placeholder="Ask AI a quick question..."
+          placeholder="Ask a quick question..."
           className="min-w-0"
         />
       </CommandHeader>

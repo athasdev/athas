@@ -8,6 +8,10 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
+import {
+  isExternalMarkdownLink,
+  resolveWorkspaceFileLink,
+} from "@/features/ai/lib/workspace-file-links";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -20,6 +24,7 @@ import {
 } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
 import { writeClipboardText } from "@/utils/clipboard";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 const LANGUAGE_HINTS = new Set([
   "bash",
@@ -157,6 +162,33 @@ function inferCodeLanguage(code: string): string {
 
 async function copyTextToClipboard(text: string) {
   await writeClipboardText(text);
+}
+
+async function openMarkdownLink(href: string, label: string) {
+  if (isExternalMarkdownLink(href)) {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(href);
+    return;
+  }
+
+  const fileSystem = useFileSystemStore.getState();
+  const files = await fileSystem.getAllProjectFiles();
+  const target = resolveWorkspaceFileLink(href, label, files, fileSystem.rootFolderPath);
+
+  if (target) {
+    await fileSystem.handleFileSelect(
+      target.path,
+      false,
+      target.line,
+      target.column,
+      undefined,
+      false,
+    );
+    return;
+  }
+
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl(href);
 }
 
 function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {
@@ -695,17 +727,18 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
       const url = linkMatch[2];
+      const label = linkMatch[1];
       elements.push(
         <a
           key={getInlineKey("link", linkMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
-            import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
+            void openMarkdownLink(url, label);
           }}
           className={INLINE_LINK_CLASS_NAME}
         >
-          {linkMatch[1]}
+          {label}
         </a>,
       );
       remaining = remaining.slice(linkMatch[0].length);

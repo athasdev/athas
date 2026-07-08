@@ -378,7 +378,7 @@ const AIChat = memo(function AIChat({
         const currentChat = useAIChatStore.getState().getChatById(chatId);
         if (!currentChat) return;
 
-        if (currentChat.title === fallbackTitle || currentChat.title === "New Chat") {
+        if (currentChat.title === fallbackTitle || currentChat.title === "New Session") {
           chatActions.updateChatTitle(chatId, generatedTitle);
         }
       } catch (error) {
@@ -998,7 +998,8 @@ details: ${errorDetails || mainError}
     } catch (error) {
       console.error("Failed to start streaming:", error);
       chatActions.updateMessage(targetChatId, assistantMessageId, {
-        content: "Error: Failed to connect to AI service. Please check your API key and try again.",
+        content:
+          "Error: Failed to connect to Agent service. Please check your API key and try again.",
         isStreaming: false,
       });
       chatActions.setIsTyping(false);
@@ -1130,9 +1131,9 @@ details: ${errorDetails || mainError}
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
-            <p className="font-medium ui-text-sm text-text">AI chat is disabled</p>
+            <p className="font-medium ui-text-sm text-text">Agent is disabled</p>
             <p className="mt-2 text-text-lighter ui-text-sm">
-              Your organization policy has disabled AI chat for this workspace.
+              Your organization policy has disabled Agent for this workspace.
             </p>
           </div>
         </div>

@@ -944,8 +944,8 @@ export const AISettings = () => {
         ) : null}
       </Section>
 
-      <Section title="Chat History">
-        <SettingRow label="Clear All Chats" description="Permanently delete all chat history">
+      <Section title="Agent History">
+        <SettingRow label="Clear Agent History" description="Permanently delete all agent history">
           <TypedConfirmAction
             actionLabel="Clear All"
             busyLabel="Clearing..."
@@ -954,7 +954,7 @@ export const AISettings = () => {
               setIsClearingChats(true);
               try {
                 await useAIChatStore.getState().clearAllChats();
-                showToast({ message: "All chats cleared", type: "success" });
+                showToast({ message: "Agent history cleared", type: "success" });
               } finally {
                 setIsClearingChats(false);
               }

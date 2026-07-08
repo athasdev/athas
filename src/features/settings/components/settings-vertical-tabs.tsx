@@ -82,7 +82,7 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
   },
   {
     id: "ai",
-    label: "AI",
+    label: "Agent",
     icon: Sparkle,
   },
   {

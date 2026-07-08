@@ -39,9 +39,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "enterprise-ai-chat",
     tab: "enterprise",
     section: "Enterprise Controls",
-    label: "Enable AI Chat",
-    description: "Enable AI chat panel for enterprise users",
-    keywords: ["enterprise", "ai", "chat", "panel"],
+    label: "Enable Agent",
+    description: "Enable Agent panel for enterprise users",
+    keywords: ["enterprise", "ai", "agent", "chat", "panel"],
   },
   {
     id: "enterprise-extension-allowlist-entries",
@@ -488,10 +488,10 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "ai-clear-chats",
     tab: "ai",
-    section: "Chat History",
-    label: "Clear All Chats",
-    description: "Permanently delete all chat history",
-    keywords: ["ai", "chat", "clear", "delete", "history"],
+    section: "Agent History",
+    label: "Clear Agent History",
+    description: "Permanently delete all agent history",
+    keywords: ["ai", "agent", "chat", "clear", "delete", "history"],
   },
 
   // Keyboard Settings
@@ -743,9 +743,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "features-ai-chat",
     tab: "advanced",
     section: "Features",
-    label: "AI Assistant",
-    description: "AI-powered code assistance and chat",
-    keywords: ["ai", "assistant", "chat"],
+    label: "Agent",
+    description: "Agentic code assistance and workspace tasks",
+    keywords: ["ai", "agent", "assistant", "chat"],
   },
   {
     id: "features-breadcrumbs",

@@ -186,7 +186,7 @@ export const getChatCompletionStream = async (
     const model = resolved.model;
 
     if (providerId === "custom" && !model) {
-      throw new Error("Custom provider model is required. Add one in Settings → AI.");
+      throw new Error("Custom provider model is required. Add one in Settings -> Agent.");
     }
 
     if (!provider || !model) {
@@ -207,7 +207,7 @@ export const getChatCompletionStream = async (
     }
 
     if (providerId === "custom" && !customProviderBaseUrl) {
-      throw new Error("Custom provider base URL is required. Add one in Settings → AI.");
+      throw new Error("Custom provider base URL is required. Add one in Settings -> Agent.");
     }
     if (providerId === "custom") {
       setCustomProviderBaseUrl(customProviderBaseUrl);
@@ -218,7 +218,9 @@ export const getChatCompletionStream = async (
     if (providerId === "ollama" && !apiKey) {
       const ollamaBaseUrl = useSettingsStore.getState().settings.ollamaBaseUrl;
       if (ollamaBaseUrl && isOllamaCloudUrl(ollamaBaseUrl)) {
-        throw new Error("Ollama Cloud requires an API key. Add one in Settings → AI → Ollama.");
+        throw new Error(
+          "Ollama Cloud requires an API key. Add one in Settings -> Agent -> Ollama.",
+        );
       }
     }
 
@@ -331,7 +333,7 @@ export const getQuickQuestionCompletionStream = async (
   onError: (error: string, canReconnect?: boolean) => void,
 ): Promise<void> => {
   const contextPrompt = buildContextPrompt(context);
-  const systemPrompt = `You are a lightweight AI question-answering assistant inside Athas.
+  const systemPrompt = `You are a lightweight question-answering agent inside Athas.
 
 This is a quick question flow, not an agent session.
 - Answer the user's question directly and concisely.

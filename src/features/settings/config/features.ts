@@ -76,8 +76,8 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
   },
   {
     id: "aiChat",
-    name: "AI Assistant",
-    description: "AI-powered code assistance and chat",
+    name: "Agent",
+    description: "Agentic code assistance and workspace tasks",
     icon: MessageSquare,
     enabled: coreFeatures.aiChat,
   },

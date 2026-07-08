@@ -543,12 +543,12 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       )?)
       .build()?;
 
-   // AI menu
-   let ai_menu = SubmenuBuilder::new(app, "AI")
+   // Agent menu
+   let ai_menu = SubmenuBuilder::new(app, "Agent")
       .item(&MenuItem::with_id(
          app,
          "toggle_ai_chat",
-         "Toggle AI Chat",
+         "Toggle Agent",
          true,
          Some("CmdOrCtrl+R"),
       )?)

@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -288,7 +289,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
             id: Date.now().toString(),
-            title: "New Chat",
+            title: "New Session",
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
@@ -326,7 +327,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
             id: chatId,
-            title: "New Chat",
+            title: "New Session",
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
@@ -466,7 +467,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             const chat = state.chats.find((c) => c.id === chatId);
             if (chat) {
-              chat.messages.push(message);
+              chat.messages.push(normalizeMessageFollowUpActions(message));
               chat.lastMessageAt = new Date();
             }
           });
@@ -480,7 +481,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             if (chat) {
               const message = chat.messages.find((m) => m.id === messageId);
               if (message) {
-                Object.assign(message, updates);
+                Object.assign(message, normalizeMessageFollowUpActions({ ...message, ...updates }));
                 chat.lastMessageAt = new Date();
               }
             }

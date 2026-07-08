@@ -110,6 +110,21 @@ export function extractFollowUpActions(content: string): {
   };
 }
 
+export function normalizeMessageFollowUpActions(message: Message): Message {
+  if (message.role !== "assistant" || typeof message.content !== "string") return message;
+
+  const extracted = extractFollowUpActions(message.content);
+  const contentChanged = extracted.content !== message.content;
+  if (!contentChanged && extracted.actions.length === 0) return message;
+
+  return {
+    ...message,
+    content: extracted.content,
+    followUpActions:
+      contentChanged || extracted.actions.length > 0 ? extracted.actions : message.followUpActions,
+  };
+}
+
 export function getFollowUpActionsForMessage(
   message: Message | null | undefined,
 ): ChatFollowUpAction[] {

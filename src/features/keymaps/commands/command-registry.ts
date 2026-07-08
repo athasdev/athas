@@ -498,7 +498,7 @@ const editCommands: Command[] = [
   },
   {
     id: "editor.inlineEdit",
-    title: "AI Inline Edit",
+    title: "Agent Inline Edit",
     category: "Edit",
     keybinding: "cmd+i",
     execute: showInlineEditToolbar,
@@ -550,7 +550,7 @@ const viewCommands: Command[] = [
   {
     id: "workbench.agentLauncher",
     title: "New Agent",
-    category: "AI",
+    category: "Agent",
     keybinding: "cmd+shift+space",
     execute: toggleAgentLauncher,
   },
@@ -651,7 +651,7 @@ const viewCommands: Command[] = [
   },
   {
     id: "workbench.toggleAIChat",
-    title: "Toggle AI Chat",
+    title: "Toggle Agent",
     category: "View",
     keybinding: "cmd+r",
     execute: toggleAIChat,

@@ -12,7 +12,7 @@ export const SETTINGS_SEARCH_TAB_LABELS: Record<SettingsTab, string> = {
   git: "Git",
   terminal: "Terminal",
   keyboard: "Keybindings",
-  ai: "AI",
+  ai: "Agent",
   collaboration: "Collaboration",
   enterprise: "Enterprise",
   advanced: "Advanced",

@@ -1349,7 +1349,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               ? hasSlashCommands
                 ? "Ask anything... (@ files, / commands)"
                 : "Ask anything... (@ to mention files)"
-              : "Configure API key to enable AI chat..."
+              : "Configure API key to enable Agent..."
           }
           className={cn(hasAttachedComposerDropdown && "border-none")}
           role="textbox"

@@ -115,15 +115,15 @@ export default function ChatHistoryDropdown({
           ref={inputRef}
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search chat history..."
+          placeholder="Search agent history..."
         />
       </CommandHeader>
 
       <CommandList ref={resultsRef}>
         {chats.length === 0 ? (
-          <CommandEmpty>No chat history yet</CommandEmpty>
+          <CommandEmpty>No agent history yet</CommandEmpty>
         ) : filteredChats.length === 0 ? (
-          <CommandEmpty>No chats match "{searchQuery}"</CommandEmpty>
+          <CommandEmpty>No sessions match "{searchQuery}"</CommandEmpty>
         ) : (
           filteredChats.map((chat, index) => {
             const isCurrent = chat.id === currentChatId;
@@ -170,7 +170,7 @@ export default function ChatHistoryDropdown({
                     }}
                     className="shrink-0 opacity-0 transition-opacity hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                     aria-label={`Delete ${chat.title}`}
-                    tooltip="Delete chat"
+                    tooltip="Delete session"
                   >
                     <Trash2 size={13} />
                   </Button>

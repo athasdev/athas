@@ -17,7 +17,7 @@ interface ModeSelectorProps {
 }
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
-  { id: "chat", label: "Chat" },
+  { id: "chat", label: "Ask" },
   { id: "plan", label: "Plan" },
 ];
 
@@ -98,8 +98,8 @@ export const ModeSelector = memo(function ModeSelector({
       menuAnimated={false}
       hideChevron
       iconOnly={iconOnly}
-      tooltip="Select chat mode"
-      aria-label="Select chat mode"
+      tooltip="Select agent mode"
+      aria-label="Select agent mode"
     />
   );
 });

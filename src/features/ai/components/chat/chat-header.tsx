@@ -89,7 +89,7 @@ function EditableChatTitle({
     <span
       className="block max-w-full cursor-pointer truncate rounded-[var(--app-radius-control-sm)] px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
-      title="Click to rename chat"
+      title="Click to rename session"
     >
       {title}
     </span>
@@ -168,11 +168,11 @@ export function ChatHeader({
             </PaneChip>
             {effectiveChatId ? (
               <EditableChatTitle
-                title={currentChat ? currentChat.title : "New Chat"}
+                title={currentChat ? currentChat.title : "New Session"}
                 onUpdateTitle={(title) => updateChatTitle(effectiveChatId, title)}
               />
             ) : (
-              <span className={cn(paneTitleClassName(), "truncate")}>New Chat</span>
+              <span className={cn(paneTitleClassName(), "truncate")}>New Session</span>
             )}
           </div>
         </div>
@@ -198,9 +198,9 @@ export function ChatHeader({
             variant="ghost"
             compact
             onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
-            tooltip="Chat History"
+            tooltip="Agent History"
             tooltipSide="bottom"
-            aria-label="Toggle chat history"
+            aria-label="Toggle agent history"
             className={chatMiniIconButtonClassName()}
           >
             <History />
