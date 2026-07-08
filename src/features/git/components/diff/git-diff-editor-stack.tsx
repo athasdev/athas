@@ -493,13 +493,13 @@ const DiffFileSection = memo(function DiffFileSection({
 
       {expanded ? (
         diff.is_image ? (
-          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-md border-border/70 border-x border-b">
+          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-[var(--app-radius-card)] border-border/70 border-x border-b">
             <LazyDiffSectionBody expanded={expanded}>
               <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
             </LazyDiffSectionBody>
           </div>
         ) : (
-          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-md border-border/70 border-x border-b">
+          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-[var(--app-radius-card)] border-border/70 border-x border-b">
             <LazyDiffSectionBody expanded={expanded}>
               {shouldUseInlineTextDiff ? (
                 <TextDiffViewer
