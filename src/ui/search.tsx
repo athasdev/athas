@@ -1,4 +1,3 @@
-import { cva } from "class-variance-authority";
 import {
   TextAaIcon as CaseSensitive,
   CaretDownIcon as ChevronDown,
@@ -67,54 +66,12 @@ export const SearchField = forwardRef<
   );
 });
 
-const searchSurfaceVariants = cva(
-  "w-[320px] rounded-[var(--app-radius-menu)] border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm",
-);
+const searchSurfaceClass =
+  "w-[320px] rounded-[var(--app-radius-menu)] border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm";
 
-const searchIconButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
-  {
-    variants: {
-      disabled: {
-        true: "cursor-not-allowed opacity-50",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      disabled: false,
-    },
-  },
-);
+const searchIconButtonClass = "size-6 min-h-6 min-w-6 px-0";
 
-const searchToggleButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover active:scale-[var(--app-press-scale)]",
-  {
-    variants: {
-      active: {
-        true: "border-border/70 bg-hover text-text",
-        false: "text-text-lighter",
-      },
-    },
-    defaultVariants: {
-      active: false,
-    },
-  },
-);
-
-const searchActionButtonVariants = cva(
-  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent px-2.5 text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
-  {
-    variants: {
-      disabled: {
-        true: "cursor-not-allowed opacity-50",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      disabled: false,
-    },
-  },
-);
+const searchActionButtonClass = "h-8 px-2.5";
 
 export function SearchPopover({
   value,
@@ -135,7 +92,7 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div className={cn(searchSurfaceVariants(), className)}>
+    <div className={cn(searchSurfaceClass, className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 
@@ -181,7 +138,7 @@ export function SearchPopover({
           type="button"
           onClick={onClose}
           variant="ghost"
-          className={searchIconButtonVariants()}
+          className={searchIconButtonClass}
           aria-label="Close search"
           compact
         >
@@ -198,9 +155,8 @@ export function SearchPopover({
                 type="button"
                 onClick={option.onToggle}
                 variant="ghost"
-                className={searchToggleButtonVariants({
-                  active: option.active,
-                })}
+                active={option.active}
+                className={searchIconButtonClass}
                 tooltip={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
@@ -219,9 +175,7 @@ export function SearchPopover({
                   onClick={onPrevious}
                   disabled={!canNavigate}
                   variant="ghost"
-                  className={searchIconButtonVariants({
-                    disabled: !canNavigate,
-                  })}
+                  className={searchIconButtonClass}
                   aria-label="Previous match"
                   compact
                 >
@@ -234,9 +188,7 @@ export function SearchPopover({
                   onClick={onNext}
                   disabled={!canNavigate}
                   variant="ghost"
-                  className={searchIconButtonVariants({
-                    disabled: !canNavigate,
-                  })}
+                  className={searchIconButtonClass}
                   aria-label="Next match"
                   compact
                 >
@@ -271,7 +223,7 @@ export function SearchReplaceToggle({
       type="button"
       onClick={onToggle}
       variant="ghost"
-      className={searchIconButtonVariants()}
+      className={searchIconButtonClass}
       tooltip={label}
       aria-label={label}
       compact
@@ -323,7 +275,7 @@ export function SearchReplaceRow({
         onClick={onReplace}
         disabled={!canReplace}
         variant="ghost"
-        className={searchActionButtonVariants({ disabled: !canReplace })}
+        className={searchActionButtonClass}
         compact
       >
         Replace
@@ -333,7 +285,7 @@ export function SearchReplaceRow({
         onClick={onReplaceAll}
         disabled={!canReplaceAll}
         variant="ghost"
-        className={searchActionButtonVariants({ disabled: !canReplaceAll })}
+        className={searchActionButtonClass}
         tooltip={replaceAllTooltip}
         compact
       >
@@ -401,9 +353,8 @@ export function SearchInput({
               type="button"
               onClick={option.onToggle}
               variant="ghost"
-              className={searchToggleButtonVariants({
-                active: option.active,
-              })}
+              active={option.active}
+              className={searchIconButtonClass}
               tooltip={option.label}
               aria-label={option.label}
               aria-pressed={option.active}
