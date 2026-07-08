@@ -28,7 +28,7 @@ export function footerControlClassName(tone: FooterControlTone = "default", busy
 
 export function FooterControlBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="flex min-h-3 min-w-3 items-center justify-center rounded-full bg-accent px-0.5 leading-3 text-primary-bg">
+    <span className="flex min-h-3 min-w-3 items-center justify-center rounded-[var(--app-radius-pill)] bg-accent px-0.5 leading-3 text-primary-bg">
       {children}
     </span>
   );

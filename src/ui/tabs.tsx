@@ -78,11 +78,11 @@ export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, "childre
 }
 
 export const equalWidthSegmentedTabs = cva(
-  "grid h-auto w-full shrink-0 grid-cols-3 gap-1 rounded-xl border border-border/60 bg-secondary-bg/40 p-1",
+  "grid h-auto w-full shrink-0 grid-cols-3 gap-1 rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/40 p-1",
 );
 
 export const equalWidthSegmentedTabItem = cva(
-  "h-10 w-full min-w-0 rounded-lg px-2.5 py-2 transition-[transform,background-color,color,border-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)] [&>div]:gap-1.5",
+  "h-10 w-full min-w-0 rounded-[var(--app-radius-control-sm)] px-2.5 py-2 transition-[transform,background-color,color,border-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)] [&>div]:gap-1.5",
 );
 
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
@@ -114,8 +114,8 @@ const tabVariants = cva(
         md: "ui-text-base flex min-h-8 items-center gap-1 px-3",
       },
       variant: {
-        default: "rounded-md",
-        pill: "rounded-md border border-transparent",
+        default: "rounded-[var(--app-radius-control-sm)]",
+        pill: "rounded-[var(--app-radius-pill)] border border-transparent",
         segmented: "size-full rounded-none border-0",
       },
       active: {
@@ -183,18 +183,21 @@ const tabVariants = cva(
   },
 );
 
-const tabsListVariants = cva("flex rounded-lg border border-border/70 bg-primary-bg/65", {
-  variants: {
-    variant: {
-      default: "items-center gap-0.5 p-0.5",
-      pill: "items-center gap-0.5 p-0.5",
-      segmented: "min-h-6 items-stretch overflow-hidden",
+const tabsListVariants = cva(
+  "flex rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg/65",
+  {
+    variants: {
+      variant: {
+        default: "items-center gap-0.5 p-0.5",
+        pill: "items-center gap-0.5 p-0.5",
+        segmented: "min-h-6 items-stretch overflow-hidden",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
     },
   },
-  defaultVariants: {
-    variant: "default",
-  },
-});
+);
 
 export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   {

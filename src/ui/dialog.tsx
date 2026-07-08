@@ -32,7 +32,7 @@ interface DialogProps {
 const dialogContentVariants = cva(
   [
     "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
-    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)]",
+    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[var(--app-radius-menu)] border border-border bg-primary-bg shadow-[var(--shadow-dialog)]",
     "focus:outline-none",
   ],
   {
@@ -138,7 +138,7 @@ const Dialog = ({
             <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
               {headerActions}
               <DialogPrimitive.Close
-                className="flex size-6 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]"
+                className="flex size-6 shrink-0 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]"
                 aria-label="Close dialog"
               >
                 <X />

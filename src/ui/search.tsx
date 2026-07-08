@@ -68,11 +68,11 @@ export const SearchField = forwardRef<
 });
 
 const searchSurfaceVariants = cva(
-  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm",
+  "w-[320px] rounded-[var(--app-radius-menu)] border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm",
 );
 
 const searchIconButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
+  "flex size-6 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
   {
     variants: {
       disabled: {
@@ -87,7 +87,7 @@ const searchIconButtonVariants = cva(
 );
 
 const searchToggleButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-lg border border-transparent transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover active:scale-[var(--app-press-scale)]",
+  "flex size-6 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover active:scale-[var(--app-press-scale)]",
   {
     variants: {
       active: {
@@ -102,7 +102,7 @@ const searchToggleButtonVariants = cva(
 );
 
 const searchActionButtonVariants = cva(
-  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
+  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-transparent px-2.5 text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
   {
     variants: {
       disabled: {
@@ -148,7 +148,7 @@ export function SearchPopover({
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            className="ui-text-sm h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8"
+            className="ui-text-sm h-8 rounded-[var(--app-radius-control)] border-border/80 bg-primary-bg py-1 pr-8 pl-8"
           />
           {value && (
             <Button
@@ -304,7 +304,7 @@ export function SearchReplaceRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg text-text-lighter">
         <Replace />
       </span>
 
@@ -315,7 +315,7 @@ export function SearchReplaceRow({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Replace with..."
-        className="ui-text-sm h-8 flex-1 rounded-lg border-border/80 bg-primary-bg py-1"
+        className="ui-text-sm h-8 flex-1 rounded-[var(--app-radius-control)] border-border/80 bg-primary-bg py-1"
       />
 
       <Button
@@ -377,7 +377,7 @@ export function SearchInput({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="ui-text-sm h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8"
+          className="ui-text-sm h-8 rounded-[var(--app-radius-control)] border-border/80 bg-primary-bg py-1 pr-8 pl-8"
         />
         {value && (
           <Button

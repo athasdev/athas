@@ -14,7 +14,7 @@ const textareaVariants = cva(
     variants: {
       variant: {
         default: cn(
-          "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
+          "rounded-[var(--app-radius-control)] border border-border bg-secondary-bg text-text transition-colors",
           "focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35",
         ),
         ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",

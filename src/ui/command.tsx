@@ -24,11 +24,11 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
+  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[var(--app-radius-menu)] border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
 );
 
 const commandItemVariants = cva(
-  "ui-font ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-xl px-3 py-2 text-left leading-[1.35] transition-colors",
+  "ui-font ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-[var(--app-radius-menu-item)] px-3 py-2 text-left leading-[1.35] transition-colors",
   {
     variants: {
       selected: {
@@ -64,7 +64,7 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
     compact
-    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded px-2 text-text-lighter hover:text-text [--app-ui-control-icon-size:1rem]"
+    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded-[var(--app-radius-control-sm)] px-2 text-text-lighter hover:text-text [--app-ui-control-icon-size:1rem]"
     {...props}
   />
 );
@@ -76,7 +76,7 @@ type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
   <Badge
     className={cn(
-      "h-auto min-h-7 max-w-40 shrink-0 rounded-full border-border/70 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter ui-text-base",
+      "h-auto min-h-7 max-w-40 shrink-0 border-border/70 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter ui-text-base",
       className,
     )}
     {...props}
@@ -373,7 +373,7 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
         isActive={item.isActive}
         size="md"
         variant="pill"
-        className="w-fit justify-start rounded-full"
+        className="w-fit justify-start rounded-[var(--app-radius-pill)]"
         onClick={item.onSelect}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -430,7 +430,8 @@ export const CommandItemIcon = ({
   <span
     className={cn(
       "inline-flex size-5 shrink-0 items-center justify-center text-text-lighter",
-      variant === "framed" && "rounded-md border border-border/70 bg-secondary-bg/70",
+      variant === "framed" &&
+        "rounded-[var(--app-radius-control-sm)] border border-border/70 bg-secondary-bg/70",
       className,
     )}
     {...props}
@@ -443,7 +444,7 @@ export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<t
   <Badge
     size="compact"
     className={cn(
-      "h-auto max-w-32 shrink-0 gap-1 truncate rounded-full border-border/70 bg-secondary-bg/70 text-text-lighter",
+      "h-auto max-w-32 shrink-0 gap-1 truncate border-border/70 bg-secondary-bg/70 text-text-lighter",
       className,
     )}
     {...props}

@@ -300,7 +300,7 @@ export const ToastContainer = () => {
         descriptionClassName: "ui-font font-normal",
         classNames: {
           toast:
-            "group ui-font rounded-xl border border-border bg-primary-bg text-text font-normal shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "group ui-font rounded-[var(--app-radius-menu)] border border-border bg-primary-bg text-text font-normal shadow-[var(--shadow-popover)] backdrop-blur-sm",
           content: "pr-8",
           title: "ui-font ui-text-sm font-normal leading-5 text-text",
           description: "ui-font ui-text-sm font-normal leading-5 text-text-light",
