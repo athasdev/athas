@@ -13,6 +13,7 @@ import {
   subscribeToTelemetryLog,
   type TelemetryLogEntry,
 } from "@/features/telemetry/services/telemetry";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
 import Section, { SettingRow } from "../settings-section";
@@ -134,9 +135,13 @@ export const AdvancedSettings = () => {
             label={feature.name}
             labelAccessory={
               feature.status === "experimental" ? (
-                <span className="rounded border border-accent/35 bg-accent/10 px-1 py-0.5 font-medium ui-text-base text-accent uppercase leading-none tracking-normal">
+                <Badge
+                  variant="accent"
+                  size="compact"
+                  className="border border-accent/35 uppercase"
+                >
                   Experimental
-                </span>
+                </Badge>
               ) : undefined
             }
             description={feature.description}
@@ -209,7 +214,7 @@ export const AdvancedSettings = () => {
           </div>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="rounded-lg border border-border/70 bg-primary-bg/50">
+          <div className="rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg/50">
             {telemetryLog.length === 0 ? (
               <p className="ui-font ui-text-base px-3 py-2 text-text-lighter">
                 No telemetry entries yet.
