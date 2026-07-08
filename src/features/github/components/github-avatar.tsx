@@ -29,7 +29,10 @@ export function GitHubAvatar({ login, name, avatarUrl, size = 32, className }: G
       <img
         src={src}
         alt={label}
-        className={cn("shrink-0 rounded-full bg-secondary-bg object-cover", className)}
+        className={cn(
+          "shrink-0 rounded-[var(--app-radius-pill)] bg-secondary-bg object-cover",
+          className,
+        )}
         loading="lazy"
         onError={() => setFailed(true)}
       />
@@ -39,7 +42,7 @@ export function GitHubAvatar({ login, name, avatarUrl, size = 32, className }: G
   return (
     <span
       className={cn(
-        "ui-text-sm flex shrink-0 items-center justify-center rounded-full bg-secondary-bg text-text-lighter",
+        "ui-text-sm flex shrink-0 items-center justify-center rounded-[var(--app-radius-pill)] bg-secondary-bg text-text-lighter",
         className,
       )}
       title={label}

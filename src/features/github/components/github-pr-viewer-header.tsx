@@ -12,6 +12,7 @@ import {
   XCircleIcon as XCircle,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import type { PullRequestDetails } from "../types/github.types";
@@ -98,11 +99,15 @@ export function GitHubPRViewerHeader({
         <>
           <span>{`athas#${pr.number}`}</span>
           <span>&middot;</span>
-          <span className="ui-text-sm inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
+          <Badge
+            variant="default"
+            size="compact"
+            className="max-w-full bg-secondary-bg/80 editor-font"
+          >
             <span className="min-w-0 truncate">{pr.baseRef}</span>
             <span className="shrink-0 px-1">&larr;</span>
             <span className="min-w-0 truncate">{pr.headRef}</span>
-          </span>
+          </Badge>
         </>
       }
       actions={
@@ -237,7 +242,7 @@ export function GitHubPRViewerHeader({
           onClick={onToggleFilesView}
           variant="ghost"
           active={activeView === "files"}
-          className="ui-text-sm h-auto min-w-0 rounded-md px-1.5 py-1 text-left"
+          className="ui-text-sm h-auto min-w-0 px-1.5 py-1 text-left"
           compact
         >
           <span className="shrink-0 text-text-lighter">
