@@ -23,6 +23,7 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import Badge from "@/ui/badge";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -238,9 +239,9 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-sm text-text-lighter">
+              <Badge size="compact" className="editor-font">
                 #{buffer.prNumber ?? "--"}
-              </span>
+              </Badge>
               <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-sm text-text-lighter">
@@ -252,15 +253,9 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <span>{commentCount ?? "--"} comments</span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-sm">
-              <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                Description
-              </span>
-              <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                Files
-              </span>
-              <span className="rounded-full border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                Comments
-              </span>
+              <Badge>Description</Badge>
+              <Badge>Files</Badge>
+              <Badge>Comments</Badge>
             </div>
           </div>
         </div>

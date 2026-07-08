@@ -5,6 +5,7 @@ import { AgentSelector } from "@/features/ai/components/selectors/agent-selector
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Command from "@/ui/command";
 import { cn } from "@/utils/cn";
@@ -203,9 +204,9 @@ export function AgentLauncher() {
             onToggleOpen={() => setContextOpen((open) => !open)}
           />
           {selectedContextCount > 0 && (
-            <span className="ui-font ui-text-base rounded-full bg-accent/12 px-1.5 py-0.5 text-accent">
+            <Badge variant="accent" size="compact">
               {selectedContextCount}
-            </span>
+            </Badge>
           )}
         </div>
 

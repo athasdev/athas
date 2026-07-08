@@ -429,7 +429,7 @@ export default function DebuggerView() {
                 <DebugSessionStatusIcon status={activeSession.status} />
                 <span className="truncate font-medium">{activeSession.name}</span>
                 {stoppedState ? (
-                  <Badge variant="default" size="compact" className="text-warning">
+                  <Badge variant="warning" size="compact">
                     Paused
                   </Badge>
                 ) : null}

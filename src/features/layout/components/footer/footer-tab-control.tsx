@@ -4,6 +4,7 @@ import {
   chromeControl,
   chromeControlGroup,
 } from "@/features/layout/components/chrome-control-styles";
+import Badge from "@/ui/badge";
 import { Tab, TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -28,9 +29,13 @@ export function footerControlClassName(tone: FooterControlTone = "default", busy
 
 export function FooterControlBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="flex min-h-3 min-w-3 items-center justify-center rounded-[var(--app-radius-pill)] bg-accent px-0.5 leading-3 text-primary-bg">
+    <Badge
+      variant="accent"
+      size="compact"
+      className="min-h-3 min-w-3 px-0.5 leading-3 text-primary-bg"
+    >
       {children}
-    </span>
+    </Badge>
   );
 }
 

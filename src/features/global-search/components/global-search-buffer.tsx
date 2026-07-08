@@ -7,6 +7,7 @@ import {
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
@@ -519,9 +520,9 @@ const GlobalSearchBuffer = () => {
             ))}
           </TabsList>
           {resultLabel ? (
-            <span className="ui-font ui-text-base shrink-0 rounded-full border border-border/60 bg-primary-bg/65 px-2 py-1 text-text-lighter">
+            <Badge size="default" className="shrink-0">
               {resultLabel}
-            </span>
+            </Badge>
           ) : null}
         </div>
         {isReplaceVisible ? (

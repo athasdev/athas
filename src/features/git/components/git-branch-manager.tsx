@@ -778,13 +778,7 @@ function BranchRow({
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
       className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
-      accessory={
-        isCurrent ? (
-          <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
-            current
-          </CommandItemBadge>
-        ) : null
-      }
+      accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
           <Button
@@ -854,11 +848,7 @@ function RepositoryRow({
       className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
       accessory={
         <>
-          {isCurrent ? (
-            <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
-              current
-            </CommandItemBadge>
-          ) : null}
+          {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
           {isAdded ? <CommandItemBadge>added</CommandItemBadge> : null}
         </>
       }
@@ -900,13 +890,7 @@ function WorktreeRow({
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
       className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
-      accessory={
-        isCurrent ? (
-          <CommandItemBadge className="border border-success/30 bg-success/10 text-success">
-            current
-          </CommandItemBadge>
-        ) : null
-      }
+      accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
     />
   );
 }

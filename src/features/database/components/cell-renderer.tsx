@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { ForeignKeyInfo } from "../types/common.types";
@@ -28,12 +29,9 @@ export default function CellRenderer({
 
   if (value === null || value === undefined) {
     return (
-      <span
-        className="rounded-full bg-hover px-1 py-0.5 ui-font ui-text-sm text-text-lighter"
-        onContextMenu={handleContextMenu}
-      >
+      <Badge variant="muted" size="compact" onContextMenu={handleContextMenu}>
         NULL
-      </span>
+      </Badge>
     );
   }
 

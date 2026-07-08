@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useMemo, useState } from "react";
+import type { ComponentProps } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
@@ -22,15 +23,17 @@ interface CIStatusProps {
   checks: StatusCheck[];
 }
 
-function getCheckBadgeClassName(check: StatusCheck): string {
-  if (check.conclusion === "SUCCESS") return "border-success/20 bg-success/10 text-success";
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+function getCheckBadgeVariant(check: StatusCheck): BadgeVariant {
+  if (check.conclusion === "SUCCESS") return "success";
   if (check.conclusion === "FAILURE" || check.conclusion === "ERROR") {
-    return "border-error/20 bg-error/10 text-error";
+    return "error";
   }
   if (check.status === "IN_PROGRESS" || check.status === "PENDING" || check.status === "QUEUED") {
-    return "border-warning/20 bg-warning/10 text-warning";
+    return "warning";
   }
-  return "";
+  return "muted";
 }
 
 export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
@@ -128,11 +131,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
                   </p>
                 )}
               </div>
-              <Badge
-                variant="muted"
-                size="compact"
-                className={cn("capitalize", getCheckBadgeClassName(check))}
-              >
+              <Badge variant={getCheckBadgeVariant(check)} size="compact" className="capitalize">
                 {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
               </Badge>
             </button>
@@ -154,38 +153,42 @@ interface MergeStatusProps {
 
 export const MergeStatusBadge = memo(
   ({ mergeStateStatus, mergeable, reviewDecision }: MergeStatusProps) => {
-    const getStatusInfo = () => {
+    const getStatusInfo = (): {
+      text: string;
+      variant: BadgeVariant;
+      icon: typeof AlertCircle;
+    } | null => {
       if (mergeable === "CONFLICTING") {
-        return { text: "Has conflicts", color: "bg-error/10 text-error", icon: AlertCircle };
+        return { text: "Has conflicts", variant: "error", icon: AlertCircle };
       }
       if (mergeStateStatus === "BLOCKED") {
         if (reviewDecision === "CHANGES_REQUESTED") {
           return {
             text: "Changes requested",
-            color: "bg-error/10 text-error",
+            variant: "error",
             icon: AlertCircle,
           };
         }
         if (!reviewDecision || reviewDecision === "REVIEW_REQUIRED") {
           return {
             text: "Review required",
-            color: "bg-warning/10 text-warning",
+            variant: "warning",
             icon: AlertCircle,
           };
         }
-        return { text: "Blocked", color: "bg-warning/10 text-warning", icon: AlertCircle };
+        return { text: "Blocked", variant: "warning", icon: AlertCircle };
       }
       if (
         mergeStateStatus === "CLEAN" ||
         mergeStateStatus === "HAS_HOOKS" ||
         mergeStateStatus === "UNSTABLE"
       ) {
-        return { text: "Ready to merge", color: "bg-success/10 text-success", icon: GitMerge };
+        return { text: "Ready to merge", variant: "success", icon: GitMerge };
       }
       if (mergeStateStatus === "BEHIND") {
         return {
           text: "Behind base",
-          color: "bg-warning/10 text-warning",
+          variant: "warning",
           icon: AlertCircle,
         };
       }
@@ -198,7 +201,7 @@ export const MergeStatusBadge = memo(
     const Icon = status.icon;
 
     return (
-      <Badge size="compact" className={cn("gap-1", status.color)}>
+      <Badge variant={status.variant} size="compact" className="gap-1">
         <Icon />
         <span>{status.text}</span>
       </Badge>

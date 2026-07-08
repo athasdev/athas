@@ -22,7 +22,8 @@ import {
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
@@ -138,13 +139,15 @@ const emptyInventory: DockerInventory = {
   networks: [],
 };
 
-function getContainerStateTone(container: DockerContainer) {
-  if (container.health === "unhealthy") return "bg-error/15 text-error";
-  if (container.health === "healthy") return "bg-success/15 text-success";
-  if (container.state === "running") return "bg-success/15 text-success";
-  if (container.state === "exited") return "bg-warning/15 text-warning";
-  if (container.state === "paused") return "bg-accent/15 text-accent";
-  return "bg-hover text-text-lighter";
+function getContainerStateVariant(
+  container: DockerContainer,
+): ComponentProps<typeof Badge>["variant"] {
+  if (container.health === "unhealthy") return "error";
+  if (container.health === "healthy") return "success";
+  if (container.state === "running") return "success";
+  if (container.state === "exited") return "warning";
+  if (container.state === "paused") return "accent";
+  return "muted";
 }
 
 function includesQuery(values: Array<string | null | undefined>, query: string) {
@@ -226,12 +229,14 @@ function fileName(path: string) {
   return path.split(/[\\/]/).pop() || path;
 }
 
-function getComposeServiceTone(service: DockerComposeService) {
-  if (service.health === "unhealthy") return "bg-error/15 text-error";
-  if (service.health === "healthy") return "bg-success/15 text-success";
-  if (service.state === "running") return "bg-success/15 text-success";
-  if (service.state === "exited") return "bg-warning/15 text-warning";
-  return "bg-hover text-text-lighter";
+function getComposeServiceVariant(
+  service: DockerComposeService,
+): ComponentProps<typeof Badge>["variant"] {
+  if (service.health === "unhealthy") return "error";
+  if (service.health === "healthy") return "success";
+  if (service.state === "running") return "success";
+  if (service.state === "exited") return "warning";
+  return "muted";
 }
 
 function ContainerActions({
@@ -430,14 +435,13 @@ function ContainerRow({
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
           <ResourceTitle>{container.name}</ResourceTitle>
-          <span
-            className={cn(
-              "ui-text-sm shrink-0 rounded-full px-1.5 py-0.5 capitalize",
-              getContainerStateTone(container),
-            )}
+          <Badge
+            variant={getContainerStateVariant(container)}
+            size="compact"
+            className="capitalize"
           >
             {container.health ?? container.state}
-          </span>
+          </Badge>
         </div>
         <ResourceMeta>
           {container.image}
@@ -604,14 +608,9 @@ function ComposeServiceRow({
     >
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="truncate">{service.name}</span>
-        <span
-          className={cn(
-            "ui-text-sm shrink-0 rounded-full px-1.5 py-0.5 capitalize",
-            getComposeServiceTone(service),
-          )}
-        >
+        <Badge variant={getComposeServiceVariant(service)} size="compact" className="capitalize">
           {service.health ?? service.state}
-        </span>
+        </Badge>
       </span>
     </SidebarListItem>
   );

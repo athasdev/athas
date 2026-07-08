@@ -26,6 +26,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
@@ -1163,9 +1164,9 @@ details: ${errorDetails || mainError}
                   <span className="editor-font">{currentPermissionSummary}</span>
                 </div>
                 {permissionQueue.length > 1 ? (
-                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 ui-text-sm text-text-lighter">
+                  <Badge variant="muted" size="compact" className="shrink-0">
                     +{permissionQueue.length - 1}
-                  </span>
+                  </Badge>
                 ) : null}
                 <div className="flex shrink-0 items-center gap-1">
                   {currentPermissionOptions.map((option) => {

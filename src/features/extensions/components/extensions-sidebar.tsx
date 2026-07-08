@@ -266,9 +266,7 @@ const ExtensionRow = ({
       ? extension.extensions
       : extension.extensions?.map((ext) => `.${ext}`);
   const actionContent = extension.isBundled ? (
-    <Badge variant="default" size="default" className="border-border/70 bg-secondary-bg/70 px-2">
-      Built-in
-    </Badge>
+    <Badge variant="muted">Built-in</Badge>
   ) : isInstalling ? (
     <span className="flex h-8 w-8 items-center justify-center text-accent">
       <LoadingIndicator label="Installing" compact />
@@ -294,11 +292,7 @@ const ExtensionRow = ({
           Activate
         </Button>
       ) : extension.isActive ? (
-        <Badge
-          variant="accent"
-          size="default"
-          className="h-8 gap-1 border-accent/25 bg-accent/10 px-2"
-        >
+        <Badge variant="accent" size="default" className="h-8 gap-1 px-2">
           <Check className="size-3.5" weight="bold" />
           Current
         </Badge>
@@ -505,11 +499,7 @@ const ExtensionRow = ({
             </Badge>
           ) : null}
           {hasLocalOverride ? (
-            <Badge
-              variant="default"
-              size="compact"
-              className="border-warning/25 bg-warning/10 text-warning"
-            >
+            <Badge variant="warning" size="compact">
               Local override
             </Badge>
           ) : null}
@@ -1823,7 +1813,7 @@ export const ExtensionsSidebar = () => {
                       ? selectedExtension.extensions
                       : [getCategoryLabel(selectedExtension.category)]
                   ).map((item) => (
-                    <Badge key={item} variant="default" size="default" className="bg-primary-bg">
+                    <Badge key={item} variant="default" size="default">
                       {item}
                     </Badge>
                   ))}

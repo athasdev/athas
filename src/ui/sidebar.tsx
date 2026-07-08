@@ -370,7 +370,7 @@ export function SidebarSectionHeader({
       />
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {count !== undefined ? (
-        <Badge size="compact" className="shrink-0 bg-hover/70 px-1.5">
+        <Badge variant="muted" size="compact" className="shrink-0">
           {count}
         </Badge>
       ) : null}

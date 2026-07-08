@@ -520,19 +520,19 @@ export function V0DesignSystemCommandContent({
                   </CommandItemMeta>
                 </div>
                 {isAdding ? (
-                  <Badge variant="accent" className="shrink-0 px-1 py-0.5">
+                  <Badge variant="accent" size="compact" className="shrink-0">
                     adding
                   </Badge>
                 ) : isCurrent ? (
-                  <Badge variant="accent" className="shrink-0 px-1 py-0.5">
+                  <Badge variant="accent" size="compact" className="shrink-0">
                     active
                   </Badge>
                 ) : row.kind === "profile" ? (
-                  <Badge variant="muted" className="shrink-0 px-1 py-0.5">
+                  <Badge variant="muted" size="compact" className="shrink-0">
                     saved
                   </Badge>
                 ) : row.kind === "suggestion" ? (
-                  <Badge variant="muted" className="shrink-0 px-1 py-0.5">
+                  <Badge variant="muted" size="compact" className="shrink-0">
                     add
                   </Badge>
                 ) : null}

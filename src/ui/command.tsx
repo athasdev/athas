@@ -443,10 +443,7 @@ CommandItemIcon.displayName = "CommandItemIcon";
 export const CommandItemBadge = ({ className, ...props }: React.ComponentProps<typeof Badge>) => (
   <Badge
     size="compact"
-    className={cn(
-      "h-auto max-w-32 shrink-0 gap-1 truncate border-border/70 bg-secondary-bg/70 text-text-lighter",
-      className,
-    )}
+    className={cn("h-auto max-w-32 shrink-0 gap-1 truncate", className)}
     {...props}
   />
 );
