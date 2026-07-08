@@ -55,6 +55,8 @@ const COLLAPSED_ACTIVITY_RAIL_WIDTH = 56;
 const DEFAULT_ACTIVITY_RAIL_WIDTH = 180;
 const MIN_ACTIVITY_RAIL_WIDTH = 140;
 const MAX_ACTIVITY_RAIL_WIDTH = 320;
+const ACTIVITY_RAIL_COLLAPSED_PADDING_X = 8;
+const ACTIVITY_RAIL_EXPANDED_PADDING_X = 12;
 
 const clampActivityRailWidth = (width: number) =>
   Math.min(MAX_ACTIVITY_RAIL_WIDTH, Math.max(MIN_ACTIVITY_RAIL_WIDTH, Math.round(width)));
@@ -77,8 +79,8 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
   const customIcon = activeProject?.customIcon;
   const isRemote = isRemoteProjectPath(projectPath);
   const rowClassName = expanded
-    ? "h-9 w-full max-w-none justify-start gap-2 px-2.5 text-text"
-    : "min-h-6 min-w-7 rounded-[var(--app-radius-control-sm)] px-0";
+    ? "h-9 w-full max-w-none justify-start gap-2.5 px-3 text-text"
+    : "h-9 w-9 rounded-[var(--app-radius-control)] px-0";
 
   const icon = customIcon ? (
     <img
@@ -121,6 +123,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const configuredActivityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [activityRailWidth, setActivityRailWidth] = useState(() =>
@@ -132,6 +135,10 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions";
+  });
+  const isAgentBufferActive = useBufferStore((state) => {
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    return activeBuffer?.type === "agent";
   });
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const { openSidebarView } = useSidebarPaneController();
@@ -227,15 +234,21 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     <div
       ref={railRef}
       className={cn(
-        "athas-sidebar-rail relative flex shrink-0 flex-col items-start pb-1.5",
-        expanded ? "px-1.5 pt-1" : "px-0.5 pt-1",
+        "athas-sidebar-rail relative flex shrink-0 flex-col items-start pb-2",
+        expanded ? "gap-1.5 pt-2" : "gap-1 pt-2",
       )}
       style={{
         width: expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH,
+        paddingLeft: expanded
+          ? ACTIVITY_RAIL_EXPANDED_PADDING_X
+          : ACTIVITY_RAIL_COLLAPSED_PADDING_X,
+        paddingRight: expanded
+          ? ACTIVITY_RAIL_EXPANDED_PADDING_X
+          : ACTIVITY_RAIL_COLLAPSED_PADDING_X,
       }}
     >
       <SidebarProjectSwitcher expanded={expanded} />
-      <div className={cn("my-1 h-px shrink-0 bg-border/60", expanded ? "w-full" : "mx-auto w-7")} />
+      <div className={cn("h-px shrink-0 bg-border/55", expanded ? "w-full" : "mx-auto w-8")} />
       <SidebarPaneSelector
         activeSidebarView={activeSidebarView}
         isGitViewActive={isGitViewActive}
@@ -243,7 +256,9 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         coreFeatures={coreFeatures}
         onViewChange={handleSidebarViewChange}
         onSearchClick={() => openGlobalSearchBuffer()}
+        onAgentsClick={() => openAgentBuffer()}
         onExtensionsClick={() => openExtensionsBuffer()}
+        isAgentsActive={isAgentBufferActive}
         isExtensionsActive={isExtensionsBufferActive}
         compact={!expanded}
         showLabels={expanded}

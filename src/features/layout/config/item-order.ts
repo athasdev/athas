@@ -6,6 +6,7 @@ export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "git",
   "github-prs",
   "docker",
+  "agents",
   "extensions",
 ] as const;
 export const FOOTER_LEADING_ITEM_IDS = [

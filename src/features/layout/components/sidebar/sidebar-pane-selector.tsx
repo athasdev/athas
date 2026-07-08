@@ -5,6 +5,7 @@ import {
   MagnifyingGlassIcon as MagnifyingGlass,
   CubeIcon as Cube,
   PuzzlePieceIcon as PuzzlePiece,
+  SparkleIcon as Sparkles,
 } from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
@@ -38,8 +39,10 @@ interface SidebarPaneSelectorProps {
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
+  onAgentsClick?: () => void;
   onExtensionsClick?: () => void;
   isSearchActive?: boolean;
+  isAgentsActive?: boolean;
   isExtensionsActive?: boolean;
   compact?: boolean;
   showLabels?: boolean;
@@ -53,8 +56,10 @@ export const SidebarPaneSelector = ({
   coreFeatures,
   onViewChange,
   onSearchClick,
+  onAgentsClick,
   onExtensionsClick,
   isSearchActive = false,
+  isAgentsActive = false,
   isExtensionsActive = false,
   compact = false,
   showLabels = false,
@@ -64,11 +69,11 @@ export const SidebarPaneSelector = ({
   const tooltipSide = isVertical ? "right" : "bottom";
   const iconClassName = compact || isVertical ? "size-4" : undefined;
   const tabClassName = compact
-    ? chromeControl()
+    ? cn(chromeControl({ shape: "sidebar" }), "size-9")
     : isVertical
       ? cn(
           chromeControl({ shape: showLabels ? "pill" : "sidebar" }),
-          showLabels ? "h-9 w-full justify-start gap-2 px-2.5" : undefined,
+          showLabels ? "h-9 w-full justify-start gap-2.5 px-3" : undefined,
         )
       : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
@@ -168,6 +173,19 @@ export const SidebarPaneSelector = ({
           ]
         : []),
       {
+        id: "agents",
+        label: showLabels ? "Agents" : undefined,
+        icon: <Sparkles className={iconClassName} weight="duotone" />,
+        isActive: isAgentsActive,
+        onClick: onAgentsClick,
+        ariaLabel: "New Agent",
+        className: tabClassName,
+        tooltip: {
+          content: "New Agent",
+          side: tooltipSide,
+        },
+      },
+      {
         id: "extensions",
         label: showLabels ? "Extensions" : undefined,
         icon: <PuzzlePiece className={iconClassName} weight="duotone" />,
@@ -210,7 +228,9 @@ export const SidebarPaneSelector = ({
       isGitHubPRsViewActive,
       isGitViewActive,
       isSearchActive,
+      isAgentsActive,
       isExtensionsActive,
+      onAgentsClick,
       onExtensionsClick,
       onSearchClick,
       onViewChange,
@@ -247,7 +267,9 @@ export const SidebarPaneSelector = ({
         onClick={item.onClick}
       >
         {item.icon}
-        {item.label ? <span className="min-w-0 truncate">{item.label}</span> : null}
+        {item.label ? (
+          <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+        ) : null}
       </Tab>
     );
 
@@ -279,8 +301,8 @@ export const SidebarPaneSelector = ({
         compact ? chromeControlGroup() : "gap-0.5 p-1",
         isVertical &&
           cn(
-            "flex-col gap-1 rounded-none border-0 bg-transparent p-0",
-            showLabels ? "w-full items-stretch" : "items-center",
+            "flex-col rounded-none border-0 bg-transparent p-0",
+            showLabels ? "w-full items-stretch gap-1.5" : "items-center gap-1",
           ),
       )}
     >
