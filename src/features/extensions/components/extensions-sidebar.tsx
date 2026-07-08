@@ -52,7 +52,7 @@ import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -79,6 +79,8 @@ interface UnifiedExtension {
   canInstall?: boolean;
   packageSize?: number;
   contributionSummary?: string[];
+  selectionId?: string;
+  isActive?: boolean;
 }
 
 const FILTER_TABS = [
@@ -151,11 +153,40 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
 };
 
 function getPrimaryActionLabel(extension: UnifiedExtension): string {
+  if (isAppearanceExtension(extension)) {
+    if (extension.isInstalled) {
+      return extension.isActive ? "Active" : "Use";
+    }
+
+    return "Install";
+  }
+
   if (extension.category === "skill") {
     return extension.isInstalled ? "Remove" : "Add";
   }
 
   return extension.isInstalled ? "Uninstall" : "Install";
+}
+
+function isAppearanceExtension(extension: UnifiedExtension): boolean {
+  return extension.category === "theme" || extension.category === "icon-theme";
+}
+
+function getAppearanceDefaultSelectionId(extension: UnifiedExtension): string | null {
+  if (extension.category === "theme") return getDefaultSetting("theme");
+  if (extension.category === "icon-theme") return getDefaultSetting("iconTheme");
+  return null;
+}
+
+function canDeactivateAppearanceExtension(extension: UnifiedExtension): boolean {
+  const defaultSelectionId = getAppearanceDefaultSelectionId(extension);
+  return Boolean(
+    isAppearanceExtension(extension) &&
+    extension.isActive &&
+    extension.selectionId &&
+    defaultSelectionId &&
+    extension.selectionId !== defaultSelectionId,
+  );
 }
 
 function getCategoryIcon(category: UnifiedExtension["category"]): ReactNode {
@@ -209,6 +240,7 @@ const ExtensionRow = ({
   const primaryActionLabel = getPrimaryActionLabel(extension);
   const isUnavailableAgent =
     extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
+  const isAppearance = isAppearanceExtension(extension);
   const extensionLabels =
     extension.category === "agent"
       ? extension.extensions
@@ -225,6 +257,27 @@ const ExtensionRow = ({
     <Button disabled variant="ghost" tooltip="Unavailable" compact className="h-8 w-8 min-w-0 p-0">
       <XCircle className="size-4" weight="duotone" />
     </Button>
+  ) : isAppearance && extension.isInstalled ? (
+    extension.isActive ? (
+      <span className="inline-flex h-8 items-center gap-1 rounded-md border border-accent/25 bg-accent/10 px-2 font-medium text-accent ui-text-sm">
+        <Check className="size-3.5" weight="bold" />
+        Active
+      </span>
+    ) : (
+      <Button
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+        variant="accent"
+        tooltip={primaryActionLabel}
+        compact
+        className="h-8 px-2.5"
+      >
+        <Check className="size-4" weight="bold" />
+        Use
+      </Button>
+    )
   ) : extension.isInstalled ? (
     <div className="flex shrink-0 items-center gap-1">
       {(hasUpdate || hasRuntimeIssue) && onUpdate && (
@@ -369,6 +422,11 @@ const ExtensionRow = ({
               Update
             </Badge>
           ) : null}
+          {extension.isActive ? (
+            <Badge variant="accent" size="compact">
+              Active
+            </Badge>
+          ) : null}
           {hasLocalOverride ? (
             <Badge
               variant="default"
@@ -403,6 +461,8 @@ export const ExtensionsSidebar = () => {
     useShallow((state) => ({
       aiSkills: state.settings.aiSkills,
       extensionsActiveTab: state.settings.extensionsActiveTab,
+      iconTheme: state.settings.iconTheme,
+      theme: state.settings.theme,
     })),
   );
   const updateSetting = useSettingsStore((state) => state.updateSetting);
@@ -523,36 +583,46 @@ export const ExtensionsSidebar = () => {
       }
 
       if (ext.manifest.themes && ext.manifest.themes.length > 0) {
+        const themeIds = ext.manifest.themes.map((theme) => theme.id);
+        const activeThemeId = themeIds.find((themeId) => themeId === settings.theme);
+        const themeId = activeThemeId ?? themeIds[0] ?? ext.manifest.id;
         allExtensions.push({
           id: ext.manifest.id,
           name: ext.manifest.displayName,
           description: ext.manifest.description,
           category: "theme",
           isInstalled: ext.isInstalled,
+          isActive: Boolean(activeThemeId),
           version: ext.manifest.version,
           publisher: ext.manifest.publisher,
           isMarketplace: true,
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
+          selectionId: themeId,
           contributionSummary: ext.manifest.themes.map((theme) => `theme:${theme.id}`),
         });
       }
 
       const iconContributions = getManifestIconContributions(ext.manifest);
       if (iconContributions.length > 0) {
+        const iconThemeIds = iconContributions.map((theme) => theme.id);
+        const activeIconThemeId = iconThemeIds.find((themeId) => themeId === settings.iconTheme);
+        const iconThemeId = activeIconThemeId ?? iconThemeIds[0] ?? ext.manifest.id;
         allExtensions.push({
           id: ext.manifest.id,
           name: ext.manifest.displayName,
           description: ext.manifest.description,
           category: "icon-theme",
           isInstalled: ext.isInstalled,
+          isActive: Boolean(activeIconThemeId),
           version: ext.manifest.version,
           publisher: ext.manifest.publisher,
           isMarketplace: true,
           isBundled: false,
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
+          selectionId: iconThemeId,
           contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
         });
       }
@@ -587,7 +657,9 @@ export const ExtensionsSidebar = () => {
         description: theme.description || `${theme.category} theme`,
         category: "theme",
         isInstalled: true,
+        isActive: settings.theme === theme.id,
         version: "1.0.0",
+        selectionId: theme.id,
       });
     });
 
@@ -602,7 +674,9 @@ export const ExtensionsSidebar = () => {
         description: iconTheme.description || `${iconTheme.name} icon theme`,
         category: "icon-theme",
         isInstalled: true,
+        isActive: settings.iconTheme === iconTheme.id,
         version: "1.0.0",
+        selectionId: iconTheme.id,
       });
     });
 
@@ -675,7 +749,14 @@ export const ExtensionsSidebar = () => {
     }
 
     setExtensions(allExtensions);
-  }, [agents, availableExtensions, marketplaceSkills, settings.aiSkills]);
+  }, [
+    agents,
+    availableExtensions,
+    marketplaceSkills,
+    settings.aiSkills,
+    settings.iconTheme,
+    settings.theme,
+  ]);
 
   useEffect(() => {
     loadAllExtensions();
@@ -869,6 +950,35 @@ export const ExtensionsSidebar = () => {
       return;
     }
 
+    if (isAppearanceExtension(extension) && extension.isInstalled) {
+      if (extension.isActive) {
+        return;
+      }
+
+      const selectionId = extension.selectionId ?? extension.id;
+      try {
+        if (extension.category === "theme") {
+          await updateSetting("theme", selectionId);
+        } else {
+          await updateSetting("iconTheme", selectionId);
+        }
+        showToast({
+          message: `${extension.name} activated`,
+          type: "success",
+          duration: 2500,
+        });
+      } catch (error) {
+        console.error(`Failed to activate ${extension.name}:`, error);
+        showToast({
+          message: `Failed to activate ${extension.name}: ${getErrorMessage(error)}`,
+          type: "error",
+          duration: 5000,
+        });
+      }
+      setTimeout(() => loadAllExtensions(), 100);
+      return;
+    }
+
     if (extension.isMarketplace) {
       if (extension.isInstalled) {
         try {
@@ -917,10 +1027,35 @@ export const ExtensionsSidebar = () => {
           enabled: !extension.isInstalled,
         });
       }
-    } else if (extension.category === "theme") {
-      updateSetting("theme", extension.isInstalled ? "one-dark" : extension.id);
-    } else if (extension.category === "icon-theme") {
-      updateSetting("iconTheme", extension.isInstalled ? "material" : extension.id);
+    }
+
+    setTimeout(() => loadAllExtensions(), 100);
+  };
+
+  const handleDeactivateAppearance = async (extension: UnifiedExtension) => {
+    const defaultSelectionId = getAppearanceDefaultSelectionId(extension);
+    if (!defaultSelectionId || !canDeactivateAppearanceExtension(extension)) {
+      return;
+    }
+
+    try {
+      if (extension.category === "theme") {
+        await updateSetting("theme", defaultSelectionId);
+      } else {
+        await updateSetting("iconTheme", defaultSelectionId);
+      }
+      showToast({
+        message: `${extension.name} deactivated`,
+        type: "success",
+        duration: 2500,
+      });
+    } catch (error) {
+      console.error(`Failed to deactivate ${extension.name}:`, error);
+      showToast({
+        message: `Failed to deactivate ${extension.name}: ${getErrorMessage(error)}`,
+        type: "error",
+        duration: 5000,
+      });
     }
 
     setTimeout(() => loadAllExtensions(), 100);
@@ -1014,6 +1149,7 @@ export const ExtensionsSidebar = () => {
     const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
     const isUnavailableAgent =
       extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
+    const isAppearance = isAppearanceExtension(extension);
     const primaryActionLabel = getPrimaryActionLabel(extension);
 
     if (extension.isBundled) {
@@ -1025,6 +1161,33 @@ export const ExtensionsSidebar = () => {
         onClick: () => {},
       });
       return items;
+    }
+
+    if (isAppearance && extension.isInstalled) {
+      if (canDeactivateAppearanceExtension(extension)) {
+        items.push({
+          id: "deactivate",
+          label: "Deactivate",
+          icon: <XCircle className="size-3.5" weight="duotone" />,
+          onClick: () => {
+            void handleDeactivateAppearance(extension);
+          },
+        });
+      } else {
+        items.push({
+          id: extension.isActive ? "active" : "use",
+          label: extension.isActive ? "Active" : "Use",
+          icon: <Check className="size-3.5 text-accent" weight="bold" />,
+          disabled: extension.isActive,
+          onClick: () => {
+            void handleToggle(extension);
+          },
+        });
+      }
+
+      if (!extension.isMarketplace) {
+        return items;
+      }
     }
 
     if ((hasUpdate || hasRuntimeIssue) && extension.isInstalled) {
@@ -1057,7 +1220,7 @@ export const ExtensionsSidebar = () => {
 
     items.push({
       id: "toggle",
-      label: primaryActionLabel,
+      label: isAppearance && extension.isInstalled ? "Uninstall" : primaryActionLabel,
       icon: extension.isInstalled ? (
         <Trash className="size-3.5" weight="duotone" />
       ) : (
@@ -1236,6 +1399,11 @@ export const ExtensionsSidebar = () => {
                     Update
                   </Badge>
                 ) : null}
+                {selectedExtension.isActive ? (
+                  <Badge variant="accent" size="compact">
+                    Active
+                  </Badge>
+                ) : null}
                 {selectedExtension.isBundled ? (
                   <Badge variant="accent" size="compact">
                     Built-in
@@ -1258,21 +1426,36 @@ export const ExtensionsSidebar = () => {
               <div className="flex flex-wrap gap-2">
                 {!selectedExtension.isBundled ? (
                   <Button
-                    variant={selectedExtension.isInstalled ? "ghost" : "accent"}
+                    variant={
+                      isAppearanceExtension(selectedExtension) && selectedExtension.isActive
+                        ? "default"
+                        : isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled
+                          ? "accent"
+                          : selectedExtension.isInstalled
+                            ? "ghost"
+                            : "accent"
+                    }
                     className={
-                      selectedExtension.isInstalled
+                      selectedExtension.isInstalled && !isAppearanceExtension(selectedExtension)
                         ? "text-text-lighter hover:text-error"
                         : undefined
                     }
                     onClick={() => void handleToggle(selectedExtension)}
                     disabled={
+                      (isAppearanceExtension(selectedExtension) && selectedExtension.isActive) ||
                       isExtensionInstalling(selectedExtension) ||
                       (selectedExtension.category === "agent" &&
                         !selectedExtension.isInstalled &&
                         selectedExtension.canInstall === false)
                     }
                   >
-                    {selectedExtension.isInstalled ? <Trash /> : <Download weight="fill" />}
+                    {isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled ? (
+                      <Check />
+                    ) : selectedExtension.isInstalled ? (
+                      <Trash />
+                    ) : (
+                      <Download weight="fill" />
+                    )}
                     {getPrimaryActionLabel(selectedExtension)}
                   </Button>
                 ) : null}
@@ -1284,6 +1467,16 @@ export const ExtensionsSidebar = () => {
                   >
                     <RefreshCw />
                     Update
+                  </Button>
+                ) : null}
+                {canDeactivateAppearanceExtension(selectedExtension) ? (
+                  <Button
+                    variant="ghost"
+                    className="text-text-lighter"
+                    onClick={() => void handleDeactivateAppearance(selectedExtension)}
+                  >
+                    <XCircle />
+                    Deactivate
                   </Button>
                 ) : null}
                 {selectedExtension.skill && hasSkillLocalOverride(selectedExtension.skill) ? (
