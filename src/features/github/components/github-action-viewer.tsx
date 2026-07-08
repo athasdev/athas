@@ -12,7 +12,9 @@ import {
 } from "@phosphor-icons/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -650,15 +652,17 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 <section
                   key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
                   className={cn(
-                    "rounded-md border border-transparent bg-secondary-bg/20 transition-[background-color,border-color]",
+                    "rounded-[var(--app-radius-card)] border border-transparent bg-secondary-bg/20 transition-[background-color,border-color]",
                     isSelectedJob && "border-border/80 bg-hover/40",
                   )}
                 >
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    compact
                     onClick={() => handleSelectJob(job)}
                     className={cn(
-                      "w-full rounded-md px-3 py-2 text-left transition-colors",
+                      "h-auto w-full justify-start rounded-[var(--app-radius-card)] px-3 py-2 text-left",
                       "hover:bg-hover/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70",
                     )}
                   >
@@ -682,29 +686,33 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                           {job.startedAt ? <span>{formatRunTime(job.startedAt)}</span> : null}
                           {job.runnerName ? <span>{job.runnerName}</span> : null}
                           {(job.labels ?? []).slice(0, 3).map((label) => (
-                            <span
+                            <Badge
                               key={label}
-                              className="rounded-full bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter"
+                              variant="default"
+                              size="compact"
+                              className="bg-secondary-bg/80"
                             >
                               {label}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       </div>
                     </div>
-                  </button>
+                  </Button>
 
                   {isSelectedJob ? (
-                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-md border border-border/70 bg-primary-bg">
+                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg">
                       <div className="w-64 shrink-0 overflow-auto border-border/70 border-r bg-secondary-bg/20 p-1.5">
                         {job.steps.length > 0 ? (
                           job.steps.map((step, index) => (
-                            <button
+                            <Button
                               type="button"
                               key={`${job.name}-${step.name}-${index}`}
+                              variant="ghost"
+                              compact
                               onClick={() => setSelectedStepIndex(index)}
                               className={cn(
-                                "flex w-full min-w-0 items-center gap-2 rounded px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
+                                "h-auto w-full min-w-0 justify-start gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
                                 selectedStepIndex === index && "bg-selected text-text",
                               )}
                             >
@@ -714,7 +722,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 className="shrink-0"
                               />
                               <span className="min-w-0 flex-1 truncate">{step.name}</span>
-                            </button>
+                            </Button>
                           ))
                         ) : (
                           <div className="px-2 py-2 ui-text-sm text-text-lighter">
@@ -738,10 +746,11 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
                             {isLogSearchVisible ? (
-                              <input
+                              <Input
                                 value={logSearchQuery}
                                 onChange={(event) => setLogSearchQuery(event.target.value)}
-                                className="h-6 w-40 rounded border border-border/70 bg-secondary-bg/40 px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/70"
+                                size="xs"
+                                className="w-40 bg-secondary-bg/40"
                                 placeholder="Search logs"
                                 aria-label="Search logs"
                               />
