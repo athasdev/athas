@@ -42,13 +42,15 @@ export const restoreProjectUiState = (projectPath: string | undefined) => {
   const nextUiState = uiState ?? DEFAULT_PROJECT_UI_STATE;
   const state = useUIState.getState();
   const legacyDebuggerSidebar = nextUiState.activeSidebarView === "debugger";
+  const legacyToolBufferSidebar =
+    legacyDebuggerSidebar || nextUiState.activeSidebarView === "extensions";
 
   state.setIsSidebarVisible(nextUiState.isSidebarVisible);
   state.setIsBottomPaneVisible(legacyDebuggerSidebar ? true : nextUiState.isBottomPaneVisible);
   state.setBottomPaneActiveTab(
     legacyDebuggerSidebar ? "debugger" : nextUiState.bottomPaneActiveTab,
   );
-  state.setActiveView(legacyDebuggerSidebar ? "files" : nextUiState.activeSidebarView);
+  state.setActiveView(legacyToolBufferSidebar ? "files" : nextUiState.activeSidebarView);
 };
 
 export const restoreProjectPaneState = (projectPath: string | undefined) => {

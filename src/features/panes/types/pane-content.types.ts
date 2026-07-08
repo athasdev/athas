@@ -34,6 +34,7 @@ export type PaneContentType =
   | "globalSearch"
   | "diagnostics"
   | "references"
+  | "extensions"
   | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
@@ -172,6 +173,10 @@ export interface ReferencesContent extends PaneContentBase {
   type: "references";
 }
 
+export interface ExtensionsContent extends PaneContentBase {
+  type: "extensions";
+}
+
 export interface OnboardingContent extends PaneContentBase {
   type: "onboarding";
   mode: import("@/features/onboarding/lib/onboarding-state").OnboardingMode;
@@ -202,6 +207,7 @@ export type PaneContent =
   | GlobalSearchContent
   | DiagnosticsContent
   | ReferencesContent
+  | ExtensionsContent
   | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
@@ -269,6 +275,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "globalSearch",
   "diagnostics",
   "references",
+  "extensions",
   "onboarding",
 ]);
 
@@ -413,6 +420,9 @@ export type OpenContentSpec =
     }
   | {
       type: "references";
+    }
+  | {
+      type: "extensions";
     }
   | {
       type: "onboarding";

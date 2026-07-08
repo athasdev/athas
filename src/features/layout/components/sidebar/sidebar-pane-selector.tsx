@@ -38,7 +38,9 @@ interface SidebarPaneSelectorProps {
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
+  onExtensionsClick?: () => void;
   isSearchActive?: boolean;
+  isExtensionsActive?: boolean;
   compact?: boolean;
   orientation?: "horizontal" | "vertical";
 }
@@ -50,7 +52,9 @@ export const SidebarPaneSelector = ({
   coreFeatures,
   onViewChange,
   onSearchClick,
+  onExtensionsClick,
   isSearchActive = false,
+  isExtensionsActive = false,
   compact = false,
   orientation = "horizontal",
 }: SidebarPaneSelectorProps) => {
@@ -156,9 +160,8 @@ export const SidebarPaneSelector = ({
       {
         id: "extensions",
         icon: <PuzzlePiece className={iconClassName} weight="duotone" />,
-        isActive: activeSidebarView === "extensions",
-        onClick: () => onViewChange("extensions"),
-        role: "tab",
+        isActive: isExtensionsActive,
+        onClick: onExtensionsClick ?? (() => onViewChange("extensions")),
         ariaLabel: "Extensions",
         className: tabClassName,
         tooltip: {
@@ -195,6 +198,8 @@ export const SidebarPaneSelector = ({
       isGitHubPRsViewActive,
       isGitViewActive,
       isSearchActive,
+      isExtensionsActive,
+      onExtensionsClick,
       onSearchClick,
       onViewChange,
       tabClassName,

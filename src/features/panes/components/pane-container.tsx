@@ -72,6 +72,11 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
+const ExtensionsBuffer = lazy(() =>
+  import("@/features/extensions/components/extensions-sidebar").then((m) => ({
+    default: m.ExtensionsSidebar,
+  })),
+);
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
 const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
@@ -908,6 +913,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         case "references":
           return <ReferencesBuffer />;
+
+        case "extensions":
+          return <ExtensionsBuffer />;
 
         case "onboarding":
           return (

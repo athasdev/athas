@@ -54,8 +54,6 @@ const Footer = () => {
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
   const commandPaletteInitialView = useUIState((state) => state.commandPaletteInitialView);
   const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
@@ -75,6 +73,13 @@ const Footer = () => {
     );
   });
   const openDiagnosticsBuffer = useBufferStore.use.actions().openDiagnosticsBuffer;
+  const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const isExtensionsBufferActive = useBufferStore((state) => {
+    if (!state.activeBufferId) return false;
+    return state.buffers.some(
+      (buffer) => buffer.id === state.activeBufferId && buffer.type === "extensions",
+    );
+  });
   const branchItem = useFooterGitBranchItem();
   const updateItem = useFooterUpdateItem();
   const debuggerContextMenu = useContextMenu<"debugger">();
@@ -282,9 +287,9 @@ const Footer = () => {
           content: (
             <FooterTabControl
               tooltip={`${extensionUpdatesCount} extension update${extensionUpdatesCount === 1 ? "" : "s"} available`}
-              active={isSidebarVisible && activeSidebarView === "extensions"}
+              active={isExtensionsBufferActive}
               tone="accent"
-              onClick={() => openSidebarView("extensions", { triggerSide: "current" })}
+              onClick={() => openExtensionsBuffer()}
             >
               <PuzzlePiece weight="duotone" />
               <FooterControlBadge>

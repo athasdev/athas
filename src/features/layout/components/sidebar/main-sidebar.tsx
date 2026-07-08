@@ -1,7 +1,6 @@
 import { memo, type ReactNode } from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
-import { ExtensionsSidebar } from "@/features/extensions/components/extensions-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import GitView from "@/features/git/components/git-view";
@@ -41,6 +40,11 @@ export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRai
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
+  const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const isExtensionsBufferActive = useBufferStore((state) => {
+    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
+    return activeBuffer?.type === "extensions";
+  });
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const { openSidebarView } = useSidebarPaneController();
 
@@ -62,6 +66,8 @@ export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRai
         coreFeatures={coreFeatures}
         onViewChange={handleSidebarViewChange}
         onSearchClick={() => openGlobalSearchBuffer()}
+        onExtensionsClick={() => openExtensionsBuffer()}
+        isExtensionsActive={isExtensionsBufferActive}
         compact={compact}
         orientation="vertical"
       />
@@ -134,10 +140,6 @@ export const MainSidebar = memo(
             },
           ]
         : []),
-      {
-        id: "extensions",
-        content: <ExtensionsSidebar />,
-      },
       {
         id: "files",
         content: <FileExplorerPane />,

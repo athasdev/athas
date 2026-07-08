@@ -12,7 +12,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import {
@@ -84,8 +83,6 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
     storeCredential,
   } = useConnectionStore.use.actions();
   const openDatabaseBuffer = useBufferStore.use.actions().openDatabaseBuffer;
-  const setActiveView = useUIState((state) => state.setActiveView);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<SidebarMode>("list");
   const [selectedDbType, setSelectedDbType] = useState<DatabaseType>("sqlite");
@@ -451,8 +448,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                     variant="ghost"
                     compact
                     onClick={() => {
-                      setActiveView("extensions");
-                      setIsSidebarVisible(true);
+                      useBufferStore.getState().actions.openExtensionsBuffer();
                     }}
                   >
                     Open Extensions

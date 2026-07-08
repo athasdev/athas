@@ -52,7 +52,7 @@ describe("parseDeepLinkAction", () => {
     });
   });
 
-  it("maps legacy extension settings URLs to the extensions sidebar", () => {
+  it("maps legacy extension settings URLs to the extensions tab", () => {
     expect(parseDeepLinkAction("athas://settings?tab=extensions&category=agent")).toEqual({
       type: "extensions",
       extensionsCategory: "agent",

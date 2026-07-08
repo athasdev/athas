@@ -49,12 +49,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
-import {
-  SidebarEmptyState,
-  SidebarHeaderIconButton,
-  SidebarSearchFilterRow,
-  SidebarSectionLabel,
-} from "@/ui/sidebar";
+import { SidebarEmptyState } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { PLATFORM_ARCH } from "@/utils/platform";
 
@@ -183,6 +178,8 @@ const ExtensionRow = ({
   onUpdate,
   onContextMenu,
   onOpenMenu,
+  onSelect,
+  selected,
   isInstalling,
   hasUpdate,
   hasLocalOverride,
@@ -194,6 +191,8 @@ const ExtensionRow = ({
   onUpdate?: () => void;
   onContextMenu: (event: MouseEvent<HTMLDivElement>, extension: UnifiedExtension) => void;
   onOpenMenu: (event: MouseEvent<HTMLButtonElement>, extension: UnifiedExtension) => void;
+  onSelect: () => void;
+  selected?: boolean;
   isInstalling?: boolean;
   hasUpdate?: boolean;
   hasLocalOverride?: boolean;
@@ -222,7 +221,10 @@ const ExtensionRow = ({
     <div className="flex shrink-0 items-center gap-1">
       {(hasUpdate || hasRuntimeIssue) && onUpdate && (
         <Button
-          onClick={onUpdate}
+          onClick={(event) => {
+            event.stopPropagation();
+            onUpdate();
+          }}
           variant="default"
           tooltip={hasRuntimeIssue ? "Reinstall" : "Update"}
           compact
@@ -233,7 +235,10 @@ const ExtensionRow = ({
       )}
       {hasLocalOverride && onResetOverride && (
         <Button
-          onClick={onResetOverride}
+          onClick={(event) => {
+            event.stopPropagation();
+            onResetOverride();
+          }}
           variant="default"
           tooltip="Reset to marketplace version"
           compact
@@ -243,7 +248,10 @@ const ExtensionRow = ({
         </Button>
       )}
       <Button
-        onClick={onToggle}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
         variant="danger"
         tooltip={primaryActionLabel}
         compact
@@ -254,7 +262,10 @@ const ExtensionRow = ({
     </div>
   ) : (
     <Button
-      onClick={onToggle}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
       variant="default"
       tooltip={primaryActionLabel}
       compact
@@ -267,15 +278,25 @@ const ExtensionRow = ({
   return (
     <div
       className={cn(
-        "group flex min-w-0 items-start gap-2 rounded-md px-2 py-2 text-text-lighter transition-colors",
-        "hover:bg-hover/70 hover:text-text",
+        "group flex min-w-0 items-start gap-3 rounded-md border px-3 py-3 text-text-lighter transition-colors",
+        "hover:border-border/90 hover:bg-hover/45 hover:text-text",
+        selected ? "border-accent/45 bg-accent/8" : "border-border/65 bg-secondary-bg/35",
       )}
+      onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
     >
-      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-primary-bg">
         {getCategoryIcon(extension.category)}
       </span>
-      <div className="min-w-0 flex-1 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex min-w-0 items-baseline gap-1.5">
           <span className="min-w-0 truncate font-medium text-text">{extension.name}</span>
           <span className="flex shrink-0 items-center gap-1.5">
@@ -297,7 +318,7 @@ const ExtensionRow = ({
           </span>
         </div>
         {extension.description ? (
-          <p className="truncate ui-text-sm text-text-lighter">{extension.description}</p>
+          <p className="line-clamp-2 ui-text-sm text-text-lighter">{extension.description}</p>
         ) : null}
         {extension.runtimeIssues && extension.runtimeIssues.length > 0 ? (
           <div className="rounded-md border border-error/20 bg-error/8 px-2 py-1">
@@ -334,7 +355,10 @@ const ExtensionRow = ({
         tooltip="More actions"
         aria-label={`More actions for ${extension.name}`}
         className="h-7 w-7 min-w-0 p-0 opacity-70 group-hover:opacity-100"
-        onClick={(event) => onOpenMenu(event, extension)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenMenu(event, extension);
+        }}
       >
         <MoreHorizontal className="size-4" weight="bold" />
       </Button>
@@ -358,7 +382,7 @@ export const ExtensionsSidebar = () => {
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [installingAgentIds, setInstallingAgentIds] = useState<Set<string>>(new Set());
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null);
   const { showToast } = useToast();
   const extensionContextMenu = useContextMenu<UnifiedExtension>();
 
@@ -877,26 +901,25 @@ export const ExtensionsSidebar = () => {
     return matchesSearch && matchesTab;
   });
   const activeFilter = FILTER_TABS.find((tab) => tab.id === settings.extensionsActiveTab);
-  const filterMenuItems = useMemo(
-    () =>
-      FILTER_TABS.map((tab) => {
-        const Icon = "icon" in tab ? tab.icon : undefined;
-        return {
-          id: tab.id,
-          label: tab.label,
-          icon: Icon ? <Icon className="size-3.5" weight="duotone" /> : undefined,
-          keybinding:
-            settings.extensionsActiveTab === tab.id ? (
-              <Check className="size-3.5 text-accent" />
-            ) : null,
-          onClick: () => {
-            void updateSetting("extensionsActiveTab", tab.id as ExtensionTabId);
-            setIsFilterOpen(false);
-          },
-        };
-      }),
-    [settings.extensionsActiveTab, updateSetting],
-  );
+  const selectedExtension =
+    filteredExtensions.find((extension) => extension.id === selectedExtensionId) ??
+    filteredExtensions[0] ??
+    null;
+  const installedCount = extensions.filter((extension) => extension.isInstalled).length;
+
+  useEffect(() => {
+    if (filteredExtensions.length === 0) {
+      if (selectedExtensionId !== null) setSelectedExtensionId(null);
+      return;
+    }
+
+    if (
+      !selectedExtensionId ||
+      !filteredExtensions.some((item) => item.id === selectedExtensionId)
+    ) {
+      setSelectedExtensionId(filteredExtensions[0]?.id ?? null);
+    }
+  }, [filteredExtensions, selectedExtensionId]);
 
   const isExtensionInstalling = (extension: UnifiedExtension) =>
     Boolean(
@@ -912,6 +935,7 @@ export const ExtensionsSidebar = () => {
       extension.marketplaceSkill &&
       hasMarketplaceSkillUpdate(extension.skill, extension.marketplaceSkill),
     );
+  const updateCount = extensions.filter((extension) => hasExtensionUpdate(extension)).length;
 
   const handleExtensionContextMenu = useCallback(
     (event: MouseEvent<HTMLDivElement>, extension: UnifiedExtension) => {
@@ -998,87 +1022,243 @@ export const ExtensionsSidebar = () => {
   }, [extensionContextMenu.data, extensionsWithUpdates, installingAgentIds, availableExtensions]);
 
   return (
-    <div className="ui-font flex h-full min-h-0 flex-col gap-2 p-2 [--app-ui-badge-font-size:var(--ui-text-base)] [--app-ui-button-font-size:var(--ui-text-base)]">
-      <SidebarSearchFilterRow
-        value={searchQuery}
-        onChange={setSearchQuery}
-        searchIcon={Search}
-        placeholder="Search Extensions"
-        filterOpen={isFilterOpen}
-        onFilterOpenChange={setIsFilterOpen}
-        filterItems={filterMenuItems}
-        filterActive={settings.extensionsActiveTab !== "all"}
-        filterTooltip={`Filter: ${activeFilter?.label ?? "All"}`}
-        filterAriaLabel="Filter extensions"
-        actions={
-          settings.extensionsActiveTab === "skill" ? (
-            <SidebarHeaderIconButton
-              type="button"
-              tooltip="New Skill"
-              tooltipSide="bottom"
-              aria-label="New Skill"
-              onClick={() => setIsSkillsCommandOpen(true)}
-            >
-              <Plus />
-            </SidebarHeaderIconButton>
-          ) : null
-        }
-      />
-
-      <SidebarSectionLabel
-        className="px-1 ui-text-sm font-medium text-text"
-        trailing={
-          <span className="rounded-full bg-hover/70 px-1.5 py-0.5 ui-text-sm text-text-lighter">
-            {filteredExtensions.length}
-          </span>
-        }
-      >
-        {activeFilter?.label ?? "Extensions"}
-      </SidebarSectionLabel>
-
-      {settings.extensionsActiveTab === "skill" && isLoadingSkills ? (
-        <div className="px-2">
-          <LoadingIndicator label="Loading skills" showLabel compact />
-        </div>
-      ) : null}
-
-      {settings.extensionsActiveTab === "agent" && isLoadingAgents ? (
-        <div className="px-2">
-          <LoadingIndicator label="Loading agents" showLabel compact />
-        </div>
-      ) : null}
-
-      <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
-        {filteredExtensions.length === 0 ? (
-          <SidebarEmptyState>No extensions found.</SidebarEmptyState>
-        ) : (
-          <div className="space-y-0.5">
-            {filteredExtensions.map((extension) => {
-              const isInstalling = isExtensionInstalling(extension);
-              const hasUpdate = hasExtensionUpdate(extension);
-              const hasLocalOverride = extension.skill
-                ? hasSkillLocalOverride(extension.skill)
-                : false;
-              const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
-
-              return (
-                <ExtensionRow
-                  key={extension.id}
-                  extension={extension}
-                  onToggle={() => handleToggle(extension)}
-                  onResetOverride={() => handleResetSkillOverride(extension)}
-                  onUpdate={() => handleUpdate(extension)}
-                  onContextMenu={handleExtensionContextMenu}
-                  onOpenMenu={handleOpenExtensionMenu}
-                  isInstalling={isInstalling}
-                  hasUpdate={hasUpdate}
-                  hasLocalOverride={hasLocalOverride}
-                  hasRuntimeIssue={hasRuntimeIssue}
-                />
-              );
-            })}
+    <div className="ui-font flex h-full min-h-0 flex-col bg-primary-bg [--app-ui-badge-font-size:var(--ui-text-base)] [--app-ui-button-font-size:var(--ui-text-base)]">
+      <div className="shrink-0 border-border/70 border-b px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Package className="size-5 text-text-lighter" weight="duotone" />
+              <h1 className="font-semibold text-text ui-text-lg">Extensions</h1>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 ui-text-sm text-text-lighter">
+              <span>{extensions.length} available</span>
+              <span>·</span>
+              <span>{installedCount} installed</span>
+              {updateCount > 0 ? (
+                <>
+                  <span>·</span>
+                  <span className="text-accent">
+                    {updateCount} update{updateCount === 1 ? "" : "s"}
+                  </span>
+                </>
+              ) : null}
+            </div>
           </div>
-        )}
+
+          <div className="flex min-w-[260px] flex-1 items-center justify-end gap-2 sm:flex-none">
+            <div className="relative min-w-0 flex-1 sm:w-80 sm:flex-none">
+              <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-text-lighter" />
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search extensions"
+                className="ui-font h-9 w-full rounded-md border border-border bg-secondary-bg/45 pr-3 pl-8 text-text outline-none transition-colors placeholder:text-text-lighter focus:border-accent/60 focus:bg-secondary-bg"
+              />
+            </div>
+            {settings.extensionsActiveTab === "skill" ? (
+              <Button variant="default" compact onClick={() => setIsSkillsCommandOpen(true)}>
+                <Plus />
+                New Skill
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="custom-scrollbar-thin mt-4 flex gap-1 overflow-x-auto">
+          {FILTER_TABS.map((tab) => {
+            const Icon = "icon" in tab ? tab.icon : undefined;
+            const active = settings.extensionsActiveTab === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={cn(
+                  "flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 ui-text-sm transition-colors",
+                  active
+                    ? "bg-accent text-primary-bg"
+                    : "text-text-lighter hover:bg-hover hover:text-text",
+                )}
+                onClick={() => void updateSetting("extensionsActiveTab", tab.id as ExtensionTabId)}
+              >
+                {Icon ? <Icon className="size-3.5" weight={active ? "fill" : "duotone"} /> : null}
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,1fr)_minmax(340px,440px)]">
+        <div className="custom-scrollbar-thin min-h-0 overflow-y-auto border-border/70 border-r p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="font-medium text-text ui-text-sm">
+              {activeFilter?.label ?? "Extensions"}
+            </div>
+            <span className="rounded-full bg-hover/70 px-2 py-0.5 ui-text-sm text-text-lighter">
+              {filteredExtensions.length}
+            </span>
+          </div>
+
+          {settings.extensionsActiveTab === "skill" && isLoadingSkills ? (
+            <div className="mb-3">
+              <LoadingIndicator label="Loading skills" showLabel compact />
+            </div>
+          ) : null}
+
+          {settings.extensionsActiveTab === "agent" && isLoadingAgents ? (
+            <div className="mb-3">
+              <LoadingIndicator label="Loading agents" showLabel compact />
+            </div>
+          ) : null}
+
+          {filteredExtensions.length === 0 ? (
+            <SidebarEmptyState>No extensions found.</SidebarEmptyState>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+              {filteredExtensions.map((extension) => {
+                const isInstalling = isExtensionInstalling(extension);
+                const hasUpdate = hasExtensionUpdate(extension);
+                const hasLocalOverride = extension.skill
+                  ? hasSkillLocalOverride(extension.skill)
+                  : false;
+                const hasRuntimeIssue = Boolean(extension.runtimeIssues?.length);
+
+                return (
+                  <ExtensionRow
+                    key={extension.id}
+                    extension={extension}
+                    selected={selectedExtension?.id === extension.id}
+                    onSelect={() => setSelectedExtensionId(extension.id)}
+                    onToggle={() => handleToggle(extension)}
+                    onResetOverride={() => handleResetSkillOverride(extension)}
+                    onUpdate={() => handleUpdate(extension)}
+                    onContextMenu={handleExtensionContextMenu}
+                    onOpenMenu={handleOpenExtensionMenu}
+                    isInstalling={isInstalling}
+                    hasUpdate={hasUpdate}
+                    hasLocalOverride={hasLocalOverride}
+                    hasRuntimeIssue={hasRuntimeIssue}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <aside className="custom-scrollbar-thin hidden min-h-0 overflow-y-auto bg-secondary-bg/25 p-5 lg:block">
+          {selectedExtension ? (
+            <div className="space-y-5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border/70 bg-primary-bg">
+                  {getCategoryIcon(selectedExtension.category)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate font-semibold text-text ui-text-xl">
+                    {selectedExtension.name}
+                  </h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-text-lighter ui-text-sm">
+                    {selectedExtension.publisher ? (
+                      <span>By {selectedExtension.publisher}</span>
+                    ) : null}
+                    {selectedExtension.version ? <span>v{selectedExtension.version}</span> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="default" size="compact">
+                  {getCategoryLabel(selectedExtension.category)}
+                </Badge>
+                {selectedExtension.isInstalled ? (
+                  <Badge variant="accent" size="compact">
+                    Installed
+                  </Badge>
+                ) : null}
+                {hasExtensionUpdate(selectedExtension) ? (
+                  <Badge variant="accent" size="compact">
+                    Update
+                  </Badge>
+                ) : null}
+                {selectedExtension.isBundled ? (
+                  <Badge variant="accent" size="compact">
+                    Built-in
+                  </Badge>
+                ) : null}
+              </div>
+
+              {selectedExtension.description ? (
+                <p className="leading-6 text-text-lighter ui-text-base">
+                  {selectedExtension.description}
+                </p>
+              ) : null}
+
+              {selectedExtension.runtimeIssues?.length ? (
+                <div className="rounded-md border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
+                  {selectedExtension.runtimeIssues[0]?.message}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                {!selectedExtension.isBundled ? (
+                  <Button
+                    variant={selectedExtension.isInstalled ? "danger" : "accent"}
+                    onClick={() => void handleToggle(selectedExtension)}
+                    disabled={
+                      isExtensionInstalling(selectedExtension) ||
+                      (selectedExtension.category === "agent" &&
+                        !selectedExtension.isInstalled &&
+                        selectedExtension.canInstall === false)
+                    }
+                  >
+                    {selectedExtension.isInstalled ? <Trash /> : <Download weight="fill" />}
+                    {getPrimaryActionLabel(selectedExtension)}
+                  </Button>
+                ) : null}
+                {hasExtensionUpdate(selectedExtension) && selectedExtension.isInstalled ? (
+                  <Button
+                    variant="default"
+                    onClick={() => void handleUpdate(selectedExtension)}
+                    disabled={isExtensionInstalling(selectedExtension)}
+                  >
+                    <RefreshCw />
+                    Update
+                  </Button>
+                ) : null}
+                {selectedExtension.skill && hasSkillLocalOverride(selectedExtension.skill) ? (
+                  <Button
+                    variant="default"
+                    onClick={() => void handleResetSkillOverride(selectedExtension)}
+                  >
+                    <Reset />
+                    Reset
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="border-border/70 border-t pt-4">
+                <div className="mb-2 font-medium text-text ui-text-sm">Contributions</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {(selectedExtension.contributionSummary?.length
+                    ? selectedExtension.contributionSummary
+                    : selectedExtension.extensions
+                      ? selectedExtension.extensions
+                      : [getCategoryLabel(selectedExtension.category)]
+                  ).map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-md border border-border/60 bg-primary-bg px-2 py-1 text-text-lighter ui-text-sm"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <SidebarEmptyState>No extension selected.</SidebarEmptyState>
+          )}
+        </aside>
       </div>
 
       <SkillsCommand

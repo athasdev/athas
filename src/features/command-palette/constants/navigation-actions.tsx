@@ -37,7 +37,6 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setBottomPaneActiveTab,
     setIsQuickOpenVisible,
     openCommandPaletteView,
-    openSettingsDialog,
     coreFeatures,
     onClose,
   } = params;
@@ -127,13 +126,12 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-extensions",
       label: "View: Show Extensions",
-      description: "Open the extensions sidebar",
+      description: "Open the extensions tab",
       icon: <Package />,
       category: "Navigation",
       action: () => {
         onClose();
-        setIsSidebarVisible(true);
-        setActiveView("extensions");
+        useBufferStore.getState().actions.openExtensionsBuffer();
       },
     },
     {
