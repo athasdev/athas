@@ -5,6 +5,7 @@ import {
   getContributionArray,
   getExtensionCdnPath,
   getExtensionSourceDir,
+  getReservedBuiltInThemeContribution,
   listExtensionFolders,
 } from "./extension-workspace";
 
@@ -118,6 +119,13 @@ async function buildCatalog() {
     const agents = getContributionArray(manifest, "agents");
     const themes = getContributionArray(manifest, "themes");
     const icons = getContributionArray(manifest, "icons");
+
+    const reservedTheme = themes.find(getReservedBuiltInThemeContribution);
+    if (reservedTheme) {
+      throw new Error(
+        `Extension ${manifest.id} contributes reserved built-in Athas theme "${String(reservedTheme.name || reservedTheme.id)}"`,
+      );
+    }
 
     if (
       languages.length === 0 &&

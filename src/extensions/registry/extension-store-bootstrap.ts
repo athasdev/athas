@@ -7,6 +7,7 @@ import { readInstalledBundledContributionExtensionIds } from "./bundled-contribu
 import { readDisabledExtensionIds } from "./extension-enabled-state";
 import { initializeLanguagePackager } from "../languages/language-packager";
 import { extensionRegistry } from "./extension-registry";
+import { isRetiredExtensionId } from "./retired-extensions";
 import {
   buildRuntimeManifest,
   getExtensionManifestForLanguage,
@@ -116,16 +117,22 @@ export function buildInstalledExtensionsMap(params: {
   } = params;
   const disabledExtensionIds = readDisabledExtensionIds();
   const installedExtensions = new Map(
-    backendInstalled.map((extension) => [
-      extension.id,
-      {
-        ...extension,
-        enabled: extension.enabled !== false && !disabledExtensionIds.has(extension.id),
-      },
-    ]),
+    backendInstalled
+      .filter((extension) => !isRetiredExtensionId(extension.id))
+      .map((extension) => [
+        extension.id,
+        {
+          ...extension,
+          enabled: extension.enabled !== false && !disabledExtensionIds.has(extension.id),
+        },
+      ]),
   );
 
   for (const extensionId of bundledContributionInstalled) {
+    if (isRetiredExtensionId(extensionId)) {
+      continue;
+    }
+
     const extension = availableExtensions.get(extensionId);
     if (!extension || !isBundledContributionExtension(extension.manifest)) {
       continue;
@@ -142,6 +149,9 @@ export function buildInstalledExtensionsMap(params: {
 
   for (const installed of indexedDBInstalled) {
     const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
+    if (isRetiredExtensionId(extensionId)) {
+      continue;
+    }
 
     if (!installedExtensions.has(extensionId)) {
       const extension =

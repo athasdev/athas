@@ -8,6 +8,7 @@ import { toSyntaxTokenVariables } from "../themes/syntax-token-colors";
 import type { ThemeDefinition } from "../themes/types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
+import { isRetiredExtensionId } from "../registry/retired-extensions";
 import {
   activateBundledContributionModule,
   deactivateBundledContributionModule,
@@ -209,6 +210,10 @@ export async function activateExtensionContributions(
   manifest: ExtensionManifest,
   extensionPath?: string,
 ): Promise<void> {
+  if (isRetiredExtensionId(extensionId)) {
+    return;
+  }
+
   const iconThemes = getIconThemeContributions(manifest);
   const resolvedExtensionPath = await resolveContributionExtensionPath(
     extensionId,

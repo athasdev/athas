@@ -31,6 +31,7 @@ import {
   updateExtensionLifecycle,
 } from "./extension-store-lifecycle";
 import { markExtensionDisabled, markExtensionEnabled } from "./extension-enabled-state";
+import { isRetiredExtensionId } from "./retired-extensions";
 import { resolveInstalledExtensionId } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
@@ -100,6 +101,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             ...bundledContributionExtensions,
             ...marketplaceExtensions,
           ]) {
+            if (isRetiredExtensionId(manifest.id)) continue;
             extensionById.set(manifest.id, manifest);
           }
 

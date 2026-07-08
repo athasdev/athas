@@ -17,6 +17,9 @@ const CONTRIBUTION_ALIASES: Record<string, string[]> = {
   iconThemes: ["icons", "iconThemes"],
 };
 
+const RESERVED_BUILT_IN_THEME_IDS = new Set(["athas-light", "athas-dark"]);
+const RESERVED_BUILT_IN_THEME_NAMES = new Set(["athas light", "athas dark"]);
+
 function contributionKeys(key: string): string[] {
   return CONTRIBUTION_ALIASES[key] ?? [key];
 }
@@ -48,6 +51,17 @@ export function getContributionArray(
   }
 
   return items;
+}
+
+export function getReservedBuiltInThemeContribution(theme: Record<string, unknown>) {
+  const id = typeof theme.id === "string" ? theme.id.trim().toLowerCase() : "";
+  const name = typeof theme.name === "string" ? theme.name.trim().toLowerCase() : "";
+
+  if (RESERVED_BUILT_IN_THEME_IDS.has(id) || RESERVED_BUILT_IN_THEME_NAMES.has(name)) {
+    return { id, name };
+  }
+
+  return null;
 }
 
 export async function listExtensionFolders(): Promise<string[]> {

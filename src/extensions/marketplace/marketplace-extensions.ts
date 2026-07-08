@@ -1,4 +1,5 @@
 import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
+import { filterRetiredExtensions } from "../registry/retired-extensions";
 import {
   getManifestAIProviderContributions,
   getManifestDatabaseContributions,
@@ -89,7 +90,7 @@ export async function loadMarketplaceContributionExtensions(): Promise<Extension
 
   try {
     const manifests = await fetchMarketplaceManifests();
-    cachedMarketplaceExtensions = Object.values(manifests)
+    cachedMarketplaceExtensions = filterRetiredExtensions(Object.values(manifests))
       .map((manifest) => ({
         ...manifest,
         displayName: manifest.displayName || manifest.name,

@@ -9,6 +9,7 @@ import {
   GENERATED_CDN_DIR,
   getContributionArray,
   getExtensionSourceDir,
+  getReservedBuiltInThemeContribution,
   listExtensionFolders,
 } from "./extension-workspace";
 
@@ -313,6 +314,13 @@ async function validateExtension(folder: string): Promise<void> {
   for (const theme of getContributionArray(manifest, "themes")) {
     if (!theme.id) error(folder, "Theme contribution missing 'id'");
     if (!theme.name) error(folder, `Theme '${theme.id}' missing 'name'`);
+    const reservedTheme = getReservedBuiltInThemeContribution(theme);
+    if (reservedTheme) {
+      error(
+        folder,
+        `Theme '${theme.id}' uses reserved built-in Athas theme identity '${reservedTheme.name || reservedTheme.id}'`,
+      );
+    }
     if (theme.appearance !== "dark" && theme.appearance !== "light") {
       error(folder, `Theme '${theme.id}' has invalid 'appearance'`);
     }
