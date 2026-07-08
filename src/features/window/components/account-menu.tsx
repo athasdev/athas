@@ -140,7 +140,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       id: "user-info",
       label: user?.name || user?.email || "Account",
       icon: user?.avatar_url ? (
-        <img src={user.avatar_url} alt="" className="size-3 rounded-full" />
+        <img src={user.avatar_url} alt="" className="size-3 rounded-[var(--app-radius-pill)]" />
       ) : (
         <UserCircle weight="duotone" />
       ),
@@ -234,7 +234,11 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
             aria-label="Account"
           >
             {isAuthenticated && user?.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="size-4 rounded-full object-cover" />
+              <img
+                src={user.avatar_url}
+                alt=""
+                className="size-4 rounded-[var(--app-radius-pill)] object-cover"
+              />
             ) : (
               <UserCircle className="size-4" weight="duotone" />
             )}
@@ -246,17 +250,18 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
         anchorRef={buttonRef}
         anchorAlign="end"
         onClose={() => setIsOpen(false)}
-        className="w-[320px] overflow-hidden rounded-xl p-0"
+        className="w-[320px] overflow-hidden rounded-[var(--app-radius-menu)] p-0"
       >
         <div className="p-1">
           {isAuthenticated ? (
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setIsOpen(false);
                 void handleOpenBillingDashboard();
               }}
-              className="ui-font block w-full rounded-lg p-2.5 text-left transition-colors hover:bg-hover/50"
+              variant="ghost"
+              className="h-auto w-full justify-start p-2.5 text-left hover:bg-hover/50"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -284,9 +289,9 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                       {formatUsdFromCents(autocompleteUsage.budgetCents)}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
+                  <div className="h-1.5 overflow-hidden rounded-[var(--app-radius-pill)] bg-primary-bg/80">
                     <div
-                      className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
+                      className="h-full rounded-[var(--app-radius-pill)] bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
                       style={{ width: `${usageProgress}%` }}
                     />
                   </div>
@@ -306,7 +311,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                   <span>Usage unavailable</span>
                 </div>
               )}
-            </button>
+            </Button>
           ) : null}
 
           {isAuthenticated ? <div className="my-0.5 border-border/70 border-t" /> : null}

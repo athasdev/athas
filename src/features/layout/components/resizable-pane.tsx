@@ -179,7 +179,7 @@ export function ResizablePane({
         <div
           className={cn(
             "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
-            !hidden && "rounded-lg",
+            !hidden && "rounded-[var(--app-radius-card)]",
           )}
         >
           {children}

@@ -136,7 +136,7 @@ export default function RunActionsButton() {
         anchorRef={triggerRef}
         anchorAlign="end"
         onClose={closeMenu}
-        className="w-[264px] rounded-xl p-1.5"
+        className="w-[264px] rounded-[var(--app-radius-menu)] p-1.5"
       >
         <div className="ui-text-sm truncate px-2 pt-1 pb-2 text-text-lighter">{workspaceLabel}</div>
 
@@ -170,7 +170,7 @@ export default function RunActionsButton() {
                     }
                     variant="ghost"
                     compact
-                    className="rounded-md text-text-lighter"
+                    className="text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
                     <PencilSimple weight="duotone" />
@@ -180,7 +180,7 @@ export default function RunActionsButton() {
                     onClick={() => deleteAction(action.id)}
                     variant="ghost"
                     compact
-                    className="rounded-md text-text-lighter hover:text-error"
+                    className="text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
                     <Trash weight="duotone" />
