@@ -88,7 +88,7 @@ const ConnectionList = ({
           onClick={onAddNew}
           variant="ghost"
           className={cn(
-            "flex size-5 items-center justify-center rounded p-0",
+            "flex size-5 items-center justify-center rounded-[var(--app-radius-control-sm)] p-0",
             "text-text-lighter transition-colors hover:bg-hover hover:text-text",
           )}
           aria-label="Add Remote Connection"

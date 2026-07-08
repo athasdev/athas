@@ -12,7 +12,6 @@ import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
-import { cn } from "@/utils/cn";
 import { testRemoteConnection } from "../services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "../types/remote.types";
 
@@ -139,12 +138,6 @@ const ConnectionDialog = ({
 
   const isFormValid = formData.name.trim() && formData.host.trim() && formData.username.trim();
 
-  const inputClassName = cn(
-    "w-full rounded border border-border bg-secondary-bg",
-    "ui-text-sm px-3 py-2 text-text placeholder-text-lighter",
-    "focus:border-accent focus:outline-none",
-  );
-
   return (
     <Dialog
       onClose={onClose}
@@ -214,7 +207,7 @@ const ConnectionDialog = ({
             value={formData.name}
             onChange={(e) => updateFormData({ name: e.target.value })}
             placeholder="My Server"
-            className={inputClassName}
+            size="md"
             disabled={isValidating}
           />
         </div>
@@ -231,7 +224,7 @@ const ConnectionDialog = ({
               value={formData.host}
               onChange={(e) => updateFormData({ host: e.target.value })}
               placeholder="192.168.1.100"
-              className={inputClassName}
+              size="md"
               disabled={isValidating}
             />
           </div>
@@ -247,7 +240,7 @@ const ConnectionDialog = ({
               placeholder="22"
               min="1"
               max="65535"
-              className={inputClassName}
+              size="md"
               disabled={isValidating}
             />
           </div>
@@ -277,7 +270,7 @@ const ConnectionDialog = ({
             value={formData.username}
             onChange={(e) => updateFormData({ username: e.target.value })}
             placeholder="root"
-            className={inputClassName}
+            size="md"
             disabled={isValidating}
           />
         </div>
@@ -294,7 +287,8 @@ const ConnectionDialog = ({
               value={formData.password}
               onChange={(e) => updateFormData({ password: e.target.value })}
               placeholder="Leave empty to use key authentication"
-              className={`${inputClassName} pr-10`}
+              className="pr-10"
+              size="md"
               disabled={isValidating}
             />
             <Button
@@ -333,7 +327,7 @@ const ConnectionDialog = ({
             value={formData.keyPath}
             onChange={(e) => updateFormData({ keyPath: e.target.value })}
             placeholder="~/.ssh/id_rsa"
-            className={inputClassName}
+            size="md"
             disabled={isValidating}
           />
         </div>
