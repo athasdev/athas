@@ -4,6 +4,7 @@ import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { extensionInstaller } from "../installer/extension-installer";
 import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
 import { readInstalledBundledContributionExtensionIds } from "./bundled-contribution-install-state";
+import { readDisabledExtensionIds } from "./extension-enabled-state";
 import { initializeLanguagePackager } from "../languages/language-packager";
 import { extensionRegistry } from "./extension-registry";
 import {
@@ -46,6 +47,7 @@ export async function loadInstalledExtensionsSnapshot(
 
   const indexedDBInstalled = await extensionInstaller.listInstalled();
   const bundledContributionInstalled = Array.from(readInstalledBundledContributionExtensionIds());
+  const disabledExtensionIds = readDisabledExtensionIds();
 
   await Promise.all(
     indexedDBInstalled.map(async (installed) => {
@@ -59,6 +61,10 @@ export async function loadInstalledExtensionsSnapshot(
       const languageConfig = extension?.languages?.find((lang) => lang.id === languageId);
       const languageExtensions = languageConfig?.extensions || [`.${languageId}`];
       const aliases = languageConfig?.aliases;
+
+      if (disabledExtensionIds.has(extensionId)) {
+        return;
+      }
 
       if (extension) {
         const resolvedTools = await resolveToolPaths(languageId, extension, {
@@ -108,8 +114,15 @@ export function buildInstalledExtensionsMap(params: {
     bundledContributionInstalled,
     availableExtensions,
   } = params;
+  const disabledExtensionIds = readDisabledExtensionIds();
   const installedExtensions = new Map(
-    backendInstalled.map((extension) => [extension.id, extension]),
+    backendInstalled.map((extension) => [
+      extension.id,
+      {
+        ...extension,
+        enabled: extension.enabled !== false && !disabledExtensionIds.has(extension.id),
+      },
+    ]),
   );
 
   for (const extensionId of bundledContributionInstalled) {
@@ -123,7 +136,7 @@ export function buildInstalledExtensionsMap(params: {
       name: extension.manifest.displayName,
       version: extension.manifest.version,
       installed_at: new Date().toISOString(),
-      enabled: true,
+      enabled: !disabledExtensionIds.has(extensionId),
     });
   }
 
@@ -154,7 +167,7 @@ export function buildInstalledExtensionsMap(params: {
         name: extension?.manifest.displayName || installed.languageId,
         version: installed.version,
         installed_at: new Date().toISOString(),
-        enabled: true,
+        enabled: !disabledExtensionIds.has(extensionId),
       });
     }
   }

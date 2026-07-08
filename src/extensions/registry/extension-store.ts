@@ -24,10 +24,13 @@ import {
 } from "./extension-store-bootstrap";
 import {
   buildInstalledExtensionMetadata,
+  disableExtensionLifecycle,
+  enableExtensionLifecycle,
   installExtensionLifecycle,
   uninstallExtensionLifecycle,
   updateExtensionLifecycle,
 } from "./extension-store-lifecycle";
+import { markExtensionDisabled, markExtensionEnabled } from "./extension-enabled-state";
 import { resolveInstalledExtensionId } from "./extension-store-runtime";
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 import type { ExtensionManifest } from "../types/extension-manifest";
@@ -57,6 +60,8 @@ interface ExtensionStoreState {
     getExtensionForFile: (filePath: string) => AvailableExtension | undefined;
     installExtension: (extensionId: string) => Promise<void>;
     uninstallExtension: (extensionId: string) => Promise<void>;
+    enableExtension: (extensionId: string) => Promise<void>;
+    disableExtension: (extensionId: string) => Promise<void>;
     updateExtension: (extensionId: string) => Promise<void>;
     checkForUpdates: () => Promise<string[]>;
     updateInstallProgress: (extensionId: string, progress: number, error?: string) => void;
@@ -114,13 +119,13 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             const isBundledContributionInstalled =
               isBundledContributionExtension(manifest) &&
               installedBundledContributions.has(manifest.id);
+            const isInstalled =
+              installed.has(manifest.id) || isBuiltInDatabase || isBundledContributionInstalled;
+            const isEnabled = installed.get(manifest.id)?.enabled ?? isInstalled;
             extensionRegistry.registerExtension(manifest, {
               isBundled: isBuiltInDatabase,
-              isEnabled: true,
-              state:
-                installed.has(manifest.id) || isBuiltInDatabase || isBundledContributionInstalled
-                  ? "installed"
-                  : "not-installed",
+              state: isInstalled ? (isEnabled ? "installed" : "deactivated") : "not-installed",
+              isEnabled,
             });
           }
 
@@ -131,10 +136,12 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               const isBundledContributionInstalled =
                 isBundledContributionExtension(manifest) &&
                 installedBundledContributions.has(manifest.id);
+              const isInstalled =
+                installed.has(manifest.id) || isBuiltInDatabase || isBundledContributionInstalled;
               state.availableExtensions.set(manifest.id, {
                 manifest,
-                isInstalled:
-                  installed.has(manifest.id) || isBuiltInDatabase || isBundledContributionInstalled,
+                isInstalled,
+                isEnabled: installed.get(manifest.id)?.enabled ?? isInstalled,
                 isInstalling: false,
                 runtimeIssues: [],
               });
@@ -171,7 +178,8 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
           });
 
           await Promise.all(
-            Array.from(installedExtensions.keys()).map(async (extensionId) => {
+            Array.from(installedExtensions.entries()).map(async ([extensionId, metadata]) => {
+              if (metadata.enabled === false) return;
               const extension = availableExtensions.get(extensionId);
               if (!extension) return;
               await activateExtensionContributions(extensionId, extension.manifest);
@@ -185,6 +193,9 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
             for (const [id, ext] of state.availableExtensions) {
               ext.isInstalled =
                 state.installedExtensions.has(id) || isBuiltInDatabaseExtension(ext.manifest);
+              ext.isEnabled = ext.isInstalled
+                ? (state.installedExtensions.get(id)?.enabled ?? true)
+                : false;
               ext.runtimeIssues = runtimeIssues.get(id) || [];
             }
           });
@@ -261,6 +272,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 if (ext) {
                   ext.isInstalling = false;
                   ext.isInstalled = true;
+                  ext.isEnabled = true;
                   ext.installProgress = 100;
                   ext.installError = undefined;
                   ext.manifest = runtimeManifest;
@@ -279,6 +291,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 if (ext) {
                   ext.isInstalling = false;
                   ext.isInstalled = true;
+                  ext.isEnabled = true;
                   ext.installProgress = 100;
                   ext.installError = undefined;
                   state.installedExtensions.set(
@@ -328,6 +341,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 const ext = state.availableExtensions.get(extensionId);
                 if (ext) {
                   ext.isInstalled = false;
+                  ext.isEnabled = false;
                   ext.runtimeIssues = [];
                 }
                 state.installedExtensions.delete(extensionId);
@@ -339,6 +353,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
                 const ext = state.availableExtensions.get(extensionId);
                 if (ext) {
                   ext.isInstalled = false;
+                  ext.isEnabled = false;
                   ext.runtimeIssues = [];
                 }
               });
@@ -367,6 +382,58 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               ext.isInstalling = false;
             }
           }
+        });
+      },
+
+      enableExtension: async (extensionId: string) => {
+        const extension = get().availableExtensions.get(extensionId);
+        if (!extension) {
+          throw new Error(`Extension ${extensionId} not found`);
+        }
+        if (!extension.isInstalled) {
+          throw new Error(`Extension ${extensionId} is not installed`);
+        }
+
+        await enableExtensionLifecycle({ extensionId, extension });
+        markExtensionEnabled(extensionId);
+
+        set((state) => {
+          const ext = state.availableExtensions.get(extensionId);
+          if (ext) {
+            ext.isEnabled = true;
+          }
+          const installed = state.installedExtensions.get(extensionId);
+          if (installed) {
+            installed.enabled = true;
+          }
+          state.availableExtensions = new Map(state.availableExtensions);
+          state.installedExtensions = new Map(state.installedExtensions);
+        });
+      },
+
+      disableExtension: async (extensionId: string) => {
+        const extension = get().availableExtensions.get(extensionId);
+        if (!extension) {
+          throw new Error(`Extension ${extensionId} not found`);
+        }
+        if (!extension.isInstalled) {
+          throw new Error(`Extension ${extensionId} is not installed`);
+        }
+
+        await disableExtensionLifecycle({ extensionId, extension });
+        markExtensionDisabled(extensionId);
+
+        set((state) => {
+          const ext = state.availableExtensions.get(extensionId);
+          if (ext) {
+            ext.isEnabled = false;
+          }
+          const installed = state.installedExtensions.get(extensionId);
+          if (installed) {
+            installed.enabled = false;
+          }
+          state.availableExtensions = new Map(state.availableExtensions);
+          state.installedExtensions = new Map(state.installedExtensions);
         });
       },
 
@@ -432,6 +499,7 @@ const useExtensionStoreBase = create<ExtensionStoreState>()(
               const ext = state.availableExtensions.get(extensionId);
               if (ext) {
                 ext.isInstalled = false;
+                ext.isEnabled = false;
               }
             });
           },

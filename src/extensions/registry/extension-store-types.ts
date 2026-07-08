@@ -18,6 +18,7 @@ export interface ExtensionInstallationMetadata {
 export interface AvailableExtension {
   manifest: ExtensionManifest;
   isInstalled: boolean;
+  isEnabled: boolean;
   isInstalling: boolean;
   installProgress?: number;
   installError?: string;

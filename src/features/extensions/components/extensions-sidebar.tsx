@@ -50,7 +50,6 @@ import {
 } from "@/features/ai/lib/skill-library";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
-import { extensionManager } from "@/features/editor/extensions/manager";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
@@ -68,6 +67,7 @@ interface UnifiedExtension {
   description: string;
   category: "language" | "theme" | "icon-theme" | "database" | "ai" | "skill" | "agent";
   isInstalled: boolean;
+  isEnabled: boolean;
   version?: string;
   extensions?: string[];
   publisher?: string;
@@ -156,6 +156,7 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
 function getPrimaryActionLabel(extension: UnifiedExtension): string {
   if (isAppearanceExtension(extension)) {
     if (extension.isInstalled) {
+      if (!extension.isEnabled) return "Activate";
       return extension.isActive ? "Active" : "Use";
     }
 
@@ -166,7 +167,11 @@ function getPrimaryActionLabel(extension: UnifiedExtension): string {
     return extension.isInstalled ? "Remove" : "Add";
   }
 
-  return extension.isInstalled ? "Uninstall" : "Install";
+  if (extension.category === "agent") {
+    return extension.isInstalled ? "Uninstall" : "Install";
+  }
+
+  return extension.isInstalled ? (extension.isEnabled ? "Deactivate" : "Activate") : "Install";
 }
 
 function isAppearanceExtension(extension: UnifiedExtension): boolean {
@@ -259,7 +264,21 @@ const ExtensionRow = ({
       <XCircle className="size-4" weight="duotone" />
     </Button>
   ) : isAppearance && extension.isInstalled ? (
-    extension.isActive ? (
+    !extension.isEnabled ? (
+      <Button
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggle();
+        }}
+        variant="accent"
+        tooltip={primaryActionLabel}
+        compact
+        className="h-8 px-2.5"
+      >
+        <Check className="size-4" weight="bold" />
+        Activate
+      </Button>
+    ) : extension.isActive ? (
       <Badge
         variant="accent"
         size="default"
@@ -283,6 +302,24 @@ const ExtensionRow = ({
         Use
       </Button>
     )
+  ) : extension.isInstalled && extension.category !== "agent" && extension.category !== "skill" ? (
+    <Button
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+      variant={extension.isEnabled ? "default" : "accent"}
+      tooltip={primaryActionLabel}
+      compact
+      className="h-8 px-2.5"
+    >
+      {extension.isEnabled ? (
+        <XCircle className="size-4" weight="duotone" />
+      ) : (
+        <Check className="size-4" weight="bold" />
+      )}
+      {primaryActionLabel}
+    </Button>
   ) : extension.isInstalled ? (
     <div className="flex shrink-0 items-center gap-1">
       {(hasUpdate || hasRuntimeIssue) && onUpdate && (
@@ -422,6 +459,11 @@ const ExtensionRow = ({
               Installed
             </Badge>
           ) : null}
+          {extension.isInstalled && !extension.isEnabled ? (
+            <Badge variant="default" size="compact">
+              Disabled
+            </Badge>
+          ) : null}
           {hasUpdate ? (
             <Badge variant="accent" size="compact">
               Update
@@ -486,7 +528,13 @@ export const ExtensionsSidebar = () => {
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const extensionsWithUpdates = useExtensionStore.use.extensionsWithUpdates();
-  const { installExtension, uninstallExtension, updateExtension } = useExtensionStore.use.actions();
+  const {
+    installExtension,
+    uninstallExtension,
+    enableExtension,
+    disableExtension,
+    updateExtension,
+  } = useExtensionStore.use.actions();
 
   useEffect(() => {
     if (!FILTER_TAB_IDS.has(settings.extensionsActiveTab)) {
@@ -526,6 +574,7 @@ export const ExtensionsSidebar = () => {
             agent?.description ?? contribution.description ?? "ACP-compatible coding agent",
           category: "agent",
           isInstalled: agent?.installed ?? false,
+          isEnabled: agent?.installed ?? false,
           version: ext.manifest.version,
           extensions: [agent?.binaryName ?? contribution.binaryName],
           publisher: ext.manifest.publisher,
@@ -550,6 +599,7 @@ export const ExtensionsSidebar = () => {
           description: ext.manifest.description,
           category: "language",
           isInstalled: ext.isInstalled,
+          isEnabled: ext.isEnabled,
           version: ext.manifest.version,
           extensions: lang.extensions.map((e: string) => e.replace(".", "")),
           publisher: ext.manifest.publisher,
@@ -576,6 +626,7 @@ export const ExtensionsSidebar = () => {
           description: ext.manifest.description,
           category: "database",
           isInstalled: ext.isInstalled,
+          isEnabled: ext.isEnabled,
           version: ext.manifest.version,
           extensions: provider.fileExtensions?.map((item) => item.replace(".", "")),
           publisher: ext.manifest.publisher,
@@ -597,7 +648,8 @@ export const ExtensionsSidebar = () => {
           description: ext.manifest.description,
           category: "theme",
           isInstalled: ext.isInstalled,
-          isActive: Boolean(activeThemeId),
+          isActive: ext.isEnabled && Boolean(activeThemeId),
+          isEnabled: ext.isEnabled,
           version: ext.manifest.version,
           publisher: ext.manifest.publisher,
           isMarketplace: true,
@@ -620,7 +672,8 @@ export const ExtensionsSidebar = () => {
           description: ext.manifest.description,
           category: "icon-theme",
           isInstalled: ext.isInstalled,
-          isActive: Boolean(activeIconThemeId),
+          isActive: ext.isEnabled && Boolean(activeIconThemeId),
+          isEnabled: ext.isEnabled,
           version: ext.manifest.version,
           publisher: ext.manifest.publisher,
           isMarketplace: true,
@@ -640,6 +693,7 @@ export const ExtensionsSidebar = () => {
           description: ext.manifest.description,
           category: "ai",
           isInstalled: ext.isInstalled,
+          isEnabled: ext.isEnabled,
           version: ext.manifest.version,
           publisher: ext.manifest.publisher,
           isMarketplace: true,
@@ -662,6 +716,7 @@ export const ExtensionsSidebar = () => {
         description: theme.description || `${theme.category} theme`,
         category: "theme",
         isInstalled: true,
+        isEnabled: true,
         isActive: settings.theme === theme.id,
         version: "1.0.0",
         selectionId: theme.id,
@@ -679,6 +734,7 @@ export const ExtensionsSidebar = () => {
         description: iconTheme.description || `${iconTheme.name} icon theme`,
         category: "icon-theme",
         isInstalled: true,
+        isEnabled: true,
         isActive: settings.iconTheme === iconTheme.id,
         version: "1.0.0",
         selectionId: iconTheme.id,
@@ -700,6 +756,7 @@ export const ExtensionsSidebar = () => {
         description: skill.description || preview || "Reusable AI chat instructions",
         category: "skill",
         isInstalled: true,
+        isEnabled: true,
         version: skill.version || (skill.source === "marketplace" ? undefined : "Local"),
         publisher: skill.author || (skill.source === "marketplace" ? "Marketplace" : "You"),
         isMarketplace: skill.source === "marketplace",
@@ -720,6 +777,7 @@ export const ExtensionsSidebar = () => {
         description: skill.description,
         category: "skill",
         isInstalled: false,
+        isEnabled: false,
         version: skill.version,
         publisher: skill.author,
         isMarketplace: true,
@@ -744,6 +802,7 @@ export const ExtensionsSidebar = () => {
         description: agent.description ?? "ACP-compatible coding agent",
         category: "agent",
         isInstalled: agent.installed,
+        isEnabled: agent.installed,
         extensions: [agent.binaryName],
         publisher: "Marketplace",
         isMarketplace: true,
@@ -962,6 +1021,9 @@ export const ExtensionsSidebar = () => {
 
       const selectionId = extension.selectionId ?? extension.id;
       try {
+        if (!extension.isEnabled) {
+          await enableExtension(extension.id);
+        }
         if (extension.category === "theme") {
           await updateSetting("theme", selectionId);
         } else {
@@ -984,57 +1046,80 @@ export const ExtensionsSidebar = () => {
       return;
     }
 
+    if (extension.isInstalled) {
+      try {
+        if (extension.isEnabled) {
+          await disableExtension(extension.id);
+        } else {
+          await enableExtension(extension.id);
+        }
+        showToast({
+          message: `${extension.name} ${extension.isEnabled ? "deactivated" : "activated"}`,
+          type: "success",
+          duration: 2500,
+        });
+      } catch (error) {
+        console.error(
+          `Failed to ${extension.isEnabled ? "deactivate" : "activate"} ${extension.name}:`,
+          error,
+        );
+        showToast({
+          message: `Failed to ${extension.isEnabled ? "deactivate" : "activate"} ${extension.name}: ${getErrorMessage(error)}`,
+          type: "error",
+          duration: 5000,
+        });
+      }
+      setTimeout(() => loadAllExtensions(), 100);
+      return;
+    }
+
     if (extension.isMarketplace) {
-      if (extension.isInstalled) {
-        try {
-          await uninstallExtension(extension.id);
-          showToast({
-            message: `${extension.name} uninstalled successfully`,
-            type: "success",
-            duration: 3000,
-          });
-        } catch (error) {
-          console.error(`Failed to uninstall ${extension.name}:`, error);
-          showToast({
-            message: `Failed to uninstall ${extension.name}: ${getErrorMessage(error)}`,
-            type: "error",
-            duration: 5000,
-          });
-        }
-      } else {
-        try {
-          await installExtension(extension.id);
-          showToast({
-            message: `${extension.name} installed successfully`,
-            type: "success",
-            duration: 3000,
-          });
-        } catch (error) {
-          console.error(`Failed to install ${extension.name}:`, error);
-          showToast({
-            message: `Failed to install ${extension.name}: ${getErrorMessage(error)}`,
-            type: "error",
-            duration: 5000,
-          });
-        }
+      try {
+        await installExtension(extension.id);
+        showToast({
+          message: `${extension.name} installed successfully`,
+          type: "success",
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error(`Failed to install ${extension.name}:`, error);
+        showToast({
+          message: `Failed to install ${extension.name}: ${getErrorMessage(error)}`,
+          type: "error",
+          duration: 5000,
+        });
       }
       return;
     }
 
-    if (extension.category === "language") {
-      const langExt = extensionManager
-        .getAllLanguageExtensions()
-        .find((e) => e.id === extension.id);
-      if (langExt?.updateSettings) {
-        const currentSettings = langExt.getSettings?.() || {};
-        langExt.updateSettings({
-          ...currentSettings,
-          enabled: !extension.isInstalled,
-        });
-      }
+    setTimeout(() => loadAllExtensions(), 100);
+  };
+
+  const handleUninstall = async (extension: UnifiedExtension) => {
+    if (extension.category === "agent" || extension.category === "skill") {
+      await handleToggle(extension);
+      return;
     }
 
-    setTimeout(() => loadAllExtensions(), 100);
+    if (!extension.isMarketplace || !extension.isInstalled) {
+      return;
+    }
+
+    try {
+      await uninstallExtension(extension.id);
+      showToast({
+        message: `${extension.name} uninstalled successfully`,
+        type: "success",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error(`Failed to uninstall ${extension.name}:`, error);
+      showToast({
+        message: `Failed to uninstall ${extension.name}: ${getErrorMessage(error)}`,
+        type: "error",
+        duration: 5000,
+      });
+    }
   };
 
   const handleDeactivateAppearance = async (extension: UnifiedExtension) => {
@@ -1168,30 +1253,53 @@ export const ExtensionsSidebar = () => {
       return items;
     }
 
-    if (isAppearance && extension.isInstalled) {
-      if (canDeactivateAppearanceExtension(extension)) {
-        items.push({
-          id: "deactivate",
-          label: "Deactivate",
-          icon: <XCircle className="size-3.5" weight="duotone" />,
-          onClick: () => {
-            void handleDeactivateAppearance(extension);
-          },
-        });
+    if (extension.isInstalled && extension.category !== "agent" && extension.category !== "skill") {
+      if (isAppearance) {
+        if (!extension.isEnabled) {
+          items.push({
+            id: "activate",
+            label: "Activate",
+            icon: <Check className="size-3.5 text-accent" weight="bold" />,
+            disabled: isInstalling,
+            onClick: () => {
+              void handleToggle(extension);
+            },
+          });
+        } else if (canDeactivateAppearanceExtension(extension)) {
+          items.push({
+            id: "deactivate",
+            label: "Deactivate",
+            icon: <XCircle className="size-3.5" weight="duotone" />,
+            disabled: isInstalling,
+            onClick: () => {
+              void handleDeactivateAppearance(extension);
+            },
+          });
+        } else {
+          items.push({
+            id: extension.isActive ? "active" : "use",
+            label: extension.isActive ? "Active" : "Use",
+            icon: <Check className="size-3.5 text-accent" weight="bold" />,
+            disabled: extension.isActive || isInstalling,
+            onClick: () => {
+              void handleToggle(extension);
+            },
+          });
+        }
       } else {
         items.push({
-          id: extension.isActive ? "active" : "use",
-          label: extension.isActive ? "Active" : "Use",
-          icon: <Check className="size-3.5 text-accent" weight="bold" />,
-          disabled: extension.isActive,
+          id: extension.isEnabled ? "deactivate" : "activate",
+          label: extension.isEnabled ? "Deactivate" : "Activate",
+          icon: extension.isEnabled ? (
+            <XCircle className="size-3.5" weight="duotone" />
+          ) : (
+            <Check className="size-3.5 text-accent" weight="bold" />
+          ),
+          disabled: isInstalling,
           onClick: () => {
             void handleToggle(extension);
           },
         });
-      }
-
-      if (!extension.isMarketplace) {
-        return items;
       }
     }
 
@@ -1223,20 +1331,39 @@ export const ExtensionsSidebar = () => {
       items.push({ id: "sep-primary-action", label: "", separator: true, onClick: () => {} });
     }
 
-    items.push({
-      id: "toggle",
-      label: isAppearance && extension.isInstalled ? "Uninstall" : primaryActionLabel,
-      icon: extension.isInstalled ? (
-        <Trash className="size-3.5" weight="duotone" />
-      ) : (
-        <Download className="size-3.5" weight="fill" />
-      ),
-      disabled: isInstalling || isUnavailableAgent,
-      className: extension.isInstalled ? "text-error hover:text-error" : undefined,
-      onClick: () => {
-        void handleToggle(extension);
-      },
-    });
+    if (!extension.isInstalled) {
+      items.push({
+        id: "install",
+        label: primaryActionLabel,
+        icon: <Download className="size-3.5" weight="fill" />,
+        disabled: isInstalling || isUnavailableAgent,
+        onClick: () => {
+          void handleToggle(extension);
+        },
+      });
+    } else if (extension.category === "agent" || extension.category === "skill") {
+      items.push({
+        id: "toggle",
+        label: primaryActionLabel,
+        icon: <Trash className="size-3.5" weight="duotone" />,
+        disabled: isInstalling,
+        className: "text-error hover:text-error",
+        onClick: () => {
+          void handleToggle(extension);
+        },
+      });
+    } else if (extension.isMarketplace) {
+      items.push({
+        id: "uninstall",
+        label: "Uninstall",
+        icon: <Trash className="size-3.5" weight="duotone" />,
+        disabled: isInstalling,
+        className: "text-error hover:text-error",
+        onClick: () => {
+          void handleUninstall(extension);
+        },
+      });
+    }
 
     return items;
   }, [extensionContextMenu.data, extensionsWithUpdates, installingAgentIds, availableExtensions]);
@@ -1397,6 +1524,11 @@ export const ExtensionsSidebar = () => {
                     Installed
                   </Badge>
                 ) : null}
+                {selectedExtension.isInstalled && !selectedExtension.isEnabled ? (
+                  <Badge variant="default" size="compact">
+                    Disabled
+                  </Badge>
+                ) : null}
                 {hasExtensionUpdate(selectedExtension) ? (
                   <Badge variant="accent" size="compact">
                     Update
@@ -1434,12 +1566,18 @@ export const ExtensionsSidebar = () => {
                         ? "default"
                         : isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled
                           ? "accent"
-                          : selectedExtension.isInstalled
+                          : selectedExtension.isInstalled &&
+                              (selectedExtension.category === "agent" ||
+                                selectedExtension.category === "skill")
                             ? "ghost"
-                            : "accent"
+                            : selectedExtension.isInstalled && selectedExtension.isEnabled
+                              ? "default"
+                              : "accent"
                     }
                     className={
-                      selectedExtension.isInstalled && !isAppearanceExtension(selectedExtension)
+                      selectedExtension.isInstalled &&
+                      (selectedExtension.category === "agent" ||
+                        selectedExtension.category === "skill")
                         ? "text-text-lighter hover:text-error"
                         : undefined
                     }
@@ -1454,12 +1592,32 @@ export const ExtensionsSidebar = () => {
                   >
                     {isAppearanceExtension(selectedExtension) && selectedExtension.isInstalled ? (
                       <Check />
-                    ) : selectedExtension.isInstalled ? (
+                    ) : selectedExtension.isInstalled &&
+                      (selectedExtension.category === "agent" ||
+                        selectedExtension.category === "skill") ? (
                       <Trash />
+                    ) : selectedExtension.isInstalled && selectedExtension.isEnabled ? (
+                      <XCircle />
+                    ) : selectedExtension.isInstalled ? (
+                      <Check />
                     ) : (
                       <Download weight="fill" />
                     )}
                     {getPrimaryActionLabel(selectedExtension)}
+                  </Button>
+                ) : null}
+                {selectedExtension.isMarketplace &&
+                selectedExtension.isInstalled &&
+                selectedExtension.category !== "agent" &&
+                selectedExtension.category !== "skill" ? (
+                  <Button
+                    variant="ghost"
+                    className="text-text-lighter hover:text-error"
+                    onClick={() => void handleUninstall(selectedExtension)}
+                    disabled={isExtensionInstalling(selectedExtension)}
+                  >
+                    <Trash />
+                    Uninstall
                   </Button>
                 ) : null}
                 {hasExtensionUpdate(selectedExtension) && selectedExtension.isInstalled ? (
