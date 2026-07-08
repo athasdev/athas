@@ -111,7 +111,7 @@ export const ExternalEditorTerminal = ({
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: editorFontSize,
-      fontFamily: `${editorFontFamily}, Menlo, Monaco, "Courier New", monospace`,
+      fontFamily: `${editorFontFamily}, "Geist Mono", Menlo, Monaco, "Courier New", monospace`,
       theme: getTerminalTheme(),
       allowProposedApi: true,
       smoothScrollDuration: 100,
@@ -291,7 +291,7 @@ export const ExternalEditorTerminal = ({
 
   useEffect(() => {
     if (xtermRef.current) {
-      xtermRef.current.options.fontFamily = `${editorFontFamily}, Menlo, Monaco, "Courier New", monospace`;
+      xtermRef.current.options.fontFamily = `${editorFontFamily}, "Geist Mono", Menlo, Monaco, "Courier New", monospace`;
       if (fitAddonRef.current) {
         fitAddonRef.current.fit();
       }

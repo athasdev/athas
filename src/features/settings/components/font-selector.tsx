@@ -16,14 +16,14 @@ import { cn } from "@/utils/cn";
 // Bundled fonts that are always available
 const BUNDLED_FONTS: FontInfo[] = [
   {
-    name: "IBM Plex Sans Variable",
-    family: "IBM Plex Sans Variable",
+    name: "Geist Sans",
+    family: "Geist Sans",
     style: "Regular",
     is_monospace: false,
   },
   {
-    name: "JetBrains Mono Variable",
-    family: "JetBrains Mono Variable",
+    name: "Geist Mono",
+    family: "Geist Mono",
     style: "Regular",
     is_monospace: true,
   },

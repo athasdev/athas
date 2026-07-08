@@ -1,11 +1,11 @@
 [data-sonner-toaster],
 [data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
-  font-family: "IBM Plex Sans Variable", sans-serif;
+  font-family: var(--app-font-family, "Geist Sans", sans-serif);
 }
 
 [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-title],
 [data-sonner-toaster] [data-sonner-toast][data-styled="true"] [data-description] {
-  font-family: "IBM Plex Sans Variable", sans-serif;
+  font-family: var(--app-font-family, "Geist Sans", sans-serif);
   font-weight: 400;
   letter-spacing: 0;
 }

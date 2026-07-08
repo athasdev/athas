@@ -38,6 +38,25 @@ describe("font family resolution", () => {
     ).toBe(DEFAULT_MONO_FONT_FAMILY);
   });
 
+  it("moves removed bundled font names back to current defaults when unavailable", () => {
+    expect(
+      resolveAvailableFontFamily(
+        "IBM Plex Sans Variable",
+        DEFAULT_UI_FONT_FAMILY,
+        [],
+        [DEFAULT_UI_FONT_FAMILY],
+      ),
+    ).toBe(DEFAULT_UI_FONT_FAMILY);
+    expect(
+      resolveAvailableFontFamily(
+        "JetBrains Mono Variable",
+        DEFAULT_MONO_FONT_FAMILY,
+        [],
+        [DEFAULT_MONO_FONT_FAMILY],
+      ),
+    ).toBe(DEFAULT_MONO_FONT_FAMILY);
+  });
+
   it("keeps custom fonts that exist on the system", () => {
     expect(
       resolveAvailableFontFamily("Berkeley Mono", DEFAULT_MONO_FONT_FAMILY, ["berkeley mono"]),

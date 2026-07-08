@@ -1,5 +1,5 @@
-export const DEFAULT_UI_FONT_FAMILY = "IBM Plex Sans Variable";
-export const DEFAULT_MONO_FONT_FAMILY = "JetBrains Mono Variable";
+export const DEFAULT_UI_FONT_FAMILY = "Geist Sans";
+export const DEFAULT_MONO_FONT_FAMILY = "Geist Mono";
 
 export const DEFAULT_CODE_FONT_SIZE = 14;
 export const DEFAULT_UI_FONT_SIZE_OFFSET = 1;

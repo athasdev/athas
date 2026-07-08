@@ -21,18 +21,18 @@ interface FontActions {
   clearError: () => void;
 }
 
-const FONT_CACHE_KEY = "athas_font_cache";
+const FONT_CACHE_KEY = "athas_font_cache_v2";
 const FONT_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const FALLBACK_FONTS: FontInfo[] = [
   {
-    name: "IBM Plex Sans Variable",
-    family: "IBM Plex Sans Variable",
+    name: "Geist Sans",
+    family: "Geist Sans",
     style: "Regular",
     is_monospace: false,
   },
   {
-    name: "JetBrains Mono Variable",
-    family: "JetBrains Mono Variable",
+    name: "Geist Mono",
+    family: "Geist Mono",
     style: "Regular",
     is_monospace: true,
   },

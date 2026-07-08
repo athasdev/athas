@@ -341,7 +341,7 @@ const prewarmCharCache = (fontSize: number, fontFamily: string) => {
 export const getCharWidthCached = (
   char: string,
   fontSize: number,
-  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 ): number => {
   const font = buildCanvasFont(fontSize, fontFamily);
   const fontReady = isCanvasFontReady(font);
@@ -395,7 +395,7 @@ export const getAccurateCursorX = (
   line: string,
   column: number,
   fontSize: number,
-  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   tabSize: number = 2,
 ): number => {
   let x = 0;
@@ -422,7 +422,7 @@ export const getAccurateCursorX = (
 export const measureTextWidth = (
   text: string,
   fontSize: number,
-  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   tabSize: number = 2,
 ): number => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize);
 
@@ -454,7 +454,7 @@ function getRenderedMeasureElement(): HTMLSpanElement | null {
 export const measureRenderedTextWidth = (
   text: string,
   fontSize: number,
-  fontFamily: string = 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
   tabSize: number = 2,
 ): number => {
   const element = getRenderedMeasureElement();

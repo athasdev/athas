@@ -11,19 +11,19 @@ import { getUiFontScale, normalizeUiFontSize } from "../lib/ui-font-size";
 
 // Cross-platform monospace fallback stack
 const DEFAULT_MONO_FALLBACK =
-  '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
+  '"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
 // Windows-optimized monospace fallback stack (WebView2 renders these more consistently)
 const WINDOWS_MONO_FALLBACK =
-  '"JetBrains Mono Variable", Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", ui-monospace, monospace';
+  '"Geist Mono", Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", ui-monospace, monospace';
 
 // Cross-platform sans fallback stack
 const DEFAULT_SANS_FALLBACK =
-  '"IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  '"Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 // Windows-optimized sans fallback stack
 const WINDOWS_SANS_FALLBACK =
-  '"IBM Plex Sans Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
+  '"Geist Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
 
 function stripWrappingQuotes(value: string): string {
   const trimmed = value.trim();

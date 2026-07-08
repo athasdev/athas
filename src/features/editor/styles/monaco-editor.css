@@ -176,7 +176,7 @@
   );
   color: var(--color-text, var(--text, #faf9f5));
   display: none !important;
-  font: 12px/1.45 var(--font-mono, "JetBrains Mono Variable", monospace);
+  font: 12px/1.45 var(--font-mono, "Geist Mono", monospace);
   pointer-events: none;
 }
 
