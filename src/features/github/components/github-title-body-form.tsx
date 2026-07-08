@@ -1,6 +1,7 @@
 import { CheckIcon as Check, XIcon as X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
+import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import Textarea from "@/ui/textarea";
 
@@ -36,24 +37,25 @@ export function GitHubTitleBodyForm({
 
   return (
     <form
-      className="w-full space-y-2 rounded-md border border-border/70 bg-secondary-bg/25 p-2"
+      className="w-full space-y-2 rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/25 p-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (!canSubmit) return;
         onSubmit({ title: draftTitle.trim(), body: draftBody });
       }}
     >
-      <input
+      <Input
         value={draftTitle}
         onChange={(event) => setDraftTitle(event.target.value)}
         placeholder={titlePlaceholder}
-        className="ui-font h-8 w-full min-w-0 rounded-md border border-border bg-primary-bg px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+        size="sm"
+        className="bg-primary-bg"
       />
       <Textarea
         value={draftBody}
         onChange={(event) => setDraftBody(event.target.value)}
         placeholder={bodyPlaceholder}
-        className="min-h-44 resize-y rounded-md bg-primary-bg"
+        className="min-h-44 resize-y bg-primary-bg"
       />
       <div className="flex items-center justify-end gap-1.5">
         <Button type="button" variant="ghost" compact onClick={onCancel} disabled={isSubmitting}>

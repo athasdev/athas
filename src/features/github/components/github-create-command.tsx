@@ -20,6 +20,9 @@ import Command, {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { Button } from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
+import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import Textarea from "@/ui/textarea";
 import { toast } from "@/ui/toast";
@@ -515,7 +518,7 @@ ${statusSummary}`;
               </>
             ) : (
               <>
-                <input
+                <Input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   onKeyDown={(event) => {
@@ -525,7 +528,7 @@ ${statusSummary}`;
                     }
                   }}
                   placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
-                  className="ui-font h-8 w-full min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-base text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+                  size="md"
                 />
                 {kind === "pull-request" ? (
                   <div className="grid grid-cols-2 gap-2">
@@ -545,7 +548,8 @@ ${statusSummary}`;
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
                   placeholder="Description"
-                  className="min-h-24 resize-none rounded-md"
+                  size="md"
+                  className="min-h-24 resize-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <FieldButton
@@ -553,20 +557,19 @@ ${statusSummary}`;
                     value={selectedLabelNames.length > 0 ? selectedLabelNames.join(", ") : "None"}
                     onClick={() => setMode("labels")}
                   />
-                  <input
+                  <Input
                     value={assignees}
                     onChange={(event) => setAssignees(event.target.value)}
                     placeholder="Assignees"
-                    className="ui-font h-8 min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-base text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+                    size="md"
                   />
                 </div>
                 {kind === "pull-request" ? (
                   <label className="flex items-center gap-2 px-1 ui-font ui-text-base text-text-lighter">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={draft}
-                      onChange={(event) => setDraft(event.target.checked)}
-                      className="size-3.5 accent-accent"
+                      onChange={setDraft}
+                      ariaLabel="Create as draft pull request"
                     />
                     Draft
                   </label>
@@ -627,15 +630,17 @@ function FieldButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="default"
+      compact
       onClick={onClick}
       className={cn(
-        "flex h-8 min-w-0 items-center gap-2 rounded-md bg-secondary-bg px-2 text-left transition-colors hover:bg-hover",
+        "h-8 min-w-0 justify-start gap-2 bg-secondary-bg px-2 text-left hover:bg-hover",
       )}
     >
       <span className="shrink-0 ui-font ui-text-base text-text-lighter">{label}</span>
       <span className="min-w-0 flex-1 truncate ui-font ui-text-base text-text">{value}</span>
-    </button>
+    </Button>
   );
 }
