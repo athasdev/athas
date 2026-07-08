@@ -12,6 +12,7 @@ import { matchesSearchQuery } from "@/utils/search-match";
 import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
+  chatSettingsSelectorTriggerClassName,
 } from "../input/chat-composer-control-styles";
 
 interface ProviderSelectorProps {
@@ -84,7 +85,7 @@ export function ProviderSelector({
   const triggerClass = cn(
     isComposer
       ? chatComposerControlClassName("max-w-[128px]")
-      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-sm",
+      : chatSettingsSelectorTriggerClassName("w-[220px] gap-2"),
     triggerClassName,
   );
 
@@ -196,7 +197,7 @@ export function ProviderSelector({
         className={cn(
           isComposer
             ? chatComposerDropdownClassName("min-w-0 p-0")
-            : "min-w-0 overflow-hidden rounded-xl p-0",
+            : "min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
         style={{ maxHeight: "260px", minWidth: 0 }}
