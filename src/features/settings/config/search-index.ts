@@ -386,22 +386,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Adjust UI text and icon scale in 0.5px steps",
     keywords: ["font", "size", "ui", "icon", "scale", "typography"],
   },
-  {
-    id: "appearance-sidebar-position",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Position",
-    description: "Choose where to position the sidebar",
-    keywords: ["sidebar", "position", "left", "right", "layout"],
-  },
-  {
-    id: "appearance-sidebar-tabs-position",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Tabs",
-    description: "Show sidebar activity tabs across the top or beside the sidebar",
-    keywords: ["sidebar", "tabs", "activity", "top", "side", "left", "right", "rail", "layout"],
-  },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
         {

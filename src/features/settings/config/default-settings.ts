@@ -23,7 +23,6 @@ export const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
 export const defaultSettings: Settings = {
   // General
   autoSave: false,
-  sidebarPosition: "left",
   quickOpenPreview: true,
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
@@ -63,7 +62,6 @@ export const defaultSettings: Settings = {
   nativeMenuBar: false,
   compactMenuBar: true,
   windowTransparency: true,
-  sidebarTabsPosition: "left",
   titleBarProjectMode: "window",
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],

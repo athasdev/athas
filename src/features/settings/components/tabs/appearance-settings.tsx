@@ -31,8 +31,6 @@ export const AppearanceSettings = () => {
       iconTheme: state.settings.iconTheme,
       nativeMenuBar: state.settings.nativeMenuBar,
       openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
-      sidebarPosition: state.settings.sidebarPosition,
-      sidebarTabsPosition: state.settings.sidebarTabsPosition,
       syncSystemTheme: state.settings.syncSystemTheme,
       theme: state.settings.theme,
       titleBarProjectMode: state.settings.titleBarProjectMode,
@@ -45,17 +43,9 @@ export const AppearanceSettings = () => {
   const registeredThemes = useRegisteredThemes();
   const registeredIconThemes = useRegisteredIconThemes();
 
-  const sidebarOptions = [
-    { value: "left", label: "Left" },
-    { value: "right", label: "Right" },
-  ];
   const titleBarProjectModeOptions = [
     { value: "tabs", label: "Tabs" },
     { value: "window", label: "Window" },
-  ];
-  const sidebarTabsPositionOptions = [
-    { value: "top", label: "Top" },
-    { value: "left", label: "Side" },
   ];
 
   const themeOptions = useMemo(
@@ -309,44 +299,6 @@ export const AppearanceSettings = () => {
       </Section>
 
       <Section title="Layout">
-        <SettingRow
-          label="Sidebar Position"
-          description="Choose where to position the sidebar"
-          onReset={() => updateSetting("sidebarPosition", getDefaultSetting("sidebarPosition"))}
-          canReset={settings.sidebarPosition !== getDefaultSetting("sidebarPosition")}
-        >
-          <Select
-            value={settings.sidebarPosition}
-            options={sidebarOptions}
-            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
-            className={SETTINGS_CONTROL_WIDTHS.compact}
-            size="md"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Sidebar Tabs"
-          description="Show sidebar activity tabs across the top or beside the sidebar"
-          onReset={() =>
-            updateSetting("sidebarTabsPosition", getDefaultSetting("sidebarTabsPosition"))
-          }
-          canReset={settings.sidebarTabsPosition !== getDefaultSetting("sidebarTabsPosition")}
-        >
-          <Select
-            value={settings.sidebarTabsPosition}
-            options={sidebarTabsPositionOptions}
-            onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
-            className={SETTINGS_CONTROL_WIDTHS.compact}
-            size="md"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
         {!IS_MAC && !IS_WINDOWS && !IS_LINUX && (
           <SettingRow
             label="Native Menu Bar"

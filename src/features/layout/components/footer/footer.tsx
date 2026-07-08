@@ -327,7 +327,7 @@ const Footer = () => {
                 active={isOutlineActive}
                 commandId="workbench.focusOutline"
                 onClick={() => {
-                  openSidebarView("outline", { triggerSide: "right" });
+                  openSidebarView("outline");
                 }}
               >
                 <ListBullets weight="duotone" />
@@ -362,7 +362,7 @@ const Footer = () => {
                 tooltip="Collaboration"
                 active={isCollaborationActive}
                 onClick={() => {
-                  openSidebarView("collaboration", { triggerSide: "right" });
+                  openSidebarView("collaboration");
                 }}
               >
                 <UsersThree weight="duotone" />

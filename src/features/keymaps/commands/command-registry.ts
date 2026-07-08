@@ -102,7 +102,6 @@ import {
   toggleMinimap,
   toggleRenderWhitespace,
   toggleSidebar,
-  toggleSidebarPosition,
   toggleSourceControlSidebar,
   toggleTerminalPane,
   toggleWordWrap,
@@ -636,13 +635,6 @@ const viewCommands: Command[] = [
     category: "Debug",
     keybinding: "F9",
     execute: toggleActiveBreakpoint,
-  },
-  {
-    id: "workbench.toggleSidebarPosition",
-    title: "Toggle Sidebar Position",
-    category: "View",
-    keybinding: "cmd+shift+b",
-    execute: toggleSidebarPosition,
   },
   {
     id: "workbench.showThemeSelector",

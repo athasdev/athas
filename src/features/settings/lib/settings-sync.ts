@@ -17,7 +17,6 @@ const SETTINGS_SYNC_PUSH_DEBOUNCE_MS = 1500;
 
 type SyncableSettingsKey =
   | "autoSave"
-  | "sidebarPosition"
   | "quickOpenPreview"
   | "fontFamily"
   | "editorEngine"
@@ -47,7 +46,6 @@ type SyncableSettingsKey =
   | "autoThemeDark"
   | "compactMenuBar"
   | "windowTransparency"
-  | "sidebarTabsPosition"
   | "titleBarProjectMode"
   | "headerTrailingItemsOrder"
   | "sidebarActivityItemsOrder"
@@ -111,7 +109,6 @@ type SyncableSettingsKey =
 
 const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoSave",
-  "sidebarPosition",
   "quickOpenPreview",
   "fontFamily",
   "editorEngine",
@@ -141,7 +138,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeDark",
   "compactMenuBar",
   "windowTransparency",
-  "sidebarTabsPosition",
   "titleBarProjectMode",
   "headerTrailingItemsOrder",
   "sidebarActivityItemsOrder",

@@ -1,17 +1,14 @@
 import { useCallback } from "react";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   getSidebarPaneLevel,
-  resolveSidebarPaneTrigger,
+  resolveSidebarPaneClick,
   type SidebarPaneLevel,
-  type SidebarTriggerSide,
   type SidebarView,
 } from "@/features/layout/utils/sidebar-pane-utils";
 
 interface OpenSidebarViewOptions {
   paneLevel?: SidebarPaneLevel;
-  triggerSide?: SidebarTriggerSide;
 }
 
 export function useSidebarPaneController() {
@@ -25,8 +22,6 @@ export function useSidebarPaneController() {
   const setActiveRightSidebarView = useUIState((state) => state.setActiveRightSidebarView);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const setIsRightSidebarVisible = useUIState((state) => state.setIsRightSidebarVisible);
-  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const openSidebarView = useCallback(
     (view: SidebarView, options: OpenSidebarViewOptions = {}) => {
@@ -38,7 +33,7 @@ export function useSidebarPaneController() {
         return;
       }
 
-      const { nextIsSidebarVisible, nextView, nextPosition } = resolveSidebarPaneTrigger(
+      const { nextIsSidebarVisible, nextView } = resolveSidebarPaneClick(
         {
           isSidebarVisible,
           isGitViewActive,
@@ -46,15 +41,7 @@ export function useSidebarPaneController() {
           activeSidebarView,
         },
         view,
-        {
-          currentPosition: sidebarPosition,
-          triggerSide: options.triggerSide,
-        },
       );
-
-      if (sidebarPosition !== nextPosition) {
-        void updateSetting("sidebarPosition", nextPosition);
-      }
 
       setActiveView(nextView);
       setIsSidebarVisible(nextIsSidebarVisible);
@@ -70,8 +57,6 @@ export function useSidebarPaneController() {
       setActiveRightSidebarView,
       setIsSidebarVisible,
       setIsRightSidebarVisible,
-      sidebarPosition,
-      updateSetting,
     ],
   );
 

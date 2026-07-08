@@ -19,7 +19,6 @@ import { SidebarPanel } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 interface MainSidebarProps {
-  showActivityRail?: boolean;
   paneLevel?: "primary" | "edge";
   activeView?: SidebarView;
   isGitActive?: boolean;
@@ -49,7 +48,7 @@ export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRai
   const { openSidebarView } = useSidebarPaneController();
 
   const handleSidebarViewChange = (view: typeof activeSidebarView) => {
-    openSidebarView(view, { triggerSide: "current" });
+    openSidebarView(view);
   };
 
   return (
@@ -76,13 +75,7 @@ export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRai
 });
 
 export const MainSidebar = memo(
-  ({
-    showActivityRail = true,
-    paneLevel = "primary",
-    activeView,
-    isGitActive,
-    isGitHubPRsActive,
-  }: MainSidebarProps) => {
+  ({ paneLevel = "primary", activeView, isGitActive, isGitHubPRsActive }: MainSidebarProps) => {
     const uiGitViewActive = useUIState((state) => state.isGitViewActive);
     const uiGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
     const uiActiveSidebarView = useUIState((state) => state.activeSidebarView);
@@ -95,15 +88,12 @@ export const MainSidebar = memo(
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
 
     const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
-    const sidebarTabsPosition = useSettingsStore((state) => state.settings.sidebarTabsPosition);
     const hasTeamsCollaborationAccess = useAuthStore(
       (state) => state.subscription?.collaboration?.enabled === true,
     );
     const isCollaborationFeatureEnabled =
       hasTeamsCollaborationAccess && coreFeatures.teamCollaboration;
     const isOutlineFeatureEnabled = coreFeatures.outline;
-    const showLeftSidebarTabs = sidebarTabsPosition === "left";
-    const shouldRenderActivityRail = showActivityRail && showLeftSidebarTabs;
     const activePaneId: SidebarView = isGitViewActive
       ? "git"
       : isGitHubPRsViewActive
@@ -183,15 +173,7 @@ export const MainSidebar = memo(
     })();
     return (
       <div className="flex h-full min-h-0" data-external-file-drop-scope="sidebar">
-        {shouldRenderActivityRail ? <SidebarActivityRail /> : null}
-
-        <SidebarPanel
-          framed={shouldRenderActivityRail}
-          className={cn(
-            "min-w-0 flex-1 overflow-hidden",
-            !shouldRenderActivityRail && "bg-transparent",
-          )}
-        >
+        <SidebarPanel className={cn("min-w-0 flex-1 overflow-hidden bg-transparent")}>
           <div className="h-full min-h-0 overflow-hidden">{activePane?.content ?? null}</div>
         </SidebarPanel>
       </div>

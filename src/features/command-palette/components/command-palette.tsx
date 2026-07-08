@@ -150,7 +150,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
   const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
   const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
-  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
   const syncSystemTheme = useSettingsStore((state) => state.settings.syncSystemTheme);
   const telemetry = useSettingsStore((state) => state.settings.telemetry);
   const theme = useSettingsStore((state) => state.settings.theme);
@@ -207,7 +206,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       showGitHubIssues,
       showGitHubPullRequests,
       showMinimap,
-      sidebarPosition,
       syncSystemTheme,
       telemetry,
       theme,
@@ -235,7 +233,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       showGitHubIssues,
       showGitHubPullRequests,
       showMinimap,
-      sidebarPosition,
       syncSystemTheme,
       telemetry,
       theme,
@@ -266,7 +263,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setIsFindVisible,
       settings: {
         isAIChatVisible: commandSettings.isAIChatVisible,
-        sidebarPosition: commandSettings.sidebarPosition,
         nativeMenuBar: commandSettings.nativeMenuBar,
         compactMenuBar: commandSettings.compactMenuBar,
         webViewerEnabled: commandSettings.coreFeatures.webViewer,

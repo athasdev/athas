@@ -1,6 +1,5 @@
 import {
   WarningCircleIcon as AlertCircle,
-  ArrowsLeftRightIcon as ArrowLeftRight,
   GlobeHemisphereWestIcon as Globe,
   ListIcon as Menu,
   ChatCircleTextIcon as MessageSquare,
@@ -30,7 +29,6 @@ interface ViewActionsParams {
   setIsFindVisible: (v: boolean) => void;
   settings: {
     isAIChatVisible: boolean;
-    sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
     webViewerEnabled: boolean;
@@ -140,21 +138,6 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
       commandId: "workbench.showFind",
       action: () => {
         setIsFindVisible(!isFindVisible);
-        onClose();
-      },
-    },
-    {
-      id: "toggle-sidebar-position",
-      label: "View: Switch Sidebar Position",
-      description:
-        settings.sidebarPosition === "left"
-          ? "Move sidebar to right side"
-          : "Move sidebar to left side",
-      icon: <ArrowLeftRight />,
-      category: "View",
-      commandId: "workbench.toggleSidebarPosition",
-      action: () => {
-        updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
         onClose();
       },
     },

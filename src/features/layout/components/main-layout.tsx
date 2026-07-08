@@ -96,8 +96,6 @@ export function MainLayout() {
     (state) => state.setIsDatabaseConnectionVisible,
   );
   const showInlineAiChat = useSettingsStore((state) => state.settings.isAIChatVisible);
-  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
-  const sidebarTabsPosition = useSettingsStore((state) => state.settings.sidebarTabsPosition);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
@@ -145,8 +143,6 @@ export function MainLayout() {
   });
 
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
-  const showLeftSidebarTabs = sidebarTabsPosition === "left";
-
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => setDeferredSurfacesReady(true), 0);
@@ -307,19 +303,15 @@ export function MainLayout() {
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
-          {sidebarPosition === "left" ? (
-            <>
-              {showLeftSidebarTabs ? <SidebarActivityRail compact={!isSidebarVisible} /> : null}
-              <ResizablePane
-                position="left"
-                widthKey="sidebarWidth"
-                hidden={!isSidebarVisible}
-                edgePadding={!showLeftSidebarTabs}
-              >
-                <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
-              </ResizablePane>
-            </>
-          ) : null}
+          <SidebarActivityRail compact={!isSidebarVisible} />
+          <ResizablePane
+            position="left"
+            widthKey="sidebarWidth"
+            hidden={!isSidebarVisible}
+            edgePadding={false}
+          >
+            <MainSidebar paneLevel="primary" />
+          </ResizablePane>
 
           {/* Main content area with split view */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
@@ -347,23 +339,8 @@ export function MainLayout() {
             </ResizablePane>
           ) : null}
 
-          {sidebarPosition === "right" ? (
-            <>
-              <ResizablePane
-                position="right"
-                widthKey="sidebarWidth"
-                hidden={!isSidebarVisible}
-                edgePadding={!showLeftSidebarTabs}
-              >
-                <MainSidebar showActivityRail={!showLeftSidebarTabs} paneLevel="primary" />
-              </ResizablePane>
-              {showLeftSidebarTabs ? <SidebarActivityRail compact={!isSidebarVisible} /> : null}
-            </>
-          ) : null}
-
           <ResizablePane position="right" widthKey="sidebarWidth" hidden={!isRightSidebarVisible}>
             <MainSidebar
-              showActivityRail={false}
               paneLevel="edge"
               activeView={activeRightSidebarView}
               isGitActive={false}

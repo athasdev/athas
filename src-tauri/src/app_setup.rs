@@ -185,7 +185,6 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_source_control" => Some("workbench.showSourceControl"),
       "command_github" => Some("workbench.showGitHub"),
       "command_debugger" => Some("workbench.showDebugger"),
-      "command_toggle_sidebar_position" => Some("workbench.toggleSidebarPosition"),
       "command_toggle_minimap" => Some("workbench.toggleMinimap"),
       "command_toggle_word_wrap" => Some("editor.toggleWordWrap"),
       "command_toggle_line_numbers" => Some("editor.toggleLineNumbers"),

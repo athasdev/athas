@@ -300,9 +300,6 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenubarItem onClick={() => handleCommand("editor.toggleRenderWhitespace")}>
             Toggle Render Whitespace
           </MenubarItem>
-          <MenubarItem onClick={() => handleCommand("workbench.toggleSidebarPosition")}>
-            Toggle Sidebar Position
-          </MenubarItem>
           <MenubarSeparator />
           <MenubarItem shortcut="mod+=" onClick={() => handleCommand("workbench.zoomIn")}>
             Zoom In

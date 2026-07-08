@@ -425,7 +425,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "command_toggle_render_whitespace",
          "Toggle Render Whitespace",
       )
-      .text("command_toggle_sidebar_position", "Toggle Sidebar Position")
       .separator()
       .text("command_zoom_in", "Zoom In")
       .text("command_zoom_out", "Zoom Out")

@@ -116,11 +116,6 @@ export function toggleDockerSidebar(): void {
   }
 }
 
-export function toggleSidebarPosition(): void {
-  const { settings, updateSetting } = useSettingsStore.getState();
-  updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
-}
-
 export function showThemeSelector(): void {
   useUIState.getState().openCommandPaletteView("color-theme");
 }

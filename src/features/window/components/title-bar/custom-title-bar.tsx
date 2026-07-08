@@ -2,23 +2,20 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   ArrowSquareOutIcon as ArrowSquareOut,
   ListIcon as List,
+  SidebarSimpleIcon as SidebarSimple,
   SparkleIcon as Sparkle,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
-import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
-import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import {
   chromeControl,
   chromeControlGroup,
   chromeIcon,
   chromeItemWrapper,
 } from "@/features/layout/components/chrome-control-styles";
-import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -47,24 +44,17 @@ interface CustomTitleBarProps {
 const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const titleBarProjectMode = useSettingsStore((state) => state.settings.titleBarProjectMode);
-  const sidebarTabsPosition = useSettingsStore((state) => state.settings.sidebarTabsPosition);
-  const sidebarPosition = useSettingsStore((state) => state.settings.sidebarPosition);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
-  const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const headerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.headerTrailingItemsOrder,
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const isGitViewActive = useUIState((state) => state.isGitViewActive);
-  const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
-  const activeSidebarView = useUIState((state) => state.activeSidebarView);
+  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
-  const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
-  const { openSidebarView } = useSidebarPaneController();
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -78,7 +68,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
-  const showTopSidebarTabs = sidebarTabsPosition === "top";
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
@@ -124,10 +113,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       cleanup?.();
     };
   }, []);
-
-  const handleSidebarViewChange = (view: SidebarView) => {
-    openSidebarView(view, { triggerSide: "left" });
-  };
 
   const handleTitleBarContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -219,39 +204,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           },
         ]
       : []),
-    { id: "sep-layout", label: "", separator: true, onClick: () => {} },
-    {
-      id: "sidebar-left",
-      label: "Move Sidebar Left",
-      disabled: sidebarPosition === "left",
-      onClick: () => {
-        void updateSetting("sidebarPosition", "left");
-      },
-    },
-    {
-      id: "sidebar-right",
-      label: "Move Sidebar Right",
-      disabled: sidebarPosition === "right",
-      onClick: () => {
-        void updateSetting("sidebarPosition", "right");
-      },
-    },
-    {
-      id: "activity-tabs-top",
-      label: "Show Activity Tabs in Title Bar",
-      disabled: sidebarTabsPosition === "top",
-      onClick: () => {
-        void updateSetting("sidebarTabsPosition", "top");
-      },
-    },
-    {
-      id: "activity-tabs-left",
-      label: "Show Activity Tabs in Sidebar",
-      disabled: sidebarTabsPosition === "left",
-      onClick: () => {
-        void updateSetting("sidebarTabsPosition", "left");
-      },
-    },
   ];
 
   const titleBarContextMenuPortal = createPortal(
@@ -292,6 +244,22 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <WindowMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
       )
     ) : null;
+
+  const sidebarToggle = (
+    <Button
+      type="button"
+      variant="ghost"
+      active={isSidebarVisible}
+      tooltip={isSidebarVisible ? "Collapse Sidebar" : "Open Sidebar"}
+      tooltipSide="bottom"
+      onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+      className={chromeControl()}
+      aria-label={isSidebarVisible ? "Collapse sidebar" : "Open sidebar"}
+      aria-pressed={isSidebarVisible}
+    >
+      <SidebarSimple className={chromeIcon()} weight={isSidebarVisible ? "fill" : "duotone"} />
+    </Button>
+  );
 
   const headerTrailingItems: Array<HeaderItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
@@ -360,17 +328,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         {/* Left side: keep clear of traffic lights */}
         <div className="pointer-events-auto flex h-8 min-w-0 items-center">
           {menuItem}
-          {showTopSidebarTabs ? (
-            <SidebarPaneSelector
-              activeSidebarView={activeSidebarView}
-              isGitViewActive={isGitViewActive}
-              isGitHubPRsViewActive={isGitHubPRsViewActive}
-              coreFeatures={coreFeatures}
-              onViewChange={handleSidebarViewChange}
-              onSearchClick={() => openGlobalSearchBuffer()}
-              compact
-            />
-          ) : null}
+          {sidebarToggle}
         </div>
 
         <TitleBarProjectArea mode={titleBarProjectMode} />
@@ -407,17 +365,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
         <div className="pointer-events-auto">
           <div className="flex items-center gap-1">
             {menuItem}
-            {showTopSidebarTabs ? (
-              <SidebarPaneSelector
-                activeSidebarView={activeSidebarView}
-                isGitViewActive={isGitViewActive}
-                isGitHubPRsViewActive={isGitHubPRsViewActive}
-                coreFeatures={coreFeatures}
-                onViewChange={handleSidebarViewChange}
-                onSearchClick={() => openGlobalSearchBuffer()}
-                compact
-              />
-            ) : null}
+            {sidebarToggle}
           </div>
         </div>
       </div>

@@ -28,7 +28,6 @@ export type SettingsSection =
 export interface Settings {
   // General
   autoSave: boolean;
-  sidebarPosition: "left" | "right";
   quickOpenPreview: boolean;
   // Editor
   fontFamily: string;
@@ -68,7 +67,6 @@ export interface Settings {
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   windowTransparency: boolean;
-  sidebarTabsPosition: "top" | "left";
   titleBarProjectMode: "tabs" | "window";
   headerTrailingItemsOrder: HeaderTrailingItemId[];
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
