@@ -70,7 +70,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
       onClick={canOpenCommit ? () => void openCommit() : undefined}
       onKeyDown={handleKeyDown}
       className={cn(
-        "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+        "flex w-full min-w-0 items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 transition-colors",
         canOpenCommit &&
           "cursor-pointer hover:bg-hover/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
       )}
@@ -79,7 +79,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
       <GitHubAvatar login={avatarLogin} name={authorName} size={32} className="size-5" />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <code className="ui-text-sm shrink-0 rounded bg-primary-bg px-1.5 py-0.5 editor-font text-text-lighter">
+          <code className="ui-text-sm shrink-0 rounded-[var(--app-radius-control-sm)] bg-primary-bg px-1.5 py-0.5 editor-font text-text-lighter">
             {shortSha}
           </code>
           <p className="ui-text-sm min-w-0 truncate font-medium text-text">
@@ -103,7 +103,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
             }}
             variant="ghost"
             compact
-            className="rounded text-text-lighter"
+            className="text-text-lighter"
             aria-label="Copy commit SHA"
           >
             <Copy />
@@ -118,7 +118,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
               }}
               variant="ghost"
               compact
-              className="rounded text-text-lighter"
+              className="text-text-lighter"
               aria-label="Open commit in browser"
             >
               <GithubLogo />

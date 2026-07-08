@@ -43,7 +43,7 @@ export const FileDiffView = memo(
     const tokenMap = usePRDiffHighlighting(isExpanded ? fileLines : [], file.path);
 
     return (
-      <div className="min-w-0 overflow-hidden rounded-md border border-border/70 bg-primary-bg">
+      <div className="min-w-0 overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg">
         {isStatic ? (
           <div className="flex items-center gap-2 px-2.5 py-2">
             <FileText className="shrink-0 text-text-lighter" />
