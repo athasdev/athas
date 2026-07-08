@@ -24,7 +24,6 @@ import GitCommandSurface from "./git-command-surface";
 
 interface GitProjectSelectorProps {
   className?: string;
-  triggerClassName?: string;
   onRepositoryChange?: (repoPath: string | null) => void;
 }
 
@@ -48,11 +47,7 @@ function getFilteredRepositoryPaths(
   });
 }
 
-const GitProjectSelector = ({
-  className,
-  triggerClassName,
-  onRepositoryChange,
-}: GitProjectSelectorProps) => {
+const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelectorProps) => {
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
@@ -135,7 +130,6 @@ const GitProjectSelector = ({
           compact
           className={cn(
             "h-7 w-fit max-w-full min-w-0 justify-start gap-1.5 px-2.5 text-left text-accent/80 hover:text-accent focus-visible:text-accent",
-            triggerClassName,
           )}
           aria-haspopup="dialog"
           aria-expanded={isOpen}

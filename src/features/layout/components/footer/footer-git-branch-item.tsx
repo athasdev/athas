@@ -6,7 +6,6 @@ import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open
 import type { FooterLeadingItemId } from "@/features/layout/config/item-order";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FooterItem } from "./footer-items";
-import { footerControlClassName } from "./footer-tab-control";
 
 export function useFooterGitBranchItem(): FooterItem<FooterLeadingItemId> | null {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
@@ -33,7 +32,7 @@ export function useFooterGitBranchItem(): FooterItem<FooterLeadingItemId> | null
         currentBranch={footerBranch}
         repoPath={footerRepoPath}
         paletteTarget
-        triggerClassName={footerControlClassName()}
+        triggerSurface="footer"
         onBranchChange={async () => {
           const status = await getGitStatus(footerRepoPath);
           actions.setWorkspaceGitStatus(status, footerRepoPath);

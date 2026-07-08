@@ -206,7 +206,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             <img
               src={convertFileSrc(tab.customIcon)}
               alt=""
-              className="shrink-0 rounded-sm object-contain"
+              className="shrink-0 rounded-[var(--app-radius-control-sm)] object-contain"
               style={{
                 width: "var(--app-ui-font-size)",
                 height: "var(--app-ui-font-size)",
