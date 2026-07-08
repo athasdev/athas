@@ -130,7 +130,7 @@ export function DebugWatchPanel({
             return (
               <div
                 key={watchExpression.id}
-                className="group rounded-md border border-border/60 bg-secondary-bg/40 px-2 py-1.5"
+                className="group rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/40 px-2 py-1.5"
               >
                 <div className="flex items-start gap-2">
                   <button

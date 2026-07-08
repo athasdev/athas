@@ -350,7 +350,7 @@ export default function DebuggerView() {
                   size="sm"
                 />
               ) : (
-                <div className="ui-font min-h-8 truncate rounded-md border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
+                <div className="ui-font min-h-8 truncate rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}
@@ -417,7 +417,7 @@ export default function DebuggerView() {
             </div>
 
             {startError ? (
-              <div className="ui-font rounded-md border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
+              <div className="ui-font rounded-[var(--app-radius-control)] border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
                 {startError}
               </div>
             ) : null}
