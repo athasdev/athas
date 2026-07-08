@@ -19,6 +19,7 @@ import {
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -36,7 +37,6 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
-import { Button } from "@/ui/button";
 import {
   SidebarHeaderIconButton,
   SidebarListItem,
@@ -87,9 +87,6 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
   const projectPath = activeProject?.path || rootFolderPath;
   const customIcon = activeProject?.customIcon;
   const isRemote = isRemoteProjectPath(projectPath);
-  const rowClassName = expanded
-    ? "h-9 w-full max-w-none justify-start gap-2.5 px-3 text-text"
-    : "h-9 w-9 rounded-[var(--app-radius-control)] px-0";
 
   const icon = customIcon ? (
     <img
@@ -105,24 +102,28 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
     <Plus className="size-4" weight="duotone" />
   );
 
+  if (!expanded) {
+    return (
+      <SidebarHeaderIconButton
+        tooltip={projectName}
+        tooltipSide="right"
+        aria-label="Switch project"
+        onClick={() => setIsProjectPickerVisible(true)}
+      >
+        {icon}
+      </SidebarHeaderIconButton>
+    );
+  }
+
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      tooltip={expanded ? undefined : projectName}
-      tooltipSide="right"
+    <SidebarListItem
+      leading={icon}
+      trailing={<CaretUpDown className="size-3.5" weight="bold" />}
       onClick={() => setIsProjectPickerVisible(true)}
-      className={cn(rowClassName)}
       aria-label="Switch project"
     >
-      {icon}
-      {expanded ? (
-        <>
-          <span className="min-w-0 flex-1 truncate text-left">{projectName}</span>
-          <CaretUpDown className="size-3.5 shrink-0 text-text-lighter" weight="bold" />
-        </>
-      ) : null}
-    </Button>
+      {projectName}
+    </SidebarListItem>
   );
 }
 
@@ -194,7 +195,7 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
         <SidebarListItem
           key={chat.id}
           active={chat.id === currentChatId}
-          description={(chat.agentId || "custom").replace(/-/g, " ")}
+          leading={<ProviderIcon providerId={chat.agentId || "custom"} size={14} />}
           trailing={getRelativeTime(chat.lastMessageAt)}
           onClick={() => handleOpenChat(chat.id)}
         >

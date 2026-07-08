@@ -17,6 +17,7 @@ import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
+import { SidebarHeaderIconButton, SidebarListItem } from "@/ui/sidebar";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { SidebarView } from "../../utils/sidebar-pane-utils";
@@ -64,13 +65,8 @@ export const SidebarPaneSelector = ({
   const tooltipSide = isVertical ? "right" : "bottom";
   const iconClassName = compact || isVertical ? "size-4" : undefined;
   const tabClassName = compact
-    ? cn(chromeControl({ shape: "sidebar" }), "size-9")
-    : isVertical
-      ? cn(
-          chromeControl({ shape: showLabels ? "pill" : "sidebar" }),
-          showLabels ? "h-9 w-full justify-start gap-2.5 px-3" : undefined,
-        )
-      : chromeControl({ shape: "tab" });
+    ? chromeControl({ shape: "sidebar" })
+    : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
@@ -231,6 +227,46 @@ export const SidebarPaneSelector = ({
 
   const orderedItems = orderItems(items, orderedIds);
 
+  if (isVertical && showLabels) {
+    return (
+      <>
+        {orderedItems.map((item) => (
+          <SidebarListItem
+            key={item.id}
+            active={!!item.isActive}
+            leading={item.icon}
+            onClick={item.onClick}
+            aria-label={item.ariaLabel}
+            aria-current={item.isActive ? "page" : undefined}
+          >
+            {item.label ?? item.tooltip?.content ?? item.ariaLabel ?? item.id}
+          </SidebarListItem>
+        ))}
+      </>
+    );
+  }
+
+  if (isVertical && compact) {
+    return (
+      <>
+        {orderedItems.map((item) => (
+          <SidebarHeaderIconButton
+            key={item.id}
+            active={!!item.isActive}
+            tooltip={item.tooltip?.content ?? item.ariaLabel ?? item.id}
+            shortcut={item.tooltip?.shortcut}
+            tooltipSide={tooltipSide}
+            aria-label={item.ariaLabel}
+            aria-current={item.isActive ? "page" : undefined}
+            onClick={item.onClick}
+          >
+            {item.icon}
+          </SidebarHeaderIconButton>
+        ))}
+      </>
+    );
+  }
+
   const renderedItems = orderedItems.map((item) => {
     const tabNode = (
       <Tab
@@ -242,7 +278,7 @@ export const SidebarPaneSelector = ({
         isActive={!!item.isActive}
         size={compact ? "xs" : "sm"}
         variant="default"
-        labelPosition={showLabels ? "start" : "center"}
+        labelPosition="center"
         className={item.className}
         onClick={item.onClick}
       >
