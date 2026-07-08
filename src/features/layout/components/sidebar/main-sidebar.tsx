@@ -4,6 +4,7 @@ import {
   FolderIcon as Folder,
   HardDrivesIcon as HardDrives,
   PlusIcon as Plus,
+  SparkleIcon as Sparkles,
 } from "@phosphor-icons/react";
 import {
   memo,
@@ -55,7 +56,6 @@ const COLLAPSED_ACTIVITY_RAIL_WIDTH = 56;
 const DEFAULT_ACTIVITY_RAIL_WIDTH = 180;
 const MIN_ACTIVITY_RAIL_WIDTH = 140;
 const MAX_ACTIVITY_RAIL_WIDTH = 320;
-const ACTIVITY_RAIL_COLLAPSED_PADDING_X = 8;
 const ACTIVITY_RAIL_EXPANDED_PADDING_X = 12;
 
 const clampActivityRailWidth = (width: number) =>
@@ -117,13 +117,39 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
   );
 }
 
+function SidebarNewAgentButton({ expanded }: { expanded: boolean }) {
+  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
+  const rowClassName = expanded
+    ? "h-9 w-full max-w-none justify-start gap-2.5 px-3 text-text-lighter"
+    : "h-9 w-9 rounded-[var(--app-radius-control)] px-0";
+
+  return (
+    <div className={cn("w-full", expanded ? "mt-2" : "mt-1")}>
+      {expanded ? (
+        <div className="ui-text-xs mb-1 px-3 font-medium text-text-lighter/75">Agents</div>
+      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        tooltip={expanded ? undefined : "New Agent"}
+        tooltipSide="right"
+        onClick={() => openAgentBuffer()}
+        className={cn(rowClassName)}
+        aria-label="New Agent"
+      >
+        <Sparkles className="size-4" weight="duotone" />
+        {expanded ? <span className="min-w-0 flex-1 truncate text-left">New Agent</span> : null}
+      </Button>
+    </div>
+  );
+}
+
 export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRailProps) => {
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
-  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const configuredActivityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [activityRailWidth, setActivityRailWidth] = useState(() =>
@@ -135,10 +161,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions";
-  });
-  const isAgentBufferActive = useBufferStore((state) => {
-    const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
-    return activeBuffer?.type === "agent";
   });
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const { openSidebarView } = useSidebarPaneController();
@@ -232,47 +254,49 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
   return (
     <div
-      ref={railRef}
-      className={cn(
-        "athas-sidebar-rail relative flex shrink-0 flex-col items-start pb-2",
-        expanded ? "gap-1.5 pt-2" : "gap-1 pt-2",
-      )}
-      style={{
-        width: expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH,
-        paddingLeft: expanded
-          ? ACTIVITY_RAIL_EXPANDED_PADDING_X
-          : ACTIVITY_RAIL_COLLAPSED_PADDING_X,
-        paddingRight: expanded
-          ? ACTIVITY_RAIL_EXPANDED_PADDING_X
-          : ACTIVITY_RAIL_COLLAPSED_PADDING_X,
-      }}
+      className="relative z-30 h-full shrink-0 overflow-visible"
+      style={{ width: COLLAPSED_ACTIVITY_RAIL_WIDTH }}
     >
-      <SidebarProjectSwitcher expanded={expanded} />
-      <div className={cn("h-px shrink-0 bg-border/55", expanded ? "w-full" : "mx-auto w-8")} />
-      <SidebarPaneSelector
-        activeSidebarView={activeSidebarView}
-        isGitViewActive={isGitViewActive}
-        isGitHubPRsViewActive={isGitHubPRsViewActive}
-        coreFeatures={coreFeatures}
-        onViewChange={handleSidebarViewChange}
-        onSearchClick={() => openGlobalSearchBuffer()}
-        onAgentsClick={() => openAgentBuffer()}
-        onExtensionsClick={() => openExtensionsBuffer()}
-        isAgentsActive={isAgentBufferActive}
-        isExtensionsActive={isExtensionsBufferActive}
-        compact={!expanded}
-        showLabels={expanded}
-        orientation="vertical"
-      />
-      {expanded ? (
-        <div
-          role="separator"
-          aria-label="Resize activity rail"
-          aria-orientation="vertical"
-          className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize"
-          onMouseDown={handleResizeMouseDown}
+      <div
+        ref={railRef}
+        className={cn(
+          "athas-sidebar-rail flex h-full flex-col pb-2 pt-2",
+          "bg-secondary-bg/95 backdrop-blur-xl",
+          expanded
+            ? "absolute top-0 left-0 z-30 items-start gap-1.5 shadow-[8px_0_24px_rgba(0,0,0,0.08)]"
+            : "relative items-center gap-1.5",
+        )}
+        style={{
+          width: expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH,
+          paddingLeft: expanded ? ACTIVITY_RAIL_EXPANDED_PADDING_X : 0,
+          paddingRight: expanded ? ACTIVITY_RAIL_EXPANDED_PADDING_X : 0,
+        }}
+      >
+        <SidebarProjectSwitcher expanded={expanded} />
+        <SidebarPaneSelector
+          activeSidebarView={activeSidebarView}
+          isGitViewActive={isGitViewActive}
+          isGitHubPRsViewActive={isGitHubPRsViewActive}
+          coreFeatures={coreFeatures}
+          onViewChange={handleSidebarViewChange}
+          onSearchClick={() => openGlobalSearchBuffer()}
+          onExtensionsClick={() => openExtensionsBuffer()}
+          isExtensionsActive={isExtensionsBufferActive}
+          compact={!expanded}
+          showLabels={expanded}
+          orientation="vertical"
         />
-      ) : null}
+        <SidebarNewAgentButton expanded={expanded} />
+        {expanded ? (
+          <div
+            role="separator"
+            aria-label="Resize activity rail"
+            aria-orientation="vertical"
+            className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize"
+            onMouseDown={handleResizeMouseDown}
+          />
+        ) : null}
+      </div>
     </div>
   );
 });
