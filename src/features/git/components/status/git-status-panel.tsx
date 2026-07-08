@@ -14,6 +14,7 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
+import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import { ContextMenu, useContextMenu } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
@@ -495,9 +496,11 @@ const GitStatusPanel = ({
   );
 
   const renderSectionHeader = (section: StatusSection, title: string) => (
-    <button
+    <Button
       type="button"
-      className="ui-text-sm mt-2 flex w-full min-w-0 items-center justify-between gap-2 rounded-[var(--app-radius-menu-item)] px-2.5 py-1 text-left text-text-lighter transition-colors hover:bg-hover"
+      variant="ghost"
+      compact
+      className="ui-text-sm mt-2 h-auto w-full min-w-0 justify-between gap-2 px-2.5 py-1 text-left text-text-lighter"
       onClick={() => toggleSectionCollapsed(section)}
       aria-expanded={!collapsedSections.has(section)}
     >
@@ -509,7 +512,7 @@ const GitStatusPanel = ({
           <CaretDown className="size-3 text-text-lighter" />
         )}
       </span>
-    </button>
+    </Button>
   );
 
   const renderFolderTree = (rootNode: GitFolderNode, section: "changes") => {

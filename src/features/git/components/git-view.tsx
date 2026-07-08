@@ -90,6 +90,9 @@ const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: str
   fetch: { present: "Fetching", past: "Fetched" },
 };
 
+const gitEmptyActionButtonClassName =
+  "h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-base hover:bg-hover hover:text-text";
+
 type GitPaletteAction =
   | { type: "select-repository" }
   | { type: "show-tab"; tab: GitSidebarTab }
@@ -1136,7 +1139,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         disabled={!canInitializeRepository || isInitializingRepo}
         variant="ghost"
         compact
-        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-base hover:bg-hover hover:text-text"
+        className={gitEmptyActionButtonClassName}
         tooltip={
           canInitializeRepository
             ? "Initialize Git repository"
@@ -1155,7 +1158,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
         type="button"
         variant="ghost"
         compact
-        className="h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-base hover:bg-hover hover:text-text"
+        className={gitEmptyActionButtonClassName}
         disabled={isSelectingRepo}
         onClick={() => void handleSelectRepository()}
       >
