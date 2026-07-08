@@ -8,6 +8,7 @@ import type {
   LanguageContribution,
   Snippet,
   SnippetContribution,
+  ThemeContribution,
 } from "./extension-manifest";
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string): T[] {
@@ -91,6 +92,10 @@ export function getManifestAIProviderContributions(
   manifest: ExtensionManifest,
 ): AIProviderContribution[] {
   return [...(manifest.aiProviders || []), ...(manifest.contributes?.aiProviders || [])];
+}
+
+export function getManifestThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
+  return [...(manifest.themes || []), ...(manifest.contributes?.themes || [])];
 }
 
 export function getManifestIconContributions(manifest: ExtensionManifest): IconThemeContribution[] {

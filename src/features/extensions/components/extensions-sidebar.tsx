@@ -37,6 +37,7 @@ import {
   getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
+  getManifestThemeContributions,
 } from "@/extensions/types/extension-contributions";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
 import {
@@ -51,7 +52,7 @@ import {
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -81,7 +82,14 @@ interface UnifiedExtension {
   packageSize?: number;
   contributionSummary?: string[];
   selectionId?: string;
+  appearanceOptions?: AppearanceOption[];
   isActive?: boolean;
+}
+
+interface AppearanceOption {
+  id: string;
+  name: string;
+  description?: string;
 }
 
 const FILTER_TABS = [
@@ -157,7 +165,7 @@ function getPrimaryActionLabel(extension: UnifiedExtension): string {
   if (isAppearanceExtension(extension)) {
     if (extension.isInstalled) {
       if (!extension.isEnabled) return "Activate";
-      return extension.isActive ? "Active" : "Use";
+      return extension.isActive ? "Current" : "Use";
     }
 
     return "Install";
@@ -178,20 +186,24 @@ function isAppearanceExtension(extension: UnifiedExtension): boolean {
   return extension.category === "theme" || extension.category === "icon-theme";
 }
 
-function getAppearanceDefaultSelectionId(extension: UnifiedExtension): string | null {
-  if (extension.category === "theme") return getDefaultSetting("theme");
-  if (extension.category === "icon-theme") return getDefaultSetting("iconTheme");
+function getAppearanceSettingKey(extension: UnifiedExtension): "theme" | "iconTheme" | null {
+  if (extension.category === "theme") return "theme";
+  if (extension.category === "icon-theme") return "iconTheme";
   return null;
 }
 
+function getAppearanceOptionLabel(extension: UnifiedExtension, optionId: string): string {
+  return (
+    extension.appearanceOptions?.find((option) => option.id === optionId)?.name ?? extension.name
+  );
+}
+
 function canDeactivateAppearanceExtension(extension: UnifiedExtension): boolean {
-  const defaultSelectionId = getAppearanceDefaultSelectionId(extension);
   return Boolean(
     isAppearanceExtension(extension) &&
-    extension.isActive &&
-    extension.selectionId &&
-    defaultSelectionId &&
-    extension.selectionId !== defaultSelectionId,
+    extension.isInstalled &&
+    extension.isEnabled &&
+    !extension.isBundled,
   );
 }
 
@@ -219,6 +231,7 @@ function getCategoryIcon(category: UnifiedExtension["category"]): ReactNode {
 const ExtensionRow = ({
   extension,
   onToggle,
+  onDeactivate,
   onResetOverride,
   onUpdate,
   onContextMenu,
@@ -232,6 +245,7 @@ const ExtensionRow = ({
 }: {
   extension: UnifiedExtension;
   onToggle: () => void;
+  onDeactivate?: () => void;
   onResetOverride?: () => void;
   onUpdate?: () => void;
   onContextMenu: (event: MouseEvent<HTMLDivElement>, extension: UnifiedExtension) => void;
@@ -264,44 +278,60 @@ const ExtensionRow = ({
       <XCircle className="size-4" weight="duotone" />
     </Button>
   ) : isAppearance && extension.isInstalled ? (
-    !extension.isEnabled ? (
-      <Button
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggle();
-        }}
-        variant="accent"
-        tooltip={primaryActionLabel}
-        compact
-        className="h-8 px-2.5"
-      >
-        <Check className="size-4" weight="bold" />
-        Activate
-      </Button>
-    ) : extension.isActive ? (
-      <Badge
-        variant="accent"
-        size="default"
-        className="h-8 gap-1 border-accent/25 bg-accent/10 px-2"
-      >
-        <Check className="size-3.5" weight="bold" />
-        Active
-      </Badge>
-    ) : (
-      <Button
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggle();
-        }}
-        variant="accent"
-        tooltip={primaryActionLabel}
-        compact
-        className="h-8 px-2.5"
-      >
-        <Check className="size-4" weight="bold" />
-        Use
-      </Button>
-    )
+    <div className="flex shrink-0 items-center gap-1">
+      {!extension.isEnabled ? (
+        <Button
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
+          variant="accent"
+          tooltip={primaryActionLabel}
+          compact
+          className="h-8 px-2.5"
+        >
+          <Check className="size-4" weight="bold" />
+          Activate
+        </Button>
+      ) : extension.isActive ? (
+        <Badge
+          variant="accent"
+          size="default"
+          className="h-8 gap-1 border-accent/25 bg-accent/10 px-2"
+        >
+          <Check className="size-3.5" weight="bold" />
+          Current
+        </Badge>
+      ) : (
+        <Button
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
+          variant="accent"
+          tooltip={primaryActionLabel}
+          compact
+          className="h-8 px-2.5"
+        >
+          <Check className="size-4" weight="bold" />
+          Use
+        </Button>
+      )}
+      {extension.isEnabled ? (
+        <Button
+          onClick={(event) => {
+            event.stopPropagation();
+            onDeactivate?.();
+          }}
+          variant="default"
+          tooltip="Deactivate"
+          compact
+          className="h-8 w-8 min-w-0 p-0"
+        >
+          <XCircle className="size-4" weight="duotone" />
+        </Button>
+      ) : null}
+    </div>
   ) : extension.isInstalled && extension.category !== "agent" && extension.category !== "skill" ? (
     <Button
       onClick={(event) => {
@@ -638,8 +668,9 @@ export const ExtensionsSidebar = () => {
         });
       }
 
-      if (ext.manifest.themes && ext.manifest.themes.length > 0) {
-        const themeIds = ext.manifest.themes.map((theme) => theme.id);
+      const themeContributions = getManifestThemeContributions(ext.manifest);
+      if (themeContributions.length > 0) {
+        const themeIds = themeContributions.map((theme) => theme.id);
         const activeThemeId = themeIds.find((themeId) => themeId === settings.theme);
         const themeId = activeThemeId ?? themeIds[0] ?? ext.manifest.id;
         allExtensions.push({
@@ -657,7 +688,12 @@ export const ExtensionsSidebar = () => {
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
           selectionId: themeId,
-          contributionSummary: ext.manifest.themes.map((theme) => `theme:${theme.id}`),
+          appearanceOptions: themeContributions.map((theme) => ({
+            id: theme.id,
+            name: theme.name,
+            description: theme.description,
+          })),
+          contributionSummary: themeContributions.map((theme) => `theme:${theme.id}`),
         });
       }
 
@@ -681,6 +717,11 @@ export const ExtensionsSidebar = () => {
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
           selectionId: iconThemeId,
+          appearanceOptions: iconContributions.map((theme) => ({
+            id: theme.id,
+            name: theme.name,
+            description: theme.description,
+          })),
           contributionSummary: iconContributions.map((theme) => `icon:${theme.id}`),
         });
       }
@@ -720,6 +761,13 @@ export const ExtensionsSidebar = () => {
         isActive: settings.theme === theme.id,
         version: "1.0.0",
         selectionId: theme.id,
+        appearanceOptions: [
+          {
+            id: theme.id,
+            name: theme.name,
+            description: theme.description,
+          },
+        ],
       });
     });
 
@@ -738,6 +786,13 @@ export const ExtensionsSidebar = () => {
         isActive: settings.iconTheme === iconTheme.id,
         version: "1.0.0",
         selectionId: iconTheme.id,
+        appearanceOptions: [
+          {
+            id: iconTheme.id,
+            name: iconTheme.name,
+            description: iconTheme.description,
+          },
+        ],
       });
     });
 
@@ -912,6 +967,81 @@ export const ExtensionsSidebar = () => {
     }
   };
 
+  const handleUseAppearance = async (extension: UnifiedExtension, selectionId?: string) => {
+    const settingKey = getAppearanceSettingKey(extension);
+    if (!settingKey || !extension.isInstalled) {
+      return;
+    }
+
+    const nextSelectionId = selectionId ?? extension.selectionId ?? extension.id;
+
+    try {
+      if (!extension.isEnabled) {
+        await enableExtension(extension.id);
+      }
+      await updateSetting(settingKey, nextSelectionId);
+      showToast({
+        message: `${getAppearanceOptionLabel(extension, nextSelectionId)} selected`,
+        type: "success",
+        duration: 2500,
+      });
+    } catch (error) {
+      console.error(`Failed to use ${extension.name}:`, error);
+      showToast({
+        message: `Failed to use ${extension.name}: ${getErrorMessage(error)}`,
+        type: "error",
+        duration: 5000,
+      });
+    }
+    setTimeout(() => loadAllExtensions(), 100);
+  };
+
+  const handleActivateExtension = async (extension: UnifiedExtension) => {
+    if (!extension.isInstalled || extension.isEnabled) {
+      return;
+    }
+
+    try {
+      await enableExtension(extension.id);
+      showToast({
+        message: `${extension.name} activated`,
+        type: "success",
+        duration: 2500,
+      });
+    } catch (error) {
+      console.error(`Failed to activate ${extension.name}:`, error);
+      showToast({
+        message: `Failed to activate ${extension.name}: ${getErrorMessage(error)}`,
+        type: "error",
+        duration: 5000,
+      });
+    }
+    setTimeout(() => loadAllExtensions(), 100);
+  };
+
+  const handleDeactivateExtension = async (extension: UnifiedExtension) => {
+    if (!extension.isInstalled || !extension.isEnabled) {
+      return;
+    }
+
+    try {
+      await disableExtension(extension.id);
+      showToast({
+        message: `${extension.name} deactivated`,
+        type: "success",
+        duration: 2500,
+      });
+    } catch (error) {
+      console.error(`Failed to deactivate ${extension.name}:`, error);
+      showToast({
+        message: `Failed to deactivate ${extension.name}: ${getErrorMessage(error)}`,
+        type: "error",
+        duration: 5000,
+      });
+    }
+    setTimeout(() => loadAllExtensions(), 100);
+  };
+
   const handleToggle = async (extension: UnifiedExtension) => {
     if (extension.category === "agent") {
       if (!extension.isInstalled && extension.canInstall === false) {
@@ -1015,34 +1145,16 @@ export const ExtensionsSidebar = () => {
     }
 
     if (isAppearanceExtension(extension) && extension.isInstalled) {
+      if (!extension.isEnabled) {
+        await handleActivateExtension(extension);
+        return;
+      }
+
       if (extension.isActive) {
         return;
       }
 
-      const selectionId = extension.selectionId ?? extension.id;
-      try {
-        if (!extension.isEnabled) {
-          await enableExtension(extension.id);
-        }
-        if (extension.category === "theme") {
-          await updateSetting("theme", selectionId);
-        } else {
-          await updateSetting("iconTheme", selectionId);
-        }
-        showToast({
-          message: `${extension.name} activated`,
-          type: "success",
-          duration: 2500,
-        });
-      } catch (error) {
-        console.error(`Failed to activate ${extension.name}:`, error);
-        showToast({
-          message: `Failed to activate ${extension.name}: ${getErrorMessage(error)}`,
-          type: "error",
-          duration: 5000,
-        });
-      }
-      setTimeout(() => loadAllExtensions(), 100);
+      await handleUseAppearance(extension);
       return;
     }
 
@@ -1120,35 +1232,6 @@ export const ExtensionsSidebar = () => {
         duration: 5000,
       });
     }
-  };
-
-  const handleDeactivateAppearance = async (extension: UnifiedExtension) => {
-    const defaultSelectionId = getAppearanceDefaultSelectionId(extension);
-    if (!defaultSelectionId || !canDeactivateAppearanceExtension(extension)) {
-      return;
-    }
-
-    try {
-      if (extension.category === "theme") {
-        await updateSetting("theme", defaultSelectionId);
-      } else {
-        await updateSetting("iconTheme", defaultSelectionId);
-      }
-      showToast({
-        message: `${extension.name} deactivated`,
-        type: "success",
-        duration: 2500,
-      });
-    } catch (error) {
-      console.error(`Failed to deactivate ${extension.name}:`, error);
-      showToast({
-        message: `Failed to deactivate ${extension.name}: ${getErrorMessage(error)}`,
-        type: "error",
-        duration: 5000,
-      });
-    }
-
-    setTimeout(() => loadAllExtensions(), 100);
   };
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -1262,27 +1345,56 @@ export const ExtensionsSidebar = () => {
             icon: <Check className="size-3.5 text-accent" weight="bold" />,
             disabled: isInstalling,
             onClick: () => {
-              void handleToggle(extension);
+              void handleActivateExtension(extension);
             },
           });
-        } else if (canDeactivateAppearanceExtension(extension)) {
+        } else {
           items.push({
             id: "deactivate",
             label: "Deactivate",
             icon: <XCircle className="size-3.5" weight="duotone" />,
             disabled: isInstalling,
             onClick: () => {
-              void handleDeactivateAppearance(extension);
+              void handleDeactivateExtension(extension);
             },
           });
-        } else {
+        }
+
+        const settingKey = getAppearanceSettingKey(extension);
+        const currentSelection = settingKey ? settings[settingKey] : undefined;
+        const appearanceOptions = extension.appearanceOptions?.length
+          ? extension.appearanceOptions
+          : extension.selectionId
+            ? [{ id: extension.selectionId, name: extension.name }]
+            : [];
+
+        if (appearanceOptions.length > 0) {
+          if (items.length > 0) {
+            items.push({ id: "sep-appearance", label: "", separator: true, onClick: () => {} });
+          }
+
+          for (const option of appearanceOptions) {
+            const isCurrent = currentSelection === option.id;
+            items.push({
+              id: `use-${option.id}`,
+              label: isCurrent ? `Current: ${option.name}` : `Use ${option.name}`,
+              icon: (
+                <Check className="size-3.5 text-accent" weight={isCurrent ? "bold" : "regular"} />
+              ),
+              disabled: isCurrent || isInstalling,
+              onClick: () => {
+                void handleUseAppearance(extension, option.id);
+              },
+            });
+          }
+        } else if (extension.isEnabled) {
           items.push({
             id: extension.isActive ? "active" : "use",
-            label: extension.isActive ? "Active" : "Use",
+            label: extension.isActive ? "Current" : "Use",
             icon: <Check className="size-3.5 text-accent" weight="bold" />,
             disabled: extension.isActive || isInstalling,
             onClick: () => {
-              void handleToggle(extension);
+              void handleUseAppearance(extension);
             },
           });
         }
@@ -1480,6 +1592,7 @@ export const ExtensionsSidebar = () => {
                     selected={selectedExtension?.id === extension.id}
                     onSelect={() => setSelectedExtensionId(extension.id)}
                     onToggle={() => handleToggle(extension)}
+                    onDeactivate={() => handleDeactivateExtension(extension)}
                     onResetOverride={() => handleResetSkillOverride(extension)}
                     onUpdate={() => handleUpdate(extension)}
                     onContextMenu={handleExtensionContextMenu}
@@ -1555,6 +1668,56 @@ export const ExtensionsSidebar = () => {
               {selectedExtension.runtimeIssues?.length ? (
                 <div className="rounded-[var(--app-radius-control)] border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
                   {selectedExtension.runtimeIssues[0]?.message}
+                </div>
+              ) : null}
+
+              {isAppearanceExtension(selectedExtension) &&
+              selectedExtension.appearanceOptions?.length ? (
+                <div className="border-border/70 border-t pt-4">
+                  <div className="mb-2 font-medium text-text ui-text-sm">
+                    {selectedExtension.category === "theme" ? "Themes" : "Icon themes"}
+                  </div>
+                  <div className="space-y-2">
+                    {selectedExtension.appearanceOptions.map((option) => {
+                      const currentSelection =
+                        selectedExtension.category === "theme"
+                          ? settings.theme
+                          : settings.iconTheme;
+                      const isCurrent = currentSelection === option.id;
+
+                      return (
+                        <div
+                          key={option.id}
+                          className="flex min-w-0 items-center gap-3 rounded-[var(--app-radius-control)] border border-border/65 bg-primary-bg px-3 py-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-medium text-text ui-text-sm">
+                              {option.name}
+                            </div>
+                            {option.description ? (
+                              <div className="mt-0.5 line-clamp-1 text-text-lighter ui-text-sm">
+                                {option.description}
+                              </div>
+                            ) : null}
+                          </div>
+                          <Button
+                            variant={isCurrent ? "default" : "accent"}
+                            compact
+                            active={isCurrent}
+                            disabled={!selectedExtension.isInstalled || isCurrent}
+                            onClick={() => void handleUseAppearance(selectedExtension, option.id)}
+                          >
+                            <Check />
+                            {isCurrent
+                              ? "Current"
+                              : selectedExtension.isEnabled
+                                ? "Use"
+                                : "Activate and use"}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : null}
 
@@ -1634,7 +1797,7 @@ export const ExtensionsSidebar = () => {
                   <Button
                     variant="ghost"
                     className="text-text-lighter"
-                    onClick={() => void handleDeactivateAppearance(selectedExtension)}
+                    onClick={() => void handleDeactivateExtension(selectedExtension)}
                   >
                     <XCircle />
                     Deactivate
