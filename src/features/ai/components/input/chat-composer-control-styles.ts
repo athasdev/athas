@@ -22,6 +22,15 @@ export function chatComposerIconButtonClassName(className?: string) {
   );
 }
 
+export function chatMiniIconButtonClassName(className?: string) {
+  return cn(
+    "size-6 rounded-[var(--app-radius-control-sm)] border-transparent bg-transparent p-0 text-text-lighter shadow-none",
+    "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
+    "hover:bg-hover/70 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35",
+    className,
+  );
+}
+
 export function chatComposerDropdownClassName(className?: string) {
   return cn(
     "overflow-hidden rounded-[var(--app-radius-menu)] border-border bg-secondary-bg/95 p-0 shadow-[var(--shadow-popover)] backdrop-blur-sm",
@@ -49,6 +58,14 @@ export function chatComposerDropdownItemClassName(className?: string) {
     "ui-font min-h-8 rounded-[var(--app-radius-menu-item)] px-2.5 py-1.5 text-left ui-text-sm leading-[1.35] text-text",
     "transition-[transform,background-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover focus:outline-none focus:ring-1 focus:ring-border-strong/35",
+    className,
+  );
+}
+
+export function chatFollowUpActionClassName(className?: string) {
+  return cn(
+    "h-7 rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg/70 px-2 text-text-lighter",
+    "hover:border-border-strong hover:bg-hover/70 hover:text-text",
     className,
   );
 }

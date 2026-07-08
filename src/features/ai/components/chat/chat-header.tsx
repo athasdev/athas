@@ -18,6 +18,7 @@ import {
   paneHeaderClassName,
   paneTitleClassName,
 } from "@/features/panes/components/pane-chrome";
+import { chatMiniIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import ChatHistoryDropdown from "../history/sidebar";
@@ -78,7 +79,7 @@ function EditableChatTitle({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className="h-6 rounded-lg border-border/80 bg-primary-bg px-2.5 py-1 ui-text-sm font-medium focus:border-accent/40 focus:bg-hover"
+        className="h-6 border-border/80 bg-primary-bg px-2.5 py-1 ui-text-sm font-medium focus:border-accent/40 focus:bg-hover"
         style={{ minWidth: "100px", maxWidth: "200px" }}
       />
     );
@@ -86,7 +87,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-lg px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-[var(--app-radius-control-sm)] px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename chat"
     >
@@ -186,7 +187,7 @@ export function ChatHeader({
             tooltip="Search messages"
             tooltipSide="bottom"
             aria-label="Search messages"
-            className="size-6 rounded-lg bg-transparent p-0 text-text-lighter shadow-none hover:text-text"
+            className={chatMiniIconButtonClassName()}
           >
             <Search />
           </Button>
@@ -200,7 +201,7 @@ export function ChatHeader({
             tooltip="Chat History"
             tooltipSide="bottom"
             aria-label="Toggle chat history"
-            className="size-6 rounded-lg bg-transparent p-0 text-text-lighter shadow-none hover:text-text"
+            className={chatMiniIconButtonClassName()}
           >
             <History />
           </Button>
@@ -208,7 +209,7 @@ export function ChatHeader({
           <AgentSelector
             variant="header"
             onOpenSettings={() => openSettingsDialog("ai")}
-            triggerClassName="size-6 rounded-lg bg-transparent p-0 text-text-lighter shadow-none hover:text-text"
+            triggerClassName={chatMiniIconButtonClassName()}
           />
         </div>
       </div>
@@ -239,7 +240,7 @@ export function ChatHeader({
             size="xs"
             variant="ghost"
             leftIcon={Search}
-            className="h-7 rounded-lg bg-secondary-bg/45"
+            className="h-7 bg-secondary-bg/45"
           />
 
           <span className="min-w-10 shrink-0 text-right text-text-lighter ui-text-sm">
@@ -254,7 +255,7 @@ export function ChatHeader({
             onClick={onPreviousMessageSearchMatch}
             tooltip="Previous match"
             aria-label="Previous search match"
-            className="size-6 rounded-lg bg-transparent p-0"
+            className={chatMiniIconButtonClassName()}
           >
             <ArrowUp />
           </Button>
@@ -266,7 +267,7 @@ export function ChatHeader({
             onClick={onNextMessageSearchMatch}
             tooltip="Next match"
             aria-label="Next search match"
-            className="size-6 rounded-lg bg-transparent p-0"
+            className={chatMiniIconButtonClassName()}
           >
             <ArrowDown />
           </Button>
@@ -277,7 +278,7 @@ export function ChatHeader({
             onClick={onCloseMessageSearch}
             tooltip="Close search"
             aria-label="Close message search"
-            className="size-6 rounded-lg bg-transparent p-0"
+            className={chatMiniIconButtonClassName()}
           >
             <X />
           </Button>

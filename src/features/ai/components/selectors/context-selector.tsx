@@ -15,8 +15,10 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import Badge from "@/ui/badge";
 import { cn } from "@/utils/cn";
 import {
+  chatComposerDropdownItemClassName,
   chatComposerDropdownClassName,
   chatComposerIconButtonClassName,
 } from "../input/chat-composer-control-styles";
@@ -282,7 +284,9 @@ function ContextSelectorDropdownContent({
                       }}
                       onMouseEnter={() => setSelectedContextIndex(index)}
                       className={cn(
-                        "ui-font flex min-h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left ui-text-sm leading-[1.35] transition-colors",
+                        chatComposerDropdownItemClassName(
+                          "flex min-h-7 w-full min-w-0 items-center gap-2 px-2 py-1",
+                        ),
                         boundedSelectedContextIndex === index
                           ? "bg-selected text-text"
                           : isSelected
@@ -305,9 +309,9 @@ function ContextSelectorDropdownContent({
                         </span>
                       </span>
                       {isSelected && (
-                        <span className="ui-text-sm shrink-0 rounded border border-border/60 px-1 leading-[1.35] text-text-lighter">
+                        <Badge variant="default" size="compact" className="shrink-0">
                           added
-                        </span>
+                        </Badge>
                       )}
                     </button>
                   );

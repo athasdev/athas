@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { memo } from "react";
 import { MessageActions } from "@/features/ai/components/elements/message";
+import { chatFollowUpActionClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import { Button } from "@/ui/button";
 
@@ -71,7 +72,7 @@ function FollowUpButton({
       variant="ghost"
       compact
       onClick={() => onSelect(action.prompt)}
-      className="h-7 rounded-md border border-border/70 bg-primary-bg/70 px-2 text-text-lighter hover:border-border-strong hover:bg-hover/70 hover:text-text"
+      className={chatFollowUpActionClassName()}
       tooltip={action.prompt}
       aria-label={action.label}
     >

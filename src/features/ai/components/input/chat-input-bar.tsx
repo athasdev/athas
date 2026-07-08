@@ -1050,7 +1050,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         mentionSpan.setAttribute("contenteditable", "false");
         mentionSpan.title = file.path;
         mentionSpan.className =
-          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
+          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-[var(--app-radius-pill)] border border-accent/30 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
@@ -1125,7 +1125,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         commandSpan.setAttribute("contenteditable", "false");
         commandSpan.title = command.description || `/${command.name}`;
         commandSpan.className =
-          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border border-border/70 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
+          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-[var(--app-radius-pill)] border border-border/70 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
         commandSpan.textContent = `/${command.name}`;
         inputRef.current.appendChild(commandSpan);
 
@@ -1313,7 +1313,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {pastedImages.map((image) => (
               <div
                 key={image.id}
-                className="group relative overflow-hidden rounded border border-border bg-secondary-bg"
+                className="group relative overflow-hidden rounded-[var(--app-radius-control)] border border-border bg-secondary-bg"
               >
                 <img
                   src={image.dataUrl}
@@ -1324,7 +1324,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   onClick={() => removePastedImage(image.id)}
                   variant="ghost"
                   compact
-                  className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
+                  className="absolute top-0.5 right-0.5 rounded-[var(--app-radius-pill)] bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
                   aria-label="Remove image"
                 >
                   <X />
@@ -1443,7 +1443,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {selectedContextItems.map((item) => (
               <div
                 key={`selected-${item.type}-${item.id}`}
-                className="group relative ui-font ui-text-sm flex h-6 min-w-0 max-w-[150px] shrink-0 select-none items-center gap-1.5 overflow-hidden rounded-md bg-hover/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:bg-hover/70 focus:bg-hover/70 focus:outline-none focus:ring-1 focus:ring-border-strong/35"
+                className="group relative ui-font ui-text-sm flex h-6 min-w-0 max-w-[150px] shrink-0 select-none items-center gap-1.5 overflow-hidden rounded-[var(--app-radius-control-sm)] bg-hover/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:bg-hover/70 focus:bg-hover/70 focus:outline-none focus:ring-1 focus:ring-border-strong/35"
                 data-context-chip
                 role="listitem"
                 tabIndex={0}
@@ -1529,7 +1529,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   }}
                   variant="ghost"
                   compact
-                  className="absolute right-0.5 size-5 rounded-md bg-hover/80 p-0 text-text opacity-0 shadow-[var(--shadow-card)] hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
+                  className="absolute right-0.5 size-5 rounded-[var(--app-radius-control-sm)] bg-hover/80 p-0 text-text opacity-0 shadow-[var(--shadow-card)] hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${item.name} from context`}
                   tabIndex={0}
                 >

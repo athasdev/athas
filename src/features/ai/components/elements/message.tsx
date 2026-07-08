@@ -1,6 +1,7 @@
 import { CopyIcon as Copy, type Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { type ComponentProps, type ReactNode } from "react";
 import { Button, type ButtonProps } from "@/ui/button";
+import { chatMiniIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { cn } from "@/utils/cn";
 
 type MessageRole = "user" | "assistant" | "system";
@@ -105,10 +106,7 @@ export function MessageAction({
       compact
       tooltip={tooltip ?? label}
       aria-label={label}
-      className={cn(
-        "size-6 rounded-md border-transparent bg-transparent p-0 text-text-lighter/55 shadow-none hover:bg-hover/70 hover:text-text",
-        className,
-      )}
+      className={cn(chatMiniIconButtonClassName("text-text-lighter/55"), className)}
       {...props}
     >
       {children ?? <Icon className="size-3.5" />}
