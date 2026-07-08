@@ -85,6 +85,7 @@ export const defaultSettings: Settings = {
   activeV0DesignSystemId: "",
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
+  activityRailWidth: 180,
   sidebarWidth: 220,
   showGitHubPullRequests: true,
   showGitHubIssues: true,

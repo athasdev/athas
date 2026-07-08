@@ -62,7 +62,7 @@ export const SidebarPaneSelector = ({
 }: SidebarPaneSelectorProps) => {
   const isVertical = orientation === "vertical";
   const tooltipSide = isVertical ? "right" : "bottom";
-  const iconClassName = compact ? "size-4" : isVertical ? "size-[18px]" : undefined;
+  const iconClassName = compact || isVertical ? "size-4" : undefined;
   const tabClassName = compact
     ? chromeControl()
     : isVertical
@@ -242,6 +242,7 @@ export const SidebarPaneSelector = ({
         isActive={!!item.isActive}
         size={compact ? "xs" : "sm"}
         variant="default"
+        labelPosition={showLabels ? "start" : "center"}
         className={item.className}
         onClick={item.onClick}
       >

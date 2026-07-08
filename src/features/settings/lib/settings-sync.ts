@@ -67,6 +67,7 @@ type SyncableSettingsKey =
   | "v0DesignSystems"
   | "activeV0DesignSystemId"
   | "ollamaBaseUrl"
+  | "activityRailWidth"
   | "sidebarWidth"
   | "showGitHubPullRequests"
   | "showGitHubIssues"
@@ -158,6 +159,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "v0DesignSystems",
   "activeV0DesignSystemId",
   "ollamaBaseUrl",
+  "activityRailWidth",
   "sidebarWidth",
   "showGitHubPullRequests",
   "showGitHubIssues",

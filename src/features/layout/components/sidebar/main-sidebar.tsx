@@ -1,10 +1,19 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
+  CaretUpDownIcon as CaretUpDown,
   FolderIcon as Folder,
   HardDrivesIcon as HardDrives,
   PlusIcon as Plus,
 } from "@phosphor-icons/react";
-import { memo, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -42,6 +51,14 @@ interface SidebarActivityRailProps {
   expanded?: boolean;
 }
 
+const COLLAPSED_ACTIVITY_RAIL_WIDTH = 56;
+const DEFAULT_ACTIVITY_RAIL_WIDTH = 180;
+const MIN_ACTIVITY_RAIL_WIDTH = 140;
+const MAX_ACTIVITY_RAIL_WIDTH = 320;
+
+const clampActivityRailWidth = (width: number) =>
+  Math.min(MAX_ACTIVITY_RAIL_WIDTH, Math.max(MIN_ACTIVITY_RAIL_WIDTH, Math.round(width)));
+
 const getProjectNameFromPath = (path?: string) => {
   if (!path) return "Open Project";
   const parts = path.split(/[\\/]/).filter(Boolean);
@@ -59,6 +76,9 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
   const projectPath = activeProject?.path || rootFolderPath;
   const customIcon = activeProject?.customIcon;
   const isRemote = isRemoteProjectPath(projectPath);
+  const rowClassName = expanded
+    ? "h-9 w-full max-w-none justify-start gap-2 px-2.5 text-text"
+    : "min-h-6 min-w-7 rounded-[var(--app-radius-control-sm)] px-0";
 
   const icon = customIcon ? (
     <img
@@ -81,15 +101,16 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
       tooltip={expanded ? undefined : projectName}
       tooltipSide="right"
       onClick={() => setIsProjectPickerVisible(true)}
-      className={cn(
-        expanded
-          ? "h-9 w-full justify-start gap-2 px-2.5"
-          : "min-h-6 min-w-7 rounded-[var(--app-radius-control-sm)] px-0",
-      )}
+      className={cn(rowClassName)}
       aria-label="Switch project"
     >
       {icon}
-      {expanded ? <span className="min-w-0 truncate">{projectName}</span> : null}
+      {expanded ? (
+        <>
+          <span className="min-w-0 flex-1 truncate text-left">{projectName}</span>
+          <CaretUpDown className="size-3.5 shrink-0 text-text-lighter" weight="bold" />
+        </>
+      ) : null}
     </Button>
   );
 }
@@ -100,6 +121,14 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
+  const configuredActivityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const [activityRailWidth, setActivityRailWidth] = useState(() =>
+    clampActivityRailWidth(configuredActivityRailWidth || DEFAULT_ACTIVITY_RAIL_WIDTH),
+  );
+  const railRef = useRef<HTMLDivElement>(null);
+  const resizeFrameRef = useRef<number | null>(null);
+  const isResizingRef = useRef(false);
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions";
@@ -111,12 +140,99 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     openSidebarView(view);
   };
 
+  useEffect(() => {
+    if (isResizingRef.current) return;
+    setActivityRailWidth(
+      clampActivityRailWidth(configuredActivityRailWidth || DEFAULT_ACTIVITY_RAIL_WIDTH),
+    );
+  }, [configuredActivityRailWidth]);
+
+  useEffect(() => {
+    return () => {
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+    };
+  }, []);
+
+  const previewActivityRailWidth = useCallback((nextWidth: number) => {
+    const clampedWidth = clampActivityRailWidth(nextWidth);
+
+    if (resizeFrameRef.current !== null) {
+      cancelAnimationFrame(resizeFrameRef.current);
+    }
+
+    resizeFrameRef.current = requestAnimationFrame(() => {
+      setActivityRailWidth(clampedWidth);
+
+      if (railRef.current) {
+        railRef.current.style.width = `${clampedWidth}px`;
+      }
+
+      resizeFrameRef.current = null;
+    });
+  }, []);
+
+  const handleResizeMouseDown = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (!expanded) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const startX = event.clientX;
+      const startWidth = activityRailWidth;
+      const previousCursor = document.body.style.cursor;
+      const previousUserSelect = document.body.style.userSelect;
+
+      isResizingRef.current = true;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      const finishResize = (clientX: number) => {
+        const nextWidth = clampActivityRailWidth(startWidth + clientX - startX);
+        setActivityRailWidth(nextWidth);
+
+        if (railRef.current) {
+          railRef.current.style.width = `${nextWidth}px`;
+        }
+
+        void updateSetting("activityRailWidth", nextWidth);
+      };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        previewActivityRailWidth(startWidth + moveEvent.clientX - startX);
+      };
+
+      const handleMouseUp = (upEvent: MouseEvent) => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = previousCursor;
+        document.body.style.userSelect = previousUserSelect;
+        if (resizeFrameRef.current !== null) {
+          cancelAnimationFrame(resizeFrameRef.current);
+          resizeFrameRef.current = null;
+        }
+        isResizingRef.current = false;
+        finishResize(upEvent.clientX);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [activityRailWidth, expanded, previewActivityRailWidth, updateSetting],
+  );
+
   return (
     <div
+      ref={railRef}
       className={cn(
-        "athas-sidebar-rail flex shrink-0 flex-col items-start pb-1.5",
-        expanded ? "w-40 px-1.5 pt-1" : "w-[3.5rem] px-0.5 pt-1",
+        "athas-sidebar-rail relative flex shrink-0 flex-col items-start pb-1.5",
+        expanded ? "px-1.5 pt-1" : "px-0.5 pt-1",
       )}
+      style={{
+        width: expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH,
+      }}
     >
       <SidebarProjectSwitcher expanded={expanded} />
       <div className={cn("my-1 h-px shrink-0 bg-border/60", expanded ? "w-full" : "mx-auto w-7")} />
@@ -133,6 +249,15 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         showLabels={expanded}
         orientation="vertical"
       />
+      {expanded ? (
+        <div
+          role="separator"
+          aria-label="Resize activity rail"
+          aria-orientation="vertical"
+          className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize"
+          onMouseDown={handleResizeMouseDown}
+        />
+      ) : null}
     </div>
   );
 });
