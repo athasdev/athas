@@ -10,11 +10,15 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { getRelativeTime } from "@/features/ai/lib/formatting";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { CollaborationSidebarView } from "@/features/collaboration/components/collaboration-sidebar";
 import { DockerSidebar } from "@/features/docker/components/docker-sidebar";
 import { FileExplorerPane } from "@/features/file-explorer/components/file-explorer-pane";
@@ -33,7 +37,12 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import { Button } from "@/ui/button";
-import { SidebarPanel } from "@/ui/sidebar";
+import {
+  SidebarHeaderIconButton,
+  SidebarListItem,
+  SidebarPanel,
+  SidebarSectionLabel,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 interface MainSidebarProps {
@@ -119,27 +128,81 @@ function SidebarProjectSwitcher({ expanded }: { expanded: boolean }) {
 
 function SidebarNewAgentButton({ expanded }: { expanded: boolean }) {
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-  const rowClassName = expanded
-    ? "h-9 w-full max-w-none justify-start gap-2.5 px-3 text-text-lighter"
-    : "h-9 w-9 rounded-[var(--app-radius-control)] px-0";
+  const createNewChat = useAIChatStore((state) => state.createNewChat);
+  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
+
+  const handleNewAgent = useCallback(() => {
+    const chatId = createNewChat(selectedAgentId);
+    openAgentBuffer(chatId);
+  }, [createNewChat, openAgentBuffer, selectedAgentId]);
+
+  if (!expanded) {
+    return (
+      <SidebarHeaderIconButton
+        tooltip="New Agent"
+        tooltipSide="right"
+        aria-label="New Agent"
+        onClick={handleNewAgent}
+      >
+        <Sparkles />
+      </SidebarHeaderIconButton>
+    );
+  }
 
   return (
-    <div className={cn("w-full", expanded ? "mt-2" : "mt-1")}>
-      {expanded ? (
-        <div className="ui-text-xs mb-1 px-3 font-medium text-text-lighter/75">Agents</div>
-      ) : null}
-      <Button
-        type="button"
-        variant="ghost"
-        tooltip={expanded ? undefined : "New Agent"}
-        tooltipSide="right"
-        onClick={() => openAgentBuffer()}
-        className={cn(rowClassName)}
-        aria-label="New Agent"
-      >
-        <Sparkles className="size-4" weight="duotone" />
-        {expanded ? <span className="min-w-0 flex-1 truncate text-left">New Agent</span> : null}
-      </Button>
+    <SidebarListItem leading={<Sparkles />} onClick={handleNewAgent}>
+      New Agent
+    </SidebarListItem>
+  );
+}
+
+function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
+  const chats = useAIChatStore((state) => state.chats);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const switchToChat = useAIChatStore((state) => state.switchToChat);
+  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
+  const workspacePath = useWorkspaceTabsStore((state) => {
+    const activeProject = state.projectTabs.find((tab) => tab.isActive);
+    return activeProject?.path ?? null;
+  });
+  const recentChats = useMemo(
+    () =>
+      [...filterChatsByWorkspace(chats, workspacePath)]
+        .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime())
+        .slice(0, 4),
+    [chats, workspacePath],
+  );
+
+  const handleOpenChat = useCallback(
+    (chatId: string) => {
+      switchToChat(chatId);
+      openAgentBuffer(chatId);
+    },
+    [openAgentBuffer, switchToChat],
+  );
+
+  if (!expanded) {
+    return <SidebarNewAgentButton expanded={false} />;
+  }
+
+  return (
+    <div className="mt-2 w-full">
+      <SidebarSectionLabel trailing={recentChats.length || undefined}>
+        Agent History
+      </SidebarSectionLabel>
+      {recentChats.map((chat) => (
+        <SidebarListItem
+          key={chat.id}
+          active={chat.id === currentChatId}
+          description={(chat.agentId || "custom").replace(/-/g, " ")}
+          trailing={getRelativeTime(chat.lastMessageAt)}
+          onClick={() => handleOpenChat(chat.id)}
+        >
+          {chat.title}
+        </SidebarListItem>
+      ))}
+      {recentChats.length === 0 ? <SidebarSectionLabel>No history yet</SidebarSectionLabel> : null}
+      <SidebarNewAgentButton expanded />
     </div>
   );
 }
@@ -279,7 +342,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         showLabels={expanded}
         orientation="vertical"
       />
-      <SidebarNewAgentButton expanded={expanded} />
+      <SidebarAgentHistory expanded={expanded} />
       {expanded ? (
         <div
           role="separator"
