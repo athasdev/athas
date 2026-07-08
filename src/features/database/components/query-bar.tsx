@@ -5,6 +5,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
+import { databaseCardClassName } from "./database-surface";
 import type { ColumnInfo, TableInfo } from "../types/common.types";
 import {
   applySqlCompletion,
@@ -88,7 +89,7 @@ function SqlEditor({
 
   return (
     <div className="mb-1">
-      <div className="relative h-20 overflow-hidden rounded-lg border border-border/70 bg-secondary-bg/60">
+      <div className={databaseCardClassName("relative h-20 overflow-hidden bg-secondary-bg/60")}>
         <pre
           ref={highlightRef}
           aria-hidden="true"
@@ -159,7 +160,7 @@ function SqlEditor({
               type="button"
               variant="ghost"
               compact
-              className="h-6 rounded-md border border-border/60 px-2 text-text-lighter"
+              className="h-6 border border-border/60 px-2 text-text-lighter"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => applyCompletion(index)}
               aria-label={`Insert SQL ${item.detail} ${item.label}`}

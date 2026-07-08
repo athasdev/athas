@@ -14,6 +14,7 @@ import {
   mapForeignKeysByColumn,
 } from "../lib/database-schema";
 import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
+import { databaseCardClassName } from "./database-surface";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },
@@ -60,7 +61,7 @@ export default function SchemaView({
         <div className="ui-text-sm text-text">{tableName}</div>
         <div className="ui-text-sm text-text-lighter">{columns.length} columns</div>
       </div>
-      <div className="mx-3 mb-3 divide-y divide-border/60 rounded-lg border border-border/60 bg-secondary-bg/40">
+      <div className={databaseCardClassName("mx-3 mb-3 divide-y divide-border/60")}>
         {columns.map((column) => {
           const fk = fkMap.get(column.name);
           const constraintLabels = getColumnConstraintLabels(column);
@@ -89,7 +90,7 @@ export default function SchemaView({
                   type="button"
                   variant="ghost"
                   onClick={() => onAddFilter(column.name)}
-                  className="rounded-md text-text-lighter opacity-60 hover:text-text hover:opacity-100"
+                  className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
                   aria-label={`Filter by ${column.name}`}
                 >
                   <Filter />

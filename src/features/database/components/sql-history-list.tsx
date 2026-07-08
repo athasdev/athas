@@ -9,6 +9,7 @@ import { Button } from "@/ui/button";
 import { formatSqlHistoryPreview } from "../lib/sql-history";
 import { writeDatabaseClipboardText } from "../utils/clipboard";
 import { cn } from "@/utils/cn";
+import { databaseCardClassName } from "./database-surface";
 
 interface SqlHistoryListProps {
   queries: string[];
@@ -32,12 +33,7 @@ export default function SqlHistoryList({
   if (queries.length === 0) return null;
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border/60 bg-secondary-bg/40",
-        compact && "mx-2 mb-2",
-      )}
-    >
+    <div className={cn(databaseCardClassName(), compact && "mx-2 mb-2")}>
       <div className="flex items-center justify-between p-2">
         <div className="px-2 py-1 ui-font ui-text-sm text-text-lighter uppercase">
           {title} ({queries.length})
@@ -47,7 +43,7 @@ export default function SqlHistoryList({
           onClick={onClear}
           variant="ghost"
           compact
-          className="rounded-md text-text-lighter hover:text-text"
+          className="text-text-lighter hover:text-text"
           aria-label="Clear recent queries"
           tooltip="Clear recent queries"
         >
@@ -60,7 +56,7 @@ export default function SqlHistoryList({
           return (
             <div
               key={query}
-              className="group mx-1 flex items-center gap-1 rounded-lg hover:bg-hover"
+              className="group mx-1 flex items-center gap-1 rounded-[var(--app-radius-menu-item)] hover:bg-hover"
             >
               <Button
                 type="button"
@@ -68,7 +64,7 @@ export default function SqlHistoryList({
                 variant="ghost"
                 compact
                 className={cn(
-                  "min-w-0 flex-1 justify-start truncate rounded-lg px-2.5 py-1.5 text-left",
+                  "min-w-0 flex-1 justify-start truncate px-2.5 py-1.5 text-left",
                   "ui-text-sm",
                 )}
                 tooltip={query}
@@ -86,7 +82,7 @@ export default function SqlHistoryList({
                   }}
                   variant="ghost"
                   compact
-                  className="shrink-0 rounded-md text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
+                  className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
                   aria-label={`Run query from history: ${preview}`}
                   tooltip="Run query"
                 >
@@ -101,7 +97,7 @@ export default function SqlHistoryList({
                 }}
                 variant="ghost"
                 compact
-                className="shrink-0 rounded-md text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
+                className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label={`Copy query from history: ${preview}`}
                 tooltip="Copy query"
               >
@@ -115,7 +111,7 @@ export default function SqlHistoryList({
                 }}
                 variant="ghost"
                 compact
-                className="shrink-0 rounded-md text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
+                className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label={`Remove query from history: ${preview}`}
                 tooltip="Remove from history"
               >

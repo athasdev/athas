@@ -11,6 +11,7 @@ import QueryBar from "../../components/query-bar";
 import SchemaView from "../../components/schema-view";
 import TableSidebar from "../../components/table-sidebar";
 import TableToolbar from "../../components/table-toolbar";
+import { databasePanelClassName } from "../../components/database-surface";
 import {
   buildQueryResultExportFilename,
   serializeQueryResultToCsv,
@@ -230,7 +231,7 @@ export default function SqlDatabaseViewer({
           onClearHistory={actions.clearSqlHistory}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg">
+        <div className={databasePanelClassName("flex-1 border border-border/70 bg-primary-bg")}>
           <QueryBar
             searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}
@@ -259,7 +260,7 @@ export default function SqlDatabaseViewer({
           )}
 
           {store.error && (
-            <div className="mx-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 ui-font ui-text-sm text-error">
+            <div className="mx-3 mb-2 rounded-[var(--app-radius-control)] border border-error/30 bg-error/10 px-3 py-2 ui-font ui-text-sm text-error">
               {store.error}
             </div>
           )}

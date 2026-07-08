@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { databaseChipClassName } from "./database-surface";
 import { formatQueryResultSummary } from "../lib/query-result-summary";
 import type {
   DatabaseInfo,
@@ -103,7 +104,7 @@ export default function TableToolbar({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 rounded-md border border-border/60 bg-secondary-bg/60 p-0.5">
+          <div className="flex items-center gap-1 rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/60 p-0.5">
             {VIEW_TABS.map(({ mode, label }) => (
               <Button
                 key={mode}
@@ -111,7 +112,7 @@ export default function TableToolbar({
                 variant={viewMode === mode ? "default" : "ghost"}
                 compact
                 className={cn(
-                  "rounded px-2.5 ui-text-sm text-text-lighter",
+                  "px-2.5 ui-text-sm text-text-lighter",
                   viewMode === mode ? "text-text" : "text-text-lighter",
                 )}
                 aria-label={`Switch to ${label} view`}
@@ -128,7 +129,7 @@ export default function TableToolbar({
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
               compact
-              className="rounded-md px-2 text-text-lighter"
+              className="px-2 text-text-lighter"
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
             >
@@ -136,14 +137,16 @@ export default function TableToolbar({
             </Button>
           )}
           {resultSummary && (
-            <span className="px-2 ui-font ui-text-sm text-text-lighter">{resultSummary}</span>
+            <span className={databaseChipClassName("px-2 ui-font ui-text-sm text-text-lighter")}>
+              {resultSummary}
+            </span>
           )}
           {viewMode === "data" && (
             <Button
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
               compact
-              className="rounded-md px-2 text-text-lighter"
+              className="px-2 text-text-lighter"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
               tooltip="Open SQL editor"
@@ -155,7 +158,7 @@ export default function TableToolbar({
             <Button
               onClick={onCreateSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="px-2 text-text-lighter"
               aria-label="Create subscription"
               tooltip="Create subscription"
               compact
@@ -167,7 +170,7 @@ export default function TableToolbar({
             <Button
               onClick={onToggleSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="px-2 text-text-lighter"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               compact
@@ -179,7 +182,7 @@ export default function TableToolbar({
             <Button
               onClick={onRefreshSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="px-2 text-text-lighter"
               aria-label="Refresh subscription"
               tooltip="Refresh subscription"
               compact
@@ -191,7 +194,7 @@ export default function TableToolbar({
             <Button
               onClick={onDropSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="px-2 text-text-lighter"
               aria-label="Drop subscription"
               tooltip="Drop subscription"
               compact
@@ -204,7 +207,7 @@ export default function TableToolbar({
               <Button
                 onClick={exportAsCSV}
                 variant="ghost"
-                className="rounded-md px-2 text-text-lighter"
+                className="px-2 text-text-lighter"
                 aria-label={exportLabel}
                 tooltip={exportTooltip}
                 compact
@@ -214,7 +217,7 @@ export default function TableToolbar({
               <Button
                 onClick={copyAsJSON}
                 variant="ghost"
-                className="rounded-md px-2 text-text-lighter"
+                className="px-2 text-text-lighter"
                 aria-label={jsonLabel}
                 tooltip={jsonTooltip}
                 compact

@@ -2,6 +2,7 @@ import { PlusIcon as Plus, XIcon as X } from "@phosphor-icons/react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
+import { databaseCardClassName } from "./database-surface";
 import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types/common.types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -41,7 +42,7 @@ export default function ColumnFilters({
   if (filters.length === 0) return null;
 
   return (
-    <div className="mx-3 mb-2 rounded-lg border border-border/60 bg-secondary-bg/60 px-3 py-2">
+    <div className={databaseCardClassName("mx-3 mb-2 bg-secondary-bg/60 px-3 py-2")}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="ui-font ui-text-sm text-text-lighter">
@@ -52,7 +53,7 @@ export default function ColumnFilters({
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
               compact
-              className="rounded-md gap-0.5 text-text-lighter"
+              className="gap-0.5 text-text-lighter"
               aria-label="Add filter"
             >
               <Plus />
@@ -63,7 +64,7 @@ export default function ColumnFilters({
         <Button
           onClick={onClear}
           variant="ghost"
-          className="rounded-md text-text-lighter"
+          className="text-text-lighter"
           aria-label="Clear all filters"
           compact
         >
