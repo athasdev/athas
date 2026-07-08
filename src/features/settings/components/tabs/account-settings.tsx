@@ -126,7 +126,7 @@ export const AccountSettings = () => {
             role="group"
             aria-labelledby="account-ai-usage-label"
             aria-describedby="account-ai-usage-description"
-            className="rounded-lg px-1 py-2"
+            className="rounded-[var(--app-radius-control)] px-1 py-2"
           >
             <div className="mb-3">
               <div className="min-w-0">
