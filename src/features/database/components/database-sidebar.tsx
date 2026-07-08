@@ -471,7 +471,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             <button
               type="button"
               className={cn(
-                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary-bg/35 px-3 py-4 text-center text-text-lighter transition-colors hover:border-accent/50 hover:bg-accent/5",
+                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-[var(--app-radius-card)] border border-dashed border-border bg-secondary-bg/35 px-3 py-4 text-center text-text-lighter transition-colors hover:border-accent/50 hover:bg-accent/5",
                 isDraggingFile && "border-accent bg-accent/10 text-text",
               )}
               onClick={() => void chooseDatabaseFile(selectedDbType)}
@@ -488,7 +488,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               value={name}
               onChange={setName}
               placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
-              className="h-7 rounded-md bg-secondary-bg px-2"
+              className="h-7 rounded-[var(--app-radius-control-sm)] bg-secondary-bg px-2"
             />
             <div className="flex gap-2">
               <Input
@@ -633,7 +633,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border border-accent bg-primary-bg/85 text-accent ui-text-base backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-[var(--app-radius-card)] border border-accent bg-primary-bg/85 text-accent ui-text-base backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}
