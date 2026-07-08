@@ -31,10 +31,10 @@ interface SidebarPaneEntry {
 }
 
 interface SidebarActivityRailProps {
-  compact?: boolean;
+  expanded?: boolean;
 }
 
-export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRailProps) => {
+export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRailProps) => {
   const isGitViewActive = useUIState((state) => state.isGitViewActive);
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
@@ -54,8 +54,8 @@ export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRai
   return (
     <div
       className={cn(
-        "athas-sidebar-rail flex shrink-0 items-start pb-1.5",
-        compact ? "px-0.5 pt-1" : "px-1 pt-0",
+        "athas-sidebar-rail flex shrink-0 items-start pb-1.5 transition-[width] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+        expanded ? "w-40 px-1.5 pt-1" : "w-[3.5rem] px-0.5 pt-1",
       )}
     >
       <SidebarPaneSelector
@@ -67,7 +67,8 @@ export const SidebarActivityRail = memo(({ compact = false }: SidebarActivityRai
         onSearchClick={() => openGlobalSearchBuffer()}
         onExtensionsClick={() => openExtensionsBuffer()}
         isExtensionsActive={isExtensionsBufferActive}
-        compact={compact}
+        compact={!expanded}
+        showLabels={expanded}
         orientation="vertical"
       />
     </div>

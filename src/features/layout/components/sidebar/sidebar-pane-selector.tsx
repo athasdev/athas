@@ -42,6 +42,7 @@ interface SidebarPaneSelectorProps {
   isSearchActive?: boolean;
   isExtensionsActive?: boolean;
   compact?: boolean;
+  showLabels?: boolean;
   orientation?: "horizontal" | "vertical";
 }
 
@@ -56,6 +57,7 @@ export const SidebarPaneSelector = ({
   isSearchActive = false,
   isExtensionsActive = false,
   compact = false,
+  showLabels = false,
   orientation = "horizontal",
 }: SidebarPaneSelectorProps) => {
   const isVertical = orientation === "vertical";
@@ -64,7 +66,10 @@ export const SidebarPaneSelector = ({
   const tabClassName = compact
     ? chromeControl()
     : isVertical
-      ? chromeControl({ shape: "sidebar" })
+      ? cn(
+          chromeControl({ shape: showLabels ? "pill" : "sidebar" }),
+          showLabels ? "h-9 w-full justify-start gap-2 px-2.5" : undefined,
+        )
       : chromeControl({ shape: "tab" });
   const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
   const extensionViews = useExtensionViews();
@@ -76,6 +81,7 @@ export const SidebarPaneSelector = ({
     () => [
       {
         id: "files",
+        label: showLabels ? "Files" : undefined,
         icon: <Folder className={iconClassName} weight="duotone" />,
         isActive: isFilesActive,
         onClick: () => onViewChange("files"),
@@ -92,6 +98,7 @@ export const SidebarPaneSelector = ({
         ? [
             {
               id: "search",
+              label: showLabels ? "Search" : undefined,
               icon: <MagnifyingGlass className={iconClassName} weight="duotone" />,
               isActive: isSearchActive,
               onClick: onSearchClick,
@@ -109,6 +116,7 @@ export const SidebarPaneSelector = ({
         ? [
             {
               id: "git",
+              label: showLabels ? "Source Control" : undefined,
               icon: <GitBranch className={iconClassName} weight="duotone" />,
               isActive: isGitViewActive,
               onClick: () => onViewChange("git"),
@@ -127,6 +135,7 @@ export const SidebarPaneSelector = ({
         ? [
             {
               id: "github-prs",
+              label: showLabels ? "Pull Requests" : undefined,
               icon: <GitPullRequest className={iconClassName} weight="duotone" />,
               isActive: isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
@@ -144,6 +153,7 @@ export const SidebarPaneSelector = ({
         ? [
             {
               id: "docker",
+              label: showLabels ? "Docker" : undefined,
               icon: <Cube className={iconClassName} weight="duotone" />,
               isActive: activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
@@ -159,6 +169,7 @@ export const SidebarPaneSelector = ({
         : []),
       {
         id: "extensions",
+        label: showLabels ? "Extensions" : undefined,
         icon: <PuzzlePiece className={iconClassName} weight="duotone" />,
         isActive: isExtensionsActive,
         onClick: onExtensionsClick ?? (() => onViewChange("extensions")),
@@ -173,6 +184,7 @@ export const SidebarPaneSelector = ({
         (view) =>
           ({
             id: view.id,
+            label: showLabels ? view.title : undefined,
             icon: <DynamicIcon name={view.icon} className={iconClassName} />,
             isActive: activeSidebarView === view.id,
             onClick: () => onViewChange(view.id),
@@ -202,6 +214,7 @@ export const SidebarPaneSelector = ({
       onExtensionsClick,
       onSearchClick,
       onViewChange,
+      showLabels,
       tabClassName,
       tooltipSide,
     ],
@@ -233,22 +246,23 @@ export const SidebarPaneSelector = ({
         onClick={item.onClick}
       >
         {item.icon}
-        {item.label}
+        {item.label ? <span className="min-w-0 truncate">{item.label}</span> : null}
       </Tab>
     );
 
-    const content = item.tooltip ? (
-      <Tooltip
-        content={item.tooltip.content}
-        shortcut={item.tooltip.shortcut}
-        side={item.tooltip.side}
-        className={item.tooltip.className}
-      >
-        {tabNode}
-      </Tooltip>
-    ) : (
-      tabNode
-    );
+    const content =
+      item.tooltip && !showLabels ? (
+        <Tooltip
+          content={item.tooltip.content}
+          shortcut={item.tooltip.shortcut}
+          side={item.tooltip.side}
+          className={item.tooltip.className}
+        >
+          {tabNode}
+        </Tooltip>
+      ) : (
+        tabNode
+      );
 
     return {
       id: item.id,
@@ -262,7 +276,11 @@ export const SidebarPaneSelector = ({
       variant="default"
       className={cn(
         compact ? chromeControlGroup() : "gap-0.5 p-1",
-        isVertical && "flex-col items-center gap-1 rounded-none border-0 bg-transparent p-0",
+        isVertical &&
+          cn(
+            "flex-col gap-1 rounded-none border-0 bg-transparent p-0",
+            showLabels ? "w-full items-stretch" : "items-center",
+          ),
       )}
     >
       {renderedItems.map((item) => (

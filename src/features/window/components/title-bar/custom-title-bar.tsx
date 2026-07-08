@@ -52,8 +52,8 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
+  const isSidebarRailExpanded = useUIState((state) => state.isSidebarRailExpanded);
+  const setIsSidebarRailExpanded = useUIState((state) => state.setIsSidebarRailExpanded);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
@@ -249,15 +249,15 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     <Button
       type="button"
       variant="ghost"
-      active={isSidebarVisible}
-      tooltip={isSidebarVisible ? "Collapse Sidebar" : "Open Sidebar"}
+      active={isSidebarRailExpanded}
+      tooltip={isSidebarRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       tooltipSide="bottom"
-      onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+      onClick={() => setIsSidebarRailExpanded(!isSidebarRailExpanded)}
       className={chromeControl()}
-      aria-label={isSidebarVisible ? "Collapse sidebar" : "Open sidebar"}
-      aria-pressed={isSidebarVisible}
+      aria-label={isSidebarRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
+      aria-pressed={isSidebarRailExpanded}
     >
-      <SidebarSimple className={chromeIcon()} weight={isSidebarVisible ? "fill" : "duotone"} />
+      <SidebarSimple className={chromeIcon()} weight={isSidebarRailExpanded ? "fill" : "duotone"} />
     </Button>
   );
 

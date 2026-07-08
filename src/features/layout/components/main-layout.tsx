@@ -89,6 +89,7 @@ export function MainLayout() {
   useCollaborationPresence();
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
+  const isSidebarRailExpanded = useUIState((state) => state.isSidebarRailExpanded);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
@@ -303,7 +304,7 @@ export function MainLayout() {
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
-          <SidebarActivityRail compact={!isSidebarVisible} />
+          <SidebarActivityRail expanded={isSidebarRailExpanded} />
           <ResizablePane
             position="left"
             widthKey="sidebarWidth"
