@@ -19,7 +19,15 @@ import {
 } from "@phosphor-icons/react";
 import { invoke } from "@tauri-apps/api/core";
 import { getVisibleIconThemes } from "@/extensions/icon-themes/icon-theme-normalization";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -206,15 +214,15 @@ const ExtensionRow = ({
       ? extension.extensions
       : extension.extensions?.map((ext) => `.${ext}`);
   const actionContent = extension.isBundled ? (
-    <Badge variant="accent" size="compact">
+    <span className="rounded-full border border-border/70 bg-secondary-bg/70 px-2 py-1 font-medium text-text-lighter ui-text-sm">
       Built-in
-    </Badge>
+    </span>
   ) : isInstalling ? (
-    <span className="flex h-7 w-7 items-center justify-center text-accent">
+    <span className="flex h-8 w-8 items-center justify-center text-accent">
       <LoadingIndicator label="Installing" compact />
     </span>
   ) : isUnavailableAgent ? (
-    <Button disabled variant="ghost" tooltip="Unavailable" compact className="h-7 w-7 min-w-0 p-0">
+    <Button disabled variant="ghost" tooltip="Unavailable" compact className="h-8 w-8 min-w-0 p-0">
       <XCircle className="size-4" weight="duotone" />
     </Button>
   ) : extension.isInstalled ? (
@@ -228,7 +236,7 @@ const ExtensionRow = ({
           variant="default"
           tooltip={hasRuntimeIssue ? "Reinstall" : "Update"}
           compact
-          className="h-7 w-7 min-w-0 p-0"
+          className="h-8 w-8 min-w-0 p-0"
         >
           <RefreshCw className="size-4" weight="duotone" />
         </Button>
@@ -242,7 +250,7 @@ const ExtensionRow = ({
           variant="default"
           tooltip="Reset to marketplace version"
           compact
-          className="h-7 w-7 min-w-0 p-0"
+          className="h-8 w-8 min-w-0 p-0"
         >
           <Reset className="size-4" weight="duotone" />
         </Button>
@@ -252,10 +260,10 @@ const ExtensionRow = ({
           event.stopPropagation();
           onToggle();
         }}
-        variant="danger"
+        variant="ghost"
         tooltip={primaryActionLabel}
         compact
-        className="h-7 w-7 min-w-0 p-0"
+        className="h-8 w-8 min-w-0 p-0 text-text-lighter hover:text-error"
       >
         <Trash className="size-4" weight="duotone" />
       </Button>
@@ -266,26 +274,28 @@ const ExtensionRow = ({
         event.stopPropagation();
         onToggle();
       }}
-      variant="default"
+      variant="accent"
       tooltip={primaryActionLabel}
       compact
-      className="h-7 w-7 min-w-0 p-0"
+      className="h-8 px-2.5"
     >
       <Download className="size-4" weight="fill" />
+      {primaryActionLabel}
     </Button>
   );
 
   return (
     <div
       className={cn(
-        "group flex min-w-0 items-start gap-3 rounded-md border px-3 py-3 text-text-lighter transition-colors",
-        "hover:border-border/90 hover:bg-hover/45 hover:text-text",
-        selected ? "border-accent/45 bg-accent/8" : "border-border/65 bg-secondary-bg/35",
+        "group flex min-w-0 flex-col rounded-md border bg-primary-bg text-text-lighter transition-colors",
+        "hover:border-border/90 hover:bg-secondary-bg/35 hover:text-text",
+        selected ? "border-accent/50 ring-1 ring-accent/20" : "border-border/65",
       )}
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
       role="button"
       tabIndex={0}
+      aria-pressed={selected}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -293,32 +303,49 @@ const ExtensionRow = ({
         }
       }}
     >
-      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-primary-bg">
-        {getCategoryIcon(extension.category)}
-      </span>
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="min-w-0 truncate font-medium text-text">{extension.name}</span>
-          <span className="flex shrink-0 items-center gap-1.5">
-            <Badge variant="default" size="compact">
-              {getCategoryLabel(extension.category)}
-            </Badge>
+      <div className="flex min-w-0 items-start gap-3 p-3 pb-2">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-secondary-bg/55">
+          {getCategoryIcon(extension.category)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span className="min-w-0 truncate font-medium text-text">{extension.name}</span>
             {extension.version ? (
-              <span className="ui-font ui-text-base text-text-lighter">v{extension.version}</span>
+              <span className="shrink-0 ui-font ui-text-sm text-text-lighter">
+                v{extension.version}
+              </span>
             ) : null}
-            {hasLocalOverride ? (
-              <Badge
-                variant="default"
-                size="compact"
-                className="border-warning/25 bg-warning/10 text-warning"
-              >
-                Local override
-              </Badge>
-            ) : null}
-          </span>
+          </div>
+          <div className="mt-0.5 min-w-0 truncate text-text-lighter ui-text-sm">
+            {extension.publisher
+              ? `By ${extension.publisher}`
+              : getCategoryLabel(extension.category)}
+          </div>
         </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {actionContent}
+          <Button
+            type="button"
+            variant="ghost"
+            compact
+            tooltip="More actions"
+            aria-label={`More actions for ${extension.name}`}
+            className="h-8 w-8 min-w-0 p-0 text-text-lighter opacity-75 group-hover:opacity-100"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenMenu(event, extension);
+            }}
+          >
+            <MoreHorizontal className="size-4" weight="bold" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-2 px-3 pb-3">
         {extension.description ? (
-          <p className="line-clamp-2 ui-text-sm text-text-lighter">{extension.description}</p>
+          <p className="line-clamp-2 min-h-[2.5rem] text-text-lighter ui-text-sm">
+            {extension.description}
+          </p>
         ) : null}
         {extension.runtimeIssues && extension.runtimeIssues.length > 0 ? (
           <div className="rounded-md border border-error/20 bg-error/8 px-2 py-1">
@@ -328,11 +355,31 @@ const ExtensionRow = ({
             </div>
           </div>
         ) : null}
-        <div className="ui-font ui-text-sm flex min-w-0 flex-wrap items-center gap-1.5 text-text-lighter">
-          {extension.publisher ? <span className="truncate">by {extension.publisher}</span> : null}
-          {extension.publisher && extensionLabels && extensionLabels.length > 0 ? (
-            <span className="shrink-0">·</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <Badge variant="default" size="compact">
+            {getCategoryLabel(extension.category)}
+          </Badge>
+          {extension.isInstalled ? (
+            <Badge variant="accent" size="compact">
+              Installed
+            </Badge>
           ) : null}
+          {hasUpdate ? (
+            <Badge variant="accent" size="compact">
+              Update
+            </Badge>
+          ) : null}
+          {hasLocalOverride ? (
+            <Badge
+              variant="default"
+              size="compact"
+              className="border-warning/25 bg-warning/10 text-warning"
+            >
+              Local override
+            </Badge>
+          ) : null}
+        </div>
+        <div className="ui-font ui-text-sm flex min-w-0 flex-wrap items-center gap-1.5 text-text-lighter">
           {extensionLabels && extensionLabels.length > 0 ? (
             <span className="truncate">
               {extensionLabels.slice(0, 5).join(" ")}
@@ -347,21 +394,6 @@ const ExtensionRow = ({
           ) : null}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1">{actionContent}</div>
-      <Button
-        type="button"
-        variant="ghost"
-        compact
-        tooltip="More actions"
-        aria-label={`More actions for ${extension.name}`}
-        className="h-7 w-7 min-w-0 p-0 opacity-70 group-hover:opacity-100"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenMenu(event, extension);
-        }}
-      >
-        <MoreHorizontal className="size-4" weight="bold" />
-      </Button>
     </div>
   );
 };
@@ -375,6 +407,7 @@ export const ExtensionsSidebar = () => {
   );
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [extensions, setExtensions] = useState<UnifiedExtension[]>([]);
   const [marketplaceSkills, setMarketplaceSkills] = useState<MarketplaceSkill[]>([]);
   const [isLoadingSkills, setIsLoadingSkills] = useState(false);
@@ -395,6 +428,10 @@ export const ExtensionsSidebar = () => {
       void updateSetting("extensionsActiveTab", "all");
     }
   }, [settings.extensionsActiveTab, updateSetting]);
+
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
 
   const loadAgents = useCallback(async () => {
     setIsLoadingAgents(true);
@@ -889,18 +926,33 @@ export const ExtensionsSidebar = () => {
     setTimeout(() => loadAllExtensions(), 100);
   };
 
-  const filteredExtensions = extensions.filter((extension) => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const searchMatchedExtensions = extensions.filter((extension) => {
     const matchesSearch =
-      !normalizedQuery ||
-      extension.name.toLowerCase().includes(normalizedQuery) ||
-      extension.description.toLowerCase().includes(normalizedQuery) ||
-      extension.contributionSummary?.some((item) => item.toLowerCase().includes(normalizedQuery));
+      !normalizedSearchQuery ||
+      extension.name.toLowerCase().includes(normalizedSearchQuery) ||
+      extension.description.toLowerCase().includes(normalizedSearchQuery) ||
+      extension.publisher?.toLowerCase().includes(normalizedSearchQuery) ||
+      extension.contributionSummary?.some((item) =>
+        item.toLowerCase().includes(normalizedSearchQuery),
+      );
+    return matchesSearch;
+  });
+  const filterCounts = FILTER_TABS.reduce(
+    (counts, tab) => {
+      counts[tab.id] =
+        tab.id === "all"
+          ? searchMatchedExtensions.length
+          : searchMatchedExtensions.filter((extension) => extension.category === tab.id).length;
+      return counts;
+    },
+    {} as Record<ExtensionTabId, number>,
+  );
+  const filteredExtensions = searchMatchedExtensions.filter((extension) => {
     const matchesTab =
       settings.extensionsActiveTab === "all" || extension.category === settings.extensionsActiveTab;
-    return matchesSearch && matchesTab;
+    return matchesTab;
   });
-  const activeFilter = FILTER_TABS.find((tab) => tab.id === settings.extensionsActiveTab);
   const selectedExtension =
     filteredExtensions.find((extension) => extension.id === selectedExtensionId) ??
     filteredExtensions[0] ??
@@ -1049,6 +1101,8 @@ export const ExtensionsSidebar = () => {
             <div className="relative min-w-0 flex-1 sm:w-80 sm:flex-none">
               <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-text-lighter" />
               <input
+                ref={searchInputRef}
+                autoFocus
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search extensions"
@@ -1068,13 +1122,14 @@ export const ExtensionsSidebar = () => {
           {FILTER_TABS.map((tab) => {
             const Icon = "icon" in tab ? tab.icon : undefined;
             const active = settings.extensionsActiveTab === tab.id;
+            const count = filterCounts[tab.id] ?? 0;
 
             return (
               <button
                 key={tab.id}
                 type="button"
                 className={cn(
-                  "flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 ui-text-sm transition-colors",
+                  "group flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 ui-text-sm transition-colors",
                   active
                     ? "bg-accent text-primary-bg"
                     : "text-text-lighter hover:bg-hover hover:text-text",
@@ -1083,6 +1138,16 @@ export const ExtensionsSidebar = () => {
               >
                 {Icon ? <Icon className="size-3.5" weight={active ? "fill" : "duotone"} /> : null}
                 {tab.label}
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 leading-none ui-text-sm transition-colors",
+                    active
+                      ? "bg-primary-bg/20 text-primary-bg"
+                      : "bg-hover/70 text-text-lighter group-hover:text-text",
+                  )}
+                >
+                  {count}
+                </span>
               </button>
             );
           })}
@@ -1091,15 +1156,6 @@ export const ExtensionsSidebar = () => {
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,1fr)_minmax(340px,440px)]">
         <div className="custom-scrollbar-thin min-h-0 overflow-y-auto border-border/70 border-r p-5">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="font-medium text-text ui-text-sm">
-              {activeFilter?.label ?? "Extensions"}
-            </div>
-            <span className="rounded-full bg-hover/70 px-2 py-0.5 ui-text-sm text-text-lighter">
-              {filteredExtensions.length}
-            </span>
-          </div>
-
           {settings.extensionsActiveTab === "skill" && isLoadingSkills ? (
             <div className="mb-3">
               <LoadingIndicator label="Loading skills" showLabel compact />
@@ -1115,7 +1171,7 @@ export const ExtensionsSidebar = () => {
           {filteredExtensions.length === 0 ? (
             <SidebarEmptyState>No extensions found.</SidebarEmptyState>
           ) : (
-            <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
               {filteredExtensions.map((extension) => {
                 const isInstalling = isExtensionInstalling(extension);
                 const hasUpdate = hasExtensionUpdate(extension);
@@ -1202,7 +1258,12 @@ export const ExtensionsSidebar = () => {
               <div className="flex flex-wrap gap-2">
                 {!selectedExtension.isBundled ? (
                   <Button
-                    variant={selectedExtension.isInstalled ? "danger" : "accent"}
+                    variant={selectedExtension.isInstalled ? "ghost" : "accent"}
+                    className={
+                      selectedExtension.isInstalled
+                        ? "text-text-lighter hover:text-error"
+                        : undefined
+                    }
                     onClick={() => void handleToggle(selectedExtension)}
                     disabled={
                       isExtensionInstalling(selectedExtension) ||
