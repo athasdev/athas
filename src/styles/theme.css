@@ -97,6 +97,12 @@
     --app-radius-md: 8px;
     --app-radius-lg: 12px;
     --app-radius-xl: 16px;
+    --app-radius-control: 10px;
+    --app-radius-control-sm: 8px;
+    --app-radius-menu: 14px;
+    --app-radius-menu-item: 10px;
+    --app-radius-card: 12px;
+    --app-radius-pill: 999px;
     --app-duration-fast: 150ms;
     --app-duration-normal: 200ms;
     --app-duration-slow: 280ms;

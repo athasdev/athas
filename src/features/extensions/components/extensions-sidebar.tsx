@@ -57,6 +57,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
+import { SearchField } from "@/ui/search";
 import { SidebarEmptyState } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { PLATFORM_ARCH } from "@/utils/platform";
@@ -1261,17 +1262,17 @@ export const ExtensionsSidebar = () => {
           </div>
 
           <div className="flex min-w-[260px] flex-1 items-center justify-end gap-2 sm:flex-none">
-            <div className="relative min-w-0 flex-1 sm:w-80 sm:flex-none">
-              <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-text-lighter" />
-              <input
-                ref={searchInputRef}
-                autoFocus
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search extensions"
-                className="ui-font h-9 w-full rounded-md border border-border bg-secondary-bg/45 pr-3 pl-8 text-text outline-none transition-colors placeholder:text-text-lighter focus:border-accent/60 focus:bg-secondary-bg"
-              />
-            </div>
+            <SearchField
+              ref={searchInputRef}
+              autoFocus
+              value={searchQuery}
+              onChange={setSearchQuery}
+              leftIcon={Search}
+              placeholder="Search extensions"
+              size="md"
+              containerClassName="min-w-0 flex-1 sm:w-80 sm:flex-none"
+              className="h-9 bg-secondary-bg/45"
+            />
             {settings.extensionsActiveTab === "skill" ? (
               <Button variant="default" compact onClick={() => setIsSkillsCommandOpen(true)}>
                 <Plus />
@@ -1288,30 +1289,28 @@ export const ExtensionsSidebar = () => {
             const count = filterCounts[tab.id] ?? 0;
 
             return (
-              <button
+              <Button
                 key={tab.id}
                 type="button"
+                variant={active ? "default" : "ghost"}
+                active={active}
+                compact
                 className={cn(
-                  "group flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 ui-text-sm transition-colors",
-                  active
-                    ? "bg-accent text-primary-bg"
-                    : "text-text-lighter hover:bg-hover hover:text-text",
+                  "group h-8 shrink-0 gap-1.5 px-2.5",
+                  active ? "bg-selected text-text" : "text-text-lighter",
                 )}
                 onClick={() => void updateSetting("extensionsActiveTab", tab.id as ExtensionTabId)}
               >
                 {Icon ? <Icon className="size-3.5" weight={active ? "fill" : "duotone"} /> : null}
                 {tab.label}
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 py-0.5 leading-none ui-text-sm transition-colors",
-                    active
-                      ? "bg-primary-bg/20 text-primary-bg"
-                      : "bg-hover/70 text-text-lighter group-hover:text-text",
-                  )}
+                <Badge
+                  variant={active ? "accent" : "default"}
+                  size="compact"
+                  className="h-4 min-w-4 px-1"
                 >
                   {count}
-                </span>
-              </button>
+                </Badge>
+              </Button>
             );
           })}
         </div>
