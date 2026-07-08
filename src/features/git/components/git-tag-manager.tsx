@@ -253,7 +253,7 @@ const GitTagManager = ({
           </div>
         ) : (
           <div className="flex items-start gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-secondary-bg text-text-lighter">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-[var(--app-radius-control-sm)] border border-border/50 bg-secondary-bg text-text-lighter">
               <Plus className="size-4" />
             </div>
             <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-1.5">

@@ -497,7 +497,7 @@ const GitStatusPanel = ({
   const renderSectionHeader = (section: StatusSection, title: string) => (
     <button
       type="button"
-      className="ui-text-sm mt-2 flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-2.5 py-1 text-left text-text-lighter transition-colors hover:bg-hover"
+      className="ui-text-sm mt-2 flex w-full min-w-0 items-center justify-between gap-2 rounded-[var(--app-radius-menu-item)] px-2.5 py-1 text-left text-text-lighter transition-colors hover:bg-hover"
       onClick={() => toggleSectionCollapsed(section)}
       aria-expanded={!collapsedSections.has(section)}
     >

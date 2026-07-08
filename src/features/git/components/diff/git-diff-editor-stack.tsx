@@ -437,12 +437,12 @@ const DiffFileSection = memo(function DiffFileSection({
     !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
 
   return (
-    <section className="relative isolate min-w-0 max-w-full rounded-md bg-primary-bg">
+    <section className="relative isolate min-w-0 max-w-full rounded-[var(--app-radius-card)] bg-primary-bg">
       <div className="sticky top-0 z-50 min-w-0 max-w-full bg-primary-bg">
         <div
           className={cn(
             "min-w-0 max-w-full overflow-hidden border border-border/70 bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]",
-            expanded ? "rounded-t-md" : "rounded-md",
+            expanded ? "rounded-t-[var(--app-radius-card)]" : "rounded-[var(--app-radius-card)]",
           )}
         >
           <div
@@ -874,7 +874,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               viewMode={fileNavigatorViewMode}
               onViewModeChange={setFileNavigatorViewMode}
               borderless
-              className="my-2 ml-2 h-auto self-stretch rounded-md border border-border/70 bg-secondary-bg/20"
+              className="my-2 ml-2 h-auto self-stretch rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/20"
               searchMode="fuzzy"
               compactRows
             />
@@ -886,7 +886,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             data-diff-stack-scroll-container
             onWheelCapture={handleStackWheelCapture}
           >
-            <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-md">
+            <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-[var(--app-radius-card)]">
               {multiDiff.files.map((diff, index) => {
                 const sectionKey = getDiffSectionKey(multiDiff, diff, index);
 

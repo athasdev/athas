@@ -15,6 +15,7 @@ import {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { resolveRepositoryPath } from "../api/git-repo-api";
@@ -128,10 +129,12 @@ const GitProjectSelector = ({
   return (
     <>
       <div className={cn("min-w-0 max-w-full", className)}>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          compact
           className={cn(
-            "ui-font flex h-7 w-fit max-w-full min-w-0 items-center gap-1.5 rounded-md px-2.5 text-left text-accent/80 transition-colors hover:text-accent focus-visible:text-accent focus-visible:outline-none",
+            "h-7 w-fit max-w-full min-w-0 justify-start gap-1.5 px-2.5 text-left text-accent/80 hover:text-accent focus-visible:text-accent",
             triggerClassName,
           )}
           aria-haspopup="dialog"
@@ -148,7 +151,7 @@ const GitProjectSelector = ({
               isOpen && "rotate-180 text-accent",
             )}
           />
-        </button>
+        </Button>
       </div>
 
       <GitCommandSurface

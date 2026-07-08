@@ -77,7 +77,7 @@ const StashMessageModalContent = ({
         initial={prefersReducedMotion ? false : overlayEntrance.initial}
         animate={overlayEntrance.animate}
         transition={prefersReducedMotion ? instantTransition : overlayEntrance.transition}
-        className="w-80 rounded-lg border border-border bg-secondary-bg p-4 shadow-[var(--shadow-dialog)]"
+        className="w-80 rounded-[var(--app-radius-menu)] border border-border bg-secondary-bg p-4 shadow-[var(--shadow-dialog)]"
       >
         <h3 className="mb-3 font-medium ui-text-sm text-text">{title}</h3>
         <Input
