@@ -13,6 +13,8 @@ interface SplitActionButtonProps {
   menuDisabled?: boolean;
   active?: boolean;
   expanded?: boolean;
+  actionTooltip?: string;
+  menuTooltip?: string;
 }
 
 export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonProps>(
@@ -28,6 +30,8 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
       menuDisabled = disabled,
       active,
       expanded,
+      actionTooltip,
+      menuTooltip,
     },
     ref,
   ) {
@@ -48,6 +52,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
           compact
           onClick={onAction}
           disabled={disabled}
+          tooltip={actionTooltip}
           className="h-full min-h-0 min-w-0 flex-none justify-start rounded-none border-0 bg-transparent px-2 font-medium hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none disabled:opacity-100"
           aria-label={actionAriaLabel}
         >
@@ -60,6 +65,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
           compact
           onClick={onMenu}
           disabled={menuDisabled}
+          tooltip={menuTooltip}
           className="h-full min-h-0 w-5 min-w-0 rounded-none border-0 bg-transparent px-0 hover:bg-hover/80 focus-visible:ring-1 focus-visible:ring-border-strong/35 disabled:pointer-events-none disabled:opacity-100"
           aria-label={menuAriaLabel}
           aria-haspopup="menu"

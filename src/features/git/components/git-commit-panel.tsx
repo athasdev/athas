@@ -13,8 +13,8 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { SidebarComposerBody } from "@/ui/sidebar";
+import { SplitActionButton } from "@/ui/split-action-button";
 import Textarea from "@/ui/textarea";
-import Tooltip from "@/ui/tooltip";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import {
@@ -360,7 +360,7 @@ const GitCommitPanel = ({
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
   const composerButtonClassName =
-    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
+    "h-6 rounded-[var(--app-radius-control-sm)] border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
   const generateModeItems: MenuItem[] = [
     {
       id: "title",
@@ -382,7 +382,7 @@ const GitCommitPanel = ({
         {error && (
           <div
             className={cn(
-              "mx-2 mt-2 flex items-center gap-2 rounded border border-error/30",
+              "mx-2 mt-2 flex items-center gap-2 rounded-[var(--app-radius-control-sm)] border border-error/30",
               "bg-error/20 px-2 py-1 ui-text-sm text-error",
             )}
           >
@@ -452,42 +452,21 @@ const GitCommitPanel = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <div
+          <SplitActionButton
             ref={generateMenuAnchorRef}
-            className={cn(
-              "flex h-6 overflow-hidden rounded-md border border-border/60 bg-transparent text-text-lighter shadow-none transition-colors",
-              isGenerateDisabled
-                ? "cursor-not-allowed opacity-50"
-                : "hover:border-border/80 hover:bg-hover/70",
-              isGenerateModeMenuOpen && "border-border/80 bg-hover/70 text-text",
-            )}
-          >
-            <Tooltip content="Generate commit message with AI" side="top">
-              <button
-                type="button"
-                onClick={() => void handleGenerateCommitMessage()}
-                disabled={isGenerateDisabled}
-                className="flex size-6 items-center justify-center transition-colors hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 focus-visible:outline-none disabled:pointer-events-none [&_svg]:size-3"
-                aria-label="Generate commit message with AI"
-              >
-                <Sparkles />
-              </button>
-            </Tooltip>
-            <div className="my-1 w-px bg-border/70" />
-            <Tooltip content="Commit message format" side="top">
-              <button
-                type="button"
-                onClick={() => setIsGenerateModeMenuOpen((open) => !open)}
-                disabled={isGenerating || isCommitting}
-                className="flex h-full w-5 items-center justify-center transition-colors hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 focus-visible:outline-none disabled:pointer-events-none [&_svg]:size-3"
-                aria-haspopup="menu"
-                aria-expanded={isGenerateModeMenuOpen}
-                aria-label="Commit message format"
-              >
-                <ChevronDown />
-              </button>
-            </Tooltip>
-          </div>
+            label={<Sparkles />}
+            actionAriaLabel="Generate commit message with AI"
+            menuAriaLabel="Commit message format"
+            menuIcon={<ChevronDown />}
+            onAction={() => void handleGenerateCommitMessage()}
+            onMenu={() => setIsGenerateModeMenuOpen((open) => !open)}
+            disabled={isGenerateDisabled}
+            menuDisabled={isGenerating || isCommitting}
+            expanded={isGenerateModeMenuOpen}
+            active={isGenerateModeMenuOpen}
+            actionTooltip="Generate commit message with AI"
+            menuTooltip="Commit message format"
+          />
           <Dropdown
             isOpen={isGenerateModeMenuOpen}
             anchorRef={generateMenuAnchorRef}
