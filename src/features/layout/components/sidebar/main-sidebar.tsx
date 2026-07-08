@@ -254,49 +254,41 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
   return (
     <div
-      className="relative z-30 h-full shrink-0 overflow-visible"
-      style={{ width: COLLAPSED_ACTIVITY_RAIL_WIDTH }}
+      ref={railRef}
+      className={cn(
+        "athas-sidebar-rail relative flex h-full shrink-0 flex-col pb-2 pt-2",
+        expanded ? "items-start gap-1.5" : "items-center gap-1.5",
+      )}
+      style={{
+        width: expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH,
+        paddingLeft: expanded ? ACTIVITY_RAIL_EXPANDED_PADDING_X : 0,
+        paddingRight: expanded ? ACTIVITY_RAIL_EXPANDED_PADDING_X : 0,
+      }}
     >
-      <div
-        ref={railRef}
-        className={cn(
-          "athas-sidebar-rail flex h-full flex-col pb-2 pt-2",
-          "bg-secondary-bg/95 backdrop-blur-xl",
-          expanded
-            ? "absolute top-0 left-0 z-30 items-start gap-1.5 shadow-[8px_0_24px_rgba(0,0,0,0.08)]"
-            : "relative items-center gap-1.5",
-        )}
-        style={{
-          width: expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH,
-          paddingLeft: expanded ? ACTIVITY_RAIL_EXPANDED_PADDING_X : 0,
-          paddingRight: expanded ? ACTIVITY_RAIL_EXPANDED_PADDING_X : 0,
-        }}
-      >
-        <SidebarProjectSwitcher expanded={expanded} />
-        <SidebarPaneSelector
-          activeSidebarView={activeSidebarView}
-          isGitViewActive={isGitViewActive}
-          isGitHubPRsViewActive={isGitHubPRsViewActive}
-          coreFeatures={coreFeatures}
-          onViewChange={handleSidebarViewChange}
-          onSearchClick={() => openGlobalSearchBuffer()}
-          onExtensionsClick={() => openExtensionsBuffer()}
-          isExtensionsActive={isExtensionsBufferActive}
-          compact={!expanded}
-          showLabels={expanded}
-          orientation="vertical"
+      <SidebarProjectSwitcher expanded={expanded} />
+      <SidebarPaneSelector
+        activeSidebarView={activeSidebarView}
+        isGitViewActive={isGitViewActive}
+        isGitHubPRsViewActive={isGitHubPRsViewActive}
+        coreFeatures={coreFeatures}
+        onViewChange={handleSidebarViewChange}
+        onSearchClick={() => openGlobalSearchBuffer()}
+        onExtensionsClick={() => openExtensionsBuffer()}
+        isExtensionsActive={isExtensionsBufferActive}
+        compact={!expanded}
+        showLabels={expanded}
+        orientation="vertical"
+      />
+      <SidebarNewAgentButton expanded={expanded} />
+      {expanded ? (
+        <div
+          role="separator"
+          aria-label="Resize activity rail"
+          aria-orientation="vertical"
+          className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize"
+          onMouseDown={handleResizeMouseDown}
         />
-        <SidebarNewAgentButton expanded={expanded} />
-        {expanded ? (
-          <div
-            role="separator"
-            aria-label="Resize activity rail"
-            aria-orientation="vertical"
-            className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize"
-            onMouseDown={handleResizeMouseDown}
-          />
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 });
