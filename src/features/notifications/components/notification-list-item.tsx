@@ -6,7 +6,6 @@ import { Button } from "@/ui/button";
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/ui/item";
 import type { NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 
 interface NotificationListItemProps {
   notification: NotificationEntry;
@@ -40,7 +39,7 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
         tabIndex={tabIndex}
         size="xs"
         variant={selected ? "muted" : "default"}
-        className="relative h-7 flex-nowrap select-none rounded-md px-2 py-0 hover:bg-hover/45 focus-visible:bg-hover/45 focus-visible:ring-0"
+        className="relative h-7 flex-nowrap select-none rounded-[var(--app-radius-menu-item)] px-2 py-0 hover:bg-hover/45 focus-visible:bg-hover/45 focus-visible:ring-0"
         onClick={onClick}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
@@ -59,12 +58,10 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
             <Tooltip key={action.id} content={action.label} side="bottom" triggerClassName="size-6">
               <Button
                 type="button"
-                variant="ghost"
+                variant={action.variant === "danger" ? "danger" : "ghost"}
                 compact
-                className={cn(
-                  "size-5 min-w-5 rounded bg-transparent p-0 text-text-lighter hover:bg-hover hover:text-text",
-                  action.variant === "danger" && "hover:text-error",
-                )}
+                className="size-5 min-h-5 min-w-5 bg-transparent px-0 text-text-lighter"
+                aria-label={action.label}
                 onClick={(event) => {
                   event.stopPropagation();
                   action.onSelect();

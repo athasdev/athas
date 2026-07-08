@@ -26,6 +26,7 @@ import Command, {
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
+  CommandItemBadge,
   CommandList,
 } from "@/ui/command";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -370,7 +371,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                   <div key={group.label} className="flex flex-col gap-1">
                     <button
                       type="button"
-                      className="ui-font ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter hover:bg-hover/50 hover:text-text"
+                      className="ui-font ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-[var(--app-radius-menu-item)] px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
                       aria-expanded={!collapsedNotificationGroups.has(group.label)}
                       onClick={() => toggleNotificationGroup(group.label)}
                     >
@@ -381,9 +382,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                         )}
                       />
                       <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                      <span className="shrink-0 rounded-full bg-hover/70 px-1.5 py-0.5">
-                        {group.notifications.length}
-                      </span>
+                      <CommandItemBadge>{group.notifications.length}</CommandItemBadge>
                     </button>
                     {!collapsedNotificationGroups.has(group.label) ? (
                       <ItemGroup className="gap-0.5">
