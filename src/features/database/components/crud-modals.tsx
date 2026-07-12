@@ -260,7 +260,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   { value: "BLOB", label: "BLOB" },
                 ]}
                 size="md"
-                className="bg-input"
+                className="bg-secondary-bg"
               />
               <label
                 htmlFor={`column-not-null-${index}`}
