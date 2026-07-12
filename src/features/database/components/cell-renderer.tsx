@@ -43,13 +43,13 @@ export default function CellRenderer({
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
           compact
-          className="block h-auto max-w-[280px] truncate p-0 text-left ui-font font-normal text-accent"
+          className="block h-auto max-w-[280px] truncate p-0 text-left font-sans font-normal text-accent"
           tooltip="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
         </Button>
         {expanded && (
-          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg p-2 ui-font ui-text-sm text-text">
+          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg p-2 font-sans ui-text-sm text-text">
             {formatJson(value)}
           </pre>
         )}

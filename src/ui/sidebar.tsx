@@ -313,7 +313,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "ui-font flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
+        "font-sans flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
         "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
         active && "bg-hover/80 text-text",
         iconOnly && "justify-center gap-0 px-0",
@@ -364,7 +364,7 @@ export function SidebarSectionHeader({
     <button
       type="button"
       className={cn(
-        "ui-font ui-text-sm flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
+        "font-sans ui-text-sm flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
         className,
       )}
       aria-expanded={expanded}
@@ -398,7 +398,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "ui-font ui-text-sm flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
+        "font-sans ui-text-sm flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
         className,
       )}
       {...props}
@@ -569,7 +569,7 @@ export function SidebarSectionSwitcher({
         {items.map((item) => (
           <div
             key={item.id}
-            className="ui-font ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-full px-2"
+            className="font-sans ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-full px-2"
           >
             {item.icon ? (
               <span className="flex size-4 shrink-0 items-center justify-center">{item.icon}</span>
@@ -586,7 +586,7 @@ export function SidebarSectionSwitcher({
             type="button"
             aria-haspopup="menu"
             aria-expanded={isDropdownOpen}
-            className="ui-font ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
+            className="font-sans ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
             onClick={() => setIsDropdownOpen((open) => !open)}
           >
             {activeItem.icon ? (
@@ -622,7 +622,7 @@ export function SidebarSectionSwitcher({
                 aria-label={item.label}
                 disabled={item.disabled}
                 className={cn(
-                  "ui-font ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
+                  "font-sans ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
                   selected
                     ? "max-w-32 bg-hover px-2 text-text"
                     : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
@@ -661,7 +661,7 @@ export function SidebarEmptyState({
   return (
     <div
       className={cn(
-        "ui-font ui-text-sm flex min-h-24 select-none items-center justify-center px-3 py-6 text-center text-text-lighter",
+        "font-sans ui-text-sm flex min-h-24 select-none items-center justify-center px-3 py-6 text-center text-text-lighter",
         className,
       )}
       {...props}
@@ -696,7 +696,7 @@ export function SidebarEmptyActionState({
   return (
     <div
       className={cn(
-        "ui-font flex min-h-24 select-none flex-col items-center justify-center gap-1.5 px-3 py-6 text-center text-text-lighter",
+        "font-sans flex min-h-24 select-none flex-col items-center justify-center gap-1.5 px-3 py-6 text-center text-text-lighter",
         className,
       )}
       {...props}

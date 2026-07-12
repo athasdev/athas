@@ -271,7 +271,7 @@ function PrimitiveDialogHost({
         }}
         className="flex flex-col gap-2"
       >
-        <label className="flex flex-col gap-2 ui-font ui-text-sm text-text">
+        <label className="flex flex-col gap-2 font-sans ui-text-sm text-text">
           {dialog.message}
           <Input
             autoFocus

@@ -505,7 +505,7 @@ export function SkillsCommand({
         <>
           <CommandHeader onClose={handleClose}>
             <div className="min-w-0 flex-1">
-              <div className="ui-font ui-text-base truncate text-text">
+              <div className="font-sans ui-text-base truncate text-text">
                 {editingSkillId ? "Edit skill" : "New skill"}
               </div>
               {(() => {
@@ -524,7 +524,7 @@ export function SkillsCommand({
 
           <div className="custom-scrollbar-thin flex-1 space-y-3 overflow-y-auto p-3">
             <div className="space-y-1.5">
-              <label className="ui-font ui-text-base text-text-lighter" htmlFor="ai-skill-title">
+              <label className="font-sans ui-text-base text-text-lighter" htmlFor="ai-skill-title">
                 Title
               </label>
               <Input
@@ -539,7 +539,10 @@ export function SkillsCommand({
             </div>
 
             <div className="space-y-1.5">
-              <label className="ui-font ui-text-base text-text-lighter" htmlFor="ai-skill-content">
+              <label
+                className="font-sans ui-text-base text-text-lighter"
+                htmlFor="ai-skill-content"
+              >
                 Markdown
               </label>
               <Textarea

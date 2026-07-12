@@ -36,7 +36,7 @@ export const EmptyState = ({
 
   return (
     <CommandEmpty>
-      <div className="ui-font text-text-lighter">
+      <div className="font-sans text-text-lighter">
         {isIndexing ? (
           <LoadingIndicator label="Indexing project files" showLabel compact />
         ) : isLoadingFiles ? (

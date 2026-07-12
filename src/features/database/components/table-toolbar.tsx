@@ -97,9 +97,9 @@ export default function TableToolbar({
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 items-center gap-1.5">
             <Database className="text-text-lighter" />
-            <span className="ui-font ui-text-sm min-w-0 truncate text-text">{fileName}</span>
+            <span className="font-sans ui-text-sm min-w-0 truncate text-text">{fileName}</span>
             {dbInfo && (
-              <span className="ui-font ui-text-sm shrink-0 text-text-lighter">
+              <span className="font-sans ui-text-sm shrink-0 text-text-lighter">
                 {dbInfo.tables}t {dbInfo.indexes}i
               </span>
             )}
@@ -137,7 +137,7 @@ export default function TableToolbar({
             </Button>
           )}
           {resultSummary && (
-            <span className={databaseChipClassName("px-2 ui-font ui-text-sm text-text-lighter")}>
+            <span className={databaseChipClassName("px-2 font-sans ui-text-sm text-text-lighter")}>
               {resultSummary}
             </span>
           )}

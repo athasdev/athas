@@ -87,7 +87,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
         <div className="flex items-center gap-2">
           <div className={databaseChipClassName()}>
             <Server className="text-text-lighter" />
-            <span className="ui-font ui-text-sm">{store.fileName}</span>
+            <span className="font-sans ui-text-sm">{store.fileName}</span>
           </div>
           <div className="ml-auto flex items-center gap-1">
             <Button
@@ -209,8 +209,8 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                 <div className="space-y-2">
                   {Object.entries(store.serverInfo).map(([key, value]) => (
                     <div key={key} className="flex gap-2 ui-text-sm">
-                      <span className="ui-font min-w-[140px] text-text-lighter">{key}</span>
-                      <span className="ui-font">{value}</span>
+                      <span className="font-sans min-w-[140px] text-text-lighter">{key}</span>
+                      <span className="font-sans">{value}</span>
                     </div>
                   ))}
                 </div>
@@ -222,7 +222,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             <div className="flex flex-1 flex-col overflow-hidden">
               <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
                 <Key className="text-text-lighter" />
-                <span className="ui-font font-medium ui-text-sm">{store.selectedKey}</span>
+                <span className="font-sans font-medium ui-text-sm">{store.selectedKey}</span>
                 <Badge
                   className={cn(
                     "border-0 bg-secondary-bg/70 px-1.5 font-bold uppercase",

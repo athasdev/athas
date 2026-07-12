@@ -99,7 +99,7 @@ export function PRActivityPanel({
           repoPath={repoPath}
         />
       ) : (
-        <p className="ui-font ui-text-sm italic text-text-lighter">No description provided</p>
+        <p className="font-sans ui-text-sm italic text-text-lighter">No description provided</p>
       )}
 
       <div className="space-y-2">
@@ -110,7 +110,7 @@ export function PRActivityPanel({
         ) : contentError ? (
           <div className="flex items-center justify-center p-8 text-center">
             <div>
-              <p className="ui-font ui-text-sm text-error">{contentError}</p>
+              <p className="font-sans ui-text-sm text-error">{contentError}</p>
               <Button
                 onClick={onRetry}
                 variant="default"
@@ -123,7 +123,7 @@ export function PRActivityPanel({
           </div>
         ) : activityItems.length === 0 ? (
           <div className="flex items-center justify-center p-8">
-            <p className="ui-font ui-text-sm text-text-lighter">No activity</p>
+            <p className="font-sans ui-text-sm text-text-lighter">No activity</p>
           </div>
         ) : (
           <div className="w-full space-y-1">
@@ -145,7 +145,7 @@ export function PRActivityPanel({
               ),
             )}
             {activityItems.length > visibleActivityItems.length ? (
-              <div className="ui-font ui-text-sm px-1 py-2 text-text-lighter">
+              <div className="font-sans ui-text-sm px-1 py-2 text-text-lighter">
                 {`Loading ${activityItems.length - visibleActivityItems.length} more activity items...`}
               </div>
             ) : null}

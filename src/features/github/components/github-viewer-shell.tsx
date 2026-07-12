@@ -47,11 +47,11 @@ export function GitHubViewerHeader({
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
             <div className="min-w-0 flex-1">
-              <h1 className="ui-font ui-text-base min-w-0 leading-tight font-semibold text-text">
+              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-text">
                 {title}
               </h1>
               {meta ? (
-                <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
                   {meta}
                 </div>
               ) : null}

@@ -79,7 +79,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
       <GitHubAvatar login={avatarLogin} name={authorName} size={32} className="size-5" />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <code className="ui-text-sm shrink-0 rounded-md bg-primary-bg px-1.5 py-0.5 editor-font text-text-lighter">
+          <code className="ui-text-sm shrink-0 rounded-md bg-primary-bg px-1.5 py-0.5 font-mono text-text-lighter">
             {shortSha}
           </code>
           <p className="ui-text-sm min-w-0 truncate font-medium text-text">
@@ -91,7 +91,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
         ) : null}
       </div>
       <div className="ui-text-sm ml-2 flex shrink-0 items-center gap-2 text-text-lighter">
-        <span className="hidden max-w-36 truncate editor-font text-text-lighter sm:inline">
+        <span className="hidden max-w-36 truncate font-mono text-text-lighter sm:inline">
           {authorName}
         </span>
         <span>committed {getTimeAgo(commit.authoredDate)}</span>

@@ -446,7 +446,7 @@ const DiffFileSection = memo(function DiffFileSection({
           )}
         >
           <div
-            className="editor-font code-editor-font-override flex min-w-0 items-center"
+            className="font-mono code-editor-font-override flex min-w-0 items-center"
             style={headerStyle}
           >
             <button

@@ -70,7 +70,7 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
   return (
     <div
       className={cn(
-        "flex min-w-full editor-font",
+        "flex min-w-full font-mono",
         visualState.lineBackground,
         visualState.railClassName,
         textClass,

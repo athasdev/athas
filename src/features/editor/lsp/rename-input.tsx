@@ -73,7 +73,7 @@ const RenameInput = forwardRef(
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={onCancel}
-              className="ui-font h-6 min-w-[120px] rounded border-none bg-primary-bg px-1.5 text-text"
+              className="font-sans h-6 min-w-[120px] rounded border-none bg-primary-bg px-1.5 text-text"
               style={{
                 fontSize: `${fontSize}px`,
                 width: `${Math.max(value.length, symbol.length) * charWidth + 24}px`,

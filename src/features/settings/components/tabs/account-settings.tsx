@@ -107,7 +107,7 @@ export const AccountSettings = () => {
           description="Sign in to access account and subscription features."
         >
           {isAuthenticated ? (
-            <span className="ui-font ui-text-base text-text-lighter">{user?.email}</span>
+            <span className="font-sans ui-text-base text-text-lighter">{user?.email}</span>
           ) : (
             <Button
               variant="default"
@@ -130,12 +130,12 @@ export const AccountSettings = () => {
           >
             <div className="mb-3">
               <div className="min-w-0">
-                <div id="account-ai-usage-label" className="ui-font ui-text-base text-text">
+                <div id="account-ai-usage-label" className="font-sans ui-text-base text-text">
                   AI Usage
                 </div>
                 <div
                   id="account-ai-usage-description"
-                  className="ui-font ui-text-base text-text-lighter"
+                  className="font-sans ui-text-base text-text-lighter"
                 >
                   Monthly hosted AI usage across chat, agents, inline edits, generation, and other
                   Athas AI features.
@@ -145,8 +145,8 @@ export const AccountSettings = () => {
             {autocompleteUsage ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="ui-font ui-text-base text-text-lighter">Monthly usage</span>
-                  <span className="ui-font ui-text-base font-medium text-text">
+                  <span className="font-sans ui-text-base text-text-lighter">Monthly usage</span>
+                  <span className="font-sans ui-text-base font-medium text-text">
                     {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                     {formatUsdFromCents(autocompleteUsage.budgetCents)}
                   </span>
@@ -158,17 +158,17 @@ export const AccountSettings = () => {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="ui-font ui-text-base text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-text-lighter/70">
                     {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                     {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
-                  <span className="ui-font ui-text-base text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-text-lighter/70">
                     Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="ui-font ui-text-base text-text-lighter">Usage unavailable</div>
+              <div className="font-sans ui-text-base text-text-lighter">Usage unavailable</div>
             )}
           </div>
         )}

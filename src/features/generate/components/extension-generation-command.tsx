@@ -423,7 +423,7 @@ export function ExtensionGenerationCommand() {
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Sparkles className="size-4 shrink-0 text-accent" />
-              <div className="min-w-0 truncate ui-font ui-text-base text-text">
+              <div className="min-w-0 truncate font-sans ui-text-base text-text">
                 Generate Extension
               </div>
               <CommandHeaderBadge>Hosted</CommandHeaderBadge>
@@ -432,10 +432,10 @@ export function ExtensionGenerationCommand() {
           <CommandList>
             <div className="p-3">
               <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">
-                <div className="ui-font ui-text-base font-medium text-text">
+                <div className="font-sans ui-text-base font-medium text-text">
                   {isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue"}
                 </div>
-                <div className="mt-1 ui-font ui-text-base leading-[1.45] text-text-lighter">
+                <div className="mt-1 font-sans ui-text-base leading-[1.45] text-text-lighter">
                   {isAuthenticated
                     ? "Hosted extension generation is available with Athas Pro."
                     : "Sign in with your Athas account to generate UI extensions."}
@@ -511,7 +511,7 @@ export function ExtensionGenerationCommand() {
           <CommandHeader onClose={close}>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Package className="size-4 shrink-0 text-accent" />
-              <div className="min-w-0 truncate ui-font ui-text-base text-text">
+              <div className="min-w-0 truncate font-sans ui-text-base text-text">
                 {selectedIntent?.detailPrompt ?? selectedOption.detailPrompt}
               </div>
             </div>
@@ -520,14 +520,14 @@ export function ExtensionGenerationCommand() {
             <div className="space-y-2 p-2">
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
-                  <div className="ui-font ui-text-base text-text-lighter">Surface</div>
-                  <div className="mt-0.5 truncate ui-font ui-text-base text-text">
+                  <div className="font-sans ui-text-base text-text-lighter">Surface</div>
+                  <div className="mt-0.5 truncate font-sans ui-text-base text-text">
                     {selectedOption.label}
                   </div>
                 </div>
                 <div className="rounded-lg border border-border/70 bg-secondary-bg/50 px-3 py-2">
-                  <div className="ui-font ui-text-base text-text-lighter">Behavior</div>
-                  <div className="mt-0.5 truncate ui-font ui-text-base text-text">
+                  <div className="font-sans ui-text-base text-text-lighter">Behavior</div>
+                  <div className="mt-0.5 truncate font-sans ui-text-base text-text">
                     {selectedIntent?.label}
                   </div>
                 </div>
@@ -567,14 +567,14 @@ export function ExtensionGenerationCommand() {
       ) : step === "generating" ? (
         <>
           <CommandHeader onClose={close}>
-            <div className="flex min-w-0 flex-1 items-center gap-2 ui-font ui-text-base text-text">
+            <div className="flex min-w-0 flex-1 items-center gap-2 font-sans ui-text-base text-text">
               <Sparkles className="size-4 shrink-0 text-accent" />
               Generating {selectedOption.label.toLowerCase()}
             </div>
           </CommandHeader>
           <div className="flex min-h-40 flex-col items-center justify-center gap-2">
             <LoadingIndicator label={GENERATING_MESSAGES[generationMessageIndex]} showLabel />
-            <div className="ui-font ui-text-base text-text-lighter">
+            <div className="font-sans ui-text-base text-text-lighter">
               {selectedIntent?.label ?? selectedOption.label}
             </div>
           </div>
@@ -582,7 +582,7 @@ export function ExtensionGenerationCommand() {
       ) : step === "installed" ? (
         <>
           <CommandHeader onClose={close}>
-            <div className="flex min-w-0 flex-1 items-center gap-2 ui-font ui-text-base text-text">
+            <div className="flex min-w-0 flex-1 items-center gap-2 font-sans ui-text-base text-text">
               <Check className="size-4 shrink-0 text-success" />
               Extension installed
             </div>
@@ -590,8 +590,8 @@ export function ExtensionGenerationCommand() {
           <CommandList>
             <div className="space-y-2 p-2">
               <div className="rounded-lg border border-success/30 bg-success/10 p-3">
-                <div className="ui-font ui-text-base font-medium text-text">{result?.name}</div>
-                <div className="mt-1 ui-font ui-text-base leading-[1.45] text-text-lighter">
+                <div className="font-sans ui-text-base font-medium text-text">{result?.name}</div>
+                <div className="mt-1 font-sans ui-text-base leading-[1.45] text-text-lighter">
                   {selectedType === "sidebar"
                     ? "The new sidebar view is open now."
                     : selectedType === "toolbar"
@@ -609,7 +609,7 @@ export function ExtensionGenerationCommand() {
       ) : (
         <>
           <CommandHeader onClose={close}>
-            <div className="flex min-w-0 flex-1 items-center gap-2 ui-font ui-text-base text-text">
+            <div className="flex min-w-0 flex-1 items-center gap-2 font-sans ui-text-base text-text">
               {error ? (
                 <Sparkles className="size-4 shrink-0 text-error" />
               ) : (
@@ -621,7 +621,7 @@ export function ExtensionGenerationCommand() {
           <CommandList>
             <div className="space-y-2 p-2">
               {error ? (
-                <div className="rounded-lg border border-error/30 bg-error/10 p-3 ui-font ui-text-base leading-[1.45] text-error">
+                <div className="rounded-lg border border-error/30 bg-error/10 p-3 font-sans ui-text-base leading-[1.45] text-error">
                   {error}
                 </div>
               ) : result ? (
@@ -629,11 +629,11 @@ export function ExtensionGenerationCommand() {
                   <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <Package className="size-4 shrink-0 text-accent" />
-                      <div className="min-w-0 truncate ui-font ui-text-base font-medium text-text">
+                      <div className="min-w-0 truncate font-sans ui-text-base font-medium text-text">
                         {result.preview?.title ?? result.name}
                       </div>
                     </div>
-                    <div className="mt-1 ui-font ui-text-base leading-[1.45] text-text-lighter">
+                    <div className="mt-1 font-sans ui-text-base leading-[1.45] text-text-lighter">
                       {result.preview?.summary ?? result.description}
                     </div>
                   </div>
@@ -642,7 +642,7 @@ export function ExtensionGenerationCommand() {
                       (highlight) => (
                         <div
                           key={highlight}
-                          className="flex h-8 items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/70 px-3 ui-font ui-text-base text-text"
+                          className="flex h-8 items-center gap-2 rounded-lg border border-border/60 bg-primary-bg/70 px-3 font-sans ui-text-base text-text"
                         >
                           <Check className="size-3.5 shrink-0 text-success" />
                           <span className="min-w-0 truncate">{highlight}</span>

@@ -143,20 +143,20 @@ const VimCommandBar = () => {
   return (
     <Command isVisible={isCommandMode} onClose={exitCommandMode} className="max-h-80">
       <CommandHeader onClose={exitCommandMode}>
-        <span className="ui-font text-accent ui-text-base">:</span>
+        <span className="font-sans text-accent ui-text-base">:</span>
         <CommandInput
           ref={inputRef}
           value={commandInput}
           onChange={handleInputChange}
           placeholder="Enter vim command..."
-          className="ui-font"
+          className="font-sans"
         />
       </CommandHeader>
 
       <CommandList ref={scrollContainerRef}>
         {suggestions.length === 0 ? (
           <CommandEmpty>
-            <div className="ui-font">
+            <div className="font-sans">
               {commandInput ? "No matching commands" : "Type a command"}
             </div>
           </CommandEmpty>

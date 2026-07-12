@@ -239,7 +239,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge size="compact" className="editor-font">
+              <Badge size="compact" className="font-mono">
                 #{buffer.prNumber ?? "--"}
               </Badge>
               <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>

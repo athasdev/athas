@@ -297,7 +297,7 @@ export function AgentLaunchInput({
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handlePromptKeyDown}
           placeholder="Ask anything..."
-          className="ui-font ui-text-base min-h-16 w-full resize-none bg-transparent px-1 py-1 text-text leading-6 outline-none placeholder:text-text-lighter"
+          className="font-sans ui-text-base min-h-16 w-full resize-none bg-transparent px-1 py-1 text-text leading-6 outline-none placeholder:text-text-lighter"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
@@ -325,7 +325,7 @@ export function AgentLaunchInput({
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handlePromptKeyDown}
           placeholder="Ask an agent to do something..."
-          className="ui-font ui-text-base h-9 w-full bg-transparent px-1 text-text outline-none placeholder:text-text-lighter"
+          className="font-sans ui-text-base h-9 w-full bg-transparent px-1 text-text outline-none placeholder:text-text-lighter"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}

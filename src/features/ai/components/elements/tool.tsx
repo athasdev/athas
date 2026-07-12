@@ -56,7 +56,7 @@ export function ToolTrigger({
       <div
         data-ai-element="tool-trigger"
         className={cn(
-          "ui-font ui-text-sm flex h-6 min-w-0 flex-1 items-center justify-start gap-1.5 rounded-md px-0 text-text-lighter/55",
+          "font-sans ui-text-sm flex h-6 min-w-0 flex-1 items-center justify-start gap-1.5 rounded-md px-0 text-text-lighter/55",
           className,
         )}
       >
@@ -71,7 +71,7 @@ export function ToolTrigger({
       type="button"
       data-ai-element="tool-trigger"
       className={cn(
-        "ui-font ui-text-sm flex h-6 min-w-0 flex-1 items-center justify-start gap-1.5 rounded-md px-0 text-text-lighter/55",
+        "font-sans ui-text-sm flex h-6 min-w-0 flex-1 items-center justify-start gap-1.5 rounded-md px-0 text-text-lighter/55",
         "hover:bg-transparent hover:text-text-lighter/75 focus-visible:outline-none",
         className,
       )}
@@ -88,7 +88,7 @@ export function ToolContent({ className, ...props }: ComponentProps<"div">) {
     <div
       data-ai-element="tool-content"
       className={cn(
-        "ui-text-sm editor-font mt-1 max-h-64 overflow-auto whitespace-pre-wrap text-text-lighter/45",
+        "ui-text-sm font-mono mt-1 max-h-64 overflow-auto whitespace-pre-wrap text-text-lighter/45",
         className,
       )}
       {...props}

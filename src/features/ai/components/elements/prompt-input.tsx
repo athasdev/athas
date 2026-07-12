@@ -51,7 +51,7 @@ export const PromptInputEditable = forwardRef<
       data-ai-element="prompt-input-editable"
       className={cn(
         "max-h-[140px] min-h-[64px] w-full resize-none overflow-x-hidden overflow-y-auto bg-transparent",
-        "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
+        "font-sans ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
         "whitespace-pre-wrap focus:outline-none",
         enabled ? "cursor-text" : "cursor-not-allowed opacity-50",
         "empty:before:pointer-events-none empty:before:text-text-lighter empty:before:content-[attr(data-placeholder)]",

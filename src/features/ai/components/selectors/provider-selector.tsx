@@ -161,7 +161,7 @@ export function ProviderSelector({
             aria-label="Search AI providers"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleTriggerInputKeyDown}
-            className="ui-font absolute top-1/2 right-1.5 left-6 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+            className="font-sans absolute top-1/2 right-1.5 left-6 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
           />
         </div>
       ) : (

@@ -692,7 +692,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
 
       {detailsError && (
         <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
-          <p className="ui-font ui-text-sm truncate text-error/90">{detailsError}</p>
+          <p className="font-sans ui-text-sm truncate text-error/90">{detailsError}</p>
           <Button
             onClick={handleRefresh}
             variant="default"

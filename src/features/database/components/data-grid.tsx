@@ -391,13 +391,13 @@ export default function DataGrid({
   if (queryResult.rows.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <span className="ui-font ui-text-sm text-text-lighter">No data</span>
+        <span className="font-sans ui-text-sm text-text-lighter">No data</span>
       </div>
     );
   }
 
   return (
-    <div className="ui-font flex min-h-0 flex-1 flex-col">
+    <div className="font-sans flex min-h-0 flex-1 flex-col">
       <div className="group flex h-9 items-center justify-between border-border/70 border-b px-3">
         <span className="ui-text-sm text-text-lighter">
           {queryResult.rows.length} {resultLabel}

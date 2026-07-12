@@ -1051,7 +1051,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         mentionSpan.setAttribute("contenteditable", "false");
         mentionSpan.title = file.path;
         mentionSpan.className =
-          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
+          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
@@ -1126,7 +1126,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         commandSpan.setAttribute("contenteditable", "false");
         commandSpan.title = command.description || `/${command.name}`;
         commandSpan.className =
-          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
+          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
         commandSpan.textContent = `/${command.name}`;
         inputRef.current.appendChild(commandSpan);
 
@@ -1456,7 +1456,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
             {selectedContextItems.map((item) => (
               <div
                 key={`selected-${item.type}-${item.id}`}
-                className="group relative ui-font ui-text-sm flex h-6 min-w-0 max-w-[150px] shrink-0 select-none items-center gap-1.5 overflow-hidden rounded-md bg-hover/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:bg-hover/70 focus:bg-hover/70 focus:outline-none focus:ring-1 focus:ring-border-strong/35"
+                className="group relative font-sans ui-text-sm flex h-6 min-w-0 max-w-[150px] shrink-0 select-none items-center gap-1.5 overflow-hidden rounded-md bg-hover/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:bg-hover/70 focus:bg-hover/70 focus:outline-none focus:ring-1 focus:ring-border-strong/35"
                 data-context-chip
                 role="listitem"
                 tabIndex={0}

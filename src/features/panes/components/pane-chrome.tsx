@@ -5,10 +5,10 @@ import { cn } from "@/utils/cn";
 
 const paneHeaderVariants = cva("flex min-h-7 items-center gap-1.5 bg-primary-bg px-1.5 py-1");
 
-const paneTitleVariants = cva("ui-font ui-text-sm font-medium text-text");
+const paneTitleVariants = cva("font-sans ui-text-sm font-medium text-text");
 
 const paneChipVariants = cva(
-  "ui-font ui-text-sm inline-flex h-5 items-center rounded-full border border-border/70 bg-primary-bg px-1.5 text-text-lighter",
+  "font-sans ui-text-sm inline-flex h-5 items-center rounded-full border border-border/70 bg-primary-bg px-1.5 text-text-lighter",
 );
 
 const paneGroupVariants = cva("flex items-center gap-1");

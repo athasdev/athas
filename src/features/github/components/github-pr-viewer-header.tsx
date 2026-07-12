@@ -58,7 +58,7 @@ interface OverviewFieldProps {
 
 function OverviewField({ icon, children }: OverviewFieldProps) {
   return (
-    <div className="ui-font ui-text-sm flex min-w-0 items-center gap-2 text-text-lighter">
+    <div className="font-sans ui-text-sm flex min-w-0 items-center gap-2 text-text-lighter">
       {icon ? <span className="shrink-0 text-text-lighter">{icon}</span> : null}
       <div className="min-w-0">{children}</div>
     </div>
@@ -102,7 +102,7 @@ export function GitHubPRViewerHeader({
           <Badge
             variant="default"
             size="compact"
-            className="max-w-full bg-secondary-bg/80 editor-font"
+            className="max-w-full bg-secondary-bg/80 font-mono"
           >
             <span className="min-w-0 truncate">{pr.baseRef}</span>
             <span className="shrink-0 px-1">&larr;</span>
@@ -304,7 +304,7 @@ export function GitHubPRViewerHeader({
       </div>
 
       {metaItems.length > 0 && (
-        <div className="ui-font ui-text-sm flex flex-wrap items-center gap-x-2 text-text-lighter">
+        <div className="font-sans ui-text-sm flex flex-wrap items-center gap-x-2 text-text-lighter">
           {metaItems.map((item, index) => (
             <span key={`${item}-${index}`} className="inline-flex items-center gap-x-2">
               {index > 0 ? <span>&middot;</span> : null}

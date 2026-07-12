@@ -14,7 +14,7 @@ const footerToneClassNames: Record<FooterControlTone, string> = {
 
 export function footerControlClassName(tone: FooterControlTone = "default", busy = false) {
   return cn(
-    "ui-font ui-text-sm font-medium",
+    "font-sans ui-text-sm font-medium",
     footerToneClassNames[tone],
     busy && "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
   );

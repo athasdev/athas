@@ -19,7 +19,7 @@ export default function Keybinding({ keys, binding, className }: KeybindingProps
   return (
     <span
       className={cn(
-        "editor-font ui-text-sm inline-flex items-center whitespace-nowrap text-text-lighter/75",
+        "font-mono ui-text-sm inline-flex items-center whitespace-nowrap text-text-lighter/75",
         className,
       )}
     >

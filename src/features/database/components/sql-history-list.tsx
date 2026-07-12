@@ -35,7 +35,7 @@ export default function SqlHistoryList({
   return (
     <div className={cn(databaseCardClassName(), compact && "mx-2 mb-2")}>
       <div className="flex items-center justify-between p-2">
-        <div className="px-2 py-1 ui-font ui-text-sm text-text-lighter uppercase">
+        <div className="px-2 py-1 font-sans ui-text-sm text-text-lighter uppercase">
           {title} ({queries.length})
         </div>
         <Button

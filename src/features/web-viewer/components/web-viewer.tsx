@@ -866,7 +866,7 @@ export function WebViewer({
           <div ref={containerRef} className="absolute inset-px overflow-hidden rounded-[7px]">
             {!currentUrl && !isLoading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-primary-bg px-6 text-center">
-                <div className="ui-font ui-text-sm text-text">Open a page</div>
+                <div className="font-sans ui-text-sm text-text">Open a page</div>
                 <div className="ui-text-sm max-w-[320px] text-text-lighter">
                   Enter a URL to load a website, local development server, or app-bound page.
                 </div>

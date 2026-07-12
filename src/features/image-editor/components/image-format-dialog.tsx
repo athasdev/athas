@@ -143,7 +143,7 @@ export function ImageFormatDialog({
       <div className="flex flex-col gap-1">
         <p className="text-text ui-text-sm">{config.description}</p>
         <p className="text-text-lighter ui-text-sm">
-          Current: <span className="ui-font">{currentFileName}</span> •{" "}
+          Current: <span className="font-sans">{currentFileName}</span> •{" "}
           {formatFileSize(currentSize)}
         </p>
       </div>
@@ -187,13 +187,13 @@ export function ImageFormatDialog({
               <span className="text-text-lighter ui-text-sm">Calculating...</span>
             ) : estimatedSize ? (
               <>
-                <span className="ui-font text-text ui-text-sm">
+                <span className="font-sans text-text ui-text-sm">
                   {formatFileSize(estimatedSize)}
                 </span>
                 {sizeDiff !== 0 && (
                   <span
                     className={cn(
-                      "ui-font ui-text-sm",
+                      "font-sans ui-text-sm",
                       sizeDiff < 0 ? "text-success" : "text-warning",
                     )}
                   >

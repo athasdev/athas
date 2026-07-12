@@ -87,7 +87,7 @@ const DiffHunkHeader = memo(
       <div
         className={cn(
           "group grid cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-center",
-          "editor-font code-editor-font-override border-border/70 border-b bg-primary-bg text-text-lighter",
+          "font-mono code-editor-font-override border-border/70 border-b bg-primary-bg text-text-lighter",
         )}
         style={headerStyle}
         onClick={onToggleCollapse}

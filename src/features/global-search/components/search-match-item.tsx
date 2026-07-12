@@ -72,7 +72,7 @@ export const SearchMatchItem = memo(
         </span>
 
         {/* Match content */}
-        <div className="ui-text-sm min-w-0 flex-[2] editor-font text-text">
+        <div className="ui-text-sm min-w-0 flex-[2] font-mono text-text">
           <div className="truncate">
             {highlightMatch(match.line_content, match.column_start, match.column_end)}
           </div>

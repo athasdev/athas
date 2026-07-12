@@ -384,8 +384,8 @@ export function LocalHistoryCommandContent({
         </CommandHeaderAction>
         <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
         <div className="min-w-0 flex-1">
-          <div className="truncate ui-font ui-text-base text-text">Local History: {fileName}</div>
-          <div className="truncate ui-font ui-text-base text-text-lighter">{targetPath}</div>
+          <div className="truncate font-sans ui-text-base text-text">Local History: {fileName}</div>
+          <div className="truncate font-sans ui-text-base text-text-lighter">{targetPath}</div>
         </div>
         <CommandHeaderAction
           aria-label="Create local history entry"
@@ -427,10 +427,10 @@ export function LocalHistoryCommandContent({
             >
               <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
               <div className="min-w-0 flex-1">
-                <div className="truncate ui-font ui-text-base text-text">
+                <div className="truncate font-sans ui-text-base text-text">
                   {getEntryTitle(entry)}
                 </div>
-                <div className="truncate ui-font ui-text-base text-text-lighter">
+                <div className="truncate font-sans ui-text-base text-text-lighter">
                   {formatRelativeDate(new Date(entry.created_at))} ·{" "}
                   {formatSnapshotSize(entry.size)}
                   {entry.reason ? ` · ${entry.reason}` : ""}

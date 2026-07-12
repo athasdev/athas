@@ -55,7 +55,7 @@ export interface SelectProps {
 }
 
 const selectTriggerVariants = cva(
-  "ui-font inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
+  "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
   {
     variants: {
       size: {
@@ -80,7 +80,7 @@ const selectContentVariants = cva(
 );
 
 const selectItemVariants = cva(
-  "ui-font flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
+  "font-sans flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
   {
     variants: {
       size: {
@@ -96,7 +96,7 @@ const selectItemVariants = cva(
 );
 
 const selectSearchInputVariants = cva(
-  "ui-font w-full border-none bg-transparent py-1 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
+  "font-sans w-full border-none bg-transparent py-1 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
   {
     variants: {
       size: {
@@ -184,7 +184,7 @@ function SelectEmptyState({ size }: { size: "xs" | "sm" | "md" }) {
   return (
     <div
       className={cn(
-        "ui-font p-3 text-center text-text-lighter",
+        "font-sans p-3 text-center text-text-lighter",
         size === "md" ? "ui-text-base" : "ui-text-sm",
       )}
     >

@@ -21,7 +21,7 @@ export function databaseCardClassName(className?: string) {
 
 export function databaseCodeBlockClassName(className?: string) {
   return cn(
-    "ui-font whitespace-pre-wrap rounded-lg bg-secondary-bg/40 p-3 ui-text-sm leading-5",
+    "font-sans whitespace-pre-wrap rounded-lg bg-secondary-bg/40 p-3 ui-text-sm leading-5",
     className,
   );
 }

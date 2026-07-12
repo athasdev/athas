@@ -117,7 +117,7 @@ export const PRFilesPanel = memo(
       return (
         <div className="flex items-center justify-center p-8 text-center">
           <div>
-            <p className="ui-font ui-text-sm text-error">{contentError}</p>
+            <p className="font-sans ui-text-sm text-error">{contentError}</p>
             <Button
               onClick={onRetry}
               variant="default"
@@ -134,7 +134,7 @@ export const PRFilesPanel = memo(
     if (diffFiles.length === 0) {
       return (
         <div className="flex items-center justify-center p-8">
-          <p className="ui-font ui-text-sm text-text-lighter">No file changes</p>
+          <p className="font-sans ui-text-sm text-text-lighter">No file changes</p>
         </div>
       );
     }
@@ -142,7 +142,7 @@ export const PRFilesPanel = memo(
     if (filteredDiff.length === 0) {
       return (
         <div className="flex items-center justify-center p-8">
-          <p className="ui-font ui-text-sm text-text-lighter">No files match your filters</p>
+          <p className="font-sans ui-text-sm text-text-lighter">No files match your filters</p>
         </div>
       );
     }
@@ -226,7 +226,7 @@ export const PRFilesPanel = memo(
               />
             ) : (
               <div className="flex h-full items-center justify-center p-8">
-                <p className="ui-font ui-text-sm text-text-lighter">Select a file</p>
+                <p className="font-sans ui-text-sm text-text-lighter">Select a file</p>
               </div>
             )}
           </div>

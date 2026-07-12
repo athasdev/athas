@@ -33,7 +33,7 @@ export default function InfoView({
   const objectGroups = groupDatabaseObjects(tables);
 
   return (
-    <div className="flex-1 overflow-auto ui-font">
+    <div className="flex-1 overflow-auto font-sans">
       <div className="divide-y divide-border">
         {/* Database stats */}
         <div className="p-3">

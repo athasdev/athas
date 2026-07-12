@@ -272,7 +272,7 @@ function ProviderApiKeyCommandContent({
                     href={dashboardLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ui-font text-text-lighter ui-text-base hover:text-text"
+                    className="font-sans text-text-lighter ui-text-base hover:text-text"
                   >
                     Open dashboard
                   </a>

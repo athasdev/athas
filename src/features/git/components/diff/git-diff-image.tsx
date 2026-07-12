@@ -82,7 +82,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
         >
           <ZoomOut />
         </Button>
-        <span className="ui-font w-12 text-center text-text-lighter ui-text-sm">
+        <span className="font-sans w-12 text-center text-text-lighter ui-text-sm">
           {Math.round(zoom * 100)}%
         </span>
         <Button

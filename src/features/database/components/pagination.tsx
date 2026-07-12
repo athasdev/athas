@@ -65,7 +65,7 @@ export default function Pagination({
           size="xs"
           className="min-w-16"
         />
-        <span className="ui-font ui-text-sm text-text-lighter">per page</span>
+        <span className="font-sans ui-text-sm text-text-lighter">per page</span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -92,9 +92,9 @@ export default function Pagination({
             min={1}
             max={totalPages}
             aria-label="Current page"
-            className="ui-font ui-text-sm h-6 w-12 px-1 py-0 text-center"
+            className="font-sans ui-text-sm h-6 w-12 px-1 py-0 text-center"
           />
-          <span className="ui-font ui-text-sm text-text-lighter">/ {totalPages}</span>
+          <span className="font-sans ui-text-sm text-text-lighter">/ {totalPages}</span>
         </form>
 
         <Button

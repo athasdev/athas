@@ -328,7 +328,7 @@ export default function DebuggerView() {
         <aside className="flex min-h-0 flex-col border-border/70 border-r">
           <div className="space-y-3 p-3">
             <div className="space-y-1.5">
-              <div className="ui-font text-text-lighter ui-text-sm">Configuration</div>
+              <div className="font-sans text-text-lighter ui-text-sm">Configuration</div>
               <Select
                 value={selectedConfig.id}
                 onChange={(value) => debuggerActions.setActiveConfigId(value)}
@@ -341,7 +341,7 @@ export default function DebuggerView() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="ui-font text-text-lighter ui-text-sm">Command</div>
+              <div className="font-sans text-text-lighter ui-text-sm">Command</div>
               {resolvedSelectedConfig.runtime === "custom" ? (
                 <Input
                   value={customCommand}
@@ -350,7 +350,7 @@ export default function DebuggerView() {
                   size="sm"
                 />
               ) : (
-                <div className="ui-font min-h-8 truncate rounded-lg border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
+                <div className="font-sans min-h-8 truncate rounded-lg border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}
@@ -417,7 +417,7 @@ export default function DebuggerView() {
             </div>
 
             {startError ? (
-              <div className="ui-font rounded-lg border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
+              <div className="font-sans rounded-lg border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
                 {startError}
               </div>
             ) : null}

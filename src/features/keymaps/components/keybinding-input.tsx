@@ -69,7 +69,7 @@ export function KeybindingInput({
         {keys.length > 0 ? (
           <Keybinding keys={keys} />
         ) : (
-          <span className="ui-font ui-text-sm text-text-lighter">
+          <span className="font-sans ui-text-sm text-text-lighter">
             {isRecording ? "Press keys..." : value || "Not assigned"}
           </span>
         )}

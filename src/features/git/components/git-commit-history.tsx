@@ -101,7 +101,7 @@ const CommitItem = memo(
             <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
               <span className="truncate">{commit.author}</span>
               <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
-              <span className="shrink-0 editor-font">{shortHash}</span>
+              <span className="shrink-0 font-mono">{shortHash}</span>
             </span>
           </span>
         </button>

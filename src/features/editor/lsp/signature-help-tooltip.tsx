@@ -254,7 +254,7 @@ export const SignatureHelpTooltip = ({
         left: `${Math.max(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT, position.left)}px`,
       }}
     >
-      <div className="ui-font ui-text-sm editor-font text-text">{renderLabel()}</div>
+      <div className="font-sans ui-text-sm font-mono text-text">{renderLabel()}</div>
     </div>
   );
 };

@@ -307,7 +307,7 @@ export function AgentSelector({
           type="button"
           variant="ghost"
           compact
-          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
+          className="font-sans flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>

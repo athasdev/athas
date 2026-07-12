@@ -477,7 +477,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
               <FolderOpen className="size-5" weight="duotone" />
-              <span className="ui-font ui-text-sm">
+              <span className="font-sans ui-text-sm">
                 Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
               </span>
             </button>
@@ -538,7 +538,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                 onChange={setSaveCredential}
                 ariaLabel="Save password securely"
               />
-              <span className="ui-font text-text-lighter ui-text-sm">Save password securely</span>
+              <span className="font-sans text-text-lighter ui-text-sm">Save password securely</span>
             </label>
           </div>
         ) : !rootFolderPath ? (

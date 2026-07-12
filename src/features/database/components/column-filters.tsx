@@ -45,7 +45,7 @@ export default function ColumnFilters({
     <div className={databaseCardClassName("mx-3 mb-2 bg-secondary-bg/60 px-3 py-2")}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="ui-font ui-text-sm text-text-lighter">
+          <span className="font-sans ui-text-sm text-text-lighter">
             {filters.length} filter{filters.length !== 1 ? "s" : ""}
           </span>
           {columns.length > 0 && (
@@ -73,7 +73,7 @@ export default function ColumnFilters({
       </div>
       <div className="space-y-1">
         {filters.map((filter, index) => (
-          <div key={index} className="flex items-center gap-2 ui-font ui-text-sm">
+          <div key={index} className="flex items-center gap-2 font-sans ui-text-sm">
             <Select
               value={filter.column}
               options={columns.map((column) => ({ value: column.name, label: column.name }))}

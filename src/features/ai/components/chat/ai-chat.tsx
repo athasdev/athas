@@ -1109,7 +1109,7 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text ui-text-sm ${className || ""}`}
+      className={`ai-chat-surface font-sans flex h-full flex-col bg-transparent text-text ui-text-sm ${className || ""}`}
     >
       <ChatHeader
         chatId={effectiveChatId}
@@ -1178,7 +1178,7 @@ details: ${errorDetails || mainError}
                 >
                   <span className="font-medium text-text-light">Permission</span>
                   <span className="px-1.5 text-text-lighter">/</span>
-                  <span className="editor-font">{currentPermissionSummary}</span>
+                  <span className="font-mono">{currentPermissionSummary}</span>
                 </div>
                 {permissionQueue.length > 1 ? (
                   <Badge variant="muted" size="compact" className="shrink-0">

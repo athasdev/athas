@@ -615,7 +615,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       {error ? (
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <p className="ui-font ui-text-sm text-error">{error}</p>
+            <p className="font-sans ui-text-sm text-error">{error}</p>
             <Button
               onClick={() => void fetchWorkflowRun(true)}
               variant="default"
@@ -635,7 +635,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 <dd
                   className={cn(
                     "min-w-0 truncate text-text",
-                    item.mono ? "editor-font ui-text-sm" : "ui-text-sm",
+                    item.mono ? "font-mono ui-text-sm" : "ui-text-sm",
                   )}
                 >
                   {item.value}

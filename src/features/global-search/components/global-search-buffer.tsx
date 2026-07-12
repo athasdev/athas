@@ -496,7 +496,7 @@ const GlobalSearchBuffer = () => {
               value={query}
               onChange={setQuery}
               placeholder="Search in files..."
-              className="ui-font min-w-0"
+              className="font-sans min-w-0"
             />
           </div>
           <TabsList variant="segmented" className="shrink-0">
@@ -540,13 +540,13 @@ const GlobalSearchBuffer = () => {
                 value={includeQuery}
                 onChange={setIncludeQuery}
                 placeholder="Files to include"
-                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+                className="font-sans h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
               />
               <CommandInput
                 value={excludeQuery}
                 onChange={setExcludeQuery}
                 placeholder="Files to exclude"
-                className="ui-font h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
+                className="font-sans h-7 rounded-md border border-border/70 bg-primary-bg/65 px-2"
               />
             </div>
           </div>

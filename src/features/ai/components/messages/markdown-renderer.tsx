@@ -257,10 +257,10 @@ function CodeBlock({
 
   return (
     <div className="group relative my-2">
-      <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+      <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
-            <div className="editor-font text-text-lighter ui-text-sm">{languageLabel}</div>
+            <div className="font-mono text-text-lighter ui-text-sm">{languageLabel}</div>
           )}
           {code.trim() && (
             <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -287,7 +287,7 @@ function CodeBlock({
             </div>
           )}
         </div>
-        <code className="editor-font block whitespace-pre-wrap break-all text-text ui-text-sm">
+        <code className="font-mono block whitespace-pre-wrap break-all text-text ui-text-sm">
           {renderedCode}
         </code>
       </pre>
@@ -435,7 +435,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
         </div>
       )}
       {normalizedDetails && isExpanded && (
-        <pre className="ui-text-sm editor-font mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
+        <pre className="ui-text-sm font-mono mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
           {(() => {
             try {
               const parsed = JSON.parse(normalizedDetails);
@@ -513,7 +513,7 @@ type MarkdownTable = {
 };
 
 const INLINE_CODE_CLASS_NAME =
-  "editor-font inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
+  "font-mono inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
 const INLINE_LINK_CLASS_NAME =
   "inline cursor-pointer break-words font-[inherit] leading-[inherit] text-accent hover:underline";
 

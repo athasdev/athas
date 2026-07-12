@@ -1329,7 +1329,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
+      <SidebarPanel className="font-sans ui-text-sm select-none gap-2 p-2">
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <SidebarSectionSwitcher
             items={gitTabs}

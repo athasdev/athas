@@ -130,7 +130,7 @@ const Dialog = ({
           >
             <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
               {Icon && <Icon className="text-text-lighter" />}
-              <DialogPrimitive.Title className="min-w-0 ui-font ui-text-base font-medium text-text">
+              <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-text">
                 {title}
               </DialogPrimitive.Title>
             </div>

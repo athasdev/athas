@@ -53,7 +53,7 @@ const VimStatusIndicator = ({ compact = false }: VimStatusIndicatorProps) => {
 
   const keyDisplay = getKeyDisplay();
   const statusChipClass = cn(
-    "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text",
+    "font-sans inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text",
     compact && "px-1.5",
   );
 

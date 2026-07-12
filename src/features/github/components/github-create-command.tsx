@@ -380,7 +380,7 @@ ${statusSummary}`;
     <Command isVisible onClose={onClose} title={titleByKind[kind]} className="max-h-[540px]">
       <CommandHeader onClose={mode === "form" ? onClose : closePicker}>
         {mode === "form" ? (
-          <span className="min-w-0 flex-1 truncate ui-font ui-text-base text-text">
+          <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-text">
             {titleByKind[kind]}
           </span>
         ) : (
@@ -561,7 +561,7 @@ ${statusSummary}`;
                   />
                 </div>
                 {kind === "pull-request" ? (
-                  <label className="flex items-center gap-2 px-1 ui-font ui-text-base text-text-lighter">
+                  <label className="flex items-center gap-2 px-1 font-sans ui-text-base text-text-lighter">
                     <Checkbox
                       checked={draft}
                       onChange={setDraft}
@@ -635,8 +635,8 @@ function FieldButton({
         "h-8 min-w-0 justify-start gap-2 bg-secondary-bg px-2 text-left hover:bg-hover",
       )}
     >
-      <span className="shrink-0 ui-font ui-text-base text-text-lighter">{label}</span>
-      <span className="min-w-0 flex-1 truncate ui-font ui-text-base text-text">{value}</span>
+      <span className="shrink-0 font-sans ui-text-base text-text-lighter">{label}</span>
+      <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-text">{value}</span>
     </Button>
   );
 }

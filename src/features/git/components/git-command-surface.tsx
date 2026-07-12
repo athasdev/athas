@@ -50,7 +50,7 @@ const GitCommandSurface = ({
           onChange={onQueryChange}
           onKeyDown={onInputKeyDown}
           placeholder={placeholder}
-          className="ui-font"
+          className="font-sans"
         />
         {meta ? <CommandHeaderBadge>{meta}</CommandHeaderBadge> : null}
       </CommandHeader>

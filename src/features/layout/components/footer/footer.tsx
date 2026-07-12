@@ -377,7 +377,7 @@ const Footer = () => {
   return (
     <>
       <div className="athas-footer-bar relative z-20 flex min-h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
-        <div className="ui-font flex items-center gap-1 text-text-lighter">
+        <div className="font-sans flex items-center gap-1 text-text-lighter">
           {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
             <div key={item.id} className="flex min-h-6 items-center">
               {item.content}
@@ -385,7 +385,7 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="ui-font flex items-center gap-1 text-text-lighter">
+        <div className="font-sans flex items-center gap-1 text-text-lighter">
           {orderChromeItems(footerTrailingItems, footerTrailingOrder).map((item) => (
             <div key={item.id} className="flex min-h-6 items-center">
               {item.content}

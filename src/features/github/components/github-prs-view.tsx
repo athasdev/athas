@@ -676,7 +676,7 @@ const GitHubPRsView = memo(() => {
   return (
     <>
       <SidebarPanel
-        className="ui-font select-none gap-2 p-2"
+        className="font-sans select-none gap-2 p-2"
         onContextMenu={(event) => {
           sectionContextMenu.open(event, null);
         }}

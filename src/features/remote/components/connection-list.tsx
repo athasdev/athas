@@ -83,7 +83,7 @@ const ConnectionList = ({
     <div className="flex h-full select-none flex-col bg-secondary-bg">
       {/* Header */}
       <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
-        <h3 className="ui-font font-medium text-text ui-text-sm tracking-wide">Remote</h3>
+        <h3 className="font-sans font-medium text-text ui-text-sm tracking-wide">Remote</h3>
         <Button
           onClick={onAddNew}
           variant="ghost"
@@ -107,7 +107,7 @@ const ConnectionList = ({
             <Button
               onClick={onAddNew}
               variant="default"
-              className="ui-font flex items-center gap-1.5"
+              className="font-sans flex items-center gap-1.5"
               compact
             >
               <Plus />

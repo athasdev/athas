@@ -26,7 +26,7 @@ export const DROPDOWN_TRIGGER_BASE = cn(
 );
 
 const dropdownItemVariants = cva(
-  "ui-font ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
+  "font-sans ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
   {
     variants: {
       disabled: {
@@ -45,7 +45,7 @@ const dropdownItemVariants = cva(
   },
 );
 
-const dropdownSectionLabelVariants = cva("ui-font ui-text-sm px-2.5 py-1 text-text-lighter");
+const dropdownSectionLabelVariants = cva("font-sans ui-text-sm px-2.5 py-1 text-text-lighter");
 
 export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
 

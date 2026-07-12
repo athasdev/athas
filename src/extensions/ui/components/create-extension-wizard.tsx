@@ -229,7 +229,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   flexDirection: "column",
@@ -260,7 +260,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   alignItems: align,
@@ -283,7 +283,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   border: "1px solid var(--color-border)",
                   background: "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
@@ -315,7 +315,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   color,
                   fontWeight: weight,
@@ -355,7 +355,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "span",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "inline-flex",
                   alignItems: "center",
@@ -392,7 +392,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           }) {
             const { value = "", placeholder, type = "text", readOnly = true, style } = config;
             return createElement("input", {
-              className: "ui-font",
+              className: "font-sans",
               defaultValue: value,
               placeholder,
               type,
@@ -421,7 +421,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   flexDirection: "column",
@@ -471,7 +471,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   alignItems: "flex-start",
@@ -522,7 +522,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   alignItems: "center",
@@ -579,7 +579,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   border: "1px dashed var(--color-border)",
                   borderRadius: "12px",

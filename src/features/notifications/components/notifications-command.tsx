@@ -371,7 +371,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                   <div key={group.label} className="flex flex-col gap-1">
                     <button
                       type="button"
-                      className="ui-font ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
+                      className="font-sans ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
                       aria-expanded={!collapsedNotificationGroups.has(group.label)}
                       onClick={() => toggleNotificationGroup(group.label)}
                     >
@@ -475,10 +475,10 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                   <NotificationIcon type={activeNotification.type} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="ui-font ui-text-base truncate font-medium text-text">
+                  <div className="font-sans ui-text-base truncate font-medium text-text">
                     {activeNotification.message}
                   </div>
-                  <div className="ui-font ui-text-base mt-0.5 flex items-center gap-1 text-text-lighter">
+                  <div className="font-sans ui-text-base mt-0.5 flex items-center gap-1 text-text-lighter">
                     <span className="capitalize">{activeNotification.type}</span>
                     <span>-</span>
                     <span>{formatNotificationAge(activeNotification.updatedAt)}</span>
@@ -489,7 +489,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
             <CommandList>
               {activeNotification.description ? (
                 <div className="border-border/70 border-b px-3 py-2">
-                  <pre className="ui-font ui-text-base max-h-40 overflow-auto whitespace-pre-wrap break-words text-text-light">
+                  <pre className="font-sans ui-text-base max-h-40 overflow-auto whitespace-pre-wrap break-words text-text-light">
                     {activeNotification.description}
                   </pre>
                 </div>

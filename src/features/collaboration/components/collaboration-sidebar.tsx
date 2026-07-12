@@ -615,7 +615,7 @@ export function CollaborationSidebarView() {
     return (
       <SidebarPanel>
         <SidebarHeader>
-          <div className="ui-font flex items-center gap-2 text-text ui-text-sm">
+          <div className="font-sans flex items-center gap-2 text-text ui-text-sm">
             <UsersThree weight="duotone" />
             Collaboration
           </div>

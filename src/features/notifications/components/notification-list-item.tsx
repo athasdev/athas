@@ -49,7 +49,7 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
           <NotificationIcon type={notification.type} />
         </ItemMedia>
         <ItemContent className="min-w-0 overflow-hidden group-hover/item:pr-7 group-focus-within/item:pr-7">
-          <ItemTitle className="ui-font ui-text-sm block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-normal text-text">
+          <ItemTitle className="font-sans ui-text-sm block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-normal text-text">
             {notification.message}
           </ItemTitle>
         </ItemContent>

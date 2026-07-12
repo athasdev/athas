@@ -48,7 +48,7 @@ export function ImageEditorToolbar({
   currentFileName,
 }: ImageEditorToolbarProps) {
   const menuItemClass = cn(
-    "ui-font h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text ui-text-sm",
+    "font-sans h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text ui-text-sm",
   );
 
   const [showEditMenu, setShowEditMenu] = useState(false);

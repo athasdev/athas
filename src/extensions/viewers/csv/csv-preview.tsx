@@ -90,7 +90,7 @@ export function CsvPreview() {
         actions={
           <div className="flex items-center gap-1">
             {/* Delimiter selector */}
-            <label htmlFor="csv-delimiter" className="ui-font mr-1 text-text-lighter ui-text-sm">
+            <label htmlFor="csv-delimiter" className="font-sans mr-1 text-text-lighter ui-text-sm">
               Delimiter
             </label>
             <Select

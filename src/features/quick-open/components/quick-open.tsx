@@ -55,7 +55,7 @@ const QuickOpen = () => {
           onChange={setQuery}
           onKeyDown={handleInputKeyDown}
           placeholder={isSymbolMode ? "Type to filter symbols..." : "Type to search files..."}
-          className="ui-font"
+          className="font-sans"
         />
         {isSymbolMode ? (
           <CommandHeaderBadge>
@@ -75,7 +75,7 @@ const QuickOpen = () => {
         {isSymbolMode ? (
           symbols.length === 0 ? (
             <div className="flex items-center justify-center p-4 text-text-lighter">
-              <span className="ui-font ui-text-base">
+              <span className="font-sans ui-text-base">
                 {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
               </span>
             </div>

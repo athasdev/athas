@@ -94,7 +94,7 @@ export function AppUpdateControl() {
           }
         }}
         className={cn(
-          "ui-font ui-text-sm font-medium",
+          "font-sans ui-text-sm font-medium",
           updateError ? "text-error hover:text-error" : "text-accent hover:text-accent",
           updateBusy && "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
         )}

@@ -173,7 +173,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "font-sans ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>
@@ -203,7 +203,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "font-sans ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>

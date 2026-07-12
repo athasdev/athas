@@ -77,7 +77,7 @@ export function GitHubSidebarRow({
   );
 
   const rowClassName = cn(
-    "ui-font ui-text-base group/github-row flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 text-left leading-[1.35] text-text-lighter transition-[background-color,color]",
+    "font-sans ui-text-base group/github-row flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 text-left leading-[1.35] text-text-lighter transition-[background-color,color]",
     "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
     active && "bg-hover/80 text-text",
     className,
@@ -138,7 +138,7 @@ export function GitHubSidebarRow({
           collisionPadding={10}
           className="z-[10080]"
         >
-          <PreviewCard.Popup className="ui-font w-[21rem] overflow-hidden rounded-xl border border-border/75 bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:translate-x-1 data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:translate-x-1 data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]">
+          <PreviewCard.Popup className="font-sans w-[21rem] overflow-hidden rounded-xl border border-border/75 bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:translate-x-1 data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:translate-x-1 data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]">
             <div className="border-border/70 border-b p-3">
               <div className="flex min-w-0 items-start gap-2.5">
                 {preview.icon ? (
@@ -182,7 +182,7 @@ export function GitHubSidebarRow({
                       <dd
                         className={cn(
                           "min-w-0 truncate text-text",
-                          detail.mono && "editor-font",
+                          detail.mono && "font-mono",
                           detail.className,
                         )}
                       >

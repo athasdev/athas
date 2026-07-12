@@ -208,7 +208,7 @@ export const SettingsVerticalTabs = ({
             );
           })
         ) : (
-          <div className="ui-font ui-text-base p-2 text-center text-text-lighter">
+          <div className="font-sans ui-text-base p-2 text-center text-text-lighter">
             No matching settings
           </div>
         )}

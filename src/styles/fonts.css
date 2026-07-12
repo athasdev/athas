@@ -1,11 +1,3 @@
-.editor-font {
-  font-family: var(--editor-font-family);
-}
-
-.ui-font {
-  font-family: var(--app-font-family);
-}
-
 .editor-container,
 .monaco-editor,
 .editor-input,

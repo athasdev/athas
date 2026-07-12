@@ -103,7 +103,7 @@ export function GitHubPRActionDialog({
       }
     >
       <div className="space-y-3">
-        <p className="ui-font ui-text-sm text-text-lighter">{copy.description}</p>
+        <p className="font-sans ui-text-sm text-text-lighter">{copy.description}</p>
 
         {kind === "merge" ? (
           <div className="grid grid-cols-3 gap-2">

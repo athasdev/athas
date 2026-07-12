@@ -28,7 +28,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "ui-font ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg px-3 py-2 text-left leading-[1.35] transition-colors",
+  "font-sans ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg px-3 py-2 text-left leading-[1.35] transition-colors",
   {
     variants: {
       selected: {
@@ -45,7 +45,7 @@ const commandItemVariants = cva(
 const commandHeaderContentClassName = "flex items-center gap-2 px-4 py-3";
 
 const commandInputClassName = cva(
-  "ui-font ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
+  "font-sans ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
 );
 
 type CommandHeaderActionProps = Omit<ButtonProps, "className" | "compact" | "variant">;

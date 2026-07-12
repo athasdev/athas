@@ -94,7 +94,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         aria-expanded={isExpanded}
       >
         {summary.icon}
-        <span className={cn("ui-font ui-text-sm", summary.tone)}>{summary.label}</span>
+        <span className={cn("font-sans ui-text-sm", summary.tone)}>{summary.label}</span>
         {isExpanded ? (
           <ChevronDown className="text-text-lighter" />
         ) : (
@@ -124,9 +124,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
                 <LoadingIndicator label="Pending check" compact />
               )}
               <div className="min-w-0 flex-1">
-                <p className="ui-font ui-text-sm truncate text-text">{check.name ?? "Check"}</p>
+                <p className="font-sans ui-text-sm truncate text-text">{check.name ?? "Check"}</p>
                 {check.workflowName && (
-                  <p className="ui-font ui-text-sm truncate text-text-lighter">
+                  <p className="font-sans ui-text-sm truncate text-text-lighter">
                     {check.workflowName}
                   </p>
                 )}
@@ -220,7 +220,7 @@ export const ReviewRequestsList = memo(({ reviewRequests }: ReviewRequestsProps)
   if (reviewRequests.length === 0) return null;
 
   return (
-    <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
       <User />
       <span>Reviewers</span>
       <span className="text-text">
@@ -241,7 +241,7 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
   if (issues.length === 0) return null;
 
   return (
-    <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
       <Link2 className="text-text-lighter" />
       <span>Linked</span>
       <span className="inline-flex items-center gap-1">
@@ -251,7 +251,7 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
             href={issue.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="ui-font ui-text-sm text-accent hover:underline"
+            className="font-sans ui-text-sm text-accent hover:underline"
           >
             #{issue.number}
             {idx < issues.length - 1 && ","}
@@ -303,7 +303,7 @@ export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
   if (assignees.length === 0) return null;
 
   return (
-    <span className="ui-font ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
       <User />
       <span>Assigned</span>
       <span className="text-text">

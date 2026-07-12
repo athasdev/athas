@@ -53,7 +53,7 @@ export const CreateRowModal = ({
             const fieldId = `create-row-field-${index}`;
             return (
               <div key={column.name} className="space-y-1">
-                <label htmlFor={fieldId} className="ui-font block ui-text-sm text-text">
+                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-text">
                   {column.name}
                   <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
                 </label>
@@ -139,7 +139,7 @@ export const EditRowModal = ({
             const fieldId = `edit-row-field-${index}`;
             return (
               <div key={column.name} className="space-y-1">
-                <label htmlFor={fieldId} className="ui-font block ui-text-sm text-text">
+                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-text">
                   {column.name}
                   <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
                 </label>
@@ -225,7 +225,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
     <Dialog onClose={handleClose} title="Create New Table" icon={PlusIcon} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
-          <label htmlFor="table-name" className="ui-font block ui-text-sm text-text">
+          <label htmlFor="table-name" className="font-sans block ui-text-sm text-text">
             Table Name
           </label>
           <Input
@@ -238,7 +238,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
         </div>
 
         <div className="space-y-2">
-          <div className="ui-font block ui-text-sm text-text">Columns</div>
+          <div className="font-sans block ui-text-sm text-text">Columns</div>
           {columns.map((column, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -264,7 +264,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               />
               <label
                 htmlFor={`column-not-null-${index}`}
-                className="ui-font flex items-center gap-1 text-text ui-text-sm"
+                className="font-sans flex items-center gap-1 text-text ui-text-sm"
               >
                 <Checkbox
                   id={`column-not-null-${index}`}

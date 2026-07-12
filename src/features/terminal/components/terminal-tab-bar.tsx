@@ -208,15 +208,15 @@ const ToolbarContextMenu = ({
 
   return (
     <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-[180px]">
-      <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">Terminal Width</div>
+      <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Terminal Width</div>
       <MenuItemsList items={modeItems} onItemSelect={onClose} />
       <div className="my-0.5 border-border/70 border-t" />
-      <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">Tab Layout</div>
+      <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Tab Layout</div>
       <MenuItemsList items={layoutItems} onItemSelect={onClose} />
       {currentLayout === "vertical" && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
-          <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">Tab Position</div>
+          <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Tab Position</div>
           <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} />
         </>
       )}
@@ -689,7 +689,7 @@ const TerminalTabBar = ({
       >
         <div className="flex items-center gap-1.5">
           <TerminalIcon className="text-text-lighter" />
-          <span className="ui-font ui-text-sm text-text-lighter">No terminals</span>
+          <span className="font-sans ui-text-sm text-text-lighter">No terminals</span>
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-0.5">
@@ -871,7 +871,7 @@ const TerminalTabBar = ({
 
           <DragOverlay dropAnimation={null}>
             {draggedTerminal ? (
-              <div className="ui-font ui-text-sm flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 opacity-95 shadow-[var(--shadow-drag)]">
+              <div className="font-sans ui-text-sm flex cursor-pointer items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1.5 opacity-95 shadow-[var(--shadow-drag)]">
                 <span className="shrink-0">
                   <TerminalIcon className="text-text-lighter" />
                 </span>
@@ -1009,7 +1009,7 @@ const TerminalTabBar = ({
             onClose={closeProfileMenu}
             className="w-[220px]"
           >
-            <div className="ui-font ui-text-sm px-2.5 py-1 text-text-lighter">New Terminal</div>
+            <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">New Terminal</div>
             <div className="my-0.5 border-border/70 border-t" />
             <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
           </Dropdown>

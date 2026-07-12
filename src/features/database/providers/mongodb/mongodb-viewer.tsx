@@ -64,7 +64,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
         <div className="flex items-center gap-2">
           <div className={databaseChipClassName()}>
             <Database className="text-text-lighter" />
-            <span className="ui-font ui-text-sm">{store.fileName}</span>
+            <span className="font-sans ui-text-sm">{store.fileName}</span>
           </div>
           {store.selectedDatabase && (
             <>
@@ -90,7 +90,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
         <div className={databasePanelClassName("w-56")}>
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
             <Layers className="text-text-lighter" />
-            <span className="ui-font text-text-lighter ui-text-sm">Collections</span>
+            <span className="font-sans text-text-lighter ui-text-sm">Collections</span>
           </div>
           <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
             {store.collections.map((col) => (
@@ -257,10 +257,10 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   size="xs"
                   className="min-w-16"
                 />
-                <span className="ui-font text-text-lighter ui-text-sm">per page</span>
+                <span className="font-sans text-text-lighter ui-text-sm">per page</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="mr-2 ui-font text-text-lighter ui-text-sm">
+                <span className="mr-2 font-sans text-text-lighter ui-text-sm">
                   Page {store.currentPage} of {store.totalPages}
                 </span>
                 <Button

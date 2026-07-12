@@ -314,7 +314,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   type="button"
                   onClick={() => navigateToSearchResult(result)}
                   className={[
-                    "ui-font flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
+                    "font-sans flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
                     isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                   ].join(" ")}
                 >
@@ -326,7 +326,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
               );
             })
           ) : (
-            <div className="ui-font ui-text-base px-3 py-2 text-text-lighter">
+            <div className="font-sans ui-text-base px-3 py-2 text-text-lighter">
               No matching settings
             </div>
           )}

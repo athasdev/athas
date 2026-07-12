@@ -13,7 +13,7 @@ const TabDragPreview = ({ x, y, buffer }: TabDragPreviewProps) => (
     className="pointer-events-none fixed z-50"
     style={{ left: x, top: y, transform: "translate(0, 0)" }}
   >
-    <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 ui-text-sm opacity-95">
+    <div className="tab-drag-preview font-sans flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 ui-text-sm opacity-95">
       <span className="grid size-3 shrink-0 place-content-center">
         {buffer.path === "extensions://marketplace" ? (
           <Package className="text-accent" />

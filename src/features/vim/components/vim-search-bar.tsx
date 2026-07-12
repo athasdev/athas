@@ -59,7 +59,7 @@ export const VimSearchBar: React.FC = () => {
   return (
     <div className="fixed right-0 bottom-0 left-0 z-50 border-border border-t bg-primary-bg p-2">
       <div className="mx-auto flex max-w-4xl items-center gap-2">
-        <span className="ui-font text-text">{searchDirection === "backward" ? "?" : "/"}</span>
+        <span className="font-sans text-text">{searchDirection === "backward" ? "?" : "/"}</span>
         <Input
           ref={inputRef}
           type="text"
@@ -67,11 +67,11 @@ export const VimSearchBar: React.FC = () => {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           variant="ghost"
-          className="ui-font flex-1 px-0 text-text"
+          className="font-sans flex-1 px-0 text-text"
           placeholder="Search..."
           autoComplete="off"
         />
-        {matchInfo && <span className="ui-font ui-text-sm text-text-lighter">{matchInfo}</span>}
+        {matchInfo && <span className="font-sans ui-text-sm text-text-lighter">{matchInfo}</span>}
       </div>
     </div>
   );

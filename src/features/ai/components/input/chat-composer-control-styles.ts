@@ -40,7 +40,7 @@ export function chatComposerDropdownClassName(className?: string) {
 
 export function chatSettingsSelectorTriggerClassName(className?: string) {
   return cn(
-    "ui-font h-8 max-w-full justify-start rounded-lg border border-border bg-secondary-bg px-2.5 ui-text-sm",
+    "font-sans h-8 max-w-full justify-start rounded-lg border border-border bg-secondary-bg px-2.5 ui-text-sm",
     "transition-[transform,border-color,background-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:border-border-strong/70 hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35",
     className,
@@ -55,7 +55,7 @@ export const chatComposerDropdownListClassName =
 
 export function chatComposerDropdownItemClassName(className?: string) {
   return cn(
-    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-sm leading-[1.35] text-text",
+    "font-sans min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-sm leading-[1.35] text-text",
     "transition-[transform,background-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover focus:outline-none focus:ring-1 focus:ring-border-strong/35",
     className,

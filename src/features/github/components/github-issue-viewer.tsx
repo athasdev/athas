@@ -304,7 +304,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       {error ? (
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <p className="ui-font ui-text-sm text-error">{error}</p>
+            <p className="font-sans ui-text-sm text-error">{error}</p>
             <Button
               onClick={() => void fetchIssue(true)}
               variant="default"
@@ -336,7 +336,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               repoPath={repoPath}
             />
           ) : (
-            <p className="ui-font ui-text-sm italic text-text-lighter">No description provided</p>
+            <p className="font-sans ui-text-sm italic text-text-lighter">No description provided</p>
           )}
 
           <div className="w-full space-y-1">
@@ -352,7 +352,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             ) : (
               <div className="flex items-center gap-2 px-1 py-2 text-text-lighter">
                 <MessageSquare className="size-4" />
-                <p className="ui-font ui-text-sm">No comments</p>
+                <p className="font-sans ui-text-sm">No comments</p>
               </div>
             )}
             {details.comments.length > visibleComments.length ? (

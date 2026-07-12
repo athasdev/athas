@@ -113,7 +113,7 @@ const SEVERITY_TEXT_CLASS: Record<Diagnostic["severity"], string> = {
 };
 
 const CONTROL_PILL_BASE =
-  "ui-font ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "font-sans ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
@@ -885,7 +885,7 @@ const DiagnosticsPane = ({
         }}
       >
         <div className="relative flex min-h-7 w-full items-center gap-1.5">
-          <span className={cn("ui-font ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
+          <span className={cn("font-sans ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
 
           <div className="ml-auto flex items-center gap-1">
             {hasDiagnosticFiles && (
@@ -1074,7 +1074,7 @@ const DiagnosticsPane = ({
                           <Info className="text-text-lighter" />
                         )}
 
-                        <span className="ui-font ui-text-sm flex-1 truncate font-medium text-text">
+                        <span className="font-sans ui-text-sm flex-1 truncate font-medium text-text">
                           {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
                         </span>
 
@@ -1114,7 +1114,7 @@ const DiagnosticsPane = ({
 
                                 <span
                                   className={cn(
-                                    "ui-font ui-text-sm min-w-0 flex-1",
+                                    "font-sans ui-text-sm min-w-0 flex-1",
                                     preferences.wrapMessages
                                       ? "whitespace-pre-wrap break-words leading-snug"
                                       : "truncate",

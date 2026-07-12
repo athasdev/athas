@@ -527,7 +527,7 @@ const GitTagManager = ({
                             event.stopPropagation();
                             void handleCopy(tag.commit, "Commit SHA");
                           }}
-                          className="ui-font ui-text-base min-w-0 truncate text-text hover:text-accent"
+                          className="font-sans ui-text-base min-w-0 truncate text-text hover:text-accent"
                           title={tag.commit}
                         >
                           {tag.commit}

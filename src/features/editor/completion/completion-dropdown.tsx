@@ -171,7 +171,7 @@ function CompletionDropdownContent({ onApplyCompletion }: CompletionDropdownProp
                 }
               }}
               className={cn(
-                "editor-completion-item ui-font cursor-pointer px-2 py-1 ui-text-sm",
+                "editor-completion-item font-sans cursor-pointer px-2 py-1 ui-text-sm",
                 isSelected
                   ? "editor-completion-item-selected text-text"
                   : "text-text hover:bg-hover",
@@ -201,10 +201,10 @@ function CompletionDropdownContent({ onApplyCompletion }: CompletionDropdownProp
           }}
         >
           {selectedDetail && (
-            <div className="ui-font mb-1 font-medium text-text ui-text-sm">{selectedDetail}</div>
+            <div className="font-sans mb-1 font-medium text-text ui-text-sm">{selectedDetail}</div>
           )}
           {selectedDocumentation && (
-            <div className="ui-font whitespace-pre-wrap text-text-lighter ui-text-sm">
+            <div className="font-sans whitespace-pre-wrap text-text-lighter ui-text-sm">
               {selectedDocumentation}
             </div>
           )}

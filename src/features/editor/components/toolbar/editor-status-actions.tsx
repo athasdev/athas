@@ -42,7 +42,7 @@ import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
 const statusChipClass =
-  "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "font-sans inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const editorMenuItemClass = dropdownItemClassName("min-h-7");
 

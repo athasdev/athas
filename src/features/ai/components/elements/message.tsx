@@ -39,7 +39,7 @@ export function MessageContent({
       data-ai-element="message-content"
       data-role={from}
       className={cn(
-        "min-w-0 break-words ui-font ui-text-sm",
+        "min-w-0 break-words font-sans ui-text-sm",
         from === "user"
           ? "inline-block max-w-[min(72ch,100%)] rounded-2xl border border-border/45 bg-secondary-bg/62 px-3 py-2.5 text-text shadow-[var(--shadow-card)]"
           : "w-full text-text",

@@ -208,7 +208,7 @@ const TabBarItem = memo(function TabBarItem({
         </div>
         <span
           className={cn(
-            "ui-font ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+            "font-sans ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}

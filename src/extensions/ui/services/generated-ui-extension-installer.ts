@@ -85,7 +85,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             if (typeof content === "string") {
               return createElement("div", {
                 dangerouslySetInnerHTML: { __html: content },
-                className: "ui-font ui-text-sm h-full overflow-auto text-text",
+                className: "font-sans ui-text-sm h-full overflow-auto text-text",
               });
             }
 
@@ -187,7 +187,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               display: "flex",
               flexDirection: "column",
@@ -212,7 +212,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               display: "flex",
               alignItems: align,
@@ -231,7 +231,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               border: "1px solid var(--color-border)",
               background: "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
@@ -263,7 +263,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               color,
               fontWeight: weight,
@@ -293,7 +293,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "span",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               display: "inline-flex",
               alignItems: "center",
@@ -325,7 +325,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
       }) {
         const { value = "", placeholder, type = "text", readOnly = true, style } = config;
         return createElement("input", {
-          className: "ui-font",
+          className: "font-sans",
           defaultValue: value,
           placeholder,
           type,
@@ -354,7 +354,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               display: "flex",
               flexDirection: "column",
@@ -404,7 +404,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               display: "flex",
               alignItems: "flex-start",
@@ -455,7 +455,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               display: "flex",
               alignItems: "center",
@@ -512,7 +512,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         return createElement(
           "div",
           {
-            className: "ui-font",
+            className: "font-sans",
             style: {
               border: "1px dashed var(--color-border)",
               borderRadius: "12px",

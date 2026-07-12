@@ -182,7 +182,7 @@ export default function Breadcrumb({
   return (
     <>
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
-        <div className="ui-font flex min-w-0 items-center gap-2 text-text-lighter ui-text-sm">
+        <div className="font-sans flex min-w-0 items-center gap-2 text-text-lighter ui-text-sm">
           {showPath && showBreadcrumbPath ? (
             <FilePathBreadcrumb
               filePath={filePath}

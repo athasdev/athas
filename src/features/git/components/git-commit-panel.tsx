@@ -400,7 +400,7 @@ const GitCommitPanel = ({
           variant="ghost"
           className={cn(
             "max-h-32 min-h-16 w-full resize-none overflow-x-hidden bg-transparent",
-            "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
+            "font-sans ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
             "focus:outline-none",
           )}
           rows={2}

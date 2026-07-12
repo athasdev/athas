@@ -1,13 +1,7 @@
-@theme {
-  --font-sans:
-    "Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --editor-font:
-    "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
-}
-
 @theme inline {
+  --font-sans: var(--app-font-family);
+  --font-mono: var(--editor-font-family);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -91,8 +85,12 @@
 
 @layer base {
   :root {
-    --app-font-family: var(--font-sans);
-    --editor-font-family: var(--editor-font);
+    --app-font-family:
+      "Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    --editor-font-family:
+      "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+      monospace;
     --app-ui-font-size: 15px;
     --app-ui-scale: 1;
     --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);

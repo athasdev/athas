@@ -122,7 +122,7 @@ const Line = memo<LineProps>(
         result.push(
           <span
             key={`${lineIndex}-hint-${hint.character}-${spanKey++}`}
-            className="inlay-hint editor-font"
+            className="inlay-hint font-mono"
           >
             {hint.label}
           </span>,

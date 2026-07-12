@@ -306,7 +306,9 @@ export const InlineGitBlame = ({
                   compact
                 >
                   <GitCommit />
-                  <span className="ui-font text-text">{blameLine.commit_hash.substring(0, 7)}</span>
+                  <span className="font-sans text-text">
+                    {blameLine.commit_hash.substring(0, 7)}
+                  </span>
                 </Button>
                 <Button
                   type="button"

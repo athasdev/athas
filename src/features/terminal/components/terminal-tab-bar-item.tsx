@@ -164,7 +164,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             }}
             variant="ghost"
             className={cn(
-              "ui-font ui-text-sm h-5 min-w-0 px-0",
+              "font-sans ui-text-sm h-5 min-w-0 px-0",
               orientation === "vertical" ? "text-left" : "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}
@@ -178,7 +178,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "ui-font ui-text-sm max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
+              "font-sans ui-text-sm max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}

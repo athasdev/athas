@@ -143,7 +143,7 @@ const TextDiffViewer = memo(
       return (
         <div
           ref={selectionScopeRef}
-          className="editor-font code-editor-font-override min-w-0"
+          className="font-mono code-editor-font-override min-w-0"
           style={{
             fontSize: `${fontSize}px`,
             fontFamily: editorFontFamily,
@@ -214,8 +214,8 @@ const TextDiffViewer = memo(
         <div
           className={
             viewMode === "split"
-              ? "editor-font code-editor-font-override min-w-0 w-full"
-              : "editor-font code-editor-font-override min-w-full w-fit"
+              ? "font-mono code-editor-font-override min-w-0 w-full"
+              : "font-mono code-editor-font-override min-w-full w-fit"
           }
           style={{
             fontSize: `${fontSize}px`,

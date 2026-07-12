@@ -80,7 +80,7 @@ const comboboxIconPositionVariants = cva(
 );
 
 const comboboxItemVariants = cva(
-  "ui-font ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
+  "font-sans ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
   {
     variants: {
       highlighted: {
@@ -195,7 +195,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
         style={inputStyle}
         className={cn(
           comboboxInputPaddingVariants({ size, hasLeftIcon, hasEndActions }),
-          "ui-font text-text placeholder:text-text-lighter disabled:cursor-not-allowed",
+          "font-sans text-text placeholder:text-text-lighter disabled:cursor-not-allowed",
           inputClassName,
         )}
         {...props}
@@ -315,7 +315,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
-      className={cn("ui-font ui-text-sm px-2 py-1 text-text-lighter", className)}
+      className={cn("font-sans ui-text-sm px-2 py-1 text-text-lighter", className)}
       {...props}
     />
   );

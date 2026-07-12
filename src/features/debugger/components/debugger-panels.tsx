@@ -50,7 +50,7 @@ export function DebugSection({
       <div className="flex h-8 shrink-0 items-center gap-1 border-border/60 border-b px-1.5">
         <button
           type="button"
-          className="ui-font flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-text-lighter hover:bg-hover/60 hover:text-text"
+          className="font-sans flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-text-lighter hover:bg-hover/60 hover:text-text"
           onClick={() => setIsOpen((current) => !current)}
         >
           <CaretRight
@@ -75,7 +75,7 @@ export function DebugSection({
 
 export function DebugEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="ui-font px-3 py-6 text-center text-text-lighter ui-text-sm">{children}</div>
+    <div className="font-sans px-3 py-6 text-center text-text-lighter ui-text-sm">{children}</div>
   );
 }
 
@@ -113,7 +113,7 @@ export function DebugStackFrames({
             key={frame.id}
             type="button"
             className={cn(
-              "ui-font flex w-full items-start gap-2 px-3 py-1.5 text-left ui-text-sm hover:bg-hover/70",
+              "font-sans flex w-full items-start gap-2 px-3 py-1.5 text-left ui-text-sm hover:bg-hover/70",
               isSelected && "bg-selected/70",
             )}
             onClick={() => void onSelect(frame.id, frame.sourcePath, frame.line)}
@@ -154,7 +154,7 @@ export function DebugBreakpointsList({
       {breakpoints.map((breakpoint) => (
         <div
           key={breakpoint.id}
-          className="group ui-font flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-hover/70"
+          className="group font-sans flex items-center gap-2 px-3 py-1.5 ui-text-sm hover:bg-hover/70"
         >
           <button
             type="button"

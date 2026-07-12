@@ -37,8 +37,8 @@ export default function Section({ title, description, children, className }: Sec
       data-settings-section-key={getSettingSearchTargetKey(title)}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
-        <h4 className="ui-font ui-text-base text-text">{title}</h4>
-        {description && <p className="ui-font ui-text-base text-text-lighter">{description}</p>}
+        <h4 className="font-sans ui-text-base text-text">{title}</h4>
+        {description && <p className="font-sans ui-text-base text-text-lighter">{description}</p>}
       </div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -179,7 +179,7 @@ export function SettingRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div id={labelId} className="ui-font ui-text-base cursor-default text-text">
+          <div id={labelId} className="font-sans ui-text-base cursor-default text-text">
             {label}
           </div>
           {labelAccessory}
@@ -201,14 +201,17 @@ export function SettingRow({
           ) : null}
         </div>
         {description && (
-          <div id={descriptionId} className="ui-font ui-text-base cursor-default text-text-lighter">
+          <div
+            id={descriptionId}
+            className="font-sans ui-text-base cursor-default text-text-lighter"
+          >
             {description}
           </div>
         )}
       </div>
       <div
         ref={controlRef}
-        className="ui-font ui-text-base shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
+        className="font-sans ui-text-base shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
       >
         {children}
       </div>

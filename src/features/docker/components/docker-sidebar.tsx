@@ -1764,7 +1764,7 @@ export function DockerSidebar() {
 
   return (
     <>
-      <SidebarPanel className="ui-font select-none gap-2 p-2">
+      <SidebarPanel className="font-sans select-none gap-2 p-2">
         <SidebarSectionSwitcher
           items={sectionTabs}
           value={activeTab}

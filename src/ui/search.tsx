@@ -124,7 +124,7 @@ export function SearchPopover({
         {matchLabel && (
           <span
             className={cn(
-              "ui-font ui-text-sm shrink-0",
+              "font-sans ui-text-sm shrink-0",
               matchTone === "warning" ? "text-warning" : "text-text-lighter",
             )}
           >
@@ -367,7 +367,7 @@ export function SearchInput({
       )}
 
       {matchLabel && (
-        <span className="ui-font ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
+        <span className="font-sans ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
       )}
 
       {extraActions}
@@ -379,5 +379,5 @@ export const SEARCH_TOGGLE_ICONS = {
   caseSensitive: <CaseSensitive />,
   wholeWord: <WholeWord />,
   regex: <Regex />,
-  preserveCase: <span className="ui-font ui-text-sm font-semibold">Aa</span>,
+  preserveCase: <span className="font-sans ui-text-sm font-semibold">Aa</span>,
 };

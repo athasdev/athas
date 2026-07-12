@@ -240,7 +240,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       >
         <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
           <FileIcon className="shrink-0 text-text" />
-          <span className="ui-font truncate text-text ui-text-sm" title={fileName}>
+          <span className="font-sans truncate text-text ui-text-sm" title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
         </div>

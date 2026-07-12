@@ -49,7 +49,7 @@ export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) =
         >
           <BellIcon />
           {unreadCount > 0 && (
-            <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
+            <span className="font-sans ui-text-sm pointer-events-none font-medium tabular-nums text-current">
               {unreadCount}
             </span>
           )}

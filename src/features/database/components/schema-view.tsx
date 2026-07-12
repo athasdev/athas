@@ -56,7 +56,7 @@ export default function SchemaView({
   const fkMap = mapForeignKeysByColumn(foreignKeys);
 
   return (
-    <div className="flex-1 overflow-auto ui-font">
+    <div className="flex-1 overflow-auto font-sans">
       <div className="px-3 py-3">
         <div className="ui-text-sm text-text">{tableName}</div>
         <div className="ui-text-sm text-text-lighter">{columns.length} columns</div>

@@ -422,7 +422,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             </CommandHeaderAction>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Server className="shrink-0 text-text-lighter" />
-              <span className="min-w-0 truncate ui-font ui-text-base font-medium text-text">
+              <span className="min-w-0 truncate font-sans ui-text-base font-medium text-text">
                 New Remote Connection
               </span>
             </div>

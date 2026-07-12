@@ -83,7 +83,7 @@ function MenubarTrigger({ className, ...props }: ComponentProps<typeof Menu.Trig
       data-slot="menubar-trigger"
       openOnHover
       className={cn(
-        "ui-font ui-text-sm flex h-5 select-none items-center rounded-md px-1.5 text-text-lighter outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover/50 hover:text-text active:scale-[var(--app-press-scale)] focus:bg-hover/50 focus:text-text data-[popup-open]:bg-hover/80 data-[popup-open]:text-text",
+        "font-sans ui-text-sm flex h-5 select-none items-center rounded-md px-1.5 text-text-lighter outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover/50 hover:text-text active:scale-[var(--app-press-scale)] focus:bg-hover/50 focus:text-text data-[popup-open]:bg-hover/80 data-[popup-open]:text-text",
         className,
       )}
       {...props}
@@ -141,7 +141,7 @@ function MenubarItem({ className, shortcut, onClick, children, ...props }: Menub
     <Menu.Item
       data-slot="menubar-item"
       className={cn(
-        "ui-font ui-text-sm flex min-h-7 cursor-default select-none items-center justify-between gap-6 rounded-lg px-2.5 py-1.5 text-text outline-none transition-[background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] focus:bg-hover focus:text-text data-[highlighted]:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "font-sans ui-text-sm flex min-h-7 cursor-default select-none items-center justify-between gap-6 rounded-lg px-2.5 py-1.5 text-text outline-none transition-[background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] focus:bg-hover focus:text-text data-[highlighted]:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
@@ -170,7 +170,7 @@ function MenubarShortcut({ className, children, ...props }: ComponentProps<"span
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn("editor-font ml-auto shrink-0 text-text-lighter/75 ui-text-sm", className)}
+      className={cn("font-mono ml-auto shrink-0 text-text-lighter/75 ui-text-sm", className)}
       {...props}
     >
       {typeof children === "string" ? <Keybinding binding={children} /> : children}
@@ -192,7 +192,7 @@ function MenubarSubTrigger({
       data-slot="menubar-sub-trigger"
       openOnHover
       className={cn(
-        "ui-font ui-text-sm flex min-h-7 cursor-default select-none items-center rounded-lg px-2.5 py-1.5 text-text outline-none transition-[background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] focus:bg-hover focus:text-text data-[highlighted]:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "font-sans ui-text-sm flex min-h-7 cursor-default select-none items-center rounded-lg px-2.5 py-1.5 text-text outline-none transition-[background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] focus:bg-hover focus:text-text data-[highlighted]:bg-hover data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
