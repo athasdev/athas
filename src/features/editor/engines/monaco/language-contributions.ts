@@ -262,6 +262,50 @@ languages.setMonarchTokensProvider("lockfile", {
   },
 });
 
+ensureLanguage("nix", [".nix"], ["Nix", "nix"]);
+languages.setMonarchTokensProvider("nix", {
+  tokenizer: {
+    root: [
+      [/#.*$/, "comment"],
+      [/''/, "string", "@indentedString"],
+      [/"([^"\\]|\\.)*$/, "string.invalid"],
+      [/"/, "string", "@string"],
+      [/<[A-Za-z0-9._+:-]+>/, "string"],
+      [/\b[A-Za-z][A-Za-z0-9+.-]*:\/\/[^\s;"')\]}]+/, "string"],
+      [/(?:\.\.?|~)?\/[A-Za-z0-9._+@%=-][A-Za-z0-9._+@%/=-]*/, "string"],
+      [/\b(assert|else|if|in|inherit|let|or|rec|then|with)\b/, "keyword"],
+      [/\b(true|false|null)\b/, "constant"],
+      [
+        /\b(abort|baseNameOf|builtins|derivation|derivationStrict|dirOf|fetchGit|fetchMercurial|fetchTarball|fetchTree|fromTOML|import|isNull|map|placeholder|removeAttrs|scopedImport|throw|toString)\b/,
+        "function.builtin",
+      ],
+      [
+        /\b(__currentSystem|__currentTime|__langVersion|__nixPath|__nixVersion|__storeDir)\b/,
+        "constant.builtin",
+      ],
+      [/\b\d+(\.\d+)?\b/, "number"],
+      [/[A-Za-z_][\w'-]*(?=\s*=)/, "key"],
+      [/[A-Za-z_][\w'-]*(?=\s*:)/, "variable.parameter"],
+      [/[A-Za-z_][\w'-]*/, "identifier"],
+      [/==|!=|<=|>=|&&|\|\||\/\/|\+\+|->|[=!<>+\-*/?@:]+/, "operator"],
+      [/[{}[\]();.,]/, "delimiter"],
+    ],
+    string: [
+      [/\$\{/, "delimiter.bracket"],
+      [/[^\\"$]+/, "string"],
+      [/\\./, "string.escape"],
+      [/"/, "string", "@pop"],
+      [/./, "string"],
+    ],
+    indentedString: [
+      [/\$\{/, "delimiter.bracket"],
+      [/'''/, "string.escape"],
+      [/''/, "string", "@pop"],
+      [/./, "string"],
+    ],
+  },
+});
+
 ensureLanguage("ocaml", [".ml", ".mli"], ["OCaml", "ocaml"]);
 languages.setMonarchTokensProvider("ocaml", {
   tokenizer: {

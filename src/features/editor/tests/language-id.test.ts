@@ -92,6 +92,7 @@ describe("getLanguageIdFromPath", () => {
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.dockerignore"))).toBe("gitignore");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitattributes"))).toBe("gitattributes");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/bun.lock"))).toBe("lockfile");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/flake.nix"))).toBe("nix");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/main.zig"))).toBe("zig");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/Main.elm"))).toBe("elm");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/init.el"))).toBe("elisp");
