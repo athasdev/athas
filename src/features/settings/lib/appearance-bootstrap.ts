@@ -7,21 +7,13 @@ import {
 import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
+  getTypographyFontFallbacks,
 } from "@/features/settings/config/typography-defaults";
-import { normalizeConfiguredFontFamily } from "./font-family-resolution";
+import { IS_WINDOWS } from "@/utils/platform";
+import { buildFontFamilyStack, normalizeConfiguredFontFamily } from "./font-family-resolution";
 import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
-
-const DEFAULT_MONO_FALLBACK =
-  '"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
-const WINDOWS_MONO_FALLBACK =
-  '"Geist Mono", Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", ui-monospace, monospace';
-
-const DEFAULT_SANS_FALLBACK =
-  '"Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const WINDOWS_SANS_FALLBACK =
-  '"Geist Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
 
 export interface AppearanceBootstrapCache {
   version: 1;
@@ -33,9 +25,6 @@ export interface AppearanceBootstrapCache {
   uiFontFamily: string;
   uiFontSize: number;
 }
-
-const DEFAULT_EDITOR_FONT = DEFAULT_MONO_FONT_FAMILY;
-const DEFAULT_UI_FONT = DEFAULT_UI_FONT_FAMILY;
 
 export const ATHAS_BOOTSTRAP_DEFAULTS = {
   dark: {
@@ -58,31 +47,10 @@ export const DEFAULT_APPEARANCE_BOOTSTRAP_CACHE: AppearanceBootstrapCache = {
   themeType: ATHAS_BOOTSTRAP_DEFAULTS.dark.type,
   cssVariables: getAthasDefaultCssVariables("dark"),
   syntaxTokens: getAthasDefaultSyntaxTokens("dark"),
-  editorFontFamily: DEFAULT_EDITOR_FONT,
-  uiFontFamily: DEFAULT_UI_FONT,
+  editorFontFamily: DEFAULT_MONO_FONT_FAMILY,
+  uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
 };
-
-function isWindowsPlatform(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Windows/i.test(navigator.userAgent);
-}
-
-function stripWrappingQuotes(value: string): string {
-  const trimmed = value.trim();
-  return trimmed.replace(/^['"]+|['"]+$/g, "");
-}
-
-function buildFontVariable(primary: string, fallback: string): string {
-  const normalized = stripWrappingQuotes(primary);
-  if (!normalized) return fallback;
-
-  if (normalized.includes(",")) {
-    return `${normalized}, ${fallback}`;
-  }
-
-  return `"${normalized}", ${fallback}`;
-}
 
 function sanitizeVarMap(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -170,14 +138,13 @@ export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void 
     root.style.setProperty(key, value);
   }
 
-  const monoFallback = isWindowsPlatform() ? WINDOWS_MONO_FALLBACK : DEFAULT_MONO_FALLBACK;
-  const sansFallback = isWindowsPlatform() ? WINDOWS_SANS_FALLBACK : DEFAULT_SANS_FALLBACK;
+  const { mono, sans } = getTypographyFontFallbacks(IS_WINDOWS);
 
   root.style.setProperty(
     "--editor-font-family",
-    buildFontVariable(cache.editorFontFamily, monoFallback),
+    buildFontFamilyStack(cache.editorFontFamily, mono),
   );
-  root.style.setProperty("--app-font-family", buildFontVariable(cache.uiFontFamily, sansFallback));
+  root.style.setProperty("--app-font-family", buildFontFamilyStack(cache.uiFontFamily, sans));
   const normalizedUiFontSize = normalizeUiFontSize(cache.uiFontSize);
   root.style.setProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
   root.style.setProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);

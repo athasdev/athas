@@ -4,43 +4,12 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
+  getTypographyFontFallbacks,
 } from "@/features/settings/config/typography-defaults";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { currentPlatform, IS_WINDOWS } from "@/utils/platform";
+import { buildFontFamilyStack } from "../lib/font-family-resolution";
 import { getUiFontScale, normalizeUiFontSize } from "../lib/ui-font-size";
-
-// Cross-platform monospace fallback stack
-const DEFAULT_MONO_FALLBACK =
-  '"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
-
-// Windows-optimized monospace fallback stack (WebView2 renders these more consistently)
-const WINDOWS_MONO_FALLBACK =
-  '"Geist Mono", Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", ui-monospace, monospace';
-
-// Cross-platform sans fallback stack
-const DEFAULT_SANS_FALLBACK =
-  '"Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-
-// Windows-optimized sans fallback stack
-const WINDOWS_SANS_FALLBACK =
-  '"Geist Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
-
-function stripWrappingQuotes(value: string): string {
-  const trimmed = value.trim();
-  return trimmed.replace(/^['"]+|['"]+$/g, "");
-}
-
-function buildFontVariable(primary: string, fallback: string): string {
-  const normalized = stripWrappingQuotes(primary);
-  if (!normalized) return fallback;
-
-  // Preserve legacy values that already include a full stack.
-  if (normalized.includes(",")) {
-    return `${normalized}, ${fallback}`;
-  }
-
-  return `"${normalized}", ${fallback}`;
-}
 
 function setRootStyleProperty(name: string, value: string) {
   const rootStyle = document.documentElement.style;
@@ -48,10 +17,6 @@ function setRootStyleProperty(name: string, value: string) {
   rootStyle.setProperty(name, value);
 }
 
-/**
- * FontStyleInjector - Updates CSS variables when font settings change
- * Font fallbacks are defined in styles.css @theme directive
- */
 export const FontStyleInjector = () => {
   const codeEditorFontFamily = useEditorSettingsStore((state) => state.fontFamily);
   const { fontFamily, uiFontFamily, uiFontSize } = useSettingsStore(
@@ -65,18 +30,12 @@ export const FontStyleInjector = () => {
   useEffect(() => {
     document.documentElement.setAttribute("data-platform", currentPlatform);
 
-    const requestedEditorFont =
-      stripWrappingQuotes(fontFamily || codeEditorFontFamily || "") || DEFAULT_MONO_FONT_FAMILY;
-    const requestedUiFont = stripWrappingQuotes(uiFontFamily || "") || DEFAULT_UI_FONT_FAMILY;
+    const requestedEditorFont = fontFamily || codeEditorFontFamily || DEFAULT_MONO_FONT_FAMILY;
+    const requestedUiFont = uiFontFamily || DEFAULT_UI_FONT_FAMILY;
+    const { mono, sans } = getTypographyFontFallbacks(IS_WINDOWS);
 
-    const monoFallback = IS_WINDOWS ? WINDOWS_MONO_FALLBACK : DEFAULT_MONO_FALLBACK;
-    const sansFallback = IS_WINDOWS ? WINDOWS_SANS_FALLBACK : DEFAULT_SANS_FALLBACK;
-
-    setRootStyleProperty(
-      "--editor-font-family",
-      buildFontVariable(requestedEditorFont, monoFallback),
-    );
-    setRootStyleProperty("--app-font-family", buildFontVariable(requestedUiFont, sansFallback));
+    setRootStyleProperty("--editor-font-family", buildFontFamilyStack(requestedEditorFont, mono));
+    setRootStyleProperty("--app-font-family", buildFontFamilyStack(requestedUiFont, sans));
 
     const normalizedUiFontSize = normalizeUiFontSize(uiFontSize);
     setRootStyleProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
