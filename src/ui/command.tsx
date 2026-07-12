@@ -54,7 +54,7 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
     compact
-    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded-[var(--app-radius-control-sm)] px-2 text-text-lighter hover:text-text [--app-ui-control-icon-size:1rem]"
+    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded-[var(--app-radius-control-sm)] px-2 text-text-lighter hover:text-text [&_svg]:size-4"
     {...props}
   />
 );
@@ -566,7 +566,7 @@ export const CommandFooterAction = (props: CommandFooterActionProps) => (
   <Button
     variant="default"
     compact
-    className="ui-text-base min-h-8 min-w-0 justify-center gap-1.5 px-3 [--app-ui-control-icon-size:1rem]"
+    className="ui-text-base min-h-8 min-w-0 justify-center gap-1.5 px-3 [&_svg]:size-4"
     {...props}
   />
 );

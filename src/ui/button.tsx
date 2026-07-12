@@ -7,7 +7,7 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "ui-font text-[length:var(--app-ui-button-font-size,var(--ui-text-sm))] inline-flex min-h-[var(--app-ui-button-height,2rem)] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--app-radius-control-sm)] border border-transparent leading-[1.35] transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none outline-none active:scale-[var(--app-press-scale)] focus:outline-none focus-visible:border-accent/45 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-[length:var(--app-ui-control-icon-size)] [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "ui-font ui-text-sm inline-flex min-h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[var(--app-radius-control-sm)] border border-transparent leading-[1.35] transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none outline-none active:scale-[var(--app-press-scale)] focus:outline-none focus-visible:border-accent/45 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -20,8 +20,8 @@ export const buttonVariants = cva(
           "bg-transparent text-text hover:bg-error/10 hover:text-error data-[active=true]:bg-error/12 data-[active=true]:text-error",
       },
       compact: {
-        true: "min-h-[var(--app-ui-button-compact-height,1.5rem)] min-w-[var(--app-ui-button-compact-min-width,1.5rem)] px-1.5",
-        false: "min-w-[var(--app-ui-button-min-width,2rem)] px-3",
+        true: "min-h-6 min-w-6 px-1.5",
+        false: "min-w-8 px-3",
       },
     },
     defaultVariants: {

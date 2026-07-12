@@ -206,11 +206,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             <img
               src={convertFileSrc(tab.customIcon)}
               alt=""
-              className="shrink-0 rounded-[var(--app-radius-control-sm)] object-contain"
-              style={{
-                width: "var(--app-ui-font-size)",
-                height: "var(--app-ui-font-size)",
-              }}
+              className="size-(--app-ui-font-size) shrink-0 rounded-[var(--app-radius-control-sm)] object-contain"
             />
           ) : isRemote ? (
             <RemoteIcon />
@@ -219,12 +215,11 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
           ),
           label: <span className="max-w-32 truncate">{tab.name}</span>,
           className: cn(
-            "border border-transparent px-6",
+            "ui-text-sm border border-transparent px-6",
             isRemote &&
               (tab.isActive ? "bg-accent/15 text-accent" : "text-accent/85 hover:text-accent"),
             isSwitchingProject && "cursor-wait",
           ),
-          style: { fontSize: "var(--ui-text-sm)" },
           action: (
             <Button
               type="button"

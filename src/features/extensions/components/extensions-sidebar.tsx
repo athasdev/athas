@@ -1518,7 +1518,7 @@ export const ExtensionsSidebar = () => {
   }, [extensionContextMenu.data, extensionsWithUpdates, installingAgentIds, availableExtensions]);
 
   return (
-    <div className="ui-font flex h-full min-h-0 flex-col bg-primary-bg [--app-ui-badge-font-size:var(--ui-text-sm)] [--app-ui-button-font-size:var(--ui-text-sm)]">
+    <div className="ui-font flex h-full min-h-0 flex-col bg-primary-bg">
       <div className="shrink-0 border-border/70 border-b px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">

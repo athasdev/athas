@@ -1883,7 +1883,7 @@ export function DockerSidebar() {
                       </div>
                     </div>
                     {composeOutput ? (
-                      <div className="mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
                         {composeOutput}
                       </div>
                     ) : null}
@@ -2325,7 +2325,7 @@ export function DockerSidebar() {
                     </Button>
                   </div>
                   {dockerOutput ? (
-                    <div className="mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
                       {dockerOutput}
                     </div>
                   ) : null}
@@ -2492,7 +2492,7 @@ export function DockerSidebar() {
                     </div>
                   ) : null}
                   {registryOutput ? (
-                    <div className="mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
                       {registryOutput}
                     </div>
                   ) : null}
@@ -2670,7 +2670,7 @@ export function DockerSidebar() {
                         {logError}
                       </div>
                     ) : null}
-                    <div className="max-h-36 overflow-auto border-t border-border/50 px-2 py-1 font-mono text-[11px] leading-4">
+                    <div className="ui-text-sm max-h-36 overflow-auto border-t border-border/50 px-2 py-1 font-mono leading-4">
                       {filteredLogLines.length > 0 ? (
                         filteredLogLines.map((entry) => (
                           <div
@@ -2703,7 +2703,7 @@ export function DockerSidebar() {
                       >
                         Up
                       </Button>
-                      <div className="min-w-0 flex-1 truncate rounded border border-border/70 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+                      <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
                         {containerPath}
                       </div>
                       <Button
@@ -3016,7 +3016,7 @@ export function DockerSidebar() {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-[11px] text-text-lighter">
+              <div className="ui-text-sm rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
                 {envDraft.path}
               </div>
               <Textarea

@@ -45,7 +45,7 @@ interface GitBranchManagerProps {
 
 type GitBranchManagerTab = "branches" | "worktrees" | "repositories";
 
-const gitCommandIconClassName = "size-[length:var(--app-ui-icon-size-md)] shrink-0";
+const gitCommandIconClassName = "size-3.5 shrink-0";
 
 function getFilteredBranches(branches: string[], currentBranch: string, query: string) {
   const sorted = [...branches].sort((a, b) => {

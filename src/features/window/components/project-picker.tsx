@@ -450,11 +450,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                           <img
                             src={convertFileSrc(iconPath)}
                             alt=""
-                            className="rounded-sm object-contain"
-                            style={{
-                              width: "var(--app-ui-font-size)",
-                              height: "var(--app-ui-font-size)",
-                            }}
+                            className="size-(--app-ui-font-size) rounded-sm object-contain"
                           />
                         ) : folder.missing ? (
                           <WarningCircle className="text-warning" />
