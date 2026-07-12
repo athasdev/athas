@@ -11,7 +11,7 @@ import { instantTransition, overlayEntrance } from "@/ui/motion";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(
-  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-[var(--app-radius-menu)] border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {

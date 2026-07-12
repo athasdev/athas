@@ -198,7 +198,7 @@ export const SettingsVerticalTabs = ({
                 aria-controls={panelIdForTab(item.id)}
                 tabIndex={isActive ? 0 : -1}
                 className={cn(
-                  "ui-text-base h-auto w-full justify-start gap-2.5 rounded-[var(--app-radius-menu-item)] px-2.5 py-1.5 text-left",
+                  "ui-text-base h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-1.5 text-left",
                   isActive ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                 )}
               >

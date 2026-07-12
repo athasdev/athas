@@ -37,7 +37,7 @@ export function GitHubTitleBodyForm({
 
   return (
     <form
-      className="w-full space-y-2 rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/25 p-2"
+      className="w-full space-y-2 rounded-xl border border-border/70 bg-secondary-bg/25 p-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (!canSubmit) return;

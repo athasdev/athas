@@ -40,7 +40,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
         ref={ref}
         data-active={active}
         className={cn(
-          "inline-flex h-6 w-fit max-w-full flex-none overflow-hidden rounded-[var(--app-radius-control-sm)] border border-transparent text-text transition-colors",
+          "inline-flex h-6 w-fit max-w-full flex-none overflow-hidden rounded-md border border-transparent text-text transition-colors",
           "hover:border-border/60 hover:bg-hover/70",
           "data-[active=true]:border-border/70 data-[active=true]:bg-hover/80",
           disabled && "opacity-50",

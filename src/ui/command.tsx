@@ -24,11 +24,11 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-[var(--app-radius-menu)] border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
+  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
 );
 
 const commandItemVariants = cva(
-  "ui-font ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-[var(--app-radius-menu-item)] px-3 py-2 text-left leading-[1.35] transition-colors",
+  "ui-font ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg px-3 py-2 text-left leading-[1.35] transition-colors",
   {
     variants: {
       selected: {
@@ -54,7 +54,7 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
     compact
-    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded-[var(--app-radius-control-sm)] px-2 text-text-lighter hover:text-text [&_svg]:size-4"
+    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded-md px-2 text-text-lighter hover:text-text [&_svg]:size-4"
     {...props}
   />
 );
@@ -362,7 +362,7 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
         isActive={item.isActive}
         size="md"
         variant="pill"
-        className="w-fit justify-start rounded-[var(--app-radius-pill)]"
+        className="w-fit justify-start rounded-full"
         onClick={item.onSelect}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -419,8 +419,7 @@ export const CommandItemIcon = ({
   <span
     className={cn(
       "inline-flex size-5 shrink-0 items-center justify-center text-text-lighter",
-      variant === "framed" &&
-        "rounded-[var(--app-radius-control-sm)] border border-border/70 bg-secondary-bg/70",
+      variant === "framed" && "rounded-md border border-border/70 bg-secondary-bg/70",
       className,
     )}
     {...props}

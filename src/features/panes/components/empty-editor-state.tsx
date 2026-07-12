@@ -27,10 +27,10 @@ interface ActionItem {
 }
 
 const quickActionCardClassName =
-  "h-20 w-full flex-col items-start justify-between rounded-[var(--app-radius-card)] border border-border/65 bg-transparent p-3 text-left text-text-lighter hover:border-border-strong/75 hover:bg-hover/35 hover:text-text focus-visible:border-border-strong/80 disabled:opacity-45";
+  "h-20 w-full flex-col items-start justify-between rounded-xl border border-border/65 bg-transparent p-3 text-left text-text-lighter hover:border-border-strong/75 hover:bg-hover/35 hover:text-text focus-visible:border-border-strong/80 disabled:opacity-45";
 
 const quickActionIconClassName =
-  "flex size-7 items-center justify-center rounded-[var(--app-radius-control-sm)] text-text-lighter group-hover:text-text";
+  "flex size-7 items-center justify-center rounded-md text-text-lighter group-hover:text-text";
 
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
@@ -166,7 +166,7 @@ export function EmptyEditorState() {
           <h1 className="font-medium text-text ui-text-lg">Where should we begin?</h1>
         </div>
 
-        <div className="w-full rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/16 p-3">
+        <div className="w-full rounded-xl border border-border/70 bg-secondary-bg/16 p-3">
           <AgentLaunchInput active autoFocus variant="hero" />
         </div>
 

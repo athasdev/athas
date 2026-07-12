@@ -140,7 +140,7 @@ function FileExplorerTreeItemComponent({
         {renderTreeGuides()}
         <div
           className={cn(
-            "file-tree-row flex w-full items-center rounded-[var(--app-radius-menu-item)]",
+            "file-tree-row flex w-full items-center rounded-lg",
             FILE_TREE_ROW_CLASS_NAME,
           )}
           style={{

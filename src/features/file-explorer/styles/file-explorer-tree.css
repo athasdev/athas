@@ -31,7 +31,7 @@
 .file-tree-container .file-tree-item button {
   box-sizing: border-box !important;
   border: 1px solid transparent !important;
-  border-radius: var(--app-radius-menu-item) !important;
+  border-radius: var(--radius-lg) !important;
   background-color: transparent !important;
   width: 100% !important;
   min-width: 100% !important;
@@ -64,7 +64,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  border-radius: var(--app-radius-menu-item);
+  border-radius: var(--radius-lg);
   background-color: transparent;
   content: "";
   pointer-events: none;
@@ -109,7 +109,7 @@
 }
 
 .file-tree-search-highlight {
-  border-radius: var(--app-radius-control-sm);
+  border-radius: var(--radius-md);
   background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
   color: inherit;
   padding: 0 1px;

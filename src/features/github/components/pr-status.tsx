@@ -103,7 +103,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
       </Button>
 
       {isExpanded && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-[320px] rounded-[var(--app-radius-menu)] border border-border/70 bg-secondary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
+        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-[320px] rounded-xl border border-border/70 bg-secondary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
           {checks.map((check, idx) => (
             <button
               key={idx}
@@ -114,7 +114,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
                 }
               }}
               disabled={!check.detailsUrl}
-              className="flex w-full items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
             >
               {check.conclusion === "SUCCESS" ? (
                 <CheckCircle2 className="text-success" />

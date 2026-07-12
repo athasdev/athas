@@ -23,7 +23,7 @@ export const EMPTY_DEBUG_SECTION_MESSAGES = {
 };
 
 const debugSectionVariants = cva(
-  "flex min-h-0 flex-col overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/30",
+  "flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-secondary-bg/30",
 );
 
 export function DebugSection({
@@ -50,7 +50,7 @@ export function DebugSection({
       <div className="flex h-8 shrink-0 items-center gap-1 border-border/60 border-b px-1.5">
         <button
           type="button"
-          className="ui-font flex min-w-0 flex-1 items-center gap-2 rounded-[var(--app-radius-menu-item)] px-1.5 py-1 text-left text-text-lighter hover:bg-hover/60 hover:text-text"
+          className="ui-font flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-text-lighter hover:bg-hover/60 hover:text-text"
           onClick={() => setIsOpen((current) => !current)}
         >
           <CaretRight

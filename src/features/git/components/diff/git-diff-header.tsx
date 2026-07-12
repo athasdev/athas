@@ -74,7 +74,7 @@ const DiffHeader = memo(
       return (
         <span
           className={cn(
-            "rounded-[var(--app-radius-pill)] px-1.5 py-0.5 font-medium ui-text-sm capitalize leading-none",
+            "rounded-full px-1.5 py-0.5 font-medium ui-text-sm capitalize leading-none",
             statusColors[status],
           )}
         >

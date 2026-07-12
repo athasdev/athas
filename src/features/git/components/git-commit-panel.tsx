@@ -360,7 +360,7 @@ const GitCommitPanel = ({
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
   const composerButtonClassName =
-    "h-6 rounded-[var(--app-radius-control-sm)] border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
+    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
   const generateModeItems: MenuItem[] = [
     {
       id: "title",
@@ -382,7 +382,7 @@ const GitCommitPanel = ({
         {error && (
           <div
             className={cn(
-              "mx-2 mt-2 flex items-center gap-2 rounded-[var(--app-radius-control-sm)] border border-error/30",
+              "mx-2 mt-2 flex items-center gap-2 rounded-md border border-error/30",
               "bg-error/20 px-2 py-1 ui-text-sm text-error",
             )}
           >

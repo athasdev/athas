@@ -31,7 +31,7 @@ export function SegmentedControl({
       className={
         className ??
         (wrap
-          ? "inline-flex h-auto max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/40 p-1"
+          ? "inline-flex h-auto max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-lg border border-border/60 bg-secondary-bg/40 p-1"
           : "inline-flex w-fit max-w-full self-start")
       }
     >
@@ -41,7 +41,7 @@ export function SegmentedControl({
           isActive={value === option.value}
           variant="segmented"
           size={size}
-          className="h-auto w-auto shrink-0 rounded-[var(--app-radius-control-sm)] border-0 px-2.5 py-1.5"
+          className="h-auto w-auto shrink-0 rounded-md border-0 px-2.5 py-1.5"
           role="button"
           tabIndex={0}
           onClick={() => onChange(option.value)}

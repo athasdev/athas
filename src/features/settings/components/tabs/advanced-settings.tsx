@@ -210,7 +210,7 @@ export const AdvancedSettings = () => {
           </div>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg/50">
+          <div className="rounded-lg border border-border/70 bg-primary-bg/50">
             {telemetryLog.length === 0 ? (
               <p className="ui-font ui-text-base px-3 py-2 text-text-lighter">
                 No telemetry entries yet.

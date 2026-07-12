@@ -67,7 +67,7 @@ const CommitItem = memo(
           type="button"
           onClick={handleCommitClick}
           className={cn(
-            "ui-text-sm flex w-full cursor-pointer items-start rounded-[var(--app-radius-menu-item)] border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
+            "ui-text-sm flex w-full cursor-pointer items-start rounded-lg border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
             isSelected && "border-accent/35 bg-accent/8",
           )}
           draggable={!!repoPath}
@@ -265,7 +265,7 @@ const GitCommitHistory = ({
       <div
         className={cn(
           "flex min-h-0 flex-1 flex-col overflow-hidden",
-          showHeader && "rounded-[var(--app-radius-card)] border border-border/60 bg-primary-bg/55",
+          showHeader && "rounded-xl border border-border/60 bg-primary-bg/55",
         )}
       >
         {showHeader ? (

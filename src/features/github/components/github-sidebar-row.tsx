@@ -77,7 +77,7 @@ export function GitHubSidebarRow({
   );
 
   const rowClassName = cn(
-    "ui-font ui-text-base group/github-row flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 text-left leading-[1.35] text-text-lighter transition-[background-color,color]",
+    "ui-font ui-text-base group/github-row flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 text-left leading-[1.35] text-text-lighter transition-[background-color,color]",
     "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
     active && "bg-hover/80 text-text",
     className,
@@ -138,11 +138,11 @@ export function GitHubSidebarRow({
           collisionPadding={10}
           className="z-[10080]"
         >
-          <PreviewCard.Popup className="ui-font w-[21rem] overflow-hidden rounded-[var(--app-radius-menu)] border border-border/75 bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:translate-x-1 data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:translate-x-1 data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]">
+          <PreviewCard.Popup className="ui-font w-[21rem] overflow-hidden rounded-xl border border-border/75 bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:translate-x-1 data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:translate-x-1 data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]">
             <div className="border-border/70 border-b p-3">
               <div className="flex min-w-0 items-start gap-2.5">
                 {preview.icon ? (
-                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-[var(--app-radius-pill)] bg-primary-bg">
+                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-bg">
                     {preview.icon}
                   </span>
                 ) : null}
@@ -163,7 +163,7 @@ export function GitHubSidebarRow({
                     <span
                       key={index}
                       className={cn(
-                        "inline-flex h-5 max-w-full items-center rounded-[var(--app-radius-pill)] px-1.5 leading-none ui-text-sm",
+                        "inline-flex h-5 max-w-full items-center rounded-full px-1.5 leading-none ui-text-sm",
                         previewBadgeClassName(badge.tone),
                       )}
                     >

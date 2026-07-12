@@ -6,11 +6,11 @@ export const controlFieldSurfaceVariants = cva(
     variants: {
       variant: {
         default:
-          "rounded-[var(--app-radius-control)] border border-border bg-secondary-bg focus:border-border-strong focus:bg-secondary-bg focus:ring-1 focus:ring-border-strong/35",
+          "rounded-lg border border-border bg-secondary-bg focus:border-border-strong focus:bg-secondary-bg focus:ring-1 focus:ring-border-strong/35",
         secondary:
-          "rounded-[var(--app-radius-control)] border border-border bg-secondary-bg focus:border-border-strong focus:bg-secondary-bg focus:ring-1 focus:ring-border-strong/35",
+          "rounded-lg border border-border bg-secondary-bg focus:border-border-strong focus:bg-secondary-bg focus:ring-1 focus:ring-border-strong/35",
         outline:
-          "rounded-[var(--app-radius-control)] border border-border/70 bg-transparent focus:border-border-strong focus:ring-1 focus:ring-border-strong/25",
+          "rounded-lg border border-border/70 bg-transparent focus:border-border-strong focus:ring-1 focus:ring-border-strong/25",
         ghost: "border-none bg-transparent focus:ring-0",
       },
     },

@@ -352,7 +352,7 @@ export function ModelSelector({
         className={cn(
           isComposer
             ? chatComposerDropdownClassName("min-w-0 p-0")
-            : "min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] p-0",
+            : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
         style={{ maxHeight: "280px", minWidth: 0 }}
@@ -365,7 +365,7 @@ export function ModelSelector({
           onWheel={(event) => event.stopPropagation()}
         >
           {modelFetchError && (
-            <div className="mb-1.5 flex items-center gap-1.5 rounded-[var(--app-radius-menu-item)] bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-sm">
+            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-sm">
               <WarningCircle className="shrink-0 text-warning" />
               <span>{modelFetchError}</span>
             </div>

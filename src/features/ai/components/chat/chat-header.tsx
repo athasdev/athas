@@ -87,7 +87,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-[var(--app-radius-control-sm)] px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-md px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
       onClick={() => setIsEditing(true)}
       title="Click to rename session"
     >

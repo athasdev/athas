@@ -75,7 +75,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 options={store.databases.map((db) => ({ value: db, label: db }))}
                 aria-label="Select database"
                 size="xs"
-                className="rounded-[var(--app-radius-pill)] border-border/70 bg-secondary-bg/70 px-2.5 focus:border-accent/60 focus:ring-accent/30"
+                className="rounded-full border-border/70 bg-secondary-bg/70 px-2.5 focus:border-accent/60 focus:ring-accent/30"
               />
             </>
           )}
@@ -100,7 +100,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 variant="ghost"
                 compact
                 className={cn(
-                  "block h-auto w-full justify-start rounded-[var(--app-radius-menu-item)] px-2 py-1 text-left ui-text-sm leading-[1.35]",
+                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-[1.35]",
                   store.selectedCollection === col.name && "bg-selected",
                 )}
                 aria-label={`Select collection ${col.name}`}
@@ -165,7 +165,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {store.error && (
-            <div className="mx-3 mt-3 mb-2 rounded-[var(--app-radius-control)] border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
+            <div className="mx-3 mt-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
               {store.error}
             </div>
           )}

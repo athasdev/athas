@@ -29,7 +29,7 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const itemVariants = cva(
-  "group/item flex w-full flex-wrap items-center rounded-[var(--app-radius-card)] border ui-text-sm transition-[background-color,border-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] outline-none focus-visible:border-accent/45 focus-visible:ring-[3px] focus-visible:ring-accent/20 [a]:transition-colors [a]:duration-[var(--app-duration-fast)] [a]:ease-[var(--app-ease-smooth)] [a]:hover:bg-hover",
+  "group/item flex w-full flex-wrap items-center rounded-xl border ui-text-sm transition-[background-color,border-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] outline-none focus-visible:border-accent/45 focus-visible:ring-[3px] focus-visible:ring-accent/20 [a]:transition-colors [a]:duration-[var(--app-duration-fast)] [a]:ease-[var(--app-ease-smooth)] [a]:hover:bg-hover",
   {
     variants: {
       variant: {
@@ -80,7 +80,7 @@ const itemMediaVariants = cva(
         default: "bg-transparent",
         icon: "[&_svg:not([class*='size-'])]:size-4",
         image:
-          "size-10 overflow-hidden rounded-[var(--app-radius-control-sm)] group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover",
+          "size-10 overflow-hidden rounded-md group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover",
       },
     },
     defaultVariants: {

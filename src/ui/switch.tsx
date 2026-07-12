@@ -11,8 +11,8 @@ interface SwitchProps {
 
 const switchTrackVariants = cva(
   [
-    "peer rounded-[var(--app-radius-pill)] border bg-secondary-bg transition-[transform,background-color,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)] peer-active:scale-[var(--app-press-scale)]",
-    "after:absolute after:rounded-[var(--app-radius-pill)] after:bg-text after:shadow-[var(--shadow-card)] after:transition-[transform,background-color,box-shadow] after:duration-[var(--app-duration-normal)] after:ease-[var(--app-ease-smooth)] after:content-['']",
+    "peer rounded-full border bg-secondary-bg transition-[transform,background-color,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)] peer-active:scale-[var(--app-press-scale)]",
+    "after:absolute after:rounded-full after:bg-text after:shadow-[var(--shadow-card)] after:transition-[transform,background-color,box-shadow] after:duration-[var(--app-duration-normal)] after:ease-[var(--app-ease-smooth)] after:content-['']",
     "border-border peer-checked:border-accent peer-checked:bg-accent peer-checked:after:bg-primary-bg",
     "peer-focus:ring-1 peer-focus:ring-border-strong/35",
   ],

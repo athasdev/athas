@@ -307,7 +307,7 @@ export function AgentSelector({
           type="button"
           variant="ghost"
           compact
-          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-[var(--app-radius-pill)] border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
+          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
@@ -324,7 +324,7 @@ export function AgentSelector({
         anchorAlign="end"
         onClose={closeAgentSelector}
         portalContainer={portalContainer}
-        className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-[var(--app-radius-menu)] p-0"
+        className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
         style={{ maxHeight: "240px" }}
       >
         <div className="bg-secondary-bg px-1.5 py-1.5" onKeyDown={handleKeyDown}>
@@ -370,7 +370,7 @@ export function AgentSelector({
                     }
                   }}
                   className={cn(
-                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1 ui-text-sm transition-colors",
+                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 ui-text-sm transition-colors",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     !item.isInstalled && item.id !== "custom" && "text-text-lighter",

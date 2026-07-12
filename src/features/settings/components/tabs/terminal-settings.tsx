@@ -190,14 +190,14 @@ export const TerminalSettings = () => {
           </div>
 
           {profiles.length === 0 ? (
-            <div className="ui-font ui-text-base rounded-[var(--app-radius-control)] border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
+            <div className="ui-font ui-text-base rounded-lg border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
               No custom terminal profiles yet.
             </div>
           ) : (
             profiles.map((profile) => (
               <div
                 key={profile.id}
-                className="space-y-3 rounded-[var(--app-radius-control)] border border-border/70 bg-secondary-bg/60 p-3"
+                className="space-y-3 rounded-lg border border-border/70 bg-secondary-bg/60 p-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">

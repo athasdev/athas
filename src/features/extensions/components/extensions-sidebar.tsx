@@ -394,7 +394,7 @@ function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
   return (
     <span
       className={cn(
-        "flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--app-radius-control)] border border-border/60",
+        "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border/60",
         showImageIcon ? "bg-white/95" : "bg-primary-bg",
       )}
     >
@@ -452,7 +452,7 @@ const ExtensionRow = ({
       variant="default"
       tooltip="Reinstall"
       compact
-      className="h-8 w-8 min-w-0 rounded-[var(--app-radius-control-sm)] p-0 text-error"
+      className="h-8 w-8 min-w-0 rounded-md p-0 text-error"
     >
       <WarningCircle className="size-4" weight="duotone" />
     </Button>
@@ -465,7 +465,7 @@ const ExtensionRow = ({
       variant="default"
       tooltip="Update"
       compact
-      className="h-8 w-8 min-w-0 rounded-[var(--app-radius-control-sm)] p-0"
+      className="h-8 w-8 min-w-0 rounded-md p-0"
     >
       <RefreshCw className="size-4" weight="duotone" />
     </Button>
@@ -489,7 +489,7 @@ const ExtensionRow = ({
       variant="default"
       tooltip={primaryActionLabel}
       compact
-      className="h-8 w-8 min-w-0 rounded-[var(--app-radius-control-sm)] p-0"
+      className="h-8 w-8 min-w-0 rounded-md p-0"
     >
       <Plus className="size-4" weight="bold" />
     </Button>
@@ -498,7 +498,7 @@ const ExtensionRow = ({
   return (
     <div
       className={cn(
-        "group flex min-h-16 min-w-0 items-center gap-3 rounded-[var(--app-radius-menu-item)] px-2.5 py-2 text-left text-text-lighter transition-colors",
+        "group flex min-h-16 min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 text-left text-text-lighter transition-colors",
         "hover:bg-hover/70 hover:text-text focus-within:bg-hover/70",
         selected && "bg-hover/80 text-text",
       )}
@@ -1694,7 +1694,7 @@ export const ExtensionsSidebar = () => {
               ) : null}
 
               {selectedExtension.runtimeIssues?.length ? (
-                <div className="rounded-[var(--app-radius-control)] border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
+                <div className="rounded-lg border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
                   {selectedExtension.runtimeIssues[0]?.message}
                 </div>
               ) : null}
@@ -1716,7 +1716,7 @@ export const ExtensionsSidebar = () => {
                       return (
                         <div
                           key={option.id}
-                          className="flex min-w-0 items-center gap-3 rounded-[var(--app-radius-control)] border border-border/65 bg-primary-bg px-3 py-2"
+                          className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-primary-bg px-3 py-2"
                         >
                           <div className="min-w-0 flex-1">
                             <div className="truncate font-medium text-text ui-text-sm">

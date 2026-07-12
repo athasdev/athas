@@ -42,17 +42,16 @@ import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
 const statusChipClass =
-  "ui-font inline-flex h-5 items-center self-center rounded-[var(--app-radius-pill)] border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "ui-font inline-flex h-5 items-center self-center rounded-full border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const editorMenuItemClass = dropdownItemClassName("min-h-7");
 
 const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-text-lighter";
 
 const editorMenuRowClass =
-  "group flex items-center justify-between gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 transition-colors hover:bg-hover";
+  "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-hover";
 
-const editorMenuMutedRowClass =
-  "flex items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-2 text-text-lighter";
+const editorMenuMutedRowClass = "flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter";
 function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
   return getLanguageDisplayName(languageId);

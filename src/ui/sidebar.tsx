@@ -37,7 +37,7 @@ export function SidebarPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col bg-primary-bg",
-        framed && "rounded-[var(--app-radius-card)] border border-border/70",
+        framed && "rounded-xl border border-border/70",
         className,
       )}
       {...props}
@@ -66,9 +66,7 @@ export const SidebarFooter = forwardRef<
         surface &&
           cn(
             "mx-2 mb-2 border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-            attached
-              ? "rounded-t-[var(--app-radius-card)] rounded-b-[var(--app-radius-menu)]"
-              : "rounded-[var(--app-radius-menu)]",
+            attached ? "rounded-t-lg rounded-b-xl" : "rounded-xl",
           ),
         className,
       )}
@@ -112,9 +110,7 @@ export function SidebarComposer({
     <div
       className={cn(
         "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-        attached
-          ? "rounded-t-[var(--app-radius-card)] rounded-b-[var(--app-radius-menu)]"
-          : "rounded-[var(--app-radius-menu)]",
+        attached ? "rounded-t-lg rounded-b-xl" : "rounded-xl",
         className,
       )}
       {...props}
@@ -134,7 +130,7 @@ export function SidebarComposerBody({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[var(--app-radius-card)] border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]",
+        "overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]",
         className,
       )}
       {...props}
@@ -164,10 +160,7 @@ export const SidebarHeaderSearch = forwardRef<
       variant="ghost"
       size="xs"
       placeholder={placeholder}
-      className={cn(
-        "h-6 rounded-[var(--app-radius-control-sm)] border-transparent bg-transparent select-text",
-        className,
-      )}
+      className={cn("h-6 rounded-md border-transparent bg-transparent select-text", className)}
       containerClassName={cn("min-w-0 flex-1", containerClassName)}
       {...props}
     />
@@ -184,7 +177,7 @@ export const SidebarHeaderIconButton = forwardRef<
       type="button"
       variant="ghost"
       compact
-      className={cn("size-6 rounded-[var(--app-radius-control-sm)] p-0", className)}
+      className={cn("size-6 rounded-md p-0", className)}
       {...props}
     />
   );
@@ -320,7 +313,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "ui-font flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
+        "ui-font flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
         "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
         active && "bg-hover/80 text-text",
         iconOnly && "justify-center gap-0 px-0",
@@ -371,7 +364,7 @@ export function SidebarSectionHeader({
     <button
       type="button"
       className={cn(
-        "ui-font ui-text-sm flex h-6 w-full select-none items-center gap-1 rounded-[var(--app-radius-control-sm)] px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
+        "ui-font ui-text-sm flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
         className,
       )}
       aria-expanded={expanded}
@@ -559,7 +552,7 @@ export function SidebarSectionSwitcher({
           setIsDropdownOpen(false);
         },
         className: cn(
-          "h-7 justify-start gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-0",
+          "h-7 justify-start gap-2 rounded-lg px-2 py-0",
           item.id === value && "bg-hover text-text",
         ),
       })),
@@ -576,7 +569,7 @@ export function SidebarSectionSwitcher({
         {items.map((item) => (
           <div
             key={item.id}
-            className="ui-font ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-[var(--app-radius-pill)] px-2"
+            className="ui-font ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-full px-2"
           >
             {item.icon ? (
               <span className="flex size-4 shrink-0 items-center justify-center">{item.icon}</span>
@@ -593,7 +586,7 @@ export function SidebarSectionSwitcher({
             type="button"
             aria-haspopup="menu"
             aria-expanded={isDropdownOpen}
-            className="ui-font ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-[var(--app-radius-pill)] bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
+            className="ui-font ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
             onClick={() => setIsDropdownOpen((open) => !open)}
           >
             {activeItem.icon ? (
@@ -610,14 +603,14 @@ export function SidebarSectionSwitcher({
             anchorSide="bottom"
             anchorAlign="start"
             items={dropdownItems}
-            className="!min-w-0 w-max max-w-[min(220px,calc(100vw-16px))] rounded-[var(--app-radius-menu)] p-1"
+            className="!min-w-0 w-max max-w-[min(220px,calc(100vw-16px))] rounded-xl p-1"
             onClose={() => setIsDropdownOpen(false)}
           />
         </>
       ) : (
         <div
           role="tablist"
-          className="mx-auto flex h-7 w-fit max-w-full select-none items-center justify-center gap-1 rounded-[var(--app-radius-pill)] bg-secondary-bg/45 p-0.5"
+          className="mx-auto flex h-7 w-fit max-w-full select-none items-center justify-center gap-1 rounded-full bg-secondary-bg/45 p-0.5"
         >
           {items.map((item) => {
             const selected = item.id === value;
@@ -629,7 +622,7 @@ export function SidebarSectionSwitcher({
                 aria-label={item.label}
                 disabled={item.disabled}
                 className={cn(
-                  "ui-font ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-[var(--app-radius-pill)] outline-none transition-[background-color,color,width,padding]",
+                  "ui-font ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
                   selected
                     ? "max-w-32 bg-hover px-2 text-text"
                     : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",

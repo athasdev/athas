@@ -32,7 +32,7 @@
 
 .monaco-editor-shell .monaco-hover {
   border: 1px solid var(--color-border, var(--border, rgba(255, 255, 255, 0.12))) !important;
-  border-radius: var(--app-radius-md, 8px) !important;
+  border-radius: var(--radius-md, 8px) !important;
   background: color-mix(
     in srgb,
     var(--color-primary-bg, var(--primary-bg, #0f1117)) 96%,
@@ -114,7 +114,7 @@
   margin: 0.35em 0;
   padding: 0.45em 0.55em;
   border: 0;
-  border-radius: var(--app-radius-sm, 6px);
+  border-radius: var(--radius-sm, 6px);
   background: color-mix(in srgb, var(--color-hover, var(--hover, #333333)) 50%, transparent);
   color: var(--color-text, var(--text, #faf9f5));
   overflow-x: hidden;

@@ -158,13 +158,13 @@ export const PRFilesPanel = memo(
             viewMode={fileNavigatorViewMode}
             onViewModeChange={setFileNavigatorViewMode}
             borderless
-            className="my-2 ml-2 h-auto self-stretch rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/20"
+            className="my-2 ml-2 h-auto self-stretch rounded-xl border border-border/70 bg-secondary-bg/20"
             searchMode="fuzzy"
           />
         ) : null}
 
         <div className="min-w-0 flex-1 space-y-3 p-2">
-          <div className="rounded-[var(--app-radius-card)] border border-border/60 bg-terniary-bg px-2 py-1">
+          <div className="rounded-xl border border-border/60 bg-terniary-bg px-2 py-1">
             <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-1">
                 <Button
@@ -213,7 +213,7 @@ export const PRFilesPanel = memo(
             </div>
           </div>
 
-          <div className="min-h-[560px] min-w-0 overflow-hidden rounded-[var(--app-radius-card)] bg-secondary-bg/12">
+          <div className="min-h-[560px] min-w-0 overflow-hidden rounded-xl bg-secondary-bg/12">
             {selectedDiffFile ? (
               <FileDiffView
                 file={selectedDiffFile}

@@ -216,7 +216,7 @@ const BottomPane = () => {
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg",
+        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
         isFullScreen && "fixed inset-x-0 z-[10040] rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",

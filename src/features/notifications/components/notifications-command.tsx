@@ -371,7 +371,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                   <div key={group.label} className="flex flex-col gap-1">
                     <button
                       type="button"
-                      className="ui-font ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-[var(--app-radius-menu-item)] px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
+                      className="ui-font ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
                       aria-expanded={!collapsedNotificationGroups.has(group.label)}
                       onClick={() => toggleNotificationGroup(group.label)}
                     >

@@ -262,7 +262,7 @@ export const KeyboardSettings = () => {
               <SegmentedControl
                 value={filterType}
                 onChange={(value) => setFilterType(value as FilterType)}
-                className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/40 p-1"
+                className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-lg border border-border/60 bg-secondary-bg/40 p-1"
                 options={[
                   {
                     value: "all",
@@ -364,7 +364,7 @@ export const KeyboardSettings = () => {
             </SettingRow>
 
             {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
-              <div className="ui-font ui-text-base rounded-[var(--app-radius-control)] border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
+              <div className="ui-font ui-text-base rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
                 This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
                 built-in command
                 {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still

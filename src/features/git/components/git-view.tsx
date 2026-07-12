@@ -1578,7 +1578,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         compact
-                        className="size-6 rounded-[var(--app-radius-control-sm)] text-text-lighter disabled:opacity-50"
+                        className="size-6 rounded-md text-text-lighter disabled:opacity-50"
                         tooltip="Apply stash"
                       >
                         <Download weight="fill" />
@@ -1596,7 +1596,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         compact
-                        className="size-6 rounded-[var(--app-radius-control-sm)] text-text-lighter disabled:opacity-50"
+                        className="size-6 rounded-md text-text-lighter disabled:opacity-50"
                         tooltip="Pop stash"
                       >
                         <Upload />
@@ -1614,7 +1614,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         compact
-                        className="size-6 rounded-[var(--app-radius-control-sm)] text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        className="size-6 rounded-md text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
                         tooltip="Drop stash"
                       >
                         <Trash2 />

@@ -82,7 +82,7 @@ const ProjectIconPicker = memo(
           ) : undefined
         }
         classNames={{
-          modal: "max-w-[360px] rounded-[var(--app-radius-menu)]",
+          modal: "max-w-[360px] rounded-xl",
           content: "p-3",
         }}
       >

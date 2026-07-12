@@ -116,10 +116,7 @@ function ProjectGlyph({
       <img
         src={convertFileSrc(iconPath)}
         alt=""
-        className={cn(
-          "shrink-0 rounded-[var(--app-radius-control-sm)] object-contain",
-          className ?? "size-4",
-        )}
+        className={cn("shrink-0 rounded-md object-contain", className ?? "size-4")}
       />
     );
   }
@@ -188,7 +185,7 @@ function SidebarProjectSwitcher({
               tabIndex={canChangeIcon ? 0 : undefined}
               aria-label={canChangeIcon ? "Change project icon" : undefined}
               className={cn(
-                "flex size-4 items-center justify-center rounded-[var(--app-radius-control-sm)]",
+                "flex size-4 items-center justify-center rounded-md",
                 canChangeIcon &&
                   "hover:bg-hover/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
               )}

@@ -76,11 +76,11 @@ const selectTriggerVariants = cva(
 );
 
 const selectContentVariants = cva(
-  "z-[10070] max-h-96 min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+  "z-[10070] max-h-96 min-w-0 overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
 );
 
 const selectItemVariants = cva(
-  "ui-font flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
+  "ui-font flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
   {
     variants: {
       size: {
@@ -472,10 +472,7 @@ export default function Select({
           anchorRef={searchInputRef}
           anchorAlign="start"
           onClose={() => handleOpenChange(false)}
-          className={cn(
-            "min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] p-0",
-            menuClassName,
-          )}
+          className={cn("min-w-0 overflow-hidden rounded-xl p-0", menuClassName)}
           menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
           style={{ width: getAnchorWidth(searchInputRef.current, menuMinWidth) }}
           animated={menuAnimated}

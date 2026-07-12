@@ -121,7 +121,7 @@ const DiffHunkHeader = memo(
               <button
                 onClick={handleStageHunk}
                 className={cn(
-                  "flex items-center gap-1 rounded-[var(--app-radius-control-sm)] px-1 py-0 opacity-0 group-hover:opacity-100",
+                  "flex items-center gap-1 rounded-md px-1 py-0 opacity-0 group-hover:opacity-100",
                   isStaged
                     ? "bg-git-deleted/20 text-git-deleted hover:bg-git-deleted/30"
                     : "bg-git-added/20 text-git-added hover:bg-git-added/30",

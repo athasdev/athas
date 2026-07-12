@@ -291,7 +291,7 @@ export function MainLayout() {
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
-          <div className="rounded-[var(--app-radius-card)] border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
+          <div className="rounded-xl border-2 border-accent border-dashed bg-secondary-bg px-8 py-6">
             <p className="ui-text-base font-semibold text-text">
               Drop folder to open project, or file to open buffer
             </p>
@@ -309,7 +309,7 @@ export function MainLayout() {
           </ResizablePane>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg">
+            <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
             {terminalWidthMode === "editor" && deferredSurfacesReady && (

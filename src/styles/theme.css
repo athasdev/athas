@@ -8,6 +8,14 @@
 }
 
 @theme inline {
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
   --color-primary-bg: var(--primary-bg);
   --color-secondary-bg: var(--secondary-bg);
   --color-text: var(--text);
@@ -90,16 +98,7 @@
     --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
     --ui-text-base: var(--app-ui-font-size);
     --athas-workbench-gap: 8px;
-    --app-radius-sm: 6px;
-    --app-radius-md: 8px;
-    --app-radius-lg: 12px;
-    --app-radius-xl: 16px;
-    --app-radius-control: 10px;
-    --app-radius-control-sm: 8px;
-    --app-radius-menu: 14px;
-    --app-radius-menu-item: 10px;
-    --app-radius-card: 12px;
-    --app-radius-pill: 999px;
+    --radius: 10px;
     --app-duration-fast: 150ms;
     --app-duration-normal: 200ms;
     --app-duration-slow: 280ms;

@@ -104,7 +104,7 @@ export default function TableToolbar({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 rounded-[var(--app-radius-control)] border border-border/60 bg-secondary-bg/60 p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary-bg/60 p-0.5">
             {VIEW_TABS.map(({ mode, label }) => (
               <Button
                 key={mode}

@@ -213,7 +213,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             <button
               ref={tabDropdownRef}
               type="button"
-              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-[var(--app-radius-control-sm)] border border-border/70 bg-secondary-bg/50 px-2 text-left text-text transition-colors hover:bg-hover max-[720px]:inline-flex"
+              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-secondary-bg/50 px-2 text-left text-text transition-colors hover:bg-hover max-[720px]:inline-flex"
               onClick={() => setIsTabDropdownOpen(true)}
             >
               <ActiveTabIcon className="size-4 shrink-0 text-text-lighter" weight="duotone" />
@@ -314,7 +314,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   type="button"
                   onClick={() => navigateToSearchResult(result)}
                   className={[
-                    "ui-font flex w-full flex-col items-start rounded-[var(--app-radius-menu-item)] px-2.5 py-2 text-left transition-colors",
+                    "ui-font flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
                     isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                   ].join(" ")}
                 >

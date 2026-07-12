@@ -260,7 +260,7 @@ export default function SqlDatabaseViewer({
           )}
 
           {store.error && (
-            <div className="mx-3 mb-2 rounded-[var(--app-radius-control)] border border-error/30 bg-error/10 px-3 py-2 ui-font ui-text-sm text-error">
+            <div className="mx-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 ui-font ui-text-sm text-error">
               {store.error}
             </div>
           )}

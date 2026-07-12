@@ -189,7 +189,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
         <div className={databasePanelClassName("flex-1")}>
           {store.error && (
-            <div className="mx-3 mt-3 rounded-[var(--app-radius-control)] border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
+            <div className="mx-3 mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
               {store.error}
             </div>
           )}

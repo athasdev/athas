@@ -67,7 +67,7 @@ export const SearchField = forwardRef<
 });
 
 const searchSurfaceClass =
-  "w-[320px] rounded-[var(--app-radius-menu)] border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm";
+  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm";
 
 const searchIconButtonClass = "size-6 min-h-6 min-w-6 px-0";
 
@@ -105,7 +105,7 @@ export function SearchPopover({
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
-            className="ui-text-sm h-8 rounded-[var(--app-radius-control)] border-border/80 bg-primary-bg py-1 pr-8 pl-8"
+            className="ui-text-sm h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8"
           />
           {value && (
             <Button
@@ -256,7 +256,7 @@ export function SearchReplaceRow({
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-[var(--app-radius-control)] border border-border/70 bg-primary-bg text-text-lighter">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
         <Replace />
       </span>
 
@@ -267,7 +267,7 @@ export function SearchReplaceRow({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
         placeholder="Replace with..."
-        className="ui-text-sm h-8 flex-1 rounded-[var(--app-radius-control)] border-border/80 bg-primary-bg py-1"
+        className="ui-text-sm h-8 flex-1 rounded-lg border-border/80 bg-primary-bg py-1"
       />
 
       <Button
@@ -329,7 +329,7 @@ export function SearchInput({
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className="ui-text-sm h-8 rounded-[var(--app-radius-control)] border-border/80 bg-primary-bg py-1 pr-8 pl-8"
+          className="ui-text-sm h-8 rounded-lg border-border/80 bg-primary-bg py-1 pr-8 pl-8"
         />
         {value && (
           <Button

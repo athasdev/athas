@@ -22,11 +22,11 @@ export const DROPDOWN_TRIGGER_BASE = cn(
     variant: "default",
     compact: true,
   }),
-  "min-w-0 gap-1 rounded-[var(--app-radius-control-sm)] px-2 text-text-lighter",
+  "min-w-0 gap-1 rounded-md px-2 text-text-lighter",
 );
 
 const dropdownItemVariants = cva(
-  "ui-font ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-[var(--app-radius-menu-item)] px-2.5 py-1.5 text-left text-text transition-colors",
+  "ui-font ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
   {
     variants: {
       disabled: {

@@ -197,7 +197,7 @@ export function ProviderSelector({
         className={cn(
           isComposer
             ? chatComposerDropdownClassName("min-w-0 p-0")
-            : "min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] p-0",
+            : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
         style={{ maxHeight: "260px", minWidth: 0 }}

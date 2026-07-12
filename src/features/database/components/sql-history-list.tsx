@@ -56,7 +56,7 @@ export default function SqlHistoryList({
           return (
             <div
               key={query}
-              className="group mx-1 flex items-center gap-1 rounded-[var(--app-radius-menu-item)] hover:bg-hover"
+              className="group mx-1 flex items-center gap-1 rounded-lg hover:bg-hover"
             >
               <Button
                 type="button"

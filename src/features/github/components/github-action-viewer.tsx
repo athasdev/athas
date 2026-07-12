@@ -652,7 +652,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 <section
                   key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
                   className={cn(
-                    "rounded-[var(--app-radius-card)] border border-transparent bg-secondary-bg/20 transition-[background-color,border-color]",
+                    "rounded-xl border border-transparent bg-secondary-bg/20 transition-[background-color,border-color]",
                     isSelectedJob && "border-border/80 bg-hover/40",
                   )}
                 >
@@ -662,7 +662,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                     compact
                     onClick={() => handleSelectJob(job)}
                     className={cn(
-                      "h-auto w-full justify-start rounded-[var(--app-radius-card)] px-3 py-2 text-left",
+                      "h-auto w-full justify-start rounded-xl px-3 py-2 text-left",
                       "hover:bg-hover/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70",
                     )}
                   >
@@ -701,7 +701,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                   </Button>
 
                   {isSelectedJob ? (
-                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg">
+                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
                       <div className="w-64 shrink-0 overflow-auto border-border/70 border-r bg-secondary-bg/20 p-1.5">
                         {job.steps.length > 0 ? (
                           job.steps.map((step, index) => (
@@ -712,7 +712,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               compact
                               onClick={() => setSelectedStepIndex(index)}
                               className={cn(
-                                "h-auto w-full min-w-0 justify-start gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
+                                "h-auto w-full min-w-0 justify-start gap-2 rounded-lg px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
                                 selectedStepIndex === index && "bg-selected text-text",
                               )}
                             >
