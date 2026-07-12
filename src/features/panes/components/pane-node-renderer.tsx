@@ -1,8 +1,7 @@
-import { useCallback, useMemo } from "react";
+import { Fragment, useCallback, useMemo } from "react";
 import { usePaneStore } from "../stores/pane.store";
 import type { PaneNode } from "../types/pane.types";
 import { flattenPaneSplit, type FlatPaneEntry } from "../utils/pane-tree";
-import { WORKBENCH_GAP_PX } from "@/features/layout/constants/workbench-layout";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
 
@@ -14,10 +13,8 @@ interface PaneNodeRendererProps {
 interface FlatResizeHandleProps {
   direction: "horizontal" | "vertical";
   handleCount: number;
-  handleDeductionPx: number;
   index: number;
   entries: FlatPaneEntry[];
-  totalSize: number;
   onReset: (index: number) => void;
   onResize: (index: number, sizes: [number, number]) => void;
 }
@@ -25,10 +22,8 @@ interface FlatResizeHandleProps {
 function FlatResizeHandle({
   direction,
   handleCount,
-  handleDeductionPx,
   index,
   entries,
-  totalSize,
   onReset,
   onResize,
 }: FlatResizeHandleProps) {
@@ -51,8 +46,6 @@ function FlatResizeHandle({
       onResize={handleResize}
       onReset={handleReset}
       initialSizes={initialSizes}
-      totalSize={totalSize}
-      handleDeductionPx={handleDeductionPx}
       resizeHandleCount={handleCount}
     />
   );
@@ -90,10 +83,7 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
 
   if (!flatEntries || flatEntries.length === 0) return null;
 
-  const totalSize = flatEntries.reduce((sum, entry) => sum + entry.size, 0);
-  const handleWidth = WORKBENCH_GAP_PX;
   const handleCount = flatEntries.length - 1;
-  const handleDeductionPx = (handleWidth * handleCount) / flatEntries.length;
 
   return (
     <div
@@ -101,15 +91,13 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
       data-pane-split-container="true"
     >
       {flatEntries.map((entry, index) => {
-        const pct = (entry.size / totalSize) * 100;
-        const handleDeduction = `${handleDeductionPx}px`;
-
         return (
-          <div key={entry.node.id} className="contents">
+          <Fragment key={entry.node.id}>
             <div
               className="min-h-0 min-w-0 overflow-hidden"
               style={{
-                [isHorizontal ? "width" : "height"]: `calc(${pct}% - ${handleDeduction})`,
+                flexBasis: 0,
+                flexGrow: entry.size,
               }}
             >
               {entry.node.type === "split" && entry.node.direction !== node.direction ? (
@@ -128,15 +116,13 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
               <FlatResizeHandle
                 direction={node.direction}
                 handleCount={handleCount}
-                handleDeductionPx={handleDeductionPx}
                 index={index}
                 entries={flatEntries}
-                totalSize={totalSize}
                 onReset={handleFlatReset}
                 onResize={handleFlatResize}
               />
             )}
-          </div>
+          </Fragment>
         );
       })}
     </div>

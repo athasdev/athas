@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WORKBENCH_GAP_PX } from "@/features/layout/constants/workbench-layout";
 import { MIN_PANE_SIZE } from "../constants/pane";
 
 interface PaneResizeHandleProps {
@@ -7,8 +6,6 @@ interface PaneResizeHandleProps {
   onResize: (sizes: [number, number]) => void;
   onReset?: () => void;
   initialSizes: [number, number];
-  totalSize: number;
-  handleDeductionPx: number;
   resizeHandleCount: number;
 }
 
@@ -17,8 +14,6 @@ export function PaneResizeHandle({
   onResize,
   onReset,
   initialSizes,
-  totalSize,
-  handleDeductionPx,
   resizeHandleCount,
 }: PaneResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -60,17 +55,14 @@ export function PaneResizeHandle({
     if (!isDragging) return;
 
     const applyPanePreview = (sizes: [number, number]) => {
-      const sizeProperty = isHorizontal ? "width" : "height";
-      const firstPct = (sizes[0] / totalSize) * 100;
-      const secondPct = (sizes[1] / totalSize) * 100;
       const firstPane = previousPaneRef.current;
       const secondPane = nextPaneRef.current;
 
       if (firstPane) {
-        firstPane.style[sizeProperty] = `calc(${firstPct}% - ${handleDeductionPx}px)`;
+        firstPane.style.flexGrow = String(sizes[0]);
       }
       if (secondPane) {
-        secondPane.style[sizeProperty] = `calc(${secondPct}% - ${handleDeductionPx}px)`;
+        secondPane.style.flexGrow = String(sizes[1]);
       }
     };
 
@@ -143,14 +135,15 @@ export function PaneResizeHandle({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [handleDeductionPx, isDragging, isHorizontal, onResize, totalSize]);
+  }, [isDragging, isHorizontal, onResize]);
 
   return (
     <div
       ref={containerRef}
-      style={isHorizontal ? { width: WORKBENCH_GAP_PX } : { height: WORKBENCH_GAP_PX }}
       className={`group relative flex shrink-0 items-center justify-center ${
-        isHorizontal ? "h-full cursor-col-resize" : "w-full cursor-row-resize"
+        isHorizontal
+          ? "h-full w-[var(--athas-workbench-gap)] cursor-col-resize"
+          : "h-[var(--athas-workbench-gap)] w-full cursor-row-resize"
       }`}
       onDoubleClick={onReset}
       onMouseDown={handleMouseDown}

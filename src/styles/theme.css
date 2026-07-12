@@ -93,6 +93,7 @@
     --app-ui-icon-size-xs: calc(10px * var(--app-ui-scale));
     --app-ui-icon-size-sm: calc(12px * var(--app-ui-scale));
     --app-ui-icon-size-md: calc(14px * var(--app-ui-scale));
+    --athas-workbench-gap: 8px;
     --app-radius-sm: 6px;
     --app-radius-md: 8px;
     --app-radius-lg: 12px;

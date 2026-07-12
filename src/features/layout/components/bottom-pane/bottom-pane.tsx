@@ -7,7 +7,6 @@ import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { WORKBENCH_GAP_PX } from "@/features/layout/constants/workbench-layout";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -97,7 +96,7 @@ const BottomPane = () => {
         if (rafId !== null) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
           if (frameEl) {
-            frameEl.style.height = `${currentHeight + WORKBENCH_GAP_PX}px`;
+            frameEl.style.height = `calc(${currentHeight}px + var(--athas-workbench-gap))`;
           }
         });
       };
@@ -108,7 +107,7 @@ const BottomPane = () => {
           rafId = null;
         }
         if (frameEl) {
-          frameEl.style.height = `${currentHeight + WORKBENCH_GAP_PX}px`;
+          frameEl.style.height = `calc(${currentHeight}px + var(--athas-workbench-gap))`;
         }
         setHeight(currentHeight);
         setIsResizing(false);
@@ -268,7 +267,7 @@ const BottomPane = () => {
       ref={paneFrameRef}
       className={cn("flex shrink-0 flex-col", !isBottomPaneVisible && "hidden")}
       style={{
-        height: `${height + WORKBENCH_GAP_PX}px`,
+        height: `calc(${height}px + var(--athas-workbench-gap))`,
       }}
     >
       {resizeGutter}

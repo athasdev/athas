@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
-import { WORKBENCH_GAP_PX } from "../constants/workbench-layout";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
@@ -118,7 +117,7 @@ export function ResizablePane({
         if (rafId !== null) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
           if (paneEl) {
-            paneEl.style.width = `${currentWidth + WORKBENCH_GAP_PX}px`;
+            paneEl.style.width = `calc(${currentWidth}px + var(--athas-workbench-gap))`;
           }
           if (contentEl) {
             contentEl.style.width = `${currentWidth}px`;
@@ -145,7 +144,7 @@ export function ResizablePane({
     [width, position, widthKey, updateSetting, clampWidth],
   );
 
-  const totalWidth = hidden ? 0 : width + WORKBENCH_GAP_PX;
+  const totalWidth = hidden ? "0px" : `calc(${width}px + var(--athas-workbench-gap))`;
   const resizeHandle = !hidden ? (
     <div
       onMouseDown={handleMouseDown}
@@ -173,7 +172,7 @@ export function ResizablePane({
   return (
     <div
       ref={paneRef}
-      style={{ width: `${totalWidth}px` }}
+      style={{ width: totalWidth }}
       className={cn(
         "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-hidden bg-transparent",
         hidden && "pointer-events-none",

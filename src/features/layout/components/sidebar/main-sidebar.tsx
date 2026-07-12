@@ -23,7 +23,6 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
-import { WORKBENCH_GAP_PX } from "@/features/layout/constants/workbench-layout";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
@@ -465,7 +464,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
   const previewActivityRailWidth = useCallback((nextWidth: number) => {
     const clampedWidth = clampActivityRailWidth(nextWidth);
-    const expandedRailWidth = clampedWidth + WORKBENCH_GAP_PX;
+    const expandedRailWidth = `calc(${clampedWidth}px + var(--athas-workbench-gap))`;
 
     if (resizeFrameRef.current !== null) {
       cancelAnimationFrame(resizeFrameRef.current);
@@ -473,7 +472,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
     resizeFrameRef.current = requestAnimationFrame(() => {
       if (railRef.current) {
-        railRef.current.style.width = `${expandedRailWidth}px`;
+        railRef.current.style.width = expandedRailWidth;
       }
 
       if (railContentRef.current) {
@@ -503,11 +502,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
       const finishResize = (clientX: number) => {
         const nextWidth = clampActivityRailWidth(startWidth + clientX - startX);
-        const expandedRailWidth = nextWidth + WORKBENCH_GAP_PX;
+        const expandedRailWidth = `calc(${nextWidth}px + var(--athas-workbench-gap))`;
         setActivityRailWidth(nextWidth);
 
         if (railRef.current) {
-          railRef.current.style.width = `${expandedRailWidth}px`;
+          railRef.current.style.width = expandedRailWidth;
         }
 
         if (railContentRef.current) {
@@ -639,8 +638,9 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     [isActivityRailResizing, isSwitchingProject, projectTabs.length, switchProjectByOffset],
   );
 
-  const renderedRailWidth =
-    (expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH) + WORKBENCH_GAP_PX;
+  const renderedRailWidth = `calc(${
+    expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH
+  }px + var(--athas-workbench-gap))`;
   const railContentWidth = expanded ? activityRailWidth : renderedRailWidth;
 
   return (
