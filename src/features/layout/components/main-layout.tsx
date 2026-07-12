@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useChatInitialization } from "@/features/ai/hooks/use-chat-initialization";
 import { useCollaborationPresence } from "@/features/collaboration/hooks/use-collaboration-presence";
 import { initializeDebuggerEventBridge } from "@/features/debugger/services/debug-adapter-events";
@@ -24,7 +24,8 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "@/ui/toast";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
-import CustomTitleBarWithSettings from "../../window/components/title-bar/custom-title-bar";
+import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
+import { WORKBENCH_GAP_CSS_VAR, WORKBENCH_GAP_VALUE } from "../constants/workbench-layout";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
 import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
@@ -80,6 +81,9 @@ const BottomPane = lazy(() => import("./bottom-pane/bottom-pane"));
 
 const EMPTY_PROJECT_FILES: FileEntry[] = [];
 const EMPTY_BUFFERS: PaneContent[] = [];
+const WORKBENCH_LAYOUT_STYLE = {
+  [WORKBENCH_GAP_CSS_VAR]: WORKBENCH_GAP_VALUE,
+} as CSSProperties;
 
 export function MainLayout() {
   const [deferredSurfacesReady, setDeferredSurfacesReady] = useState(false);
@@ -288,7 +292,10 @@ export function MainLayout() {
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
 
   return (
-    <div className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-secondary-bg">
+    <div
+      className="athas-layout-shell relative flex size-full flex-col overflow-hidden bg-secondary-bg"
+      style={WORKBENCH_LAYOUT_STYLE}
+    >
       {/* Drag-and-drop overlay */}
       {isDraggingOver && !getInternalTabDragData() && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-primary-bg/90 backdrop-blur-sm">
@@ -300,22 +307,16 @@ export function MainLayout() {
         </div>
       )}
 
-      <CustomTitleBarWithSettings />
+      <TitleBarWithSettings />
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
           <SidebarActivityRail expanded={isSidebarRailExpanded} />
-          <ResizablePane
-            position="left"
-            widthKey="sidebarWidth"
-            hidden={!isSidebarVisible}
-            edgePadding={false}
-          >
+          <ResizablePane position="left" widthKey="sidebarWidth" hidden={!isSidebarVisible}>
             <MainSidebar paneLevel="primary" />
           </ResizablePane>
 
-          {/* Main content area with split view */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-2">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg">
               <SplitViewRoot />
             </div>
@@ -351,7 +352,7 @@ export function MainLayout() {
         </div>
 
         {terminalWidthMode === "full" && deferredSurfacesReady && (
-          <div className="px-2">
+          <div className="px-[var(--athas-workbench-gap)]">
             <Suspense fallback={null}>
               <BottomPane />
             </Suspense>

@@ -1,15 +1,4 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import {
-  CopyIcon as Copy,
-  DotsThreeVerticalIcon as DotsThreeVertical,
-  FolderIcon as Folder,
-  FolderOpenIcon as FolderOpen,
-  HardDrivesIcon as HardDrives,
-  ImageIcon as Image,
-  PlusIcon as Plus,
-  XIcon as X,
-  ArrowSquareOutIcon as ArrowSquareOut,
-} from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { createPortal } from "react-dom";
@@ -20,10 +9,21 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  CaretDownIcon,
+  CopyIcon,
+  FolderIcon,
+  FolderOpenIcon,
+  ImageIcon,
+  PlusIcon,
+  RemoteIcon,
+  WindowExpandIcon,
+  XIcon,
+} from "@/ui/icons";
 import { Tabs } from "@/ui/tabs";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
-import ProjectIconPicker from "./project-icon-picker";
+import ProjectIconPicker from "../project-icon-picker";
 
 const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
@@ -89,7 +89,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "copy-path",
           label: "Copy Path",
-          icon: <Copy />,
+          icon: <CopyIcon />,
           onClick: async () => {
             await writeClipboardText(tab.path);
           },
@@ -97,7 +97,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "reveal",
           label: "Reveal in Finder",
-          icon: <FolderOpen />,
+          icon: <FolderOpenIcon />,
           onClick: () => {
             if (handleRevealInFolder) {
               handleRevealInFolder(tab.path);
@@ -107,7 +107,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "select-icon",
           label: "Select Icon",
-          icon: <Image />,
+          icon: <ImageIcon />,
           onClick: () => {
             setIconPickerTab(tab);
           },
@@ -115,7 +115,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "open-in-new-window",
           label: "Open in New Window",
-          icon: <ArrowSquareOut weight="duotone" />,
+          icon: <WindowExpandIcon />,
           onClick: () => {
             if (isRemoteProjectTab(tab)) {
               const match = tab.path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
@@ -145,7 +145,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
       items.push({
         id: "close-project",
         label: "Close Project",
-        icon: <X weight="bold" />,
+        icon: <XIcon />,
         onClick: () => {
           void closeProject(tab.id);
         },
@@ -213,9 +213,9 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
               }}
             />
           ) : isRemote ? (
-            <HardDrives weight="duotone" />
+            <RemoteIcon />
           ) : (
-            <Folder weight="duotone" />
+            <FolderIcon />
           ),
           label: <span className="max-w-32 truncate">{tab.name}</span>,
           className: cn(
@@ -238,7 +238,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
               tooltip="Project actions"
               aria-label="Project actions"
             >
-              <DotsThreeVertical weight="bold" />
+              <CaretDownIcon />
             </Button>
           ),
         };
@@ -284,7 +284,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             aria-label="Open folder"
             compact
           >
-            <Plus weight="bold" />
+            <PlusIcon />
           </Button>
         </div>
       </div>

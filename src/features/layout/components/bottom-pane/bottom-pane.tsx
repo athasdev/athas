@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DebuggerView from "@/features/debugger/components/debugger-view";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
@@ -7,6 +7,7 @@ import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { WORKBENCH_GAP_PX } from "@/features/layout/constants/workbench-layout";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -41,6 +42,7 @@ const BottomPane = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isInternalHoverTarget, setIsInternalHoverTarget] = useState(false);
+  const paneFrameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const syncHover = () => {
@@ -84,14 +86,31 @@ const BottomPane = () => {
 
       const startY = e.clientY;
       const startHeight = height;
+      const frameEl = paneFrameRef.current;
+      let currentHeight = startHeight;
+      let rafId: number | null = null;
 
       const handleMouseMove = (e: MouseEvent) => {
-        const deltaY = startY - e.clientY; // Reverse direction since we're resizing from top
-        const newHeight = Math.min(Math.max(startHeight + deltaY, 200), window.innerHeight * 0.8); // Min 200px, max 80% of screen
-        setHeight(newHeight);
+        const deltaY = startY - e.clientY;
+        currentHeight = Math.min(Math.max(startHeight + deltaY, 200), window.innerHeight * 0.8);
+
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          if (frameEl) {
+            frameEl.style.height = `${currentHeight + WORKBENCH_GAP_PX}px`;
+          }
+        });
       };
 
       const handleMouseUp = () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        if (frameEl) {
+          frameEl.style.height = `${currentHeight + WORKBENCH_GAP_PX}px`;
+        }
+        setHeight(currentHeight);
         setIsResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
@@ -173,14 +192,35 @@ const BottomPane = () => {
     [moveBufferToPane, openTerminalBuffer],
   );
 
-  return (
+  const resizeGutter = !isFullScreen ? (
+    <div
+      onMouseDown={handleMouseDown}
+      className={cn(
+        "group relative flex h-[var(--athas-workbench-gap)] w-full shrink-0 cursor-ns-resize items-center justify-center",
+        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/8",
+        isResizing && "bg-accent/8",
+      )}
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize bottom pane"
+    >
+      <div
+        className={cn(
+          "h-px w-full bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",
+          isResizing && "bg-accent",
+        )}
+      />
+    </div>
+  ) : null;
+
+  const pane = (
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "athas-glass-island relative flex flex-col overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg",
+        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-[var(--app-radius-card)] border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
         isFullScreen && "fixed inset-x-0 z-[10040] rounded-none border-0 shadow-none ring-0",
-        !isBottomPaneVisible && "hidden",
+        !isFullScreen && "flex-1",
       )}
       style={
         isFullScreen
@@ -188,34 +228,11 @@ const BottomPane = () => {
               top: `${titleBarHeight}px`,
               bottom: `${footerHeight}px`,
             }
-          : {
-              height: `${height}px`,
-              flexShrink: 0,
-            }
+          : undefined
       }
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Resize Handle */}
-      {!isFullScreen && (
-        <div
-          onMouseDown={handleMouseDown}
-          className={cn(
-            "group absolute inset-x-0 top-0 z-10 h-1",
-            "cursor-ns-resize transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/30",
-            isResizing && "bg-accent/50",
-          )}
-        >
-          <div
-            className={cn(
-              "-translate-y-[1px] absolute inset-x-0 top-0 h-[3px]",
-              "bg-accent opacity-0 transition-opacity duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:opacity-100",
-            )}
-          />
-        </div>
-      )}
-
-      {/* Content Area */}
       <div className="h-full overflow-hidden">
         {/* Terminal Container - Always mounted to preserve terminal sessions */}
         {terminalEnabled && (
@@ -239,6 +256,24 @@ const BottomPane = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+
+  if (isFullScreen) {
+    return isBottomPaneVisible ? pane : null;
+  }
+
+  return (
+    <div
+      ref={paneFrameRef}
+      className={cn("flex shrink-0 flex-col", !isBottomPaneVisible && "hidden")}
+      style={{
+        height: `${height + WORKBENCH_GAP_PX}px`,
+      }}
+    >
+      {resizeGutter}
+      {pane}
+      {isResizing ? <div className="fixed inset-0 z-40 cursor-ns-resize" /> : null}
     </div>
   );
 };

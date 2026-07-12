@@ -11,7 +11,7 @@ export const chromeControl = cva(
       shape: {
         icon: "w-7 px-0",
         pill: "px-2",
-        sidebar: "size-9 rounded-[var(--app-radius-control)]",
+        sidebar: "size-7 rounded-[var(--app-radius-control-sm)] px-0",
         tab: "w-8 rounded-[var(--app-radius-control-sm)]",
       },
     },

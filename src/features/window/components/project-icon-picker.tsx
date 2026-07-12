@@ -1,9 +1,8 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { readDir } from "@tauri-apps/plugin-fs";
-import { TrashIcon as Trash2 } from "@phosphor-icons/react";
+import { TrashIcon as Trash2 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { scanProjectIconFiles, type ProjectIconFile } from "@/features/window/utils/project-icons";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Tooltip from "@/ui/tooltip";
@@ -20,66 +19,9 @@ interface ProjectIconPickerProps {
   projectPath: string;
 }
 
-interface IcoFile {
-  name: string;
-  path: string;
-  src: string;
-}
-
-async function scanIcoFiles(projectPath: string): Promise<IcoFile[]> {
-  const results: IcoFile[] = [];
-  const separator = projectPath.includes("\\") ? "\\" : "/";
-
-  async function scanDirectory(dirPath: string, depth: number) {
-    if (depth > 3) return;
-
-    try {
-      const entries = await readDir(dirPath);
-      const childDirectories: string[] = [];
-
-      for (const entry of entries) {
-        const entryPath = `${dirPath}${separator}${entry.name}`;
-
-        if (!entry.isDirectory && entry.name && /\.(ico|png|svg)$/i.test(entry.name)) {
-          const isLikelyIcon =
-            /\.(ico)$/i.test(entry.name) || /icon|logo|favicon/i.test(entry.name);
-
-          if (isLikelyIcon) {
-            results.push({
-              name: entry.name,
-              path: entryPath,
-              src: convertFileSrc(entryPath),
-            });
-          }
-        }
-
-        if (
-          entry.isDirectory &&
-          entry.name &&
-          !entry.name.startsWith(".") &&
-          entry.name !== "node_modules" &&
-          entry.name !== "dist" &&
-          entry.name !== "build" &&
-          entry.name !== "target" &&
-          entry.name !== "vendor"
-        ) {
-          childDirectories.push(entryPath);
-        }
-      }
-
-      await Promise.all(childDirectories.map((childPath) => scanDirectory(childPath, depth + 1)));
-    } catch {
-      // Skip directories we can't read
-    }
-  }
-
-  await scanDirectory(projectPath, 0);
-  return results;
-}
-
 const ProjectIconPicker = memo(
   ({ isOpen, onClose, projectId, projectPath }: ProjectIconPickerProps) => {
-    const [icons, setIcons] = useState<IcoFile[]>([]);
+    const [icons, setIcons] = useState<ProjectIconFile[]>([]);
     const [loading, setLoading] = useState(false);
     const { setProjectIcon } = useWorkspaceTabsStore.getState();
     const currentIcon = useWorkspaceTabsStore(
@@ -90,7 +32,7 @@ const ProjectIconPicker = memo(
       if (!isOpen) return;
 
       setLoading(true);
-      scanIcoFiles(projectPath).then((found) => {
+      scanProjectIconFiles(projectPath).then((found) => {
         setIcons(found);
         setLoading(false);
       });

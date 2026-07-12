@@ -1,14 +1,9 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
-  ArrowSquareOutIcon as ArrowSquareOut,
-  ListIcon as List,
-  SidebarSimpleIcon as SidebarSimple,
-  SparkleIcon as Sparkle,
-} from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import {
   chromeControl,
@@ -16,6 +11,7 @@ import {
   chromeIcon,
   chromeItemWrapper,
 } from "@/features/layout/components/chrome-control-styles";
+import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -24,6 +20,15 @@ import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  FilesIcon,
+  FolderOpenIcon,
+  ListIcon,
+  SidebarSimpleIcon,
+  SparkleIcon,
+  TrashIcon,
+  WindowExpandIcon,
+} from "@/ui/icons";
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -31,16 +36,35 @@ import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "../account-menu";
 import ProjectPicker from "../project-picker";
 import RunActionsButton from "../run-actions-button";
-import { type HeaderItem, orderHeaderItems, placeHeaderItemsBeforeAccount } from "./header-items";
 import { WindowControls } from "./window-controls";
 import WindowMenuBar from "../window-menu-bar";
 
-interface CustomTitleBarProps {
+interface TitleBarProps {
   title?: string;
   showMinimal?: boolean;
 }
 
-const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
+function placeHeaderItemsBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>) {
+  const accountIndex = items.findIndex((item) => item.id === "account");
+  if (accountIndex < 0) return items;
+
+  const nextItems = [...items];
+  for (const id of ["updates", "ai-chat"] as const) {
+    const itemIndex = nextItems.findIndex((item) => item.id === id);
+    const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
+    if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
+      continue;
+    }
+
+    const [item] = nextItems.splice(itemIndex, 1);
+    const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
+    nextItems.splice(insertionIndex, 0, item);
+  }
+
+  return nextItems;
+}
+
+const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
@@ -64,8 +88,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   const isWindows = IS_WINDOWS;
   const isLinux = IS_LINUX;
   const usesNativeWindowChrome = useNativeWindowChrome();
-  const showCustomWindowControls = !isMacOS && !usesNativeWindowChrome;
+  const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
+  const macTitleBarControlAlignment = isFullscreen ? undefined : "translate-y-[3px]";
+
   useEffect(() => {
     const initWindow = async () => {
       const window = getCurrentWindow();
@@ -166,7 +192,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "new-window",
       label: "New Window",
-      icon: <ArrowSquareOut weight="duotone" />,
+      icon: <WindowExpandIcon />,
       onClick: () => {
         void createAppWindow();
       },
@@ -174,11 +200,13 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "add-project",
       label: "Add Project",
+      icon: <FilesIcon />,
       onClick: () => setIsProjectPickerVisible(true),
     },
     {
       id: "open-project",
       label: "Open Folder",
+      icon: <FolderOpenIcon />,
       onClick: () => {
         void handleOpenFolder();
       },
@@ -186,6 +214,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     {
       id: "open-project-new-window",
       label: "Open Folder in New Window",
+      icon: <WindowExpandIcon />,
       onClick: () => {
         void handleOpenFolderInNewWindow();
       },
@@ -196,6 +225,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           {
             id: "close-all-projects",
             label: "Close All Projects",
+            icon: <TrashIcon />,
             onClick: () => {
               void handleCloseAllProjects();
             },
@@ -228,7 +258,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
                 aria-label="Menu"
                 aria-expanded={Boolean(menuBarActiveMenu)}
               >
-                <List className={chromeIcon()} weight="duotone" />
+                <ListIcon className={chromeIcon()} />
               </Button>
             </TabsList>
           </Tooltip>
@@ -251,34 +281,35 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       tooltip={isSidebarRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       tooltipSide="bottom"
       onClick={() => setIsSidebarRailExpanded(!isSidebarRailExpanded)}
-      className={chromeControl()}
+      className={cn(chromeControl(), isMacOS && "size-6 min-h-6 min-w-6")}
       aria-label={isSidebarRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
       aria-pressed={isSidebarRailExpanded}
     >
-      <SidebarSimple className={chromeIcon()} weight={isSidebarRailExpanded ? "fill" : "duotone"} />
+      <SidebarSimpleIcon className={chromeIcon()} />
     </Button>
   );
 
-  const headerTrailingItems: Array<HeaderItem<HeaderTrailingItemId>> = [
+  const headerTrailingItems: Array<ChromeItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
+    { id: "updates", label: "App updates", content: <AppUpdateControl /> },
     {
       id: "ai-chat",
-      label: "AI Chat",
+      label: "Agent",
       content: (
         <Button
           type="button"
           variant="ghost"
           active={isAIChatVisible}
-          tooltip="Toggle AI Chat"
+          tooltip="Toggle Agent"
           tooltipSide="bottom"
           commandId="workbench.toggleAIChat"
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
           className={chromeControl()}
-          aria-label="Toggle AI Chat"
+          aria-label="Toggle Agent"
         >
-          <Sparkle className={chromeIcon()} weight="duotone" />
+          <SparkleIcon className={chromeIcon()} />
         </Button>
       ),
     },
@@ -300,7 +331,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       >
         <div className="flex-1" />
 
-        {showCustomWindowControls && (
+        {showAppWindowControls && (
           <WindowControls
             currentWindow={currentWindow}
             isMaximized={isMaximized}
@@ -311,7 +342,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     );
   }
 
-  // Full mode with custom controls
   if (isMacOS) {
     return (
       <div
@@ -323,17 +353,20 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
-        {/* Left side: keep clear of traffic lights */}
-        <div className="pointer-events-auto flex h-8 min-w-0 items-center">
+        <div
+          className={cn(
+            "pointer-events-auto flex h-8 min-w-0 items-center",
+            macTitleBarControlAlignment,
+          )}
+        >
           {menuItem}
           {sidebarToggle}
         </div>
 
-        {/* Account menu */}
-        <div className="flex h-8 items-center">
+        <div className={cn("flex h-8 items-center", macTitleBarControlAlignment)}>
           <div className="flex items-center gap-1">
             {placeHeaderItemsBeforeAccount(
-              orderHeaderItems(headerTrailingItems, headerTrailingItemsOrder),
+              orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
             ).map((item) =>
               item.content ? (
                 <div key={item.id} className={chromeItemWrapper()}>
@@ -348,7 +381,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
     );
   }
 
-  // Windows/Linux full title bar
   return (
     <div
       data-tauri-drag-region
@@ -356,7 +388,6 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
       onContextMenu={handleTitleBarContextMenu}
       className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
     >
-      {/* Left side */}
       <div data-tauri-drag-region className="flex flex-1 items-center">
         <div className="pointer-events-auto">
           <div className="flex items-center gap-1">
@@ -365,11 +396,10 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           </div>
         </div>
       </div>
-      {/* Right side */}
       <div className="z-20 flex items-center">
         <div className="flex items-center gap-1">
           {placeHeaderItemsBeforeAccount(
-            orderHeaderItems(headerTrailingItems, headerTrailingItemsOrder),
+            orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
           ).map((item) =>
             item.content ? (
               <div key={item.id} className={chromeItemWrapper()}>
@@ -379,7 +409,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
           )}
         </div>
 
-        {showCustomWindowControls && (
+        {showAppWindowControls && (
           <WindowControls
             currentWindow={currentWindow}
             isMaximized={isMaximized}
@@ -392,7 +422,7 @@ const CustomTitleBar = ({ showMinimal = false }: CustomTitleBarProps) => {
   );
 };
 
-const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
+const TitleBarWithSettings = (props: TitleBarProps) => {
   const isSettingsDialogVisible = useUIState((state) => state.isSettingsDialogVisible);
   const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
@@ -415,7 +445,7 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
 
   return (
     <>
-      <CustomTitleBar {...props} />
+      <TitleBar {...props} />
       <SettingsDialog
         isOpen={isSettingsDialogVisible}
         onClose={() => setIsSettingsDialogVisible(false)}
@@ -431,4 +461,4 @@ const CustomTitleBarWithSettings = (props: CustomTitleBarProps) => {
   );
 };
 
-export default CustomTitleBarWithSettings;
+export default TitleBarWithSettings;

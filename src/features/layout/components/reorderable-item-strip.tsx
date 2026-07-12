@@ -2,24 +2,18 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import type { ChromeItem } from "@/features/layout/utils/chrome-items";
 import { cn } from "@/utils/cn";
 
 const DRAG_THRESHOLD = 4;
 
-interface ReorderableStripItem {
-  id: string;
-  label: string;
-  content: ReactNode;
-}
-
 interface ReorderableItemStripProps<T extends string> {
-  items: Array<ReorderableStripItem & { id: T }>;
+  items: Array<ChromeItem<T>>;
   orderedIds: T[];
   onReorder: (orderedIds: T[]) => void;
   className?: string;

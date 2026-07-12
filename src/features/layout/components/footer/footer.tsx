@@ -1,16 +1,3 @@
-import {
-  ArrowCounterClockwiseIcon as ArrowCounterClockwise,
-  ArrowLeftIcon as ArrowLeft,
-  ArrowRightIcon as ArrowRight,
-  BugBeetleIcon as BugBeetle,
-  DatabaseIcon as Database,
-  ListBulletsIcon as ListBullets,
-  PuzzlePieceIcon as PuzzlePiece,
-  TerminalWindowIcon as TerminalWindow,
-  TrashIcon as Trash,
-  UsersThreeIcon as UsersThree,
-  WarningCircleIcon as WarningCircle,
-} from "@phosphor-icons/react";
 import { useCallback, useMemo } from "react";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
@@ -30,10 +17,22 @@ import {
   type FooterLeadingItemId,
   type FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
-import { orderFooterItems, type FooterItem } from "./footer-items";
+import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import { useFooterGitBranchItem } from "./footer-git-branch-item";
 import { FooterControlBadge, FooterTabControl } from "./footer-tab-control";
-import { useFooterUpdateItem } from "./footer-update-item";
+import {
+  BugIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  DatabaseIcon,
+  ExtensionsIcon,
+  ListIcon,
+  RefreshIcon,
+  TerminalWindowIcon,
+  TrashIcon,
+  UsersThreeIcon,
+  WarningIcon,
+} from "@/ui/icons";
 
 const DEBUGGER_FOOTER_ITEM_ID: FooterLeadingItemId = "debugger";
 
@@ -81,7 +80,6 @@ const Footer = () => {
     );
   });
   const branchItem = useFooterGitBranchItem();
-  const updateItem = useFooterUpdateItem();
   const debuggerContextMenu = useContextMenu<"debugger">();
 
   const debuggerBreakpointsCount = useDebuggerStore((state) => state.breakpoints.length);
@@ -144,7 +142,7 @@ const Footer = () => {
           isBottomPaneVisible && bottomPaneActiveTab === "debugger"
             ? "Hide Run and Debug"
             : "Show Run and Debug",
-        icon: <BugBeetle />,
+        icon: <BugIcon />,
         onClick: toggleDebuggerPane,
       },
       {
@@ -156,21 +154,21 @@ const Footer = () => {
       {
         id: "clear-breakpoints",
         label: "Clear Breakpoints",
-        icon: <Trash />,
+        icon: <TrashIcon />,
         disabled: debuggerBreakpointsCount === 0,
         onClick: debuggerActions.clearBreakpoints,
       },
       {
         id: "clear-watch-expressions",
         label: "Clear Watch Expressions",
-        icon: <Trash />,
+        icon: <TrashIcon />,
         disabled: debuggerWatchExpressionsCount === 0,
         onClick: debuggerActions.clearWatchExpressions,
       },
       {
         id: "clear-debug-console",
         label: "Clear Debug Console",
-        icon: <Trash />,
+        icon: <TrashIcon />,
         disabled: debuggerTranscriptCount === 0,
         onClick: debuggerActions.clearAdapterTranscript,
       },
@@ -183,14 +181,14 @@ const Footer = () => {
       {
         id: "move-debugger-left",
         label: "Move Left",
-        icon: <ArrowLeft />,
+        icon: <CaretLeftIcon />,
         disabled: debuggerFooterIndex <= 0,
         onClick: () => moveDebuggerFooterItem(-1),
       },
       {
         id: "move-debugger-right",
         label: "Move Right",
-        icon: <ArrowRight />,
+        icon: <CaretRightIcon />,
         disabled:
           debuggerFooterIndex < 0 || debuggerFooterIndex >= normalizedFooterLeadingOrder.length - 1,
         onClick: () => moveDebuggerFooterItem(1),
@@ -198,7 +196,7 @@ const Footer = () => {
       {
         id: "reset-footer-order",
         label: "Reset Footer Order",
-        icon: <ArrowCounterClockwise />,
+        icon: <RefreshIcon />,
         onClick: resetFooterOrder,
       },
     ],
@@ -219,7 +217,7 @@ const Footer = () => {
     ],
   );
 
-  const footerLeadingItemsSource: Array<FooterItem<FooterLeadingItemId> | null> = [
+  const footerLeadingItemsSource: Array<ChromeItem<FooterLeadingItemId> | null> = [
     branchItem,
     terminalEnabled
       ? {
@@ -236,7 +234,7 @@ const Footer = () => {
                 setIsBottomPaneVisible(showingTerminal);
               }}
             >
-              <TerminalWindow weight="duotone" />
+              <TerminalWindowIcon />
             </FooterTabControl>
           ),
         }
@@ -253,7 +251,7 @@ const Footer = () => {
               onClick={toggleDebuggerPane}
               onContextMenu={(event) => debuggerContextMenu.open(event, "debugger")}
             >
-              <BugBeetle weight="duotone" />
+              <BugIcon />
             </FooterTabControl>
           ),
         }
@@ -274,7 +272,7 @@ const Footer = () => {
               commandId="workbench.toggleDiagnostics"
               onClick={() => openDiagnosticsBuffer()}
             >
-              <WarningCircle weight="duotone" />
+              <WarningIcon />
               {diagnosticsCount > 0 && <span className="tabular-nums">{diagnosticsCount}</span>}
             </FooterTabControl>
           ),
@@ -291,7 +289,7 @@ const Footer = () => {
               tone="accent"
               onClick={() => openExtensionsBuffer()}
             >
-              <PuzzlePiece weight="duotone" />
+              <ExtensionsIcon />
               <FooterControlBadge>
                 {extensionUpdatesCount > 9 ? "9+" : extensionUpdatesCount}
               </FooterControlBadge>
@@ -299,10 +297,9 @@ const Footer = () => {
           ),
         }
       : null,
-    updateItem,
   ];
   const footerLeadingItems = footerLeadingItemsSource.filter(
-    (item): item is FooterItem<FooterLeadingItemId> => item !== null,
+    (item): item is ChromeItem<FooterLeadingItemId> => item !== null,
   );
   const shouldShowOutline = outlineEnabled;
   const isOutlineActive = isRightSidebarVisible && activeRightSidebarView === "outline";
@@ -315,7 +312,7 @@ const Footer = () => {
     ) as FooterTrailingItemId[];
   }, [footerTrailingItemsOrder]);
 
-  const footerTrailingItems: Array<FooterItem<FooterTrailingItemId>> = [
+  const footerTrailingItems: Array<ChromeItem<FooterTrailingItemId>> = [
     ...(shouldShowOutline
       ? [
           {
@@ -330,7 +327,7 @@ const Footer = () => {
                   openSidebarView("outline");
                 }}
               >
-                <ListBullets weight="duotone" />
+                <ListIcon />
               </FooterTabControl>
             ),
           },
@@ -348,7 +345,7 @@ const Footer = () => {
             openCommandPaletteView("databases");
           }}
         >
-          <Database weight="duotone" />
+          <DatabaseIcon />
         </FooterTabControl>
       ),
     },
@@ -365,7 +362,7 @@ const Footer = () => {
                   openSidebarView("collaboration");
                 }}
               >
-                <UsersThree weight="duotone" />
+                <UsersThreeIcon />
               </FooterTabControl>
             ),
           },
@@ -382,7 +379,7 @@ const Footer = () => {
     <>
       <div className="athas-footer-bar relative z-20 flex min-h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
         <div className="ui-font flex items-center gap-1 text-text-lighter">
-          {orderFooterItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
+          {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
             <div key={item.id} className={chromeItemWrapper()}>
               {item.content}
             </div>
@@ -390,7 +387,7 @@ const Footer = () => {
         </div>
 
         <div className="ui-font flex items-center gap-1 text-text-lighter">
-          {orderFooterItems(footerTrailingItems, footerTrailingOrder).map((item) => (
+          {orderChromeItems(footerTrailingItems, footerTrailingOrder).map((item) => (
             <div key={item.id} className={chromeItemWrapper()}>
               {item.content}
             </div>

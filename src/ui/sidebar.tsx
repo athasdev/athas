@@ -3,8 +3,8 @@ import {
   CaretRightIcon as CaretRight,
   FunnelIcon as Funnel,
   MagnifyingGlassIcon as Search,
-  type Icon as PhosphorIcon,
-} from "@phosphor-icons/react";
+  type Icon as AppIcon,
+} from "@/ui/icons";
 import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,
@@ -149,7 +149,7 @@ export const SidebarHeaderSearch = forwardRef<
   Omit<ComponentProps<typeof SearchField>, "onChange" | "value" | "size" | "variant"> & {
     value: string;
     onChange: (value: string) => void;
-    leftIcon: PhosphorIcon;
+    leftIcon: AppIcon;
   }
 >(function SidebarHeaderSearch(
   { value, onChange, leftIcon, placeholder = "Search", className, containerClassName, ...props },
@@ -217,7 +217,7 @@ export function SidebarSearchFilterRow({
 }: Omit<ComponentProps<"div">, "onChange"> & {
   value: string;
   onChange: (value: string) => void;
-  searchIcon?: PhosphorIcon;
+  searchIcon?: AppIcon;
   placeholder?: string;
   searchAriaLabel?: string;
   searchClassName?: string;
@@ -303,6 +303,7 @@ export function SidebarListItem({
   description,
   leading,
   trailing,
+  iconOnly = false,
   className,
   contentClassName,
   ...props
@@ -312,6 +313,7 @@ export function SidebarListItem({
   description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
+  iconOnly?: boolean;
   contentClassName?: string;
 }) {
   return (
@@ -321,6 +323,7 @@ export function SidebarListItem({
         "ui-font flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
         "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
         active && "bg-hover/80 text-text",
+        iconOnly && "justify-center gap-0 px-0",
         className,
       )}
       {...props}
@@ -328,14 +331,24 @@ export function SidebarListItem({
       {leading ? (
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
-      <span className={cn("min-w-0 flex-1", description && "flex flex-col", contentClassName)}>
-        <span className="max-w-full truncate">{children}</span>
+      <span
+        aria-hidden={iconOnly ? true : undefined}
+        className={cn(
+          "min-w-0 flex-1 overflow-hidden transition-opacity duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+          iconOnly && "w-0 flex-none opacity-0",
+          description && "flex flex-col",
+          contentClassName,
+        )}
+      >
+        <span className="block max-w-full truncate">{children}</span>
         {description ? (
-          <span className="max-w-full truncate text-text-lighter">{description}</span>
+          <span className="block max-w-full truncate text-text-lighter">{description}</span>
         ) : null}
       </span>
-      {trailing ? (
-        <span className="min-w-0 max-w-[38%] shrink text-text-lighter">{trailing}</span>
+      {trailing && !iconOnly ? (
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
+          {trailing}
+        </span>
       ) : null}
     </button>
   );

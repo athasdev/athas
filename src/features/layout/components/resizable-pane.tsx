@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
+import { WORKBENCH_GAP_PX } from "../constants/workbench-layout";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
@@ -16,7 +17,6 @@ interface ResizablePaneProps {
   position: "left" | "right";
   widthKey: WidthSettingKey;
   className?: string;
-  edgePadding?: boolean;
   hidden?: boolean;
 }
 
@@ -25,7 +25,6 @@ export function ResizablePane({
   position,
   widthKey,
   className,
-  edgePadding = true,
   hidden = false,
 }: ResizablePaneProps) {
   const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
@@ -37,6 +36,7 @@ export function ResizablePane({
   const [width, setWidth] = useState(Math.max(storedWidth, MIN_PANE_WIDTH));
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const getViewportWidth = () => (typeof window !== "undefined" ? window.innerWidth : 1280);
 
@@ -108,6 +108,7 @@ export function ResizablePane({
       let rafId: number | null = null;
 
       const paneEl = paneRef.current;
+      const contentEl = contentRef.current;
 
       const handleMouseMove = (e: MouseEvent) => {
         const deltaX = position === "right" ? startX - e.clientX : e.clientX - startX;
@@ -117,7 +118,10 @@ export function ResizablePane({
         if (rafId !== null) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
           if (paneEl) {
-            paneEl.style.width = `${currentWidth}px`;
+            paneEl.style.width = `${currentWidth + WORKBENCH_GAP_PX}px`;
+          }
+          if (contentEl) {
+            contentEl.style.width = `${currentWidth}px`;
           }
         });
       };
@@ -141,40 +145,48 @@ export function ResizablePane({
     [width, position, widthKey, updateSetting, clampWidth],
   );
 
-  const handlePosition = position === "right" ? "left-[-8px]" : "right-[-8px]";
+  const totalWidth = hidden ? 0 : width + WORKBENCH_GAP_PX;
+  const resizeHandle = !hidden ? (
+    <div
+      onMouseDown={handleMouseDown}
+      className={cn(
+        "group relative flex h-full w-[var(--athas-workbench-gap)] shrink-0 cursor-col-resize items-center justify-center",
+        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/8",
+      )}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={widthKey === "aiChatWidth" ? "Resize AI chat" : "Resize sidebar"}
+      aria-valuenow={Math.round(width)}
+      aria-valuemin={Math.round(getMinWidth())}
+      aria-valuemax={Math.round(getMaxWidth())}
+      tabIndex={0}
+    >
+      <div
+        className={cn(
+          "h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",
+          isResizing && "bg-accent",
+        )}
+      />
+    </div>
+  ) : null;
+
   return (
     <div
       ref={paneRef}
-      style={{ width: hidden ? "0px" : `${width}px` }}
+      style={{ width: `${totalWidth}px` }}
       className={cn(
-        "athas-resizable-pane relative flex h-full min-w-0 shrink-0 flex-col overflow-hidden bg-secondary-bg",
+        "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-hidden bg-transparent",
         hidden && "pointer-events-none",
         className,
       )}
       aria-hidden={hidden}
     >
-      {!hidden && (
-        <div
-          onMouseDown={handleMouseDown}
-          className={cn(
-            "absolute top-0 z-50 h-full w-4 cursor-col-resize transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
-            handlePosition,
-          )}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize sidebar"
-          aria-valuenow={Math.round(width)}
-          aria-valuemin={Math.round(getMinWidth())}
-          aria-valuemax={Math.round(getMaxWidth())}
-          tabIndex={0}
-        />
-      )}
-      {isResizing && <div className="pointer-events-none fixed inset-0 z-40 cursor-col-resize" />}
+      {position === "right" ? resizeHandle : null}
+      {isResizing && <div className="fixed inset-0 z-40 cursor-col-resize" />}
       <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden py-0",
-          edgePadding && !hidden && (position === "left" ? "pl-2" : "pr-2"),
-        )}
+        ref={contentRef}
+        style={{ width: hidden ? "0px" : `${width}px` }}
+        className="flex min-h-0 shrink-0 flex-col overflow-hidden py-0"
       >
         <div
           className={cn(
@@ -185,6 +197,7 @@ export function ResizablePane({
           {children}
         </div>
       </div>
+      {position === "left" ? resizeHandle : null}
     </div>
   );
 }

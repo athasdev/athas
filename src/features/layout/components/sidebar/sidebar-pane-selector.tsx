@@ -1,11 +1,3 @@
-import {
-  FolderIcon as Folder,
-  GitBranchIcon as GitBranch,
-  GitPullRequestIcon as GitPullRequest,
-  MagnifyingGlassIcon as MagnifyingGlass,
-  CubeIcon as Cube,
-  PuzzlePieceIcon as PuzzlePiece,
-} from "@phosphor-icons/react";
 import { Fragment, useMemo } from "react";
 import {
   chromeControl,
@@ -17,7 +9,15 @@ import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
-import { SidebarHeaderIconButton, SidebarListItem } from "@/ui/sidebar";
+import { SidebarListItem } from "@/ui/sidebar";
+import {
+  BoxIcon,
+  GitBranchIcon,
+  ExtensionsIcon,
+  FilesIcon,
+  GitPullRequestIcon,
+  MagnifyingGlassIcon,
+} from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { SidebarView } from "../../utils/sidebar-pane-utils";
@@ -36,6 +36,7 @@ interface SidebarPaneSelectorProps {
   activeSidebarView: SidebarView;
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
+  isSidebarVisible?: boolean;
   coreFeatures: CoreFeaturesState;
   onViewChange: (view: SidebarView) => void;
   onSearchClick?: () => void;
@@ -51,6 +52,7 @@ export const SidebarPaneSelector = ({
   activeSidebarView,
   isGitViewActive,
   isGitHubPRsViewActive,
+  isSidebarVisible = true,
   coreFeatures,
   onViewChange,
   onSearchClick,
@@ -67,7 +69,13 @@ export const SidebarPaneSelector = ({
   const tabClassName = compact
     ? chromeControl({ shape: "sidebar" })
     : chromeControl({ shape: "tab" });
-  const isFilesActive = !isGitViewActive && !isGitHubPRsViewActive && activeSidebarView === "files";
+  const isBufferOwnedSurfaceActive = isSearchActive || isExtensionsActive;
+  const isPrimarySidebarItemActive = isSidebarVisible && !isBufferOwnedSurfaceActive;
+  const isFilesActive =
+    isPrimarySidebarItemActive &&
+    !isGitViewActive &&
+    !isGitHubPRsViewActive &&
+    activeSidebarView === "files";
   const extensionViews = useExtensionViews();
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
@@ -78,7 +86,7 @@ export const SidebarPaneSelector = ({
       {
         id: "files",
         label: showLabels ? "Files" : undefined,
-        icon: <Folder className={iconClassName} weight="duotone" />,
+        icon: <FilesIcon className={iconClassName} />,
         isActive: isFilesActive,
         onClick: () => onViewChange("files"),
         role: "tab",
@@ -95,7 +103,7 @@ export const SidebarPaneSelector = ({
             {
               id: "search",
               label: showLabels ? "Search" : undefined,
-              icon: <MagnifyingGlass className={iconClassName} weight="duotone" />,
+              icon: <MagnifyingGlassIcon className={iconClassName} />,
               isActive: isSearchActive,
               onClick: onSearchClick,
               ariaLabel: "Search",
@@ -113,8 +121,8 @@ export const SidebarPaneSelector = ({
             {
               id: "git",
               label: showLabels ? "Source Control" : undefined,
-              icon: <GitBranch className={iconClassName} weight="duotone" />,
-              isActive: isGitViewActive,
+              icon: <GitBranchIcon className={iconClassName} />,
+              isActive: isPrimarySidebarItemActive && isGitViewActive,
               onClick: () => onViewChange("git"),
               role: "tab",
               ariaLabel: "Git Source Control",
@@ -132,8 +140,8 @@ export const SidebarPaneSelector = ({
             {
               id: "github-prs",
               label: showLabels ? "Pull Requests" : undefined,
-              icon: <GitPullRequest className={iconClassName} weight="duotone" />,
-              isActive: isGitHubPRsViewActive,
+              icon: <GitPullRequestIcon className={iconClassName} />,
+              isActive: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
               role: "tab",
               ariaLabel: "GitHub Pull Requests",
@@ -150,8 +158,8 @@ export const SidebarPaneSelector = ({
             {
               id: "docker",
               label: showLabels ? "Docker" : undefined,
-              icon: <Cube className={iconClassName} weight="duotone" />,
-              isActive: activeSidebarView === "docker",
+              icon: <BoxIcon className={iconClassName} />,
+              isActive: isPrimarySidebarItemActive && activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
               role: "tab",
               ariaLabel: "Docker",
@@ -166,7 +174,7 @@ export const SidebarPaneSelector = ({
       {
         id: "extensions",
         label: showLabels ? "Extensions" : undefined,
-        icon: <PuzzlePiece className={iconClassName} weight="duotone" />,
+        icon: <ExtensionsIcon className={iconClassName} />,
         isActive: isExtensionsActive,
         onClick: onExtensionsClick ?? (() => onViewChange("extensions")),
         ariaLabel: "Extensions",
@@ -182,7 +190,7 @@ export const SidebarPaneSelector = ({
             id: view.id,
             label: showLabels ? view.title : undefined,
             icon: <DynamicIcon name={view.icon} className={iconClassName} />,
-            isActive: activeSidebarView === view.id,
+            isActive: isPrimarySidebarItemActive && activeSidebarView === view.id,
             onClick: () => onViewChange(view.id),
             role: "tab",
             ariaLabel: view.title,
@@ -203,10 +211,12 @@ export const SidebarPaneSelector = ({
       extensionViews,
       iconClassName,
       isFilesActive,
+      isPrimarySidebarItemActive,
       isGitHubPRsViewActive,
       isGitViewActive,
       isSearchActive,
       isExtensionsActive,
+      isSidebarVisible,
       onExtensionsClick,
       onSearchClick,
       onViewChange,
@@ -227,7 +237,7 @@ export const SidebarPaneSelector = ({
 
   const orderedItems = orderItems(items, orderedIds);
 
-  if (isVertical && showLabels) {
+  if (isVertical) {
     return (
       <>
         {orderedItems.map((item) => (
@@ -235,33 +245,15 @@ export const SidebarPaneSelector = ({
             key={item.id}
             active={!!item.isActive}
             leading={item.icon}
+            iconOnly={!showLabels}
             onClick={item.onClick}
             aria-label={item.ariaLabel}
             aria-current={item.isActive ? "page" : undefined}
+            title={!showLabels ? (item.tooltip?.content ?? item.ariaLabel ?? item.id) : undefined}
+            className="ui-text-sm min-h-6 py-1"
           >
             {item.label ?? item.tooltip?.content ?? item.ariaLabel ?? item.id}
           </SidebarListItem>
-        ))}
-      </>
-    );
-  }
-
-  if (isVertical && compact) {
-    return (
-      <>
-        {orderedItems.map((item) => (
-          <SidebarHeaderIconButton
-            key={item.id}
-            active={!!item.isActive}
-            tooltip={item.tooltip?.content ?? item.ariaLabel ?? item.id}
-            shortcut={item.tooltip?.shortcut}
-            tooltipSide={tooltipSide}
-            aria-label={item.ariaLabel}
-            aria-current={item.isActive ? "page" : undefined}
-            onClick={item.onClick}
-          >
-            {item.icon}
-          </SidebarHeaderIconButton>
         ))}
       </>
     );
@@ -318,7 +310,7 @@ export const SidebarPaneSelector = ({
         isVertical &&
           cn(
             "flex-col rounded-none border-0 bg-transparent p-0",
-            showLabels ? "w-full items-stretch gap-1.5" : "items-center gap-1",
+            showLabels ? "w-full items-stretch gap-1" : "items-center gap-1",
           ),
       )}
     >

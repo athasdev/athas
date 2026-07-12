@@ -4,10 +4,10 @@ import { useGitStore } from "@/features/git/stores/git.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { openGitWorktreeWorkspace } from "@/features/git/utils/git-worktree-open";
 import type { FooterLeadingItemId } from "@/features/layout/config/item-order";
+import type { ChromeItem } from "@/features/layout/utils/chrome-items";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import type { FooterItem } from "./footer-items";
 
-export function useFooterGitBranchItem(): FooterItem<FooterLeadingItemId> | null {
+export function useFooterGitBranchItem(): ChromeItem<FooterLeadingItemId> | null {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const gitStatus = useGitStore((state) => state.gitStatus);

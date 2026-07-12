@@ -5,6 +5,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background-color: var(--primary-bg, var(--color-primary-bg));
 }
 
 /* Ensure xterm fills its container */
@@ -14,6 +15,7 @@
   min-width: 0;
   width: 100%;
   height: 100%;
+  background-color: var(--primary-bg, var(--color-primary-bg));
 }
 
 /* Override any xterm styles that might cause full-screen issues */
@@ -21,12 +23,14 @@
   position: relative !important;
   width: 100% !important;
   height: 100% !important;
+  background-color: var(--primary-bg, var(--color-primary-bg));
 }
 
 /* Style the terminal viewport for better appearance */
 .xterm-container .xterm-viewport {
   overflow-y: auto !important;
   overscroll-behavior: none;
+  background-color: var(--primary-bg, var(--color-primary-bg)) !important;
 }
 
 @supports not selector(::-webkit-scrollbar) {
