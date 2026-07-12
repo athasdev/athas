@@ -6,7 +6,7 @@ import {
   PlugsConnectedIcon as PlugsConnected,
   PlusIcon as Plus,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -477,7 +477,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
               <FolderOpen className="size-5" weight="duotone" />
-              <span className="ui-font ui-text-base">
+              <span className="ui-font ui-text-sm">
                 Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
               </span>
             </button>
@@ -538,7 +538,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                 onChange={setSaveCredential}
                 ariaLabel="Save password securely"
               />
-              <span className="ui-font text-text-lighter ui-text-base">Save password securely</span>
+              <span className="ui-font text-text-lighter ui-text-sm">Save password securely</span>
             </label>
           </div>
         ) : !rootFolderPath ? (
@@ -629,11 +629,11 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       ) : null}
 
       {error ? (
-        <div className="border-border border-t px-2 py-1.5 text-error ui-text-base">{error}</div>
+        <div className="border-border border-t px-2 py-1.5 text-error ui-text-sm">{error}</div>
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-[var(--app-radius-card)] border border-accent bg-primary-bg/85 text-accent ui-text-base backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-[var(--app-radius-card)] border border-accent bg-primary-bg/85 text-accent ui-text-sm backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}

@@ -2,7 +2,7 @@ import {
   ListBulletsIcon as ListBullets,
   MagnifyingGlassIcon as Search,
   TreeStructureIcon as TreeStructure,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   memo,
   type KeyboardEvent,
@@ -400,7 +400,6 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           searchIcon={Search}
           placeholder="Search"
           searchAriaLabel="Search files"
-          searchClassName="h-8 ui-text-base pl-9"
           searchContainerClassName="file-explorer-search-field"
           className={cn(borderless ? "px-1" : "border-b border-border/60")}
           actions={
@@ -412,7 +411,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             >
               <SidebarHeaderIconButton
                 className={cn(
-                  "file-navigator-view-mode-button rounded ui-text-base",
+                  "file-navigator-view-mode-button rounded",
                   viewMode === "flat" && "bg-selected text-text",
                 )}
                 onClick={() => onViewModeChange("flat")}
@@ -425,7 +424,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               </SidebarHeaderIconButton>
               <SidebarHeaderIconButton
                 className={cn(
-                  "file-navigator-view-mode-button rounded ui-text-base",
+                  "file-navigator-view-mode-button rounded",
                   viewMode === "tree" && "bg-selected text-text",
                 )}
                 onClick={() => onViewModeChange("tree")}

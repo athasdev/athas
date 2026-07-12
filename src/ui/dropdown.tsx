@@ -15,7 +15,7 @@ import { motionDuration, motionEase } from "@/ui/motion";
 import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
@@ -128,7 +128,11 @@ export function MenuItemsList({
               item.className,
             )}
           >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
+            {item.icon && (
+              <span className="grid size-[1.125rem] shrink-0 place-items-center [&>svg]:block [&>svg]:size-[1.125rem]">
+                {item.icon}
+              </span>
+            )}
             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
             {item.keybinding && (
               <span className="ui-text-sm ml-8 shrink-0 whitespace-nowrap text-text-lighter">

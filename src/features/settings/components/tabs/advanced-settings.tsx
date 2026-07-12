@@ -135,11 +135,7 @@ export const AdvancedSettings = () => {
             label={feature.name}
             labelAccessory={
               feature.status === "experimental" ? (
-                <Badge
-                  variant="accent"
-                  size="compact"
-                  className="border border-accent/35 uppercase"
-                >
+                <Badge variant="accent" size="compact" className="uppercase">
                   Experimental
                 </Badge>
               ) : undefined

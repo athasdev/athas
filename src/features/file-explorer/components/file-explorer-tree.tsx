@@ -5,7 +5,7 @@ import {
   GitBranchIcon as GitBranch,
   MagnifyingGlassIcon as Search,
   WarningIcon as AlertTriangle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
@@ -1255,7 +1255,6 @@ function FileExplorerTreeComponent({
         searchIcon={Search}
         placeholder="Search"
         searchAriaLabel="Filter files in tree"
-        searchClassName="h-8 ui-text-base pl-9"
         searchContainerClassName="file-explorer-search-field"
         searchInputRef={searchInputRef}
         searchInputProps={{
@@ -1285,7 +1284,7 @@ function FileExplorerTreeComponent({
         filterActive={hasActiveFileTreeFilters}
         filterTooltip="Filter Files"
         filterAriaLabel="Filter files"
-        filterButtonClassName="file-navigator-view-mode-button ui-text-base"
+        filterButtonClassName="file-navigator-view-mode-button"
         filterCloseOnSelect={false}
         filterMenuClassName="file-tree-context-menu w-fit min-w-fit"
         onClick={(e) => e.stopPropagation()}
@@ -1298,7 +1297,7 @@ function FileExplorerTreeComponent({
             actionLabel="Open Folder"
             onAction={handleOpenFolder}
             className="file-explorer-base-text"
-            actionClassName="ui-text-base"
+            actionClassName="ui-text-sm"
           />
         </div>
       ) : displayedFiles.length === 0 ? (

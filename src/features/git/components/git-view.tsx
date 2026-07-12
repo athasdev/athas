@@ -10,7 +10,7 @@ import {
   ArrowClockwiseIcon as RefreshCw,
   TrashIcon as Trash2,
   UploadIcon as Upload,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -91,7 +91,7 @@ const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: str
 };
 
 const gitEmptyActionButtonClassName =
-  "h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-base hover:bg-hover hover:text-text";
+  "h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-sm hover:bg-hover hover:text-text";
 
 type GitPaletteAction =
   | { type: "select-repository" }
@@ -1282,7 +1282,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-base mt-1.5 text-error">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -1315,7 +1315,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-base mt-1.5 text-error">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -1329,7 +1329,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <SidebarPanel className="ui-font ui-text-base select-none gap-2 p-2">
+      <SidebarPanel className="ui-font ui-text-sm select-none gap-2 p-2">
         <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
           <SidebarSectionSwitcher
             items={gitTabs}

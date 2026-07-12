@@ -84,24 +84,24 @@
 }
 
 .file-navigator-view-mode-button svg {
-  width: var(--ui-text-base);
-  height: var(--ui-text-base);
+  width: var(--ui-text-sm);
+  height: var(--ui-text-sm);
 }
 
 .file-explorer-search-field svg {
   left: 0.625rem;
-  width: var(--ui-text-base);
-  height: var(--ui-text-base);
+  width: var(--ui-text-sm);
+  height: var(--ui-text-sm);
 }
 
 .file-explorer-base-text,
 .file-explorer-base-text * {
-  font-size: var(--ui-text-base);
+  font-size: var(--ui-text-sm);
 }
 
 .file-tree-context-menu [role="menuitem"],
 .file-tree-context-menu [role="menuitem"] * {
-  font-size: var(--ui-text-base);
+  font-size: var(--ui-text-sm);
 }
 
 .file-tree-row:hover {

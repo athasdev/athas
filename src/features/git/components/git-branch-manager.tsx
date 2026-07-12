@@ -1,13 +1,10 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   CheckIcon as Check,
-  FolderOpenIcon as FolderOpen,
-  GitBranchIcon as GitBranch,
-  GitForkIcon as GitFork,
   PlusIcon as Plus,
   ArrowClockwiseIcon as RefreshCw,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { chromeControl } from "@/features/layout/components/chrome-control-styles";
@@ -23,6 +20,7 @@ import {
   CommandTabs,
   useCommandListNavigation,
 } from "@/ui/command";
+import { GitBranchIcon, FolderOpenIcon, NodesIcon } from "@/ui/icons";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
@@ -506,21 +504,21 @@ const GitBranchManager = ({
     {
       id: "repositories",
       label: "Repositories",
-      icon: <FolderOpen className={gitCommandIconClassName} />,
+      icon: <FolderOpenIcon className={gitCommandIconClassName} />,
       isActive: activeTab === "repositories",
       onSelect: () => handleTabChange("repositories"),
     },
     {
       id: "branches",
       label: "Branches",
-      icon: <GitBranch className={gitCommandIconClassName} />,
+      icon: <GitBranchIcon className={gitCommandIconClassName} />,
       isActive: activeTab === "branches",
       onSelect: () => handleTabChange("branches"),
     },
     {
       id: "worktrees",
       label: "Worktrees",
-      icon: <GitFork className={gitCommandIconClassName} />,
+      icon: <NodesIcon className={gitCommandIconClassName} />,
       isActive: activeTab === "worktrees",
       onSelect: () => handleTabChange("worktrees"),
     },
@@ -540,7 +538,7 @@ const GitBranchManager = ({
         )}
         aria-label="Search branches"
       >
-        <GitBranch className="shrink-0" />
+        <GitBranchIcon className="shrink-0" />
         <span
           className="min-w-0 truncate font-normal"
           style={{ maxWidth: `${triggerTextWidthCh}ch` }}
@@ -733,7 +731,7 @@ const GitBranchManager = ({
                 </CommandFooterAction>
               ) : null}
               {selectionError ? (
-                <span className="ui-text-base min-w-0 flex-1 truncate text-error/90">
+                <span className="ui-text-sm min-w-0 flex-1 truncate text-error/90">
                   {selectionError}
                 </span>
               ) : null}
@@ -769,7 +767,7 @@ function BranchRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <GitBranch className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <GitBranchIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
         )
       }
       title={branch}
@@ -837,7 +835,7 @@ function RepositoryRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <FolderOpen className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <FolderOpenIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
         )
       }
       title={getFolderName(repoPath)}
@@ -876,13 +874,13 @@ function WorktreeRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <GitFork className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <NodesIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
         )
       }
       title={getFolderName(worktree.path)}
       description={
         <>
-          <GitBranch className={gitCommandIconClassName} />
+          <GitBranchIcon className={gitCommandIconClassName} />
           <span className="truncate">{getBranchLabel(worktree)}</span>
         </>
       }

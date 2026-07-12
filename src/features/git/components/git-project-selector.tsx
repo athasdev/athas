@@ -5,7 +5,7 @@ import {
   FolderOpenIcon as FolderOpen,
   PlusIcon as Plus,
   ArrowClockwiseIcon as RefreshCw,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import {
   CommandEmpty,
@@ -136,9 +136,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
           title={activeRepoTitle ?? undefined}
           onClick={() => setIsOpen((open) => !open)}
         >
-          <span className="ui-text-base min-w-0 flex-1 truncate font-medium">
-            {activeRepoLabel}
-          </span>
+          <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
           <CaretDown
             className={cn(
               "size-3.5 shrink-0 text-accent/65 transition-transform",
@@ -208,7 +206,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             </CommandFooterAction>
           ) : null}
           {selectionError ? (
-            <span className="ui-text-base min-w-0 flex-1 truncate text-error/90">
+            <span className="ui-text-sm min-w-0 flex-1 truncate text-error/90">
               {selectionError}
             </span>
           ) : null}
