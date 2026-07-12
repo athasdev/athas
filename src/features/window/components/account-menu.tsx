@@ -2,10 +2,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import {
-  chromeControl,
-  chromeControlGroup,
-} from "@/features/layout/components/chrome-control-styles";
-import {
   extractAutocompleteUsage,
   formatUsageDate,
   formatUsdFromCents,
@@ -29,7 +25,6 @@ import {
   UserIcon,
   UsersThreeIcon,
 } from "@/ui/icons";
-import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { getApiBase } from "@/utils/api-base";
@@ -220,30 +215,29 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
-          <Button
-            ref={buttonRef}
-            onClick={() => setIsOpen((open) => !open)}
-            type="button"
-            variant="ghost"
-            compact
-            active={isOpen}
-            className={chromeControl()}
-            aria-expanded={isOpen}
-            aria-haspopup="menu"
-            aria-label="Account"
-          >
-            {isAuthenticated && user?.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt=""
-                className="size-4 rounded-[var(--app-radius-pill)] object-cover"
-              />
-            ) : (
-              <UserIcon className="size-4" />
-            )}
-          </Button>
-        </TabsList>
+        <Button
+          ref={buttonRef}
+          onClick={() => setIsOpen((open) => !open)}
+          type="button"
+          variant="ghost"
+          compact
+          chrome="icon"
+          active={isOpen}
+          className={className}
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+          aria-label="Account"
+        >
+          {isAuthenticated && user?.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="size-4 rounded-[var(--app-radius-pill)] object-cover"
+            />
+          ) : (
+            <UserIcon className="size-4" />
+          )}
+        </Button>
       </Tooltip>
       <Dropdown
         isOpen={isOpen}

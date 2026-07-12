@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import {
-  chromeControl,
-  chromeControlGroup,
-  chromeIcon,
-} from "@/features/layout/components/chrome-control-styles";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -13,7 +8,6 @@ import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { PenIcon, PlayIcon, PlusIcon, TrashIcon } from "@/ui/icons";
-import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 
 type ActionDraft = {
@@ -107,23 +101,21 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <TabsList variant="segmented" data-active={isMenuOpen} className={chromeControlGroup()}>
-          <Tooltip content="Run actions" side="bottom">
-            <Button
-              type="button"
-              onClick={() => setIsMenuOpen((open) => !open)}
-              variant="ghost"
-              active={isMenuOpen}
-              className={chromeControl()}
-              aria-expanded={isMenuOpen}
-              aria-haspopup="menu"
-              aria-label="Run actions"
-              compact
-            >
-              <PlayIcon className={chromeIcon()} />
-            </Button>
-          </Tooltip>
-        </TabsList>
+        <Tooltip content="Run actions" side="bottom">
+          <Button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            variant="ghost"
+            active={isMenuOpen}
+            chrome="icon"
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            aria-label="Run actions"
+            compact
+          >
+            <PlayIcon />
+          </Button>
+        </Tooltip>
       </div>
 
       <Dropdown

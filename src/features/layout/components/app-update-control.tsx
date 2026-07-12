@@ -1,14 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import {
-  chromeControl,
-  chromeControlGroup,
-} from "@/features/layout/components/chrome-control-styles";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import { CaretDownIcon, DownloadIcon } from "@/ui/icons";
-import { TabsList } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 export function AppUpdateControl() {
@@ -85,53 +80,46 @@ export function AppUpdateControl() {
 
   return (
     <div className="flex items-center gap-0.5">
-      <TabsList variant="segmented" className={chromeControlGroup()}>
+      <Button
+        type="button"
+        variant="ghost"
+        compact
+        chrome="pill"
+        tooltip={updateTooltip}
+        tooltipSide="bottom"
+        disabled={updateBusy}
+        onClick={() => {
+          if (!updateBusy) {
+            void downloadAndInstall();
+          }
+        }}
+        className={cn(
+          "ui-font ui-text-sm font-medium",
+          updateError ? "text-error hover:text-error" : "text-accent hover:text-accent",
+          updateBusy && "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
+        )}
+      >
+        {updateBusy ? (
+          <LoadingIndicator label={downloading ? "Downloading" : "Installing"} compact />
+        ) : (
+          <DownloadIcon />
+        )}
+        <span>{updateLabel}</span>
+      </Button>
+      <div ref={updateMenuRef}>
         <Button
           type="button"
           variant="ghost"
           compact
-          tooltip={updateTooltip}
+          chrome="icon"
+          active={isUpdateMenuOpen}
+          tooltip="Update Options"
           tooltipSide="bottom"
-          disabled={updateBusy}
-          onClick={() => {
-            if (!updateBusy) {
-              void downloadAndInstall();
-            }
-          }}
-          className={cn(
-            chromeControl({ shape: "pill" }),
-            "ui-font ui-text-sm font-medium",
-            updateError ? "text-error hover:text-error" : "text-accent hover:text-accent",
-            updateBusy &&
-              "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
-          )}
+          onClick={() => setIsUpdateMenuOpen((open) => !open)}
+          className={updateError ? "text-error hover:text-error" : "text-accent hover:text-accent"}
         >
-          {updateBusy ? (
-            <LoadingIndicator label={downloading ? "Downloading" : "Installing"} compact />
-          ) : (
-            <DownloadIcon />
-          )}
-          <span>{updateLabel}</span>
+          <CaretDownIcon />
         </Button>
-      </TabsList>
-      <div ref={updateMenuRef}>
-        <TabsList variant="segmented" className={chromeControlGroup()}>
-          <Button
-            type="button"
-            variant="ghost"
-            compact
-            active={isUpdateMenuOpen}
-            tooltip="Update Options"
-            tooltipSide="bottom"
-            onClick={() => setIsUpdateMenuOpen((open) => !open)}
-            className={cn(
-              chromeControl(),
-              updateError ? "text-error hover:text-error" : "text-accent hover:text-accent",
-            )}
-          >
-            <CaretDownIcon />
-          </Button>
-        </TabsList>
       </div>
       <Dropdown
         isOpen={isUpdateMenuOpen}

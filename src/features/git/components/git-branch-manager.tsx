@@ -7,7 +7,6 @@ import {
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { chromeControl } from "@/features/layout/components/chrome-control-styles";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import {
@@ -531,9 +530,10 @@ const GitBranchManager = ({
         onClick={() => void handleOpenDropdown()}
         disabled={isLoading}
         variant="ghost"
+        chrome={triggerSurface === "footer" ? "pill" : undefined}
         className={cn(
           "inline-flex max-w-full shrink overflow-hidden px-2 text-text-lighter hover:bg-hover/80",
-          triggerSurface === "footer" && [chromeControl({ shape: "pill" }), "font-medium"],
+          triggerSurface === "footer" && "font-medium",
           isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
         )}
         aria-label="Search branches"

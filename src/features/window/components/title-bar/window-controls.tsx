@@ -4,10 +4,8 @@ import {
   MinusIcon as Minus,
   XIcon as X,
 } from "@/ui/icons";
-import { chromeControl } from "@/features/layout/components/chrome-control-styles";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 
 interface WindowControlsProps {
   currentWindow: any;
@@ -52,7 +50,8 @@ export function WindowControls({
         <Button
           onClick={handleMinimize}
           variant="ghost"
-          className={cn("pointer-events-auto", chromeControl())}
+          chrome="icon"
+          className="pointer-events-auto"
           compact
         >
           <Minus weight="bold" />
@@ -62,7 +61,8 @@ export function WindowControls({
         <Button
           onClick={handleToggleMaximize}
           variant="ghost"
-          className={cn("pointer-events-auto", chromeControl())}
+          chrome="icon"
+          className="pointer-events-auto"
           compact
         >
           {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
@@ -72,7 +72,8 @@ export function WindowControls({
         <Button
           onClick={handleClose}
           variant="danger"
-          className={cn("pointer-events-auto group hover:text-white", chromeControl())}
+          chrome="icon"
+          className="pointer-events-auto group hover:text-white"
           compact
         >
           <X weight="bold" />

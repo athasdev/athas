@@ -1,8 +1,4 @@
 import { Fragment, useMemo } from "react";
-import {
-  chromeControl,
-  chromeControlGroup,
-} from "@/features/layout/components/chrome-control-styles";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
@@ -66,9 +62,6 @@ export const SidebarPaneSelector = ({
   const isVertical = orientation === "vertical";
   const tooltipSide = isVertical ? "right" : "bottom";
   const iconClassName = compact || isVertical ? "size-4" : undefined;
-  const tabClassName = compact
-    ? chromeControl({ shape: "sidebar" })
-    : chromeControl({ shape: "tab" });
   const isBufferOwnedSurfaceActive = isSearchActive || isExtensionsActive;
   const isPrimarySidebarItemActive = isSidebarVisible && !isBufferOwnedSurfaceActive;
   const isFilesActive =
@@ -91,7 +84,6 @@ export const SidebarPaneSelector = ({
         onClick: () => onViewChange("files"),
         role: "tab",
         ariaLabel: "Files",
-        className: tabClassName,
         tooltip: {
           content: "Files",
           shortcut: "Mod+Shift+E",
@@ -107,7 +99,6 @@ export const SidebarPaneSelector = ({
               isActive: isSearchActive,
               onClick: onSearchClick,
               ariaLabel: "Search",
-              className: tabClassName,
               tooltip: {
                 content: "Search",
                 shortcut: "Mod+Shift+F",
@@ -126,7 +117,6 @@ export const SidebarPaneSelector = ({
               onClick: () => onViewChange("git"),
               role: "tab",
               ariaLabel: "Git Source Control",
-              className: tabClassName,
               tooltip: {
                 content: "Source Control",
                 shortcut: "Mod+Shift+G",
@@ -145,7 +135,6 @@ export const SidebarPaneSelector = ({
               onClick: () => onViewChange("github-prs"),
               role: "tab",
               ariaLabel: "GitHub Pull Requests",
-              className: tabClassName,
               tooltip: {
                 content: "Pull Requests",
                 side: tooltipSide,
@@ -163,7 +152,6 @@ export const SidebarPaneSelector = ({
               onClick: () => onViewChange("docker"),
               role: "tab",
               ariaLabel: "Docker",
-              className: tabClassName,
               tooltip: {
                 content: "Docker",
                 side: tooltipSide,
@@ -178,7 +166,6 @@ export const SidebarPaneSelector = ({
         isActive: isExtensionsActive,
         onClick: onExtensionsClick ?? (() => onViewChange("extensions")),
         ariaLabel: "Extensions",
-        className: tabClassName,
         tooltip: {
           content: "Extensions",
           side: tooltipSide,
@@ -194,7 +181,6 @@ export const SidebarPaneSelector = ({
             onClick: () => onViewChange(view.id),
             role: "tab",
             ariaLabel: view.title,
-            className: tabClassName,
             tooltip: {
               content: view.title,
               side: tooltipSide,
@@ -221,7 +207,6 @@ export const SidebarPaneSelector = ({
       onSearchClick,
       onViewChange,
       showLabels,
-      tabClassName,
       tooltipSide,
     ],
   );
@@ -270,6 +255,7 @@ export const SidebarPaneSelector = ({
         isActive={!!item.isActive}
         size={compact ? "xs" : "sm"}
         variant="default"
+        chrome="icon"
         labelPosition="center"
         className={item.className}
         onClick={item.onClick}
@@ -305,8 +291,9 @@ export const SidebarPaneSelector = ({
   return (
     <TabsList
       variant="default"
+      chrome={compact}
       className={cn(
-        compact ? chromeControlGroup() : "gap-0.5 p-1",
+        !compact && "gap-0.5 p-1",
         isVertical &&
           cn(
             "flex-col rounded-none border-0 bg-transparent p-0",

@@ -23,6 +23,7 @@ import type {
   ReactNode,
 } from "react";
 import { forwardRef, useMemo, useRef } from "react";
+import { chromeControlVariants, type ChromeControlVariant } from "@/ui/chrome-control";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -40,6 +41,7 @@ export interface TabProps extends HTMLAttributes<HTMLDivElement> {
   variant?: TabVariant;
   labelPosition?: TabLabelPosition;
   contentLayout?: TabContentLayout;
+  chrome?: ChromeControlVariant;
   children: ReactNode;
 }
 
@@ -192,9 +194,14 @@ const tabsListVariants = cva(
         pill: "items-center gap-0.5 p-0.5",
         segmented: "min-h-6 items-stretch overflow-hidden",
       },
+      chrome: {
+        true: "pointer-events-auto gap-1 overflow-visible border-0 bg-transparent p-0",
+        false: "",
+      },
     },
     defaultVariants: {
       variant: "default",
+      chrome: false,
     },
   },
 );
@@ -209,6 +216,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
     variant = "default",
     labelPosition = "center",
     contentLayout = "inline",
+    chrome,
     children,
     className,
     style,
@@ -241,6 +249,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
       data-active={isActive}
       className={cn(
         tabVariants({ size, variant, active: isActive, dragged: isDragged }),
+        chromeControlVariants({ chrome }),
         actionInsetClass,
         className,
       )}
@@ -263,9 +272,11 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
 
 export const TabsList = forwardRef<
   HTMLDivElement,
-  HTMLAttributes<HTMLDivElement> & { variant?: TabVariant }
->(function TabsList({ className, variant = "default", ...props }, ref) {
-  return <div ref={ref} className={cn(tabsListVariants({ variant }), className)} {...props} />;
+  HTMLAttributes<HTMLDivElement> & { variant?: TabVariant; chrome?: boolean }
+>(function TabsList({ className, variant = "default", chrome = false, ...props }, ref) {
+  return (
+    <div ref={ref} className={cn(tabsListVariants({ variant, chrome }), className)} {...props} />
+  );
 });
 
 export function Tabs({

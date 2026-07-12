@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  chromeControl,
-  chromeControlGroup,
-  chromeIcon,
-} from "@/features/layout/components/chrome-control-styles";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { NotificationsCommand } from "@/features/notifications/components/notifications-command";
 import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { Button } from "@/ui/button";
 import { BellIcon } from "@/ui/icons";
-import { TabsList } from "@/ui/tabs";
 import { useToastStore } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -41,29 +35,25 @@ export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) =
   return (
     <>
       <Tooltip content="Notifications" shortcut={shortcut} side="top">
-        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
-          <Button
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
-            }}
-            type="button"
-            variant="ghost"
-            compact
-            active={isCommandVisible}
-            className={cn(
-              chromeControl(),
-              unreadCount > 0 && cn(chromeControl({ shape: "pill" }), "w-auto gap-1.5"),
-            )}
-            aria-label="Notifications"
-          >
-            <BellIcon className={chromeIcon()} />
-            {unreadCount > 0 && (
-              <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
-                {unreadCount}
-              </span>
-            )}
-          </Button>
-        </TabsList>
+        <Button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
+          }}
+          type="button"
+          variant="ghost"
+          compact
+          chrome={unreadCount > 0 ? "pill" : "icon"}
+          active={isCommandVisible}
+          className={cn(className, unreadCount > 0 && "w-auto gap-1.5")}
+          aria-label="Notifications"
+        >
+          <BellIcon />
+          {unreadCount > 0 && (
+            <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
+              {unreadCount}
+            </span>
+          )}
+        </Button>
       </Tooltip>
       <NotificationsCommand
         isVisible={isCommandVisible}

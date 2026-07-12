@@ -3,7 +3,6 @@ import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import { chromeItemWrapper } from "@/features/layout/components/chrome-control-styles";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -380,7 +379,7 @@ const Footer = () => {
       <div className="athas-footer-bar relative z-20 flex min-h-8 shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
         <div className="ui-font flex items-center gap-1 text-text-lighter">
           {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
-            <div key={item.id} className={chromeItemWrapper()}>
+            <div key={item.id} className="flex min-h-6 items-center">
               {item.content}
             </div>
           ))}
@@ -388,7 +387,7 @@ const Footer = () => {
 
         <div className="ui-font flex items-center gap-1 text-text-lighter">
           {orderChromeItems(footerTrailingItems, footerTrailingOrder).map((item) => (
-            <div key={item.id} className={chromeItemWrapper()}>
+            <div key={item.id} className="flex min-h-6 items-center">
               {item.content}
             </div>
           ))}

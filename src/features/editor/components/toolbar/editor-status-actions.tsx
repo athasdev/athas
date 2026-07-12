@@ -25,7 +25,6 @@ import {
 } from "@/features/editor/utils/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { chromeControl } from "@/features/layout/components/chrome-control-styles";
 import { Button } from "@/ui/button";
 import {
   Combobox,
@@ -42,12 +41,8 @@ import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
-const actionButtonClass = cn(chromeControl(), "text-text-lighter");
-
 const statusChipClass =
   "ui-font inline-flex h-5 items-center self-center rounded-[var(--app-radius-pill)] border border-transparent px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
-
-const menuTriggerClass = cn(chromeControl(), "text-text-lighter");
 
 const editorMenuItemClass = dropdownItemClassName("min-h-7");
 
@@ -557,7 +552,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
           compact
-          className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
+          chrome="icon"
+          className={cn("text-text-lighter", config.color, isLspOpen && "bg-hover text-text")}
           aria-label="Language server status"
           tooltip={config.title}
           tooltipSide="bottom"
@@ -691,8 +687,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
           compact
+          chrome="icon"
           className={cn(
-            menuTriggerClass,
+            "text-text-lighter",
             isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
           )}
           tooltip="Editor preferences"

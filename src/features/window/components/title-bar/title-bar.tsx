@@ -5,12 +5,6 @@ import { openFolder } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
-import {
-  chromeControl,
-  chromeControlGroup,
-  chromeIcon,
-  chromeItemWrapper,
-} from "@/features/layout/components/chrome-control-styles";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -29,7 +23,6 @@ import {
   TrashIcon,
   WindowExpandIcon,
 } from "@/ui/icons";
-import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
@@ -249,18 +242,17 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       compactMenuBar ? (
         <div className="relative">
           <Tooltip content="Menu" side="bottom">
-            <TabsList variant="segmented" className={chromeControlGroup()}>
-              <Button
-                onClick={handleCompactMenuToggle}
-                variant="ghost"
-                compact
-                className={cn(chromeControl(), menuBarActiveMenu && "bg-hover/70 text-text")}
-                aria-label="Menu"
-                aria-expanded={Boolean(menuBarActiveMenu)}
-              >
-                <ListIcon className={chromeIcon()} />
-              </Button>
-            </TabsList>
+            <Button
+              onClick={handleCompactMenuToggle}
+              variant="ghost"
+              compact
+              chrome="icon"
+              className={menuBarActiveMenu ? "bg-hover/70 text-text" : undefined}
+              aria-label="Menu"
+              aria-expanded={Boolean(menuBarActiveMenu)}
+            >
+              <ListIcon />
+            </Button>
           </Tooltip>
           <WindowMenuBar
             activeMenu={menuBarActiveMenu}
@@ -281,11 +273,12 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       tooltip={isSidebarRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       tooltipSide="bottom"
       onClick={() => setIsSidebarRailExpanded(!isSidebarRailExpanded)}
-      className={cn(chromeControl(), isMacOS && "size-6 min-h-6 min-w-6")}
+      chrome="icon"
+      className={isMacOS ? "size-6 min-h-6 min-w-6" : undefined}
       aria-label={isSidebarRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
       aria-pressed={isSidebarRailExpanded}
     >
-      <SidebarSimpleIcon className={chromeIcon()} />
+      <SidebarSimpleIcon />
     </Button>
   );
 
@@ -306,10 +299,10 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
-          className={chromeControl()}
+          chrome="icon"
           aria-label="Toggle Agent"
         >
-          <SparkleIcon className={chromeIcon()} />
+          <SparkleIcon />
         </Button>
       ),
     },
@@ -369,7 +362,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
               orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
             ).map((item) =>
               item.content ? (
-                <div key={item.id} className={chromeItemWrapper()}>
+                <div key={item.id} className="flex min-h-6 items-center">
                   {item.content}
                 </div>
               ) : null,
@@ -402,7 +395,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
             orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
           ).map((item) =>
             item.content ? (
-              <div key={item.id} className={chromeItemWrapper()}>
+              <div key={item.id} className="flex min-h-6 items-center">
                 {item.content}
               </div>
             ) : null,
