@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import "../../styles/ai-chat.css";
 import { KeyIcon as KeyRound } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";

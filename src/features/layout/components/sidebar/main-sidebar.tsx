@@ -1,4 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import "./project-carousel.css";
 import {
   memo,
   useCallback,
