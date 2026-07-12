@@ -8,7 +8,7 @@ import {
   MicrophoneIcon as Mic,
   StopIcon as Stop,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
@@ -78,6 +78,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
   isActiveSurface = true,
+  presentation = "default",
   onSendMessage,
   onStopStreaming,
 }: AIChatInputBarProps) {
@@ -1050,7 +1051,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         mentionSpan.setAttribute("contenteditable", "false");
         mentionSpan.title = file.path;
         mentionSpan.className =
-          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-[var(--app-radius-pill)] border border-accent/30 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
+          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-[var(--app-radius-pill)] border-0 bg-accent/10 px-1.5 py-0.5 leading-[1.35] text-accent align-baseline select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
@@ -1125,7 +1126,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         commandSpan.setAttribute("contenteditable", "false");
         commandSpan.title = command.description || `/${command.name}`;
         commandSpan.className =
-          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-[var(--app-radius-pill)] border border-border/70 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
+          "ui-font ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-[var(--app-radius-pill)] border-0 bg-hover/70 px-1.5 py-0.5 leading-[1.35] text-text align-baseline select-none";
         commandSpan.textContent = `/${command.name}`;
         inputRef.current.appendChild(commandSpan);
 
@@ -1296,6 +1297,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const hasSlashCommands = availableSlashCommands.length > 0;
   const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
+  const isInitialPresentation = presentation === "initial";
+  const inputPlaceholder = isInputEnabled
+    ? isInitialPresentation
+      ? "What do you want to create?"
+      : hasSlashCommands
+        ? "Ask anything... (@ files, / commands)"
+        : "Ask anything... (@ to mention files)"
+    : "Configure API key to enable Agent...";
 
   return (
     <PromptInput
@@ -1306,10 +1315,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
       onDragLeave={handleContextDragLeave}
       onDrop={handleContextDrop}
       dragActive={isContextDragOver}
+      className={cn(
+        isInitialPresentation &&
+          "!mx-0 !mb-0 !w-full !max-w-[720px] !pb-0 rounded-[22px] bg-transparent",
+      )}
     >
-      <PromptInputBody>
+      <PromptInputBody
+        className={cn(
+          isInitialPresentation &&
+            "rounded-[22px] border-border/70 bg-primary-bg/96 shadow-[var(--shadow-popover)]",
+        )}
+      >
         {pastedImages.length > 0 && (
-          <PromptInputAttachments>
+          <PromptInputAttachments className={cn(isInitialPresentation && "px-4 pt-4")}>
             {pastedImages.map((image) => (
               <div
                 key={image.id}
@@ -1344,21 +1362,19 @@ const AIChatInputBar = memo(function AIChatInputBar({
           onFocus={() => setIsComposerFocused(true)}
           onBlur={() => setIsComposerFocused(false)}
           onPaste={handlePaste}
-          data-placeholder={
-            isInputEnabled
-              ? hasSlashCommands
-                ? "Ask anything... (@ files, / commands)"
-                : "Ask anything... (@ to mention files)"
-              : "Configure API key to enable Agent..."
-          }
-          className={cn(hasAttachedComposerDropdown && "border-none")}
+          data-placeholder={inputPlaceholder}
+          className={cn(
+            hasAttachedComposerDropdown && "border-none",
+            isInitialPresentation &&
+              "!max-h-12 !min-h-12 !overflow-hidden !px-4 !py-3 ui-text-base",
+          )}
           role="textbox"
-          aria-multiline="true"
+          aria-multiline={!isInitialPresentation}
           aria-label="Message input"
           tabIndex={isInputEnabled ? 0 : -1}
         />
 
-        <PromptInputToolbar>
+        <PromptInputToolbar className={cn(isInitialPresentation && "items-center px-3 pb-3 pt-0")}>
           <div ref={contextDropdownRef} className="min-w-0 flex-1">
             <ContextSelector
               buffers={buffers}
@@ -1377,10 +1393,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           </div>
 
           {queueCount > 0 && (
-            <Badge
-              size="sm"
-              className="shrink-0 gap-1 border border-accent/30 bg-accent/10 px-2.5 text-accent"
-            >
+            <Badge size="sm" className="shrink-0 gap-1 bg-accent/10 px-2.5 text-accent">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
               <span>{queueCount}</span>
             </Badge>
@@ -1439,7 +1452,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </PromptInputToolbar>
 
         {selectedContextItems.length > 0 ? (
-          <PromptInputContextList>
+          <PromptInputContextList className={cn(isInitialPresentation && "px-3 pb-3")}>
             {selectedContextItems.map((item) => (
               <div
                 key={`selected-${item.type}-${item.id}`}
@@ -1541,7 +1554,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         ) : null}
       </PromptInputBody>
 
-      <PromptInputTools>
+      <PromptInputTools className={cn(isInitialPresentation && "px-3 pb-0.5 pt-2")}>
         {isAcpMetadataLoading ? (
           <ChatLoadingIndicator label="loading session" compact />
         ) : (

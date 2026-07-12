@@ -120,6 +120,7 @@ export interface AIChatInputBarProps {
   buffers: PaneContent[];
   allProjectFiles: FileEntry[];
   isActiveSurface?: boolean;
+  presentation?: "default" | "initial";
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

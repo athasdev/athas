@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { KeyIcon as KeyRound } from "@phosphor-icons/react";
+import { KeyIcon as KeyRound } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
@@ -1083,6 +1083,8 @@ details: ${errorDetails || mainError}
       ? currentPermission.options
       : getFallbackPermissionOptions()
     : [];
+  const isNewSession = (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
+  const useInitialComposer = isNewSession && !currentPermission;
   const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
     try {
@@ -1139,18 +1141,31 @@ details: ${errorDetails || mainError}
         </div>
       ) : (
         <>
-          <Conversation ref={messagesContainerRef} onScroll={handleMessagesScroll}>
-            <ChatMessages
-              ref={messagesEndRef}
-              chatId={effectiveChatId}
-              onApplyCode={onApplyCode}
-              onSendFollowUp={handleSendMessage}
-              acpEvents={acpEvents}
-              searchQuery={messageSearchQuery}
-              activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
-              activeSearchIndex={activeMessageSearchIndex}
-            />
-          </Conversation>
+          {useInitialComposer ? (
+            <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
+              <AIChatInputBar
+                buffers={buffers}
+                allProjectFiles={allProjectFiles}
+                isActiveSurface={isActiveSurface}
+                presentation="initial"
+                onSendMessage={handleSendMessage}
+                onStopStreaming={stopStreaming}
+              />
+            </div>
+          ) : (
+            <Conversation ref={messagesContainerRef} onScroll={handleMessagesScroll}>
+              <ChatMessages
+                ref={messagesEndRef}
+                chatId={effectiveChatId}
+                onApplyCode={onApplyCode}
+                onSendFollowUp={handleSendMessage}
+                acpEvents={acpEvents}
+                searchQuery={messageSearchQuery}
+                activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
+                activeSearchIndex={activeMessageSearchIndex}
+              />
+            </Conversation>
+          )}
 
           {currentPermission && (
             <div className="bg-transparent px-3 pt-2 ui-text-sm">
@@ -1196,13 +1211,15 @@ details: ${errorDetails || mainError}
             </div>
           )}
 
-          <AIChatInputBar
-            buffers={buffers}
-            allProjectFiles={allProjectFiles}
-            isActiveSurface={isActiveSurface}
-            onSendMessage={handleSendMessage}
-            onStopStreaming={stopStreaming}
-          />
+          {!useInitialComposer ? (
+            <AIChatInputBar
+              buffers={buffers}
+              allProjectFiles={allProjectFiles}
+              isActiveSurface={isActiveSurface}
+              onSendMessage={handleSendMessage}
+              onStopStreaming={stopStreaming}
+            />
+          ) : null}
 
           <ProviderApiKeyCommand
             isOpen={chatState.apiKeyModalState.isOpen}

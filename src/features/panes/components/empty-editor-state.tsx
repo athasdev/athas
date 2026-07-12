@@ -2,55 +2,43 @@ import {
   FileTextIcon as FileText,
   FolderOpenIcon as FolderOpen,
   GlobeHemisphereWestIcon as Globe,
-  PencilIcon as Pencil,
   PlusIcon as Plus,
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
-  TrashIcon as Trash2,
-} from "@phosphor-icons/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+} from "@/ui/icons";
+import { useCallback } from "react";
 import { createPortal } from "react-dom";
+import { AgentLaunchInput } from "@/features/ai/components/agent-launcher";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions.store";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import Input from "@/ui/input";
 
 interface ActionItem {
   id: string;
   label: string;
+  description: string;
   icon: React.ReactNode;
   action: () => void;
+  disabled?: boolean;
 }
 
-const newTabRowClassName =
-  "h-auto w-full justify-start gap-3 rounded-md px-3 py-1.5 text-left hover:bg-hover";
+const quickActionCardClassName =
+  "h-20 w-full flex-col items-start justify-between rounded-[var(--app-radius-card)] border border-border/65 bg-transparent p-3 text-left text-text-lighter hover:border-border-strong/75 hover:bg-hover/35 hover:text-text focus-visible:border-border-strong/80 disabled:opacity-45";
+
+const quickActionIconClassName =
+  "flex size-7 items-center justify-center rounded-[var(--app-radius-control-sm)] text-text-lighter group-hover:text-text";
 
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
     useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
-  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
 
-  const allCustomActions = useCustomActionsStore.use.actions();
-  const { addAction, updateAction, deleteAction, getActionsForWorkspace } =
-    useCustomActionsStore.getState().storeActions;
-  const customActions = useMemo(
-    () => getActionsForWorkspace(rootFolderPath),
-    [allCustomActions, getActionsForWorkspace, rootFolderPath],
-  );
-
   const contextMenu = useContextMenu();
-
-  const [isAddingAction, setIsAddingAction] = useState(false);
-  const [editingActionId, setEditingActionId] = useState<string | null>(null);
-  const [inputValue, setInputValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleOpenTerminal = useCallback(() => {
     openTerminalBuffer();
@@ -81,59 +69,6 @@ export function EmptyEditorState() {
       console.error("Failed to open file:", error);
     }
   }, [openBuffer]);
-
-  const handleStartAdd = useCallback(() => {
-    setIsAddingAction(true);
-    setInputValue("");
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
-
-  const handleStartEdit = useCallback((actionId: string, command: string) => {
-    setEditingActionId(actionId);
-    setInputValue(command);
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    setIsAddingAction(false);
-    setEditingActionId(null);
-    setInputValue("");
-  }, []);
-
-  const handleSave = useCallback(() => {
-    const command = inputValue.trim();
-    if (!command) {
-      handleCancel();
-      return;
-    }
-
-    if (editingActionId) {
-      updateAction(editingActionId, { name: command, command });
-    } else {
-      addAction({ name: command, command, workspacePath: rootFolderPath });
-    }
-    handleCancel();
-  }, [inputValue, editingActionId, addAction, updateAction, handleCancel, rootFolderPath]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleSave();
-      } else if (e.key === "Escape") {
-        handleCancel();
-      }
-    },
-    [handleSave, handleCancel],
-  );
-
-  const handleDelete = useCallback(
-    (id: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      deleteAction(id);
-    },
-    [deleteAction],
-  );
 
   const getContextMenuItems = useCallback((): ContextMenuItem[] => {
     return [
@@ -189,151 +124,70 @@ export function EmptyEditorState() {
     webViewerEnabled,
   ]);
 
-  const actions: ActionItem[] = [
+  const quickActions: ActionItem[] = [
     {
       id: "new-file",
-      label: "New File",
-      icon: <Plus className="text-text-light" />,
+      label: "Create",
+      description: "New file",
+      icon: <Plus />,
       action: handleNewFile,
     },
     {
-      id: "folder",
-      label: "Open Folder",
-      icon: <FolderOpen className="text-text-light" />,
-      action: handleOpenFolder,
-    },
-    {
-      id: "file",
-      label: "Open File",
-      icon: <FileText className="text-text-light" />,
+      id: "find",
+      label: "Find",
+      description: "Open file",
+      icon: <FileText />,
       action: handleOpenFile,
     },
     {
       id: "terminal",
-      label: "New Terminal",
-      icon: <Terminal className="text-text-light" />,
+      label: "Run",
+      description: "New terminal",
+      icon: <Terminal />,
       action: handleOpenTerminal,
     },
     {
-      id: "agent",
-      label: "New Agent",
-      icon: <Sparkles className="text-text-light" />,
-      action: handleOpenAgent,
+      id: "research",
+      label: "Research",
+      description: "Apps and web",
+      icon: <Globe />,
+      action: webViewerEnabled ? handleOpenWebViewer : handleOpenFolder,
+      disabled: !webViewerEnabled,
     },
-    ...(webViewerEnabled
-      ? [
-          {
-            id: "web",
-            label: "Open URL",
-            icon: <Globe className="text-text-light" />,
-            action: handleOpenWebViewer,
-          },
-        ]
-      : []),
   ];
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-auto" onContextMenu={contextMenu.open}>
-      <div className="m-auto flex w-48 min-w-0 flex-col gap-0.5 px-2 py-3">
-        {actions.map((item) => (
-          <Button
-            key={item.id}
-            type="button"
-            onClick={item.action}
-            variant="ghost"
-            className={newTabRowClassName}
-            compact
-          >
-            <span className="shrink-0">{item.icon}</span>
-            <span className="text-text ui-text-sm">{item.label}</span>
-          </Button>
-        ))}
+      <div className="m-auto flex w-[min(680px,calc(100%-56px))] min-w-0 flex-col items-center gap-4 px-6 py-8">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="flex size-8 items-center justify-center text-text">
+            <Sparkles className="size-5" weight="duotone" />
+          </span>
+          <h1 className="font-medium text-text ui-text-lg">Where should we begin?</h1>
+        </div>
 
-        {customActions.length > 0 && (
-          <>
-            <div className="my-1 h-px bg-border" />
-            {customActions.map((action) =>
-              editingActionId === action.id ? (
-                <div key={action.id} className="min-w-0 px-1">
-                  <Input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="command"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onBlur={handleSave}
-                    className="w-full bg-secondary-bg"
-                  />
-                </div>
-              ) : (
-                <div
-                  key={action.id}
-                  className="group flex min-w-0 items-center gap-1 rounded-md px-3 py-1.5 hover:bg-hover"
-                >
-                  <Button
-                    type="button"
-                    onClick={() =>
-                      openTerminalBuffer({ name: action.name, command: action.command })
-                    }
-                    variant="ghost"
-                    compact
-                    className="h-auto min-w-0 flex-1 justify-start gap-3 p-0 hover:bg-transparent"
-                  >
-                    <Terminal className="shrink-0 text-text-light" />
-                    <span className="truncate text-text ui-text-sm">{action.name}</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => handleStartEdit(action.id, action.command)}
-                    variant="ghost"
-                    compact
-                    className="shrink-0 opacity-0 transition-opacity hover:text-text group-hover:opacity-100"
-                  >
-                    <Pencil />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(e) => handleDelete(action.id, e)}
-                    variant="ghost"
-                    compact
-                    className="shrink-0 opacity-0 transition-opacity hover:text-error group-hover:opacity-100"
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
-              ),
-            )}
-          </>
-        )}
+        <div className="w-full rounded-[var(--app-radius-card)] border border-border/70 bg-secondary-bg/16 p-3">
+          <AgentLaunchInput active autoFocus variant="hero" />
+        </div>
 
-        <div className="my-1 h-px bg-border" />
-
-        {isAddingAction ? (
-          <div className="min-w-0 px-1">
-            <Input
-              ref={inputRef}
-              type="text"
-              placeholder="command"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={handleSave}
-              className="w-full bg-secondary-bg"
-            />
-          </div>
-        ) : (
-          <Button
-            type="button"
-            onClick={handleStartAdd}
-            variant="ghost"
-            className={newTabRowClassName}
-            compact
-          >
-            <Plus className="shrink-0 text-text-lighter" />
-            <span className="text-text-light ui-text-sm">Add custom action...</span>
-          </Button>
-        )}
+        <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
+          {quickActions.map((item) => (
+            <Button
+              key={item.id}
+              type="button"
+              onClick={item.action}
+              variant="ghost"
+              disabled={item.disabled}
+              className={`group ${quickActionCardClassName}`}
+            >
+              <span className={quickActionIconClassName}>{item.icon}</span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-medium text-text ui-text-sm">{item.label}</span>
+                <span className="text-text-lighter ui-text-sm">{item.description}</span>
+              </span>
+            </Button>
+          ))}
+        </div>
       </div>
 
       {createPortal(
