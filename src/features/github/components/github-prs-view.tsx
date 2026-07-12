@@ -11,11 +11,8 @@ import {
   LightningIcon as Lightning,
   MagnifyingGlassIcon as Search,
   PlusIcon as Plus,
-} from "@phosphor-icons/react";
-import {
-  WarningCircleIcon as AlertCircle,
-  ArrowClockwiseIcon as RefreshCw,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
+import { WarningCircleIcon as AlertCircle, ArrowClockwiseIcon as RefreshCw } from "@/ui/icons";
 import {
   memo,
   type ReactNode,
@@ -42,7 +39,6 @@ import {
   SidebarEmptyActionState,
   SidebarHeader,
   SidebarHeaderIconButton,
-  SidebarListItem,
   SidebarPanel,
   SidebarSearchFilterRow,
   SidebarSectionPager,
@@ -50,6 +46,7 @@ import {
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
+import { getTimeAgo } from "../utils/github-viewer-utils";
 import type {
   IssueFilter,
   IssueListItem,
@@ -62,6 +59,7 @@ import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubCreateCommand, type GitHubCreateKind } from "./github-create-command";
 import GitHubIssuesView from "./github-issues-view";
+import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GitHubSidebarState } from "./github-sidebar-state";
 import {
   GITHUB_ACTION_LIST_TTL_MS,
@@ -105,12 +103,33 @@ interface PRListItemProps {
 
 const PRListItem = memo(
   ({ pr, isActive, onSelect, onPrefetch, onContextMenu, repoPath }: PRListItemProps) => {
+    const updatedLabel = getTimeAgo(pr.updatedAt);
+    const branchLabel = pr.baseRef && pr.headRef ? `${pr.baseRef} <- ${pr.headRef}` : undefined;
+    const badges: GitHubSidebarPreviewBadge[] = [
+      { label: pr.isDraft ? "Draft" : pr.state, tone: pr.isDraft ? "muted" : "accent" },
+      ...(pr.reviewDecision
+        ? [
+            {
+              label: pr.reviewDecision.replace(/_/g, " ").toLowerCase(),
+              tone: pr.reviewDecision === "APPROVED" ? "success" : "warning",
+            } satisfies GitHubSidebarPreviewBadge,
+          ]
+        : []),
+    ];
+    const authorAvatar = (
+      <GitHubAvatar
+        login={pr.author.login}
+        avatarUrl={pr.author.avatarUrl}
+        size={40}
+        className="size-full"
+      />
+    );
+
     return (
-      <SidebarListItem
+      <GitHubSidebarRow
+        title={pr.title}
         onClick={onSelect}
-        onMouseEnter={onPrefetch}
-        onFocus={onPrefetch}
-        onPointerDown={onPrefetch}
+        onPrefetch={onPrefetch}
         onContextMenu={(event) => onContextMenu(event, pr)}
         draggable
         onDragStart={(event) => {
@@ -126,26 +145,21 @@ const PRListItem = memo(
           });
         }}
         active={isActive}
-        leading={
-          <GitHubAvatar
-            login={pr.author.login}
-            avatarUrl={pr.author.avatarUrl}
-            size={40}
-            className="size-5"
-          />
-        }
-        description={`#${pr.number} by ${pr.author.login}`}
-        trailing={
-          <span
-            className="editor-font block min-w-0 truncate text-xs"
-            title={`${pr.baseRef} ← ${pr.headRef}`}
-          >
-            {pr.baseRef} &larr; {pr.headRef}
-          </span>
-        }
-      >
-        {pr.title}
-      </SidebarListItem>
+        leading={authorAvatar}
+        trailing={updatedLabel}
+        preview={{
+          title: pr.title,
+          subtitle: `#${pr.number} by ${pr.author.login}`,
+          icon: authorAvatar,
+          badges,
+          details: [
+            { label: "Updated", value: updatedLabel },
+            { label: "Created", value: getTimeAgo(pr.createdAt) },
+            { label: "Branches", value: branchLabel, mono: true },
+            { label: "Changes", value: `+${pr.additions} / -${pr.deletions}`, mono: true },
+          ],
+        }}
+      />
     );
   },
 );
@@ -611,6 +625,42 @@ const GitHubPRsView = memo(() => {
       ].some((value) => value.toLowerCase().includes(query)),
     );
   }, [deferredPrs, deferredSearchQuery]);
+
+  useEffect(() => {
+    if (
+      !isGitHubPRsViewActive ||
+      activeSection !== "pull-requests" ||
+      !effectiveRepoPath ||
+      filteredPrs.length === 0
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    const idleApi = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const prefetchVisiblePRs = () => {
+      if (cancelled) return;
+      filteredPrs.slice(0, 4).forEach((pr) => {
+        void prefetchPR(effectiveRepoPath, pr.number);
+      });
+    };
+    const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
+    const idleId = usesIdleCallback
+      ? idleApi.requestIdleCallback?.(prefetchVisiblePRs, { timeout: 1200 })
+      : window.setTimeout(prefetchVisiblePRs, 500);
+
+    return () => {
+      cancelled = true;
+      if (usesIdleCallback && idleId !== undefined) {
+        idleApi.cancelIdleCallback(idleId);
+      } else if (idleId !== undefined) {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, [activeSection, effectiveRepoPath, filteredPrs, isGitHubPRsViewActive, prefetchPR]);
 
   if (!isAuthenticated) {
     return (

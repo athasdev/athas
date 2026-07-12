@@ -1,0 +1,206 @@
+import { PreviewCard } from "@base-ui/react/preview-card";
+import { type DragEventHandler, type MouseEventHandler, type ReactNode, useCallback } from "react";
+import { cn } from "@/utils/cn";
+
+type PreviewBadgeTone = "default" | "accent" | "success" | "warning" | "error" | "muted";
+
+export interface GitHubSidebarPreviewBadge {
+  label: ReactNode;
+  tone?: PreviewBadgeTone;
+}
+
+export interface GitHubSidebarPreviewDetail {
+  label: ReactNode;
+  value?: ReactNode;
+  mono?: boolean;
+  className?: string;
+}
+
+export interface GitHubSidebarPreview {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  icon?: ReactNode;
+  badges?: GitHubSidebarPreviewBadge[];
+  details?: GitHubSidebarPreviewDetail[];
+  footer?: ReactNode;
+}
+
+interface GitHubSidebarRowProps {
+  title: ReactNode;
+  leading: ReactNode;
+  trailing?: ReactNode;
+  active?: boolean;
+  preview?: GitHubSidebarPreview;
+  className?: string;
+  draggable?: boolean;
+  onClick: () => void;
+  onContextMenu?: MouseEventHandler<HTMLElement>;
+  onDragStart?: DragEventHandler<HTMLElement>;
+  onPrefetch?: () => void;
+}
+
+function previewBadgeClassName(tone: PreviewBadgeTone = "default") {
+  switch (tone) {
+    case "accent":
+      return "bg-accent/12 text-accent";
+    case "success":
+      return "bg-success/12 text-success";
+    case "warning":
+      return "bg-warning/12 text-warning";
+    case "error":
+      return "bg-error/12 text-error";
+    case "muted":
+      return "bg-hover/70 text-text-lighter";
+    default:
+      return "bg-primary-bg text-text-lighter";
+  }
+}
+
+export function GitHubSidebarRow({
+  active = false,
+  className,
+  draggable = false,
+  leading,
+  onClick,
+  onContextMenu,
+  onDragStart,
+  onPrefetch,
+  preview,
+  title,
+  trailing,
+}: GitHubSidebarRowProps) {
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) onPrefetch?.();
+    },
+    [onPrefetch],
+  );
+
+  const rowClassName = cn(
+    "ui-font ui-text-base group/github-row flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-[var(--app-radius-menu-item)] px-2 text-left leading-[1.35] text-text-lighter transition-[background-color,color]",
+    "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
+    active && "bg-hover/80 text-text",
+    className,
+  );
+  const rowContent = (
+    <>
+      <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden">
+        {leading}
+      </span>
+      <span className="min-w-0 flex-1 truncate whitespace-nowrap text-text">{title}</span>
+      {trailing ? (
+        <span className="ml-auto max-w-16 shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
+          {trailing}
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (!preview) {
+    return (
+      <button
+        type="button"
+        className={rowClassName}
+        draggable={draggable}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        onDragStart={onDragStart}
+        onFocus={onPrefetch}
+        onMouseEnter={onPrefetch}
+        onPointerDown={onPrefetch}
+      >
+        {rowContent}
+      </button>
+    );
+  }
+
+  return (
+    <PreviewCard.Root onOpenChange={handleOpenChange}>
+      <PreviewCard.Trigger
+        delay={360}
+        closeDelay={120}
+        draggable={draggable}
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        onDragStart={onDragStart}
+        onFocus={onPrefetch}
+        onMouseEnter={onPrefetch}
+        onPointerDown={onPrefetch}
+        render={<button type="button" className={rowClassName} />}
+      >
+        {rowContent}
+      </PreviewCard.Trigger>
+      <PreviewCard.Portal>
+        <PreviewCard.Positioner
+          side="right"
+          align="start"
+          sideOffset={10}
+          collisionPadding={10}
+          className="z-[10080]"
+        >
+          <PreviewCard.Popup className="ui-font w-[21rem] overflow-hidden rounded-[var(--app-radius-menu)] border border-border/75 bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:translate-x-1 data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:translate-x-1 data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]">
+            <div className="border-border/70 border-b p-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                {preview.icon ? (
+                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-[var(--app-radius-pill)] bg-primary-bg">
+                    {preview.icon}
+                  </span>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-2 font-medium text-text ui-text-base">
+                    {preview.title}
+                  </div>
+                  {preview.subtitle ? (
+                    <div className="mt-1 truncate text-text-lighter ui-text-sm">
+                      {preview.subtitle}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              {preview.badges?.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {preview.badges.map((badge, index) => (
+                    <span
+                      key={index}
+                      className={cn(
+                        "inline-flex h-5 max-w-full items-center rounded-[var(--app-radius-pill)] px-1.5 leading-none ui-text-sm",
+                        previewBadgeClassName(badge.tone),
+                      )}
+                    >
+                      <span className="truncate">{badge.label}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            {preview.details?.length ? (
+              <dl className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 ui-text-sm">
+                {preview.details.map((detail, index) =>
+                  detail.value ? (
+                    <div key={index} className="contents">
+                      <dt className="text-text-lighter">{detail.label}</dt>
+                      <dd
+                        className={cn(
+                          "min-w-0 truncate text-text",
+                          detail.mono && "editor-font",
+                          detail.className,
+                        )}
+                      >
+                        {detail.value}
+                      </dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
+            ) : null}
+            {preview.footer ? (
+              <div className="border-border/70 border-t px-3 py-2 text-text-lighter ui-text-sm">
+                {preview.footer}
+              </div>
+            ) : null}
+          </PreviewCard.Popup>
+        </PreviewCard.Positioner>
+      </PreviewCard.Portal>
+    </PreviewCard.Root>
+  );
+}

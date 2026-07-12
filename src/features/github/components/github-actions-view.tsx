@@ -5,7 +5,7 @@ import {
   PulseIcon as Activity,
   WarningCircleIcon as AlertCircle,
   XCircleIcon as XCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarState } from "./github-sidebar-state";
 import {
@@ -27,6 +27,7 @@ import type {
   WorkflowRunFilter,
   WorkflowRunListItem,
 } from "../types/github.types";
+import { getTimeAgo } from "../utils/github-viewer-utils";
 import {
   GITHUB_ACTION_DETAILS_TTL_MS,
   GITHUB_ACTION_LIST_TTL_MS,
@@ -34,8 +35,8 @@ import {
   githubActionListCache,
 } from "../utils/github-data-cache";
 import { LoadingIndicator } from "@/ui/loading";
-import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
+import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 
 const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null) => {
   const normalizedStatus = status?.toLowerCase() ?? "";
@@ -135,37 +136,87 @@ interface WorkflowRunRowProps {
   repoPath?: string | null;
 }
 
+function getWorkflowRunBadgeTone(
+  status?: string | null,
+  conclusion?: string | null,
+): GitHubSidebarPreviewBadge["tone"] {
+  const normalizedStatus = status?.toLowerCase() ?? "";
+  const normalizedConclusion = conclusion?.toLowerCase() ?? "";
+
+  if (normalizedConclusion === "success") return "success";
+  if (
+    normalizedConclusion === "failure" ||
+    normalizedConclusion === "timed_out" ||
+    normalizedConclusion === "startup_failure"
+  ) {
+    return "error";
+  }
+  if (
+    normalizedStatus === "in_progress" ||
+    normalizedStatus === "waiting" ||
+    normalizedStatus === "requested"
+  ) {
+    return "accent";
+  }
+  if (normalizedStatus === "queued" || normalizedStatus === "pending") return "warning";
+  return "muted";
+}
+
 const WorkflowRunRow = memo(
-  ({ run, isActive, onSelect, onPrefetch, repoPath }: WorkflowRunRowProps) => (
-    <SidebarListItem
-      onClick={onSelect}
-      onMouseEnter={onPrefetch}
-      onFocus={onPrefetch}
-      onPointerDown={onPrefetch}
-      draggable
-      onDragStart={(event) => {
-        const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
-        writeSidebarResourceDragData(event.dataTransfer, {
-          type: "github-action",
-          repoPath: repoPath ?? undefined,
-          runId: run.databaseId,
+  ({ run, isActive, onSelect, onPrefetch, repoPath }: WorkflowRunRowProps) => {
+    const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
+    const status = getWorkflowRunStatus(run.status, run.conclusion);
+    const updatedLabel = run.updatedAt ? getTimeAgo(run.updatedAt) : null;
+    const shortSha = run.headSha ? run.headSha.slice(0, 7) : null;
+    const statusIcon = <WorkflowRunStatusIcon status={run.status} conclusion={run.conclusion} />;
+    const badges: GitHubSidebarPreviewBadge[] = [
+      {
+        label: status.label,
+        tone: getWorkflowRunBadgeTone(run.status, run.conclusion),
+      },
+      ...(run.event
+        ? [{ label: run.event, tone: "muted" } satisfies GitHubSidebarPreviewBadge]
+        : []),
+      ...(run.headBranch
+        ? [{ label: run.headBranch, tone: "default" } satisfies GitHubSidebarPreviewBadge]
+        : []),
+    ];
+
+    return (
+      <GitHubSidebarRow
+        title={title}
+        onClick={onSelect}
+        onPrefetch={onPrefetch}
+        draggable
+        onDragStart={(event) => {
+          writeSidebarResourceDragData(event.dataTransfer, {
+            type: "github-action",
+            repoPath: repoPath ?? undefined,
+            runId: run.databaseId,
+            title,
+            url: run.url,
+            name: title,
+          });
+        }}
+        active={isActive}
+        leading={statusIcon}
+        trailing={updatedLabel}
+        preview={{
           title,
-          url: run.url,
-          name: title,
-        });
-      }}
-      active={isActive}
-      leading={<WorkflowRunStatusIcon status={run.status} conclusion={run.conclusion} />}
-      description={run.workflowName}
-      trailing={
-        run.headBranch ? (
-          <span className="editor-font max-w-32 truncate">{run.headBranch}</span>
-        ) : null
-      }
-    >
-      {run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`}
-    </SidebarListItem>
-  ),
+          subtitle: run.workflowName || `Run #${run.databaseId}`,
+          icon: statusIcon,
+          badges,
+          details: [
+            { label: "Updated", value: updatedLabel },
+            { label: "Workflow", value: run.workflowName, mono: true },
+            { label: "Branch", value: run.headBranch, mono: true },
+            { label: "Commit", value: shortSha, mono: true },
+            { label: "Run", value: `#${run.databaseId}`, mono: true },
+          ],
+        }}
+      />
+    );
+  },
 );
 
 WorkflowRunRow.displayName = "WorkflowRunRow";
@@ -322,6 +373,33 @@ const GitHubActionsView = memo(
         ].some((value) => value.toLowerCase().includes(query)),
       );
     }, [deferredRuns, deferredSearchQuery, filter]);
+
+    useEffect(() => {
+      if (!isAuthenticated || !repoPath || filteredRuns.length === 0) return;
+
+      let cancelled = false;
+      const idleApi = window as Window & {
+        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
+      const prefetchVisibleRuns = () => {
+        if (cancelled) return;
+        filteredRuns.slice(0, 4).forEach((run) => prefetchWorkflowRun(run));
+      };
+      const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
+      const idleId = usesIdleCallback
+        ? idleApi.requestIdleCallback?.(prefetchVisibleRuns, { timeout: 1200 })
+        : window.setTimeout(prefetchVisibleRuns, 500);
+
+      return () => {
+        cancelled = true;
+        if (usesIdleCallback && idleId !== undefined) {
+          idleApi.cancelIdleCallback(idleId);
+        } else if (idleId !== undefined) {
+          window.clearTimeout(idleId);
+        }
+      };
+    }, [filteredRuns, isAuthenticated, prefetchWorkflowRun, repoPath]);
 
     if (!isAuthenticated) {
       return (
