@@ -16,7 +16,7 @@ import {
   MagnifyingGlassIcon as Search,
   TrashIcon as Trash2,
   TextTIcon as Type,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import Keybinding from "@/ui/keybinding";
 

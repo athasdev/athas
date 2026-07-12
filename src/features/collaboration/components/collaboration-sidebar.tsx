@@ -10,7 +10,7 @@ import {
   MonitorIcon as Monitor,
   MagnifyingGlassIcon as Search,
   UsersThreeIcon as UsersThree,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   type ReactNode,
   useCallback,

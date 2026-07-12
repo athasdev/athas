@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import {
   ArrowLeftIcon as ArrowLeft,
   CirclesThreeIcon as CirclesThree,
@@ -7,7 +7,7 @@ import {
   DownloadSimpleIcon as DownloadSimple,
   SlidersIcon as Sliders,
   UserIcon as User,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useMemo, useState } from "react";

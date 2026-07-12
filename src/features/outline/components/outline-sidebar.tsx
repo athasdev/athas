@@ -10,7 +10,7 @@ import {
   FunctionIcon,
   MagnifyingGlassIcon as Search,
   SquaresFourIcon as SquaresFour,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import type { MenuItem } from "@/ui/dropdown";

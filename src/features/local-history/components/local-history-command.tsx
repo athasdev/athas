@@ -7,7 +7,7 @@ import {
   PencilSimpleIcon as PencilSimple,
   PlusIcon as Plus,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile, writeFile } from "@/features/file-system/controllers/platform";

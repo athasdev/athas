@@ -1,4 +1,4 @@
-import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import type { MenuItem } from "@/ui/dropdown";

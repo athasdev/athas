@@ -10,7 +10,7 @@ import {
   SquaresFourIcon as SquaresFour,
   StackIcon as Stack,
   TextTIcon as TextT,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { forwardRef } from "react";
 import {
   SidebarTreeDisclosure,

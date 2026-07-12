@@ -46,7 +46,8 @@ function normalizeResolvedPath(path: string): string {
   const normalizedPath = path.replace(/\\/g, "/");
   const driveMatch = normalizedPath.match(/^([A-Za-z]:)(\/.*)?$/);
   const protocolMatch = normalizedPath.match(/^([A-Za-z][A-Za-z\d+.-]*:\/\/[^/]*)(\/.*)?$/);
-  const prefix = driveMatch?.[1] ?? protocolMatch?.[1] ?? (normalizedPath.startsWith("/") ? "/" : "");
+  const prefix =
+    driveMatch?.[1] ?? protocolMatch?.[1] ?? (normalizedPath.startsWith("/") ? "/" : "");
   const body = driveMatch?.[2] ?? protocolMatch?.[2] ?? normalizedPath;
   const segments = body.split("/").filter(Boolean);
   const resolved: string[] = [];

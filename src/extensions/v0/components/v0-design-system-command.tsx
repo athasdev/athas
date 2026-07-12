@@ -6,7 +6,7 @@ import {
   PaletteIcon as Palette,
   PlusIcon as Plus,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";

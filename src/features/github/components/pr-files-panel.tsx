@@ -2,7 +2,7 @@ import {
   ListBulletsIcon as ListBullets,
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as SlidersHorizontal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useMemo, useState } from "react";
 import {
   FileNavigatorSidebar,

@@ -1,4 +1,4 @@
-import { CopySimpleIcon as CopySimple } from "@phosphor-icons/react";
+import { CopySimpleIcon as CopySimple } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { memo, useCallback } from "react";
 import {

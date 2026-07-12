@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as MagnifyingGlass } from "@/ui/icons";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,

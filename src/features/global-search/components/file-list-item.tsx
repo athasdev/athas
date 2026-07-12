@@ -1,4 +1,4 @@
-import { ClockIcon } from "@phosphor-icons/react";
+import { ClockIcon } from "@/ui/icons";
 import { memo } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";

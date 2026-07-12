@@ -1,8 +1,4 @@
-import {
-  DatabaseIcon as Database,
-  PackageIcon as Package,
-  PushPinIcon as Pin,
-} from "@phosphor-icons/react";
+import { DatabaseIcon as Database, PackageIcon as Package, PushPinIcon as Pin } from "@/ui/icons";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 

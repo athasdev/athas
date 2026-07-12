@@ -83,7 +83,7 @@ export function useFileExplorerDragDrop(
         background-color: var(--color-primary-bg);
         border: 2px solid var(--color-accent);
         border-radius: var(--app-radius-control);
-        font-size: var(--ui-text-base);
+        font-size: var(--ui-text-sm);
         font-family: var(--app-font-family);
         color: var(--color-text);
         box-shadow: var(--shadow-popover);

@@ -5,7 +5,7 @@ import {
   MagnifyingGlassIcon as Search,
   HardDrivesIcon as Server,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

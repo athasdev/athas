@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { FadersHorizontalIcon as FadersHorizontal } from "@phosphor-icons/react";
+import { FadersHorizontalIcon as FadersHorizontal } from "@/ui/icons";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode } from "@/features/ai/types/ai-chat-store.types";
 import Select from "@/ui/select";

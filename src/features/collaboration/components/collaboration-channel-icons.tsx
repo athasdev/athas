@@ -8,7 +8,7 @@ import {
   PushPinIcon as PushPin,
   RocketLaunchIcon as RocketLaunch,
   WrenchIcon as Wrench,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { EmojiPicker } from "./emoji-picker";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";

@@ -4,7 +4,7 @@ import {
   PauseIcon as Pause,
   StackIcon as Stack,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import type { ReactNode } from "react";
 import { useState } from "react";

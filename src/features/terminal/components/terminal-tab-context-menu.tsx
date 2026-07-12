@@ -6,7 +6,7 @@ import {
   PushPinSlashIcon as PinOff,
   ArrowCounterClockwiseIcon as RotateCcw,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";

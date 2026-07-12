@@ -6,7 +6,7 @@ import {
   KeyIcon as Key,
   LinkIcon as Link,
   TextTIcon as Type,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { Button } from "@/ui/button";
 import {
   formatForeignKeyLabel,

@@ -6,7 +6,7 @@ import {
   RowsPlusTopIcon as Sidebar,
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { KeyboardEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {

@@ -10,7 +10,7 @@ import {
   PencilSimpleIcon as Pencil,
   ArrowClockwiseIcon as RefreshCw,
   XCircleIcon as XCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { ReactNode } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

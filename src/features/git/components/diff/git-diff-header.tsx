@@ -6,7 +6,7 @@ import {
   RowsIcon as Rows3,
   TrashIcon as Trash2,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo } from "react";
 import Breadcrumb, {
   BreadcrumbActionButton,

@@ -5,7 +5,7 @@ import {
   PlusIcon as Plus,
   RadioButtonIcon as Radio,
   TableIcon as Table,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   SidebarHeader,
   SidebarHeaderIconButton,

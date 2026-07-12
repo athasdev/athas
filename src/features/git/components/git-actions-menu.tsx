@@ -10,7 +10,7 @@ import {
   GearSixIcon as Settings,
   TagIcon as Tag,
   UploadIcon as Upload,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";

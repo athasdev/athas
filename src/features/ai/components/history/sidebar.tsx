@@ -1,8 +1,4 @@
-import {
-  CheckIcon as Check,
-  MagnifyingGlassIcon as Search,
-  TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+import { CheckIcon as Check, MagnifyingGlassIcon as Search, TrashIcon as Trash2 } from "@/ui/icons";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat.types";

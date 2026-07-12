@@ -6,7 +6,7 @@ import {
   ChatCircleTextIcon as MessageSquare,
   PencilSimpleIcon as Pencil,
   ArrowClockwiseIcon as RefreshCw,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";

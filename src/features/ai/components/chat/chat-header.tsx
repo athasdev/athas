@@ -4,7 +4,7 @@ import {
   ClockCounterClockwiseIcon as History,
   MagnifyingGlassIcon as Search,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";

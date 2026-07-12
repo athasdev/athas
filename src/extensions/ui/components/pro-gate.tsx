@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LockIcon as Lock } from "@phosphor-icons/react";
+import { LockIcon as Lock } from "@/ui/icons";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { ProBadge } from "./pro-badge";
 

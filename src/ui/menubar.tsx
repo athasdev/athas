@@ -1,5 +1,5 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
-import { CaretRightIcon } from "@phosphor-icons/react";
+import { CaretRightIcon } from "@/ui/icons";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
 import Keybinding from "@/ui/keybinding";
 import { cn } from "@/utils/cn";

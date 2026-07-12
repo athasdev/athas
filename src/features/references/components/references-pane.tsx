@@ -5,7 +5,7 @@ import {
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LoadingIndicator } from "@/ui/loading";

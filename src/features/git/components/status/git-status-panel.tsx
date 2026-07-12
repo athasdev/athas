@@ -7,7 +7,7 @@ import {
   MinusIcon as Minus,
   PlusIcon as Plus,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";

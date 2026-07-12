@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { motion, useReducedMotion } from "framer-motion";
-import { type IconProps as PhosphorIconProps, XIcon as X } from "@phosphor-icons/react";
+import { type IconProps as AppIconProps, XIcon as X } from "@/ui/icons";
 import { type ReactNode } from "react";
 import { instantTransition, overlayEntrance, overlayTransition } from "@/ui/motion";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
@@ -12,7 +12,7 @@ interface DialogProps {
   onClose: () => void;
   title: ReactNode;
   icon?: React.ForwardRefExoticComponent<
-    Omit<PhosphorIconProps, "ref"> & React.RefAttributes<SVGSVGElement>
+    Omit<AppIconProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
   headerActions?: ReactNode;
   footer?: ReactNode;

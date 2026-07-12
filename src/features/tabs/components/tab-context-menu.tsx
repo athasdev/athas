@@ -11,7 +11,7 @@ import {
   RowsIcon as Rows2,
   TerminalWindowIcon as Terminal,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";

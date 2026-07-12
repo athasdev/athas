@@ -10,7 +10,7 @@ import {
   TerminalWindowIcon as Terminal,
   MagnifyingGlassPlusIcon as ZoomIn,
   MagnifyingGlassMinusIcon as ZoomOut,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";

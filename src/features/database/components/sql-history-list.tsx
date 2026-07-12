@@ -4,7 +4,7 @@ import {
   PlayIcon as Play,
   TrashIcon as Trash,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { formatSqlHistoryPreview } from "../lib/sql-history";
 import { writeDatabaseClipboardText } from "../utils/clipboard";

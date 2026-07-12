@@ -1,8 +1,5 @@
 import { memo, useCallback, useMemo } from "react";
-import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-} from "@phosphor-icons/react";
+import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useFoldStore } from "@/features/editor/stores/fold.store";
 import { GUTTER_CONFIG } from "@/features/editor/utils/gutter";

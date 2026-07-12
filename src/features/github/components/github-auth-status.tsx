@@ -1,4 +1,4 @@
-import { WarningCircleIcon as AlertCircle } from "@phosphor-icons/react";
+import { WarningCircleIcon as AlertCircle } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/ui/button";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";

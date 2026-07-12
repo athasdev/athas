@@ -4,7 +4,7 @@ import {
   CaretRightIcon as ChevronRight,
   CopyIcon as Copy,
   TerminalWindowIcon as Terminal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";

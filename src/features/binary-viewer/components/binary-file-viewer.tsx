@@ -1,5 +1,5 @@
 import { readFile } from "@tauri-apps/plugin-fs";
-import { FileIcon } from "@phosphor-icons/react";
+import { FileIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
 import { LoadingIndicator } from "@/ui/loading";

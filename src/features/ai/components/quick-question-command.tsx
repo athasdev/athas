@@ -1,8 +1,4 @@
-import {
-  CaretLeftIcon as CaretLeft,
-  CopyIcon as Copy,
-  SparkleIcon as Sparkles,
-} from "@phosphor-icons/react";
+import { CaretLeftIcon as CaretLeft, CopyIcon as Copy, SparkleIcon as Sparkles } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getQuickQuestionCompletionStream } from "@/features/ai/services/ai-chat-service";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";

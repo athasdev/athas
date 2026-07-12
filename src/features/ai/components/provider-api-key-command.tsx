@@ -3,7 +3,7 @@ import {
   MagnifyingGlassIcon as Search,
   TrashIcon as Trash,
   WarningCircleIcon as WarningCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import {

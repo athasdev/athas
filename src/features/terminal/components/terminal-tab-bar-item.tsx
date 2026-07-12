@@ -1,4 +1,4 @@
-import { PushPinIcon as Pin, XIcon as X } from "@phosphor-icons/react";
+import { PushPinIcon as Pin, XIcon as X } from "@/ui/icons";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";

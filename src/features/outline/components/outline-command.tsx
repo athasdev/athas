@@ -1,4 +1,4 @@
-import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeftIcon as ArrowLeft } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CommandEmpty,

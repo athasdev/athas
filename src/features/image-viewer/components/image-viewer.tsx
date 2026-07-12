@@ -4,7 +4,7 @@ import {
   ArrowUpIcon as ArrowUp,
   FileIcon,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";

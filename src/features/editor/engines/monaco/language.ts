@@ -27,7 +27,7 @@ export const MONACO_LANGUAGE_BY_ATHAS_ID: Record<string, string> = {
   lua: "lua",
   lockfile: "lockfile",
   markdown: "markdown",
-  nix: "plaintext",
+  nix: "nix",
   objc: "objective-c",
   ocaml: "ocaml",
   php: "php",

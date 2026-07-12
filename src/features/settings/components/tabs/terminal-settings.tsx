@@ -1,4 +1,4 @@
-import { InfoIcon as Info, PlusIcon as Plus, TrashIcon as Trash2 } from "@phosphor-icons/react";
+import { InfoIcon as Info, PlusIcon as Plus, TrashIcon as Trash2 } from "@/ui/icons";
 import { useEffect } from "react";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useFontStore } from "@/features/settings/stores/font.store";

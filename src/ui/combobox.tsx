@@ -1,9 +1,5 @@
-import {
-  CheckIcon as Check,
-  CaretDownIcon as ChevronDown,
-  XIcon as X,
-} from "@phosphor-icons/react";
-import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { CheckIcon as Check, CaretDownIcon as ChevronDown, XIcon as X } from "@/ui/icons";
+import type { Icon as AppIcon } from "@/ui/icons";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { forwardRef, useRef, type ButtonHTMLAttributes, type CSSProperties } from "react";
@@ -147,7 +143,7 @@ type ComboboxInputProps = Omit<ComboboxPrimitive.Input.Props, "size"> & {
   containerStyle?: CSSProperties;
   inputClassName?: string;
   inputStyle?: CSSProperties;
-  leftIcon?: PhosphorIcon;
+  leftIcon?: AppIcon;
   leftIconSize?: number;
   htmlSize?: number;
   size?: ComboboxSize;

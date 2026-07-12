@@ -1,4 +1,4 @@
-import { CheckIcon as Check, XIcon as X } from "@phosphor-icons/react";
+import { CheckIcon as Check, XIcon as X } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

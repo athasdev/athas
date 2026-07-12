@@ -1,7 +1,4 @@
-import {
-  ArrowDownIcon as ArrowDown,
-  ChatCircleTextIcon as MessageSquare,
-} from "@phosphor-icons/react";
+import { ArrowDownIcon as ArrowDown, ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
 import {
   forwardRef,
   type ComponentProps,

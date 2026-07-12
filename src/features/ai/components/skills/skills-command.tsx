@@ -7,7 +7,7 @@ import {
   PencilSimpleIcon as PencilSimple,
   PlusIcon as Plus,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   createSkillFromMarketplace,

@@ -4,7 +4,7 @@ import {
   CopyIcon as Copy,
   GitBranchIcon as GitBranch,
   GitCommitIcon as GitCommit,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener } from "usehooks-ts";

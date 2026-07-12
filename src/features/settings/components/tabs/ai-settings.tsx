@@ -12,7 +12,7 @@ import {
   ArrowClockwiseIcon as RefreshCw,
   ArrowCounterClockwiseIcon as RotateCcw,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";

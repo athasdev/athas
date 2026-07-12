@@ -3,7 +3,7 @@ import {
   CornersOutIcon as CornersOut,
   MinusIcon as Minus,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { chromeControl } from "@/features/layout/components/chrome-control-styles";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";

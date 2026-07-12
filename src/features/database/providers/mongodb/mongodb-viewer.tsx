@@ -8,7 +8,7 @@ import {
   StackIcon as Layers,
   ArrowClockwiseIcon as RefreshCw,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";

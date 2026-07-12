@@ -7,7 +7,7 @@ import {
   ArrowClockwiseIcon as RotateCw,
   FloppyDiskIcon as Save,
   ArrowCounterClockwiseIcon as Undo2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";

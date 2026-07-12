@@ -180,7 +180,7 @@ export const AccountSettings = () => {
                 <Badge
                   variant="default"
                   size="compact"
-                  className="border-accent/30 bg-accent/10 font-normal text-accent"
+                  className="bg-accent/10 font-normal text-accent"
                 >
                   {planLabel}
                 </Badge>

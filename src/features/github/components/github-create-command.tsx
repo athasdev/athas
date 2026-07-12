@@ -1,9 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  CheckIcon as Check,
-  PlusIcon as Plus,
-  SparkleIcon as Sparkle,
-} from "@phosphor-icons/react";
+import { CheckIcon as Check, PlusIcon as Plus, SparkleIcon as Sparkle } from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { getBranches } from "@/features/git/api/git-branches-api";
 import { getRefDiff } from "@/features/git/api/git-diff-api";

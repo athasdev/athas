@@ -7,7 +7,7 @@ import {
   ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   type MouseEvent,
   type WheelEvent,

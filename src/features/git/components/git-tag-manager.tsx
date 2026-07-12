@@ -11,7 +11,7 @@ import {
   TrashIcon as Trash2,
   UploadIcon as Upload,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

@@ -6,7 +6,7 @@ import {
   TrashIcon as Trash2,
   WifiHighIcon as Wifi,
   WifiSlashIcon as WifiOff,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";

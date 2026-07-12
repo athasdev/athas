@@ -9,7 +9,7 @@ import {
   TrashIcon as Trash,
   WarningCircleIcon as WarningCircle,
   XCircleIcon as XCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { NotificationIcon } from "@/features/notifications/components/notification-icon";

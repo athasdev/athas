@@ -1,4 +1,4 @@
-import { CopyIcon as Copy, type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { CopyIcon as Copy, type Icon as AppIcon } from "@/ui/icons";
 import { type ComponentProps, type ReactNode } from "react";
 import { Button, type ButtonProps } from "@/ui/button";
 import { chatMiniIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
@@ -96,7 +96,7 @@ export function MessageAction({
 }: Omit<ButtonProps, "tooltip"> & {
   label: string;
   tooltip?: string;
-  icon?: PhosphorIcon;
+  icon?: AppIcon;
   children?: ReactNode;
 }) {
   return (

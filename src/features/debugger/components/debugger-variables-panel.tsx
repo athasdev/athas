@@ -1,4 +1,4 @@
-import { CaretRightIcon as CaretRight } from "@phosphor-icons/react";
+import { CaretRightIcon as CaretRight } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";

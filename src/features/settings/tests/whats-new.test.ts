@@ -32,9 +32,7 @@ describe("resolveWhatsNewInfo", () => {
       });
     };
 
-    await expect(
-      resolveWhatsNewInfo({ version: "1.2.0" }, fetchReleaseNotes),
-    ).resolves.toEqual({
+    await expect(resolveWhatsNewInfo({ version: "1.2.0" }, fetchReleaseNotes)).resolves.toEqual({
       version: "1.2.0",
       body: "Fixed release notes.",
       date: "2026-07-08",
@@ -58,9 +56,7 @@ describe("resolveWhatsNewInfo", () => {
       });
     };
 
-    await expect(
-      resolveWhatsNewInfo({ version: "1.2.0" }, fetchReleaseNotes),
-    ).resolves.toEqual({
+    await expect(resolveWhatsNewInfo({ version: "1.2.0" }, fetchReleaseNotes)).resolves.toEqual({
       version: "1.2.0",
       body: "Archived release notes.",
       date: "2026-07-07",
@@ -76,8 +72,8 @@ describe("resolveWhatsNewInfo", () => {
       throw new Error("offline");
     };
 
-    await expect(
-      resolveWhatsNewInfo({ version: "1.2.0" }, fetchReleaseNotes),
-    ).resolves.toEqual({ version: "1.2.0" });
+    await expect(resolveWhatsNewInfo({ version: "1.2.0" }, fetchReleaseNotes)).resolves.toEqual({
+      version: "1.2.0",
+    });
   });
 });

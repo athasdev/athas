@@ -1,4 +1,4 @@
-import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {

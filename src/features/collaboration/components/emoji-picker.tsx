@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useMemo, useState } from "react";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";

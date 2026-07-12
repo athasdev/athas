@@ -8,8 +8,8 @@ import {
   MagnifyingGlassIcon as Search,
   TextTIcon as WholeWord,
   XIcon as X,
-  type Icon as PhosphorIcon,
-} from "@phosphor-icons/react";
+  type Icon as AppIcon,
+} from "@/ui/icons";
 import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -47,7 +47,7 @@ export const SearchField = forwardRef<
   Omit<ComponentProps<typeof Input>, "onChange" | "value" | "leftIcon"> & {
     value: string;
     onChange: (value: string) => void;
-    leftIcon?: PhosphorIcon;
+    leftIcon?: AppIcon;
   }
 >(function SearchField(
   { value, onChange, leftIcon = Search, placeholder = "Search", ...props },

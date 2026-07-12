@@ -20,7 +20,7 @@ import {
   XIcon as X,
   UploadIcon as Upload,
   WarningIcon as Warning,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

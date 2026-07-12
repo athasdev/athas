@@ -3,7 +3,7 @@ import {
   CaretRightIcon as ChevronRight,
   CircleIcon as Circle,
   PlayIcon as Play,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useState } from "react";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";

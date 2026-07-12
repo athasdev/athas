@@ -1,9 +1,3 @@
-import {
-  PencilSimpleIcon as PencilSimple,
-  PlayIcon as Play,
-  PlusIcon as Plus,
-  TrashIcon as Trash,
-} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
@@ -18,6 +12,7 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { PenIcon, PlayIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 
@@ -125,7 +120,7 @@ export default function RunActionsButton() {
               aria-label="Run actions"
               compact
             >
-              <Play className={chromeIcon()} weight="duotone" />
+              <PlayIcon className={chromeIcon()} />
             </Button>
           </Tooltip>
         </TabsList>
@@ -154,7 +149,7 @@ export default function RunActionsButton() {
                   className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent p-0 text-text hover:bg-transparent"
                   style={{ fontSize: "var(--ui-text-sm)" }}
                 >
-                  <Play className="shrink-0 text-text-lighter" weight="duotone" />
+                  <PlayIcon className="shrink-0 text-text-lighter" />
                   <span className="ui-text-sm truncate text-text">{action.name}</span>
                 </Button>
 
@@ -173,7 +168,7 @@ export default function RunActionsButton() {
                     className="text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
-                    <PencilSimple weight="duotone" />
+                    <PenIcon />
                   </Button>
                   <Button
                     type="button"
@@ -183,7 +178,7 @@ export default function RunActionsButton() {
                     className="text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
-                    <Trash weight="duotone" />
+                    <TrashIcon />
                   </Button>
                 </div>
               </div>
@@ -203,7 +198,7 @@ export default function RunActionsButton() {
           onClick={() => openDialog()}
           className={dropdownItemClassName()}
         >
-          <Plus className="text-text-lighter" weight="bold" />
+          <PlusIcon className="text-text-lighter" />
           <span>Add Action</span>
         </Button>
       </Dropdown>

@@ -4,7 +4,7 @@ import {
   CaretRightIcon as ChevronRight,
   MinusIcon as Minus,
   PlusIcon as Plus,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useCallback, useMemo } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";

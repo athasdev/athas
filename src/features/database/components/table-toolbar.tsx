@@ -9,7 +9,7 @@ import {
   PlusCircleIcon as PlusCircle,
   RadioButtonIcon as RadioButton,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { databaseChipClassName } from "./database-surface";

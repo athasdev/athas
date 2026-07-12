@@ -5,7 +5,7 @@ import {
   FolderIcon as Folder,
   HouseIcon as House,
   WarningIcon as Warning,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { Button } from "@/ui/button";

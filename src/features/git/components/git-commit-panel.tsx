@@ -5,7 +5,7 @@ import {
   CaretDownIcon as ChevronDown,
   WarningCircleIcon as AlertCircle,
   SparkleIcon as Sparkles,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";

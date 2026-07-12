@@ -18,7 +18,7 @@ import {
   ArrowsInIcon as Minimize2,
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";

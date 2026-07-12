@@ -1,4 +1,4 @@
-import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@phosphor-icons/react";
+import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@/ui/icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";

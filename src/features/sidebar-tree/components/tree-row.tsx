@@ -22,7 +22,7 @@ export function TreeRow({
     <button
       type="button"
       className={cn(
-        "file-tree-row ui-font ui-text-base flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-[var(--app-radius-menu-item)] border-none bg-transparent text-left text-text outline-none transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover focus:outline-none",
+        "file-tree-row ui-font ui-text-sm flex w-full min-w-max cursor-pointer select-none items-center whitespace-nowrap rounded-[var(--app-radius-menu-item)] border-none bg-transparent text-left text-text outline-none transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover focus:outline-none",
         active && "bg-selected",
         className,
       )}

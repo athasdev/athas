@@ -7,7 +7,7 @@ import {
   PlayCircleIcon as PlayCircle,
   PlusIcon as Plus,
   TerminalWindowIcon as TerminalWindow,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { FileItem } from "@/features/global-search/types/global-search.types";

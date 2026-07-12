@@ -1,4 +1,4 @@
-import { RadioButtonIcon as Radio } from "@phosphor-icons/react";
+import { RadioButtonIcon as Radio } from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

@@ -18,7 +18,7 @@ import {
   TerminalWindowIcon as Terminal,
   TrashIcon as Trash,
   UploadSimpleIcon as Upload,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useState } from "react";

@@ -1,4 +1,4 @@
-import { PlusIcon as Plus, XIcon as X } from "@phosphor-icons/react";
+import { PlusIcon as Plus, XIcon as X } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";

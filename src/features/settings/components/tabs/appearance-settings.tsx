@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { UploadIcon as Upload } from "@phosphor-icons/react";
+import { UploadIcon as Upload } from "@/ui/icons";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import { themeRegistry } from "@/extensions/themes/theme-registry";

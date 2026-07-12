@@ -12,7 +12,7 @@ import {
   TerminalWindowIcon as Terminal,
   WarningCircleIcon as WarningCircle,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";

@@ -1,4 +1,4 @@
-import { FolderOpenIcon as FolderOpen } from "@phosphor-icons/react";
+import { FolderOpenIcon as FolderOpen } from "@/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

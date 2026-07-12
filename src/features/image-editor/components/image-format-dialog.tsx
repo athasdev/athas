@@ -1,4 +1,4 @@
-import { ImageIcon as Image } from "@phosphor-icons/react";
+import { ImageIcon as Image } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";

@@ -1,7 +1,7 @@
 import {
   ClockCounterClockwiseIcon as ClockCounterClockwise,
   FilePlusIcon as FilePlus,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { openLocalHistoryForActiveFile } from "@/features/local-history/utils/open-local-history";
 import { createTabActions } from "@/features/tabs/constants/tab-actions";
 import type { Action } from "../types/action.types";

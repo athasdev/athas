@@ -5,7 +5,7 @@ import {
   SquareIcon as Square,
   LightningIcon as Zap,
   LightningSlashIcon as ZapOff,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";

@@ -1,4 +1,4 @@
-import { SparkleIcon as Sparkles } from "@phosphor-icons/react";
+import { SparkleIcon as Sparkles } from "@/ui/icons";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import type { Action } from "../types/action.types";
 

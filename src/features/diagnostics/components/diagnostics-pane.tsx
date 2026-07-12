@@ -15,7 +15,7 @@ import {
   MagnifyingGlassIcon as Search,
   MagicWandIcon as WandSparkles,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";

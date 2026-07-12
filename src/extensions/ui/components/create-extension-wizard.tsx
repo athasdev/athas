@@ -8,7 +8,7 @@ import {
   PuzzlePieceIcon as Puzzle,
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

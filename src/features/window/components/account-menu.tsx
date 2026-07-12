@@ -1,15 +1,4 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  BookOpenIcon as BookOpen,
-  CreditCardIcon as CreditCard,
-  CurrencyDollarIcon as CurrencyDollar,
-  SignInIcon as SignIn,
-  SignOutIcon as SignOut,
-  UserCircleIcon as UserCircle,
-  GearSixIcon as GearSix,
-  ArrowSquareOutIcon as ArrowSquareOut,
-  UsersThreeIcon as UsersThree,
-} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import {
@@ -29,6 +18,17 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
+import {
+  BookOpenIcon,
+  CreditCardIcon,
+  MoneyIcon,
+  OpenExternalIcon,
+  GearSixIcon,
+  SignInIcon,
+  SignOutIcon,
+  UserIcon,
+  UsersThreeIcon,
+} from "@/ui/icons";
 import { TabsList } from "@/ui/tabs";
 import Tooltip from "@/ui/tooltip";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
@@ -111,13 +111,13 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "settings",
       label: "Settings",
-      icon: <GearSix weight="duotone" />,
+      icon: <GearSixIcon />,
       onClick: handleOpenSettings,
     },
     {
       id: "docs",
       label: "Docs",
-      icon: <BookOpen weight="duotone" />,
+      icon: <BookOpenIcon />,
       onClick: handleOpenDocs,
     },
     {
@@ -129,7 +129,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "sign-in",
       label: isSigningIn ? "Signing In..." : "Sign In",
-      icon: <SignIn weight="duotone" />,
+      icon: <SignInIcon />,
       onClick: handleSignIn,
       disabled: isSigningIn,
     },
@@ -142,7 +142,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       icon: user?.avatar_url ? (
         <img src={user.avatar_url} alt="" className="size-3 rounded-[var(--app-radius-pill)]" />
       ) : (
-        <UserCircle weight="duotone" />
+        <UserIcon />
       ),
       onClick: () => {},
       disabled: true,
@@ -156,7 +156,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "subscription",
       label: `Plan: ${planLabel}`,
-      icon: <CreditCard weight="duotone" />,
+      icon: <CreditCardIcon />,
       onClick: handleOpenBillingDashboard,
     },
     ...(isTeams
@@ -164,7 +164,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
           {
             id: "collaboration",
             label: "Collaboration",
-            icon: <UsersThree weight="duotone" />,
+            icon: <UsersThreeIcon />,
             onClick: handleOpenCollaboration,
           },
         ]
@@ -172,19 +172,19 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "manage-account",
       label: "Manage Account",
-      icon: <ArrowSquareOut weight="duotone" />,
+      icon: <OpenExternalIcon />,
       onClick: handleManageAccount,
     },
     {
       id: "settings",
       label: "Settings",
-      icon: <GearSix weight="duotone" />,
+      icon: <GearSixIcon />,
       onClick: handleOpenSettings,
     },
     {
       id: "docs",
       label: "Docs",
-      icon: <BookOpen weight="duotone" />,
+      icon: <BookOpenIcon />,
       onClick: handleOpenDocs,
     },
     {
@@ -196,7 +196,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "sign-out",
       label: "Sign Out",
-      icon: <SignOut weight="duotone" />,
+      icon: <SignOutIcon />,
       onClick: handleSignOut,
     },
   ];
@@ -240,7 +240,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                 className="size-4 rounded-[var(--app-radius-pill)] object-cover"
               />
             ) : (
-              <UserCircle className="size-4" weight="duotone" />
+              <UserIcon className="size-4" />
             )}
           </Button>
         </TabsList>
@@ -307,7 +307,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
-                  <CurrencyDollar weight="duotone" />
+                  <MoneyIcon />
                   <span>Usage unavailable</span>
                 </div>
               )}

@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { CopyIcon as Copy, GithubLogoIcon as GithubLogo } from "@phosphor-icons/react";
+import { CopyIcon as Copy, GithubLogoIcon as GithubLogo } from "@/ui/icons";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { memo } from "react";
 import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";

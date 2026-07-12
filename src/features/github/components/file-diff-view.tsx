@@ -2,7 +2,7 @@ import {
   CaretDownIcon as ChevronDown,
   CaretRightIcon as ChevronRight,
   FileTextIcon as FileText,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";

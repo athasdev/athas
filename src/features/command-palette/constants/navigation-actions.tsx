@@ -8,7 +8,7 @@ import {
   ListBulletsIcon as ListBullets,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type {

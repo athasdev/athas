@@ -17,7 +17,7 @@ import {
   SparkleIcon as Sparkles,
   TerminalWindowIcon as Terminal,
   TextAlignJustifyIcon as WrapText,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
 import type { Settings as AppSettings } from "@/features/settings/stores/settings.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";

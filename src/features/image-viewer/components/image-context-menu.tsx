@@ -9,7 +9,7 @@ import {
   ArrowClockwiseIcon as RotateCw,
   FloppyDiskIcon as Save,
   ArrowCounterClockwiseIcon as Undo2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";

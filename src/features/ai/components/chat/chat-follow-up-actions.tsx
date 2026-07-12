@@ -13,7 +13,7 @@ import {
   UploadSimpleIcon as UploadSimple,
   WarningCircleIcon as WarningCircle,
   WrenchIcon as Wrench,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo } from "react";
 import { MessageActions } from "@/features/ai/components/elements/message";
 import { chatFollowUpActionClassName } from "@/features/ai/components/input/chat-composer-control-styles";

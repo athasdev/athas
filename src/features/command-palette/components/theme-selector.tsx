@@ -6,7 +6,7 @@ import {
   GearSixIcon as Settings,
   SunIcon as Sun,
   UploadIcon as Upload,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";

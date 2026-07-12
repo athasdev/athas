@@ -12,7 +12,7 @@ import {
   ShieldWarningIcon as ShieldAlert,
   XIcon as X,
   MagnifyingGlassPlusIcon as ZoomIn,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";

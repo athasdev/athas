@@ -1,5 +1,5 @@
 import "@/features/sidebar-tree/styles/sidebar-tree.css";
-import { CaretDownIcon as CaretDown, CaretRightIcon as CaretRight } from "@phosphor-icons/react";
+import { CaretDownIcon as CaretDown, CaretRightIcon as CaretRight } from "@/ui/icons";
 import type React from "react";
 import { forwardRef } from "react";
 import { cn } from "@/utils/cn";

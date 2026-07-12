@@ -4,7 +4,7 @@ import {
   CaretRightIcon as ChevronRight,
   FileCodeIcon as FileJson2,
   FileTextIcon as FileText,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import { parseDiffAccordionLine } from "@/features/git/utils/diff-editor-content";

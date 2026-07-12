@@ -5,7 +5,7 @@ import {
   CheckCircleIcon as CheckCircle2,
   InfoIcon as Info,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
 import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
 import { LoadingIndicator } from "@/ui/loading";

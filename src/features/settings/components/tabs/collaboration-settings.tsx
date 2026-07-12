@@ -1,5 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { UsersThreeIcon as UsersThree } from "@phosphor-icons/react";
+import { UsersThreeIcon as UsersThree } from "@/ui/icons";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";

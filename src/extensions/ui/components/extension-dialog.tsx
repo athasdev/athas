@@ -1,4 +1,4 @@
-import { XIcon as X } from "@phosphor-icons/react";
+import { XIcon as X } from "@/ui/icons";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
 import { ExtensionErrorBoundary } from "./extension-error-boundary";
 import { Button } from "@/ui/button";

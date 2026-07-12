@@ -179,7 +179,7 @@ function FileExplorerTreeItemComponent({
             onKeyDown={(e) => onKeyDown(e, file)}
             onBlur={() => onBlur(file)}
             variant="ghost"
-            className="ui-font ui-text-base relative z-1 flex-1 border-text border-b px-0 focus:border-text-lighter"
+            className="ui-font ui-text-sm relative z-1 flex-1 border-text border-b px-0 focus:border-text-lighter"
             placeholder={file.isDir ? "folder name" : "file name"}
           />
         </div>

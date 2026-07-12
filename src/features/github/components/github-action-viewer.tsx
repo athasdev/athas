@@ -9,7 +9,7 @@ import {
   MagnifyingGlassIcon as Search,
   ArrowClockwiseIcon as RefreshCw,
   XCircleIcon as XCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import Badge from "@/ui/badge";

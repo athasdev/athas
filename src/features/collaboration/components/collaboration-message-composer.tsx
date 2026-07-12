@@ -1,7 +1,4 @@
-import {
-  FilePlusIcon as FilePlus,
-  PaperPlaneTiltIcon as PaperPlaneTilt,
-} from "@phosphor-icons/react";
+import { FilePlusIcon as FilePlus, PaperPlaneTiltIcon as PaperPlaneTilt } from "@/ui/icons";
 import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";

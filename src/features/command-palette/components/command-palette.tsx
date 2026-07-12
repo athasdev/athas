@@ -1,8 +1,5 @@
 import { appDataDir } from "@tauri-apps/api/path";
-import {
-  ClockCounterClockwiseIcon as History,
-  PuzzlePieceIcon as Puzzle,
-} from "@phosphor-icons/react";
+import { ClockCounterClockwiseIcon as History, PuzzlePieceIcon as Puzzle } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUIExtensionStore } from "@/extensions/ui/stores/ui-extension-store";
 import { IconThemeSelectorContent } from "@/features/command-palette/components/icon-theme-selector";

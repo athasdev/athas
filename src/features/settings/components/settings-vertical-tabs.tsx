@@ -12,7 +12,7 @@ import {
   TreeStructureIcon as TreeStructure,
   UserCircleIcon as UserCircle,
   UsersThreeIcon as UsersThree,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useRef, type ComponentType, type WheelEvent } from "react";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";

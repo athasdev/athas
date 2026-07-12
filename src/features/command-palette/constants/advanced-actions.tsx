@@ -4,7 +4,7 @@ import {
   SparkleIcon as Sparkles,
   SquareIcon as Square,
   TerminalWindowIcon as Terminal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   restartAllLanguageServers,
   stopAllLanguageServers,

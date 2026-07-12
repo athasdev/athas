@@ -1,8 +1,5 @@
-import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
-import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-} from "@phosphor-icons/react";
+import { type Icon as AppIcon } from "@/ui/icons";
+import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { SidebarSectionLabel } from "@/ui/sidebar";
@@ -14,7 +11,7 @@ interface GitSidebarSectionHeaderProps {
   collapsible?: boolean;
   isCollapsed?: boolean;
   onToggle?: () => void;
-  icon?: PhosphorIcon;
+  icon?: AppIcon;
   className?: string;
 }
 

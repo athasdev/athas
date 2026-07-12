@@ -1,4 +1,3 @@
-import { BellIcon as Bell } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import {
   chromeControl,
@@ -9,6 +8,7 @@ import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcu
 import { NotificationsCommand } from "@/features/notifications/components/notifications-command";
 import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { Button } from "@/ui/button";
+import { BellIcon } from "@/ui/icons";
 import { TabsList } from "@/ui/tabs";
 import { useToastStore } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
@@ -56,7 +56,7 @@ export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) =
             )}
             aria-label="Notifications"
           >
-            <Bell className={chromeIcon()} weight="duotone" />
+            <BellIcon className={chromeIcon()} />
             {unreadCount > 0 && (
               <span className="ui-font ui-text-sm pointer-events-none font-medium tabular-nums text-current">
                 {unreadCount}

@@ -1,4 +1,4 @@
-import { ArrowsInLineVerticalIcon as ArrowsInLineVertical } from "@phosphor-icons/react";
+import { ArrowsInLineVerticalIcon as ArrowsInLineVertical } from "@/ui/icons";
 import { memo } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";

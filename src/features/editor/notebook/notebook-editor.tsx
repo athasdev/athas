@@ -9,7 +9,7 @@ import {
   TextTIcon as Text,
   TrashIcon as Trash,
   WarningCircleIcon as Warning,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   closestCenter,
   DndContext,

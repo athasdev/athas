@@ -1,4 +1,4 @@
-import { MagnifyingGlassIcon as Search, XIcon as X } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search, XIcon as X } from "@/ui/icons";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenizer } from "@/features/editor/hooks/use-tokenizer";
 import { Button } from "@/ui/button";

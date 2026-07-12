@@ -47,7 +47,7 @@ Rules for follow-up actions:
 - Generate 1-3 actions that fit the work you just completed or the next likely user intent.
 - Each action must be a short UI button, not a sentence.
 - Each prompt must be the exact message to send if the user clicks it.
-- Pick an icon from this Phosphor icon set only: ${FOLLOW_UP_ACTION_ICONS.join(", ")}.
+- Pick an icon from this app icon set only: ${FOLLOW_UP_ACTION_ICONS.join(", ")}.
 - Do not mention the follow-up block in the visible response.`;
 }
 

@@ -1,4 +1,4 @@
-import { ArrowCounterClockwiseIcon as RotateCcw } from "@phosphor-icons/react";
+import { ArrowCounterClockwiseIcon as RotateCcw } from "@/ui/icons";
 import {
   useCallback,
   useId,

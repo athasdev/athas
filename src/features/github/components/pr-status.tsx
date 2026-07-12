@@ -8,7 +8,7 @@ import {
   LinkSimpleIcon as Link2,
   UserIcon as User,
   XCircleIcon as XCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, useMemo, useState } from "react";
 import type { ComponentProps } from "react";

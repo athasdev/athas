@@ -10,7 +10,7 @@ import {
   LinkIcon as Link,
   PlusIcon as Plus,
   TextTIcon as Type,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";

@@ -1,4 +1,4 @@
-import { PlusIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, XIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";

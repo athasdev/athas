@@ -8,7 +8,7 @@ import {
   TextTIcon as LetterText,
   PuzzlePieceIcon as Puzzle,
   FunctionIcon as Variable,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { ReactNode } from "react";
 import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import type { SymbolItem } from "../hooks/use-symbol-search";

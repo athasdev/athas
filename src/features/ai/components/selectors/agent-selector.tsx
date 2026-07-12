@@ -4,7 +4,7 @@ import {
   PlusIcon as Plus,
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as Settings2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";

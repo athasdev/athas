@@ -1,8 +1,4 @@
-import {
-  CaretRightIcon as CaretRight,
-  MinusIcon as Minus,
-  PlusIcon as Plus,
-} from "@phosphor-icons/react";
+import { CaretRightIcon as CaretRight, MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeEditor from "@/features/editor/components/code-editor";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";

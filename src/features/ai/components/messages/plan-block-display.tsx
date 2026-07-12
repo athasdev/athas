@@ -1,4 +1,4 @@
-import { ListChecksIcon as ListChecks, PlayIcon as Play } from "@phosphor-icons/react";
+import { ListChecksIcon as ListChecks, PlayIcon as Play } from "@/ui/icons";
 import { memo, useCallback, useState } from "react";
 import type { ParsedPlan, PlanStep } from "@/features/ai/lib/plan-parser";
 import { Button } from "@/ui/button";

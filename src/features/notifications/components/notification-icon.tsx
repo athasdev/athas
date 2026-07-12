@@ -3,7 +3,7 @@ import {
   InfoIcon as Info,
   WarningCircleIcon as WarningCircle,
   XCircleIcon as XCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { NotificationEntry } from "@/ui/toast";
 
 export function NotificationIcon({ type }: { type: NotificationEntry["type"] }) {

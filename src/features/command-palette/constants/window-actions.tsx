@@ -1,4 +1,4 @@
-import { ArrowsOutIcon as Maximize, ArrowsInIcon as Minimize } from "@phosphor-icons/react";
+import { ArrowsOutIcon as Maximize, ArrowsInIcon as Minimize } from "@/ui/icons";
 import type { Action } from "../types/action.types";
 
 interface WindowActionsParams {

@@ -3,7 +3,7 @@ import {
   FolderPlusIcon as FolderPlus,
   FolderOpenIcon as FolderOpen,
   SidebarSimpleIcon as PanelTopClose,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";

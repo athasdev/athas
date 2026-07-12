@@ -8,7 +8,7 @@ import {
   HardDrivesIcon as Server,
   TagIcon as Tag,
   ArrowClockwiseIcon as RefreshCw,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
 import { showConfirmDialog, showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import type { Action } from "../types/action.types";
