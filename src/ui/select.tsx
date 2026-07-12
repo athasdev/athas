@@ -3,7 +3,7 @@ import {
   CheckIcon as Check,
   CaretDownIcon as ChevronDown,
   MagnifyingGlassIcon as Search,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type {
   AriaAttributes,
   ComponentType,
@@ -76,7 +76,7 @@ const selectTriggerVariants = cva(
 );
 
 const selectContentVariants = cva(
-  "z-[10040] max-h-96 min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+  "z-[10070] max-h-96 min-w-0 overflow-hidden rounded-[var(--app-radius-menu)] border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
 );
 
 const selectItemVariants = cva(

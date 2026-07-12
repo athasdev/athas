@@ -1,19 +1,11 @@
-import {
-  WarningCircleIcon as AlertCircle,
-  CheckCircleIcon as CheckCircle,
-  EyeIcon as Eye,
-  EyeSlashIcon as EyeOff,
-  HardDrivesIcon as Server,
-} from "@phosphor-icons/react";
+import { HardDrivesIcon as Server } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
-import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
-import Select from "@/ui/select";
 import { testRemoteConnection } from "../services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "../types/remote.types";
+import ConnectionForm from "./connection-form";
 
 interface ConnectionDialogProps {
   isOpen: boolean;
@@ -45,11 +37,6 @@ const ConnectionDialog = ({
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<"idle" | "success" | "error">("idle");
   const [testMessage, setTestMessage] = useState("");
-
-  const connectionTypeOptions = [
-    { value: "ssh", label: "SSH" },
-    { value: "sftp", label: "SFTP" },
-  ];
 
   useEffect(() => {
     if (isOpen) {
@@ -189,172 +176,24 @@ const ConnectionDialog = ({
         </>
       }
     >
-      <div className="space-y-4">
-        <p className="ui-text-sm text-text-lighter">
-          {editingConnection
+      <ConnectionForm
+        formData={formData}
+        onChange={updateFormData}
+        showPassword={showPassword}
+        onShowPasswordChange={setShowPassword}
+        validationStatus={validationStatus}
+        errorMessage={errorMessage}
+        testStatus={testStatus}
+        testMessage={testMessage}
+        disabled={isValidating}
+        intro={
+          editingConnection
             ? "Update your remote connection settings."
-            : "Connect to remote servers via SSH or SFTP."}
-        </p>
-
-        {/* Connection Name */}
-        <div className="space-y-1.5">
-          <label htmlFor="connection-name" className="ui-text-sm font-medium text-text">
-            Connection Name <span className="text-text-lighter">*</span>
-          </label>
-          <Input
-            id="connection-name"
-            type="text"
-            value={formData.name}
-            onChange={(e) => updateFormData({ name: e.target.value })}
-            placeholder="My Server"
-            size="md"
-            disabled={isValidating}
-          />
-        </div>
-
-        {/* Host and Port */}
-        <div className="grid grid-cols-12 gap-3">
-          <div className="col-span-8 space-y-1.5">
-            <label htmlFor="host" className="ui-text-sm font-medium text-text">
-              Host <span className="text-text-lighter">*</span>
-            </label>
-            <Input
-              id="host"
-              type="text"
-              value={formData.host}
-              onChange={(e) => updateFormData({ host: e.target.value })}
-              placeholder="192.168.1.100"
-              size="md"
-              disabled={isValidating}
-            />
-          </div>
-          <div className="col-span-4 space-y-1.5">
-            <label htmlFor="port" className="ui-text-sm font-medium text-text">
-              Port
-            </label>
-            <Input
-              id="port"
-              type="number"
-              value={formData.port}
-              onChange={(e) => updateFormData({ port: parseInt(e.target.value) || 22 })}
-              placeholder="22"
-              min="1"
-              max="65535"
-              size="md"
-              disabled={isValidating}
-            />
-          </div>
-        </div>
-
-        {/* Type */}
-        <div className="space-y-1.5">
-          <label htmlFor="type" className="ui-text-sm font-medium text-text">
-            Connection Type
-          </label>
-          <Select
-            value={formData.type}
-            options={connectionTypeOptions}
-            onChange={(value) => updateFormData({ type: value as "ssh" | "sftp" })}
-            className="ui-text-sm"
-          />
-        </div>
-
-        {/* Username */}
-        <div className="space-y-1.5">
-          <label htmlFor="username" className="ui-text-sm font-medium text-text">
-            Username <span className="text-text-lighter">*</span>
-          </label>
-          <Input
-            id="username"
-            type="text"
-            value={formData.username}
-            onChange={(e) => updateFormData({ username: e.target.value })}
-            placeholder="root"
-            size="md"
-            disabled={isValidating}
-          />
-        </div>
-
-        {/* Password */}
-        <div className="space-y-1.5">
-          <label htmlFor="password" className="ui-text-sm font-medium text-text">
-            Password <span className="text-text-lighter">(optional)</span>
-          </label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              value={formData.password}
-              onChange={(e) => updateFormData({ password: e.target.value })}
-              placeholder="Leave empty to use key authentication"
-              className="pr-10"
-              size="md"
-              disabled={isValidating}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setShowPassword(!showPassword)}
-              className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter hover:text-text"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Save Credentials Option */}
-        {formData.password && (
-          <label htmlFor="save-credentials" className="flex cursor-pointer items-center gap-2">
-            <Checkbox
-              id="save-credentials"
-              checked={!!formData.saveCredentials}
-              onChange={(checked) => updateFormData({ saveCredentials: !!checked })}
-              disabled={isValidating}
-            />
-            <span className="ui-text-sm text-text">Save password for future connections</span>
-          </label>
-        )}
-
-        {/* Private Key Path */}
-        <div className="space-y-1.5">
-          <label htmlFor="keypath" className="ui-text-sm font-medium text-text">
-            Private Key Path <span className="text-text-lighter">(optional)</span>
-          </label>
-          <Input
-            id="keypath"
-            type="text"
-            value={formData.keyPath}
-            onChange={(e) => updateFormData({ keyPath: e.target.value })}
-            placeholder="~/.ssh/id_rsa"
-            size="md"
-            disabled={isValidating}
-          />
-        </div>
-
-        {/* Validation/Test Status */}
-        {testStatus !== "idle" && (
-          <div
-            className={`ui-text-sm flex items-center gap-2 ${testStatus === "success" ? "text-success" : "text-error"}`}
-          >
-            {testStatus === "success" ? <CheckCircle /> : <AlertCircle />}
-            {testMessage}
-          </div>
-        )}
-        {validationStatus === "valid" && (
-          <div className="ui-text-sm flex items-center gap-2 text-success">
-            <CheckCircle />
-            Connection saved successfully!
-          </div>
-        )}
-
-        {validationStatus === "invalid" && (
-          <div className="ui-text-sm flex items-center gap-2 text-error">
-            <AlertCircle />
-            {errorMessage}
-          </div>
-        )}
-      </div>
+            : "Connect to remote servers via SSH or SFTP."
+        }
+        idPrefix="remote-connection"
+        onSubmit={() => void handleSave()}
+      />
     </Dialog>
   );
 };

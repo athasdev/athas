@@ -1,12 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import { CheckIcon as Check } from "@phosphor-icons/react";
+import { ArrowLeftIcon as ArrowLeft, CheckIcon as Check } from "@/ui/icons";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
+  CommandFooter,
   CommandHeader,
+  CommandHeaderAction,
   CommandInput,
   CommandItemRow,
   CommandList,
@@ -22,6 +25,11 @@ interface ImportableIdeProject {
 
 interface IdeSettingsImportDialogProps {
   onClose: () => void;
+}
+
+interface IdeSettingsImportContentProps {
+  onClose: () => void;
+  onBack?: () => void;
 }
 
 interface IdeImportSource {
@@ -74,7 +82,7 @@ const IDE_IMPORT_SOURCES: IdeImportSource[] = [
   },
 ];
 
-export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProps) {
+export function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentProps) {
   const [projects, setProjects] = useState<ImportableIdeProject[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -243,14 +251,16 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
     }
   };
 
+  const leadingAction: ReactNode = onBack ? (
+    <CommandHeaderAction type="button" aria-label="Back to projects" onClick={onBack}>
+      <ArrowLeft />
+    </CommandHeaderAction>
+  ) : null;
+
   return (
-    <Command
-      isVisible
-      onClose={onClose}
-      title={selectedSource ? `Import from ${selectedSource.name}` : "Import Settings"}
-      className="w-[520px]"
-    >
+    <>
       <CommandHeader onClose={onClose}>
+        {leadingAction}
         <CommandInput
           ref={inputRef}
           value={query}
@@ -300,7 +310,7 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
       </CommandList>
 
       {selectedSource ? (
-        <div className="flex justify-end border-border border-t p-2">
+        <CommandFooter>
           <Button
             variant="accent"
             compact
@@ -309,8 +319,16 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
           >
             Import
           </Button>
-        </div>
+        </CommandFooter>
       ) : null}
+    </>
+  );
+}
+
+export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProps) {
+  return (
+    <Command isVisible onClose={onClose} title="Import Settings">
+      <IdeSettingsImportContent onClose={onClose} />
     </Command>
   );
 }

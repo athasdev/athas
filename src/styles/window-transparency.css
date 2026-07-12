@@ -116,20 +116,10 @@ html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-proj
   backdrop-filter: none;
 }
 
-html.platform-macos:not([data-window-transparency="disabled"]) .athas-project-picker-command {
-  border-color: var(--athas-macos-glass-popover-border) !important;
-  background: var(--athas-macos-glass-popover-bg) !important;
+html.platform-macos:not([data-window-transparency="disabled"]) [data-command-surface] {
+  background: var(--color-primary-bg) !important;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-}
-
-html.platform-macos:not([data-window-transparency="disabled"])
-  .athas-project-picker-command
-  [data-command-header],
-html.platform-macos:not([data-window-transparency="disabled"])
-  .athas-project-picker-command
-  [data-command-footer] {
-  background: color-mix(in srgb, var(--athas-macos-glass-popover-bg) 72%, transparent) !important;
 }
 
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-chrome-control {

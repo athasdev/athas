@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type React from "react";
@@ -42,17 +42,7 @@ const commandItemVariants = cva(
   },
 );
 
-const commandHeaderContentVariants = cva("flex items-center gap-2", {
-  variants: {
-    density: {
-      compact: "px-4 py-3",
-      comfortable: "px-5 py-4",
-    },
-  },
-  defaultVariants: {
-    density: "compact",
-  },
-});
+const commandHeaderContentClassName = "flex items-center gap-2 px-4 py-3";
 
 const commandInputClassName = cva(
   "ui-font ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
@@ -76,7 +66,7 @@ type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
   <Badge
     className={cn(
-      "h-auto min-h-7 max-w-40 shrink-0 border-border/70 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter ui-text-base",
+      "h-auto min-h-7 max-w-40 shrink-0 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter ui-text-base",
       className,
     )}
     {...props}
@@ -139,6 +129,7 @@ const Command = ({
                   />
                 }
                 className={cn(commandContentVariants(), "pointer-events-auto", className)}
+                data-command-surface=""
               >
                 <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
                 {children}
@@ -157,7 +148,6 @@ interface CommandHeaderProps {
   children: React.ReactNode;
   onClose: () => void;
   showClearButton?: boolean;
-  density?: "compact" | "comfortable";
   className?: string;
   contentClassName?: string;
 }
@@ -166,7 +156,6 @@ export const CommandHeader = ({
   children,
   onClose,
   showClearButton = false,
-  density = "compact",
   className,
   contentClassName,
 }: CommandHeaderProps) => {
@@ -174,7 +163,7 @@ export const CommandHeader = ({
 
   return (
     <div data-command-header className={cn("border-border border-b", className)}>
-      <div className={cn(commandHeaderContentVariants({ density }), contentClassName)}>
+      <div className={cn(commandHeaderContentClassName, contentClassName)}>
         {children}
         <CommandHeaderAction aria-label="Close command palette" onClick={onClose}>
           <X />
