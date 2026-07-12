@@ -62,6 +62,20 @@ function isContributionExtension(manifest: ExtensionManifest): boolean {
   );
 }
 
+function isAbsoluteIconUrl(icon: string): boolean {
+  return /^(?:[a-z]+:)?\/\//i.test(icon) || icon.startsWith("/") || icon.startsWith("data:");
+}
+
+function resolveMarketplaceIcon(path: string, icon: string | undefined): string {
+  const normalizedIcon = icon?.trim() || "icon.svg";
+
+  if (isAbsoluteIconUrl(normalizedIcon)) {
+    return normalizedIcon;
+  }
+
+  return `${CDN_BASE_URL}/${path}/${normalizedIcon.replace(/^\.?\//, "")}`;
+}
+
 let cachedMarketplaceExtensions: ExtensionManifest[] | null = null;
 
 async function fetchMarketplaceManifests(): Promise<Record<string, ExtensionManifest>> {
@@ -90,16 +104,17 @@ export async function loadMarketplaceContributionExtensions(): Promise<Extension
 
   try {
     const manifests = await fetchMarketplaceManifests();
-    cachedMarketplaceExtensions = filterRetiredExtensions(Object.values(manifests))
-      .map((manifest) => ({
+    cachedMarketplaceExtensions = filterRetiredExtensions(
+      Object.entries(manifests).map(([path, manifest]) => ({
         ...manifest,
+        icon: resolveMarketplaceIcon(path, manifest.icon),
         displayName: manifest.displayName || manifest.name,
         description: manifest.description || `${manifest.name} extension`,
         version: manifest.version || "1.0.0",
         publisher: manifest.publisher || "Athas",
         categories: toExtensionCategories(manifest.categories),
-      }))
-      .filter(isContributionExtension);
+      })),
+    ).filter(isContributionExtension);
   } catch (error) {
     console.warn("Failed to load marketplace contribution extensions:", error);
     cachedMarketplaceExtensions = [];

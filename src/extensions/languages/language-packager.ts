@@ -45,6 +45,7 @@ interface ExternalLanguageManifest {
   version?: string;
   publisher?: string;
   categories?: string[];
+  icon?: string;
   languages?: ExternalLanguageContribution[];
   contributes?: {
     languages?: ExternalLanguageContribution[];
@@ -101,6 +102,20 @@ function defaultCommand(name?: string): PlatformExecutable {
 
 function isAbsoluteAssetUrl(value: string): boolean {
   return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("/");
+}
+
+function resolveExtensionAssetUrl(
+  folder: string,
+  assetPath: string | undefined,
+  fallbackFilename: string,
+): string {
+  const normalized = assetPath?.trim() || fallbackFilename;
+
+  if (isAbsoluteAssetUrl(normalized)) {
+    return normalized;
+  }
+
+  return `${CDN_BASE_URL}/${folder}/${normalized.replace(/^\.?\//, "")}`;
 }
 
 export function resolveLanguageAssetUrl(
@@ -226,6 +241,7 @@ function convertLanguageManifest(
     version: manifest.version || "1.0.0",
     publisher: manifest.publisher || "Athas",
     categories: toExtensionCategories(manifest.categories),
+    icon: resolveExtensionAssetUrl(folder, manifest.icon, "icon.svg"),
     languages,
     contributes: {
       languages,
