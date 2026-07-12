@@ -92,6 +92,7 @@ export default function SchemaView({
                   onClick={() => onAddFilter(column.name)}
                   className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
                   aria-label={`Filter by ${column.name}`}
+                  size="icon"
                 >
                   <Filter />
                 </Button>

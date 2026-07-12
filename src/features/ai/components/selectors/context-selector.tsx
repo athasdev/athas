@@ -89,7 +89,7 @@ export function ContextSelector({
             aria-label="Add context"
             aria-expanded={isOpen}
             aria-haspopup="true"
-            compact
+            size="icon-sm"
           >
             <Plus />
           </Button>

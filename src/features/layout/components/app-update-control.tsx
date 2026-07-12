@@ -83,7 +83,7 @@ export function AppUpdateControl() {
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="xs"
         chrome="pill"
         tooltip={updateTooltip}
         tooltipSide="bottom"
@@ -110,7 +110,7 @@ export function AppUpdateControl() {
         <Button
           type="button"
           variant="ghost"
-          compact
+          size="icon-xs"
           chrome="icon"
           active={isUpdateMenuOpen}
           tooltip="Update Options"

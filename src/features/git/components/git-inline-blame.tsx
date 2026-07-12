@@ -303,7 +303,7 @@ export const InlineGitBlame = ({
                   className="gap-1.5 px-1.5"
                   onClick={handleViewCommit}
                   tooltip="View commit details"
-                  compact
+                  size="xs"
                 >
                   <GitCommit />
                   <span className="font-sans text-text">
@@ -316,7 +316,7 @@ export const InlineGitBlame = ({
                   className="ml-auto text-text-lighter hover:text-text"
                   onClick={handleCopyCommitHash}
                   tooltip="Copy commit hash"
-                  compact
+                  size="icon-xs"
                 >
                   {isCopied ? <Check className="text-success" /> : <Copy />}
                 </Button>

@@ -94,10 +94,10 @@ const PasswordPromptDialog = ({
       size="sm"
       footer={
         <>
-          <Button onClick={onClose} variant="ghost" compact>
+          <Button onClick={onClose} variant="ghost" size="xs">
             Cancel
           </Button>
-          <Button onClick={handleConnect} disabled={!password.trim() || isConnecting} compact>
+          <Button onClick={handleConnect} disabled={!password.trim() || isConnecting} size="xs">
             {isConnecting ? "Connecting..." : "Connect"}
           </Button>
         </>
@@ -136,6 +136,7 @@ const PasswordPromptDialog = ({
                 "text-text-lighter hover:text-text",
               )}
               aria-label={showPassword ? "Hide password" : "Show password"}
+              size="icon"
             >
               {showPassword ? <EyeOff /> : <Eye />}
             </Button>

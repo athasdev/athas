@@ -124,10 +124,10 @@ export function ConversationScrollButton({
     <Button
       type="button"
       variant="ghost"
-      compact
+      size="icon-sm"
       tooltip="Scroll to latest message"
       className={cn(
-        "absolute right-3 bottom-3 z-10 size-7 rounded-full border border-border/70 bg-primary-bg/95 p-0 text-text-lighter shadow-[var(--shadow-popover)] hover:bg-hover hover:text-text",
+        "absolute right-3 bottom-3 z-10 rounded-full border border-border/70 bg-primary-bg/95 text-text-lighter shadow-[var(--shadow-popover)] hover:bg-hover hover:text-text",
         className,
       )}
       {...props}

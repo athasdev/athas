@@ -144,7 +144,7 @@ export default function LinuxFolderPickerDialog() {
           <Button type="button" variant="ghost" onClick={() => resolve(null)}>
             Cancel
           </Button>
-          <Button type="button" variant="accent" onClick={handleOpen} compact>
+          <Button type="button" variant="accent" onClick={handleOpen} size="xs">
             Open Folder
           </Button>
         </>
@@ -162,6 +162,7 @@ export default function LinuxFolderPickerDialog() {
             onClick={() => navigateToPath(homePath)}
             tooltip="Home"
             aria-label="Home"
+            size="icon"
           >
             <House />
           </Button>
@@ -172,6 +173,7 @@ export default function LinuxFolderPickerDialog() {
             disabled={!canGoUp}
             tooltip="Parent folder"
             aria-label="Parent folder"
+            size="icon"
           >
             <ArrowUp />
           </Button>
@@ -189,7 +191,7 @@ export default function LinuxFolderPickerDialog() {
               spellCheck={false}
               className="font-mono"
             />
-            <Button type="submit" variant="default" compact>
+            <Button type="submit" variant="default" size="xs">
               Go
             </Button>
           </form>

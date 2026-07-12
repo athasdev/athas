@@ -412,7 +412,7 @@ export default function DataGrid({
           )}
           aria-label="Add row"
           disabled={!canCreateRows}
-          compact
+          size="icon-xs"
         >
           <Plus className="text-text-lighter hover:text-text" />
         </Button>
@@ -479,6 +479,7 @@ export default function DataGrid({
                             !canFilterColumns && "pointer-events-none opacity-20",
                           )}
                           aria-label={`Filter by ${col}`}
+                          size="icon"
                         >
                           <Filter className="text-text-lighter hover:text-text" />
                         </Button>

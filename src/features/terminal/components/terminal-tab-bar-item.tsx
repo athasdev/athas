@@ -111,7 +111,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
           !isEditing ? (
             <Button
               type="button"
-              compact
+              size="icon-xs"
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
@@ -122,7 +122,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                 }
               }}
               className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
+                "-translate-y-1/2 absolute top-1/2 right-1 cursor-pointer select-none rounded-sm text-text-lighter transition-opacity",
                 "hover:text-text",
                 terminal.isPinned || isActive
                   ? "opacity-100"

@@ -1341,7 +1341,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 <Button
                   onClick={() => removePastedImage(image.id)}
                   variant="ghost"
-                  compact
+                  size="icon-xs"
                   className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
                   aria-label="Remove image"
                 >
@@ -1420,7 +1420,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               }
               aria-label={isListening ? "Stop voice input" : "Start voice input"}
               aria-pressed={isListening}
-              compact
+              size="icon-sm"
             >
               <Mic size={12} className={cn(isListening && "animate-pulse")} />
             </Button>
@@ -1445,6 +1445,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               }
               shortcut={isStreaming ? "escape" : "enter"}
               aria-label={isStreaming ? "Stop generation" : "Send message"}
+              size="icon-sm"
             >
               {isStreaming ? <Stop /> : <ArrowUp />}
             </Button>
@@ -1541,8 +1542,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     }
                   }}
                   variant="ghost"
-                  compact
-                  className="absolute right-0.5 size-5 rounded-md bg-hover/80 p-0 text-text opacity-0 shadow-[var(--shadow-card)] hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
+                  size="icon-xs"
+                  className="absolute right-0.5 rounded-md bg-hover/80 text-text opacity-0 shadow-[var(--shadow-card)] hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${item.name} from context`}
                   tabIndex={0}
                 >
@@ -1630,6 +1631,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                       closeInlineMenus();
                       setIsApiKeyManagerOpen(true);
                     }}
+                    size="icon-sm"
                   >
                     <Key />
                   </Button>
@@ -1679,7 +1681,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                     }
                   }}
                   variant="ghost"
-                  compact
+                  size="icon-sm"
                   active={slashCommandState.active}
                   className={chatComposerIconButtonClassName()}
                   tooltip="Show slash commands"
@@ -1697,7 +1699,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
                 setIsSkillsOpen(true);
               }}
               variant="ghost"
-              compact
+              size="icon-sm"
               className={chatComposerIconButtonClassName("ml-auto shrink-0")}
               tooltip="Skills"
               aria-label="Skills"

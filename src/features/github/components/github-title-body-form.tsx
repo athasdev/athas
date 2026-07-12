@@ -58,11 +58,11 @@ export function GitHubTitleBodyForm({
         className="min-h-44 resize-y bg-primary-bg"
       />
       <div className="flex items-center justify-end gap-1.5">
-        <Button type="button" variant="ghost" compact onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={isSubmitting}>
           <X />
           Cancel
         </Button>
-        <Button type="submit" variant="default" compact disabled={!canSubmit}>
+        <Button type="submit" variant="default" size="xs" disabled={!canSubmit}>
           {isSubmitting ? <LoadingIndicator label={submitLabel} compact /> : <Check />}
           {submitLabel}
         </Button>

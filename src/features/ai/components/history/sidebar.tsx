@@ -167,6 +167,7 @@ export default function ChatHistoryDropdown({
                     className="shrink-0 opacity-0 transition-opacity hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                     aria-label={`Delete ${chat.title}`}
                     tooltip="Delete session"
+                    size="icon"
                   >
                     <Trash2 size={13} />
                   </Button>

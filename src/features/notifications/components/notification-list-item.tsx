@@ -59,8 +59,8 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
               <Button
                 type="button"
                 variant={action.variant === "danger" ? "danger" : "ghost"}
-                compact
-                className="size-5 min-h-5 min-w-5 bg-transparent px-0 text-text-lighter"
+                size="icon-xs"
+                className="bg-transparent text-text-lighter"
                 aria-label={action.label}
                 onClick={(event) => {
                   event.stopPropagation();

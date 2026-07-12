@@ -167,7 +167,7 @@ export const AppearanceSettings = () => {
                 variant="default"
                 tooltip="Upload theme"
                 aria-label="Upload theme"
-                compact
+                size="icon-xs"
               >
                 <Upload />
               </Button>
@@ -200,7 +200,7 @@ export const AppearanceSettings = () => {
                   variant="default"
                   tooltip="Upload theme"
                   aria-label="Upload theme"
-                  compact
+                  size="icon-xs"
                 >
                   <Upload />
                 </Button>
@@ -230,7 +230,7 @@ export const AppearanceSettings = () => {
                   variant="default"
                   tooltip="Upload theme"
                   aria-label="Upload theme"
-                  compact
+                  size="icon-xs"
                 >
                   <Upload />
                 </Button>

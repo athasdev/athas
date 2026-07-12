@@ -52,7 +52,7 @@ export function WindowControls({
           variant="ghost"
           chrome="icon"
           className="pointer-events-auto"
-          compact
+          size="icon-xs"
         >
           <Minus weight="bold" />
         </Button>
@@ -63,7 +63,7 @@ export function WindowControls({
           variant="ghost"
           chrome="icon"
           className="pointer-events-auto"
-          compact
+          size="icon-xs"
         >
           {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
         </Button>
@@ -74,7 +74,7 @@ export function WindowControls({
           variant="danger"
           chrome="icon"
           className="pointer-events-auto group hover:text-white"
-          compact
+          size="icon-xs"
         >
           <X weight="bold" />
         </Button>

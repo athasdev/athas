@@ -181,7 +181,7 @@ export function ChatHeader({
           <Button
             type="button"
             variant="ghost"
-            compact
+            size="icon-xs"
             onClick={onToggleMessageSearch}
             active={isMessageSearchOpen}
             tooltip="Search messages"
@@ -196,7 +196,7 @@ export function ChatHeader({
             type="button"
             ref={historyButtonRef}
             variant="ghost"
-            compact
+            size="icon-xs"
             onClick={() => setIsChatHistoryVisible(!isChatHistoryVisible)}
             tooltip="Agent History"
             tooltipSide="bottom"
@@ -250,7 +250,7 @@ export function ChatHeader({
           <Button
             type="button"
             variant="ghost"
-            compact
+            size="icon-xs"
             disabled={!hasMessageSearchMatches}
             onClick={onPreviousMessageSearchMatch}
             tooltip="Previous match"
@@ -262,7 +262,7 @@ export function ChatHeader({
           <Button
             type="button"
             variant="ghost"
-            compact
+            size="icon-xs"
             disabled={!hasMessageSearchMatches}
             onClick={onNextMessageSearchMatch}
             tooltip="Next match"
@@ -274,7 +274,7 @@ export function ChatHeader({
           <Button
             type="button"
             variant="ghost"
-            compact
+            size="icon-xs"
             onClick={onCloseMessageSearch}
             tooltip="Close search"
             aria-label="Close message search"

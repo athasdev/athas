@@ -135,7 +135,7 @@ const ConnectionDialog = ({
       }}
       footer={
         <>
-          <Button onClick={onClose} variant="ghost" compact>
+          <Button onClick={onClose} variant="ghost" size="xs">
             Cancel
           </Button>
           <Button
@@ -161,12 +161,12 @@ const ConnectionDialog = ({
               }
             }}
             variant="ghost"
-            compact
+            size="xs"
             disabled={isTesting}
           >
             {isTesting ? <LoadingIndicator label="Testing" showLabel compact /> : "Test Connection"}
           </Button>
-          <Button onClick={handleSave} disabled={!isFormValid || isValidating} compact>
+          <Button onClick={handleSave} disabled={!isFormValid || isValidating} size="xs">
             {isValidating
               ? "Saving..."
               : editingConnection

@@ -294,7 +294,7 @@ export function AgentSelector({
           onClick={toggleAgentSelector}
           type="button"
           variant="ghost"
-          compact
+          size="icon-xs"
           tooltip={triggerTooltip ?? "New session"}
           className={triggerClassName}
         >
@@ -306,7 +306,7 @@ export function AgentSelector({
           onClick={toggleAgentSelector}
           type="button"
           variant="ghost"
-          compact
+          size="xs"
           className="font-sans flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
@@ -398,7 +398,7 @@ export function AgentSelector({
                           void handleInstallAgent(item.id as AgentType, item.name);
                         }}
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-2 ui-text-sm"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
@@ -418,7 +418,7 @@ export function AgentSelector({
                           onOpenSettings();
                         }}
                         variant="ghost"
-                        compact
+                        size="icon-xs"
                         className={cn(
                           item.isCurrent
                             ? "bg-accent/15 text-accent"

@@ -220,7 +220,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
           onClick={() => setIsOpen((open) => !open)}
           type="button"
           variant="ghost"
-          compact
+          size="icon-xs"
           chrome="icon"
           active={isOpen}
           className={className}

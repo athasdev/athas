@@ -18,7 +18,7 @@ function ActionButton({ action }: { action: GenerativeUIAction }) {
     action.style === "primary" ? "accent" : action.style === "danger" ? "danger" : "default";
 
   return (
-    <Button onClick={handleClick} variant={variant} aria-label={action.label} compact>
+    <Button onClick={handleClick} variant={variant} aria-label={action.label} size="xs">
       {action.label}
     </Button>
   );

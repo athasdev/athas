@@ -118,7 +118,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Refresh PR data"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             {isRefreshingDetails ? (
               <LoadingIndicator label="Refreshing PR" compact />
@@ -131,7 +131,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Checkout PR branch"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <GitBranch />
           </Button>
@@ -140,7 +140,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Edit pull request"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <Pencil />
           </Button>
@@ -150,7 +150,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Add PR comment"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <MessageCircle />
           </Button>
@@ -160,7 +160,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Approve pull request"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <CheckCircle2 />
           </Button>
@@ -170,7 +170,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Request pull request changes"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <XCircle />
           </Button>
@@ -180,7 +180,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Merge pull request"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <GitMerge />
           </Button>
@@ -190,7 +190,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Close pull request"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <XCircle />
           </Button>
@@ -199,7 +199,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Open pull request in browser"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <GithubLogo />
           </Button>
@@ -208,7 +208,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Copy PR link"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <Copy />
           </Button>
@@ -217,7 +217,7 @@ export function GitHubPRViewerHeader({
             variant="ghost"
             tooltip="Copy branch name"
             tooltipSide="bottom"
-            compact
+            size="icon-xs"
           >
             <GitBranch />
           </Button>
@@ -243,7 +243,7 @@ export function GitHubPRViewerHeader({
           variant="ghost"
           active={activeView === "files"}
           className="ui-text-sm h-auto min-w-0 px-1.5 py-1 text-left"
-          compact
+          size="xs"
         >
           <span className="shrink-0 text-text-lighter">
             <FileCode2 />

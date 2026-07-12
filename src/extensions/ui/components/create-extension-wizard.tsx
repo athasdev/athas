@@ -377,7 +377,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               {
                 onClick,
                 variant,
-                compact: true,
+                size: "xs",
                 style: { fontSize: GENERATED_UI_FONT_SIZE },
               },
               label,
@@ -682,7 +682,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <Button onClick={onClose} variant="ghost" compact>
+            <Button onClick={onClose} variant="ghost" size="xs">
               Close
             </Button>
             {isAuthenticated ? (
@@ -691,7 +691,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
                 }
                 variant="accent"
-                compact
+                size="xs"
               >
                 Upgrade to Pro
               </Button>
@@ -699,7 +699,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               <Button
                 onClick={() => void signIn()}
                 variant="accent"
-                compact
+                size="xs"
                 disabled={isSigningIn}
                 className="gap-1.5"
               >
@@ -727,7 +727,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               variant="ghost"
               aria-label="Go back"
               disabled={isGenerating}
-              compact
+              size="icon-xs"
             >
               <ArrowLeft />
             </Button>
@@ -809,7 +809,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               variant="accent"
               disabled={!description.trim()}
               className="gap-1.5"
-              compact
+              size="xs"
             >
               <Sparkles className="size-3.5" />
               Generate
@@ -858,11 +858,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Button onClick={handleInstall} variant="accent" className="gap-1.5" compact>
+                  <Button onClick={handleInstall} variant="accent" className="gap-1.5" size="xs">
                     <Puzzle className="size-3.5" />
                     Install
                   </Button>
-                  <Button onClick={handleBack} variant="default" compact>
+                  <Button onClick={handleBack} variant="default" size="xs">
                     Try another prompt
                   </Button>
                 </div>
@@ -871,7 +871,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           ) : null}
 
           {(isInstalled || error) && (
-            <Button onClick={onClose} variant="ghost" className="self-end" compact>
+            <Button onClick={onClose} variant="ghost" className="self-end" size="xs">
               Done
             </Button>
           )}

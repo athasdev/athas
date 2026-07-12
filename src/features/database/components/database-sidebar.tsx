@@ -446,7 +446,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                   <Button
                     type="button"
                     variant="ghost"
-                    compact
+                    size="xs"
                     onClick={() => {
                       useBufferStore.getState().actions.openExtensionsBuffer();
                     }}
@@ -584,10 +584,10 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                     <Button
                       type="button"
                       variant="ghost"
-                      compact
+                      size="icon-xs"
                       aria-label={`Delete ${connection.name}`}
                       className={cn(
-                        "size-6 shrink-0 p-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
+                        "shrink-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
                         isBusy && "pointer-events-none opacity-40",
                       )}
                       onClick={(event) => {

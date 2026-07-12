@@ -597,7 +597,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
                   onClick={handleRefresh}
                   variant="ghost"
                   className="text-text-lighter"
-                  compact
+                  size="xs"
                 >
                   Retry
                 </Button>
@@ -697,7 +697,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
             onClick={handleRefresh}
             variant="default"
             className="shrink-0 border-error/40 text-error/90 hover:bg-error/10"
-            compact
+            size="xs"
           >
             Retry
           </Button>

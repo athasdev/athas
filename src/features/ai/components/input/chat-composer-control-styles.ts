@@ -13,7 +13,7 @@ export function chatComposerControlClassName(className?: string) {
 
 export function chatComposerIconButtonClassName(className?: string) {
   return cn(
-    "size-7 rounded-md border-transparent bg-transparent p-0 ui-text-sm leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "rounded-md border-transparent bg-transparent ui-text-sm leading-normal text-text-lighter shadow-none [&_svg]:size-3",
     "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
@@ -24,7 +24,7 @@ export function chatComposerIconButtonClassName(className?: string) {
 
 export function chatMiniIconButtonClassName(className?: string) {
   return cn(
-    "size-6 rounded-md border-transparent bg-transparent p-0 text-text-lighter shadow-none",
+    "rounded-md border-transparent bg-transparent text-text-lighter shadow-none",
     "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover/70 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35",
     className,

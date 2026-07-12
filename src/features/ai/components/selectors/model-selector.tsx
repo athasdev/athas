@@ -305,7 +305,7 @@ export function ModelSelector({
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
-              compact: true,
+              size: "xs",
             }),
             triggerClass,
             "relative cursor-text",
@@ -331,7 +331,7 @@ export function ModelSelector({
           }}
           type="button"
           variant={isComposer ? "ghost" : "default"}
-          compact
+          size="xs"
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"

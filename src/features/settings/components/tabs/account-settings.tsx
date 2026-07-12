@@ -114,7 +114,7 @@ export const AccountSettings = () => {
               onClick={signIn}
               disabled={isSigningIn}
               className="ui-text-base"
-              compact
+              size="xs"
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
@@ -185,7 +185,12 @@ export const AccountSettings = () => {
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button variant="default" onClick={handleManagePlan} className="ui-text-base" compact>
+              <Button
+                variant="default"
+                onClick={handleManagePlan}
+                className="ui-text-base"
+                size="xs"
+              >
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -255,7 +260,7 @@ export const AccountSettings = () => {
               variant="default"
               onClick={handleManageAccount}
               className="ui-text-base"
-              compact
+              size="xs"
             >
               Open Dashboard
             </Button>

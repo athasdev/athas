@@ -18,7 +18,7 @@ import type { FileStatusFilter } from "../types/github-pr-viewer.types";
 import { FileDiffView } from "./file-diff-view";
 
 const compactToolbarButtonClass = cn(
-  buttonVariants({ variant: "ghost", compact: true }),
+  buttonVariants({ variant: "ghost", size: "xs" }),
   "h-5 rounded px-1.5 ui-text-sm text-text-lighter hover:bg-hover hover:text-text",
 );
 
@@ -122,7 +122,7 @@ export const PRFilesPanel = memo(
               onClick={onRetry}
               variant="default"
               className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
-              compact
+              size="xs"
             >
               Retry
             </Button>
@@ -173,7 +173,7 @@ export const PRFilesPanel = memo(
                   onClick={onToggleFileTree}
                   className={compactToolbarButtonClass}
                   aria-label={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
-                  compact
+                  size="icon-xs"
                 >
                   <ListBullets weight="duotone" />
                 </Button>

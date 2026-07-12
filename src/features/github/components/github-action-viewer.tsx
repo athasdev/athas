@@ -581,7 +581,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 variant="ghost"
                 tooltip="Refresh action run"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 {isLoading && details ? (
                   <LoadingIndicator label="Loading action run" compact />
@@ -594,7 +594,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 variant="ghost"
                 tooltip="Open action run on GitHub"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 <GithubLogo />
               </Button>
@@ -603,7 +603,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 variant="ghost"
                 tooltip="Copy run link"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 <Copy />
               </Button>
@@ -619,7 +619,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             <Button
               onClick={() => void fetchWorkflowRun(true)}
               variant="default"
-              compact
+              size="xs"
               className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
             >
               Retry
@@ -659,7 +659,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                   <Button
                     type="button"
                     variant="ghost"
-                    compact
+                    size="xs"
                     onClick={() => handleSelectJob(job)}
                     className={cn(
                       "h-auto w-full justify-start rounded-xl px-3 py-2 text-left",
@@ -709,7 +709,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               type="button"
                               key={`${job.name}-${step.name}-${index}`}
                               variant="ghost"
-                              compact
+                              size="xs"
                               onClick={() => setSelectedStepIndex(index)}
                               className={cn(
                                 "h-auto w-full min-w-0 justify-start gap-2 rounded-lg px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
@@ -759,7 +759,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               type="button"
                               onClick={handleToggleLogSearch}
                               variant="ghost"
-                              compact
+                              size="icon-xs"
                               tooltip={isLogSearchVisible ? "Hide log search" : "Search logs"}
                             >
                               <Search />
@@ -769,7 +769,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 type="button"
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="ghost"
-                                compact
+                                size="icon-xs"
                                 tooltip="Refresh job logs"
                                 disabled={!areJobLogsDownloadable(job)}
                               >
@@ -786,7 +786,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               variant="ghost"
                               tooltip="Copy job logs"
                               disabled={!job.id || !selectedStepLogs}
-                              compact
+                              size="icon-xs"
                             >
                               <Copy />
                             </Button>
@@ -809,7 +809,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 type="button"
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="default"
-                                compact
+                                size="xs"
                                 className="border-error/40 text-error/90 hover:bg-error/10"
                               >
                                 Retry

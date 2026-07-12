@@ -113,7 +113,7 @@ export function CsvPreview() {
             <Button
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
-              compact
+              size="xs"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Toggle header row"
             >
@@ -126,7 +126,7 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Copy as CSV"
-              compact
+              size="xs"
             >
               <Download weight="fill" /> CSV
             </Button>
@@ -137,7 +137,7 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Copy as JSON"
-              compact
+              size="xs"
             >
               <FileJson /> JSON
             </Button>

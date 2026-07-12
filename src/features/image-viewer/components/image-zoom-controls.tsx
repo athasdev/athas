@@ -21,7 +21,7 @@ export function ImageZoomControls({
 }: ImageZoomControlsProps) {
   return (
     <div className="flex items-center gap-2">
-      <Button onClick={onZoomOut} variant="ghost" tooltip="Zoom out" compact>
+      <Button onClick={onZoomOut} variant="ghost" tooltip="Zoom out" size="icon-xs">
         <Minus />
       </Button>
       <span
@@ -29,10 +29,10 @@ export function ImageZoomControls({
       >
         {Math.round(zoom * 100)}%
       </span>
-      <Button onClick={onZoomIn} variant="ghost" tooltip="Zoom in" compact>
+      <Button onClick={onZoomIn} variant="ghost" tooltip="Zoom in" size="icon-xs">
         <Plus />
       </Button>
-      <Button onClick={onResetZoom} variant="ghost" tooltip="Reset zoom" compact>
+      <Button onClick={onResetZoom} variant="ghost" tooltip="Reset zoom" size="icon-xs">
         <RotateCcw />
       </Button>
     </div>

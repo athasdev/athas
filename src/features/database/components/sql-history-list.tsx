@@ -42,7 +42,7 @@ export default function SqlHistoryList({
           type="button"
           onClick={onClear}
           variant="ghost"
-          compact
+          size="icon-xs"
           className="text-text-lighter hover:text-text"
           aria-label="Clear recent queries"
           tooltip="Clear recent queries"
@@ -62,7 +62,7 @@ export default function SqlHistoryList({
                 type="button"
                 onClick={() => onSelect(query)}
                 variant="ghost"
-                compact
+                size="xs"
                 className={cn(
                   "min-w-0 flex-1 justify-start truncate px-2.5 py-1.5 text-left",
                   "ui-text-sm",
@@ -81,7 +81,7 @@ export default function SqlHistoryList({
                     onRun(query);
                   }}
                   variant="ghost"
-                  compact
+                  size="icon-xs"
                   className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
                   aria-label={`Run query from history: ${preview}`}
                   tooltip="Run query"
@@ -96,7 +96,7 @@ export default function SqlHistoryList({
                   void writeDatabaseClipboardText(query);
                 }}
                 variant="ghost"
-                compact
+                size="icon-xs"
                 className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label={`Copy query from history: ${preview}`}
                 tooltip="Copy query"
@@ -110,7 +110,7 @@ export default function SqlHistoryList({
                   onRemove(query);
                 }}
                 variant="ghost"
-                compact
+                size="icon-xs"
                 className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label={`Remove query from history: ${preview}`}
                 tooltip="Remove from history"

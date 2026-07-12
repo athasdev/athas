@@ -165,7 +165,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button variant="default" onClick={handleImportSettings} compact>
+          <Button variant="default" onClick={handleImportSettings} size="xs">
             Import
           </Button>
         </SettingRow>
@@ -204,7 +204,7 @@ export const AdvancedSettings = () => {
             <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="default" onClick={handleClearTelemetryLog} compact>
+            <Button variant="default" onClick={handleClearTelemetryLog} size="xs">
               Clear
             </Button>
           </div>

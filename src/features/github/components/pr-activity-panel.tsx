@@ -115,7 +115,7 @@ export function PRActivityPanel({
                 onClick={onRetry}
                 variant="default"
                 className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
-                compact
+                size="xs"
               >
                 Retry
               </Button>

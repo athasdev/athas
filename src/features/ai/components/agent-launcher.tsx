@@ -268,7 +268,7 @@ export function AgentLaunchInput({
               : "Start voice input"
         }
         aria-label={isListening ? "Stop voice input" : "Start voice input"}
-        compact
+        size="icon-xs"
       >
         <Mic className={cn("size-3.5", isListening && "animate-pulse")} />
       </Button>
@@ -277,11 +277,11 @@ export function AgentLaunchInput({
         onClick={submit}
         disabled={selectedAgentId !== CLAUDE_CODE_TERMINAL_AGENT_ID && !prompt.trim()}
         variant="default"
-        className="rounded-full px-2.5"
+        className="rounded-full"
         tooltip="Launch agent"
         shortcut="enter"
         aria-label="Launch agent"
-        compact
+        size="icon-xs"
       >
         <Send className="size-3.5" />
       </Button>

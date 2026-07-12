@@ -429,7 +429,7 @@ function SearchExcerptItemComponent({
             tooltip={isExpanded ? "Collapse context" : "Expand context"}
             aria-label={isExpanded ? "Collapse context" : "Expand context"}
             className="shrink-0 text-text-lighter"
-            compact
+            size="icon-xs"
           >
             {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
           </Button>

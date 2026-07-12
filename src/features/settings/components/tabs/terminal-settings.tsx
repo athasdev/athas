@@ -210,6 +210,7 @@ export const TerminalSettings = () => {
                     variant="danger"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
+                    size="icon"
                   >
                     <Trash2 />
                   </Button>

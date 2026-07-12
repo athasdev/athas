@@ -69,10 +69,6 @@ export const SearchField = forwardRef<
 const searchSurfaceClass =
   "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm";
 
-const searchIconButtonClass = "size-6 min-h-6 min-w-6 px-0";
-
-const searchActionButtonClass = "h-8 px-2.5";
-
 export function SearchPopover({
   value,
   onChange,
@@ -112,7 +108,7 @@ export function SearchPopover({
               type="button"
               onClick={() => onChange("")}
               variant="ghost"
-              compact
+              size="icon-xs"
               className="-translate-y-1/2 absolute top-1/2 right-1"
               aria-label="Clear search"
             >
@@ -138,9 +134,8 @@ export function SearchPopover({
           type="button"
           onClick={onClose}
           variant="ghost"
-          className={searchIconButtonClass}
           aria-label="Close search"
-          compact
+          size="icon-xs"
         >
           <X />
         </Button>
@@ -156,11 +151,10 @@ export function SearchPopover({
                 onClick={option.onToggle}
                 variant="ghost"
                 active={option.active}
-                className={searchIconButtonClass}
                 tooltip={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
-                compact
+                size="icon-xs"
               >
                 {option.icon}
               </Button>
@@ -175,9 +169,8 @@ export function SearchPopover({
                   onClick={onPrevious}
                   disabled={!canNavigate}
                   variant="ghost"
-                  className={searchIconButtonClass}
                   aria-label="Previous match"
-                  compact
+                  size="icon-xs"
                 >
                   <ChevronUp />
                 </Button>
@@ -188,9 +181,8 @@ export function SearchPopover({
                   onClick={onNext}
                   disabled={!canNavigate}
                   variant="ghost"
-                  className={searchIconButtonClass}
                   aria-label="Next match"
-                  compact
+                  size="icon-xs"
                 >
                   <ChevronDown />
                 </Button>
@@ -223,10 +215,9 @@ export function SearchReplaceToggle({
       type="button"
       onClick={onToggle}
       variant="ghost"
-      className={searchIconButtonClass}
       tooltip={label}
       aria-label={label}
-      compact
+      size="icon-xs"
     >
       <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
     </Button>
@@ -270,14 +261,7 @@ export function SearchReplaceRow({
         className="ui-text-sm h-8 flex-1 rounded-lg border-border/80 bg-primary-bg py-1"
       />
 
-      <Button
-        type="button"
-        onClick={onReplace}
-        disabled={!canReplace}
-        variant="ghost"
-        className={searchActionButtonClass}
-        compact
-      >
+      <Button type="button" onClick={onReplace} disabled={!canReplace} variant="ghost">
         Replace
       </Button>
       <Button
@@ -285,9 +269,7 @@ export function SearchReplaceRow({
         onClick={onReplaceAll}
         disabled={!canReplaceAll}
         variant="ghost"
-        className={searchActionButtonClass}
         tooltip={replaceAllTooltip}
-        compact
       >
         All
       </Button>
@@ -336,7 +318,7 @@ export function SearchInput({
             type="button"
             onClick={() => onChange("")}
             variant="ghost"
-            compact
+            size="icon-xs"
             className="-translate-y-1/2 absolute top-1/2 right-1"
             aria-label="Clear search"
           >
@@ -354,11 +336,10 @@ export function SearchInput({
               onClick={option.onToggle}
               variant="ghost"
               active={option.active}
-              className={searchIconButtonClass}
               tooltip={option.label}
               aria-label={option.label}
               aria-pressed={option.active}
-              compact
+              size="icon-xs"
             >
               {option.icon}
             </Button>

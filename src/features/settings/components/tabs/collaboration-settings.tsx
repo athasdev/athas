@@ -48,7 +48,7 @@ export const CollaborationSettings = () => {
             variant="default"
             className="ui-text-base"
             onClick={openDashboardCollaboration}
-            compact
+            size="xs"
           >
             <UsersThree />
             Open

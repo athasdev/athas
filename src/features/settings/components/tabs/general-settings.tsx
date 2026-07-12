@@ -175,7 +175,7 @@ export const GeneralSettings = () => {
               onClick={downloadAndInstall}
               disabled={downloading || installing}
               variant="default"
-              compact
+              size="xs"
             >
               {downloading
                 ? "Downloading..."
@@ -188,7 +188,7 @@ export const GeneralSettings = () => {
               onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="default"
-              compact
+              size="xs"
             >
               {checking ? "Checking..." : "Check"}
             </Button>
@@ -239,7 +239,7 @@ export const GeneralSettings = () => {
                 onClick={() => void handleInstallCli()}
                 disabled={cliInstalling || cliChecking}
                 variant="default"
-                compact
+                size="xs"
               >
                 {cliInstalling ? "Installing..." : "Install"}
               </Button>
@@ -248,7 +248,7 @@ export const GeneralSettings = () => {
                 disabled={cliChecking}
                 variant="default"
                 tooltip="Copy install command to clipboard"
-                compact
+                size="xs"
               >
                 Copy
               </Button>
@@ -266,7 +266,7 @@ export const GeneralSettings = () => {
       </div>
 
       <SettingRow label="Import Settings" description="Import matching setup from another editor.">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" compact>
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" size="xs">
           Import
         </Button>
       </SettingRow>
@@ -275,7 +275,7 @@ export const GeneralSettings = () => {
         label="Report a Bug"
         description="Choose where to report an issue with environment details."
       >
-        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" compact>
+        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" size="xs">
           Open
         </Button>
       </SettingRow>

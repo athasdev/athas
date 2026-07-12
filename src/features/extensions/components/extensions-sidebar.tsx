@@ -451,8 +451,8 @@ const ExtensionRow = ({
       }}
       variant="default"
       tooltip="Reinstall"
-      compact
-      className="h-8 w-8 min-w-0 rounded-md p-0 text-error"
+      size="icon"
+      className="text-error"
     >
       <WarningCircle className="size-4" weight="duotone" />
     </Button>
@@ -464,13 +464,12 @@ const ExtensionRow = ({
       }}
       variant="default"
       tooltip="Update"
-      compact
-      className="h-8 w-8 min-w-0 rounded-md p-0"
+      size="icon"
     >
       <RefreshCw className="size-4" weight="duotone" />
     </Button>
   ) : isUnavailableAgent ? (
-    <Button disabled variant="ghost" tooltip="Unavailable" compact className="h-8 w-8 min-w-0 p-0">
+    <Button disabled variant="ghost" tooltip="Unavailable" size="icon">
       <XCircle className="size-4" weight="duotone" />
     </Button>
   ) : extension.isInstalled ? (
@@ -488,8 +487,7 @@ const ExtensionRow = ({
       }}
       variant="default"
       tooltip={primaryActionLabel}
-      compact
-      className="h-8 w-8 min-w-0 rounded-md p-0"
+      size="icon"
     >
       <Plus className="size-4" weight="bold" />
     </Button>
@@ -1554,7 +1552,7 @@ export const ExtensionsSidebar = () => {
               className="h-9 bg-secondary-bg/45"
             />
             {settings.extensionsActiveTab === "skill" ? (
-              <Button variant="default" compact onClick={() => setIsSkillsCommandOpen(true)}>
+              <Button variant="default" size="xs" onClick={() => setIsSkillsCommandOpen(true)}>
                 <Plus />
                 New Skill
               </Button>
@@ -1574,7 +1572,7 @@ export const ExtensionsSidebar = () => {
                 type="button"
                 variant={active ? "default" : "ghost"}
                 active={active}
-                compact
+                size="xs"
                 className={cn(
                   "group h-8 shrink-0 gap-1.5 px-2.5",
                   active ? "bg-selected text-text" : "text-text-lighter",
@@ -1730,7 +1728,7 @@ export const ExtensionsSidebar = () => {
                           </div>
                           <Button
                             variant={isCurrent ? "default" : "accent"}
-                            compact
+                            size="xs"
                             active={isCurrent}
                             disabled={!selectedExtension.isInstalled || isCurrent}
                             onClick={() => void handleUseAppearance(selectedExtension, option.id)}
@@ -1851,7 +1849,7 @@ export const ExtensionsSidebar = () => {
                       ? selectedExtension.extensions
                       : [getCategoryLabel(selectedExtension.category)]
                   ).map((item) => (
-                    <Badge key={item} variant="default" size="default">
+                    <Badge key={item} variant="default">
                       {item}
                     </Badge>
                   ))}

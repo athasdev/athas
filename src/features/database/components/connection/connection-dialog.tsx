@@ -230,7 +230,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               disabled={isTesting || isConnecting}
               className="gap-1.5"
               aria-label="Test connection"
-              compact
+              size="xs"
             >
               {isTesting ? <LoadingIndicator label="Testing" compact /> : <PlugZap />}
               Test
@@ -242,7 +242,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             disabled={installedDbTypes.length === 0 || isConnecting || validationError !== null}
             className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
-            compact
+            size="xs"
           >
             {isConnecting && <LoadingIndicator label="Connecting" compact />}
             {isFileBased ? "Open Database" : "Connect"}
@@ -327,7 +327,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   variant="ghost"
                   className="gap-1.5"
                   onClick={handleBrowseDatabaseFile}
-                  compact
+                  size="xs"
                 >
                   <FolderOpen />
                   Browse

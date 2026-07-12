@@ -550,7 +550,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           type="button"
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
-          compact
+          size="icon-xs"
           chrome="icon"
           className={cn("text-text-lighter", config.color, isLspOpen && "bg-hover text-text")}
           aria-label="Language server status"
@@ -580,7 +580,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       onClick={() => void handleRestartAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      compact
+                      size="xs"
                       className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
@@ -590,7 +590,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       onClick={() => void handleStopAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      compact
+                      size="xs"
                       className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
@@ -611,7 +611,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           onClick={() => void handleRestartServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          compact
+                          size="xs"
                           className={editorMenuActionButtonClass}
                         >
                           {isBusy ? "..." : "Restart"}
@@ -621,7 +621,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           onClick={() => void handleStopServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          compact
+                          size="icon-xs"
                           className={editorMenuActionButtonClass}
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
@@ -645,7 +645,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         onClick={() => void handleStartCurrent()}
                         disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
-                        compact
+                        size="xs"
                         className={editorMenuActionButtonClass}
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
@@ -685,7 +685,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           type="button"
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
-          compact
+          size="icon-xs"
           chrome="icon"
           className={cn(
             "text-text-lighter",
@@ -713,7 +713,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                compact
+                size="xs"
                 className={editorMenuItemClass}
                 disabled={option.disabled}
               >
@@ -735,7 +735,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                compact
+                size="xs"
                 className={editorMenuItemClass}
                 disabled={option.disabled}
               >
@@ -752,7 +752,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                compact
+                size="xs"
                 className={editorMenuItemClass}
                 disabled={option.disabled}
               >

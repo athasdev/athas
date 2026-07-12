@@ -62,7 +62,7 @@ export default function CreateSubscriptionDialog({
       size="lg"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose} disabled={isSubmitting} compact>
+          <Button variant="ghost" onClick={handleClose} disabled={isSubmitting} size="xs">
             Cancel
           </Button>
           <Button

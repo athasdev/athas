@@ -108,7 +108,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
             <Button
               type="button"
               variant="ghost"
-              compact
+              size="icon-xs"
               onClick={() => void state.handleApplyInlineEdit()}
               disabled={state.isInlineEditRunning}
               className="text-accent hover:bg-transparent hover:text-accent/80"
@@ -121,7 +121,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
             <Button
               type="button"
               variant="ghost"
-              compact
+              size="icon-xs"
               onClick={() => state.inlineEditToolbarActions.hide()}
               className="text-text-lighter hover:text-text"
               tooltip="Close inline edit"

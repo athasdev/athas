@@ -159,7 +159,7 @@ function SqlEditor({
               key={`${item.detail}-${item.value}`}
               type="button"
               variant="ghost"
-              compact
+              size="xs"
               className="h-6 border border-border/60 px-2 text-text-lighter"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => applyCompletion(index)}
@@ -280,11 +280,11 @@ export default function QueryBar({
                 : "Cmd/Ctrl+Enter to run"}
           </div>
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setIsCustomQuery(false)} variant="ghost" compact>
+            <Button onClick={() => setIsCustomQuery(false)} variant="ghost" size="xs">
               Cancel
             </Button>
             {isCustomQueryLoading && (
-              <Button onClick={cancelCustomQuery} variant="ghost" compact>
+              <Button onClick={cancelCustomQuery} variant="ghost" size="xs">
                 Stop
               </Button>
             )}
@@ -292,7 +292,7 @@ export default function QueryBar({
               onClick={runQuery}
               variant="default"
               disabled={isLoading || !(selectedQuery || customQuery).trim()}
-              compact
+              size="xs"
             >
               {selectedQuery ? "Run Selection" : "Execute"}
             </Button>
@@ -323,6 +323,7 @@ export default function QueryBar({
               className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
               aria-label="Clear search"
               tooltip="Clear search"
+              size="icon"
             >
               <X />
             </Button>

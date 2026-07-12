@@ -264,8 +264,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || isRunning || isPaused}
         tooltip="Start"
         tooltipSide="bottom"
@@ -280,8 +279,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || !isRunning}
         tooltip="Stop"
         tooltipSide="bottom"
@@ -296,8 +294,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || (!isRunning && !isPaused)}
         tooltip={isPaused ? "Unpause" : "Pause"}
         tooltipSide="bottom"
@@ -312,8 +309,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy}
         tooltip="Restart"
         tooltipSide="bottom"
@@ -328,8 +324,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || !isRunning}
         tooltip="Open shell"
         tooltipSide="bottom"
@@ -344,8 +339,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || !isRunning}
         tooltip="Debug in container"
         tooltipSide="bottom"
@@ -360,8 +354,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || !quickUrl}
         tooltip="Open service URL"
         tooltipSide="bottom"
@@ -376,8 +369,7 @@ function ContainerActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || isRunning}
         tooltip="Remove"
         tooltipSide="bottom"
@@ -493,8 +485,7 @@ function ComposeServiceActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy}
         tooltip="Start"
         tooltipSide="bottom"
@@ -509,8 +500,7 @@ function ComposeServiceActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || !isRunning}
         tooltip="Stop"
         tooltipSide="bottom"
@@ -525,8 +515,7 @@ function ComposeServiceActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy}
         tooltip="Restart"
         tooltipSide="bottom"
@@ -541,8 +530,7 @@ function ComposeServiceActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy}
         tooltip="Rebuild"
         tooltipSide="bottom"
@@ -557,8 +545,7 @@ function ComposeServiceActions({
       <Button
         type="button"
         variant="ghost"
-        compact
-        className="size-6 p-0"
+        size="icon-xs"
         disabled={busy || !quickUrl}
         tooltip="Open service URL"
         tooltipSide="bottom"
@@ -636,8 +623,7 @@ function ImageRow({
           <Button
             type="button"
             variant="ghost"
-            compact
-            className="size-6 p-0"
+            size="icon-xs"
             disabled={busy}
             tooltip="Run image"
             tooltipSide="bottom"
@@ -652,8 +638,7 @@ function ImageRow({
           <Button
             type="button"
             variant="ghost"
-            compact
-            className="size-6 p-0"
+            size="icon-xs"
             disabled={busy}
             tooltip="Remove image"
             tooltipSide="bottom"
@@ -1845,7 +1830,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={busyComposeService !== null || composeEnvFilePaths.length === 0}
                           tooltip={
@@ -1862,7 +1847,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={busyComposeService !== null}
                           onClick={() => void handleSaveComposePreset()}
@@ -1872,7 +1857,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={busyComposeService !== null}
                           onClick={() => void handleComposeAction(null, "down")}
@@ -1929,7 +1914,7 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         onClick={() => void handleOpenEnvFile()}
                       >
@@ -1939,7 +1924,7 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         onClick={() => void handleSaveDebugPreset()}
                       >
@@ -1958,7 +1943,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           onClick={() => void handleOpenEnvFile()}
                         >
@@ -1968,7 +1953,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           onClick={() => void handleSaveDebugPreset()}
                         >
@@ -1993,7 +1978,7 @@ export function DockerSidebar() {
                               <Button
                                 type="button"
                                 variant="ghost"
-                                compact
+                                size="xs"
                                 className="h-6 px-1.5 ui-text-sm"
                                 disabled={
                                   busyDevContainerPath !== null ||
@@ -2059,7 +2044,7 @@ export function DockerSidebar() {
                               <Button
                                 type="button"
                                 variant="ghost"
-                                compact
+                                size="xs"
                                 className="h-6 px-1.5 ui-text-sm"
                                 onClick={() => handleRunDebugPreset(preset)}
                               >
@@ -2088,7 +2073,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
+                                  size="xs"
                                   className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => handleRunDebugPreset(preset)}
                                 >
@@ -2097,8 +2082,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
-                                  className="size-6 p-0"
+                                  size="icon-xs"
                                   tooltip="Delete preset"
                                   tooltipSide="left"
                                   aria-label={`Delete ${preset.name}`}
@@ -2132,7 +2116,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
+                                  size="xs"
                                   className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => void openEnvFile(envFile)}
                                 >
@@ -2141,8 +2125,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
-                                  className="size-6 p-0"
+                                  size="icon-xs"
                                   tooltip="Delete env file"
                                   tooltipSide="left"
                                   aria-label={`Delete ${envFile.relativePath}`}
@@ -2178,7 +2161,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
+                                  size="xs"
                                   className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => applyBuildPreset(preset)}
                                 >
@@ -2187,8 +2170,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
-                                  className="size-6 p-0"
+                                  size="icon-xs"
                                   tooltip="Delete preset"
                                   tooltipSide="left"
                                   aria-label={`Delete ${preset.name}`}
@@ -2222,7 +2204,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
+                                  size="xs"
                                   className="h-6 px-1.5 ui-text-sm"
                                   onClick={() => applyRunPreset(preset)}
                                 >
@@ -2231,8 +2213,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
-                                  className="size-6 p-0"
+                                  size="icon-xs"
                                   tooltip="Delete preset"
                                   tooltipSide="left"
                                   aria-label={`Delete ${preset.name}`}
@@ -2266,7 +2247,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
+                                  size="xs"
                                   className="h-6 px-1.5 ui-text-sm"
                                   disabled={busyComposeService !== null}
                                   onClick={() => void handleRunComposePreset(preset)}
@@ -2280,8 +2261,7 @@ export function DockerSidebar() {
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  compact
-                                  className="size-6 p-0"
+                                  size="icon-xs"
                                   tooltip="Delete preset"
                                   tooltipSide="left"
                                   aria-label={`Delete ${preset.name}`}
@@ -2315,7 +2295,7 @@ export function DockerSidebar() {
                     <Button
                       type="button"
                       variant="ghost"
-                      compact
+                      size="xs"
                       className="h-6 px-1.5 ui-text-sm"
                       disabled={busyImageId !== null}
                       onClick={openBuildDialog}
@@ -2365,7 +2345,7 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         disabled={isRegistryBusy || !registryQuery.trim()}
                         onClick={() => void handleRegistrySearch()}
@@ -2400,7 +2380,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={isRegistryBusy || !registryDraft.image.trim()}
                           onClick={() => void handleRegistryPull(registryDraft.image)}
@@ -2410,7 +2390,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={isRegistryBusy || !registryDraft.image.trim()}
                           onClick={() => void handleRegistryPush()}
@@ -2420,7 +2400,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={
                             isRegistryBusy ||
@@ -2472,7 +2452,7 @@ export function DockerSidebar() {
                         <Button
                           type="button"
                           variant="ghost"
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm"
                           disabled={
                             isRegistryBusy ||
@@ -2507,7 +2487,7 @@ export function DockerSidebar() {
                           <Button
                             type="button"
                             variant="ghost"
-                            compact
+                            size="xs"
                             className="h-6 px-1.5 ui-text-sm"
                             disabled={isRegistryBusy}
                             onClick={() => void handleRegistryPull(result.name)}
@@ -2549,7 +2529,7 @@ export function DockerSidebar() {
                       key={target}
                       type="button"
                       variant="ghost"
-                      compact
+                      size="xs"
                       className="h-7 justify-start px-2 ui-text-sm"
                       disabled={busyPruneTarget !== null}
                       onClick={() => void handlePrune(target, target === "system")}
@@ -2608,7 +2588,7 @@ export function DockerSidebar() {
                         key={tab}
                         type="button"
                         variant={detailTab === tab ? "accent" : "ghost"}
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm capitalize"
                         onClick={() => setDetailTab(tab)}
                       >
@@ -2619,7 +2599,7 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         disabled={logLines.length === 0}
                         onClick={() => setLogLines([])}
@@ -2630,7 +2610,7 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         onClick={() => void handleCopyToContainer()}
                       >
@@ -2657,7 +2637,7 @@ export function DockerSidebar() {
                           key={filter}
                           type="button"
                           variant={logFilter === filter ? "accent" : "ghost"}
-                          compact
+                          size="xs"
                           className="h-6 px-1.5 ui-text-sm capitalize"
                           onClick={() => setLogFilter(filter)}
                         >
@@ -2696,7 +2676,7 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
+                        size="xs"
                         className="h-6 px-1.5 ui-text-sm"
                         disabled={containerPath === "/"}
                         onClick={() => setContainerPath(parentContainerPath(containerPath))}
@@ -2709,8 +2689,8 @@ export function DockerSidebar() {
                       <Button
                         type="button"
                         variant="ghost"
-                        compact
-                        className="h-6 px-1.5 ui-text-sm"
+                        size="icon-xs"
+                        className="ui-text-sm"
                         disabled={isFilesLoading}
                         onClick={() => void loadContainerFiles()}
                       >
@@ -2770,8 +2750,8 @@ export function DockerSidebar() {
                             <Button
                               type="button"
                               variant="ghost"
-                              compact
-                              className="h-6 px-1.5 ui-text-sm"
+                              size="icon-xs"
+                              className="ui-text-sm"
                               tooltip="Copy to host"
                               tooltipSide="left"
                               aria-label={`Copy ${entry.name} to host`}

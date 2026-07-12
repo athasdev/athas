@@ -129,7 +129,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
             <Button
               onClick={() => void handleAddRemote()}
               disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
-              compact
+              size="xs"
               variant="default"
             >
               {isLoading ? "Adding..." : "Add Remote"}
@@ -166,7 +166,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                     }}
                     disabled={isActionLoading}
                     variant="ghost"
-                    compact
+                    size="icon-xs"
                     className="shrink-0 text-error hover:bg-error/10 hover:text-error"
                     aria-label={`Remove ${remote.name}`}
                   >

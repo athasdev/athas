@@ -70,7 +70,7 @@ function FollowUpButton({
     <Button
       type="button"
       variant="ghost"
-      compact
+      size="xs"
       onClick={() => onSelect(action.prompt)}
       className={chatFollowUpActionClassName()}
       tooltip={action.prompt}

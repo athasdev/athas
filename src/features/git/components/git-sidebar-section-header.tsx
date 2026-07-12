@@ -56,7 +56,7 @@ const GitSidebarSectionHeader = ({
           "flex min-h-7 w-full shrink-0 items-center justify-between gap-1.5 rounded-none bg-primary-bg px-2.5 py-1 hover:bg-hover",
           className,
         )}
-        compact
+        size="xs"
       >
         {content}
       </Button>

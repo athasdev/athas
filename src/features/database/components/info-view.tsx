@@ -64,7 +64,7 @@ export default function InfoView({
                         key={table.name}
                         onClick={() => onTableChange(table.name)}
                         variant="ghost"
-                        compact
+                        size="xs"
                         className={`block h-auto w-full justify-start px-2 py-1 text-left ui-text-sm hover:bg-hover ${
                           selectedTable === table.name ? "bg-selected" : ""
                         }`}

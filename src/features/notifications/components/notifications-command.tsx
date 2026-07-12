@@ -498,7 +498,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                 <Button
                   type="button"
                   variant="ghost"
-                  compact
+                  size="xs"
                   className="gap-1.5"
                   onClick={() => void copyActiveNotification(activeNotification)}
                 >
@@ -508,7 +508,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                 <Button
                   type="button"
                   variant="danger"
-                  compact
+                  size="xs"
                   className="gap-1.5"
                   onClick={() => {
                     removeNotification(activeNotification.id);

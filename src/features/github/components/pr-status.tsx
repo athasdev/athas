@@ -88,7 +88,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="xs"
         onClick={() => setIsExpanded(!isExpanded)}
         className="ui-text-sm h-auto min-w-0 px-1.5 py-1 text-left"
         aria-expanded={isExpanded}

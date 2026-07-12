@@ -116,7 +116,7 @@ const TabBarItem = memo(function TabBarItem({
         action={
           <Button
             type="button"
-            compact
+            size="icon-xs"
             variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
@@ -127,7 +127,7 @@ const TabBarItem = memo(function TabBarItem({
               }
             }}
             className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
+              "-translate-y-1/2 absolute top-1/2 right-1 cursor-pointer select-none rounded-sm text-text-lighter transition-opacity",
               "hover:bg-transparent hover:text-text",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}

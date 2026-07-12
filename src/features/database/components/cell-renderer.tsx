@@ -42,7 +42,7 @@ export default function CellRenderer({
         <Button
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
-          compact
+          size="xs"
           className="block h-auto max-w-[280px] truncate p-0 text-left font-sans font-normal text-accent"
           tooltip="Click to expand JSON"
         >
@@ -82,7 +82,7 @@ export default function CellRenderer({
       <Button
         onClick={() => onFkClick(columnName, value)}
         variant="ghost"
-        compact
+        size="xs"
         className="block h-auto truncate p-0 text-left font-normal text-accent underline decoration-accent/40"
         tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
@@ -109,7 +109,7 @@ export default function CellRenderer({
         <Button
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
-          compact
+          size="xs"
           className={cn(
             "block h-auto max-w-[280px] p-0 text-left font-normal",
             expanded ? "whitespace-pre-wrap" : "truncate",

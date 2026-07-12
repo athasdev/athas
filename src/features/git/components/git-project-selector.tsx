@@ -127,7 +127,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
         <Button
           type="button"
           variant="ghost"
-          compact
+          size="xs"
           className={cn(
             "h-7 w-fit max-w-full min-w-0 justify-start gap-1.5 px-2.5 text-left text-accent/80 hover:text-accent focus-visible:text-accent",
           )}

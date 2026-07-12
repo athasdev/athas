@@ -49,7 +49,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
         <Button
           type="button"
           variant="default"
-          compact
+          size="xs"
           onClick={onAction}
           disabled={disabled}
           tooltip={actionTooltip}
@@ -62,7 +62,7 @@ export const SplitActionButton = forwardRef<HTMLDivElement, SplitActionButtonPro
         <Button
           type="button"
           variant="default"
-          compact
+          size="icon-xs"
           onClick={onMenu}
           disabled={menuDisabled}
           tooltip={menuTooltip}

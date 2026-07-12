@@ -219,6 +219,7 @@ export function QuickQuestionCommandContent({
                 className="rounded"
                 onClick={() => void handleCopy()}
                 tooltip="Copy answer"
+                size="icon"
               >
                 <Copy className="text-text-lighter" size={12} />
               </Button>

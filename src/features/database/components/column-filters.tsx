@@ -52,7 +52,7 @@ export default function ColumnFilters({
             <Button
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
-              compact
+              size="xs"
               className="gap-0.5 text-text-lighter"
               aria-label="Add filter"
             >
@@ -66,7 +66,7 @@ export default function ColumnFilters({
           variant="ghost"
           className="text-text-lighter"
           aria-label="Clear all filters"
-          compact
+          size="xs"
         >
           Clear all
         </Button>
@@ -112,7 +112,7 @@ export default function ColumnFilters({
             <Button
               onClick={() => onRemove(index)}
               variant="ghost"
-              compact
+              size="icon-xs"
               className="text-text-lighter hover:text-error"
               aria-label="Remove filter"
             >

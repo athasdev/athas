@@ -111,7 +111,7 @@ export default function RunActionsButton() {
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
             aria-label="Run actions"
-            compact
+            size="icon-xs"
           >
             <PlayIcon />
           </Button>
@@ -155,7 +155,7 @@ export default function RunActionsButton() {
                       })
                     }
                     variant="ghost"
-                    compact
+                    size="icon-xs"
                     className="text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
@@ -165,7 +165,7 @@ export default function RunActionsButton() {
                     type="button"
                     onClick={() => deleteAction(action.id)}
                     variant="ghost"
-                    compact
+                    size="icon-xs"
                     className="text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
@@ -207,7 +207,7 @@ export default function RunActionsButton() {
               <Button
                 onClick={handleSave}
                 disabled={!draft.name.trim() || !draft.command.trim()}
-                compact
+                size="xs"
               >
                 {draft.id ? "Save" : "Add Action"}
               </Button>

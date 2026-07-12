@@ -26,13 +26,13 @@ export interface BreadcrumbProps {
   showPath?: boolean;
 }
 
-type BreadcrumbActionButtonProps = Omit<ButtonProps, "variant" | "compact">;
+type BreadcrumbActionButtonProps = Omit<ButtonProps, "variant" | "size">;
 
 export function BreadcrumbActionButton({ className, ...props }: BreadcrumbActionButtonProps) {
   return (
     <Button
       variant="ghost"
-      compact
+      size="icon-xs"
       className={cn("rounded text-text-lighter", className)}
       {...props}
     />

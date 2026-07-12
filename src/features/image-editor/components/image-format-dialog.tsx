@@ -131,10 +131,10 @@ export function ImageFormatDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <Button onClick={onClose} variant="default" compact>
+          <Button onClick={onClose} variant="default" size="xs">
             Cancel
           </Button>
-          <Button onClick={handleConvert} disabled={isEstimating} variant="accent" compact>
+          <Button onClick={handleConvert} disabled={isEstimating} variant="accent" size="xs">
             Convert
           </Button>
         </>
@@ -158,7 +158,7 @@ export function ImageFormatDialog({
                 type="button"
                 onClick={() => setSelectedQuality(option.quality)}
                 variant="ghost"
-                compact
+                size="xs"
                 className={cn(
                   "flex h-auto items-center justify-between rounded border px-3 py-2 text-left ui-text-sm",
                   selectedQuality === option.quality

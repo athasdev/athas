@@ -312,7 +312,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
         const { label, onClick, variant = "default" } = config;
         return createElement(
           Button,
-          { onClick, variant, compact: true, style: { fontSize: GENERATED_UI_FONT_SIZE } },
+          { onClick, variant, size: "xs", style: { fontSize: GENERATED_UI_FONT_SIZE } },
           label,
         );
       },

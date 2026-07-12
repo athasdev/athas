@@ -61,11 +61,16 @@ export function paneIconButtonClassName(className?: string) {
   return cn("shrink-0 rounded-md text-text-lighter", className);
 }
 
-export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "compact">;
+export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;
 
 function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
   return (
-    <Button variant="default" compact className={paneIconButtonClassName(className)} {...props} />
+    <Button
+      variant="default"
+      size="icon-xs"
+      className={paneIconButtonClassName(className)}
+      {...props}
+    />
   );
 }
 

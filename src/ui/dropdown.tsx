@@ -20,7 +20,7 @@ import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
     variant: "default",
-    compact: true,
+    size: "xs",
   }),
   "min-w-0 gap-1 rounded-md px-2 text-text-lighter",
 );

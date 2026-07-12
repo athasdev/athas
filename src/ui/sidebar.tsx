@@ -169,15 +169,15 @@ export const SidebarHeaderSearch = forwardRef<
 
 export const SidebarHeaderIconButton = forwardRef<
   HTMLButtonElement,
-  Omit<ButtonProps, "variant" | "compact">
+  Omit<ButtonProps, "variant" | "size">
 >(function SidebarHeaderIconButton({ className, ...props }, ref) {
   return (
     <Button
       ref={ref}
       type="button"
       variant="ghost"
-      compact
-      className={cn("size-6 rounded-md p-0", className)}
+      size="icon-xs"
+      className={cn("rounded-md", className)}
       {...props}
     />
   );
@@ -730,7 +730,7 @@ export function SidebarEmptyActionState({
         <Button
           type="button"
           variant="ghost"
-          compact
+          size="xs"
           className={cn("ui-text-sm h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
           disabled={actionDisabled}
           onClick={onAction}

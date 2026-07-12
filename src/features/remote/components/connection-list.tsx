@@ -88,11 +88,11 @@ const ConnectionList = ({
           onClick={onAddNew}
           variant="ghost"
           className={cn(
-            "flex size-5 items-center justify-center rounded-md p-0",
+            "flex items-center justify-center rounded-md",
             "text-text-lighter transition-colors hover:bg-hover hover:text-text",
           )}
           aria-label="Add Remote Connection"
-          compact
+          size="icon-xs"
         >
           <Plus />
         </Button>
@@ -108,7 +108,7 @@ const ConnectionList = ({
               onClick={onAddNew}
               variant="default"
               className="font-sans flex items-center gap-1.5"
-              compact
+              size="xs"
             >
               <Plus />
               Add Connection
@@ -177,7 +177,7 @@ const ConnectionList = ({
                           onFileSelect?.(`remote://${connection.id}/`, true);
                         }}
                         variant="ghost"
-                        compact
+                        size="icon-xs"
                         aria-label="Browse Files"
                       >
                         <FolderOpen />
@@ -189,7 +189,7 @@ const ConnectionList = ({
                           onConnect(connection.id);
                         }}
                         variant="ghost"
-                        compact
+                        size="icon-xs"
                         className="hover:text-error"
                         aria-label="Disconnect"
                       >
@@ -204,7 +204,7 @@ const ConnectionList = ({
                         if (!connectingMap[connection.id]) onConnect(connection.id);
                       }}
                       variant="ghost"
-                      compact
+                      size="icon-xs"
                       className={cn(
                         connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                       )}

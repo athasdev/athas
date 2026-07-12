@@ -178,7 +178,7 @@ export const InlineEditModelSelector = ({
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="xs"
         onClick={openSelector}
         disabled={disabled}
         className="max-w-[144px] justify-start px-1.5 text-text"

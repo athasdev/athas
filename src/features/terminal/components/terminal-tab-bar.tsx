@@ -442,7 +442,7 @@ const TerminalTabBar = ({
             onClick={onSearchTerminal}
             variant="ghost"
             className="shrink-0 rounded-lg text-text-lighter"
-            compact
+            size="icon-xs"
           >
             <Search />
           </Button>
@@ -454,7 +454,7 @@ const TerminalTabBar = ({
             onClick={onNewTerminal}
             variant="ghost"
             className="shrink-0 rounded-lg text-text-lighter"
-            compact
+            size="icon-xs"
           >
             <Plus />
           </Button>
@@ -465,8 +465,8 @@ const TerminalTabBar = ({
               ref={profileMenuButtonRef}
               onClick={openProfileMenu}
               variant="ghost"
-              className="h-6 w-5 shrink-0 rounded-lg text-text-lighter"
-              compact
+              className="shrink-0 rounded-lg text-text-lighter"
+              size="icon-xs"
             >
               <ChevronDown />
             </Button>
@@ -479,7 +479,7 @@ const TerminalTabBar = ({
             onClick={onFullScreen}
             variant="ghost"
             className="shrink-0 rounded-lg text-text-lighter"
-            compact
+            size="icon-xs"
           >
             {isFullScreen ? <Minimize2 /> : <Maximize2 />}
           </Button>
@@ -698,7 +698,7 @@ const TerminalTabBar = ({
                 onClick={onNewTerminal}
                 variant="ghost"
                 className="rounded-lg text-text-lighter"
-                compact
+                size="icon-xs"
               >
                 <Plus />
               </Button>
@@ -709,8 +709,8 @@ const TerminalTabBar = ({
                   ref={profileMenuButtonRef}
                   onClick={openProfileMenu}
                   variant="ghost"
-                  className="h-6 w-5 rounded-lg text-text-lighter"
-                  compact
+                  className="rounded-lg text-text-lighter"
+                  size="icon-xs"
                 >
                   <ChevronDown />
                 </Button>

@@ -209,7 +209,7 @@ export function FilePathBreadcrumb({
                 onClick={handleGoBack}
                 variant="ghost"
                 className={dropdownItemClassName("justify-start gap-2 font-normal")}
-                compact
+                size="xs"
               >
                 <ChevronLeft className="size-4 shrink-0 text-text-lighter" weight="duotone" />
                 <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
@@ -245,7 +245,7 @@ export function FilePathBreadcrumb({
                 }
               }}
               variant="ghost"
-              compact
+              size="xs"
               className={dropdownItemClassName("justify-start gap-2 font-normal")}
             >
               <ThemedFileIcon

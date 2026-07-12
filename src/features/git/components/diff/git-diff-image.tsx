@@ -78,7 +78,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           className="text-text-lighter disabled:opacity-50"
           tooltip="Zoom out"
           aria-label="Zoom out"
-          compact
+          size="icon-xs"
         >
           <ZoomOut />
         </Button>
@@ -89,7 +89,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           onClick={handleZoomIn}
           disabled={zoom >= MAX_ZOOM}
           variant="ghost"
-          compact
+          size="icon-xs"
           className="text-text-lighter disabled:opacity-50"
           tooltip="Zoom in"
           aria-label="Zoom in"

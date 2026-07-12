@@ -499,7 +499,7 @@ const GitStatusPanel = ({
     <Button
       type="button"
       variant="ghost"
-      compact
+      size="xs"
       className="ui-text-sm mt-2 h-auto w-full min-w-0 justify-between gap-2 px-2.5 py-1 text-left text-text-lighter"
       onClick={() => toggleSectionCollapsed(section)}
       aria-expanded={!collapsedSections.has(section)}

@@ -318,7 +318,7 @@ export default function DebuggerView() {
           tooltip="Toggle breakpoint on current line"
           onClick={toggleCurrentLineBreakpoint}
           disabled={!activeFile}
-          compact
+          size="icon-xs"
         >
           <ListBullets />
         </Button>
@@ -372,6 +372,7 @@ export default function DebuggerView() {
                 disabled={!canSendAdapterThreadRequest}
                 onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
                 aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
+                size="icon"
               >
                 {isPaused ? <Play /> : <Pause />}
               </Button>
@@ -381,6 +382,7 @@ export default function DebuggerView() {
                 disabled={!isActiveSession}
                 onClick={stopDebugging}
                 commandId="debug.stop"
+                size="icon"
               >
                 <Square />
               </Button>
@@ -392,7 +394,7 @@ export default function DebuggerView() {
                 tooltip="Step over"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("next")}
-                compact
+                size="xs"
               >
                 Over
               </Button>
@@ -401,7 +403,7 @@ export default function DebuggerView() {
                 tooltip="Step into"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepIn")}
-                compact
+                size="xs"
               >
                 Into
               </Button>
@@ -410,7 +412,7 @@ export default function DebuggerView() {
                 tooltip="Step out"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepOut")}
-                compact
+                size="xs"
               >
                 Out
               </Button>
@@ -488,7 +490,7 @@ export default function DebuggerView() {
                   variant="ghost"
                   tooltip="Clear console"
                   onClick={debuggerActions.clearAdapterTranscript}
-                  compact
+                  size="icon-xs"
                 >
                   <Trash />
                 </Button>
@@ -524,7 +526,7 @@ export default function DebuggerView() {
                   variant="ghost"
                   tooltip="Clear breakpoints"
                   onClick={debuggerActions.clearBreakpoints}
-                  compact
+                  size="icon-xs"
                 >
                   <Trash />
                 </Button>

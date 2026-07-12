@@ -1389,7 +1389,7 @@ function FileExplorerTreeComponent({
             <Button
               onClick={() => setAlertDialog(null)}
               variant="accent"
-              compact
+              size="xs"
               className="ui-text-base"
             >
               OK

@@ -160,6 +160,7 @@ export default function ConnectionForm({
             onClick={() => onShowPasswordChange((value) => !value)}
             className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter hover:text-text"
             aria-label={showPassword ? "Hide password" : "Show password"}
+            size="icon"
           >
             {showPassword ? <EyeOff /> : <Eye />}
           </Button>

@@ -314,8 +314,17 @@ export default function Select({
     () => getInputTriggerText(open, searchableTrigger, searchQuery, selectedOption, value),
     [open, searchableTrigger, searchQuery, selectedOption, value],
   );
+  const buttonSize = iconOnly
+    ? size === "md"
+      ? "icon"
+      : size === "sm"
+        ? "icon-sm"
+        : "icon-xs"
+    : size === "md"
+      ? "default"
+      : size;
   const resolvedTriggerClassName = cn(
-    buttonVariants({ variant, compact: size !== "md" }),
+    buttonVariants({ variant, size: buttonSize }),
     !iconOnly && selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
     !iconOnly && "justify-between text-left",
     triggerClassName,

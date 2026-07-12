@@ -470,6 +470,7 @@ export function SkillsCommand({
                           className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                           tooltip="Edit skill"
                           aria-label={`Edit ${skill.title}`}
+                          size="icon"
                         >
                           <PencilSimple size={13} />
                         </Button>
@@ -483,6 +484,7 @@ export function SkillsCommand({
                           className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                           tooltip="Delete skill"
                           aria-label={`Delete ${skill.title}`}
+                          size="icon"
                         >
                           <Trash size={13} />
                         </Button>

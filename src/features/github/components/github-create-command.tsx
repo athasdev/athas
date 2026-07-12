@@ -629,7 +629,7 @@ function FieldButton({
     <Button
       type="button"
       variant="default"
-      compact
+      size="xs"
       onClick={onClick}
       className={cn(
         "h-8 min-w-0 justify-start gap-2 bg-secondary-bg px-2 text-left hover:bg-hover",

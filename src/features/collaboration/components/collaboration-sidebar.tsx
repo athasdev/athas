@@ -1195,10 +1195,11 @@ export function CollaborationSidebarView() {
             <Button
               type="button"
               variant="ghost"
-              className="size-7 rounded-md p-0"
+              className="rounded-md"
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
+              size="icon-sm"
             >
               <CaretLeft />
             </Button>
@@ -1280,10 +1281,11 @@ export function CollaborationSidebarView() {
             <Button
               type="button"
               variant="ghost"
-              className="size-7 rounded-md p-0"
+              className="rounded-md"
               tooltip="Back to Channels"
               tooltipSide="bottom"
               onClick={() => setOpenConversation(null)}
+              size="icon-sm"
             >
               <CaretLeft />
             </Button>

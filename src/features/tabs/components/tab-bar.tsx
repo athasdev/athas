@@ -720,12 +720,12 @@ const TabBar = ({
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+              className="shrink-0 rounded-md text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
-              compact
+              size="icon-xs"
             >
               <ArrowLeft />
             </Button>
@@ -734,12 +734,12 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+              className="shrink-0 rounded-md text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
-              compact
+              size="icon-xs"
             >
               <ArrowRight />
             </Button>
@@ -779,8 +779,8 @@ const TabBar = ({
                 type="button"
                 onClick={handleShowNewTab}
                 variant="ghost"
-                compact
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                size="icon-xs"
+                className="shrink-0 rounded-md text-text-lighter"
                 tooltip="New Tab"
                 tooltipSide="bottom"
                 aria-label="New tab"
@@ -793,8 +793,8 @@ const TabBar = ({
                 type="button"
                 onClick={() => closePane(paneId)}
                 variant="ghost"
-                compact
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                size="icon-xs"
+                className="shrink-0 rounded-md text-text-lighter"
                 tooltip="Close Split"
                 tooltipSide="bottom"
                 aria-label="Close split pane"
@@ -807,11 +807,11 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                className="shrink-0 rounded-md text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
-                compact
+                size="icon-xs"
               >
                 {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
               </Button>

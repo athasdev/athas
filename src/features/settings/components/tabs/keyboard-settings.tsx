@@ -238,7 +238,7 @@ export const KeyboardSettings = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" onClick={handleImport} compact>
+                <Button variant="default" onClick={handleImport} size="xs">
                   Import
                 </Button>
                 <Button variant="default" onClick={() => void handleExport()}>

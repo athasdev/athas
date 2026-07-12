@@ -513,17 +513,13 @@ const GlobalSearchBuffer = () => {
                 tooltip={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
-                compact
+                size="icon-xs"
               >
                 {option.icon}
               </Button>
             ))}
           </TabsList>
-          {resultLabel ? (
-            <Badge size="default" className="shrink-0">
-              {resultLabel}
-            </Badge>
-          ) : null}
+          {resultLabel ? <Badge className="shrink-0">{resultLabel}</Badge> : null}
         </div>
         {isReplaceVisible ? (
           <div className="mt-2 space-y-2">

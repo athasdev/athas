@@ -103,7 +103,7 @@ export function MessageAction({
     <Button
       type="button"
       variant="ghost"
-      compact
+      size="icon-xs"
       tooltip={tooltip ?? label}
       aria-label={label}
       className={cn(chatMiniIconButtonClassName("text-text-lighter/55"), className)}

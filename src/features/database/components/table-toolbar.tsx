@@ -110,7 +110,7 @@ export default function TableToolbar({
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 variant={viewMode === mode ? "default" : "ghost"}
-                compact
+                size="xs"
                 className={cn(
                   "px-2.5 ui-text-sm text-text-lighter",
                   viewMode === mode ? "text-text" : "text-text-lighter",
@@ -128,8 +128,8 @@ export default function TableToolbar({
             <Button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
-              compact
-              className="px-2 text-text-lighter"
+              size="icon-xs"
+              className="text-text-lighter"
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
             >
@@ -145,8 +145,8 @@ export default function TableToolbar({
             <Button
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
-              compact
-              className="px-2 text-text-lighter"
+              size="icon-xs"
+              className="text-text-lighter"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
               tooltip="Open SQL editor"
@@ -158,10 +158,10 @@ export default function TableToolbar({
             <Button
               onClick={onCreateSubscription}
               variant="ghost"
-              className="px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label="Create subscription"
               tooltip="Create subscription"
-              compact
+              size="icon-xs"
             >
               <RadioButton />
             </Button>
@@ -170,10 +170,10 @@ export default function TableToolbar({
             <Button
               onClick={onToggleSubscription}
               variant="ghost"
-              className="px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
-              compact
+              size="icon-xs"
             >
               {subscriptionInfo.enabled ? <MinusCircle /> : <PlusCircle />}
             </Button>
@@ -182,10 +182,10 @@ export default function TableToolbar({
             <Button
               onClick={onRefreshSubscription}
               variant="ghost"
-              className="px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label="Refresh subscription"
               tooltip="Refresh subscription"
-              compact
+              size="icon-xs"
             >
               <ArrowClockwise />
             </Button>
@@ -194,10 +194,10 @@ export default function TableToolbar({
             <Button
               onClick={onDropSubscription}
               variant="ghost"
-              className="px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label="Drop subscription"
               tooltip="Drop subscription"
-              compact
+              size="icon-xs"
             >
               <Trash />
             </Button>
@@ -207,20 +207,20 @@ export default function TableToolbar({
               <Button
                 onClick={exportAsCSV}
                 variant="ghost"
-                className="px-2 text-text-lighter"
+                className="text-text-lighter"
                 aria-label={exportLabel}
                 tooltip={exportTooltip}
-                compact
+                size="icon-xs"
               >
                 <Download weight="fill" />
               </Button>
               <Button
                 onClick={copyAsJSON}
                 variant="ghost"
-                className="px-2 text-text-lighter"
+                className="text-text-lighter"
                 aria-label={jsonLabel}
                 tooltip={jsonTooltip}
-                compact
+                size="icon-xs"
               >
                 <ClipboardText />
               </Button>

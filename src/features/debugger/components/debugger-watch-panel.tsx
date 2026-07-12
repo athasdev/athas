@@ -102,7 +102,7 @@ export function DebugWatchPanel({
           tooltip="Add watch"
           disabled={!newExpression.trim()}
           onClick={addExpression}
-          compact
+          size="icon-xs"
         >
           <Plus />
         </Button>
@@ -111,7 +111,7 @@ export function DebugWatchPanel({
           tooltip="Refresh watches"
           disabled={!activeSessionId || !isPaused || watchExpressions.length === 0}
           onClick={evaluateAll}
-          compact
+          size="icon-xs"
         >
           <ArrowsClockwise />
         </Button>
@@ -147,6 +147,7 @@ export function DebugWatchPanel({
                     className="opacity-0 group-hover:opacity-100"
                     tooltip="Remove watch"
                     onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
+                    size="icon"
                   >
                     <Trash />
                   </Button>

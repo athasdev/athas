@@ -98,7 +98,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 key={col.name}
                 onClick={() => actions.selectCollection(col.name)}
                 variant="ghost"
-                compact
+                size="xs"
                 className={cn(
                   "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-[1.35]",
                   store.selectedCollection === col.name && "bg-selected",
@@ -129,14 +129,19 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               onKeyDown={(e) => e.key === "Enter" && handleApplyQuery()}
               aria-label="MongoDB sort query"
             />
-            <Button onClick={handleApplyQuery} className="gap-1.5" aria-label="Apply query" compact>
+            <Button
+              onClick={handleApplyQuery}
+              className="gap-1.5"
+              aria-label="Apply query"
+              size="xs"
+            >
               <Braces />
               Apply
             </Button>
             <Button
               onClick={handleResetQuery}
               variant="ghost"
-              compact
+              size="xs"
               className="px-2 py-1 text-text-lighter"
               aria-label="Reset query"
             >
@@ -145,7 +150,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             <Button
               onClick={() => actions.refresh()}
               variant="ghost"
-              compact
+              size="icon-xs"
               className="text-text-lighter"
               aria-label="Refresh"
             >
@@ -210,7 +215,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                         <Button
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
-                          compact
+                          size="icon-xs"
                           className="text-error opacity-0 transition-[opacity,background-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-error/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
@@ -267,7 +272,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(1)}
                   disabled={store.currentPage === 1}
                   variant="ghost"
-                  compact
+                  size="icon-xs"
                   aria-label="First page"
                 >
                   <ChevronsLeft />
@@ -276,7 +281,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.currentPage - 1)}
                   disabled={store.currentPage === 1}
                   variant="ghost"
-                  compact
+                  size="icon-xs"
                   aria-label="Previous page"
                 >
                   <ChevronLeft />
@@ -285,7 +290,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.currentPage + 1)}
                   disabled={store.currentPage === store.totalPages}
                   variant="ghost"
-                  compact
+                  size="icon-xs"
                   aria-label="Next page"
                 >
                   <ChevronRight />
@@ -294,7 +299,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   onClick={() => actions.setCurrentPage(store.totalPages)}
                   disabled={store.currentPage === store.totalPages}
                   variant="ghost"
-                  compact
+                  size="icon-xs"
                   aria-label="Last page"
                 >
                   <ChevronsRight />

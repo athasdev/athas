@@ -245,7 +245,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
             <Button
               onClick={handleCompactMenuToggle}
               variant="ghost"
-              compact
+              size="icon-xs"
               chrome="icon"
               className={menuBarActiveMenu ? "bg-hover/70 text-text" : undefined}
               aria-label="Menu"
@@ -274,9 +274,9 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       tooltipSide="bottom"
       onClick={() => setIsSidebarRailExpanded(!isSidebarRailExpanded)}
       chrome="icon"
-      className={isMacOS ? "size-6 min-h-6 min-w-6" : undefined}
       aria-label={isSidebarRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
       aria-pressed={isSidebarRailExpanded}
+      size="icon-xs"
     >
       <SidebarSimpleIcon />
     </Button>
@@ -301,6 +301,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           }}
           chrome="icon"
           aria-label="Toggle Agent"
+          size="icon-xs"
         >
           <SparkleIcon />
         </Button>
@@ -318,9 +319,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       <div
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
-        className={`athas-title-bar relative z-50 flex select-none items-center justify-between ${
-          isMacOS ? "h-8" : "h-8"
-        } bg-secondary-bg px-2`}
+        className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
       >
         <div className="flex-1" />
 

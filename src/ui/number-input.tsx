@@ -134,7 +134,7 @@ export default function NumberInput({
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="icon-xs"
         onClick={() => handleStep(-1)}
         disabled={!canDecrement}
         aria-label="Decrease value"
@@ -165,7 +165,7 @@ export default function NumberInput({
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="icon-xs"
         onClick={() => handleStep(1)}
         disabled={!canIncrement}
         aria-label="Increase value"

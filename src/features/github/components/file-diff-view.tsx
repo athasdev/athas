@@ -66,7 +66,7 @@ export const FileDiffView = memo(
             onClick={onToggle}
             className="h-auto w-full justify-start rounded-none px-2.5 py-2 text-left hover:bg-hover/60"
             aria-label={`${isExpanded ? "Collapse" : "Expand"} diff for ${file.path}`}
-            compact
+            size="xs"
           >
             {isExpanded ? (
               <ChevronDown className="text-text-lighter" />
@@ -94,7 +94,7 @@ export const FileDiffView = memo(
                 <Button
                   onClick={() => onOpenFile(file.path)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className="text-text-lighter"
                 >
                   Open File

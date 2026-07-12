@@ -102,7 +102,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
               void copyToClipboard(commit.oid, "Commit SHA copied");
             }}
             variant="ghost"
-            compact
+            size="icon-xs"
             className="text-text-lighter"
             aria-label="Copy commit SHA"
           >
@@ -117,7 +117,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
                 openCommitInBrowser();
               }}
               variant="ghost"
-              compact
+              size="icon-xs"
               className="text-text-lighter"
               aria-label="Open commit in browser"
             >

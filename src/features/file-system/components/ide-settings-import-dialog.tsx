@@ -313,7 +313,7 @@ export function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportC
         <CommandFooter>
           <Button
             variant="accent"
-            compact
+            size="xs"
             disabled={selectedCapabilityIds.length === 0}
             onClick={handleImport}
           >

@@ -178,7 +178,7 @@ export function DebugBreakpointsList({
             className="opacity-0 group-hover:opacity-100"
             tooltip="Remove breakpoint"
             onClick={() => onRemove(breakpoint)}
-            compact
+            size="icon-xs"
           >
             <Trash />
           </Button>

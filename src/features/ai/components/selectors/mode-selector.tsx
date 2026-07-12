@@ -82,7 +82,7 @@ export const ModeSelector = memo(function ModeSelector({
         setMode(value as ChatMode);
       }}
       disabled={isSelectorDisabled}
-      size="xs"
+      size="sm"
       openDirection="up"
       variant="ghost"
       open={open}

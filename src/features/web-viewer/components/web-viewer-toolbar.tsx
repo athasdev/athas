@@ -181,7 +181,7 @@ export function WebViewerToolbar({
               onClick={isLoading ? onStopLoading : onRefresh}
               className="text-text-lighter hover:text-text"
               tooltip={isLoading ? "Stop loading" : "Refresh"}
-              compact
+              size="icon-xs"
             >
               {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
             </Button>
@@ -192,7 +192,7 @@ export function WebViewerToolbar({
               disabled={!canCopyUrl}
               className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
-              compact
+              size="icon-xs"
             >
               {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
             </Button>
@@ -208,7 +208,7 @@ export function WebViewerToolbar({
           variant="ghost"
           onClick={() => setShowZoomPopover((open) => !open)}
           tooltip="Zoom controls"
-          compact
+          size="icon-xs"
         >
           <ZoomIn />
         </Button>
@@ -266,7 +266,7 @@ export function WebViewerToolbar({
           onClick={onClearBrowsingData}
           disabled={!canClearBrowsingData}
           tooltip="Clear browsing data"
-          compact
+          size="icon-xs"
         >
           <Broom />
         </Button>
@@ -275,7 +275,7 @@ export function WebViewerToolbar({
           onClick={onOpenDevTools}
           disabled={!canOpenDevTools}
           tooltip={devToolsTooltip}
-          compact
+          size="icon-xs"
         >
           <Code2 />
         </Button>
@@ -284,7 +284,7 @@ export function WebViewerToolbar({
           onClick={onOpenExternal}
           disabled={!canOpenExternal}
           tooltip="Open in browser"
-          compact
+          size="icon-xs"
         >
           <ExternalLink />
         </Button>

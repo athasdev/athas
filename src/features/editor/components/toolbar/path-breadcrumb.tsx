@@ -52,7 +52,7 @@ export function PathBreadcrumb({
                 ref={(element) => setSegmentRef?.(index, element)}
                 onClick={(event) => onSegmentClick?.(index, event)}
                 variant="ghost"
-                compact
+                size="xs"
                 className={cn(
                   "min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 ui-text-sm",
                   isLast

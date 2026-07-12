@@ -193,7 +193,7 @@ export function SettingRow({
                 aria-label={resetLabel || `Reset ${label}`}
                 tooltip={canReset ? resetLabel || `Reset ${label}` : undefined}
                 className={cn(!canReset && "pointer-events-none invisible")}
-                compact
+                size="icon-xs"
               >
                 <RotateCcw />
               </Button>

@@ -520,7 +520,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveCustomChatApiKey}
                 disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
-                compact
+                size="xs"
               >
                 Save
               </Button>
@@ -530,7 +530,7 @@ export const AISettings = () => {
                   variant="default"
                   onClick={handleRemoveCustomChatApiKey}
                   disabled={isSavingCustomChatApiKey}
-                  compact
+                  size="xs"
                 >
                   Remove
                 </Button>
@@ -584,7 +584,7 @@ export const AISettings = () => {
                   onClick={handleResetOllamaUrl}
                   title="Reset to default"
                   aria-label="Reset Ollama URL to default"
-                  compact
+                  size="icon-xs"
                 >
                   <RotateCcw />
                 </Button>
@@ -615,7 +615,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveOllamaApiKey}
                 disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
-                compact
+                size="xs"
               >
                 {isSavingOllamaKey ? "Saving…" : "Save"}
               </Button>
@@ -627,7 +627,7 @@ export const AISettings = () => {
                   title="Remove saved API key"
                   aria-label="Remove Ollama API key"
                   className="text-error hover:bg-error/10"
-                  compact
+                  size="icon-xs"
                 >
                   <Trash2 />
                 </Button>
@@ -658,9 +658,7 @@ export const AISettings = () => {
                   : "Could not connect. Check that Ollama is running at this address."
               }
             >
-              <Badge variant="default" size="default">
-                Error
-              </Badge>
+              <Badge variant="default">Error</Badge>
             </SettingRow>
           )}
         </Section>
@@ -680,9 +678,7 @@ export const AISettings = () => {
               label={provider.name}
               description="Requires OAuth authentication"
             >
-              <Badge variant="default" size="default">
-                Coming Soon
-              </Badge>
+              <Badge variant="default">Coming Soon</Badge>
             </SettingRow>
           ))}
         </Section>
@@ -812,7 +808,7 @@ export const AISettings = () => {
                     onClick={loadAutocompleteModels}
                     disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
                     title="Refresh model list"
-                    compact
+                    size="icon-xs"
                   >
                     {isLoadingAutocompleteModels ? (
                       <LoadingIndicator label="Loading models" compact />
@@ -905,7 +901,7 @@ export const AISettings = () => {
                         !aiCompletionAllowedByPolicy ||
                         isSavingCustomAutocompleteApiKey
                       }
-                      compact
+                      size="xs"
                     >
                       Save
                     </Button>
@@ -914,7 +910,7 @@ export const AISettings = () => {
                         variant="default"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                        compact
+                        size="xs"
                       >
                         Remove
                       </Button>
@@ -925,9 +921,7 @@ export const AISettings = () => {
             )}
             {autocompleteModelError && (
               <SettingRow label="Model List" description={autocompleteModelError}>
-                <Badge variant="default" size="default">
-                  Error
-                </Badge>
+                <Badge variant="default">Error</Badge>
               </SettingRow>
             )}
           </>
@@ -937,9 +931,7 @@ export const AISettings = () => {
             label="Enterprise Policy"
             description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
           >
-            <Badge variant="default" size="default">
-              Managed
-            </Badge>
+            <Badge variant="default">Managed</Badge>
           </SettingRow>
         ) : null}
       </Section>

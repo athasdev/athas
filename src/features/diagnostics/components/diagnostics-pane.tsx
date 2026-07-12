@@ -1038,7 +1038,7 @@ const DiagnosticsPane = ({
                   onClick={resetFilters}
                   variant="ghost"
                   className={CONTROL_PILL_BASE}
-                  compact
+                  size="xs"
                 >
                   Reset filters
                 </Button>

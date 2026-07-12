@@ -254,7 +254,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 variant="ghost"
                 tooltip="Refresh issue"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 {isLoading && details ? (
                   <LoadingIndicator label="Loading issue" compact />
@@ -267,7 +267,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 variant="ghost"
                 tooltip="Open issue on GitHub"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 <GithubLogo />
               </Button>
@@ -276,7 +276,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 variant="ghost"
                 tooltip="Edit issue"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 <Pencil />
               </Button>
@@ -285,7 +285,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 variant="ghost"
                 tooltip="Copy issue link"
                 tooltipSide="bottom"
-                compact
+                size="icon-xs"
               >
                 <Copy />
               </Button>
@@ -308,7 +308,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             <Button
               onClick={() => void fetchIssue(true)}
               variant="default"
-              compact
+              size="xs"
               className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
             >
               Retry

@@ -63,10 +63,10 @@ export function ImageResizeDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <Button type="button" variant="default" onClick={onClose} compact>
+          <Button type="button" variant="default" onClick={onClose} size="xs">
             Cancel
           </Button>
-          <Button type="button" variant="accent" onClick={handleSubmit} compact>
+          <Button type="button" variant="accent" onClick={handleSubmit} size="xs">
             Resize
           </Button>
         </>

@@ -77,10 +77,10 @@ export const CreateRowModal = ({
           })}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} compact>
+          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
             Cancel
           </Button>
-          <Button type="submit" className="gap-1" compact>
+          <Button type="submit" className="gap-1" size="xs">
             <PlusIcon size="14" />
             Add Row
           </Button>
@@ -163,10 +163,10 @@ export const EditRowModal = ({
           })}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} compact>
+          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
             Cancel
           </Button>
-          <Button type="submit" compact>
+          <Button type="submit" size="xs">
             Save Changes
           </Button>
         </div>
@@ -279,7 +279,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   type="button"
                   onClick={() => removeColumn(index)}
                   variant="danger"
-                  compact
+                  size="icon-xs"
                   aria-label={`Remove ${column.name || `column ${index + 1}`}`}
                 >
                   <XIcon size="14" />
@@ -287,14 +287,14 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
               )}
             </div>
           ))}
-          <Button type="button" onClick={addColumn} variant="ghost" compact>
+          <Button type="button" onClick={addColumn} variant="ghost" size="xs">
             <PlusIcon size="12" />
             Add Column
           </Button>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} compact>
+          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
             Cancel
           </Button>
           <Button type="submit" disabled={!canSubmit}>

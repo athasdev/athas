@@ -48,13 +48,13 @@ const commandInputClassName = cva(
   "font-sans ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
 );
 
-type CommandHeaderActionProps = Omit<ButtonProps, "className" | "compact" | "variant">;
+type CommandHeaderActionProps = Omit<ButtonProps, "className" | "size" | "variant">;
 
 export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
-    compact
-    className="ui-text-base min-h-7 min-w-7 shrink-0 rounded-md px-2 text-text-lighter hover:text-text [&_svg]:size-4"
+    size="sm"
+    className="ui-text-base shrink-0 rounded-md px-2 text-text-lighter hover:text-text [&_svg]:size-4"
     {...props}
   />
 );
@@ -321,7 +321,7 @@ export const CommandItem = ({
       {...props}
       variant="ghost"
       className={cn(commandItemVariants({ selected: isSelected }), className)}
-      compact
+      size="xs"
     >
       {children}
     </Button>
@@ -559,13 +559,12 @@ export function useCommandListNavigation({
   return { selectedIndex, setSelectedIndex, onInputKeyDown };
 }
 
-type CommandFooterActionProps = Omit<ButtonProps, "className" | "compact" | "variant">;
+type CommandFooterActionProps = Omit<ButtonProps, "className" | "size" | "variant">;
 
 export const CommandFooterAction = (props: CommandFooterActionProps) => (
   <Button
     variant="default"
-    compact
-    className="ui-text-base min-h-8 min-w-0 justify-center gap-1.5 px-3 [&_svg]:size-4"
+    className="ui-text-base min-w-0 justify-center gap-1.5 [&_svg]:size-4"
     {...props}
   />
 );

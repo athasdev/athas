@@ -48,7 +48,7 @@ export function GitHubAuthStatusMessage() {
         <Button
           onClick={() => void signIn().catch(() => undefined)}
           variant="ghost"
-          compact
+          size="xs"
           disabled={isSigningIn}
           className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
           aria-label="Sign in to Athas"
@@ -76,7 +76,7 @@ export function GitHubAuthStatusMessage() {
             variant="ghost"
             className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
             aria-label="Connect GitHub"
-            compact
+            size="xs"
           >
             Connect GitHub
           </Button>
@@ -86,7 +86,7 @@ export function GitHubAuthStatusMessage() {
             variant="ghost"
             className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
             aria-label="Retry authentication check"
-            compact
+            size="xs"
           >
             Retry
           </Button>
@@ -109,7 +109,7 @@ export function GitHubAuthStatusMessage() {
           variant="ghost"
           className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
           aria-label="Connect GitHub"
-          compact
+          size="xs"
         >
           Connect GitHub
         </Button>
@@ -119,7 +119,7 @@ export function GitHubAuthStatusMessage() {
           variant="ghost"
           className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
           aria-label="Retry authentication check"
-          compact
+          size="xs"
         >
           Retry
         </Button>

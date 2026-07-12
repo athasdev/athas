@@ -270,6 +270,7 @@ function CodeBlock({
                 className="rounded"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
+                size="icon"
               >
                 <Copy className="text-text-lighter" size={12} />
               </Button>

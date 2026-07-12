@@ -74,7 +74,7 @@ const ProjectIconPicker = memo(
                 onClick={handleRemoveIcon}
                 variant="ghost"
                 aria-label="Remove custom icon"
-                compact
+                size="icon-xs"
               >
                 <Trash2 />
               </Button>
@@ -108,6 +108,7 @@ const ProjectIconPicker = memo(
                     currentIcon === icon.path ? "border-accent bg-accent/10" : "border-border/50"
                   }`}
                   aria-label={`Select ${icon.name} as project icon`}
+                  size="icon"
                 >
                   <img
                     src={icon.src}
