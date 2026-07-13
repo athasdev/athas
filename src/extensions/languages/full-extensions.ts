@@ -44,12 +44,6 @@ export const fullExtensions: ExtensionManifest[] = [
       fileExtensions: [".astro"],
       languageIds: ["astro"],
     },
-    installation: {
-      downloadUrl: "/tree-sitter/parsers/astro/parser.wasm",
-      size: 0,
-      checksum: "",
-      minEditorVersion: "0.2.0",
-    },
   },
   {
     id: "athas.php",

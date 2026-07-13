@@ -1551,11 +1551,19 @@ export const useFileSystemStore = createSelectors(
 
         let effectiveRootPath = activePath || rootFolderPath;
 
-        // Active path maybe is a file
+        // If the active path is a file (has extension, or found in tree as non-dir),
+        // use its parent directory. Otherwise, use the path as-is (it's a directory).
         if (activePath) {
           try {
-            await extname(activePath);
-            effectiveRootPath = await dirname(activePath);
+            const ext = await extname(activePath);
+            if (ext) {
+              effectiveRootPath = await dirname(activePath);
+            } else {
+              const entry = findFileInTree(get().files, activePath);
+              if (entry && !entry.isDir) {
+                effectiveRootPath = await dirname(activePath);
+              }
+            }
           } catch {}
         }
 
@@ -1651,11 +1659,19 @@ export const useFileSystemStore = createSelectors(
 
         let effectiveRootPath = activePath || rootFolderPath;
 
-        // Active path maybe is a file
+        // If the active path is a file (has extension, or found in tree as non-dir),
+        // use its parent directory. Otherwise, use the path as-is (it's a directory).
         if (activePath) {
           try {
-            await extname(activePath);
-            effectiveRootPath = await dirname(activePath);
+            const ext = await extname(activePath);
+            if (ext) {
+              effectiveRootPath = await dirname(activePath);
+            } else {
+              const entry = findFileInTree(get().files, activePath);
+              if (entry && !entry.isDir) {
+                effectiveRootPath = await dirname(activePath);
+              }
+            }
           } catch {}
         }
 

@@ -102,9 +102,5 @@ export function resolveInjectedLanguage(
     return lang === "tsx" ? "typescriptreact" : "javascriptreact";
   }
 
-  if (parentLanguageId === "astro" && !lang) {
-    return "typescript";
-  }
-
   return rule.language;
 }
