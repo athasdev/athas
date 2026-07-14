@@ -54,6 +54,13 @@ html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="
   --athas-chrome-control-active-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
 }
 
+html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="dark"]
+  .athas-sidebar-rail {
+  --athas-sidebar-rail-muted-text: color-mix(in srgb, var(--text-light) 90%, var(--text) 10%);
+  --text-lighter: var(--athas-sidebar-rail-muted-text);
+  --color-text-lighter: var(--athas-sidebar-rail-muted-text);
+}
+
 html.platform-macos:not([data-window-transparency="disabled"]) .window-container {
   background: transparent !important;
 }
