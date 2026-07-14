@@ -1,11 +1,7 @@
 use crate::{app_runtime::AppHandle, commands::fuzzy::FffSearchState};
 use athas_fff_search::{GrepMode, GrepSearchOptions, parse_grep_query};
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, Instant};
 use tauri::State;
-
-const INITIAL_SCAN_WAIT_TIMEOUT: Duration = Duration::from_millis(100);
-const INITIAL_SCAN_WAIT_INTERVAL: Duration = Duration::from_millis(25);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchMatchRange {
@@ -141,27 +137,6 @@ pub fn search_files_content(
    let _operation_guard = state.lock_operation()?;
    state.ensure_workspace(&app, std::path::Path::new(&request.root_path))?;
    let fff = state.get_or_init(&app)?;
-   let wait_started = Instant::now();
-
-   while wait_started.elapsed() < INITIAL_SCAN_WAIT_TIMEOUT {
-      let is_scanning = {
-         let picker_guard = fff
-            .picker
-            .read()
-            .map_err(|e| format!("fff picker read: {e}"))?;
-
-         picker_guard
-            .as_ref()
-            .map(|picker| picker.get_scan_progress().is_scanning)
-            .unwrap_or(false)
-      };
-
-      if !is_scanning {
-         break;
-      }
-
-      std::thread::sleep(INITIAL_SCAN_WAIT_INTERVAL);
-   }
 
    let picker_guard = fff
       .picker
@@ -264,4 +239,54 @@ pub fn search_files_content(
       indexed_files: grep_result.total_files,
       regex_fallback_error: grep_result.regex_fallback_error,
    })
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn request(query: &str) -> SearchFilesRequest {
+      SearchFilesRequest {
+         root_path: "/project".to_string(),
+         query: query.to_string(),
+         case_sensitive: Some(true),
+         whole_word: Some(false),
+         use_regex: Some(false),
+         max_results: None,
+         file_offset: None,
+         context_lines: None,
+      }
+   }
+
+   #[test]
+   fn keeps_case_sensitive_literals_on_the_plain_text_path() {
+      let (pattern, mode) = build_fff_grep_pattern(&request("needle"));
+
+      assert_eq!(pattern, "needle");
+      assert!(matches!(mode, GrepMode::PlainText));
+   }
+
+   #[test]
+   fn escapes_literals_before_adding_case_insensitive_regex_flags() {
+      let mut search_request = request("value.*");
+      search_request.case_sensitive = Some(false);
+      let (pattern, mode) = build_fff_grep_pattern(&search_request);
+
+      assert_eq!(pattern, r"(?i:value\.\*)");
+      assert!(matches!(mode, GrepMode::Regex));
+   }
+
+   #[test]
+   fn converts_utf8_byte_ranges_to_character_ranges() {
+      assert_eq!(byte_range_to_char_range("aé日z", 1, 6), (1, 3));
+   }
+
+   #[test]
+   fn rejects_virtual_and_empty_search_roots() {
+      assert!(should_skip_fff_path("remote://host/project"));
+      assert!(should_skip_fff_path("wsl://Ubuntu/project"));
+      assert!(should_skip_fff_path("diff://change"));
+      assert!(should_skip_fff_path("  "));
+      assert!(!should_skip_fff_path("/project"));
+   }
 }

@@ -3,7 +3,7 @@ import { getSourceEditorBufferByPath } from "@/features/editor/utils/buffer-inde
 import { buildSearchRegex } from "@/features/editor/utils/search";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { writeFile } from "@/features/file-system/controllers/platform";
-import type { ContentSearchOptions } from "../hooks/use-content-search";
+import type { ContentSearchOptions } from "../types/global-search.types";
 
 interface ReplaceTarget {
   filePath: string;
@@ -15,6 +15,8 @@ interface SourceContent {
   bufferId: string | null;
   content: string;
 }
+
+const REPLACE_ALL_CONCURRENCY = 8;
 
 function lineColumnToOffset(content: string, line: number, column: number): number {
   const lines = content.split("\n");
@@ -127,13 +129,19 @@ export async function replaceAllInSources(
   const regex = buildSearchRegex(query, options);
   if (!regex) return 0;
   const openSourcesByPath = getOpenSourceContentByPath();
+  let nextFileIndex = 0;
+  let totalReplacements = 0;
 
-  const replaceCounts = await Promise.all(
-    filePaths.map(async (filePath) => {
+  const replaceWorker = async () => {
+    while (nextFileIndex < filePaths.length) {
+      const filePath = filePaths[nextFileIndex];
+      nextFileIndex++;
+      if (!filePath) continue;
+
       const source = await readSource(filePath, openSourcesByPath);
       let matchCount = 0;
       const fileRegex = buildSearchRegex(query, options);
-      if (!fileRegex) return 0;
+      if (!fileRegex) continue;
       const replacementRegex = options.useRegex
         ? new RegExp(fileRegex.source, fileRegex.flags.replace(/g/g, ""))
         : null;
@@ -145,11 +153,14 @@ export async function replaceAllInSources(
 
       if (matchCount > 0 && nextContent !== source.content) {
         await writeSource(filePath, source.bufferId, nextContent);
-        return matchCount;
+        totalReplacements += matchCount;
       }
-      return 0;
-    }),
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(REPLACE_ALL_CONCURRENCY, filePaths.length) }, replaceWorker),
   );
 
-  return replaceCounts.reduce((total, count) => total + count, 0);
+  return totalReplacements;
 }

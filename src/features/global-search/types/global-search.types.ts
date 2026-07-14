@@ -16,3 +16,9 @@ export interface SearchResult {
   file: FileItem;
   score: number;
 }
+
+export interface ContentSearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  useRegex: boolean;
+}
