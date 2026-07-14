@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { editorAPI } from "@/features/editor/extensions/api";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { canUseNativeFileSearch } from "@/features/global-search/utils/file-search-paths";
@@ -14,6 +17,7 @@ import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
 import { type SymbolItem, useSymbolSearch } from "./use-symbol-search";
+import { type WorkspaceSymbolItem, useWorkspaceSymbolSearch } from "./use-workspace-symbol-search";
 
 export const useQuickOpen = () => {
   const isQuickOpenVisible = useUIState((state) => state.isQuickOpenVisible);
@@ -26,8 +30,9 @@ export const useQuickOpen = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { centerCursorInViewport } = useCenterCursor();
 
-  // Detect symbol mode (query starts with @)
+  // Detect symbol mode (query starts with @) and workspace-symbol mode (query starts with #)
   const isSymbolMode = query.startsWith("@");
+  const isWorkspaceSymbolMode = query.startsWith("#");
   const useBackendFileSearch = canUseNativeFileSearch(rootFolderPath);
 
   const onClose = useCallback(() => {
@@ -43,22 +48,30 @@ export const useQuickOpen = () => {
 
   const { hits: fffHits, isSearching: isFffSearching } = useFffSearch(
     debouncedQuery,
-    isQuickOpenVisible && !isSymbolMode,
+    isQuickOpenVisible && !isSymbolMode && !isWorkspaceSymbolMode,
     rootFolderPath,
   );
 
   const { openBufferFiles, recentFilesInResults, otherFiles } = useFileSearch(
     files,
-    isSymbolMode ? "" : debouncedQuery,
-    isSymbolMode ? null : fffHits,
+    isSymbolMode || isWorkspaceSymbolMode ? "" : debouncedQuery,
+    isSymbolMode || isWorkspaceSymbolMode ? null : fffHits,
     {
       rootFolderPath,
-      useBackendResults: useBackendFileSearch && !isSymbolMode && debouncedQuery.trim().length > 0,
+      useBackendResults:
+        useBackendFileSearch &&
+        !isSymbolMode &&
+        !isWorkspaceSymbolMode &&
+        debouncedQuery.trim().length > 0,
     },
   );
 
   // Symbol search (only active in @ mode)
   const { symbols, isLoading: isLoadingSymbols } = useSymbolSearch(query, isSymbolMode);
+
+  // Workspace-wide symbol search (only active in # mode)
+  const { symbols: workspaceSymbols, isLoading: isLoadingWorkspaceSymbols } =
+    useWorkspaceSymbolSearch(query, isWorkspaceSymbolMode);
 
   const handleSymbolSelect = useCallback(
     (symbol: SymbolItem) => {
@@ -84,6 +97,42 @@ export const useQuickOpen = () => {
       }, 50);
     },
     [onClose, centerCursorInViewport],
+  );
+
+  // Workspace-symbol results routinely point at files that are not open yet, so unlike
+  // handleSymbolSelect (which just moves the cursor in the already-open active file), this
+  // needs to push a jump-list entry for the current position and open the target file.
+  const handleWorkspaceSymbolSelect = useCallback(
+    (symbol: WorkspaceSymbolItem) => {
+      onClose();
+
+      const bufferStore = useBufferStore.getState();
+      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+      if (activeBuffer?.type === "editor" && activeBuffer.path) {
+        const editorState = useEditorStateStore.getState();
+        useJumpListStore.getState().actions.pushEntry({
+          bufferId: activeBuffer.id,
+          filePath: activeBuffer.path,
+          line: editorState.cursorPosition.line,
+          column: editorState.cursorPosition.column,
+          offset: editorState.cursorPosition.offset,
+          scrollTop: editorState.scrollTop,
+          scrollLeft: editorState.scrollLeft,
+        });
+      }
+
+      // handleFileSelect expects 1-indexed line/column; LSP/FlatWorkspaceSymbol positions
+      // are 0-indexed.
+      void handleFileSelect(
+        symbol.filePath,
+        false,
+        symbol.line + 1,
+        symbol.character + 1,
+        undefined,
+        false,
+      );
+    },
+    [onClose, handleFileSelect],
   );
 
   const handleItemSelect = useCallback(
@@ -132,12 +181,49 @@ export const useQuickOpen = () => {
     [symbolByPath, handleSymbolSelect],
   );
 
+  // Workspace-symbol results span multiple files, so the keyboard-nav key must include the
+  // file path (two different files could otherwise share the same symbol name and line).
+  const { workspaceSymbolResultsAsFiles, workspaceSymbolByPath } = useMemo(() => {
+    const nextWorkspaceSymbolResultsAsFiles = [];
+    const nextWorkspaceSymbolByPath = new Map<string, WorkspaceSymbolItem>();
+    for (const symbol of workspaceSymbols) {
+      const path = `${symbol.filePath}:${symbol.line}:${symbol.character}`;
+      nextWorkspaceSymbolResultsAsFiles.push({
+        name: symbol.name,
+        path,
+        isDir: false,
+      });
+      nextWorkspaceSymbolByPath.set(path, symbol);
+    }
+
+    return {
+      workspaceSymbolResultsAsFiles: nextWorkspaceSymbolResultsAsFiles,
+      workspaceSymbolByPath: nextWorkspaceSymbolByPath,
+    };
+  }, [workspaceSymbols]);
+
+  const workspaceSymbolSelectAdapter = useCallback(
+    (path: string) => {
+      const symbol = workspaceSymbolByPath.get(path);
+      if (symbol) handleWorkspaceSymbolSelect(symbol);
+    },
+    [workspaceSymbolByPath, handleWorkspaceSymbolSelect],
+  );
+
   const { selectedIndex, setSelectedIndex, scrollContainerRef, handleInputKeyDown } =
     useKeyboardNavigation({
       isVisible: isQuickOpenVisible,
-      allResults: isSymbolMode ? symbolResultsAsFiles : allResults,
+      allResults: isSymbolMode
+        ? symbolResultsAsFiles
+        : isWorkspaceSymbolMode
+          ? workspaceSymbolResultsAsFiles
+          : allResults,
       onClose,
-      onSelect: isSymbolMode ? symbolSelectAdapter : handleItemSelect,
+      onSelect: isSymbolMode
+        ? symbolSelectAdapter
+        : isWorkspaceSymbolMode
+          ? workspaceSymbolSelectAdapter
+          : handleItemSelect,
     });
 
   const handleItemHover = useCallback(
@@ -180,5 +266,9 @@ export const useQuickOpen = () => {
     symbols,
     isLoadingSymbols,
     handleSymbolSelect,
+    isWorkspaceSymbolMode,
+    workspaceSymbols,
+    isLoadingWorkspaceSymbols,
+    handleWorkspaceSymbolSelect,
   };
 };

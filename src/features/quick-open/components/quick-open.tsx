@@ -35,6 +35,10 @@ const QuickOpen = () => {
     symbols,
     isLoadingSymbols,
     handleSymbolSelect,
+    isWorkspaceSymbolMode,
+    workspaceSymbols,
+    isLoadingWorkspaceSymbols,
+    handleWorkspaceSymbolSelect,
   } = useQuickOpen();
 
   if (!isVisible) {
@@ -44,7 +48,7 @@ const QuickOpen = () => {
   const hasResults =
     openBufferFiles.length > 0 || recentFilesInResults.length > 0 || otherFiles.length > 0;
   const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
-  const symbolSearchQuery = query.startsWith("@") ? query.slice(1).trim() : query;
+  const symbolSearchQuery = isSymbolMode || isWorkspaceSymbolMode ? query.slice(1).trim() : query;
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
@@ -54,12 +58,22 @@ const QuickOpen = () => {
           value={query}
           onChange={setQuery}
           onKeyDown={handleInputKeyDown}
-          placeholder={isSymbolMode ? "Type to filter symbols..." : "Type to search files..."}
+          placeholder={
+            isSymbolMode
+              ? "Type to filter symbols..."
+              : isWorkspaceSymbolMode
+                ? "Type to search symbols across the project..."
+                : "Type to search files..."
+          }
           className="font-sans"
         />
         {isSymbolMode ? (
           <CommandHeaderBadge>
             {isLoadingSymbols ? "..." : `${symbols.length} symbols`}
+          </CommandHeaderBadge>
+        ) : isWorkspaceSymbolMode ? (
+          <CommandHeaderBadge>
+            {isLoadingWorkspaceSymbols ? "..." : `${workspaceSymbols.length} symbols`}
           </CommandHeaderBadge>
         ) : (
           <FileCountBadge
@@ -89,6 +103,27 @@ const QuickOpen = () => {
                 onClick={handleSymbolSelect}
                 onMouseEnter={(idx) => setSelectedIndex(idx)}
                 searchQuery={symbolSearchQuery}
+              />
+            ))
+          )
+        ) : isWorkspaceSymbolMode ? (
+          workspaceSymbols.length === 0 ? (
+            <div className="flex items-center justify-center p-4 text-text-lighter">
+              <span className="font-sans ui-text-base">
+                {isLoadingWorkspaceSymbols ? "Loading symbols..." : "No symbols found"}
+              </span>
+            </div>
+          ) : (
+            workspaceSymbols.map((symbol, index) => (
+              <SymbolListItem
+                key={`${symbol.filePath}:${symbol.line}:${symbol.character}`}
+                symbol={symbol}
+                index={index}
+                isSelected={index === selectedIndex}
+                onClick={handleWorkspaceSymbolSelect}
+                onMouseEnter={(idx) => setSelectedIndex(idx)}
+                searchQuery={symbolSearchQuery}
+                showFilePath
               />
             ))
           )

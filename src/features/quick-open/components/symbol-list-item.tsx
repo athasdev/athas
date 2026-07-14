@@ -37,6 +37,9 @@ interface SymbolListItemProps {
   onClick: (symbol: SymbolItem) => void;
   onMouseEnter?: (index: number) => void;
   searchQuery: string;
+  /** Render a file-path badge alongside the container name. Off by default so the
+   * existing `@`-mode (file-scoped) call site renders identically to before. */
+  showFilePath?: boolean;
 }
 
 export const SymbolListItem = ({
@@ -46,8 +49,10 @@ export const SymbolListItem = ({
   onClick,
   onMouseEnter,
   searchQuery,
+  showFilePath = false,
 }: SymbolListItemProps) => {
   const icon = SYMBOL_ICONS[symbol.kind] || <Code2 size={14} className="text-text-lighter" />;
+  const fileBaseName = showFilePath ? symbol.filePath.split(/[/\\]/).pop() : undefined;
 
   return (
     <CommandItemRow
@@ -64,6 +69,7 @@ export const SymbolListItem = ({
       }
       accessory={
         <>
+          {fileBaseName && <CommandItemBadge>{fileBaseName}</CommandItemBadge>}
           <CommandItemBadge>{symbol.kind}</CommandItemBadge>
           <CommandItemBadge>:{symbol.line + 1}</CommandItemBadge>
         </>
