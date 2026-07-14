@@ -68,7 +68,7 @@ export function OutlineSidebar() {
   const symbolContextMenu = useContextMenu<OutlineSymbol>();
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
-  const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline(true);
+  const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline({ isActive: true });
   const openBuffer = useBufferStore.use.actions().openBuffer;
   const filteredSymbols = useMemo(
     () => symbols.filter((symbol) => matchesOutlineFilter(symbol.kind, selectedFilters)),

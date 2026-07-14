@@ -25,7 +25,7 @@ export function OutlineCommandContent({ isActive, onBack, onClose }: OutlineComm
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const { filePath, symbols, isLoading, isSupported } = useDocumentOutline(isActive);
+  const { filePath, symbols, isLoading, isSupported } = useDocumentOutline({ isActive });
   const visibleSymbols = useMemo(
     () => getVisibleOutlineSymbols(symbols, collapsedIds, query),
     [collapsedIds, query, symbols],

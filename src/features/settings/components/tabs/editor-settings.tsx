@@ -14,6 +14,7 @@ export const EditorSettings = () => {
       autoCompletion: state.settings.autoCompletion,
       autoDetectLanguage: state.settings.autoDetectLanguage,
       autoSave: state.settings.autoSave,
+      breadcrumbShowSymbols: state.settings.breadcrumbShowSymbols,
       defaultLanguage: state.settings.defaultLanguage,
       editorLineHeight: state.settings.editorLineHeight,
       fontFamily: state.settings.fontFamily,
@@ -382,6 +383,21 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.semanticTokens}
             onChange={(checked) => updateSetting("semanticTokens", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Symbol in Breadcrumb"
+          description="Show the containing function/class for the cursor position in the breadcrumb bar"
+          onReset={() =>
+            updateSetting("breadcrumbShowSymbols", getDefaultSetting("breadcrumbShowSymbols"))
+          }
+          canReset={settings.breadcrumbShowSymbols !== getDefaultSetting("breadcrumbShowSymbols")}
+        >
+          <Switch
+            checked={settings.breadcrumbShowSymbols}
+            onChange={(checked) => updateSetting("breadcrumbShowSymbols", checked)}
             size="sm"
           />
         </SettingRow>

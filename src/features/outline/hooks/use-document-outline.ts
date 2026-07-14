@@ -8,11 +8,15 @@ import { normalizeOutlineSymbols } from "../utils/outline-symbols";
 
 const OUTLINE_REFRESH_DELAY_MS = 250;
 
-export function useDocumentOutline(isActive = true) {
+export function useDocumentOutline({
+  isActive = true,
+  bufferId,
+}: { isActive?: boolean; bufferId?: string } = {}) {
   const { activeBuffer, contentVersion } = useBufferStore(
     useShallow((state) => {
-      const buffer = state.activeBufferId
-        ? (state.buffers.find((candidate) => candidate.id === state.activeBufferId) ?? null)
+      const targetBufferId = bufferId ?? state.activeBufferId;
+      const buffer = targetBufferId
+        ? (state.buffers.find((candidate) => candidate.id === targetBufferId) ?? null)
         : null;
 
       return {
