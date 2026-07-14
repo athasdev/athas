@@ -95,7 +95,7 @@ export function GitHubPRActionDialog({
             variant="default"
             onClick={() => onSubmit({ body, method })}
             disabled={!canSubmit}
-            className={copy.tone === "danger" ? "border-error/40 text-error/90" : undefined}
+            className={copy.tone === "danger" ? "border border-error/40 text-error/90" : undefined}
           >
             {isSubmitting ? "Working..." : copy.submitLabel}
           </Button>

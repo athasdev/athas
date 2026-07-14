@@ -99,7 +99,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
             onClick={() => setIsEditing(true)}
             variant="default"
             size="xs"
-            className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border-accent"
+            className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-accent"
             aria-label={`Edit keybinding for ${command.title}`}
           >
             {keybinding?.key ? (

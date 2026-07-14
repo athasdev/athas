@@ -696,7 +696,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
           <Button
             onClick={handleRefresh}
             variant="default"
-            className="shrink-0 border-error/40 text-error/90 hover:bg-error/10"
+            className="shrink-0 border border-error/40 text-error/90 hover:bg-error/10"
             size="xs"
           >
             Retry

@@ -620,7 +620,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               onClick={() => void fetchWorkflowRun(true)}
               variant="default"
               size="xs"
-              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
             >
               Retry
             </Button>
@@ -810,7 +810,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="default"
                                 size="xs"
-                                className="border-error/40 text-error/90 hover:bg-error/10"
+                                className="border border-error/40 text-error/90 hover:bg-error/10"
                               >
                                 Retry
                               </Button>

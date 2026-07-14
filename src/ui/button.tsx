@@ -7,17 +7,17 @@ import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
 export const buttonVariants = cva(
-  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent leading-[1.35] transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none outline-none active:scale-[var(--app-press-scale)] focus:outline-none focus-visible:border-accent/45 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "font-sans ui-text-sm inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md leading-[1.35] transition-[transform,background-color,border-color,color,box-shadow,opacity] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none outline-none active:scale-[var(--app-press-scale)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-hover text-text hover:bg-selected",
+        default: "border-0 bg-hover text-text hover:bg-selected",
         accent:
-          "border-accent/30 bg-accent/12 text-accent hover:bg-accent/20 data-[active=true]:border-accent/45 data-[active=true]:bg-accent/24",
+          "border border-accent/30 bg-accent/12 text-accent hover:bg-accent/20 data-[active=true]:border-accent/45 data-[active=true]:bg-accent/24",
         ghost:
-          "bg-transparent text-text-lighter hover:bg-hover hover:text-text data-[active=true]:bg-hover data-[active=true]:text-text",
+          "border-0 bg-transparent text-text-lighter hover:bg-hover hover:text-text data-[active=true]:bg-hover data-[active=true]:text-text",
         danger:
-          "bg-transparent text-text hover:bg-error/10 hover:text-error data-[active=true]:bg-error/12 data-[active=true]:text-error",
+          "border-0 bg-transparent text-text hover:bg-error/10 hover:text-error data-[active=true]:bg-error/12 data-[active=true]:text-error",
       },
       size: {
         default: "h-8 px-3",

@@ -121,7 +121,7 @@ export const PRFilesPanel = memo(
             <Button
               onClick={onRetry}
               variant="default"
-              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
               size="xs"
             >
               Retry

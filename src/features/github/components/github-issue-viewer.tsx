@@ -309,7 +309,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               onClick={() => void fetchIssue(true)}
               variant="default"
               size="xs"
-              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
             >
               Retry
             </Button>
