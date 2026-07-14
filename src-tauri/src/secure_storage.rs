@@ -126,20 +126,39 @@ fn store_delete(app: &AppHandle, key: &str) -> Result<(), String> {
    save_store(app, &store)
 }
 
-fn store_secret_with_operations<SetKeychain, DeleteFallback, SetFallback>(
+fn store_secret_with_operations<SetKeychain, GetKeychain, DeleteFallback, SetFallback>(
    key: &str,
    value: &str,
    set_keychain: SetKeychain,
+   get_keychain: GetKeychain,
    delete_fallback: DeleteFallback,
    set_fallback: SetFallback,
 ) -> Result<(), String>
 where
    SetKeychain: FnOnce(&str, &str) -> Result<(), String>,
+   GetKeychain: FnOnce(&str) -> Result<Option<String>, String>,
    DeleteFallback: FnOnce(&str) -> Result<(), String>,
    SetFallback: FnOnce(&str, &str) -> Result<(), String>,
 {
    match set_keychain(key, value) {
-      Ok(()) => delete_fallback(key),
+      Ok(()) => match get_keychain(key) {
+         Ok(Some(stored_value)) if stored_value == value => delete_fallback(key),
+         Ok(_) => {
+            log::warn!(
+               "Keychain write for key '{}' could not be read back, using secure.json fallback",
+               key
+            );
+            set_fallback(key, value)
+         }
+         Err(error) => {
+            log::warn!(
+               "Keychain readback failed for key '{}', using secure.json fallback: {}",
+               key,
+               error
+            );
+            set_fallback(key, value)
+         }
+      },
       Err(error) => {
          log::warn!(
             "Keychain unavailable for key '{}', using secure.json fallback: {}",
@@ -158,11 +177,21 @@ fn set_keychain_password(app: &AppHandle, key: &str, value: &str) -> Result<(), 
       .map_err(|e| format!("Failed to write keychain entry: {e}"))
 }
 
+fn get_keychain_password(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
+   let entry = keyring_entry(app, key)?;
+   match entry.get_password() {
+      Ok(value) => Ok(Some(value)),
+      Err(keyring::Error::NoEntry) => Ok(None),
+      Err(error) => Err(format!("Failed to read keychain entry: {error}")),
+   }
+}
+
 pub fn store_secret(app: &AppHandle, key: &str, value: &str) -> Result<(), String> {
    store_secret_with_operations(
       key,
       value,
       |key, value| set_keychain_password(app, key, value),
+      |key| get_keychain_password(app, key),
       |key| store_delete(app, key),
       |key, value| store_set(app, key, value),
    )
@@ -298,41 +327,8 @@ mod tests {
          {
             let calls = calls.clone();
             move |key| {
-               calls.borrow_mut().push(format!("delete:{key}"));
-               Ok(())
-            }
-         },
-         {
-            let calls = calls.clone();
-            move |key, value| {
-               calls.borrow_mut().push(format!("fallback:{key}:{value}"));
-               Ok(())
-            }
-         },
-      );
-
-      assert_eq!(result, Ok(()));
-      assert_eq!(
-         calls.borrow().as_slice(),
-         [
-            "keychain:github_token:secret".to_string(),
-            "delete:github_token".to_string()
-         ]
-      );
-   }
-
-   #[test]
-   fn store_secret_uses_fallback_only_when_keychain_fails() {
-      let calls = Rc::new(RefCell::new(Vec::new()));
-
-      let result = store_secret_with_operations(
-         "github_token",
-         "secret",
-         {
-            let calls = calls.clone();
-            move |key, value| {
-               calls.borrow_mut().push(format!("keychain:{key}:{value}"));
-               Err("keychain unavailable".to_string())
+               calls.borrow_mut().push(format!("read:{key}"));
+               Ok(Some("secret".to_string()))
             }
          },
          {
@@ -356,6 +352,98 @@ mod tests {
          calls.borrow().as_slice(),
          [
             "keychain:github_token:secret".to_string(),
+            "read:github_token".to_string(),
+            "delete:github_token".to_string()
+         ]
+      );
+   }
+
+   #[test]
+   fn store_secret_uses_fallback_only_when_keychain_fails() {
+      let calls = Rc::new(RefCell::new(Vec::new()));
+
+      let result = store_secret_with_operations(
+         "github_token",
+         "secret",
+         {
+            let calls = calls.clone();
+            move |key, value| {
+               calls.borrow_mut().push(format!("keychain:{key}:{value}"));
+               Err("keychain unavailable".to_string())
+            }
+         },
+         |_| -> Result<Option<String>, String> {
+            panic!("keychain readback should not run after a failed write")
+         },
+         {
+            let calls = calls.clone();
+            move |key| {
+               calls.borrow_mut().push(format!("delete:{key}"));
+               Ok(())
+            }
+         },
+         {
+            let calls = calls.clone();
+            move |key, value| {
+               calls.borrow_mut().push(format!("fallback:{key}:{value}"));
+               Ok(())
+            }
+         },
+      );
+
+      assert_eq!(result, Ok(()));
+      assert_eq!(
+         calls.borrow().as_slice(),
+         [
+            "keychain:github_token:secret".to_string(),
+            "fallback:github_token:secret".to_string()
+         ]
+      );
+   }
+
+   #[test]
+   fn store_secret_uses_fallback_when_keychain_readback_is_missing() {
+      let calls = Rc::new(RefCell::new(Vec::new()));
+
+      let result = store_secret_with_operations(
+         "github_token",
+         "secret",
+         {
+            let calls = calls.clone();
+            move |key, value| {
+               calls.borrow_mut().push(format!("keychain:{key}:{value}"));
+               Ok(())
+            }
+         },
+         {
+            let calls = calls.clone();
+            move |key| {
+               calls.borrow_mut().push(format!("read:{key}"));
+               Ok(None)
+            }
+         },
+         {
+            let calls = calls.clone();
+            move |key| {
+               calls.borrow_mut().push(format!("delete:{key}"));
+               Ok(())
+            }
+         },
+         {
+            let calls = calls.clone();
+            move |key, value| {
+               calls.borrow_mut().push(format!("fallback:{key}:{value}"));
+               Ok(())
+            }
+         },
+      );
+
+      assert_eq!(result, Ok(()));
+      assert_eq!(
+         calls.borrow().as_slice(),
+         [
+            "keychain:github_token:secret".to_string(),
+            "read:github_token".to_string(),
             "fallback:github_token:secret".to_string()
          ]
       );

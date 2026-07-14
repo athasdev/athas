@@ -166,6 +166,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
       - name: Ensure Rust target is installed
         if: matrix.target != ''
         run: rustup target add ${{ matrix.target }}
