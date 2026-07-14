@@ -9,6 +9,7 @@ import {
   type PointerEvent,
   type ReactNode,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -69,6 +70,7 @@ interface FileNavigatorSidebarProps {
   borderless?: boolean;
   searchMode?: FileNavigatorSearchMode;
   compactRows?: boolean;
+  searchResetKey?: string;
 }
 
 function createDirectoryNode(name: string, path: string): FileNavigatorNode {
@@ -301,10 +303,16 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   borderless = false,
   searchMode = "substring",
   compactRows = false,
+  searchResetKey,
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    setSearchQuery("");
+  }, [searchResetKey]);
+
   const searchableItems = useMemo(() => items.slice(0, MAX_NAVIGATOR_SYNC_ITEMS), [items]);
   const hiddenItemCount = Math.max(0, items.length - searchableItems.length);
   const filteredItems = useMemo(() => {
