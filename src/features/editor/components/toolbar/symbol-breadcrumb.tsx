@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useDocumentOutline } from "@/features/outline/hooks/use-document-outline";
@@ -22,6 +22,23 @@ export function SymbolBreadcrumb({
   className,
 }: SymbolBreadcrumbProps) {
   const breadcrumbShowSymbols = useSettingsStore((state) => state.settings.breadcrumbShowSymbols);
+
+  // extensionRegistry populates itself asynchronously on app start (it awaits a Tauri IPC
+  // call before isLspSupported has anything to report). Without this, the very first render
+  // after a cold launch reads isLspSupported as false and nothing re-renders once the
+  // registry finishes loading, so the breadcrumb silently never appears until some unrelated
+  // state change forces a re-render.
+  const [isRegistryReady, setIsRegistryReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    extensionRegistry.ensureInitialized().then(() => {
+      if (!cancelled) setIsRegistryReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const isLspSupported = !filePath.includes("://") && extensionRegistry.isLspSupported(filePath);
   const { symbols, isSupported } = useDocumentOutline({
     isActive: breadcrumbShowSymbols && isLspSupported,
@@ -37,7 +54,13 @@ export function SymbolBreadcrumb({
     [symbols, cursorPosition.line, cursorPosition.column],
   );
 
-  if (!breadcrumbShowSymbols || !isLspSupported || !isSupported || symbolChain.length === 0) {
+  if (
+    !isRegistryReady ||
+    !breadcrumbShowSymbols ||
+    !isLspSupported ||
+    !isSupported ||
+    symbolChain.length === 0
+  ) {
     return null;
   }
 
