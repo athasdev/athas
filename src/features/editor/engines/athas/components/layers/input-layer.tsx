@@ -103,7 +103,6 @@ const InputLayerComponent = ({
         bottom: 0,
         overflowY: scrollable ? "auto" : "clip",
         overflowX: scrollable && !(wordWrap || horizontalBufferCarousel) ? "auto" : "hidden",
-        overscrollBehaviorY: scrollable ? undefined : "none",
         fontSize: `${fontSize}px`,
         fontFamily,
         lineHeight: `${lineHeight}px`,

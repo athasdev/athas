@@ -1293,6 +1293,7 @@ export function AthasEditor({
           relativeLineNumbers={showRelativeLineNumbers}
           viewZones={viewLayout.zones}
           visualCursorLine={visualCursorLine}
+          scrollable={largeContentMode || scrollable}
         />
       )}
 

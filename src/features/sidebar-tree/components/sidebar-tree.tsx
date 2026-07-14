@@ -1,5 +1,5 @@
 import "@/features/sidebar-tree/styles/sidebar-tree.css";
-import { CaretDownIcon as CaretDown, CaretRightIcon as CaretRight } from "@/ui/icons";
+import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
 import type React from "react";
 import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
@@ -127,9 +127,9 @@ export function SidebarTreeDisclosure({
     >
       {visible ? (
         expanded ? (
-          <CaretDown className="size-3" weight="bold" />
+          <ChevronDown className="size-3" weight="bold" />
         ) : (
-          <CaretRight className="size-3" weight="bold" />
+          <ChevronRight className="size-3" weight="bold" />
         )
       ) : (
         <span className="size-3" />

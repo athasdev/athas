@@ -34,6 +34,7 @@ interface GutterProps {
   relativeLineNumbers?: boolean;
   viewZones?: ResolvedEditorViewZone[];
   visualCursorLine: number;
+  scrollable?: boolean;
 }
 
 const BUFFER_LINES = 20;
@@ -59,6 +60,7 @@ function GutterComponent({
   relativeLineNumbers = false,
   viewZones = [],
   visualCursorLine,
+  scrollable = true,
 }: GutterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -148,20 +150,7 @@ function GutterComponent({
     };
 
     const forwardWheel = (e: WheelEvent) => {
-      const isTextareaScrollable = getComputedStyle(textarea).overflowY !== "hidden";
-      if (!isTextareaScrollable) {
-        const scrollContainer =
-          textarea.closest("[data-editor-outer-scroll]") ??
-          textarea.closest("[data-diff-stack-scroll-container]");
-
-        if (scrollContainer instanceof HTMLDivElement) {
-          scrollContainer.scrollTop += e.deltaY;
-          scrollContainer.scrollLeft += e.deltaX;
-          e.preventDefault();
-        }
-
-        return;
-      }
+      if (!scrollable) return;
 
       e.preventDefault();
       textarea.scrollTop += e.deltaY;
@@ -178,17 +167,21 @@ function GutterComponent({
     updateHeight();
 
     textarea.addEventListener("scroll", syncScroll, { passive: true });
-    container.addEventListener("wheel", forwardWheel, { passive: false });
+    if (scrollable) {
+      container.addEventListener("wheel", forwardWheel, { passive: false });
+    }
     const resizeObserver = new ResizeObserver(updateHeight);
     resizeObserver.observe(container);
 
     return () => {
       textarea.removeEventListener("scroll", syncScroll);
-      container.removeEventListener("wheel", forwardWheel);
+      if (scrollable) {
+        container.removeEventListener("wheel", forwardWheel);
+      }
       resizeObserver.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, [textareaRef, totalLines, lineHeight, virtualize, useFlowGutter]);
+  }, [textareaRef, totalLines, lineHeight, virtualize, useFlowGutter, scrollable]);
 
   const computedViewport = useMemo(() => {
     if (!virtualize) {

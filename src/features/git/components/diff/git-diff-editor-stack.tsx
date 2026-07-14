@@ -1,31 +1,20 @@
 import {
   CheckIcon as Check,
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
   ColumnsIcon as Columns2,
   GithubLogoIcon as GithubLogo,
   ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
   TrashIcon as Trash2,
 } from "@/ui/icons";
-import {
-  type MouseEvent,
-  type WheelEvent,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
 import Breadcrumb, {
   BreadcrumbActionButton,
 } from "@/features/editor/components/toolbar/breadcrumb";
+import { MultibufferFileHeader } from "@/features/editor/components/multibuffer/multibuffer-file-header";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
-import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
@@ -36,7 +25,6 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
 import { joinPath } from "@/utils/path-helpers";
 import { getRemotes } from "../../api/git-remotes-api";
@@ -407,89 +395,32 @@ const DiffFileSection = memo(function DiffFileSection({
     : "";
   const status = getFileStatus(diff) as "added" | "deleted" | "modified" | "renamed";
   const { additions, deletions } = countStats(diff);
-  const editorFontSize = useEditorSettingsStore.use.fontSize();
-  const editorFontFamily = useEditorSettingsStore.use.fontFamily();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
-  const zoomLevel = useZoomStore.use.editorZoomLevel();
-  const fontSize = editorFontSize * zoomLevel;
-  const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
-  const headerHeight = lineHeight + 6;
-  const iconSize = Math.max(12, Math.min(16, Math.round(fontSize * 0.72)));
-  const headerStyle = useMemo(
-    () => ({
-      fontSize: `${fontSize}px`,
-      fontFamily: editorFontFamily,
-      lineHeight: `${lineHeight}px`,
-    }),
-    [editorFontFamily, fontSize, lineHeight],
-  );
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
   }, [onToggle, sectionKey]);
-  const handleOpenFile = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
-      event.stopPropagation();
-      void onOpenFile(filePath);
-    },
-    [filePath, onOpenFile],
-  );
+  const handleOpenFile = useCallback(() => {
+    void onOpenFile(filePath);
+  }, [filePath, onOpenFile]);
   const shouldUseInlineTextDiff =
     !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
 
   return (
     <section className="relative isolate min-w-0 max-w-full rounded-xl bg-primary-bg">
-      <div className="sticky top-0 z-50 min-w-0 max-w-full bg-primary-bg">
-        <div
-          className={cn(
-            "min-w-0 max-w-full overflow-hidden border border-border/70 bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]",
-            expanded ? "rounded-t-xl" : "rounded-xl",
-          )}
-        >
-          <div
-            className="font-mono code-editor-font-override flex min-w-0 items-center"
-            style={headerStyle}
-          >
-            <button
-              type="button"
-              onClick={handleToggle}
-              className="relative z-50 flex shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
-              style={{ width: `${headerHeight}px`, height: `${headerHeight}px` }}
-              aria-label={expanded ? "Collapse file diff" : "Expand file diff"}
-              aria-expanded={expanded}
-            >
-              {expanded ? <ChevronDown size={iconSize} /> : <ChevronRight size={iconSize} />}
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenFile}
-              className="relative z-50 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left hover:bg-hover/30"
-              style={{ height: `${headerHeight}px` }}
-              aria-label={`Open ${filePath}`}
-            >
-              <ThemedFileIcon
-                fileName={fileName}
-                isDir={false}
-                className="shrink-0 text-text-lighter"
-              />
-              <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
-                <span
-                  className={cn(
-                    "min-w-0 max-w-[45%] truncate font-medium",
-                    statusTextClass[status],
-                  )}
-                >
-                  {fileName}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-text-lighter">{directoryPath}</span>
-              </span>
-              <span className="ml-auto flex shrink-0 items-center gap-1.5">
-                {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
-                {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <MultibufferFileHeader
+        filePath={filePath}
+        fileName={fileName}
+        directoryPath={directoryPath}
+        expanded={expanded}
+        onToggle={handleToggle}
+        onOpen={handleOpenFile}
+        fileNameClassName={statusTextClass[status]}
+        trailing={
+          <>
+            {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
+            {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
+          </>
+        }
+      />
 
       {expanded ? (
         diff.is_image ? (
@@ -629,22 +560,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       });
     });
   }, []);
-  const handleStackWheelCapture = useCallback((event: WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-    const scrollContainer = event.currentTarget;
-    const canScroll =
-      (event.deltaY < 0 && scrollContainer.scrollTop > 0) ||
-      (event.deltaY > 0 &&
-        scrollContainer.scrollTop + scrollContainer.clientHeight < scrollContainer.scrollHeight);
-
-    if (!canScroll) return;
-
-    scrollContainer.scrollTop += event.deltaY;
-    event.preventDefault();
-    event.stopPropagation();
-  }, []);
-
   useEffect(() => {
     const nextKeys = new Set(
       multiDiff.files.map((diff, index) => getDiffSectionKey(multiDiff, diff, index)),
@@ -884,7 +799,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             className="min-h-0 flex-1 overflow-auto px-2 pb-2"
             style={{ overflowAnchor: "none" }}
             data-diff-stack-scroll-container
-            onWheelCapture={handleStackWheelCapture}
           >
             <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-xl">
               {multiDiff.files.map((diff, index) => {

@@ -149,6 +149,19 @@ export const CaretDownIcon = createIconComponent(Nucleo.IconCaretDownOutline18, 
 export const CaretLeftIcon = createIconComponent(Nucleo.IconCaretLeftOutline18, "CaretLeftIcon");
 export const CaretRightIcon = createIconComponent(Nucleo.IconCaretRightOutline18, "CaretRightIcon");
 export const CaretUpIcon = createIconComponent(Nucleo.IconCaretUpOutline18, "CaretUpIcon");
+export const ChevronDownIcon = createIconComponent(
+  Nucleo.IconChevronDownOutline18,
+  "ChevronDownIcon",
+);
+export const ChevronLeftIcon = createIconComponent(
+  Nucleo.IconChevronLeftOutline18,
+  "ChevronLeftIcon",
+);
+export const ChevronRightIcon = createIconComponent(
+  Nucleo.IconChevronRightOutline18,
+  "ChevronRightIcon",
+);
+export const ChevronUpIcon = createIconComponent(Nucleo.IconChevronUpOutline18, "ChevronUpIcon");
 export const ChatCircleIcon = createIconComponent(Nucleo.IconChatBubbleOutline18, "ChatCircleIcon");
 export const ChatCircleTextIcon = createIconComponent(
   Nucleo.IconChatBubbleContentOutline18,

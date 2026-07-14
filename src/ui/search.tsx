@@ -1,8 +1,8 @@
 import {
   TextAaIcon as CaseSensitive,
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-  CaretUpIcon as ChevronUp,
+  ChevronDownIcon as ChevronDown,
+  ChevronRightIcon as ChevronRight,
+  ChevronUpIcon as ChevronUp,
   BracketsCurlyIcon as Regex,
   ArrowsLeftRightIcon as Replace,
   MagnifyingGlassIcon as Search,
