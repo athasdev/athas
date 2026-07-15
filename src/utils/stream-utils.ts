@@ -15,6 +15,10 @@ interface SSEData {
     delta?: { content?: string };
     message?: { content?: string };
   }>;
+  error?: SSEError;
+  response?: {
+    error?: SSEError;
+  };
   // Gemini format
   candidates?: Array<{
     content?: {
@@ -31,6 +35,11 @@ interface SSEData {
     demoUrl?: string;
     files?: Array<{ name?: string }>;
   };
+}
+
+interface SSEError {
+  code?: string | number;
+  message?: string;
 }
 
 class SSEStreamParser {
@@ -70,6 +79,12 @@ class SSEStreamParser {
         }
       }
 
+      this.buffer += this.decoder.decode();
+      if (this.buffer.trim()) {
+        this.processLine(this.buffer);
+        this.buffer = "";
+      }
+
       this.complete();
     } catch (streamError) {
       console.error("Streaming error:", streamError);
@@ -80,20 +95,37 @@ class SSEStreamParser {
   }
 
   private processLine(line: string): void {
+    if (this.isComplete) return;
+
     const trimmedLine = line.trim();
 
     if (trimmedLine === "") return;
     // Skip SSE event type lines (e.g. "event: content_block_delta")
     if (trimmedLine.startsWith("event:")) return;
-    if (trimmedLine === "data: [DONE]") {
+    const jsonPayload = trimmedLine.startsWith("data:")
+      ? trimmedLine.slice(5).trimStart()
+      : trimmedLine.startsWith("{")
+        ? trimmedLine
+        : null;
+
+    if (jsonPayload === "[DONE]") {
       this.complete();
       return;
     }
 
-    if (trimmedLine.startsWith("data: ")) {
+    if (jsonPayload) {
       try {
-        const jsonStr = trimmedLine.slice(6); // Remove 'data: ' prefix
-        const data = JSON.parse(jsonStr) as SSEData;
+        const data = JSON.parse(jsonPayload) as SSEData;
+
+        const streamError = data.error || data.response?.error;
+        if (streamError) {
+          const code = streamError.code ?? "unknown";
+          const message = streamError.message?.trim();
+          this.fail(
+            `Streaming API error: ${code}${message ? ` ${message}` : ""}|||${JSON.stringify(streamError)}`,
+          );
+          return;
+        }
 
         // Handle different response formats
         let content = "";
@@ -157,6 +189,12 @@ class SSEStreamParser {
     if (this.isComplete) return;
     this.isComplete = true;
     this.handlers.onComplete();
+  }
+
+  private fail(error: string): void {
+    if (this.isComplete) return;
+    this.isComplete = true;
+    this.handlers.onError(error);
   }
 }
 

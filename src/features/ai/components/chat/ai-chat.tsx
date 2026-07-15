@@ -9,6 +9,7 @@ import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info"
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
 import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import {
   createToolCall,
   markToolCallComplete,
@@ -531,6 +532,9 @@ const AIChat = memo(function AIChat({
     const latestSettings = useSettingsStore.getState().settings;
     const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
     context.mentionedFiles = mentionedFiles;
+    const conversationContext = buildConversationHistory(
+      useAIChatStore.getState().getMessagesForChat(targetChatId),
+    );
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),
@@ -607,15 +611,6 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const conversationContext = useAIChatStore
-        .getState()
-        .getMessagesForChat(targetChatId)
-        .filter((msg) => msg.role !== "system")
-        .map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-        }));
-
       const enhancedMessage = isAcp ? messageContent.trim() : processedMessage;
       if (isAcp) {
         setAcpEvents([]);
@@ -647,8 +642,8 @@ const AIChat = memo(function AIChat({
             currentMessage?.resources?.length,
           );
 
-          if (!hasVisibleResponse && isAcpAgent(currentAgentId)) {
-            if (acpProducedStateOnlyUpdate) {
+          if (!hasVisibleResponse) {
+            if (isAcpAgent(currentAgentId) && acpProducedStateOnlyUpdate) {
               const slashCommand = messageContent.trim().match(/^\/([^\s]+)/)?.[1];
               const fallbackContent =
                 acpCommandResultLabel ||
@@ -665,14 +660,17 @@ const AIChat = memo(function AIChat({
               return;
             }
 
-            const fallbackMessage =
-              "The selected agent did not return a visible response. Try sending the message again.";
+            const isAcp = isAcpAgent(currentAgentId);
+            const fallbackMessage = isAcp
+              ? "The selected agent did not return a visible response. Try sending the message again."
+              : "The selected provider did not return a visible response. Try another model or send the message again.";
+            const emptyResponseSource = isAcp ? "agent session" : "provider request";
             updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
               content: `[ERROR_BLOCK]
 title: No Response
 code: EMPTY_RESPONSE
 message: ${fallbackMessage}
-details: The agent session started, but no content, tool output, or resource was returned.
+details: The ${emptyResponseSource} completed, but no content, tool output, or resource was returned.
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
@@ -1062,6 +1060,7 @@ details: ${errorDetails || mainError}
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
     if (chatState.isTyping || chatState.streamingMessageId) return;
+    if (!isAcpAgent(pendingLaunch.agentId) && !chatState.hasApiKey) return;
 
     chatActions.setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
     chatActions.setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
@@ -1070,6 +1069,7 @@ details: ${errorDetails || mainError}
   }, [
     chatActions,
     effectiveChatId,
+    chatState.hasApiKey,
     chatState.isTyping,
     chatState.pendingAgentLaunchRequest,
     chatState.streamingMessageId,
