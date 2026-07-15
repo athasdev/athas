@@ -376,7 +376,7 @@ const Footer = () => {
 
   return (
     <>
-      <div className="athas-footer-bar relative z-20 flex h-[var(--athas-footer-height)] shrink-0 items-center justify-between bg-secondary-bg/70 px-2.5 py-1 backdrop-blur-sm">
+      <div className="athas-footer-bar relative z-20 flex h-[var(--athas-footer-height)] shrink-0 items-center justify-between bg-transparent px-2.5 py-1">
         <div className="font-sans flex items-center gap-1 text-text-lighter">
           {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
             <div key={item.id} className="flex min-h-6 items-center">

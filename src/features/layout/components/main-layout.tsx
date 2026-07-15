@@ -302,7 +302,10 @@ export function MainLayout() {
       <TitleBarWithSettings />
 
       <div className="athas-workbench-glass relative z-10 flex flex-1 flex-col overflow-hidden">
-        <div className="flex flex-1 flex-row overflow-hidden" style={{ minHeight: 0 }}>
+        <div
+          className="flex flex-1 flex-row overflow-hidden pr-[var(--athas-workbench-gap)]"
+          style={{ minHeight: 0 }}
+        >
           <SidebarActivityRail expanded={isSidebarRailExpanded} />
           <ResizablePane position="left" widthKey="sidebarWidth" hidden={!isSidebarVisible}>
             <MainSidebar paneLevel="primary" />

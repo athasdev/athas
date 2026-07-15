@@ -9,12 +9,6 @@ html.platform-macos:not([data-window-transparency="disabled"]) {
   --athas-macos-glass-control-border: color-mix(in srgb, var(--color-border) 26%, transparent);
   --athas-macos-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 62%, transparent);
   --athas-macos-glass-popover-border: color-mix(in srgb, var(--color-border) 50%, transparent);
-  --athas-macos-glass-chrome-border: transparent;
-  --athas-macos-glass-chrome-overlay-bg: color-mix(
-    in srgb,
-    var(--color-secondary-bg) 6%,
-    transparent
-  );
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text-light) 78%, transparent);
   --athas-chrome-icon-hover-color: var(--color-text);
   --athas-chrome-icon-active-color: var(--color-text);
@@ -33,12 +27,6 @@ html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="
   --athas-macos-glass-control-border: color-mix(in srgb, var(--color-border) 42%, transparent);
   --athas-macos-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
   --athas-macos-glass-popover-border: color-mix(in srgb, var(--color-border) 55%, transparent);
-  --athas-macos-glass-chrome-border: color-mix(in srgb, var(--color-border) 45%, transparent);
-  --athas-macos-glass-chrome-overlay-bg: color-mix(
-    in srgb,
-    var(--color-primary-bg) 10%,
-    transparent
-  );
   --athas-chrome-icon-color: color-mix(in srgb, var(--color-text) 66%, transparent);
   --athas-chrome-icon-hover-color: color-mix(
     in srgb,
@@ -82,8 +70,8 @@ html.platform-macos:not([data-window-transparency="disabled"]) .athas-workbench-
 
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-title-bar,
 html.platform-macos:not([data-window-transparency="disabled"]) .athas-footer-bar {
-  background: var(--athas-macos-glass-chrome-overlay-bg) !important;
-  border-color: var(--athas-macos-glass-chrome-border);
+  background: transparent !important;
+  border-color: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }

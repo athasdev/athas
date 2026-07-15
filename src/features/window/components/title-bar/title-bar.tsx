@@ -319,7 +319,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       <div
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
-        className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-secondary-bg px-2"
+        className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent px-2"
       >
         <div className="flex-1" />
 
@@ -341,7 +341,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
-          "athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-secondary-bg pr-2",
+          "athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent pr-2",
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
@@ -378,7 +378,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       data-tauri-drag-region
       onMouseDown={handleTitleBarMouseDown}
       onContextMenu={handleTitleBarContextMenu}
-      className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-secondary-bg px-2"
+      className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent px-2"
     >
       <div data-tauri-drag-region className="flex flex-1 items-center">
         <div className="pointer-events-auto">
