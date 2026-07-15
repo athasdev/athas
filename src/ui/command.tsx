@@ -8,6 +8,7 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
+import { clampCommandListIndex, moveCommandListIndex } from "@/ui/command-navigation";
 import { instantTransition, motionEase, motionDuration } from "@/ui/motion";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
@@ -534,17 +535,21 @@ export function useCommandListNavigation({
     setSelectedIndex(0);
   }, [resetKey]);
 
+  useEffect(() => {
+    setSelectedIndex((index) => clampCommandListIndex(index, itemCount));
+  }, [itemCount]);
+
   const onInputKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedIndex((index) => Math.min(index + 1, Math.max(itemCount - 1, 0)));
+        setSelectedIndex((index) => moveCommandListIndex(index, itemCount, "next"));
         return;
       }
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setSelectedIndex((index) => Math.max(index - 1, 0));
+        setSelectedIndex((index) => moveCommandListIndex(index, itemCount, "previous"));
         return;
       }
 
