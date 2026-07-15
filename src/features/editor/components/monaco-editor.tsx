@@ -42,6 +42,7 @@ import { useEditorStateStore } from "../stores/state.store";
 import { useEditorUIStore } from "../stores/ui.store";
 import type { Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
+import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
@@ -409,6 +410,9 @@ export function MonacoEditor({
     if (!container || !buffer) return;
     const fontOptions = { fontFamily, fontSize, lineHeight };
     syncMonacoHoverBounds(container);
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "monaco-create-start");
+    }
 
     const model = monacoEditor.createModel(content, monacoLanguageId, modelUri);
     const editor = monacoEditor.create(container, {
@@ -457,6 +461,17 @@ export function MonacoEditor({
     pendingLocalContentSnapshotsRef.current = [];
     editorAPI.setTextareaRef(null);
     editorAPI.setViewportRef(container);
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "monaco-created", `${model.getLineCount()} lines`);
+    }
+    const benchmarkRafId = requestAnimationFrame(() => {
+      if (!filePath || !fileOpenBenchmark.has(filePath)) return;
+      fileOpenBenchmark.finish(filePath, "editor-ready", `${content.length} chars`, {
+        contentLength: content.length,
+        lineCount: model.getLineCount(),
+        largeContentMode: false,
+      });
+    });
 
     let hoverClampRaf: number | null = null;
     const scheduleMonacoHoverClamp = () => {
@@ -717,6 +732,10 @@ export function MonacoEditor({
     }
 
     return () => {
+      cancelAnimationFrame(benchmarkRafId);
+      if (filePath && fileOpenBenchmark.has(filePath)) {
+        fileOpenBenchmark.cancel(filePath, "editor-unmounted-before-ready");
+      }
       onCoordinateResolverChange?.(null);
       onModelPositionResolverChange?.(null);
       unsubscribeCursor();
