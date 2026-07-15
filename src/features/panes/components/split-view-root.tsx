@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { IS_MAC } from "@/utils/platform";
+import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
 import { usePaneStore } from "../stores/pane.store";
 import { findPaneGroup } from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
@@ -22,9 +22,6 @@ export function SplitViewRoot() {
     }
   }, [exitPaneFullscreen, fullscreenPane, fullscreenPaneId]);
 
-  const titleBarHeight = IS_MAC ? 44 : 28;
-  const footerHeight = 32;
-
   return (
     <>
       <div className="size-full overflow-hidden">
@@ -32,17 +29,9 @@ export function SplitViewRoot() {
       </div>
 
       {fullscreenPane && (
-        <div
-          className="fixed inset-x-2 z-[10040]"
-          style={{
-            top: `${titleBarHeight + 8}px`,
-            bottom: `${footerHeight + 8}px`,
-          }}
-        >
-          <div className="h-full overflow-hidden rounded-xl border border-border/80 bg-primary-bg shadow-[var(--shadow-dialog)]">
-            <PaneContainer pane={fullscreenPane} />
-          </div>
-        </div>
+        <WorkbenchFullscreenSurface>
+          <PaneContainer pane={fullscreenPane} />
+        </WorkbenchFullscreenSurface>
       )}
     </>
   );
