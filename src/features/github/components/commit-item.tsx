@@ -70,61 +70,61 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
       onClick={canOpenCommit ? () => void openCommit() : undefined}
       onKeyDown={handleKeyDown}
       className={cn(
-        "flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 transition-colors",
+        "group flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors",
         canOpenCommit &&
           "cursor-pointer hover:bg-hover/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
       )}
       aria-label={canOpenCommit ? `Open commit ${shortSha}` : undefined}
     >
-      <GitHubAvatar login={avatarLogin} name={authorName} size={32} className="size-5" />
+      <GitHubAvatar login={avatarLogin} name={authorName} size={32} className="size-6" />
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <code className="ui-text-sm shrink-0 rounded-md bg-primary-bg px-1.5 py-0.5 font-mono text-text-lighter">
-            {shortSha}
-          </code>
-          <p className="ui-text-sm min-w-0 truncate font-medium text-text">
-            {commit.messageHeadline}
-          </p>
-        </div>
+        <p className="ui-text-sm min-w-0 truncate font-medium text-text">
+          {commit.messageHeadline}
+        </p>
         {bodyPreview ? (
           <p className="ui-text-sm mt-0.5 line-clamp-1 text-text-lighter">{bodyPreview}</p>
         ) : null}
       </div>
-      <div className="ui-text-sm ml-2 flex shrink-0 items-center gap-2 text-text-lighter">
+      <div className="ui-text-sm ml-2 flex shrink-0 items-center gap-1.5 text-text-lighter">
         <span className="hidden max-w-36 truncate font-mono text-text-lighter sm:inline">
           {authorName}
         </span>
-        <span>committed {getTimeAgo(commit.authoredDate)}</span>
-        <Tooltip content="Copy full commit SHA" side="top">
-          <Button
-            onClick={(event) => {
-              stopActionClick(event);
-              void copyToClipboard(commit.oid, "Commit SHA copied");
-            }}
-            variant="ghost"
-            size="icon-xs"
-            className="text-text-lighter"
-            aria-label="Copy commit SHA"
-          >
-            <Copy />
-          </Button>
-        </Tooltip>
-        {commit.url && (
-          <Tooltip content="Open commit on GitHub" side="top">
+        <span className="hidden sm:inline">&middot;</span>
+        <span>{getTimeAgo(commit.authoredDate)}</span>
+        <span>&middot;</span>
+        <code className="font-mono text-text-lighter">{shortSha}</code>
+        <span className="ml-0.5 flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <Tooltip content="Copy full commit SHA" side="top">
             <Button
               onClick={(event) => {
                 stopActionClick(event);
-                openCommitInBrowser();
+                void copyToClipboard(commit.oid, "Commit SHA copied");
               }}
               variant="ghost"
               size="icon-xs"
               className="text-text-lighter"
-              aria-label="Open commit in browser"
+              aria-label="Copy commit SHA"
             >
-              <GithubLogo />
+              <Copy />
             </Button>
           </Tooltip>
-        )}
+          {commit.url && (
+            <Tooltip content="Open commit on GitHub" side="top">
+              <Button
+                onClick={(event) => {
+                  stopActionClick(event);
+                  openCommitInBrowser();
+                }}
+                variant="ghost"
+                size="icon-xs"
+                className="text-text-lighter"
+                aria-label="Open commit in browser"
+              >
+                <GithubLogo />
+              </Button>
+            </Tooltip>
+          )}
+        </span>
       </div>
     </div>
   );
