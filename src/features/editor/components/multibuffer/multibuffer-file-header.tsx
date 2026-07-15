@@ -1,5 +1,6 @@
 import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
 import { memo, type ReactNode, useMemo } from "react";
+import { cva } from "class-variance-authority";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
@@ -17,7 +18,33 @@ interface MultibufferFileHeaderProps {
   fileNameClassName?: string;
   trailing?: ReactNode;
   actions?: ReactNode;
+  surface?: "card" | "section";
+  showFileIcon?: boolean;
 }
+
+const multibufferFileHeaderSurfaceVariants = cva(
+  "min-w-0 max-w-full overflow-hidden bg-primary-bg",
+  {
+    variants: {
+      surface: {
+        card: "border border-border/70 shadow-[0_1px_0_rgba(0,0,0,0.04)]",
+        section: "border-border/60 border-b bg-secondary-bg/12",
+      },
+      expanded: {
+        true: "",
+        false: "",
+      },
+    },
+    compoundVariants: [
+      { surface: "card", expanded: true, className: "rounded-t-xl" },
+      { surface: "card", expanded: false, className: "rounded-xl" },
+    ],
+    defaultVariants: {
+      surface: "card",
+      expanded: true,
+    },
+  },
+);
 
 export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   filePath,
@@ -30,6 +57,8 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   fileNameClassName,
   trailing,
   actions,
+  surface = "card",
+  showFileIcon = true,
 }: MultibufferFileHeaderProps) {
   const editorFontSize = useEditorSettingsStore.use.fontSize();
   const editorFontFamily = useEditorSettingsStore.use.fontFamily();
@@ -50,12 +79,7 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
 
   return (
     <div className="sticky top-0 z-50 min-w-0 max-w-full bg-primary-bg">
-      <div
-        className={cn(
-          "min-w-0 max-w-full overflow-hidden border border-border/70 bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]",
-          expanded ? "rounded-t-xl" : "rounded-xl",
-        )}
-      >
+      <div className={multibufferFileHeaderSurfaceVariants({ surface, expanded })}>
         <div
           className="font-mono code-editor-font-override flex min-w-0 items-center"
           style={headerStyle}
@@ -76,19 +100,26 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
             type="button"
             onClick={onOpen}
             className={cn(
-              "relative z-50 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left hover:bg-hover/30",
+              "relative z-50 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left text-text hover:bg-hover/30",
               !onToggle && "pl-2",
             )}
             style={{ height: `${headerHeight}px` }}
             aria-label={openAriaLabel}
           >
-            <ThemedFileIcon
-              fileName={fileName}
-              isDir={false}
-              className="shrink-0 text-text-lighter"
-            />
+            {showFileIcon ? (
+              <ThemedFileIcon
+                fileName={fileName}
+                isDir={false}
+                className="shrink-0 text-text-lighter"
+              />
+            ) : null}
             <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
-              <span className={cn("min-w-0 max-w-[45%] truncate font-medium", fileNameClassName)}>
+              <span
+                className={cn(
+                  "min-w-0 max-w-[45%] truncate font-medium text-text",
+                  fileNameClassName,
+                )}
+              >
                 {fileName}
               </span>
               {directoryPath ? (

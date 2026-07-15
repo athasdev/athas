@@ -59,11 +59,11 @@ export function GlobalSearchResults({
         ariaLabel="Search result files"
         viewMode={fileNavigatorViewMode}
         onViewModeChange={onFileNavigatorViewModeChange}
-        borderless
+        surface="inset"
         searchMode="fuzzy"
         compactRows
         searchResetKey={navigatorSearchResetKey}
-        className="my-2 ml-2 h-auto self-stretch rounded-xl border border-border/70 bg-secondary-bg/20"
+        className="my-2 ml-2 h-auto self-stretch"
       />
       <div
         ref={scrollContainerRef}
