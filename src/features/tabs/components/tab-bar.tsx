@@ -1,16 +1,5 @@
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragMoveEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   ArrowLeftIcon as ArrowLeft,
   ArrowRightIcon as ArrowRight,
@@ -19,7 +8,7 @@ import {
   PlusIcon as Plus,
   SidebarSimpleIcon as PanelLeftClose,
 } from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -43,6 +32,8 @@ import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-vi
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
+import { SortableTab, TabDndContext, TabDragOverlay, useTabDragClickGuard } from "@/ui/tab-drag";
+import { TabBarSurface } from "@/ui/tabs";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
@@ -148,17 +139,10 @@ const TabBar = ({
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
+  const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   const terminalSessions = useTerminalStore((state) => state.sessions);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-  );
-
   const getDirectoryLabel = useCallback((directory?: string) => {
     if (!directory) return "";
     const normalized = directory.replace(/[\\/]+$/, "");
@@ -527,9 +511,9 @@ const TabBar = ({
         bufferId: buffer.id,
         paneId,
       });
-      handleTabSelect(buffer);
+      suppressNextClick(buffer.id);
     },
-    [bufferById, handleTabSelect, paneId],
+    [bufferById, paneId, suppressNextClick],
   );
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
@@ -547,7 +531,8 @@ const TabBar = ({
     dragPointRef.current = null;
     pointerPointRef.current = null;
     clearInternalTabDragData();
-  }, []);
+    releaseClickSuppression();
+  }, [releaseClickSuppression]);
 
   useEffect(() => {
     if (!draggedBufferId) return;
@@ -596,15 +581,12 @@ const TabBar = ({
         const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           reorderBuffers(oldIndex, newIndex);
-          if (dragged) {
-            handleTabClick(dragged.id);
-          }
         }
       }
 
       resetDrag();
     },
-    [bufferById, handleTabClick, paneId, reorderBuffers, resetDrag, sortedBufferIndexById],
+    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIndexById],
   );
 
   useEffect(() => {
@@ -698,29 +680,26 @@ const TabBar = ({
 
   return (
     <>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
+      <TabDndContext
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={resetDrag}
       >
-        <div
+        <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="relative flex h-7 shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-0.5"
+          className="scrollbar-hidden [overscroll-behavior-x:contain]"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
         >
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="flex h-8 shrink-0 items-center gap-0.5">
             <Button
               type="button"
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              className="shrink-0 rounded-md text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
               commandId="navigation.goBack"
@@ -734,7 +713,6 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              className="shrink-0 rounded-md text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
               commandId="navigation.goForward"
@@ -746,41 +724,43 @@ const TabBar = ({
           </div>
 
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-hidden flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]">
+            <div className="scrollbar-hidden flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]">
               {sortedBuffers.map((buffer, index) => (
-                <SortableEditorTab
+                <SortableTab
                   key={buffer.id}
                   id={buffer.id}
                   tabRef={(el) => {
                     tabRefs.current[index] = el;
                   }}
+                  onClickCapture={getClickCapture(buffer.id)}
                 >
-                  <TabBarItem
-                    buffer={buffer}
-                    displayName={getBufferDisplayName(buffer)}
-                    index={index}
-                    isActive={buffer.id === activeBufferId}
-                    isDraggedTab={buffer.id === draggedBufferId}
-                    onClick={() => handleTabSelect(buffer)}
-                    onDoubleClick={(e) => handleDoubleClick(e, index)}
-                    onContextMenu={(e) => handleContextMenu(e, buffer)}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                    handleTabClose={closeTab}
-                    handleTabPin={handleTabPin}
-                  />
-                </SortableEditorTab>
+                  {({ isDragging }) => (
+                    <TabBarItem
+                      buffer={buffer}
+                      displayName={getBufferDisplayName(buffer)}
+                      index={index}
+                      isActive={buffer.id === activeBufferId}
+                      isDraggedTab={isDragging}
+                      onClick={() => handleTabSelect(buffer)}
+                      onDoubleClick={(e) => handleDoubleClick(e, index)}
+                      onContextMenu={(e) => handleContextMenu(e, buffer)}
+                      onKeyDown={(e) => handleKeyDown(e, index)}
+                      handleTabClose={closeTab}
+                      handleTabPin={handleTabPin}
+                    />
+                  )}
+                </SortableTab>
               ))}
             </div>
           </SortableContext>
 
-          <div className="flex shrink-0 items-center gap-1 pl-0.5">
+          <div className="flex h-8 shrink-0 items-center gap-1 pl-0.5">
             {paneId && !isBottomPane && (
               <Button
                 type="button"
                 onClick={handleShowNewTab}
                 variant="ghost"
                 size="icon-xs"
-                className="shrink-0 rounded-md text-text-lighter"
                 tooltip="New Tab"
                 tooltipSide="bottom"
                 aria-label="New tab"
@@ -794,7 +774,6 @@ const TabBar = ({
                 onClick={() => closePane(paneId)}
                 variant="ghost"
                 size="icon-xs"
-                className="shrink-0 rounded-md text-text-lighter"
                 tooltip="Close Split"
                 tooltipSide="bottom"
                 aria-label="Close split pane"
@@ -807,7 +786,6 @@ const TabBar = ({
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                className="shrink-0 rounded-md text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
@@ -817,16 +795,14 @@ const TabBar = ({
               </Button>
             )}
           </div>
-        </div>
+        </TabBarSurface>
 
-        <DragOverlay dropAnimation={null}>
+        <TabDragOverlay>
           {draggedBuffer ? (
-            <div className="tab-drag-preview font-sans flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 ui-text-sm opacity-95">
-              <span className="max-w-[200px] truncate text-text">{draggedBuffer.name}</span>
-            </div>
+            <span className="max-w-[240px] truncate">{getBufferDisplayName(draggedBuffer)}</span>
           ) : null}
-        </DragOverlay>
-      </DndContext>
+        </TabDragOverlay>
+      </TabDndContext>
 
       <MemoizedTabContextMenu
         isOpen={contextMenu.isOpen}
@@ -906,35 +882,5 @@ const TabBar = ({
     </>
   );
 };
-
-interface SortableEditorTabProps {
-  id: string;
-  children: ReactNode;
-  tabRef: (element: HTMLDivElement | null) => void;
-}
-
-function SortableEditorTab({ id, children, tabRef }: SortableEditorTabProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-  });
-
-  return (
-    <div
-      ref={(element) => {
-        setNodeRef(element);
-        tabRef(element);
-      }}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      className={isDragging ? "relative z-10 opacity-40" : "relative"}
-      {...attributes}
-      {...listeners}
-    >
-      {children}
-    </div>
-  );
-}
 
 export default TabBar;

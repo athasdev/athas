@@ -18,7 +18,7 @@ import type { RefCallback } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
-import { Tab } from "@/ui/tabs";
+import { TabBarTab } from "@/ui/tabs";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
@@ -99,14 +99,13 @@ const TabBarItem = memo(function TabBarItem({
       {showDropIndicatorBefore ? (
         <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
       ) : null}
-      <Tab
+      <TabBarTab
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        className={cn("h-5 pl-2 pr-6 hover:bg-transparent", isActive && "bg-hover/80")}
         onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
@@ -127,8 +126,7 @@ const TabBarItem = memo(function TabBarItem({
               }
             }}
             className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-1 cursor-pointer select-none rounded-sm text-text-lighter transition-opacity",
-              "hover:bg-transparent hover:text-text",
+              "-translate-y-1/2 absolute top-1/2 right-1 transition-opacity",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
             tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
@@ -224,7 +222,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-      </Tab>
+      </TabBarTab>
     </div>
   );
 });
