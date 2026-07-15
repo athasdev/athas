@@ -66,6 +66,21 @@
 - Never use hardcoded font-size utilities such as `text-[11px]` in UI code; use the shared UI font-size classes such as `ui-text-sm`, `ui-text-base`, and related system primitives instead.
 - Interactive elements must remain accessible, including accessible names for icon-only controls and usable keyboard/focus behavior.
 
+## UI Design System
+
+- Treat `src/ui` primitives and `src/styles/theme.css` as the source of truth for reusable visual behavior.
+- Before creating UI markup or a new component, search `src/ui` and at least two comparable feature surfaces for an existing primitive or composition.
+- Feature components may control placement, responsive layout, and domain content. They must not redefine a shared primitive's height, radius, border, background, typography, or interaction states with local utility classes.
+- When a primitive is missing a needed visual behavior, add a named semantic prop or CVA variant to the primitive and migrate every current consumer that represents the same pattern.
+- Do not create pass-through wrappers, exported Tailwind class constants, or feature-local copies of shared controls. Keep a wrapper only when it owns behavior or a stable composition reused by multiple consumers.
+- If the same visual utility sequence appears in two feature consumers, move that contract into a shared primitive before finishing the change.
+- New app-wide visual concepts require semantic variables in `src/styles/theme.css`, derived from the existing theme colors when possible. Do not add feature-local color mixes or hardcoded light/dark values.
+- Prefer spacing and surface contrast over borders. Borders should communicate a real boundary and should be owned by the primitive rather than added independently by consumers.
+- Use line chevrons for disclosure, expansion, submenu, and directional navigation controls. Reserve triangular play icons for actions that actually start or resume something.
+- Keep `className` escape hatches focused on layout and placement. Repeated visual overrides are evidence that the primitive API needs a semantic variant.
+- When touching a shared primitive, audit all import sites and remove confirmed dead or redundant code in that primitive's module.
+- Before finishing UI work, verify light and dark themes plus hover, active, focus-visible, disabled, overflow, and resized states in the real Tauri app when practical.
+
 ## Zustand
 
 - Always use the `createSelectors` wrapper for stores.

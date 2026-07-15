@@ -17,7 +17,7 @@ const comboboxInputGroupVariants = cva(
       variant: {
         default:
           "rounded-lg border border-border bg-secondary-bg focus-within:border-border-strong focus-within:bg-secondary-bg focus-within:ring-1 focus-within:ring-border-strong/35",
-        ghost: "rounded-lg border border-transparent bg-transparent focus-within:ring-0",
+        ghost: "rounded-lg border-0 bg-transparent focus-within:ring-0",
       },
     },
     defaultVariants: {
