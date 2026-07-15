@@ -27,6 +27,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -347,10 +348,9 @@ const AIChat = memo(function AIChat({
       chatActions.updateChatTitle(chatId, fallbackTitle);
 
       const authState = useAuthStore.getState();
-      const subscriptionStatus = authState.subscription?.status ?? "free";
       const enterprisePolicy = authState.subscription?.enterprise?.policy;
       const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-      const isPro = subscriptionStatus === "pro";
+      const isPro = hasProductCapability(authState.subscription, "hostedAi");
 
       if (!isPro || (managedPolicy && !managedPolicy.aiCompletionEnabled)) {
         return;

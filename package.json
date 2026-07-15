@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "check": "bash scripts/check.sh",
     "check:frontend": "bash scripts/check/frontend.sh",
+    "services:check": "bun scripts/check-service-config.ts",
     "lint": "bunx vp lint .",
     "fix": "bunx vp check --fix",
     "format": "bunx vp fmt --write .",

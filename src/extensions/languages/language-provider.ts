@@ -8,9 +8,10 @@ import {
   tokenizeCode,
 } from "@/features/editor/lib/wasm-parser/wasm-parser-api";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
+import { getServiceUrls } from "@/config/services";
 
 // CDN base URL for downloading WASM parsers and highlight queries
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 
 export interface LanguageConfig {
   id: string;

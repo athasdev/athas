@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
+import { getServiceUrls } from "@/config/services";
 import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
@@ -79,7 +80,7 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
 }
 
 function withCdnCacheBuster(url: string): string {
-  if (!url.startsWith("https://athas.dev/extensions/")) {
+  if (!url.startsWith(`${getServiceUrls().extensionsCdnBaseUrl}/`)) {
     return url;
   }
 

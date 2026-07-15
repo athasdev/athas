@@ -17,10 +17,11 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
 import Section, { SettingRow } from "../settings-section";
+import { getServiceUrls } from "@/config/services";
 
 const telemetryDescription =
   "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, extensions, and crashes; it never sends file paths, project names, prompts, or editor content.";
-const telemetryLearnMoreUrl = "https://athas.dev/docs/telemetry";
+const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 
 export const AdvancedSettings = () => {
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);

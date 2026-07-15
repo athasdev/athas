@@ -10,9 +10,10 @@ import type {
   LspConfiguration,
   ToolRuntime,
 } from "../types/extension-manifest";
+import { getServiceUrls } from "@/config/services";
 
 // CDN base URL for extensions
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 
 function parserInstallation(languageId: string): ExtensionManifest["installation"] {
   return {

@@ -21,6 +21,7 @@ import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { getServiceUrls } from "@/config/services";
 import Command, {
   CommandEmpty,
   CommandFooter,
@@ -178,7 +179,7 @@ export function ExtensionGenerationCommand() {
   const { closeExtensionGeneration } = useGenerateStore.use.actions();
   const setActiveView = useUIState((state) => state.setActiveView);
   const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
-  const { isAuthenticated, isPro } = useProFeature();
+  const { isAuthenticated, hasHostedAi } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const [step, setStep] = useState<GenerationStep>("type");
@@ -221,7 +222,7 @@ export function ExtensionGenerationCommand() {
   const activeIntentOption =
     filteredIntentOptions[selectedIndex] ?? filteredIntentOptions[0] ?? null;
   const canGenerate = Boolean(selectedType && selectedIntent && details.trim());
-  const locked = !isAuthenticated || !isPro;
+  const locked = !isAuthenticated || !hasHostedAi;
 
   useEffect(() => {
     isVisibleRef.current = isVisible;
@@ -448,7 +449,7 @@ export function ExtensionGenerationCommand() {
             {isAuthenticated ? (
               <CommandFooterAction
                 onClick={() =>
-                  window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
+                  window.open(getServiceUrls().pricingUrl, "_blank", "noopener,noreferrer")
                 }
               >
                 Upgrade

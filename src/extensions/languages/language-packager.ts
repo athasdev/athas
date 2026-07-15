@@ -14,8 +14,9 @@ import type {
 } from "../types/extension-manifest";
 import { getManifestLanguageContributions } from "../types/extension-contributions";
 import { registerLanguageAssetOverride } from "@/features/editor/lib/wasm-parser/extension-assets";
+import { getServiceUrls } from "@/config/services";
 
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
 const BUNDLED_PARSER_BASE_URL = "/tree-sitter/parsers";
 

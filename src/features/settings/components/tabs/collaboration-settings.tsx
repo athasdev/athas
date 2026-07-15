@@ -1,10 +1,10 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getServiceUrls } from "@/config/services";
 import { UsersThreeIcon as UsersThree } from "@/ui/icons";
 import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { getApiBase } from "@/utils/api-base";
 import Section, { SettingRow } from "../settings-section";
 
 export const CollaborationSettings = () => {
@@ -33,7 +33,7 @@ export const CollaborationSettings = () => {
   );
 
   const openDashboardCollaboration = () => {
-    void openUrl(new URL("/dashboard/collaboration", getApiBase()).toString());
+    void openUrl(getServiceUrls().dashboardCollaborationUrl);
   };
 
   return (
