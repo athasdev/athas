@@ -29,7 +29,7 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "font-sans ui-text-base mb-1.5 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg px-3 py-2 text-left leading-[1.35] transition-colors",
+  "group/command-item font-sans ui-text-base mb-1 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left leading-[1.35] transition-colors",
   {
     variants: {
       selected: {
@@ -47,6 +47,22 @@ const commandHeaderContentClassName = "flex items-center gap-2 px-4 py-3";
 
 const commandInputClassName = cva(
   "font-sans ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
+);
+
+const commandItemActionVariants = cva(
+  "shrink-0 transition-[opacity,background-color,color] duration-[var(--app-duration-fast)]",
+  {
+    variants: {
+      visibility: {
+        always: "opacity-100",
+        hover:
+          "opacity-100 sm:opacity-0 sm:group-hover/command-item:opacity-100 sm:group-focus-within/command-item:opacity-100",
+      },
+    },
+    defaultVariants: {
+      visibility: "hover",
+    },
+  },
 );
 
 type CommandHeaderActionProps = Omit<ButtonProps, "className" | "size" | "variant">;
@@ -75,6 +91,26 @@ export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgePr
 );
 
 CommandHeaderBadge.displayName = "CommandHeaderBadge";
+
+type CommandItemActionProps = Omit<ButtonProps, "className" | "size" | "variant"> & {
+  tone?: "neutral" | "danger";
+  visibility?: "always" | "hover";
+};
+
+export const CommandItemAction = ({
+  tone = "neutral",
+  visibility = "hover",
+  ...props
+}: CommandItemActionProps) => (
+  <Button
+    variant={tone === "danger" ? "danger" : "ghost"}
+    size="icon-xs"
+    className={commandItemActionVariants({ visibility })}
+    {...props}
+  />
+);
+
+CommandItemAction.displayName = "CommandItemAction";
 
 const Command = ({
   isVisible,
@@ -194,6 +230,85 @@ export const CommandList = ({ children, ref, className, ...props }: CommandListP
 );
 
 CommandList.displayName = "CommandList";
+
+interface CommandFormProps {
+  title: React.ReactNode;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+  columns?: 1 | 2;
+  submitLabel: string;
+  pendingLabel?: string;
+  isPending?: boolean;
+  submitDisabled?: boolean;
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
+  onCancel?: () => void;
+}
+
+export const CommandForm = ({
+  title,
+  icon,
+  children,
+  columns = 1,
+  submitLabel,
+  pendingLabel,
+  isPending = false,
+  submitDisabled = false,
+  onSubmit,
+  onCancel,
+}: CommandFormProps) => (
+  <div className="shrink-0 p-2 pb-0">
+    <form data-command-form="" className="rounded-lg bg-secondary-bg/65 p-2.5" onSubmit={onSubmit}>
+      <div className="mb-2 flex min-w-0 items-center gap-2">
+        {icon ? <CommandItemIcon variant="framed">{icon}</CommandItemIcon> : null}
+        <span className="min-w-0 flex-1 truncate font-medium text-text ui-text-sm">{title}</span>
+        {onCancel ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={onCancel}
+            aria-label={`Cancel ${submitLabel.toLowerCase()}`}
+          >
+            <X />
+          </Button>
+        ) : null}
+        <Button type="submit" variant="accent" size="xs" disabled={submitDisabled || isPending}>
+          {isPending ? (pendingLabel ?? submitLabel) : submitLabel}
+        </Button>
+      </div>
+      <div className={cn("grid min-w-0 gap-2", columns === 2 && "grid-cols-1 sm:grid-cols-2")}>
+        {children}
+      </div>
+    </form>
+  </div>
+);
+
+CommandForm.displayName = "CommandForm";
+
+interface CommandFormFieldProps {
+  label?: React.ReactNode;
+  htmlFor?: string;
+  span?: "single" | "full";
+  children: React.ReactNode;
+}
+
+export const CommandFormField = ({
+  label,
+  htmlFor,
+  span = "single",
+  children,
+}: CommandFormFieldProps) => (
+  <div className={cn("min-w-0 space-y-1", span === "full" && "col-span-full")}>
+    {label ? (
+      <label htmlFor={htmlFor} className="block truncate text-text-lighter ui-text-sm">
+        {label}
+      </label>
+    ) : null}
+    {children}
+  </div>
+);
+
+CommandFormField.displayName = "CommandFormField";
 
 interface CommandFooterProps {
   children: React.ReactNode;
