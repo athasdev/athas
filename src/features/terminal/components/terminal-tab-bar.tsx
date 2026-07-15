@@ -1,4 +1,5 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
+import { restrictToHorizontalAxis, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
   SortableContext,
   horizontalListSortingStrategy,
@@ -14,7 +15,6 @@ import {
   ArrowsOutIcon as Maximize,
   ArrowsOutIcon as Maximize2,
   ArrowsInIcon as Minimize2,
-  PushPinIcon as Pin,
   PlusIcon as Plus,
   MagnifyingGlassIcon as Search,
   TerminalWindowIcon as TerminalIcon,
@@ -41,7 +41,7 @@ import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
-import { SortableTab, TabDndContext, TabDragOverlay, useTabDragClickGuard } from "@/ui/tab-drag";
+import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
 import { TabBarSurface } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import {
@@ -410,8 +410,6 @@ const TerminalTabBar = ({
     return 0;
   });
   const sortedTerminalIds = sortedTerminals.map((terminal) => terminal.id);
-  const draggedTerminal =
-    sortedTerminals.find((terminal) => terminal.id === draggedTerminalId) ?? null;
   const terminalProfiles = getAllTerminalProfiles(availableShells, customProfiles);
   const terminalToolbarActions = (
     <div
@@ -691,6 +689,7 @@ const TerminalTabBar = ({
   return (
     <>
       <TabDndContext
+        modifiers={[orientation === "vertical" ? restrictToVerticalAxis : restrictToHorizontalAxis]}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -837,20 +836,6 @@ const TerminalTabBar = ({
 
           {/* Horizontal mode - Action buttons on the right */}
           {orientation === "horizontal" && terminalToolbarActions}
-
-          <TabDragOverlay>
-            {draggedTerminal ? (
-              <>
-                <span className="shrink-0">
-                  <TerminalIcon className="text-text-lighter" />
-                </span>
-                {draggedTerminal.isPinned && <Pin className="shrink-0 fill-current text-accent" />}
-                <span className="max-w-[220px] truncate">
-                  {getTerminalDisplayName(draggedTerminal)}
-                </span>
-              </>
-            ) : null}
-          </TabDragOverlay>
 
           {/* Resize handle for vertical sidebar */}
           {orientation === "vertical" && (

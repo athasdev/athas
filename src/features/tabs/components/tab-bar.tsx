@@ -1,4 +1,5 @@
 import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   ArrowLeftIcon as ArrowLeft,
@@ -32,7 +33,7 @@ import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-vi
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import { SortableTab, TabDndContext, TabDragOverlay, useTabDragClickGuard } from "@/ui/tab-drag";
+import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
 import { TabBarSurface } from "@/ui/tabs";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
@@ -299,8 +300,6 @@ const TabBar = ({
 
     return { sortedBufferIds: ids, sortedBufferIndexById: indexById };
   }, [sortedBuffers]);
-  const draggedBuffer = draggedBufferId ? (bufferById.get(draggedBufferId) ?? null) : null;
-
   // Calculate display names for tabs with minimal distinguishing paths
   const displayNames = useMemo(() => {
     return calculateDisplayNames(buffers, rootFolderPath);
@@ -681,6 +680,7 @@ const TabBar = ({
   return (
     <>
       <TabDndContext
+        modifiers={[restrictToHorizontalAxis]}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -796,12 +796,6 @@ const TabBar = ({
             )}
           </div>
         </TabBarSurface>
-
-        <TabDragOverlay>
-          {draggedBuffer ? (
-            <span className="max-w-[240px] truncate">{getBufferDisplayName(draggedBuffer)}</span>
-          ) : null}
-        </TabDragOverlay>
       </TabDndContext>
 
       <MemoizedTabContextMenu
