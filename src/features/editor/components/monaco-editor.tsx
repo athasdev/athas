@@ -56,6 +56,7 @@ import {
 } from "../engines/monaco/content-sync";
 import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../engines/monaco/hover-widgets";
 import { toMonacoLanguageId } from "../engines/monaco/language";
+import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
 import {
   buildLineOffsets,
   clampMonacoPosition,
@@ -421,7 +422,8 @@ export function MonacoEditor({
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
       minimap: { enabled: minimapEnabled },
-      scrollBeyondLastLine: true,
+      scrollBeyondLastLine: false,
+      padding: { bottom: getEditorBottomScrollPadding(container.clientHeight) },
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
@@ -474,6 +476,14 @@ export function MonacoEditor({
     const hoverResizeObserver = new ResizeObserver(scheduleMonacoHoverClamp);
     hoverResizeObserver.observe(container);
     scheduleMonacoHoverClamp();
+
+    let bottomScrollPadding = getEditorBottomScrollPadding(container.clientHeight);
+    const syncBottomScrollPadding = (viewportHeight: number) => {
+      const nextBottomScrollPadding = getEditorBottomScrollPadding(viewportHeight);
+      if (nextBottomScrollPadding === bottomScrollPadding) return;
+      bottomScrollPadding = nextBottomScrollPadding;
+      editor.updateOptions({ padding: { bottom: bottomScrollPadding } });
+    };
 
     const adapterOwnerId = viewStateKey ?? activeBufferId ?? modelUri.toString();
     const selectEntireModel = () => {
@@ -669,6 +679,7 @@ export function MonacoEditor({
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
+        syncBottomScrollPadding(info.height);
         scheduleMonacoHoverClamp();
         updateVisibleLineRange(editor);
       }),
