@@ -3,12 +3,16 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import type { MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
+import { Avatar } from "@/ui/avatar";
 import { SidebarSearchFilterRow } from "@/ui/sidebar";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import type { AuthUser } from "@/features/window/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { cn } from "@/utils/cn";
 import type { GitCommit } from "../types/git.types";
 import { useGitStore } from "../stores/git.store";
+import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
 import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
 interface GitCommitHistoryProps {
@@ -27,6 +31,7 @@ interface CommitItemProps {
   isSelected: boolean;
   syncState: "local" | "pushed";
   repoPath?: string;
+  account: AuthUser | null;
 }
 
 type HistorySearchScope = "all" | "message" | "author" | "hash";
@@ -54,21 +59,22 @@ function getCommitSearchFields(commit: GitCommit, scope: HistorySearchScope) {
 }
 
 const CommitItem = memo(
-  ({ commit, onViewCommitDiff, isSelected, syncState, repoPath }: CommitItemProps) => {
+  ({ commit, onViewCommitDiff, isSelected, syncState, repoPath, account }: CommitItemProps) => {
     const handleCommitClick = useCallback(() => {
       onViewCommitDiff(commit.hash);
     }, [commit.hash, onViewCommitDiff]);
 
     const shortHash = commit.hash.substring(0, 7);
+    const avatarUrl = getGitAuthorAvatarUrl(commit, account);
 
     return (
-      <div className="mb-1.5">
+      <div className="mb-0.5">
         <button
           type="button"
           onClick={handleCommitClick}
           className={cn(
-            "ui-text-sm flex w-full cursor-pointer items-start rounded-lg border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
-            isSelected && "border-accent/35 bg-accent/8",
+            "ui-text-sm flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-hover/80 focus-visible:bg-hover/80",
+            isSelected && "bg-accent/10",
           )}
           draggable={!!repoPath}
           onDragStart={(event) => {
@@ -84,6 +90,7 @@ const CommitItem = memo(
             });
           }}
         >
+          <Avatar name={commit.author} src={avatarUrl} className="mt-0.5 size-6" />
           <span className="min-w-0 flex-1">
             <span className="flex min-w-0 items-center gap-2">
               <span
@@ -123,6 +130,7 @@ const GitCommitHistory = ({
   const hasMoreCommits = useGitStore((state) => state.hasMoreCommits);
   const isLoadingMoreCommits = useGitStore((state) => state.isLoadingMoreCommits);
   const actions = useGitStore((state) => state.actions);
+  const account = useAuthStore((state) => state.user);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const scrollSetupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -338,6 +346,7 @@ const GitCommitHistory = ({
                       isSelected={commit.hash === selectedCommitHash}
                       syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
                       repoPath={repoPath}
+                      account={account}
                     />
                   ))}
 

@@ -17,6 +17,7 @@ import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { requestUIExtensionGeneration } from "../services/ui-extension-generation-service";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
+import { getServiceUrls } from "@/config/services";
 
 type ContributionType = "sidebar" | "toolbar" | "command";
 
@@ -67,7 +68,7 @@ interface GeneratedExtension {
 }
 
 export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
-  const { isAuthenticated, isPro } = useProFeature();
+  const { isAuthenticated, hasHostedAi } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
   const [step, setStep] = useState<WizardStep>("type");
   const [selectedType, setSelectedType] = useState<ContributionType | null>(null);
@@ -688,7 +689,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             {isAuthenticated ? (
               <Button
                 onClick={() =>
-                  window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
+                  window.open(getServiceUrls().pricingUrl, "_blank", "noopener,noreferrer")
                 }
                 variant="accent"
                 size="xs"
@@ -713,7 +714,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
     );
   };
 
-  if (!isAuthenticated || !isPro) {
+  if (!isAuthenticated || !hasHostedAi) {
     return renderLockedState();
   }
 

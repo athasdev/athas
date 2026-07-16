@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import {
   AutocompleteError,
   requestAutocomplete,
@@ -115,10 +116,9 @@ export function useAutocomplete({
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
 
-  const subscriptionStatus = subscription?.status ?? "free";
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscriptionStatus === "pro";
+  const isPro = hasProductCapability(subscription, "hostedAi");
   const useByok = managedPolicy ? managedPolicy.allowByok && !isPro : !isPro;
   const needsAthasAuth = provider !== "custom";
 

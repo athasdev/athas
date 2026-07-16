@@ -1,12 +1,7 @@
-import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-  FileTextIcon as FileText,
-} from "@/ui/icons";
+import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import { memo } from "react";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
 import type { FileDiff } from "../types/github-pr-viewer.types";
@@ -23,10 +18,10 @@ interface FileDiffViewProps {
 }
 
 const statusColors: Record<FileDiff["status"], string> = {
-  added: "bg-git-added/15 text-git-added",
-  deleted: "bg-git-deleted/15 text-git-deleted",
-  modified: "bg-git-modified/15 text-git-modified",
-  renamed: "bg-git-renamed/15 text-git-renamed",
+  added: "text-git-added",
+  deleted: "text-git-deleted",
+  modified: "text-git-modified",
+  renamed: "text-git-renamed",
 };
 
 export const FileDiffView = memo(
@@ -43,10 +38,9 @@ export const FileDiffView = memo(
     const tokenMap = usePRDiffHighlighting(isExpanded ? fileLines : [], file.path);
 
     return (
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
+      <div className="min-w-0 overflow-hidden bg-primary-bg">
         {isStatic ? (
-          <div className="flex items-center gap-2 px-2.5 py-2">
-            <FileText className="shrink-0 text-text-lighter" />
+          <div className="flex min-h-9 items-center gap-2 border-border/60 border-b px-3 py-1.5">
             <div className="min-w-0 flex-1">
               <div className="ui-text-sm truncate text-text">{file.path}</div>
               {file.oldPath && (
@@ -58,6 +52,14 @@ export const FileDiffView = memo(
             </span>
             <span className="ui-text-sm shrink-0 text-git-added">+{file.additions}</span>
             <span className="ui-text-sm shrink-0 text-git-deleted">-{file.deletions}</span>
+            <Button
+              onClick={() => onOpenFile(file.path)}
+              variant="ghost"
+              size="xs"
+              className="text-text-lighter"
+            >
+              Open
+            </Button>
           </div>
         ) : (
           <Button
@@ -73,7 +75,6 @@ export const FileDiffView = memo(
             ) : (
               <ChevronRight className="text-text-lighter" />
             )}
-            <FileText className="shrink-0 text-text-lighter" />
             <div className="min-w-0 flex-1">
               <div className="ui-text-sm truncate text-text">{file.path}</div>
               {file.oldPath && (
@@ -88,22 +89,7 @@ export const FileDiffView = memo(
           </Button>
         )}
         {isExpanded && (
-          <div className="border-border/70 border-t bg-primary-bg">
-            <div className="flex items-center justify-between px-3 py-2">
-              <Tooltip content="Open file in editor" side="top">
-                <Button
-                  onClick={() => onOpenFile(file.path)}
-                  variant="ghost"
-                  size="xs"
-                  className="text-text-lighter"
-                >
-                  Open File
-                </Button>
-              </Tooltip>
-              <span className="ui-text-sm text-text-lighter">
-                {isLoadingPatch ? "Loading patch..." : `${fileLines.length} diff lines`}
-              </span>
-            </div>
+          <div className="bg-primary-bg">
             <div className="max-h-[540px] overflow-auto">
               {isLoadingPatch ? (
                 <div className="flex items-center justify-center py-6">

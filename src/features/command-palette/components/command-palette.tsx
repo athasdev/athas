@@ -39,6 +39,7 @@ import Command, {
   CommandInput,
   CommandItemRow,
   CommandList,
+  useCommandListNavigation,
 } from "@/ui/command";
 import Keybinding from "@/ui/keybinding";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -87,7 +88,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   };
 
   const [query, setQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [viewStack, setViewStack] = useState<CommandPaletteViewId[]>(["root"]);
   const [activeInitialView, setActiveInitialView] = useState<CommandPaletteViewId>("root");
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -98,11 +98,9 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const renderedViewStack =
     activeInitialView !== commandPaletteInitialView ? initialViewStack : viewStack;
   const currentView = renderedViewStack[renderedViewStack.length - 1] || "root";
-  const isRootView = currentView === "root";
 
   const pushView = (view: CommandPaletteViewId) => {
     setQuery("");
-    setSelectedIndex(0);
     setViewStack((currentStack) => [...currentStack, view]);
   };
 
@@ -412,47 +410,32 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
     return [...prioritized, ...remaining];
   }, [commandSettings.coreFeatures.persistentCommands, filteredActions, lastEnteredActions]);
 
-  // Handle keyboard navigation
-  useEffect(() => {
-    if (!isRootView) return;
+  const handleActionSelect = useCallback(
+    (index: number) => {
+      const action = prioritizedActions[index];
+      if (!action) return;
+      action.action();
+      pushAction(action.id);
+    },
+    [prioritizedActions, pushAction],
+  );
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev < prioritizedActions.length - 1 ? prev + 1 : prev));
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-          break;
-        case "Enter":
-          e.preventDefault();
-          if (prioritizedActions[selectedIndex]) {
-            prioritizedActions[selectedIndex].action();
-            pushAction(prioritizedActions[selectedIndex].id);
-          }
-          break;
-        // Escape is now handled globally in use-keyboard-shortcuts
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isRootView, selectedIndex, prioritizedActions, pushAction]);
+  const {
+    selectedIndex,
+    setSelectedIndex,
+    onInputKeyDown: handleCommandKeyDown,
+  } = useCommandListNavigation({
+    itemCount: prioritizedActions.length,
+    resetKey: `${currentView}:${query}`,
+    onSelect: handleActionSelect,
+  });
 
   // Reset state when visibility changes
   useEffect(() => {
     setQuery("");
-    setSelectedIndex(0);
     setActiveInitialView(commandPaletteInitialView);
     setViewStack(initialViewStack);
   }, [commandPaletteInitialView, initialViewStack]);
-
-  // Update selected index when query changes
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -528,7 +511,12 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
             onClose={onClose}
             showClearButton={commandSettings.coreFeatures.persistentCommands}
           >
-            <CommandInput value={query} onChange={setQuery} placeholder="Type a command..." />
+            <CommandInput
+              value={query}
+              onChange={setQuery}
+              onKeyDown={handleCommandKeyDown}
+              placeholder="Type a command..."
+            />
           </CommandHeader>
 
           <CommandList ref={resultsRef}>
@@ -549,6 +537,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
                       action.action();
                       pushAction(action.id);
                     }}
+                    onMouseEnter={() => setSelectedIndex(index)}
                     isSelected={index === selectedIndex}
                     icon={isRecent ? <History className="text-text-lighter" /> : undefined}
                     title={action.label}

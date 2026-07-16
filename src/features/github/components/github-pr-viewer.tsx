@@ -629,21 +629,9 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
         ? "review required"
         : null;
   const issueBaseUrl = pr.url.replace(/\/pull\/\d+$/, "");
-  const metaItems = [
-    pr.reviewDecision === "APPROVED" ? "Approved" : null,
-    pr.mergeStateStatus === "BEHIND" ? "Behind base" : null,
-    pr.isDraft ? "Draft" : null,
-    pr.assignees?.length
-      ? `Assigned ${pr.assignees.map((assignee) => assignee.login).join(", ")}`
-      : null,
-    pr.linkedIssues?.length
-      ? `Linked ${pr.linkedIssues.map((issue) => `#${issue.number}`).join(", ")}`
-      : null,
-    pr.labels?.length ? pr.labels.map((label) => label.name).join(", ") : null,
-  ].filter((item): item is string => !!item);
-
   return (
     <GitHubViewerShell
+      contentClassName={activeTab === "files" ? "px-0 pb-0 sm:px-0" : undefined}
       header={
         <GitHubPRViewerHeader
           pr={pr}
@@ -654,7 +642,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
           checksSummary={checksSummary}
           reviewerLogins={reviewerLogins}
           reviewSummary={reviewSummary}
-          metaItems={metaItems}
           isRefreshingDetails={isRefreshingDetails}
           onRefresh={handleRefresh}
           onCheckout={() => {

@@ -2,11 +2,11 @@ import { CheckIcon as Check, MagnifyingGlassIcon as Search, TrashIcon as Trash2 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
-import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
+  CommandItemAction,
   CommandItemBadge,
   CommandItemRow,
   CommandList,
@@ -157,20 +157,18 @@ export default function ChatHistoryDropdown({
                   </>
                 }
                 action={
-                  <Button
+                  <CommandItemAction
                     type="button"
-                    variant="ghost"
+                    tone="danger"
                     onClick={(event) => {
                       event.stopPropagation();
                       onDeleteChat(chat.id, event);
                     }}
-                    className="shrink-0 opacity-0 transition-opacity hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                     aria-label={`Delete ${chat.title}`}
                     tooltip="Delete session"
-                    size="icon"
                   >
                     <Trash2 size={13} />
-                  </Button>
+                  </CommandItemAction>
                 }
               />
             );

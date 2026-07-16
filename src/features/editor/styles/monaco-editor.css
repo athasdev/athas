@@ -8,6 +8,15 @@
   background-color: var(--color-primary-bg, var(--primary-bg, #0f1117));
 }
 
+.monaco-editor-shell .monaco-editor .sticky-widget {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--color-border, var(--border, rgba(255, 255, 255, 0.12))) 42%,
+    transparent
+  );
+  box-shadow: var(--shadow-editor-sticky) !important;
+}
+
 .monaco-editor-shell .monaco-search-match {
   background-color: color-mix(in srgb, var(--color-accent, #4f8cff) 26%, transparent);
 }

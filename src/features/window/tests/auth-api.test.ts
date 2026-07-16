@@ -110,6 +110,27 @@ describe("auth-api desktop auth parsers", () => {
     });
   });
 
+  it("parses explicit product capabilities", () => {
+    const parsed = __test__.parseSubscriptionInfoResponse({
+      status: "pro",
+      capabilities: {
+        hostedAi: false,
+        settingsSync: true,
+        collaboration: false,
+        enterprisePolicy: true,
+      },
+      enterprise: { has_access: false, is_admin: false, policy: null },
+      collaboration: null,
+    });
+
+    expect(parsed?.capabilities).toEqual({
+      hostedAi: false,
+      settingsSync: true,
+      collaboration: false,
+      enterprisePolicy: true,
+    });
+  });
+
   it("rejects malformed subscription payloads before storing them", () => {
     expect(__test__.parseSubscriptionInfoResponse(null)).toBeNull();
     expect(__test__.parseSubscriptionInfoResponse({ status: "unknown" })).toBeNull();

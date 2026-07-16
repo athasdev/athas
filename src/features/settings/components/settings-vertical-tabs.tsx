@@ -108,7 +108,7 @@ export const SettingsVerticalTabs = ({
   panelIdForTab = (tab) => `settings-panel-${tab}`,
 }: SettingsVerticalTabsProps) => {
   const subscription = useAuthStore((state) => state.subscription);
-  const { isPro } = useProFeature();
+  const { hasSettingsSync } = useProFeature();
   const { promptUpgrade } = useUpgradeToPro();
   const settingsAccess = resolveSettingsAccess(subscription);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -214,7 +214,7 @@ export const SettingsVerticalTabs = ({
         )}
       </div>
 
-      {!isPro ? (
+      {!hasSettingsSync ? (
         <div className="p-2">
           <Button
             type="button"

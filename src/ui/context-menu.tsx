@@ -1,5 +1,6 @@
 import { type CSSProperties, useCallback, useState } from "react";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { cn } from "@/utils/cn";
 
 export type ContextMenuItem = MenuItem;
 
@@ -10,6 +11,7 @@ interface ContextMenuProps {
   onClose: () => void;
   className?: string;
   style?: CSSProperties;
+  showIcons?: boolean;
 }
 
 export const ContextMenu = ({
@@ -19,14 +21,17 @@ export const ContextMenu = ({
   onClose,
   className,
   style,
+  showIcons = false,
 }: ContextMenuProps) => (
   <Dropdown
     isOpen={isOpen}
     point={position}
     items={items}
     onClose={onClose}
-    className={className}
+    className={cn("min-w-[180px] max-w-[320px] rounded-lg", className)}
     style={style}
+    density="compact"
+    showIcons={showIcons}
   />
 );
 

@@ -21,6 +21,7 @@ import {
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
+  CommandItemAction,
   CommandItemBadge,
   CommandItemRow,
   CommandList,
@@ -581,22 +582,18 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
                     ) : null
                   }
                   action={
-                    <Button
+                    <CommandItemAction
                       type="button"
-                      variant="ghost"
-                      size="icon-xs"
+                      tone="danger"
                       aria-label={`Delete ${connection.name}`}
-                      className={cn(
-                        "shrink-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
-                        isBusy && "pointer-events-none opacity-40",
-                      )}
+                      disabled={isBusy}
                       onClick={(event) => {
                         event.stopPropagation();
                         void handleDeleteConnection(connection.id);
                       }}
                     >
                       <Trash />
-                    </Button>
+                    </CommandItemAction>
                   }
                 />
               );

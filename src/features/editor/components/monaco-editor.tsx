@@ -42,6 +42,7 @@ import { useEditorStateStore } from "../stores/state.store";
 import { useEditorUIStore } from "../stores/ui.store";
 import type { Position, Range } from "../types/editor.types";
 import { getBufferById } from "../utils/buffer-index";
+import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
@@ -56,6 +57,7 @@ import {
 } from "../engines/monaco/content-sync";
 import { clampMonacoHoverWidgets, syncMonacoHoverBounds } from "../engines/monaco/hover-widgets";
 import { toMonacoLanguageId } from "../engines/monaco/language";
+import { getEditorBottomScrollPadding } from "../engines/monaco/scroll-padding";
 import {
   buildLineOffsets,
   clampMonacoPosition,
@@ -408,6 +410,9 @@ export function MonacoEditor({
     if (!container || !buffer) return;
     const fontOptions = { fontFamily, fontSize, lineHeight };
     syncMonacoHoverBounds(container);
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "monaco-create-start");
+    }
 
     const model = monacoEditor.createModel(content, monacoLanguageId, modelUri);
     const editor = monacoEditor.create(container, {
@@ -421,7 +426,8 @@ export function MonacoEditor({
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
       minimap: { enabled: minimapEnabled },
-      scrollBeyondLastLine: true,
+      scrollBeyondLastLine: false,
+      padding: { bottom: getEditorBottomScrollPadding(container.clientHeight) },
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
@@ -455,6 +461,17 @@ export function MonacoEditor({
     pendingLocalContentSnapshotsRef.current = [];
     editorAPI.setTextareaRef(null);
     editorAPI.setViewportRef(container);
+    if (filePath && fileOpenBenchmark.has(filePath)) {
+      fileOpenBenchmark.mark(filePath, "monaco-created", `${model.getLineCount()} lines`);
+    }
+    const benchmarkRafId = requestAnimationFrame(() => {
+      if (!filePath || !fileOpenBenchmark.has(filePath)) return;
+      fileOpenBenchmark.finish(filePath, "editor-ready", `${content.length} chars`, {
+        contentLength: content.length,
+        lineCount: model.getLineCount(),
+        largeContentMode: false,
+      });
+    });
 
     let hoverClampRaf: number | null = null;
     const scheduleMonacoHoverClamp = () => {
@@ -474,6 +491,14 @@ export function MonacoEditor({
     const hoverResizeObserver = new ResizeObserver(scheduleMonacoHoverClamp);
     hoverResizeObserver.observe(container);
     scheduleMonacoHoverClamp();
+
+    let bottomScrollPadding = getEditorBottomScrollPadding(container.clientHeight);
+    const syncBottomScrollPadding = (viewportHeight: number) => {
+      const nextBottomScrollPadding = getEditorBottomScrollPadding(viewportHeight);
+      if (nextBottomScrollPadding === bottomScrollPadding) return;
+      bottomScrollPadding = nextBottomScrollPadding;
+      editor.updateOptions({ padding: { bottom: bottomScrollPadding } });
+    };
 
     const adapterOwnerId = viewStateKey ?? activeBufferId ?? modelUri.toString();
     const selectEntireModel = () => {
@@ -669,6 +694,7 @@ export function MonacoEditor({
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
+        syncBottomScrollPadding(info.height);
         scheduleMonacoHoverClamp();
         updateVisibleLineRange(editor);
       }),
@@ -706,6 +732,10 @@ export function MonacoEditor({
     }
 
     return () => {
+      cancelAnimationFrame(benchmarkRafId);
+      if (filePath && fileOpenBenchmark.has(filePath)) {
+        fileOpenBenchmark.cancel(filePath, "editor-unmounted-before-ready");
+      }
       onCoordinateResolverChange?.(null);
       onModelPositionResolverChange?.(null);
       unsubscribeCursor();

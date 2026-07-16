@@ -1,5 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
+import { getServiceUrls } from "@/config/services";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import {
   extractAutocompleteUsage,
@@ -27,7 +28,6 @@ import {
 } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 
 interface AccountMenuProps {
@@ -35,6 +35,7 @@ interface AccountMenuProps {
 }
 
 export const AccountMenu = ({ className }: AccountMenuProps) => {
+  const services = getServiceUrls();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
@@ -73,16 +74,15 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   };
 
   const handleManageAccount = async () => {
-    await openUrl(new URL("/dashboard", getApiBase()).toString());
+    await openUrl(services.dashboardUrl);
   };
 
   const handleOpenBillingDashboard = async () => {
-    const apiBase = getApiBase();
-    await openUrl(new URL("/dashboard/billing", apiBase).toString());
+    await openUrl(services.dashboardBillingUrl);
   };
 
   const handleOpenDocs = async () => {
-    await openUrl("https://athas.dev/docs");
+    await openUrl(services.docsUrl);
   };
 
   const handleOpenSettings = () => {

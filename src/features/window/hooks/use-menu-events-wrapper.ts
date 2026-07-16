@@ -20,6 +20,7 @@ import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import { writeClipboardText } from "@/utils/clipboard";
+import { getServiceUrls } from "@/config/services";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
@@ -296,7 +297,7 @@ export function useMenuEventsWrapper() {
     },
     onDocumentation: async () => {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
-      await openUrl("https://athas.dev/docs");
+      await openUrl(getServiceUrls().docsUrl);
     },
     onChangelog: async () => {
       const { openUrl } = await import("@tauri-apps/plugin-opener");

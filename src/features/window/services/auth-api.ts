@@ -30,8 +30,13 @@ export interface AuthUser {
   created_at: string;
 }
 
+export type ProductCapability = "hostedAi" | "settingsSync" | "collaboration" | "enterprisePolicy";
+
+export type ProductCapabilities = Record<ProductCapability, boolean>;
+
 export interface SubscriptionInfo {
   status: "free" | "pro";
+  capabilities?: ProductCapabilities;
   subscription: {
     plan: "free" | "pro" | "teams" | "enterprise" | string;
     renews_at: string | null;
@@ -310,10 +315,29 @@ function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | nul
   const subscription = parseSubscriptionPlanSnapshot(payload.subscription);
   const enterprise = asRecord(payload.enterprise);
   const collaboration = parseCollaborationSnapshot(payload.collaboration);
+  const capabilities = asRecord(payload.capabilities);
 
   return {
     ...(payload as unknown as SubscriptionInfo),
     status: payload.status,
+    capabilities: {
+      hostedAi:
+        typeof capabilities.hostedAi === "boolean"
+          ? capabilities.hostedAi
+          : payload.status === "pro",
+      settingsSync:
+        typeof capabilities.settingsSync === "boolean"
+          ? capabilities.settingsSync
+          : payload.status === "pro",
+      collaboration:
+        typeof capabilities.collaboration === "boolean"
+          ? capabilities.collaboration
+          : collaboration?.enabled === true,
+      enterprisePolicy:
+        typeof capabilities.enterprisePolicy === "boolean"
+          ? capabilities.enterprisePolicy
+          : enterprise.has_access === true,
+    },
     subscription,
     collaboration,
     enterprise: {

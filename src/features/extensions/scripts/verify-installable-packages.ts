@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { GENERATED_CDN_DIR } from "./extension-workspace";
+import { SERVICE_DEFAULTS } from "@/config/service-defaults";
 
 type InstallablePackage = {
   url: string;
@@ -11,7 +12,7 @@ type InstallablePackage = {
   checksum: string;
 };
 
-const cdnBaseUrl = process.env.EXTENSIONS_CDN_BASE_URL || "https://athas.dev/extensions";
+const cdnBaseUrl = process.env.EXTENSIONS_CDN_BASE_URL || SERVICE_DEFAULTS.extensionsCdnBaseUrl;
 
 function collectInstallablePackages(value: unknown, packages: InstallablePackage[] = []) {
   if (Array.isArray(value)) {

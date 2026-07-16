@@ -4,8 +4,14 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/ui/button";
-import { CommandEmpty, CommandItemRow, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandForm,
+  CommandFormField,
+  CommandItemAction,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import Input from "@/ui/input";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { addRemote, getRemotes, removeRemote } from "../api/git-remotes-api";
@@ -23,6 +29,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const [query, setQuery] = useState("");
   const [remotes, setRemotes] = useState<GitRemote[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [newRemoteName, setNewRemoteName] = useState("");
   const [newRemoteUrl, setNewRemoteUrl] = useState("");
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
@@ -58,7 +65,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const handleAddRemote = async () => {
     if (!repoPath || !newRemoteName.trim() || !newRemoteUrl.trim()) return;
 
-    setIsLoading(true);
+    setIsAdding(true);
     try {
       const success = await addRemote(repoPath, newRemoteName.trim(), newRemoteUrl.trim());
       if (!success) return;
@@ -67,7 +74,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
       await loadRemotes();
       onRefresh?.();
     } finally {
-      setIsLoading(false);
+      setIsAdding(false);
     }
   };
 
@@ -98,45 +105,40 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
       placeholder="Search remotes..."
       meta={`${remotes.length} remote${remotes.length === 1 ? "" : "s"}`}
     >
-      <div className="border-border/70 border-b px-3 py-2">
-        <div className="mb-1.5 flex items-center gap-2 text-text">
-          <Plus className="size-4 text-text-lighter" />
-          <span className="ui-text-base font-medium">Add remote</span>
-        </div>
-        <div className="grid gap-1.5">
+      <CommandForm
+        title="Add remote"
+        icon={<Plus className="size-4" />}
+        columns={2}
+        submitLabel="Add remote"
+        pendingLabel="Adding..."
+        isPending={isAdding}
+        submitDisabled={!newRemoteName.trim() || !newRemoteUrl.trim()}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleAddRemote();
+        }}
+      >
+        <CommandFormField label="Name" htmlFor="git-remote-name">
           <Input
+            id="git-remote-name"
             type="text"
-            placeholder="Remote name"
+            placeholder="origin"
             value={newRemoteName}
             onChange={(e) => setNewRemoteName(e.target.value)}
-            size="xs"
-            className="w-full"
+            size="sm"
           />
+        </CommandFormField>
+        <CommandFormField label="URL" htmlFor="git-remote-url">
           <Input
+            id="git-remote-url"
             type="text"
-            placeholder="Remote URL"
+            placeholder="https://github.com/owner/repository.git"
             value={newRemoteUrl}
             onChange={(e) => setNewRemoteUrl(e.target.value)}
-            size="xs"
-            className="w-full"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                void handleAddRemote();
-              }
-            }}
+            size="sm"
           />
-          <div className="flex justify-end">
-            <Button
-              onClick={() => void handleAddRemote()}
-              disabled={isLoading || !newRemoteName.trim() || !newRemoteUrl.trim()}
-              size="xs"
-              variant="default"
-            >
-              {isLoading ? "Adding..." : "Add Remote"}
-            </Button>
-          </div>
-        </div>
-      </div>
+        </CommandFormField>
+      </CommandForm>
 
       <CommandList>
         {isLoading && remotes.length === 0 ? (
@@ -157,21 +159,19 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
                 title={remote.name}
                 description={remote.url}
                 contentLayout="stacked"
-                className="min-h-11"
                 action={
-                  <Button
+                  <CommandItemAction
+                    tone="danger"
                     onClick={(event) => {
                       event.stopPropagation();
                       void handleRemoveRemote(remote.name);
                     }}
                     disabled={isActionLoading}
-                    variant="ghost"
-                    size="icon-xs"
-                    className="shrink-0 text-error hover:bg-error/10 hover:text-error"
                     aria-label={`Remove ${remote.name}`}
+                    tooltip="Remove remote"
                   >
                     <Trash2 className="size-3.5" />
-                  </Button>
+                  </CommandItemAction>
                 }
               />
             );

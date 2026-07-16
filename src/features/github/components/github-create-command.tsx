@@ -7,6 +7,7 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import Command, {
   CommandEmpty,
   CommandFooter,
@@ -299,7 +300,7 @@ function GitHubCreateCommandContent({
 
     try {
       const enterprisePolicy = subscription?.enterprise?.policy;
-      const isPro = subscription?.status === "pro";
+      const isPro = hasProductCapability(subscription, "hostedAi");
       if (enterprisePolicy?.managedMode && enterprisePolicy.aiCompletionEnabled === false) {
         setError("AI generation is disabled by your organization policy.");
         return;

@@ -1,10 +1,7 @@
 import {
-  CheckIcon as Check,
   ColumnsIcon as Columns2,
-  GithubLogoIcon as GithubLogo,
   ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
-  TrashIcon as Trash2,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -26,7 +23,10 @@ import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatRelativeDate } from "@/utils/date";
+import { cn } from "@/utils/cn";
 import { joinPath } from "@/utils/path-helpers";
+import { ActionMenu } from "@/ui/action-menu";
+import { Avatar } from "@/ui/avatar";
 import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
@@ -48,7 +48,6 @@ import {
 import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
-import Badge from "@/ui/badge";
 
 function countStats(diff: GitDiff) {
   if (typeof diff.additions === "number" || typeof diff.deletions === "number") {
@@ -124,7 +123,7 @@ function LargeDiffSectionEditor({ diff, cacheKey }: { diff: GitDiff; cacheKey: s
 
   return (
     <div
-      className="relative overflow-hidden border-border border-t bg-primary-bg"
+      className="relative overflow-hidden bg-primary-bg"
       style={{ height: "min(72vh, 760px)", minHeight: "420px" }}
     >
       <CodeEditor
@@ -238,10 +237,7 @@ function EmbeddedDiffSectionEditor({
 
   if (viewMode === "split") {
     return (
-      <div
-        className="grid grid-cols-2 border-border border-t bg-primary-bg"
-        style={{ height: `${height}px` }}
-      >
+      <div className="grid grid-cols-2 bg-primary-bg" style={{ height: `${height}px` }}>
         <div className="relative overflow-hidden border-border border-r bg-primary-bg">
           <DiffLineBackgroundLayer
             lineKinds={splitContent.left.lineKinds}
@@ -279,10 +275,7 @@ function EmbeddedDiffSectionEditor({
   }
 
   return (
-    <div
-      className="relative overflow-hidden border-border border-t bg-primary-bg"
-      style={{ height: `${height}px` }}
-    >
+    <div className="relative overflow-hidden bg-primary-bg" style={{ height: `${height}px` }}>
       <DiffLineBackgroundLayer lineKinds={unifiedContent.lineKinds} lineHeight={lineHeight} />
       <CodeEditor
         bufferId={unifiedBufferId}
@@ -361,11 +354,7 @@ const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
   }, [expanded]);
 
   return (
-    <div
-      ref={bodyRef}
-      className="border-border border-t"
-      style={{ contentVisibility: "auto", containIntrinsicSize: "960px" }}
-    >
+    <div ref={bodyRef} style={{ contentVisibility: "auto", containIntrinsicSize: "960px" }}>
       {shouldMount ? children : <div className="h-[320px] bg-primary-bg" />}
     </div>
   );
@@ -393,7 +382,6 @@ const DiffFileSection = memo(function DiffFileSection({
   const directoryPath = filePath.includes("/")
     ? filePath.slice(0, filePath.lastIndexOf("/") + 1)
     : "";
-  const status = getFileStatus(diff) as "added" | "deleted" | "modified" | "renamed";
   const { additions, deletions } = countStats(diff);
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
@@ -405,7 +393,12 @@ const DiffFileSection = memo(function DiffFileSection({
     !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
 
   return (
-    <section className="relative isolate min-w-0 max-w-full rounded-xl bg-primary-bg">
+    <section
+      className={cn(
+        "relative isolate min-w-0 max-w-full bg-primary-bg",
+        expanded && "border-border/60 border-b",
+      )}
+    >
       <MultibufferFileHeader
         filePath={filePath}
         fileName={fileName}
@@ -413,7 +406,8 @@ const DiffFileSection = memo(function DiffFileSection({
         expanded={expanded}
         onToggle={handleToggle}
         onOpen={handleOpenFile}
-        fileNameClassName={statusTextClass[status]}
+        surface="section"
+        showFileIcon={false}
         trailing={
           <>
             {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
@@ -424,13 +418,13 @@ const DiffFileSection = memo(function DiffFileSection({
 
       {expanded ? (
         diff.is_image ? (
-          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-xl border-border/70 border-x border-b">
+          <div className="min-w-0 max-w-full overflow-hidden">
             <LazyDiffSectionBody expanded={expanded}>
               <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
             </LazyDiffSectionBody>
           </div>
         ) : (
-          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-xl border-border/70 border-x border-b">
+          <div className="min-w-0 max-w-full overflow-hidden">
             <LazyDiffSectionBody expanded={expanded}>
               {shouldUseInlineTextDiff ? (
                 <TextDiffViewer
@@ -696,31 +690,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
             >
               <ListBullets weight="duotone" />
             </BreadcrumbActionButton>
-            {githubCommitUrl ? (
-              <BreadcrumbActionButton
-                type="button"
-                onClick={() => void openUrl(githubCommitUrl)}
-                className="gap-1 ui-text-sm"
-                tooltip="View on GitHub"
-                tooltipSide="bottom"
-                aria-label="View on GitHub"
-              >
-                <GithubLogo weight="duotone" />
-                <span className="max-[1280px]:hidden">View on GitHub</span>
-              </BreadcrumbActionButton>
-            ) : null}
-            <BreadcrumbActionButton
-              type="button"
-              active={showWhitespace}
-              onClick={() => setShowWhitespace((prev) => !prev)}
-              className="gap-1"
-              tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-              tooltipSide="bottom"
-              aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-            >
-              <Trash2 weight="duotone" />
-              {showWhitespace ? <Check weight="duotone" /> : null}
-            </BreadcrumbActionButton>
             <div className="flex items-center gap-0.5">
               <BreadcrumbActionButton
                 type="button"
@@ -743,30 +712,56 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <Columns2 weight="duotone" />
               </BreadcrumbActionButton>
             </div>
+            <ActionMenu
+              label="Diff actions"
+              items={[
+                ...(githubCommitUrl
+                  ? [
+                      {
+                        id: "github",
+                        label: "View on GitHub",
+                        onClick: () => void openUrl(githubCommitUrl),
+                      },
+                    ]
+                  : []),
+                {
+                  id: "whitespace",
+                  label: showWhitespace ? "Hide whitespace" : "Show whitespace",
+                  onClick: () => setShowWhitespace((current) => !current),
+                },
+              ]}
+            />
           </div>
         }
       />
 
       {!isWorkingTree &&
       (multiDiff.commitMessage || multiDiff.commitAuthor || multiDiff.commitDate) ? (
-        <div className="bg-primary-bg px-2 py-2">
-          <div className="px-1 py-1.5">
+        <div className="border-border/60 border-b bg-primary-bg px-4 py-3">
+          <div className="max-w-4xl">
             {multiDiff.commitMessage ? (
-              <div className="ui-text-sm font-medium text-text">{multiDiff.commitMessage}</div>
+              <div className="ui-text-base font-medium leading-snug text-text">
+                {multiDiff.commitMessage}
+              </div>
             ) : null}
             {multiDiff.commitDescription ? (
-              <div className="ui-text-sm mt-2 whitespace-pre-wrap text-text-lighter">
+              <div className="ui-text-sm mt-1 whitespace-pre-wrap leading-relaxed text-text-lighter">
                 {multiDiff.commitDescription}
               </div>
             ) : null}
             <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
-              {multiDiff.commitAuthor ? <span>{multiDiff.commitAuthor}</span> : null}
+              {multiDiff.commitAuthor ? (
+                <span className="inline-flex items-center gap-1.5 text-text-light">
+                  <Avatar name={multiDiff.commitAuthor} className="size-5" />
+                  {multiDiff.commitAuthor}
+                </span>
+              ) : null}
               {multiDiff.commitDate ? (
                 <span>{formatRelativeDate(multiDiff.commitDate)}</span>
               ) : null}
-              <Badge size="compact" variant="muted">
-                {multiDiff.commitHash}
-              </Badge>
+              <code className="font-mono text-text-lighter" title={multiDiff.commitHash}>
+                {multiDiff.commitHash.slice(0, 7)}
+              </code>
             </div>
           </div>
         </div>
@@ -788,19 +783,19 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               ariaLabel="Changed files"
               viewMode={fileNavigatorViewMode}
               onViewModeChange={setFileNavigatorViewMode}
-              borderless
-              className="my-2 ml-2 h-auto self-stretch rounded-xl border border-border/70 bg-secondary-bg/20"
+              surface="review"
+              className="h-auto self-stretch"
               searchMode="fuzzy"
               compactRows
             />
           ) : null}
 
           <div
-            className="min-h-0 flex-1 overflow-auto px-2 pb-2"
+            className="min-h-0 flex-1 overflow-auto"
             style={{ overflowAnchor: "none" }}
             data-diff-stack-scroll-container
           >
-            <div className="flex min-w-0 max-w-full flex-col gap-2 rounded-xl">
+            <div className="flex min-w-0 max-w-full flex-col">
               {multiDiff.files.map((diff, index) => {
                 const sectionKey = getDiffSectionKey(multiDiff, diff, index);
 

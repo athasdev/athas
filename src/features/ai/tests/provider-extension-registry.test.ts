@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
   registerAIProviderExtension,
+  shouldUseTauriFetchForProvider,
   unregisterAIProviderExtension,
 } from "@/features/ai/services/providers/ai-provider-registry";
 import {
@@ -24,6 +25,11 @@ class TestProvider extends AIProvider {
 }
 
 describe("AI provider extension registry", () => {
+  it("routes OpenRouter through the Tauri HTTP transport", () => {
+    expect(shouldUseTauriFetchForProvider("openrouter")).toBe(true);
+    expect(shouldUseTauriFetchForProvider("openai")).toBe(false);
+  });
+
   it("adds and removes extension providers from provider lookups", () => {
     const extensionId = "athas.test.ai-provider";
 

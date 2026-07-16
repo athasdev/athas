@@ -20,6 +20,10 @@
   --color-selected: var(--selected);
   --color-selection-bg: var(--selection-bg);
 
+  --color-tab-bar: var(--tab-bar-bg);
+  --color-tab-active: var(--tab-active-bg);
+  --color-tab-hover: var(--tab-hover-bg);
+
   --color-accent: var(--accent);
 
   --color-cursor: var(--cursor);
@@ -95,6 +99,8 @@
     --app-ui-scale: 1;
     --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
     --ui-text-base: var(--app-ui-font-size);
+    --athas-title-bar-height: 2rem;
+    --athas-footer-height: 2rem;
     --athas-workbench-gap: 8px;
     --radius: 10px;
     --app-duration-fast: 150ms;
@@ -105,6 +111,11 @@
     --app-ease-spring: cubic-bezier(0.35, 1.55, 0.65, 1);
     --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
     --app-press-scale: 0.98;
+    --tab-bar-bg: color-mix(in srgb, var(--secondary-bg) 72%, var(--primary-bg));
+    --tab-active-bg: var(--primary-bg);
+    --tab-hover-bg: color-mix(in srgb, var(--hover) 72%, transparent);
+    --tab-radius: calc(var(--radius) * 1.2);
+    --tab-shoulder-size: 8px;
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);
     --shadow-popover:
@@ -115,6 +126,7 @@
       0 0 0 0.5px rgb(0 0 0 / 0.12);
     --shadow-drag:
       0 8px 18px rgb(0 0 0 / 0.12), 0 18px 44px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+    --shadow-editor-sticky: 0 8px 16px -14px rgb(0 0 0 / 0.28);
 
     --symbol-function: var(--syntax-function);
     --symbol-type: var(--syntax-type, var(--syntax-tag));
@@ -137,6 +149,7 @@
     --shadow-drag:
       0 8px 18px rgb(0 0 0 / 0.36), 0 18px 44px rgb(0 0 0 / 0.34),
       0 0 0 0.5px rgb(255 255 255 / 0.12);
+    --shadow-editor-sticky: 0 10px 20px -16px rgb(0 0 0 / 0.72);
   }
 
   html {
