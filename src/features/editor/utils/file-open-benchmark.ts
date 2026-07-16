@@ -16,6 +16,9 @@ interface FileOpenBenchmarkMeta {
   contentLength?: number;
   fileType?: string;
   largeContentMode?: boolean;
+  languageId?: string;
+  themeId?: string;
+  tokenTypes?: string[];
 }
 
 const sessions = new Map<string, FileOpenBenchmarkSession>();
@@ -144,6 +147,9 @@ export const fileOpenBenchmark = {
       contentLength: meta.contentLength ?? null,
       fileType,
       largeContentMode: meta.largeContentMode ?? null,
+      languageId: meta.languageId ?? null,
+      themeId: meta.themeId ?? null,
+      tokenTypes: meta.tokenTypes ?? null,
       phases: summary.phases.map((phase) => ({
         label: phase.label,
         durationMs: Math.round(phase.duration * 100) / 100,
@@ -166,5 +172,9 @@ export const fileOpenBenchmark = {
 
   has(path: string): boolean {
     return sessions.has(path);
+  },
+
+  hasMark(path: string, label: string): boolean {
+    return sessions.get(path)?.marks.some((mark) => mark.label === label) ?? false;
   },
 };

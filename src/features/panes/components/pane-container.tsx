@@ -115,6 +115,7 @@ interface PaneContainerProps {
 const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
+const MAX_MOUNTED_EDITOR_BUFFERS = 8;
 
 type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
@@ -309,6 +310,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const [isCarouselResizing, setIsCarouselResizing] = useState(false);
   const [draggedCarouselBufferId, setDraggedCarouselBufferId] = useState<string | null>(null);
   const [carouselDropBufferId, setCarouselDropBufferId] = useState<string | null>(null);
+  const [recentEditorBufferIds, setRecentEditorBufferIds] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const carouselViewportRef = useRef<HTMLDivElement>(null);
   const lastCarouselBufferIdRef = useRef<string | null>(null);
@@ -340,6 +342,32 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       };
     }),
   );
+
+  useEffect(() => {
+    const openEditorBufferIds = paneBuffers
+      .filter(isStandardEditorBuffer)
+      .map((buffer) => buffer.id);
+    const openEditorBufferIdSet = new Set(openEditorBufferIds);
+    const activeEditorBufferId =
+      activeBuffer && isStandardEditorBuffer(activeBuffer) ? activeBuffer.id : null;
+
+    setRecentEditorBufferIds((current) => {
+      const next = [
+        ...(activeEditorBufferId ? [activeEditorBufferId] : []),
+        ...current.filter(
+          (bufferId) => bufferId !== activeEditorBufferId && openEditorBufferIdSet.has(bufferId),
+        ),
+      ].slice(0, MAX_MOUNTED_EDITOR_BUFFERS);
+
+      if (
+        next.length === current.length &&
+        next.every((bufferId, index) => bufferId === current[index])
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [activeBuffer, paneBuffers]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
@@ -849,6 +877,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   }, []);
 
   const shouldRenderCarousel = horizontalBufferCarousel && paneBuffers.length > 1;
+  const mountedEditorBuffers = paneBuffers.filter(
+    (buffer): buffer is EditorBufferShell =>
+      isStandardEditorBuffer(buffer) &&
+      (buffer.id === activeBuffer?.id || recentEditorBufferIds.includes(buffer.id)),
+  );
 
   const renderActiveBuffer = useCallback(
     (buffer: PaneRenderBuffer) => {
@@ -1185,9 +1218,27 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     </div>
                   );
                 })}
+              {mountedEditorBuffers.map((buffer) => {
+                const isActive = buffer.id === activeBuffer?.id;
+                return (
+                  <div
+                    key={buffer.id}
+                    className="absolute inset-0"
+                    style={isActive ? undefined : { visibility: "hidden" }}
+                  >
+                    <CodeEditor
+                      paneId={pane.id}
+                      bufferId={buffer.id}
+                      isActiveSurface={isActive && isActivePane}
+                      readOnly={buffer.readOnly}
+                    />
+                  </div>
+                );
+              })}
               {activeBuffer &&
                 activeBuffer.type !== "terminal" &&
                 (activeBuffer.type !== "webViewer" || !webViewerEnabled) &&
+                !isStandardEditorBuffer(activeBuffer) &&
                 renderActiveBuffer(activeBuffer)}
             </>
           )}

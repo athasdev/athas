@@ -42,6 +42,88 @@ const jsxCompilerOptions = {
   jsx: typescript.JsxEmit.Preserve,
 } satisfies typescript.CompilerOptions;
 
+type MonarchLanguageModule = {
+  conf: Parameters<typeof languages.setLanguageConfiguration>[1];
+  language: Parameters<typeof languages.setMonarchTokensProvider>[1];
+};
+
+const monarchLanguageLoaders: Record<string, () => Promise<MonarchLanguageModule>> = {
+  c: () => import("monaco-editor/esm/vs/basic-languages/cpp/cpp"),
+  cpp: () => import("monaco-editor/esm/vs/basic-languages/cpp/cpp"),
+  css: () => import("monaco-editor/esm/vs/basic-languages/css/css"),
+  csharp: () => import("monaco-editor/esm/vs/basic-languages/csharp/csharp"),
+  dart: () => import("monaco-editor/esm/vs/basic-languages/dart/dart"),
+  dockerfile: () => import("monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile"),
+  elixir: () => import("monaco-editor/esm/vs/basic-languages/elixir/elixir"),
+  go: () => import("monaco-editor/esm/vs/basic-languages/go/go"),
+  graphql: () => import("monaco-editor/esm/vs/basic-languages/graphql/graphql"),
+  hcl: () => import("monaco-editor/esm/vs/basic-languages/hcl/hcl"),
+  html: () => import("monaco-editor/esm/vs/basic-languages/html/html"),
+  java: () => import("monaco-editor/esm/vs/basic-languages/java/java"),
+  javascript: () => import("monaco-editor/esm/vs/basic-languages/javascript/javascript"),
+  kotlin: () => import("monaco-editor/esm/vs/basic-languages/kotlin/kotlin"),
+  less: () => import("monaco-editor/esm/vs/basic-languages/less/less"),
+  lua: () => import("monaco-editor/esm/vs/basic-languages/lua/lua"),
+  markdown: () => import("monaco-editor/esm/vs/basic-languages/markdown/markdown"),
+  "objective-c": () => import("monaco-editor/esm/vs/basic-languages/objective-c/objective-c"),
+  php: () => import("monaco-editor/esm/vs/basic-languages/php/php"),
+  protobuf: () => import("monaco-editor/esm/vs/basic-languages/protobuf/protobuf"),
+  python: () => import("monaco-editor/esm/vs/basic-languages/python/python"),
+  r: () => import("monaco-editor/esm/vs/basic-languages/r/r"),
+  ruby: () => import("monaco-editor/esm/vs/basic-languages/ruby/ruby"),
+  rust: () => import("monaco-editor/esm/vs/basic-languages/rust/rust"),
+  scala: () => import("monaco-editor/esm/vs/basic-languages/scala/scala"),
+  scheme: () => import("monaco-editor/esm/vs/basic-languages/scheme/scheme"),
+  scss: () => import("monaco-editor/esm/vs/basic-languages/scss/scss"),
+  shell: () => import("monaco-editor/esm/vs/basic-languages/shell/shell"),
+  sol: () => import("monaco-editor/esm/vs/basic-languages/solidity/solidity"),
+  sql: () => import("monaco-editor/esm/vs/basic-languages/sql/sql"),
+  swift: () => import("monaco-editor/esm/vs/basic-languages/swift/swift"),
+  typescript: () => import("monaco-editor/esm/vs/basic-languages/typescript/typescript"),
+  xml: () => import("monaco-editor/esm/vs/basic-languages/xml/xml"),
+  yaml: () => import("monaco-editor/esm/vs/basic-languages/yaml/yaml"),
+};
+
+const monarchLanguagePromises = new Map<string, Promise<boolean>>();
+
+export function ensureMonacoLanguageTokenizer(languageId: string): Promise<boolean> {
+  if (languageId === "json") {
+    const existing = monarchLanguagePromises.get(languageId);
+    if (existing) return existing;
+
+    const promise = import("monaco-editor/esm/vs/language/json/tokenization")
+      .then(({ createTokenizationSupport }) => {
+        languages.setTokensProvider(languageId, createTokenizationSupport(true));
+        return true;
+      })
+      .catch((error) => {
+        monarchLanguagePromises.delete(languageId);
+        throw error;
+      });
+    monarchLanguagePromises.set(languageId, promise);
+    return promise;
+  }
+
+  const loader = monarchLanguageLoaders[languageId];
+  if (!loader) return Promise.resolve(false);
+
+  const existing = monarchLanguagePromises.get(languageId);
+  if (existing) return existing;
+
+  const promise = loader()
+    .then((module) => {
+      languages.setLanguageConfiguration(languageId, module.conf);
+      languages.setMonarchTokensProvider(languageId, module.language);
+      return true;
+    })
+    .catch((error) => {
+      monarchLanguagePromises.delete(languageId);
+      throw error;
+    });
+  monarchLanguagePromises.set(languageId, promise);
+  return promise;
+}
+
 const lspOwnedDiagnosticsOptions = {
   noSemanticValidation: true,
   noSuggestionDiagnostics: true,

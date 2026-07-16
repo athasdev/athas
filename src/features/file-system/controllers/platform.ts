@@ -45,7 +45,9 @@ export async function readFile(path: string): Promise<string> {
   }
 
   try {
-    const content = await readBinaryFile(path);
+    const response = await invoke<ArrayBuffer | number[]>("read_local_file", { path });
+    const content =
+      response instanceof ArrayBuffer ? new Uint8Array(response) : Uint8Array.from(response);
     return utf8Decoder.decode(content);
   } catch {
     const content = await readBinaryFile(path, { baseDir: BaseDirectory.AppData });

@@ -56,6 +56,7 @@ fn main() {
       .invoke_handler(tauri::generate_handler![
          // File system commands
          read_athas_log,
+         read_local_file,
          open_file_external,
          open_folder_dialog,
          move_file,

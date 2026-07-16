@@ -1102,19 +1102,25 @@ export const useFileSystemStore = createSelectors(
 
         const {
           buffers,
+          activeBufferId,
           actions: { convertPreviewToDefinite, setActiveBuffer },
         } = useBufferStore.getState();
         const workspaceRootPath = get().rootFolderPath;
         const fileName = getFilenameFromPath(path);
         const existingBuffer = getBufferByPath(buffers, path);
         if (existingBuffer) {
+          const wasAlreadyActive = existingBuffer.id === activeBufferId;
           setActiveBuffer(existingBuffer.id);
           recordLocalFileAccess(path, fileName, workspaceRootPath, getWorkspaceFolderPaths(get));
 
           if (existingBuffer.isPreview && !isPreview) {
             convertPreviewToDefinite(existingBuffer.id);
           }
-          fileOpenBenchmark.finish(path, "existing-buffer");
+          if (wasAlreadyActive || existingBuffer.type !== "editor") {
+            fileOpenBenchmark.finish(path, "existing-buffer");
+          } else {
+            fileOpenBenchmark.mark(path, "existing-buffer-activated");
+          }
 
           if (line) {
             setTimeout(() => {
@@ -1141,12 +1147,17 @@ export const useFileSystemStore = createSelectors(
         let resolvedPath = path;
 
         const isKnownTextPath = isKnownTextFile(path);
+        const selectedFileEntry = findFileInTree(get().files, path);
         const shouldResolveSymlink =
-          !isKnownTextPath && !path.startsWith("diff://") && !path.startsWith("remote://");
+          selectedFileEntry?.isSymlink === true &&
+          !path.startsWith("diff://") &&
+          !path.startsWith("remote://");
         if (shouldResolveSymlink) {
           try {
             const workspaceRoot = get().rootFolderPath;
-            const symlinkInfo = await getSymlinkInfo(path, workspaceRoot);
+            const symlinkInfo = selectedFileEntry.symlinkTarget
+              ? { is_symlink: true, target: selectedFileEntry.symlinkTarget }
+              : await getSymlinkInfo(path, workspaceRoot);
 
             if (symlinkInfo.is_symlink && symlinkInfo.target) {
               const wslTargetPath = resolveWslTargetPath(path, symlinkInfo.target);
@@ -1361,7 +1372,6 @@ export const useFileSystemStore = createSelectors(
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
-
               // Create terminal connection for external editor
               const connectionId = await invoke<string>("create_terminal", {
                 config: {
