@@ -22,6 +22,7 @@ const remoteInvokeCommands = [
   "create_remote_terminal",
   "remote_terminal_write",
   "remote_terminal_resize",
+  "remote_terminal_set_paused",
   "close_remote_terminal",
 ];
 

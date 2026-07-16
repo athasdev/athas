@@ -468,7 +468,7 @@ const TerminalContainer = ({
         setTimeout(() => {
           invoke("terminal_write", {
             id: connectionId,
-            data: pendingCommand,
+            input: { kind: "text", data: pendingCommand },
           }).catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);

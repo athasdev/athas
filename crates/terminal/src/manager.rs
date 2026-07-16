@@ -1,5 +1,7 @@
 use crate::{
-   config::TerminalConfig, connection::TerminalConnection, runtime::AthasAppHandle as AppHandle,
+   config::TerminalConfig,
+   connection::TerminalConnection,
+   protocol::{TerminalEventHandler, TerminalInput, TerminalSize},
 };
 use anyhow::{Result, anyhow};
 use std::{
@@ -27,9 +29,13 @@ impl TerminalManager {
       }
    }
 
-   pub fn create_terminal(&self, config: TerminalConfig, app_handle: AppHandle) -> Result<String> {
+   pub fn create_terminal(
+      &self,
+      config: TerminalConfig,
+      event_handler: TerminalEventHandler,
+   ) -> Result<String> {
       let id = Uuid::new_v4().to_string();
-      let connection = TerminalConnection::new(id.clone(), config, app_handle)?;
+      let connection = TerminalConnection::new(id.clone(), config, event_handler)?;
 
       // Start the reader thread
       connection.start_reader_thread();
@@ -41,19 +47,29 @@ impl TerminalManager {
       Ok(id)
    }
 
-   pub fn write_to_terminal(&self, id: &str, data: &str) -> Result<()> {
+   pub fn write_to_terminal(&self, id: &str, input: TerminalInput) -> Result<()> {
       let connections = self.connections.lock().unwrap();
       if let Some(connection) = connections.get(id) {
-         connection.write(data)
+         connection.write(&input.into_bytes())
       } else {
          Err(anyhow!("Terminal connection not found"))
       }
    }
 
-   pub fn resize_terminal(&self, id: &str, rows: u16, cols: u16) -> Result<()> {
+   pub fn resize_terminal(&self, id: &str, size: TerminalSize) -> Result<()> {
       let connections = self.connections.lock().unwrap();
       if let Some(connection) = connections.get(id) {
-         connection.resize(rows, cols)
+         connection.resize(size)
+      } else {
+         Err(anyhow!("Terminal connection not found"))
+      }
+   }
+
+   pub fn set_terminal_paused(&self, id: &str, paused: bool) -> Result<()> {
+      let connections = self.connections.lock().unwrap();
+      if let Some(connection) = connections.get(id) {
+         connection.set_paused(paused);
+         Ok(())
       } else {
          Err(anyhow!("Terminal connection not found"))
       }

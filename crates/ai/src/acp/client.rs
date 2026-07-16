@@ -10,13 +10,15 @@ use super::{
 };
 use crate::runtime::AthasAppHandle as AppHandle;
 use agent_client_protocol::{self as acp_sdk, schema as acp};
-use athas_terminal::{TerminalConfig, TerminalManager};
+use athas_terminal::{
+   TerminalConfig, TerminalEvent, TerminalEventHandler, TerminalManager, TerminalSize,
+};
 use std::{
    collections::HashMap,
    path::PathBuf,
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::{Emitter, Listener};
+use tauri::Emitter;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 /// Response for permission requests
@@ -927,14 +929,27 @@ impl AthasAcpClient {
          environment: env_map,
          command: Some(command),
          args: command_args,
-         rows: 24,
-         cols: 80,
+         size: TerminalSize::default(),
+         term_program_version: Some(self.app_handle.package_info().version.to_string()),
       };
 
-      match self
-         .terminal_manager
-         .create_terminal(config, self.app_handle.clone())
-      {
+      let states_for_events = self.terminal_states.clone();
+      let pending_events = Arc::new(StdMutex::new(Vec::<(String, TerminalEvent)>::new()));
+      let pending_events_for_handler = pending_events.clone();
+      let event_handler: TerminalEventHandler = Arc::new(move |terminal_id, event| {
+         let Ok(mut states) = states_for_events.lock() else {
+            return false;
+         };
+
+         if let Some(state) = states.get_mut(terminal_id) {
+            state.handle_event(event);
+         } else if let Ok(mut pending) = pending_events_for_handler.lock() {
+            pending.push((terminal_id.to_string(), event));
+         }
+         true
+      });
+
+      match self.terminal_manager.create_terminal(config, event_handler) {
          Ok(athas_terminal_id) => {
             let terminal_id = athas_terminal_id.clone();
             let output_limit = args.output_byte_limit.map(|l| l as u32);
@@ -942,91 +957,12 @@ impl AthasAcpClient {
             {
                let mut states = self.terminal_states.lock().unwrap();
                states.insert(terminal_id.clone(), state);
-            }
-
-            // Set up output listener
-            let output_event = format!("pty-output-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let output_listener_id = self.app_handle.listen(output_event, move |event| {
-               let payload = event.payload();
-               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload)
-                  && let Some(data) = parsed.get("data").and_then(|d| d.as_str())
-                  && let Ok(mut states) = states_clone.lock()
-                  && let Some(state) = states.get_mut(&terminal_id_clone)
-               {
-                  state.append_output(data);
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(output_listener_id);
-               }
-            }
-
-            // Set up exit-status listener
-            let exit_event = format!("pty-exit-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let exit_listener_id = self.app_handle.listen(exit_event, move |event| {
-               let payload = event.payload();
-               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
-                  let exit_code = parsed
-                     .get("exitCode")
-                     .and_then(|v| v.as_u64())
-                     .map(|v| v as u32);
-                  let signal = parsed
-                     .get("signal")
-                     .and_then(|v| v.as_str())
-                     .map(str::to_string);
-                  if let Ok(mut states) = states_clone.lock()
-                     && let Some(state) = states.get_mut(&terminal_id_clone)
-                  {
-                     state.set_exit_status(exit_code, signal);
+               if let Ok(mut pending) = pending_events.lock() {
+                  for (_, event) in pending.drain(..).filter(|(id, _)| id == &terminal_id) {
+                     if let Some(state) = states.get_mut(&terminal_id) {
+                        state.handle_event(event);
+                     }
                   }
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(exit_listener_id);
-               }
-            }
-
-            // Set up error listener
-            let error_event = format!("pty-error-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let error_listener_id = self.app_handle.listen(error_event, move |_| {
-               if let Ok(mut states) = states_clone.lock()
-                  && let Some(state) = states.get_mut(&terminal_id_clone)
-               {
-                  state.set_exit_status(Some(1), Some("pty_error".to_string()));
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(error_listener_id);
-               }
-            }
-
-            // Set up close listener
-            let close_event = format!("pty-closed-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let close_listener_id = self.app_handle.listen(close_event, move |_| {
-               if let Ok(mut states) = states_clone.lock()
-                  && let Some(state) = states.get_mut(&terminal_id_clone)
-               {
-                  state.set_exit_status(Some(0), None);
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(close_listener_id);
                }
             }
 
@@ -1083,9 +1019,6 @@ impl AthasAcpClient {
       };
 
       if let Some(state) = removed_state {
-         for listener_id in state.listener_ids {
-            self.app_handle.unlisten(listener_id);
-         }
          if let Err(e) = self
             .terminal_manager
             .close_terminal(&state.athas_terminal_id)

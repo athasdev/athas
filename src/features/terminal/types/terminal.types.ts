@@ -44,6 +44,21 @@ export interface TerminalState {
   activeTerminalId: string | null;
 }
 
+export interface TerminalSize {
+  rows: number;
+  cols: number;
+  pixelWidth: number;
+  pixelHeight: number;
+}
+
+export type TerminalInput = { kind: "text"; data: string } | { kind: "binary"; data: number[] };
+
+export type TerminalEvent =
+  | { event: "output"; data: number[] }
+  | { event: "error"; message: string }
+  | { event: "exit"; exitCode?: number | null; signal?: string | null }
+  | { event: "closed" };
+
 export interface PersistedTerminal {
   id: string;
   name: string;

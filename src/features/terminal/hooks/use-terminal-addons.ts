@@ -1,5 +1,6 @@
 import { ask } from "@tauri-apps/plugin-dialog";
 import { open } from "@tauri-apps/plugin-shell";
+import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
@@ -11,6 +12,7 @@ import {
   parseTerminalFileLinks,
   type TerminalFileLink,
 } from "@/features/terminal/utils/terminal-file-links";
+import { writeClipboardText } from "@/utils/clipboard";
 
 export interface TerminalAddons {
   fitAddon: FitAddon;
@@ -20,8 +22,7 @@ export interface TerminalAddons {
 }
 
 export interface CreateTerminalAddonsOptions {
-  /** Skip WebGL addon - use canvas renderer instead (better for some fonts like Nerd Fonts) */
-  skipWebGL?: boolean;
+  onRendererFallback?: () => void;
 }
 
 export function createTerminalAddons(
@@ -32,23 +33,41 @@ export function createTerminalAddons(
   const searchAddon = new SearchAddon();
   const serializeAddon = new SerializeAddon();
   const unicode11Addon = new Unicode11Addon();
+  const clipboardAddon = new ClipboardAddon(undefined, {
+    readText: async () => "",
+    writeText: async (selection: ClipboardSelectionType, text: string) => {
+      if (selection === "c") await writeClipboardText(text);
+    },
+  });
 
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(searchAddon);
   terminal.loadAddon(serializeAddon);
   terminal.loadAddon(unicode11Addon);
+  terminal.loadAddon(clipboardAddon);
 
-  let webglAddon: WebglAddon | null = null;
-
-  if (!options.skipWebGL) {
-    webglAddon = new WebglAddon();
-    webglAddon.onContextLoss(() => {
-      webglAddon?.dispose();
-    });
-    terminal.loadAddon(webglAddon);
-  }
+  const webglAddon = loadWebglRenderer(terminal, options.onRendererFallback);
 
   return { fitAddon, searchAddon, serializeAddon, webglAddon };
+}
+
+export function loadWebglRenderer(
+  terminal: Terminal,
+  onRendererFallback?: () => void,
+): WebglAddon | null {
+  try {
+    const webglAddon = new WebglAddon();
+    webglAddon.onContextLoss(() => {
+      webglAddon.dispose();
+      onRendererFallback?.();
+    });
+    terminal.loadAddon(webglAddon);
+    return webglAddon;
+  } catch (error) {
+    console.warn("WebGL terminal renderer unavailable; using the DOM renderer.", error);
+    onRendererFallback?.();
+    return null;
+  }
 }
 
 export function loadWebLinksAddon(terminal: Terminal): void {

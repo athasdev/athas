@@ -7,7 +7,10 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use app_runtime::AthasRuntime;
 use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
-use terminal::{close_terminal, create_terminal, list_shells, terminal_resize, terminal_write};
+use terminal::{
+   close_terminal, create_terminal, list_shells, terminal_resize, terminal_set_paused,
+   terminal_write,
+};
 
 mod app_runtime;
 mod app_setup;
@@ -188,6 +191,7 @@ fn main() {
          create_terminal,
          terminal_write,
          terminal_resize,
+         terminal_set_paused,
          close_terminal,
          list_shells,
          // execute_shell,
@@ -207,6 +211,7 @@ fn main() {
          create_remote_terminal,
          remote_terminal_write,
          remote_terminal_resize,
+         remote_terminal_set_paused,
          close_remote_terminal,
          // WSL commands
          wsl_list_distributions,

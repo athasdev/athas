@@ -41,6 +41,7 @@ import {
   buildTerminalRestorePayload,
   loadWorkspaceTerminalsFromStorage,
 } from "@/features/terminal/lib/terminal-session-storage";
+import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { showAlertDialog, showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
@@ -1372,14 +1373,16 @@ export const useFileSystemStore = createSelectors(
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
+              const events = createTerminalEventChannel();
               // Create terminal connection for external editor
               const connectionId = await invoke<string>("create_terminal", {
                 config: {
-                  working_directory: rootFolderPath || undefined,
-                  rows: 24,
-                  cols: 80,
+                  workingDirectory: rootFolderPath || undefined,
+                  size: { rows: 24, cols: 80, pixelWidth: 0, pixelHeight: 0 },
                 },
+                onEvent: events.channel,
               });
+              events.bind(connectionId);
 
               if (isStaleRequest()) return;
 

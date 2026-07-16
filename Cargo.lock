@@ -796,6 +796,7 @@ dependencies = [
 name = "athas-remote"
 version = "0.1.0"
 dependencies = [
+ "athas-terminal",
  "lazy_static",
  "log",
  "serde",
@@ -826,6 +827,7 @@ dependencies = [
  "anyhow",
  "athas-wsl",
  "dirs 5.0.1",
+ "libc",
  "log",
  "portable-pty",
  "serde",

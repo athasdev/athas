@@ -1,4 +1,8 @@
-use crate::{config::TerminalConfig, runtime::AthasAppHandle as AppHandle, shell::get_shell_by_id};
+use crate::{
+   config::TerminalConfig,
+   protocol::{TerminalEvent, TerminalEventHandler, TerminalReaderControl, TerminalSize},
+   shell::get_shell_by_id,
+};
 use anyhow::{Result, anyhow};
 use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
 use std::{
@@ -8,27 +12,31 @@ use std::{
    sync::{Arc, Mutex, OnceLock},
    thread,
 };
-use tauri::Emitter;
-
 static USER_ENVIRONMENT_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
 
 pub struct TerminalConnection {
    pub id: String,
    pub pty_pair: PtyPair,
-   pub app_handle: AppHandle,
+   pub event_handler: TerminalEventHandler,
    pub writer: Arc<Mutex<Option<Box<dyn Write + Send>>>>,
    pub child: Arc<Mutex<Option<Box<dyn Child + Send + Sync>>>>,
+   pub reader_control: Arc<TerminalReaderControl>,
 }
 
 impl TerminalConnection {
-   pub fn new(id: String, config: TerminalConfig, app_handle: AppHandle) -> Result<Self> {
+   pub fn new(
+      id: String,
+      config: TerminalConfig,
+      event_handler: TerminalEventHandler,
+   ) -> Result<Self> {
       let pty_system = portable_pty::native_pty_system();
 
+      let size = config.size.normalized();
       let pty_pair = pty_system.openpty(PtySize {
-         rows: config.rows,
-         cols: config.cols,
-         pixel_width: 0,
-         pixel_height: 0,
+         rows: size.rows,
+         cols: size.cols,
+         pixel_width: size.pixel_width,
+         pixel_height: size.pixel_height,
       })?;
 
       let cmd = Self::build_command(&config)?;
@@ -39,9 +47,10 @@ impl TerminalConnection {
       Ok(Self {
          id,
          pty_pair,
-         app_handle,
+         event_handler,
          writer,
          child,
+         reader_control: Arc::new(TerminalReaderControl::default()),
       })
    }
 
@@ -192,11 +201,19 @@ impl TerminalConnection {
       cmd.env("TERM", "xterm-256color");
       cmd.env("COLORTERM", "truecolor");
       cmd.env("TERM_PROGRAM", "athas");
-      cmd.env("TERM_PROGRAM_VERSION", "1.0.0");
+      cmd.env(
+         "TERM_PROGRAM_VERSION",
+         config
+            .term_program_version
+            .as_deref()
+            .unwrap_or(env!("CARGO_PKG_VERSION")),
+      );
       if let Some(shell_path) = shell_path {
          cmd.env("SHELL", shell_path);
       }
       cmd.env("CLICOLOR", "1");
+
+      Self::remove_inherited_terminal_markers(&mut cmd, &user_env);
 
       if !custom_no_color_requested {
          cmd.env_remove("NO_COLOR");
@@ -212,6 +229,31 @@ impl TerminalConnection {
       }
 
       Ok(cmd)
+   }
+
+   fn remove_inherited_terminal_markers(
+      cmd: &mut CommandBuilder,
+      environment: &HashMap<String, String>,
+   ) {
+      const EXACT_MARKERS: &[&str] = &[
+         "WT_SESSION",
+         "TERM_SESSION_ID",
+         "VTE_VERSION",
+         "TMUX",
+         "TMUX_PANE",
+      ];
+      const PREFIX_MARKERS: &[&str] = &["KITTY_", "GHOSTTY_", "WEZTERM_", "ITERM_"];
+
+      for key in environment.keys() {
+         let upper = key.to_ascii_uppercase();
+         if EXACT_MARKERS.contains(&upper.as_str())
+            || PREFIX_MARKERS
+               .iter()
+               .any(|prefix| upper.starts_with(prefix))
+         {
+            cmd.env_remove(key);
+         }
+      }
    }
 
    fn resolve_shell_path(shell_id: Option<&str>, default_shell: &str) -> String {
@@ -430,8 +472,9 @@ impl TerminalConnection {
 
    pub fn start_reader_thread(&self) {
       let id = self.id.clone();
-      let app_handle = self.app_handle.clone();
+      let event_handler = self.event_handler.clone();
       let child = self.child.clone();
+      let reader_control = self.reader_control.clone();
       let mut reader = self
          .pty_pair
          .master
@@ -440,76 +483,47 @@ impl TerminalConnection {
 
       thread::spawn(move || {
          let mut buffer = vec![0u8; 65536]; // 64KB buffer for better performance
-         let mut incomplete_utf8: Vec<u8> = Vec::new();
-
          loop {
+            if !reader_control.wait_until_resumed() {
+               break;
+            }
+
             match reader.read(&mut buffer) {
                Ok(0) => {
-                  let mut exit_code: Option<u32> = None;
-                  let mut signal: Option<String> = None;
-
-                  if let Ok(mut child_guard) = child.lock()
-                     && let Some(child) = child_guard.as_mut()
-                  {
-                     let status = child
-                        .try_wait()
-                        .ok()
-                        .flatten()
-                        .or_else(|| child.wait().ok());
-
-                     if let Some(status) = status {
-                        exit_code = Some(status.exit_code());
-                        signal = status.signal().map(str::to_string);
-                     }
-                  }
-
-                  let _ = app_handle.emit(
-                     &format!("pty-exit-{}", id),
-                     serde_json::json!({
-                        "exitCode": exit_code,
-                        "signal": signal
-                     }),
-                  );
-
-                  // End of stream
-                  let _ = app_handle.emit(&format!("pty-closed-{}", id), ());
+                  let (exit_code, signal) = Self::child_exit_status(&child, true);
+                  event_handler(&id, TerminalEvent::Exit { exit_code, signal });
+                  event_handler(&id, TerminalEvent::Closed);
                   break;
                }
                Ok(n) => {
-                  // Prepend any incomplete UTF-8 bytes from previous read
-                  let mut data_to_process = if incomplete_utf8.is_empty() {
-                     buffer[..n].to_vec()
-                  } else {
-                     let mut combined = std::mem::take(&mut incomplete_utf8);
-                     combined.extend_from_slice(&buffer[..n]);
-                     combined
-                  };
-
-                  // Find the last valid UTF-8 boundary
-                  let valid_up_to = Self::find_utf8_boundary(&data_to_process);
-
-                  // Save incomplete bytes for next iteration
-                  if valid_up_to < data_to_process.len() {
-                     incomplete_utf8 = data_to_process[valid_up_to..].to_vec();
-                     data_to_process.truncate(valid_up_to);
-                  }
-
-                  // Only emit if we have valid data
-                  if !data_to_process.is_empty() {
-                     // Safe to use from_utf8 since we validated the boundary
-                     let data = String::from_utf8_lossy(&data_to_process).to_string();
-                     let _ = app_handle.emit(
-                        &format!("pty-output-{}", id),
-                        serde_json::json!({ "data": data }),
-                     );
+                  if !event_handler(
+                     &id,
+                     TerminalEvent::Output {
+                        data: buffer[..n].to_vec(),
+                     },
+                  ) {
+                     break;
                   }
                }
                Err(e) => {
-                  eprintln!("Error reading from PTY: {}", e);
-                  let _ = app_handle.emit(
-                     &format!("pty-error-{}", id),
-                     serde_json::json!({ "error": e.to_string() }),
-                  );
+                  let should_wait_for_status = e.raw_os_error() == Some(5)
+                     || matches!(
+                        e.kind(),
+                        std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::UnexpectedEof
+                     );
+                  let (exit_code, signal) = Self::child_exit_status(&child, should_wait_for_status);
+                  if exit_code.is_some() || signal.is_some() {
+                     event_handler(&id, TerminalEvent::Exit { exit_code, signal });
+                  } else {
+                     eprintln!("Error reading from PTY: {}", e);
+                     event_handler(
+                        &id,
+                        TerminalEvent::Error {
+                           message: e.to_string(),
+                        },
+                     );
+                  }
+                  event_handler(&id, TerminalEvent::Closed);
                   break;
                }
             }
@@ -517,58 +531,35 @@ impl TerminalConnection {
       });
    }
 
-   /// Find the last valid UTF-8 boundary in a byte slice.
-   /// Returns the index up to which the bytes form valid UTF-8.
-   fn find_utf8_boundary(bytes: &[u8]) -> usize {
-      if bytes.is_empty() {
-         return 0;
-      }
+   fn child_exit_status(
+      child: &Arc<Mutex<Option<Box<dyn Child + Send + Sync>>>>,
+      wait: bool,
+   ) -> (Option<u32>, Option<String>) {
+      let Ok(mut child_guard) = child.lock() else {
+         return (None, None);
+      };
+      let Some(child) = child_guard.as_mut() else {
+         return (None, None);
+      };
 
-      // Check from the end for incomplete multi-byte sequences
-      let len = bytes.len();
+      let status = child
+         .try_wait()
+         .ok()
+         .flatten()
+         .or_else(|| wait.then(|| child.wait().ok()).flatten());
 
-      // Check the last 1-4 bytes for incomplete sequences
-      for i in 1..=4.min(len) {
-         let check_from = len - i;
-         let byte = bytes[check_from];
-
-         // Check if this is a leading byte of a multi-byte sequence
-         if byte & 0b1000_0000 == 0 {
-            // ASCII byte - valid boundary after this
-            return len;
-         } else if byte & 0b1100_0000 == 0b1100_0000 {
-            // This is a leading byte (starts with 11)
-            let expected_len = if byte & 0b1111_0000 == 0b1111_0000 {
-               4
-            } else if byte & 0b1110_0000 == 0b1110_0000 {
-               3
-            } else {
-               2
-            };
-
-            let actual_len = i;
-            if actual_len >= expected_len {
-               // Complete sequence
-               return len;
-            } else {
-               // Incomplete sequence - boundary is before this byte
-               return check_from;
-            }
-         }
-         // Continuation byte (10xxxxxx) - keep looking for the leading byte
-      }
-
-      // If we get here, try to validate the whole thing
-      match std::str::from_utf8(bytes) {
-         Ok(_) => len,
-         Err(e) => e.valid_up_to(),
-      }
+      status.map_or((None, None), |status| {
+         (
+            Some(status.exit_code()),
+            status.signal().map(str::to_string),
+         )
+      })
    }
 
-   pub fn write(&self, data: &str) -> Result<()> {
+   pub fn write(&self, data: &[u8]) -> Result<()> {
       let mut writer_guard = self.writer.lock().unwrap();
       if let Some(writer) = writer_guard.as_mut() {
-         writer.write_all(data.as_bytes())?;
+         writer.write_all(data)?;
          writer.flush()?;
          Ok(())
       } else {
@@ -576,17 +567,23 @@ impl TerminalConnection {
       }
    }
 
-   pub fn resize(&self, rows: u16, cols: u16) -> Result<()> {
+   pub fn resize(&self, size: TerminalSize) -> Result<()> {
+      let size = size.normalized();
       self.pty_pair.master.resize(PtySize {
-         rows,
-         cols,
-         pixel_width: 0,
-         pixel_height: 0,
+         rows: size.rows,
+         cols: size.cols,
+         pixel_width: size.pixel_width,
+         pixel_height: size.pixel_height,
       })?;
       Ok(())
    }
 
+   pub fn set_paused(&self, paused: bool) {
+      self.reader_control.set_paused(paused);
+   }
+
    pub fn kill(&self) -> Result<()> {
+      self.reader_control.set_paused(false);
       let mut child_guard = self.child.lock().unwrap();
       if let Some(child) = child_guard.as_mut() {
          if child.try_wait()?.is_some() {
@@ -612,8 +609,8 @@ mod tests {
          environment: Some(environment),
          command: Some("node".to_string()),
          args: None,
-         rows: 24,
-         cols: 80,
+         size: TerminalSize::default(),
+         term_program_version: Some("0.9.0-test".to_string()),
       }
    }
 
@@ -772,5 +769,45 @@ mod tests {
       assert_eq!(cmd.get_env("CLICOLOR"), Some(OsStr::new("1")));
       assert!(cmd.get_env("FORCE_COLOR").is_none());
       assert!(cmd.get_env("CLICOLOR_FORCE").is_none());
+   }
+
+   #[test]
+   fn removes_inherited_host_terminal_markers() {
+      let mut environment = HashMap::new();
+      environment.insert("KITTY_WINDOW_ID".to_string(), "1".to_string());
+      environment.insert("GHOSTTY_RESOURCES_DIR".to_string(), "/tmp".to_string());
+      environment.insert("WEZTERM_PANE".to_string(), "3".to_string());
+      environment.insert("ITERM_SESSION_ID".to_string(), "session".to_string());
+      environment.insert("TERM_SESSION_ID".to_string(), "term-session".to_string());
+      environment.insert("TMUX".to_string(), "/tmp/tmux".to_string());
+
+      let mut config = config_with_env(HashMap::new());
+      let mut command = CommandBuilder::new("node");
+      for (key, value) in &environment {
+         command.env(key, value);
+      }
+      TerminalConnection::remove_inherited_terminal_markers(&mut command, &environment);
+
+      for key in environment.keys() {
+         assert!(
+            command.get_env(key).is_none(),
+            "expected {key} to be removed"
+         );
+      }
+
+      config
+         .environment
+         .as_mut()
+         .unwrap()
+         .insert("KITTY_WINDOW_ID".to_string(), "custom".to_string());
+      let command = TerminalConnection::build_command(&config).unwrap();
+      assert_eq!(
+         command.get_env("KITTY_WINDOW_ID"),
+         Some(OsStr::new("custom"))
+      );
+      assert_eq!(
+         command.get_env("TERM_PROGRAM_VERSION"),
+         Some(OsStr::new("0.9.0-test"))
+      );
    }
 }

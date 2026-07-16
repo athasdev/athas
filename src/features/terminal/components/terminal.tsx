@@ -18,6 +18,8 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
+import { currentPlatform } from "@/utils/platform";
 import {
   createTerminalAddons,
   injectLinkStyles,
@@ -31,6 +33,9 @@ import { useTerminalTheme } from "../hooks/use-terminal-theme";
 import { useTerminalStore } from "../stores/terminal.store";
 import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
+import { getTerminalKeyAction } from "../utils/terminal-keyboard";
+import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
+import { createTerminalEventChannel, getTerminalSize } from "../utils/terminal-protocol";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
@@ -68,6 +73,7 @@ export const XtermTerminal = ({
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
+  const fitFrameRef = useRef<number | null>(null);
 
   const updateSession = useTerminalStore((state) => state.updateSession);
   const getSession = useTerminalStore((state) => state.getSession);
@@ -91,53 +97,17 @@ export const XtermTerminal = ({
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
+  const terminalIsRemote = Boolean(
+    remoteConnectionId ||
+    session?.remoteConnectionId ||
+    parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || ""),
+  );
 
   useEffect(() => {
     workspaceRootRef.current = rootFolderPath;
   }, [rootFolderPath]);
 
-  const fitTerminal = useCallback((attempts = 1) => {
-    let attempt = 0;
-    let rafId: number | null = null;
-
-    const runFit = () => {
-      const container = terminalContainerRef.current;
-      const addons = addonsRef.current;
-      if (!container || !addons) return;
-
-      const rect = container.getBoundingClientRect();
-      const isContainerVisible = container.offsetParent !== null;
-      if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) {
-        if (attempt < attempts - 1) {
-          attempt += 1;
-          rafId = requestAnimationFrame(runFit);
-        }
-        return;
-      }
-
-      addons.fitAddon.fit();
-
-      if (attempt < attempts - 1) {
-        attempt += 1;
-        rafId = requestAnimationFrame(runFit);
-      } else {
-        // Final pass: force a renderer refresh so the canvas/WebGL backend
-        // repaints after a size change. Without this, splitting a pane (or any
-        // layout change that resizes the container) leaves the buffer in memory
-        // but unpainted until the window regains focus.
-        const term = xtermRef.current;
-        if (term) term.refresh(0, term.rows - 1);
-      }
-    };
-
-    rafId = requestAnimationFrame(runFit);
-
-    return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  const { currentConnectionIdRef, writeBuffered } = useTerminalConnection({
+  const { currentConnectionIdRef, sendTerminalSize, writeBuffered } = useTerminalConnection({
     connectionId,
     getTerminalTheme,
     initialCommand,
@@ -149,6 +119,27 @@ export const XtermTerminal = ({
     terminal: xtermRef.current,
     updateSession,
   });
+
+  const fitTerminal = useCallback(() => {
+    if (fitFrameRef.current !== null) cancelAnimationFrame(fitFrameRef.current);
+
+    fitFrameRef.current = requestAnimationFrame(() => {
+      fitFrameRef.current = null;
+      const container = terminalContainerRef.current;
+      const addons = addonsRef.current;
+      const terminal = xtermRef.current;
+      if (!container || !addons || !terminal) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || container.offsetParent === null) {
+        return;
+      }
+
+      addons.fitAddon.fit();
+      sendTerminalSize(terminal);
+      terminal.refresh(0, terminal.rows - 1);
+    });
+  }, [sendTerminalSize]);
 
   const handleTerminalFileDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
@@ -169,6 +160,26 @@ export const XtermTerminal = ({
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const pasteIntoTerminal = useCallback(async (terminal: Terminal, text: string) => {
+    if (!text) return;
+
+    const lineCount = text.replace(/\r\n/g, "\n").split("\n").length;
+    const requiresConfirmation =
+      lineCount >= MULTILINE_PASTE_LINE_THRESHOLD || text.length >= LARGE_PASTE_CHAR_THRESHOLD;
+
+    if (
+      requiresConfirmation &&
+      !(await showConfirmDialog(
+        `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
+        { title: "Paste Into Terminal", confirmLabel: "Paste" },
+      ))
+    ) {
+      return;
+    }
+
+    terminal.paste(text);
   }, []);
 
   const initializeTerminal = useCallback(async () => {
@@ -202,39 +213,51 @@ export const XtermTerminal = ({
         convertEol: false,
         macOptionIsMeta: false,
         rightClickSelectsWord: false,
-      });
-
-      const addons = createTerminalAddons(terminal, {
-        skipWebGL: resolved.skipWebGL,
+        ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
       });
 
       terminal.open(terminalContainerRef.current);
+      const addons = createTerminalAddons(terminal, {
+        onRendererFallback: fitTerminal,
+      });
       terminal.attachCustomKeyEventHandler((event) => {
-        if (
-          event.type === "keydown" &&
-          event.ctrlKey &&
-          !event.metaKey &&
-          !event.altKey &&
-          !event.shiftKey &&
-          (event.key === "PageUp" || event.key === "PageDown")
-        ) {
+        const action = getTerminalKeyAction(event, currentPlatform);
+        if (action.type === "switchTab") {
           event.preventDefault();
           window.dispatchEvent(
             new CustomEvent("terminal-switch-tab", {
-              detail: event.key === "PageDown" ? "next" : "prev",
+              detail: action.direction,
             }),
           );
           return false;
         }
 
-        if (event.ctrlKey && !event.metaKey) return true;
-        if (
-          event.metaKey &&
-          ["Backspace", "k", "a", "e", "f", "ArrowLeft", "ArrowRight"].includes(event.key)
-        ) {
-          return true;
+        if (action.type === "write") {
+          event.preventDefault();
+          writeBuffered(action.data);
+          return false;
         }
-        return !event.metaKey;
+
+        if (action.type === "copy") {
+          event.preventDefault();
+          const selection = terminal.getSelection();
+          if (selection) {
+            void writeClipboardText(selection).catch((error) =>
+              console.error("Failed to copy terminal selection:", error),
+            );
+          }
+          return false;
+        }
+
+        if (action.type === "paste") {
+          event.preventDefault();
+          void readClipboardText()
+            .then((text) => pasteIntoTerminal(terminal, text))
+            .catch((error) => console.error("Failed to paste into terminal:", error));
+          return false;
+        }
+
+        return action.type === "passthrough";
       });
 
       if (terminal.textarea) {
@@ -255,27 +278,9 @@ export const XtermTerminal = ({
             const text = event.clipboardData?.getData("text/plain");
             if (!text || !currentConnectionIdRef.current) return;
 
-            const normalizedText = text.replace(/\r\n/g, "\n");
-            const lineCount = normalizedText.split("\n").length;
-            const requiresConfirmation =
-              lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
-              normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
-
-            if (requiresConfirmation) {
-              event.preventDefault();
-              event.stopImmediatePropagation();
-              void showConfirmDialog(
-                `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
-                { title: "Paste Into Terminal", confirmLabel: "Paste" },
-              ).then((confirmed) => {
-                if (confirmed) writeBuffered(normalizedText);
-              });
-              return;
-            }
-
             event.preventDefault();
             event.stopImmediatePropagation();
-            writeBuffered(normalizedText);
+            void pasteIntoTerminal(terminal, text);
           },
           true,
         );
@@ -314,6 +319,8 @@ export const XtermTerminal = ({
         const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
         const wslInfo = targetDirectory ? parseWslPath(targetDirectory) : null;
         const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
+        const size = getTerminalSize(terminal);
+        const events = createTerminalEventChannel();
 
         activeConnectionId = effectiveRemoteConnectionId
           ? await (async () => {
@@ -329,21 +336,23 @@ export const XtermTerminal = ({
                 password: connection.password || null,
                 keyPath: connection.keyPath || null,
                 workingDirectory: remoteInfo?.remotePath || "/",
-                rows: terminal.rows,
-                cols: terminal.cols,
+                size,
+                onEvent: events.channel,
               });
             })()
           : await invoke<string>("create_terminal", {
               config: {
-                working_directory: targetDirectory || undefined,
+                workingDirectory: targetDirectory || undefined,
                 shell:
                   existingSession?.shell || (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
-                wsl_distribution: wslInfo?.distro,
-                wsl_working_directory: wslInfo?.linuxPath,
-                rows: terminal.rows,
-                cols: terminal.cols,
+                wslDistribution: wslInfo?.distro,
+                wslWorkingDirectory: wslInfo?.linuxPath,
+                size,
               },
+              onEvent: events.channel,
             });
+
+        events.bind(activeConnectionId);
 
         updateSession(sessionId, {
           connectionId: activeConnectionId,
@@ -359,7 +368,7 @@ export const XtermTerminal = ({
       isInitializingRef.current = false;
 
       // Re-fit after connection is established so onResize can notify the PTY
-      fitTerminal(3);
+      fitTerminal();
 
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {
@@ -385,6 +394,7 @@ export const XtermTerminal = ({
     isInitialized,
     onReady,
     onTerminalRef,
+    pasteIntoTerminal,
     rootFolderPath,
     remoteConnectionId,
     sessionId,
@@ -397,6 +407,7 @@ export const XtermTerminal = ({
     effectiveTerminalLetterSpacing,
     terminalLineHeight,
     terminalScrollback,
+    terminalIsRemote,
     updateSession,
     workingDirectory,
     writeBuffered,
@@ -405,11 +416,7 @@ export const XtermTerminal = ({
   useEffect(() => {
     if (!xtermRef.current) return;
     xtermRef.current.options.theme = getTerminalTheme();
-    const timer = setTimeout(() => {
-      xtermRef.current?.refresh(0, xtermRef.current.rows - 1);
-      fitTerminal(4);
-    }, 10);
-    return () => clearTimeout(timer);
+    fitTerminal();
   }, [terminalThemeId, getTerminalTheme, fitTerminal]);
 
   useEffect(() => {
@@ -421,10 +428,6 @@ export const XtermTerminal = ({
       const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
       if (cancelled || !xtermRef.current || !addonsRef.current) return;
 
-      if (resolved.skipWebGL) {
-        addonsRef.current.webglAddon?.dispose();
-      }
-
       xtermRef.current.options.fontFamily = resolved.fontFamily;
       xtermRef.current.options.fontSize = effectiveTerminalFontSize;
       xtermRef.current.options.lineHeight = terminalLineHeight;
@@ -434,8 +437,7 @@ export const XtermTerminal = ({
       xtermRef.current.options.cursorStyle = terminalCursorStyle;
       xtermRef.current.options.cursorWidth = effectiveTerminalCursorWidth;
 
-      fitTerminal(4);
-      xtermRef.current.refresh(0, xtermRef.current.rows - 1);
+      fitTerminal();
     };
 
     void applyFontChange();
@@ -504,6 +506,10 @@ export const XtermTerminal = ({
   // other layout changes from killing running terminal processes.
   useEffect(() => {
     return () => {
+      if (fitFrameRef.current !== null) {
+        cancelAnimationFrame(fitFrameRef.current);
+        fitFrameRef.current = null;
+      }
       if (xtermRef.current) {
         xtermRef.current.dispose();
         xtermRef.current = null;
@@ -533,9 +539,7 @@ export const XtermTerminal = ({
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ sessionId: string }>).detail;
       if (!detail || detail.sessionId !== sessionId) return;
-      fitTerminal(4);
-      const term = xtermRef.current;
-      if (term) term.refresh(0, term.rows - 1);
+      fitTerminal();
     };
     window.addEventListener("athas-terminal-refit", handler);
     return () => window.removeEventListener("athas-terminal-refit", handler);
@@ -544,27 +548,21 @@ export const XtermTerminal = ({
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;
 
-    let rafId: number | null = null;
-    const resizeObserver = new ResizeObserver(() => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const container = terminalContainerRef.current;
-        if (!addonsRef.current || !container) return;
-
-        const rect = container.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          fitTerminal(3);
-        }
-      });
-    });
+    const resizeObserver = new ResizeObserver(fitTerminal);
+    const visualViewport = window.visualViewport;
 
     resizeObserver.observe(terminalContainerRef.current);
-    const cleanupFit = fitTerminal(12);
+    window.addEventListener("resize", fitTerminal);
+    visualViewport?.addEventListener("resize", fitTerminal);
+    document.fonts.addEventListener("loadingdone", fitTerminal);
+    void document.fonts.ready.then(fitTerminal);
+    fitTerminal();
 
     return () => {
       resizeObserver.disconnect();
-      if (rafId) cancelAnimationFrame(rafId);
-      cleanupFit?.();
+      window.removeEventListener("resize", fitTerminal);
+      visualViewport?.removeEventListener("resize", fitTerminal);
+      document.fonts.removeEventListener("loadingdone", fitTerminal);
     };
   }, [fitTerminal, isInitialized]);
 
@@ -574,7 +572,7 @@ export const XtermTerminal = ({
     let cancelled = false;
 
     // Fit the terminal first to recalculate dimensions after display:none → display:flex
-    const cleanupFit = fitTerminal(6);
+    fitTerminal();
 
     // Focus with verified retry — wait for layout to fully settle after tab switch
     const ensureFocus = (attempt: number) => {
@@ -601,7 +599,6 @@ export const XtermTerminal = ({
 
     return () => {
       cancelled = true;
-      cleanupFit?.();
     };
   }, [isActive, isInitialized, isVisible, fitTerminal]);
 
@@ -626,7 +623,7 @@ export const XtermTerminal = ({
       useSettingsStore.getState().updateSetting("terminalFontSize", newSize);
       if (xtermRef.current) {
         xtermRef.current.options.fontSize = newSize;
-        fitTerminal(4);
+        fitTerminal();
       }
     },
     [fitTerminal, terminalFontSize],
@@ -636,7 +633,7 @@ export const XtermTerminal = ({
     useSettingsStore.getState().updateSetting("terminalFontSize", 14);
     if (xtermRef.current) {
       xtermRef.current.options.fontSize = 14;
-      fitTerminal(4);
+      fitTerminal();
     }
   }, [fitTerminal]);
 
@@ -770,7 +767,7 @@ export const XtermTerminal = ({
       findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
       findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
       serialize: () => (xtermRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
-      resize: () => fitTerminal(4),
+      resize: () => fitTerminal(),
     }),
     [fitTerminal, getSession, isInitialized, sessionId],
   );
