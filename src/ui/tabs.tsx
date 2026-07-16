@@ -1,20 +1,6 @@
-import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
+import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  arrayMove,
-  horizontalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { cva } from "class-variance-authority";
 import type {
   HTMLAttributes,
@@ -22,20 +8,23 @@ import type {
   MouseEvent as ReactMouseEvent,
   ReactNode,
 } from "react";
-import { forwardRef, useMemo, useRef } from "react";
+import { forwardRef, useMemo } from "react";
 import { chromeControlVariants, type ChromeControlVariant } from "@/ui/chrome-control";
+import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
+import "./tabs.css";
 
 export type TabSize = "xs" | "sm" | "md";
-export type TabVariant = "default" | "pill" | "segmented";
+export type TabVariant = "default" | "pill" | "segmented" | "connected";
+export type TabBarOrientation = "horizontal" | "vertical";
 export type TabLabelPosition = "start" | "center" | "end";
 export type TabContentLayout = "inline" | "stacked";
 
 export interface TabProps extends HTMLAttributes<HTMLDivElement> {
   isActive: boolean;
   isDragged?: boolean;
-  maxWidth?: number;
+  maxWidth?: number | null;
   action?: ReactNode;
   size?: TabSize;
   variant?: TabVariant;
@@ -43,6 +32,10 @@ export interface TabProps extends HTMLAttributes<HTMLDivElement> {
   contentLayout?: TabContentLayout;
   chrome?: ChromeControlVariant;
   children: ReactNode;
+}
+
+export interface TabBarTabProps extends Omit<TabProps, "size" | "variant" | "labelPosition"> {
+  orientation?: TabBarOrientation;
 }
 
 export interface TabsItem {
@@ -79,14 +72,6 @@ export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, "childre
   onReorder?: (orderedIds: string[]) => void;
 }
 
-export const equalWidthSegmentedTabs = cva(
-  "grid h-auto w-full shrink-0 grid-cols-3 gap-1 rounded-lg border border-border/60 bg-secondary-bg/40 p-1",
-);
-
-export const equalWidthSegmentedTabItem = cva(
-  "h-10 w-full min-w-0 rounded-md px-2.5 py-2 transition-[transform,background-color,color,border-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)] [&>div]:gap-1.5",
-);
-
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
     return items;
@@ -107,7 +92,7 @@ function areOrdersEqual<T>(left: T[], right: T[]): boolean {
 }
 
 const tabVariants = cva(
-  "group/tab relative shrink-0 cursor-pointer select-none whitespace-nowrap transition-[transform,opacity,color,background-color,border-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
+  "group/tab relative shrink-0 cursor-pointer select-none whitespace-nowrap outline-none transition-[transform,opacity,color,background-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-accent/20",
   {
     variants: {
       size: {
@@ -117,8 +102,9 @@ const tabVariants = cva(
       },
       variant: {
         default: "rounded-md",
-        pill: "rounded-full border border-transparent",
+        pill: "rounded-full border-0",
         segmented: "size-full rounded-none border-0",
+        connected: "ui-connected-tab isolate mx-1 rounded-lg border-0 active:scale-100",
       },
       active: {
         true: "",
@@ -181,16 +167,28 @@ const tabVariants = cva(
         active: false,
         className: "text-text-lighter hover:bg-hover/50 hover:text-text",
       },
+      {
+        variant: "connected",
+        active: true,
+        className:
+          "z-10 -mb-px rounded-t-[var(--tab-radius)] rounded-b-none bg-tab-active text-text",
+      },
+      {
+        variant: "connected",
+        active: false,
+        className: "text-text-lighter hover:bg-tab-hover hover:text-text",
+      },
     ],
   },
 );
 
-const tabsListVariants = cva("flex rounded-lg border border-border/70 bg-primary-bg/65", {
+const tabsListVariants = cva("flex rounded-lg bg-secondary-bg/55", {
   variants: {
     variant: {
       default: "items-center gap-0.5 p-0.5",
       pill: "items-center gap-0.5 p-0.5",
       segmented: "min-h-6 items-stretch overflow-hidden",
+      connected: "min-h-9 items-end gap-0.5 rounded-none bg-tab-bar px-1.5 pt-1",
     },
     chrome: {
       true: "pointer-events-auto gap-1 overflow-visible border-0 bg-transparent p-0",
@@ -243,6 +241,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   return (
     <div
       ref={ref}
+      data-slot="tab"
       data-active={isActive}
       className={cn(
         tabVariants({ size, variant, active: isActive, dragged: isDragged }),
@@ -250,7 +249,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
         actionInsetClass,
         className,
       )}
-      style={{ maxWidth, ...style }}
+      style={{ ...(maxWidth == null ? {} : { maxWidth }), ...style }}
       {...props}
     >
       <div
@@ -267,12 +266,74 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
   );
 });
 
+const tabBarSurfaceVariants = cva("relative flex overflow-hidden", {
+  variants: {
+    orientation: {
+      horizontal: "h-9 min-h-9 shrink-0 items-end gap-1 bg-tab-bar px-1.5 pt-1",
+      vertical: "h-full min-h-0 flex-col bg-tab-bar",
+    },
+  },
+  defaultVariants: {
+    orientation: "horizontal",
+  },
+});
+
+const tabBarTabVariants = cva("ui-text-sm", {
+  variants: {
+    orientation: {
+      horizontal: "h-8 min-w-24 w-fit pl-2 pr-6",
+      vertical: "w-full max-w-none justify-start pl-2 pr-6",
+    },
+  },
+  defaultVariants: {
+    orientation: "horizontal",
+  },
+});
+
+export const TabBarTab = forwardRef<HTMLDivElement, TabBarTabProps>(function TabBarTab(
+  { className, orientation = "horizontal", maxWidth, ...props },
+  ref,
+) {
+  return (
+    <Tab
+      ref={ref}
+      size="xs"
+      variant={orientation === "horizontal" ? "connected" : "default"}
+      labelPosition={orientation === "horizontal" ? "center" : "start"}
+      className={cn(tabBarTabVariants({ orientation }), className)}
+      maxWidth={orientation === "horizontal" ? maxWidth : null}
+      data-slot="tab-bar-tab"
+      {...props}
+    />
+  );
+});
+
+export const TabBarSurface = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & { orientation?: TabBarOrientation }
+>(function TabBarSurface({ className, orientation = "horizontal", ...props }, ref) {
+  return (
+    <div
+      ref={ref}
+      data-slot="tab-bar"
+      data-orientation={orientation}
+      className={cn(tabBarSurfaceVariants({ orientation }), className)}
+      {...props}
+    />
+  );
+});
+
 export const TabsList = forwardRef<
   HTMLDivElement,
   HTMLAttributes<HTMLDivElement> & { variant?: TabVariant; chrome?: boolean }
 >(function TabsList({ className, variant = "default", chrome = false, ...props }, ref) {
   return (
-    <div ref={ref} className={cn(tabsListVariants({ variant, chrome }), className)} {...props} />
+    <div
+      ref={ref}
+      data-slot="tabs-list"
+      className={cn(tabsListVariants({ variant, chrome }), className)}
+      {...props}
+    />
   );
 });
 
@@ -289,15 +350,8 @@ export function Tabs({
 }: TabsProps) {
   const itemMap = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const orderedIds = useMemo(() => items.map((item) => item.id), [items]);
-  const suppressClickRef = useRef<string | null>(null);
   const canReorder = reorderable && !!onReorder && items.length > 1;
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-  );
+  const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
 
   const commitOrder = (nextOrder: string[]) => {
     if (onReorder && !areOrdersEqual(nextOrder, orderedIds)) {
@@ -342,33 +396,21 @@ export function Tabs({
     item?.onKeyDown?.(event);
   };
 
-  const handleClickCapture = (itemId: string) => (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (suppressClickRef.current !== itemId) {
-      return;
-    }
-
-    suppressClickRef.current = null;
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
   const handleDragStart = (event: DragStartEvent) => {
-    suppressClickRef.current = String(event.active.id);
+    suppressNextClick(event.active.id);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) {
-      return;
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedIds.indexOf(String(active.id));
+      const newIndex = orderedIds.indexOf(String(over.id));
+      if (oldIndex >= 0 && newIndex >= 0) {
+        commitOrder(arrayMove(orderedIds, oldIndex, newIndex));
+      }
     }
 
-    const oldIndex = orderedIds.indexOf(String(active.id));
-    const newIndex = orderedIds.indexOf(String(over.id));
-    if (oldIndex < 0 || newIndex < 0) {
-      return;
-    }
-
-    commitOrder(arrayMove(orderedIds, oldIndex, newIndex));
+    releaseClickSuppression();
   };
 
   const renderTab = (item: TabsItem, isDragged = false) => {
@@ -428,7 +470,7 @@ export function Tabs({
         canReorder={canReorder}
         renderTab={renderTab}
         onKeyDown={handleKeyDown(item.id)}
-        onClickCapture={handleClickCapture(item.id)}
+        onClickCapture={getClickCapture(item.id)}
       />
     );
   });
@@ -444,17 +486,16 @@ export function Tabs({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
+    <TabDndContext
       modifiers={[restrictToHorizontalAxis]}
-      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={releaseClickSuppression}
     >
       <SortableContext items={orderedIds} strategy={horizontalListSortingStrategy}>
         {tabsList}
       </SortableContext>
-    </DndContext>
+    </TabDndContext>
   );
 }
 
@@ -473,29 +514,14 @@ function SortableTabItem({
   onKeyDown,
   onClickCapture,
 }: SortableTabItemProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-    disabled: !canReorder || item.disabled,
-  });
-
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      className={cn(
-        "relative flex min-w-0 items-stretch",
-        canReorder && "cursor-grab touch-none active:cursor-grabbing",
-        isDragging && "z-10",
-      )}
+    <SortableTab
+      id={item.id}
+      disabled={!canReorder || item.disabled}
       onKeyDown={onKeyDown}
       onClickCapture={onClickCapture}
-      {...attributes}
-      {...listeners}
     >
-      {renderTab(item, isDragging)}
-    </div>
+      {({ isDragging }) => renderTab(item, isDragging)}
+    </SortableTab>
   );
 }

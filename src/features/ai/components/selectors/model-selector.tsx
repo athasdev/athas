@@ -67,7 +67,7 @@ export function ModelSelector({
   const triggerInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { isPro } = useProFeature();
+  const { hasHostedAi } = useProFeature();
   const subscription = useAuthStore((state) => state.subscription);
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const customModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
@@ -208,14 +208,14 @@ export function ModelSelector({
 
   const selectableModelIndexes = useMemo(() => {
     const indexes = filteredModels.reduce<number[]>((modelIndexes, model, index) => {
-      if (!(model.proOnly && !isPro)) modelIndexes.push(index);
+      if (!(model.proOnly && !hasHostedAi)) modelIndexes.push(index);
       return modelIndexes;
     }, []);
     if (canUseCustomQueryModel) {
       indexes.push(filteredModels.length);
     }
     return indexes;
-  }, [canUseCustomQueryModel, filteredModels, isPro]);
+  }, [canUseCustomQueryModel, filteredModels, hasHostedAi]);
   useEffect(() => {
     if (!isOpen) return;
     const currentIndex = filteredModels.findIndex((model) => model.id === modelId);
@@ -283,7 +283,7 @@ export function ModelSelector({
         }
         const selectedModel =
           filteredModels[activeIndex] ?? filteredModels[selectableModelIndexes[0] ?? 0];
-        if (!selectedModel || (selectedModel.proOnly && !isPro)) return;
+        if (!selectedModel || (selectedModel.proOnly && !hasHostedAi)) return;
         onChange(selectedModel.id);
         setOpen(false);
         break;
@@ -379,7 +379,7 @@ export function ModelSelector({
             <>
               {filteredModels.map((model) => {
                 const isCurrent = model.id === modelId;
-                const isLocked = Boolean(model.proOnly && !isPro);
+                const isLocked = Boolean(model.proOnly && !hasHostedAi);
                 const index = filteredModels.indexOf(model);
                 const isActive = activeIndex === index;
 

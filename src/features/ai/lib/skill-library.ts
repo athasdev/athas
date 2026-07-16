@@ -1,7 +1,7 @@
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
+import { getServiceUrls } from "@/config/services";
 
-const SKILLS_REGISTRY_URL =
-  import.meta.env.VITE_SKILLS_REGISTRY_URL || "https://athas.dev/skills/index.json";
+const SKILLS_REGISTRY_URL = getServiceUrls().skillsRegistryUrl;
 
 type SkillRegistryEntry = Record<string, unknown>;
 

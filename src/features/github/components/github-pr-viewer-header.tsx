@@ -1,20 +1,7 @@
-import {
-  ChatCircleIcon as MessageCircle,
-  CheckCircleIcon as CheckCircle2,
-  CopyIcon as Copy,
-  FileCodeIcon as FileCode2,
-  GitBranchIcon as GitBranch,
-  GitMergeIcon as GitMerge,
-  GithubLogoIcon as GithubLogo,
-  GitPullRequestIcon as GitPullRequest,
-  PencilSimpleIcon as Pencil,
-  ArrowClockwiseIcon as RefreshCw,
-  XCircleIcon as XCircle,
-} from "@/ui/icons";
+import { CheckCircleIcon as CheckCircle2 } from "@/ui/icons";
 import type { ReactNode } from "react";
-import Badge from "@/ui/badge";
+import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
 import type { PullRequestDetails } from "../types/github.types";
 import {
   AssigneesList,
@@ -35,7 +22,6 @@ interface GitHubPRViewerHeaderProps {
   checksSummary: string;
   reviewerLogins: string[];
   reviewSummary: string | null;
-  metaItems: string[];
   isRefreshingDetails: boolean;
   onRefresh: () => void;
   onCheckout: () => void;
@@ -52,14 +38,12 @@ interface GitHubPRViewerHeaderProps {
 }
 
 interface OverviewFieldProps {
-  icon?: ReactNode;
   children: ReactNode;
 }
 
-function OverviewField({ icon, children }: OverviewFieldProps) {
+function OverviewField({ children }: OverviewFieldProps) {
   return (
     <div className="font-sans ui-text-sm flex min-w-0 items-center gap-2 text-text-lighter">
-      {icon ? <span className="shrink-0 text-text-lighter">{icon}</span> : null}
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -74,7 +58,6 @@ export function GitHubPRViewerHeader({
   checksSummary,
   reviewerLogins,
   reviewSummary,
-  metaItems,
   isRefreshingDetails,
   onRefresh,
   onCheckout,
@@ -99,132 +82,69 @@ export function GitHubPRViewerHeader({
         <>
           <span>{`athas#${pr.number}`}</span>
           <span>&middot;</span>
-          <Badge
-            variant="default"
-            size="compact"
-            className="max-w-full bg-secondary-bg/80 font-mono"
-          >
+          <span className="capitalize">{pr.isDraft ? "draft" : pr.state}</span>
+          <span>&middot;</span>
+          <span className="inline-flex max-w-full min-w-0 items-center gap-1 font-mono">
             <span className="min-w-0 truncate">{pr.baseRef}</span>
-            <span className="shrink-0 px-1">&larr;</span>
+            <span className="shrink-0 text-text-lighter">&larr;</span>
             <span className="min-w-0 truncate">{pr.headRef}</span>
-          </Badge>
+          </span>
         </>
       }
       actions={
         <>
-          <Button
-            onClick={onRefresh}
-            disabled={isRefreshingDetails}
-            variant="ghost"
-            tooltip="Refresh PR data"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            {isRefreshingDetails ? (
-              <LoadingIndicator label="Refreshing PR" compact />
-            ) : (
-              <RefreshCw />
-            )}
+          <Button onClick={onComment} disabled={isClosed} variant="ghost" size="xs">
+            Comment
           </Button>
-          <Button
-            onClick={onCheckout}
-            variant="ghost"
-            tooltip="Checkout PR branch"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <GitBranch />
+          <Button onClick={onMerge} disabled={!canMerge} variant="default" size="xs">
+            Merge
           </Button>
-          <Button
-            onClick={onEdit}
-            variant="ghost"
-            tooltip="Edit pull request"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <Pencil />
-          </Button>
-          <Button
-            onClick={onComment}
-            disabled={isClosed}
-            variant="ghost"
-            tooltip="Add PR comment"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <MessageCircle />
-          </Button>
-          <Button
-            onClick={onApprove}
-            disabled={isClosed}
-            variant="ghost"
-            tooltip="Approve pull request"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <CheckCircle2 />
-          </Button>
-          <Button
-            onClick={onRequestChanges}
-            disabled={isClosed}
-            variant="ghost"
-            tooltip="Request pull request changes"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <XCircle />
-          </Button>
-          <Button
-            onClick={onMerge}
-            disabled={!canMerge}
-            variant="ghost"
-            tooltip="Merge pull request"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <GitMerge />
-          </Button>
-          <Button
-            onClick={onClosePR}
-            disabled={isClosed}
-            variant="ghost"
-            tooltip="Close pull request"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <XCircle />
-          </Button>
-          <Button
-            onClick={onOpenInBrowser}
-            variant="ghost"
-            tooltip="Open pull request in browser"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <GithubLogo />
-          </Button>
-          <Button
-            onClick={onCopyPRLink}
-            variant="ghost"
-            tooltip="Copy PR link"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <Copy />
-          </Button>
-          <Button
-            onClick={onCopyBranchName}
-            variant="ghost"
-            tooltip="Copy branch name"
-            tooltipSide="bottom"
-            size="icon-xs"
-          >
-            <GitBranch />
-          </Button>
+          <ActionMenu
+            label="Pull request actions"
+            items={[
+              {
+                id: "refresh",
+                label: isRefreshingDetails ? "Refreshing..." : "Refresh",
+                disabled: isRefreshingDetails,
+                onClick: onRefresh,
+              },
+              { id: "checkout", label: "Checkout branch", onClick: onCheckout },
+              { id: "edit", label: "Edit pull request", onClick: onEdit },
+              {
+                id: "approve",
+                label: "Approve",
+                disabled: isClosed,
+                onClick: onApprove,
+              },
+              {
+                id: "request-changes",
+                label: "Request changes",
+                disabled: isClosed,
+                onClick: onRequestChanges,
+              },
+              {
+                id: "close",
+                label: "Close pull request",
+                disabled: isClosed,
+                onClick: onClosePR,
+              },
+              {
+                id: "open-browser",
+                label: "Open on GitHub",
+                onClick: onOpenInBrowser,
+              },
+              { id: "copy-link", label: "Copy link", onClick: onCopyPRLink },
+              {
+                id: "copy-branch",
+                label: "Copy branch name",
+                onClick: onCopyBranchName,
+              },
+            ]}
+          />
         </>
       }
     >
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <OverviewField>
           <span className="inline-flex min-w-0 items-center gap-2">
             <GitHubAvatar
@@ -242,13 +162,9 @@ export function GitHubPRViewerHeader({
           onClick={onToggleFilesView}
           variant="ghost"
           active={activeView === "files"}
-          className="ui-text-sm h-auto min-w-0 px-1.5 py-1 text-left"
+          className="h-auto min-w-0 px-1.5 py-1 text-left"
           size="xs"
         >
-          <span className="shrink-0 text-text-lighter">
-            <FileCode2 />
-          </span>
-          <span className="text-text-lighter">Changes</span>
           <span className="text-text-light">{changedFilesCount} files</span>
           <span className="text-git-added">+{additions}</span>
           <span className="text-git-deleted">-{deletions}</span>
@@ -265,7 +181,13 @@ export function GitHubPRViewerHeader({
           )}
         </OverviewField>
 
-        <OverviewField icon={<GitPullRequest />}>
+        <MergeStatusBadge
+          mergeStateStatus={pr.mergeStateStatus}
+          mergeable={pr.mergeable}
+          reviewDecision={pr.reviewDecision}
+        />
+
+        <OverviewField>
           {pr.reviewRequests?.length > 0 ? (
             <span className="inline-flex min-w-0 items-center gap-2">
               <span className="text-text-lighter">
@@ -290,29 +212,10 @@ export function GitHubPRViewerHeader({
             </span>
           )}
         </OverviewField>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <MergeStatusBadge
-          mergeStateStatus={pr.mergeStateStatus}
-          mergeable={pr.mergeable}
-          reviewDecision={pr.reviewDecision}
-        />
         <AssigneesList assignees={pr.assignees ?? []} />
         <LinkedIssuesList issues={pr.linkedIssues ?? []} />
         <LabelBadges labels={pr.labels ?? []} />
       </div>
-
-      {metaItems.length > 0 && (
-        <div className="font-sans ui-text-sm flex flex-wrap items-center gap-x-2 text-text-lighter">
-          {metaItems.map((item, index) => (
-            <span key={`${item}-${index}`} className="inline-flex items-center gap-x-2">
-              {index > 0 ? <span>&middot;</span> : null}
-              <span>{item}</span>
-            </span>
-          ))}
-        </div>
-      )}
     </GitHubViewerHeader>
   );
 }

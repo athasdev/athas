@@ -83,7 +83,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
-  const macTitleBarControlAlignment = isFullscreen ? undefined : "translate-y-[3px]";
+  const macTitleBarControlAlignment = isFullscreen ? undefined : "translate-y-0.5";
 
   useEffect(() => {
     const initWindow = async () => {
@@ -319,7 +319,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       <div
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
-        className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
+        className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent px-2"
       >
         <div className="flex-1" />
 
@@ -341,13 +341,13 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
         className={cn(
-          "athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg pr-2",
+          "athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent pr-2",
           isFullscreen ? "pl-2" : "pl-[94px]",
         )}
       >
         <div
           className={cn(
-            "pointer-events-auto flex h-8 min-w-0 items-center",
+            "pointer-events-auto flex h-full min-w-0 items-center",
             macTitleBarControlAlignment,
           )}
         >
@@ -355,7 +355,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           {sidebarToggle}
         </div>
 
-        <div className={cn("flex h-8 items-center", macTitleBarControlAlignment)}>
+        <div className={cn("flex h-full items-center", macTitleBarControlAlignment)}>
           <div className="flex items-center gap-1">
             {placeHeaderItemsBeforeAccount(
               orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
@@ -378,7 +378,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       data-tauri-drag-region
       onMouseDown={handleTitleBarMouseDown}
       onContextMenu={handleTitleBarContextMenu}
-      className="athas-title-bar relative z-50 flex h-8 select-none items-center justify-between bg-secondary-bg px-2"
+      className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent px-2"
     >
       <div data-tauri-drag-region className="flex flex-1 items-center">
         <div className="pointer-events-auto">

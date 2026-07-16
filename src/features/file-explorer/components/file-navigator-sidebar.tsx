@@ -13,6 +13,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import {
   SidebarHeaderIconButton,
@@ -27,6 +28,7 @@ import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
 export type FileNavigatorSearchMode = "substring" | "fuzzy";
+export type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
 
 const DEFAULT_NAVIGATOR_WIDTH = 224;
 const MIN_NAVIGATOR_WIDTH = 176;
@@ -67,11 +69,28 @@ interface FileNavigatorSidebarProps {
   ariaLabel?: string;
   viewMode?: FileNavigatorViewMode;
   onViewModeChange?: (viewMode: FileNavigatorViewMode) => void;
-  borderless?: boolean;
+  surface?: FileNavigatorSurface;
   searchMode?: FileNavigatorSearchMode;
   compactRows?: boolean;
   searchResetKey?: string;
 }
+
+const fileNavigatorSurfaceVariants = cva(
+  "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden",
+  {
+    variants: {
+      surface: {
+        sidebar: "border-border/70 border-r bg-secondary-bg/20",
+        plain: "bg-transparent",
+        inset: "rounded-xl border border-border/70 bg-secondary-bg/20",
+        review: "border-border/60 border-r bg-secondary-bg/10",
+      },
+    },
+    defaultVariants: {
+      surface: "sidebar",
+    },
+  },
+);
 
 function createDirectoryNode(name: string, path: string): FileNavigatorNode {
   return {
@@ -300,7 +319,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   ariaLabel = "Files",
   viewMode = "tree",
   onViewModeChange,
-  borderless = false,
+  surface = "sidebar",
   searchMode = "substring",
   compactRows = false,
   searchResetKey,
@@ -393,11 +412,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
 
   return (
     <aside
-      className={cn(
-        "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden",
-        borderless ? "bg-transparent" : "border-r border-border/70 bg-secondary-bg/20",
-        className,
-      )}
+      className={cn(fileNavigatorSurfaceVariants({ surface }), className)}
       style={{ width }}
       aria-label={ariaLabel}
     >
@@ -409,12 +424,12 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           placeholder="Search"
           searchAriaLabel="Search files"
           searchContainerClassName="file-explorer-search-field"
-          className={cn(borderless ? "px-1" : "border-b border-border/60")}
+          className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}
           actions={
             <div
               className={cn(
-                "inline-flex shrink-0 rounded bg-primary-bg p-0.5",
-                !borderless && "border border-border/70",
+                "inline-flex shrink-0 rounded p-0.5",
+                surface === "inset" ? "bg-primary-bg" : "bg-transparent",
               )}
             >
               <SidebarHeaderIconButton

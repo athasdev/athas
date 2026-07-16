@@ -177,7 +177,12 @@ export function shouldUseTauriFetchForProvider(providerId: string): boolean {
     return providerFetchModes.get(providerId) ?? false;
   }
 
-  return providerId === "gemini" || providerId === "ollama" || providerId === "anthropic";
+  return (
+    providerId === "gemini" ||
+    providerId === "ollama" ||
+    providerId === "anthropic" ||
+    providerId === "openrouter"
+  );
 }
 
 export function buildProviderSystemPromptContext(providerId: string, settings: Settings): string {

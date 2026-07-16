@@ -14,9 +14,9 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {
@@ -125,8 +125,6 @@ const BottomPane = () => {
     [height],
   );
 
-  const titleBarHeight = IS_MAC ? 44 : 28;
-  const footerHeight = 32;
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.types.includes("application/tab-data") && !getInternalTabDragData()) {
       return;
@@ -212,23 +210,15 @@ const BottomPane = () => {
     </div>
   ) : null;
 
-  const pane = (
+  const paneContent = (
     <div
       data-bottom-pane-drop-target
       className={cn(
         "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
-        isFullScreen && "fixed inset-x-0 z-[10040] rounded-none border-0 shadow-none ring-0",
+        isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",
       )}
-      style={
-        isFullScreen
-          ? {
-              top: `${titleBarHeight}px`,
-              bottom: `${footerHeight}px`,
-            }
-          : undefined
-      }
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -256,6 +246,12 @@ const BottomPane = () => {
         )}
       </div>
     </div>
+  );
+
+  const pane = isFullScreen ? (
+    <WorkbenchFullscreenSurface>{paneContent}</WorkbenchFullscreenSurface>
+  ) : (
+    paneContent
   );
 
   if (isFullScreen) {

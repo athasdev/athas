@@ -9,9 +9,9 @@ interface ProGateProps {
 }
 
 export function ProGate({ children, fallback }: ProGateProps) {
-  const { isPro } = useProFeature();
+  const { hasHostedAi } = useProFeature();
 
-  if (isPro) {
+  if (hasHostedAi) {
     return <>{children}</>;
   }
 

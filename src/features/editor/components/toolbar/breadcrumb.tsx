@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { EyeIcon as Eye, MagnifyingGlassIcon as Search, SparkleIcon as Sparkles } from "@/ui/icons";
+import { type ReactNode, useRef, useState } from "react";
+import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -12,6 +12,7 @@ import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-too
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
 
@@ -72,6 +73,8 @@ export default function Breadcrumb({
   );
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
   const extensionActions = useExtensionActions();
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleSearchClick = () => {
     setIsFindVisible(!isFindVisible);
@@ -141,40 +144,59 @@ export default function Breadcrumb({
   if (!filePath) return null;
   const isLocalHistorySnapshot = filePath.startsWith("local-history://");
 
+  const canPreview =
+    (isMarkdownFile() && activeBuffer?.type !== "markdownPreview") ||
+    (isHtmlFile() && activeBuffer?.type !== "htmlPreview") ||
+    (isCsvFile() && activeBuffer?.type !== "csvPreview");
+
+  const actionMenuItems: MenuItem[] = [
+    ...(canPreview
+      ? [
+          {
+            id: "preview",
+            label: "Preview",
+            onClick: handlePreviewClick,
+          },
+        ]
+      : []),
+    {
+      id: "inline-edit",
+      label: "AI inline edit",
+      onClick: handleInlineEditClick,
+    },
+    {
+      id: "find",
+      label: "Find in file",
+      onClick: onSearchClick,
+    },
+  ];
+
   const defaultActions =
     showDefaultActions && activeBuffer ? (
       <>
-        {((isMarkdownFile() && activeBuffer.type !== "markdownPreview") ||
-          (isHtmlFile() && activeBuffer.type !== "htmlPreview") ||
-          (isCsvFile() && activeBuffer.type !== "csvPreview")) && (
-          <BreadcrumbActionButton
-            onClick={handlePreviewClick}
-            tooltip="Preview"
-            tooltipSide="bottom"
-          >
-            <Eye weight="duotone" />
-          </BreadcrumbActionButton>
-        )}
-        <BreadcrumbActionButton
-          onClick={handleInlineEditClick}
-          tooltip="AI inline edit"
-          commandId="editor.inlineEdit"
-          tooltipSide="bottom"
-        >
-          <Sparkles weight="duotone" />
-        </BreadcrumbActionButton>
-        <BreadcrumbActionButton
-          onClick={onSearchClick}
-          tooltip="Find in file"
-          commandId="workbench.showFind"
-          tooltipSide="bottom"
-        >
-          <Search weight="duotone" />
-        </BreadcrumbActionButton>
-        <div className="mx-1 h-3.5 w-px bg-border/70" />
         <EditorStatusActions
           bufferId={resolvedBufferId ?? undefined}
           editorViewKey={editorViewKey}
+        />
+        <BreadcrumbActionButton
+          ref={actionsButtonRef}
+          onClick={() => setIsActionsMenuOpen((open) => !open)}
+          active={isActionsMenuOpen}
+          tooltip="Editor actions"
+          tooltipSide="bottom"
+        >
+          <MoreHorizontal />
+        </BreadcrumbActionButton>
+        <Dropdown
+          isOpen={isActionsMenuOpen}
+          anchorRef={actionsButtonRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          onClose={() => setIsActionsMenuOpen(false)}
+          items={actionMenuItems}
+          className="min-w-[180px] rounded-lg"
+          density="compact"
+          showIcons={false}
         />
       </>
     ) : null;

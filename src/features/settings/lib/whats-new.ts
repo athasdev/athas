@@ -1,3 +1,5 @@
+import { getServiceUrls } from "@/config/services";
+
 export interface WhatsNewInfo {
   version: string;
   previousVersion?: string;
@@ -26,6 +28,7 @@ interface WhatsNewStorageState {
 const STORAGE_KEY = "athas-whats-new";
 
 export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
+  const services = getServiceUrls();
   const lines = [`# What's New in Athas ${info.version}`, ""];
 
   if (info.previousVersion) {
@@ -47,9 +50,7 @@ export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
   }
 
   lines.push("---");
-  lines.push(
-    `[View release on GitHub](https://github.com/athasdev/athas/releases/tag/v${info.version})`,
-  );
+  lines.push(`[View release on GitHub](${services.githubReleasesBaseUrl}/tag/v${info.version})`);
 
   return lines.join("\n");
 }
@@ -87,7 +88,12 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 async function fetchManifestInfo(info: WhatsNewInfo, fetchImpl: FetchLike): Promise<WhatsNewInfo> {
-  const response = await fetchImpl(`https://athas.dev/api/update/${updateChannel(info.version)}`, {
+  const services = getServiceUrls();
+  const updateUrl =
+    updateChannel(info.version) === "preview"
+      ? services.previewUpdateUrl
+      : services.stableUpdateUrl;
+  const response = await fetchImpl(updateUrl, {
     cache: "no-store",
   });
   const manifest = (await readJson(response)) as UpdateManifestResponse | null;
@@ -107,8 +113,9 @@ async function fetchGitHubReleaseInfo(
   info: WhatsNewInfo,
   fetchImpl: FetchLike,
 ): Promise<WhatsNewInfo> {
+  const services = getServiceUrls();
   const response = await fetchImpl(
-    `https://api.github.com/repos/athasdev/athas/releases/tags/${releaseTag(info.version)}`,
+    `${services.githubReleasesApiBaseUrl}/tags/${releaseTag(info.version)}`,
     { cache: "no-store" },
   );
   const release = (await readJson(response)) as GitHubReleaseResponse | null;

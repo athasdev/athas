@@ -1,14 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  CopyIcon as Copy,
-  GithubLogoIcon as GithubLogo,
-  ChatCircleTextIcon as MessageSquare,
-  PencilSimpleIcon as Pencil,
-  ArrowClockwiseIcon as RefreshCw,
-} from "@/ui/icons";
+import { ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
@@ -250,45 +245,26 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           actions={
             <>
               <Button
-                onClick={() => void fetchIssue(true)}
-                variant="ghost"
-                tooltip="Refresh issue"
-                tooltipSide="bottom"
-                size="icon-xs"
-              >
-                {isLoading && details ? (
-                  <LoadingIndicator label="Loading issue" compact />
-                ) : (
-                  <RefreshCw />
-                )}
-              </Button>
-              <Button
-                onClick={handleOpenInBrowser}
-                variant="ghost"
-                tooltip="Open issue on GitHub"
-                tooltipSide="bottom"
-                size="icon-xs"
-              >
-                <GithubLogo />
-              </Button>
-              <Button
                 onClick={() => setIsEditingDetails(true)}
+                disabled={!details}
                 variant="ghost"
-                tooltip="Edit issue"
-                tooltipSide="bottom"
-                size="icon-xs"
+                size="xs"
               >
-                <Pencil />
+                Edit
               </Button>
-              <Button
-                onClick={handleCopyIssueLink}
-                variant="ghost"
-                tooltip="Copy issue link"
-                tooltipSide="bottom"
-                size="icon-xs"
-              >
-                <Copy />
-              </Button>
+              <ActionMenu
+                label="Issue actions"
+                items={[
+                  {
+                    id: "refresh",
+                    label: isLoading && details ? "Refreshing..." : "Refresh",
+                    disabled: isLoading && Boolean(details),
+                    onClick: () => void fetchIssue(true),
+                  },
+                  { id: "open-browser", label: "Open on GitHub", onClick: handleOpenInBrowser },
+                  { id: "copy-link", label: "Copy link", onClick: handleCopyIssueLink },
+                ]}
+              />
             </>
           }
         >

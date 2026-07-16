@@ -17,6 +17,7 @@ mod file_events;
 mod logger;
 mod menu;
 mod secure_storage;
+mod service_urls;
 mod terminal;
 
 #[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]

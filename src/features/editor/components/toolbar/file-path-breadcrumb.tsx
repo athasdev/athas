@@ -178,7 +178,6 @@ export function FilePathBreadcrumb({
     <>
       <PathBreadcrumb
         segments={segments}
-        fullPath={filePath}
         interactive={interactive}
         onSegmentClick={interactive ? handleSegmentClick : undefined}
         setSegmentRef={

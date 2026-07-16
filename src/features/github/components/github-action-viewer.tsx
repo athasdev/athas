@@ -5,13 +5,13 @@ import {
   ClockIcon as Clock,
   PulseIcon as Activity,
   CopyIcon as Copy,
-  GithubLogoIcon as GithubLogo,
   MagnifyingGlassIcon as Search,
   ArrowClockwiseIcon as RefreshCw,
   XCircleIcon as XCircle,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { ActionMenu } from "@/ui/action-menu";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -575,39 +575,19 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             </>
           }
           actions={
-            <>
-              <Button
-                onClick={() => void fetchWorkflowRun(true)}
-                variant="ghost"
-                tooltip="Refresh action run"
-                tooltipSide="bottom"
-                size="icon-xs"
-              >
-                {isLoading && details ? (
-                  <LoadingIndicator label="Loading action run" compact />
-                ) : (
-                  <RefreshCw />
-                )}
-              </Button>
-              <Button
-                onClick={handleOpenInBrowser}
-                variant="ghost"
-                tooltip="Open action run on GitHub"
-                tooltipSide="bottom"
-                size="icon-xs"
-              >
-                <GithubLogo />
-              </Button>
-              <Button
-                onClick={handleCopyRunLink}
-                variant="ghost"
-                tooltip="Copy run link"
-                tooltipSide="bottom"
-                size="icon-xs"
-              >
-                <Copy />
-              </Button>
-            </>
+            <ActionMenu
+              label="Action run actions"
+              items={[
+                {
+                  id: "refresh",
+                  label: isLoading && details ? "Refreshing..." : "Refresh",
+                  disabled: isLoading && Boolean(details),
+                  onClick: () => void fetchWorkflowRun(true),
+                },
+                { id: "open-browser", label: "Open on GitHub", onClick: handleOpenInBrowser },
+                { id: "copy-link", label: "Copy link", onClick: handleCopyRunLink },
+              ]}
+            />
           }
         />
       }

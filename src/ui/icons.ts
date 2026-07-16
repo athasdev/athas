@@ -145,10 +145,13 @@ export const CaretDoubleUpIcon = createIconComponent(
   Nucleo.IconDoubleChevronUpOutline18,
   "CaretDoubleUpIcon",
 );
-export const CaretDownIcon = createIconComponent(Nucleo.IconCaretDownOutline18, "CaretDownIcon");
-export const CaretLeftIcon = createIconComponent(Nucleo.IconCaretLeftOutline18, "CaretLeftIcon");
-export const CaretRightIcon = createIconComponent(Nucleo.IconCaretRightOutline18, "CaretRightIcon");
-export const CaretUpIcon = createIconComponent(Nucleo.IconCaretUpOutline18, "CaretUpIcon");
+export const CaretDownIcon = createIconComponent(Nucleo.IconChevronDownOutline18, "CaretDownIcon");
+export const CaretLeftIcon = createIconComponent(Nucleo.IconChevronLeftOutline18, "CaretLeftIcon");
+export const CaretRightIcon = createIconComponent(
+  Nucleo.IconChevronRightOutline18,
+  "CaretRightIcon",
+);
+export const CaretUpIcon = createIconComponent(Nucleo.IconChevronUpOutline18, "CaretUpIcon");
 export const ChevronDownIcon = createIconComponent(
   Nucleo.IconChevronDownOutline18,
   "ChevronDownIcon",

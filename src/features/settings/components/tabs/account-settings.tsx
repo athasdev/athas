@@ -1,4 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getServiceUrls } from "@/config/services";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import {
   disableSettingsSync,
@@ -20,15 +21,15 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
-import { getApiBase } from "@/utils/api-base";
 import Section, { SettingRow } from "../settings-section";
 
 export const AccountSettings = () => {
+  const services = getServiceUrls();
   const user = useAuthStore((state) => state.user);
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
-  const { isPro } = useProFeature();
+  const { isPro, hasSettingsSync } = useProFeature();
   const { isSigningIn, signIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const settingsSyncEnabled = useSettingsSyncStore((state) => state.enabled);
@@ -47,11 +48,11 @@ export const AccountSettings = () => {
   const usageProgress = getUsageProgress(autocompleteUsage);
 
   const handleManageAccount = async () => {
-    await openUrl(new URL("/dashboard", getApiBase()).toString());
+    await openUrl(services.dashboardUrl);
   };
 
   const handleManagePlan = async () => {
-    await openUrl(new URL(isPaidPlan ? "/dashboard/billing" : "/pricing", getApiBase()).toString());
+    await openUrl(isPaidPlan ? services.dashboardBillingUrl : services.pricingUrl);
   };
 
   const handleToggleSettingsSync = async (checked: boolean) => {
@@ -93,7 +94,7 @@ export const AccountSettings = () => {
 
   const settingsSyncDescription = !isAuthenticated
     ? "Sign in to access cloud settings sync across devices."
-    : !isPaidPlan
+    : !hasSettingsSync
       ? "Cloud settings sync is included with Pro."
       : settingsSyncLastSyncedAt
         ? `Last synced ${new Date(settingsSyncLastSyncedAt).toLocaleString()}${settingsSyncLastSource ? ` from ${settingsSyncLastSource}` : ""}.`
@@ -206,7 +207,7 @@ export const AccountSettings = () => {
                 : settingsSyncDescription
             }
           >
-            {isPaidPlan ? (
+            {hasSettingsSync ? (
               <Switch
                 checked={settingsSyncHydrated ? settingsSyncEnabled : false}
                 onChange={(checked) => void handleToggleSettingsSync(checked)}
@@ -219,7 +220,7 @@ export const AccountSettings = () => {
           </SettingRow>
         )}
 
-        {isPaidPlan && settingsSyncEnabled ? (
+        {hasSettingsSync && settingsSyncEnabled ? (
           <>
             <SettingRow
               label="Sync Now"

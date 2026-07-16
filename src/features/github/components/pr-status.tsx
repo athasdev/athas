@@ -278,11 +278,9 @@ export const LabelBadges = memo(({ labels }: LabelBadgesProps) => {
         <Badge
           key={idx}
           size="compact"
-          className="border"
           style={{
             backgroundColor: `#${label.color}20`,
             color: `#${label.color}`,
-            border: `1px solid #${label.color}40`,
           }}
         >
           {label.name}

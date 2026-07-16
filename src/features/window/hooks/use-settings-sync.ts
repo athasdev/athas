@@ -4,12 +4,13 @@ import {
   initializeSettingsSyncPreferences,
 } from "@/features/settings/lib/settings-sync";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 
 export function useSettingsSync() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
   const hasHydrated = useRef(false);
-  const isPro = subscription?.status === "pro";
+  const hasSettingsSync = hasProductCapability(subscription, "settingsSync");
 
   useEffect(() => {
     if (hasHydrated.current) {
@@ -27,7 +28,7 @@ export function useSettingsSync() {
 
     void ensureSettingsSyncStarted({
       isAuthenticated,
-      isPro: isPro === true,
+      isPro: hasSettingsSync,
     });
-  }, [isAuthenticated, isPro]);
+  }, [hasSettingsSync, isAuthenticated]);
 }

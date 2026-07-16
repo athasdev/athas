@@ -16,7 +16,14 @@ import { useEffect, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandForm,
+  CommandFormField,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import Input from "@/ui/input";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import Select from "@/ui/select";
@@ -237,88 +244,69 @@ const GitTagManager = ({
       placeholder="Search tags..."
       meta={`${tags.length} tag${tags.length === 1 ? "" : "s"}`}
     >
-      <div className="border-border/70 border-b px-3 py-2">
-        {!isCreateOpen ? (
+      {!isCreateOpen ? (
+        <div className="flex shrink-0 items-center justify-end px-2 pt-2">
           <div className="flex items-center justify-end gap-2">
-            <Button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              size="xs"
-              variant="default"
-              className="gap-1.5"
-            >
+            <Button type="button" onClick={() => setIsCreateOpen(true)} size="xs" variant="accent">
               <Plus />
-              Add
+              Add tag
             </Button>
           </div>
-        ) : (
-          <div className="flex items-start gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-secondary-bg text-text-lighter">
-              <Plus className="size-4" />
-            </div>
-            <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
-              <Input
-                type="text"
-                placeholder="Tag name"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                size="xs"
-                className="w-full"
-              />
-              <Input
-                type="text"
-                placeholder="Commit SHA or ref"
-                value={newTagCommit}
-                onChange={(e) => setNewTagCommit(e.target.value)}
-                size="xs"
-                className="w-full"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void handleCreateTag();
-                  }
-                }}
-              />
-              <Input
-                type="text"
-                placeholder="Message"
-                value={newTagMessage}
-                onChange={(e) => setNewTagMessage(e.target.value)}
-                size="xs"
-                className="col-span-2 w-full"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void handleCreateTag();
-                  }
-                }}
-              />
-              <label className="ui-text-base col-span-2 inline-flex items-center gap-2 text-text-lighter">
-                <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
-                Sign tag
-              </label>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() => void handleCreateTag()}
-                disabled={isLoading || !newTagName.trim()}
-                size="xs"
-                variant="default"
-              >
-                {isLoading ? "Creating..." : "Create"}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setIsCreateOpen(false)}
-                size="icon-xs"
-                variant="ghost"
-                tooltip="Cancel"
-                aria-label="Cancel create tag"
-              >
-                <X />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : null}
+      {isCreateOpen ? (
+        <CommandForm
+          title="Create tag"
+          icon={<Plus className="size-4" />}
+          columns={2}
+          submitLabel="Create"
+          pendingLabel="Creating..."
+          isPending={isLoading}
+          submitDisabled={!newTagName.trim()}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCreateTag();
+          }}
+          onCancel={() => setIsCreateOpen(false)}
+        >
+          <CommandFormField label="Name" htmlFor="git-tag-name">
+            <Input
+              id="git-tag-name"
+              type="text"
+              placeholder="v1.0.0"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              size="sm"
+            />
+          </CommandFormField>
+          <CommandFormField label="Target" htmlFor="git-tag-target">
+            <Input
+              id="git-tag-target"
+              type="text"
+              placeholder="Commit SHA or ref"
+              value={newTagCommit}
+              onChange={(e) => setNewTagCommit(e.target.value)}
+              size="sm"
+            />
+          </CommandFormField>
+          <CommandFormField label="Message" htmlFor="git-tag-message" span="full">
+            <Input
+              id="git-tag-message"
+              type="text"
+              placeholder="Optional annotation"
+              value={newTagMessage}
+              onChange={(e) => setNewTagMessage(e.target.value)}
+              size="sm"
+            />
+          </CommandFormField>
+          <CommandFormField span="full">
+            <label className="inline-flex items-center gap-2 text-text-lighter ui-text-sm">
+              <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
+              Sign tag
+            </label>
+          </CommandFormField>
+        </CommandForm>
+      ) : null}
 
       <CommandList>
         {isLoading && tags.length === 0 ? (

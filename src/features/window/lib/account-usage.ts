@@ -1,4 +1,5 @@
 import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 
 export type AutocompleteUsageSummary = {
   periodStart: string;
@@ -44,7 +45,7 @@ export function getAccountPlanLabel(
 ): string {
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
   const isTeams = Boolean(subscription?.collaboration?.enabled);
-  const isPro = subscription?.status === "pro";
+  const isPro = hasProductCapability(subscription, "hostedAi");
 
   if (isEnterprise) return "Enterprise";
   if (isTeams) return "Teams";
@@ -60,7 +61,7 @@ export function getAiUsageModeLabel(params: {
   const { isAuthenticated, subscription, hasOpenRouterKey } = params;
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscription?.status === "pro";
+  const isPro = hasProductCapability(subscription, "hostedAi");
   const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
 

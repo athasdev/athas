@@ -5,9 +5,10 @@ import {
   getManifestDatabaseContributions,
   getManifestIconContributions,
 } from "../types/extension-contributions";
+import { getServiceUrls } from "@/config/services";
 
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
-const ATHAS_EXTENSIONS_CDN_PREFIX = "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
+const ATHAS_EXTENSIONS_CDN_PREFIX = getServiceUrls().extensionsCdnBaseUrl;
 const USE_LOCAL_MARKETPLACE_SOURCES = import.meta.env.VITE_EXTENSION_MARKETPLACE_LOCAL === "true";
 const withCdnCacheBuster = (url: string) => {
   if (!url.startsWith(ATHAS_EXTENSIONS_CDN_PREFIX)) {
