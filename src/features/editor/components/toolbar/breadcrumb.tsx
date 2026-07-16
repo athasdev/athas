@@ -15,6 +15,7 @@ import { Button, type ButtonProps } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
+import { SymbolBreadcrumb } from "./symbol-breadcrumb";
 
 export interface BreadcrumbProps {
   bufferId?: string;
@@ -206,10 +207,17 @@ export default function Breadcrumb({
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
         <div className="font-sans flex min-w-0 items-center gap-2 text-text-lighter ui-text-sm">
           {showPath && showBreadcrumbPath ? (
-            <FilePathBreadcrumb
-              filePath={filePath}
-              interactive={interactive && !isLocalHistorySnapshot}
-            />
+            <>
+              <FilePathBreadcrumb
+                filePath={filePath}
+                interactive={interactive && !isLocalHistorySnapshot}
+              />
+              <SymbolBreadcrumb
+                bufferId={resolvedBufferId ?? undefined}
+                filePath={filePath}
+                interactive={interactive && !isLocalHistorySnapshot}
+              />
+            </>
           ) : null}
           {extensionActions.left.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />

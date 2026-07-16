@@ -39,6 +39,7 @@ export const defaultSettings: Settings = {
   inlayHints: true,
   codeLens: true,
   semanticTokens: true,
+  breadcrumbShowSymbols: true,
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
   terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,

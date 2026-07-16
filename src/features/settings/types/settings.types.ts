@@ -44,6 +44,7 @@ export interface Settings {
   inlayHints: boolean;
   codeLens: boolean;
   semanticTokens: boolean;
+  breadcrumbShowSymbols: boolean;
   // Terminal
   terminalFontFamily: string;
   terminalFontSize: number;
