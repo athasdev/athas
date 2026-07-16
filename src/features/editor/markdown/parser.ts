@@ -19,26 +19,50 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function processInline(text: string, footnotes: Footnote[]): string {
+function applyInlineFormatting(text: string): string {
   return text
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
-    .replace(/\[\^([^\]]+)\]/g, (match, id) => {
-      const footnoteIndex = footnotes.findIndex((fn) => fn.id === id);
-      if (footnoteIndex !== -1) {
-        return `<sup class="footnote-ref"><a href="#fn-${id}" id="fnref-${id}">${footnoteIndex + 1}</a></sup>`;
-      }
-      return match;
-    })
-    .replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
-    )
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/__([^_]+)__/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/_([^_]+)_/g, "<em>$1</em>")
-    .replace(/~~([^~]+)~~/g, "<del>$1</del>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
+    .replace(/~~([^~]+)~~/g, "<del>$1</del>");
+}
+
+function processInline(text: string, footnotes: Footnote[]): string {
+  const protectedSegments: string[] = [];
+  const protect = (html: string): string => {
+    const token = `\u0000ATHAS${protectedSegments.length}\u0000`;
+    protectedSegments.push(html);
+    return token;
+  };
+
+  let processed = text
+    .replace(/`([^`]+)`/g, (_, code) => protect(`<code>${code}</code>`))
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, source) =>
+      protect(`<img src="${source}" alt="${alt}" />`),
+    )
+    .replace(/\[\^([^\]]+)\]/g, (match, id) => {
+      const footnoteIndex = footnotes.findIndex((fn) => fn.id === id);
+      if (footnoteIndex !== -1) {
+        return protect(
+          `<sup class="footnote-ref"><a href="#fn-${id}" id="fnref-${id}">${footnoteIndex + 1}</a></sup>`,
+        );
+      }
+      return match;
+    })
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, destination) =>
+      protect(
+        `<a href="${destination}" target="_blank" rel="noopener noreferrer">${applyInlineFormatting(label)}</a>`,
+      ),
+    );
+
+  processed = applyInlineFormatting(processed);
+
+  for (let index = protectedSegments.length - 1; index >= 0; index--) {
+    processed = processed.split(`\u0000ATHAS${index}\u0000`).join(protectedSegments[index]);
+  }
+
+  return processed;
 }
 
 function processTable(lines: string[], footnotes: Footnote[]): string {
