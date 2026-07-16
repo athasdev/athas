@@ -214,6 +214,7 @@ export default function Breadcrumb({
               />
               <SymbolBreadcrumb
                 bufferId={resolvedBufferId ?? undefined}
+                editorViewKey={editorViewKey}
                 filePath={filePath}
                 interactive={interactive && !isLocalHistorySnapshot}
               />

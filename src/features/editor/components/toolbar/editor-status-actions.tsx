@@ -15,6 +15,7 @@ import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import type { Position } from "@/features/editor/types/editor.types";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { resolveEditorViewCursorPosition } from "@/features/editor/utils/editor-view-cursor-position";
 import { LoadingIndicator } from "@/ui/loading";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -78,12 +79,15 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
   const [draftPosition, setDraftPosition] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const displayedCursorPosition = useMemo<Position>(() => {
-    if (!editorViewKey || activeEditorViewKey === editorViewKey) {
-      return cursorPosition;
-    }
-
-    const cachedCursor = useEditorStateStore.getState().actions.getCachedPosition(editorViewKey);
-    return cachedCursor ?? { line: 0, column: 0, offset: 0 };
+    const cachedCursor = editorViewKey
+      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
+      : undefined;
+    return resolveEditorViewCursorPosition(
+      editorViewKey,
+      activeEditorViewKey,
+      cursorPosition,
+      cachedCursor,
+    );
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
   const displayPosition = `${displayedCursorPosition.line + 1}:${displayedCursorPosition.column + 1}`;
 

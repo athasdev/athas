@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { resolveEditorViewCursorPosition } from "@/features/editor/utils/editor-view-cursor-position";
 import { useDocumentOutline } from "@/features/outline/hooks/use-document-outline";
 import { findSymbolPathAtPosition } from "@/features/outline/utils/symbol-path";
 import { openOutlineSymbol } from "@/features/outline/utils/outline-symbols";
@@ -10,6 +12,7 @@ import { cn } from "@/utils/cn";
 
 interface SymbolBreadcrumbProps {
   bufferId?: string;
+  editorViewKey?: string | null;
   filePath: string;
   interactive?: boolean;
   className?: string;
@@ -17,37 +20,35 @@ interface SymbolBreadcrumbProps {
 
 export function SymbolBreadcrumb({
   bufferId,
+  editorViewKey,
   filePath,
   interactive = true,
   className,
 }: SymbolBreadcrumbProps) {
   const breadcrumbShowSymbols = useSettingsStore((state) => state.settings.breadcrumbShowSymbols);
 
-  // extensionRegistry populates itself asynchronously on app start (it awaits a Tauri IPC
-  // call before isLspSupported has anything to report). Without this, the very first render
-  // after a cold launch reads isLspSupported as false and nothing re-renders once the
-  // registry finishes loading, so the breadcrumb silently never appears until some unrelated
-  // state change forces a re-render.
-  const [isRegistryReady, setIsRegistryReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    extensionRegistry.ensureInitialized().then(() => {
-      if (!cancelled) setIsRegistryReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const availableExtensions = useExtensionStore.use.availableExtensions();
+  const isExtensionStoreReady = availableExtensions.size > 0;
 
   const isLspSupported = !filePath.includes("://") && extensionRegistry.isLspSupported(filePath);
   const { symbols, isSupported } = useDocumentOutline({
     isActive: breadcrumbShowSymbols && isLspSupported,
     bufferId,
   });
-  // NOTE: cursorPosition is a single GLOBAL store, not per-pane. In an unfocused split
-  // pane, this combines THIS pane's own symbols with the FOCUSED pane's cursor position —
-  // accepted known limitation for v1, do not add per-pane cursor tracking here.
-  const cursorPosition = useEditorStateStore.use.cursorPosition();
+  const activeEditorViewKey = useEditorStateStore.use.activeEditorViewKey();
+  const activeCursorPosition = useEditorStateStore.use.cursorPosition();
+  const cursorPosition = useMemo(() => {
+    const cachedPosition = editorViewKey
+      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
+      : undefined;
+
+    return resolveEditorViewCursorPosition(
+      editorViewKey,
+      activeEditorViewKey,
+      activeCursorPosition,
+      cachedPosition,
+    );
+  }, [activeCursorPosition, activeEditorViewKey, editorViewKey]);
 
   const symbolChain = useMemo(
     () => findSymbolPathAtPosition(symbols, cursorPosition.line, cursorPosition.column),
@@ -55,7 +56,7 @@ export function SymbolBreadcrumb({
   );
 
   if (
-    !isRegistryReady ||
+    !isExtensionStoreReady ||
     !breadcrumbShowSymbols ||
     !isLspSupported ||
     !isSupported ||
