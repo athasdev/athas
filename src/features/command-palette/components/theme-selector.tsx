@@ -11,6 +11,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
+import { chooseThemeFile, uploadTheme } from "@/features/settings/utils/theme-upload";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   CommandEmpty,
@@ -21,6 +22,7 @@ import {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { toast } from "@/ui/toast";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
@@ -205,30 +207,27 @@ export const ThemeSelectorContent = ({
     onBack();
   }, [initialTheme, onBack, applyPreviewTheme]);
 
-  const handleUploadTheme = async () => {
-    // Create file input element
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
-        const result = await uploadTheme(file);
-        if (result.success) {
-          console.log("Theme uploaded successfully:", result.theme?.name);
-          // Optionally switch to the newly uploaded theme
-          if (result.theme) {
-            didCommitRef.current = true;
-            onThemeChange(result.theme.id);
-            onClose();
-          }
-        } else {
-          console.error("Theme upload failed:", result.error);
+  const handleUploadTheme = () => {
+    chooseThemeFile((file) => {
+      void uploadTheme(file).then((result) => {
+        if (!result.success || !result.theme) {
+          toast.error(
+            result.error ?? "Failed to import theme",
+            result.details?.slice(0, 4).join("\n"),
+          );
+          return;
         }
-      }
-    };
-    input.click();
+
+        toast.success(
+          result.themes?.length === 1
+            ? `Imported ${result.theme.name}`
+            : `Imported ${result.themes?.length ?? 0} theme variants`,
+        );
+        didCommitRef.current = true;
+        onThemeChange(result.theme.id);
+        onClose();
+      });
+    });
   };
 
   return (

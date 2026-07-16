@@ -4,7 +4,7 @@ import type { IconThemeContribution, ThemeContribution } from "../types/extensio
 import { iconThemeRegistry } from "../icon-themes/icon-theme-registry";
 import type { IconResult, IconThemeDefinition } from "../icon-themes/types";
 import { themeRegistry } from "../themes/theme-registry";
-import { toSyntaxTokenVariables } from "../themes/syntax-token-colors";
+import { toThemeDefinition as convertThemeToDefinition } from "../themes/theme-file";
 import type { ThemeDefinition } from "../themes/types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
@@ -22,37 +22,8 @@ function getIconThemeContributions(manifest: ExtensionManifest): IconThemeContri
   return getManifestIconContributions(manifest);
 }
 
-function toCssVariables(colors: Record<string, string>): Record<string, string> {
-  const variables: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(colors)) {
-    const normalizedKey = key.startsWith("--") ? key : `--${key}`;
-    variables[normalizedKey] = value;
-
-    if (!normalizedKey.startsWith("--color-")) {
-      variables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
-  }
-
-  return variables;
-}
-
 function toThemeDefinition(contribution: ThemeContribution): ThemeDefinition {
-  const isDark = contribution.appearance === "dark";
-
-  return {
-    id: contribution.id,
-    name: contribution.name,
-    description: contribution.description || "",
-    category: isDark ? "Dark" : "Light",
-    cssVariables: toCssVariables(contribution.colors),
-    syntaxTokens: toSyntaxTokenVariables(
-      contribution.syntax,
-      contribution.colors,
-      contribution.appearance,
-    ),
-    isDark,
-  };
+  return convertThemeToDefinition(contribution);
 }
 
 function normalizeLookupMap(map: Record<string, string> | undefined, withDot = false) {

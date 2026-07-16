@@ -1,11 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import { UploadIcon as Upload } from "@/ui/icons";
+import { FilePlusIcon, TrashIcon, UploadIcon } from "@/ui/icons";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { getServiceUrls } from "@/config/services";
+import { CustomThemeCreatorDialog } from "@/features/settings/components/custom-theme-creator-dialog";
 import {
   formatUiFontSize,
   UI_FONT_SIZE_MAX,
@@ -21,6 +23,12 @@ import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
+import { toast } from "@/ui/toast";
+import {
+  chooseThemeFile,
+  deleteCustomTheme,
+  uploadTheme,
+} from "@/features/settings/utils/theme-upload";
 
 export const AppearanceSettings = () => {
   const settings = useSettingsStore(
@@ -41,6 +49,13 @@ export const AppearanceSettings = () => {
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const registeredThemes = useRegisteredThemes();
   const registeredIconThemes = useRegisteredIconThemes();
+  const [isThemeCreatorOpen, setIsThemeCreatorOpen] = useState(false);
+  const themeDocsUrl = `${getServiceUrls().docsUrl}/themes`;
+  const customThemes = useMemo(
+    () =>
+      registeredThemes.filter((theme) => themeRegistry.getThemeSource(theme.id)?.kind === "custom"),
+    [registeredThemes],
+  );
 
   const themeOptions = useMemo(
     () =>
@@ -104,23 +119,60 @@ export const AppearanceSettings = () => {
     return [{ value: fallbackIconTheme.id, label: fallbackIconTheme.name }, ...iconThemeOptions];
   }, [iconThemeOptions, settings.iconTheme]);
 
-  const handleUploadTheme = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
-        const result = await uploadTheme(file);
-        if (result.success) {
-          console.log("Theme uploaded successfully:", result.theme?.name);
-        } else {
-          console.error("Theme upload failed:", result.error);
+  const selectImportedTheme = (themeId: string) => {
+    const theme = themeRegistry.getTheme(themeId);
+    if (!theme) return;
+
+    if (!settings.syncSystemTheme) {
+      void updateSetting("theme", themeId);
+      return;
+    }
+
+    void updateSetting(theme.isDark ? "autoThemeDark" : "autoThemeLight", themeId);
+  };
+
+  const handleUploadTheme = () => {
+    chooseThemeFile((file) => {
+      void uploadTheme(file).then((result) => {
+        if (!result.success || !result.theme) {
+          toast.error(
+            result.error ?? "Failed to import theme",
+            result.details?.slice(0, 4).join("\n"),
+          );
+          return;
         }
+
+        toast.success(
+          result.themes?.length === 1
+            ? `Imported ${result.theme.name}`
+            : `Imported ${result.themes?.length ?? 0} theme variants`,
+        );
+        selectImportedTheme(result.theme.id);
+      });
+    });
+  };
+
+  const handleRemoveCustomTheme = async (themeId: string) => {
+    try {
+      const fallbackUpdates: Promise<void>[] = [];
+      if (settings.theme === themeId) {
+        fallbackUpdates.push(updateSetting("theme", getDefaultSetting("theme")));
       }
-    };
-    input.click();
+      if (settings.autoThemeLight === themeId) {
+        fallbackUpdates.push(updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight")));
+      }
+      if (settings.autoThemeDark === themeId) {
+        fallbackUpdates.push(updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark")));
+      }
+      await Promise.all(fallbackUpdates);
+      await deleteCustomTheme(themeId);
+      toast.success("Custom theme removed");
+    } catch (error) {
+      toast.error(
+        "Failed to remove custom theme",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   };
 
   const handleIconThemeChange = (themeId: string) => {
@@ -150,28 +202,16 @@ export const AppearanceSettings = () => {
             onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
             canReset={settings.theme !== getDefaultSetting("theme")}
           >
-            <div className="flex items-center gap-2">
-              <Select
-                value={settings.theme}
-                options={normalizedThemeOptions}
-                onChange={(value) => updateSetting("theme", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="md"
-                variant="default"
-                searchable
-                searchableTrigger="input"
-              />
-              <Button
-                type="button"
-                onClick={handleUploadTheme}
-                variant="default"
-                tooltip="Upload theme"
-                aria-label="Upload theme"
-                size="icon-xs"
-              >
-                <Upload />
-              </Button>
-            </div>
+            <Select
+              value={settings.theme}
+              options={normalizedThemeOptions}
+              onChange={(value) => updateSetting("theme", value)}
+              className={SETTINGS_CONTROL_WIDTHS.wide}
+              size="md"
+              variant="default"
+              searchable
+              searchableTrigger="input"
+            />
           </SettingRow>
         ) : null}
 
@@ -183,28 +223,16 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
-              <div className="flex items-center gap-2">
-                <Select
-                  value={settings.autoThemeLight}
-                  options={lightThemeOptions}
-                  onChange={(value) => updateSetting("autoThemeLight", value)}
-                  className={SETTINGS_CONTROL_WIDTHS.wide}
-                  size="md"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
-                />
-                <Button
-                  type="button"
-                  onClick={handleUploadTheme}
-                  variant="default"
-                  tooltip="Upload theme"
-                  aria-label="Upload theme"
-                  size="icon-xs"
-                >
-                  <Upload />
-                </Button>
-              </div>
+              <Select
+                value={settings.autoThemeLight}
+                options={lightThemeOptions}
+                onChange={(value) => updateSetting("autoThemeLight", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="md"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+              />
             </SettingRow>
 
             <SettingRow
@@ -213,28 +241,16 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
-              <div className="flex items-center gap-2">
-                <Select
-                  value={settings.autoThemeDark}
-                  options={darkThemeOptions}
-                  onChange={(value) => updateSetting("autoThemeDark", value)}
-                  className={SETTINGS_CONTROL_WIDTHS.wide}
-                  size="md"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
-                />
-                <Button
-                  type="button"
-                  onClick={handleUploadTheme}
-                  variant="default"
-                  tooltip="Upload theme"
-                  aria-label="Upload theme"
-                  size="icon-xs"
-                >
-                  <Upload />
-                </Button>
-              </div>
+              <Select
+                value={settings.autoThemeDark}
+                options={darkThemeOptions}
+                onChange={(value) => updateSetting("autoThemeDark", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="md"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+              />
             </SettingRow>
           </>
         ) : null}
@@ -256,6 +272,52 @@ export const AppearanceSettings = () => {
             searchableTrigger="input"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Custom Themes"
+          description={
+            <>
+              Import Athas theme JSON or create one from an installed theme.{" "}
+              <a
+                href={themeDocsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-link hover:underline"
+              >
+                Format guide
+              </a>
+            </>
+          }
+        >
+          <div className="flex items-center gap-2">
+            <Button type="button" size="xs" onClick={() => setIsThemeCreatorOpen(true)}>
+              <FilePlusIcon />
+              Create
+            </Button>
+            <Button type="button" size="xs" onClick={handleUploadTheme}>
+              <UploadIcon />
+              Import
+            </Button>
+          </div>
+        </SettingRow>
+
+        {customThemes.map((theme) => (
+          <SettingRow
+            key={theme.id}
+            label={theme.name}
+            description={`${theme.category} custom theme · ${theme.id}`}
+          >
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="danger"
+              tooltip={`Remove ${theme.name}`}
+              onClick={() => void handleRemoveCustomTheme(theme.id)}
+            >
+              <TrashIcon />
+            </Button>
+          </SettingRow>
+        ))}
       </Section>
 
       <Section title="Typography">
@@ -357,6 +419,15 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
       </Section>
+
+      {isThemeCreatorOpen ? (
+        <CustomThemeCreatorDialog
+          baseThemeId={settings.theme}
+          themes={registeredThemes}
+          onClose={() => setIsThemeCreatorOpen(false)}
+          onInstalled={selectImportedTheme}
+        />
+      ) : null}
     </div>
   );
 };

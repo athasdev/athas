@@ -1,6 +1,6 @@
 import athasThemes from "./builtin/athas.json";
-import { toSyntaxTokenVariables } from "./syntax-token-colors";
-import type { Theme, ThemeFile } from "./theme-schema";
+import { toThemeDefinition } from "./theme-file";
+import type { ThemeFile } from "./theme-schema";
 import type { ThemeDefinition } from "./types";
 
 export type AthasDefaultThemeType = "dark" | "light";
@@ -33,28 +33,6 @@ function toStringRecord(value: object): Record<string, string> {
   return result;
 }
 
-function toThemeDefinition(theme: Theme): ThemeDefinition {
-  const cssVariables: Record<string, string> = {};
-  const colors = toStringRecord(theme.colors);
-  for (const [key, value] of Object.entries(colors)) {
-    cssVariables[`--${key}`] = value;
-    cssVariables[`--color-${key}`] = value;
-  }
-
-  const syntax = toStringRecord(theme.syntax);
-
-  const isDark = theme.appearance === "dark";
-  return {
-    id: theme.id,
-    name: theme.name,
-    description: theme.description || "",
-    category: isDark ? "Dark" : "Light",
-    cssVariables,
-    syntaxTokens: toSyntaxTokenVariables(syntax, colors, theme.appearance),
-    isDark,
-  };
-}
-
 function buildDefaultTheme(type: AthasDefaultThemeType): AthasDefaultTheme {
   const theme = athasThemeFile.themes.find((entry) => entry.appearance === type);
   if (!theme) {
@@ -65,7 +43,7 @@ function buildDefaultTheme(type: AthasDefaultThemeType): AthasDefaultTheme {
     id: theme.id,
     type,
     colors: toStringRecord(theme.colors),
-    syntax: toStringRecord(theme.syntax),
+    syntax: toStringRecord(theme.syntax ?? {}),
     definition: toThemeDefinition(theme),
   };
 }

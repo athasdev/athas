@@ -1,149 +1,144 @@
+import {
+  installCustomThemes,
+  loadCustomThemes,
+  removeCustomTheme,
+} from "@/extensions/themes/custom-theme-store";
+import {
+  parseThemeFileJson,
+  ThemeFileValidationError,
+  toThemeDefinition,
+} from "@/extensions/themes/theme-file";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import { toSyntaxTokenVariables } from "@/extensions/themes/syntax-token-colors";
 import type { ThemeDefinition } from "@/extensions/themes/types";
 
-/**
- * New theme format (recommended)
- */
-interface NewJsonTheme {
-  id: string;
-  name: string;
-  description?: string;
-  appearance: "dark" | "light";
-  colors: Record<string, string>;
-  syntax: Record<string, string>;
+const MAX_THEME_FILE_BYTES = 2 * 1024 * 1024;
+
+export interface ThemeUploadResult {
+  success: boolean;
+  error?: string;
+  details?: string[];
+  theme?: ThemeDefinition;
+  themes?: ThemeDefinition[];
 }
 
-interface NewThemeFile {
-  name: string;
-  author?: string;
-  description?: string;
-  themes: NewJsonTheme[];
+function customThemeSource(themeId: string) {
+  return { extensionId: `custom-theme.${themeId}`, kind: "custom" as const };
 }
 
-/**
- * Check if theme file is in the new format
- */
-function isNewFormat(themeFile: unknown): themeFile is NewThemeFile {
-  if (!themeFile || typeof themeFile !== "object") return false;
-  const file = themeFile as Record<string, unknown>;
-  if (!file.themes || !Array.isArray(file.themes)) return false;
-  if (file.themes.length === 0) return false;
-  const firstTheme = file.themes[0] as Record<string, unknown>;
-  return "appearance" in firstTheme && "colors" in firstTheme && "syntax" in firstTheme;
-}
-
-function convertNewFormatTheme(jsonTheme: NewJsonTheme): ThemeDefinition {
-  const cssVariables: Record<string, string> = {};
-  for (const [key, value] of Object.entries(jsonTheme.colors)) {
-    cssVariables[`--${key}`] = value;
-    cssVariables[`--color-${key}`] = value;
+function errorResult(error: unknown): ThemeUploadResult {
+  if (error instanceof ThemeFileValidationError) {
+    return {
+      success: false,
+      error: "The theme file does not match the Athas theme format.",
+      details: error.issues,
+    };
   }
 
-  const isDark = jsonTheme.appearance === "dark";
-
   return {
-    id: jsonTheme.id,
-    name: jsonTheme.name,
-    description: jsonTheme.description || "",
-    category: isDark ? "Dark" : "Light",
-    cssVariables,
-    syntaxTokens: toSyntaxTokenVariables(jsonTheme.syntax, jsonTheme.colors, jsonTheme.appearance),
-    isDark,
-    icon: undefined,
+    success: false,
+    error: error instanceof Error ? error.message : "Failed to import the theme file.",
   };
 }
 
-export const uploadTheme = async (
-  file: File,
-): Promise<{ success: boolean; error?: string; theme?: ThemeDefinition }> => {
+function unsupportedColorIssues(themes: ReturnType<typeof parseThemeFileJson>["themes"]): string[] {
+  if (typeof CSS === "undefined" || typeof CSS.supports !== "function") return [];
+
+  return themes.flatMap((theme, index) =>
+    [
+      ...Object.entries(theme.colors).map(([key, value]) => ["colors", key, value] as const),
+      ...Object.entries(theme.syntax ?? {}).map(([key, value]) => ["syntax", key, value] as const),
+    ].flatMap(([group, key, value]) =>
+      CSS.supports("color", value)
+        ? []
+        : [`themes[${index}].${group}.${key} is not a supported CSS color: ${value}`],
+    ),
+  );
+}
+
+export async function installThemeJson(content: string): Promise<ThemeUploadResult> {
   try {
-    // Validate file extension
-    if (!file.name.endsWith(".json")) {
-      return { success: false, error: "Please upload a JSON file (.json)" };
+    const themeFile = parseThemeFileJson(content);
+    const colorIssues = unsupportedColorIssues(themeFile.themes);
+    if (colorIssues.length > 0) {
+      throw new ThemeFileValidationError(colorIssues);
+    }
+    const storedThemeIds = new Set((await loadCustomThemes()).map((theme) => theme.id));
+    const conflicts = themeFile.themes.flatMap((theme, index) => {
+      const registeredTheme = themeRegistry.getTheme(theme.id);
+      if (!registeredTheme || storedThemeIds.has(theme.id)) return [];
+
+      const source = themeRegistry.getThemeSource(theme.id);
+      if (source?.kind === "custom") return [];
+
+      return [`themes[${index}].id conflicts with the existing theme "${registeredTheme.name}"`];
+    });
+
+    if (conflicts.length > 0) {
+      throw new ThemeFileValidationError(conflicts);
     }
 
-    // Read and parse JSON file
-    const content = await file.text();
-    let themeFile: unknown;
+    await installCustomThemes(themeFile.themes);
+    const definitions = themeFile.themes.map(toThemeDefinition);
+    const activeThemeId = themeRegistry.getCurrentTheme();
 
-    try {
-      themeFile = JSON.parse(content);
-    } catch {
-      return {
-        success: false,
-        error: "Invalid JSON format. Please check your theme file syntax.",
-      };
-    }
-
-    // Check if it has a themes array
-    if (
-      !themeFile ||
-      typeof themeFile !== "object" ||
-      !("themes" in themeFile) ||
-      !Array.isArray((themeFile as Record<string, unknown>).themes)
-    ) {
-      return {
-        success: false,
-        error: 'Theme file must have a "themes" array property',
-      };
-    }
-
-    const themesArray = (themeFile as Record<string, unknown[]>).themes;
-    if (themesArray.length === 0) {
-      return { success: false, error: "No themes found in file" };
-    }
-
-    if (themesArray.length > 1) {
-      return { success: false, error: "Multiple themes in one file not supported yet" };
-    }
-
-    let themeDefinition: ThemeDefinition;
-
-    if (isNewFormat(themeFile)) {
-      // New format: colors, syntax, appearance
-      const jsonTheme = themeFile.themes[0];
-
-      // Validate required fields
-      if (!jsonTheme.id || !jsonTheme.name || !jsonTheme.appearance) {
-        return {
-          success: false,
-          error: "Theme must have id, name, and appearance properties",
-        };
+    for (const definition of definitions) {
+      themeRegistry.registerTheme(definition, customThemeSource(definition.id));
+      if (definition.id === activeThemeId) {
+        themeRegistry.applyTheme(definition.id);
       }
-
-      if (!jsonTheme.colors || typeof jsonTheme.colors !== "object") {
-        return {
-          success: false,
-          error: "Theme must have colors object",
-        };
-      }
-
-      if (!jsonTheme.syntax || typeof jsonTheme.syntax !== "object") {
-        return {
-          success: false,
-          error: "Theme must have syntax object",
-        };
-      }
-
-      themeDefinition = convertNewFormatTheme(jsonTheme);
-    } else {
-      return {
-        success: false,
-        error:
-          "Invalid theme format. Theme must have: id, name, appearance (dark/light), colors, and syntax objects",
-      };
     }
 
-    // Register the theme
-    themeRegistry.registerTheme(themeDefinition);
-
-    return { success: true, theme: themeDefinition };
+    return {
+      success: true,
+      theme: definitions[0],
+      themes: definitions,
+    };
   } catch (error) {
-    console.error("Theme upload error:", error);
+    return errorResult(error);
+  }
+}
+
+export async function uploadTheme(file: File): Promise<ThemeUploadResult> {
+  if (!file.name.toLowerCase().endsWith(".json")) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to upload theme",
+      error: "Choose an Athas theme JSON file.",
+      details: [`${file.name} does not use the .json extension`],
     };
   }
-};
+
+  if (file.size > MAX_THEME_FILE_BYTES) {
+    return {
+      success: false,
+      error: "The theme file is too large.",
+      details: ["Athas theme files must be 2 MB or smaller"],
+    };
+  }
+
+  try {
+    return await installThemeJson(await file.text());
+  } catch (error) {
+    return errorResult(error);
+  }
+}
+
+export async function deleteCustomTheme(themeId: string): Promise<void> {
+  const source = themeRegistry.getThemeSource(themeId);
+  if (source?.kind !== "custom") {
+    throw new Error("Only imported custom themes can be removed.");
+  }
+
+  await removeCustomTheme(themeId);
+  themeRegistry.unregisterTheme(themeId);
+}
+
+export function chooseThemeFile(onSelect: (file: File) => void): void {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (file) onSelect(file);
+  };
+  input.click();
+}

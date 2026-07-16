@@ -41,4 +41,5 @@ export interface ThemeRegistryAPI {
 export interface ThemeSource {
   extensionId: string;
   isBundled?: boolean;
+  kind?: "extension" | "custom";
 }

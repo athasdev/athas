@@ -371,6 +371,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["icon", "theme", "file", "tree", "tabs"],
   },
   {
+    id: "appearance-custom-themes",
+    tab: "appearance",
+    section: "Theme",
+    label: "Custom Themes",
+    description: "Create, import, and remove custom Athas theme JSON files",
+    keywords: ["custom", "theme", "json", "create", "generator", "import", "upload"],
+  },
+  {
     id: "appearance-ui-font",
     tab: "appearance",
     section: "Typography",
