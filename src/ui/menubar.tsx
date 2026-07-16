@@ -116,6 +116,7 @@ function MenubarContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
+        className="z-[10031]"
       >
         <Menu.Popup
           data-slot="menubar-content"
@@ -220,6 +221,7 @@ function MenubarSubContent({
         side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
+        className="z-[10050]"
       >
         <Menu.Popup
           data-slot="menubar-sub-content"
