@@ -1,19 +1,13 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
-import { useSessionStore, type ProjectUiSession } from "@/features/window/stores/session.store";
+import type { ProjectUiSession } from "@/features/window/stores/session.store";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import {
   buildCurrentProjectPaneSession,
   buildPaneLayoutFromSession,
 } from "@/features/window/stores/workspace-pane-session";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-
-export const DEFAULT_PROJECT_UI_STATE: ProjectUiSession = {
-  isSidebarVisible: true,
-  isBottomPaneVisible: false,
-  bottomPaneActiveTab: "terminal",
-  activeSidebarView: "files",
-  paneState: null,
-};
+import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
 
 export const getCurrentProjectUiState = (): ProjectUiSession => {
   const uiState = useUIState.getState();
@@ -34,13 +28,13 @@ export const persistCurrentProjectUiState = (projectPath: string | undefined) =>
     return;
   }
 
-  useSessionStore.getState().saveUiState(projectPath, getCurrentProjectUiState());
+  workspaceSessionRepository.saveUi(projectPath, getCurrentProjectUiState());
 };
 
-export const restoreProjectUiState = (projectPath: string | undefined) => {
-  const uiState = useSessionStore.getState().getUiState(projectPath || "");
+export const restoreProjectUiState = (projectPath: string | undefined, workspaceId?: string) => {
+  const uiState = workspaceSessionRepository.loadUi(projectPath);
   const nextUiState = uiState ?? DEFAULT_PROJECT_UI_STATE;
-  const state = useUIState.getState();
+  const state = workspaceId ? useUIState.getStore(workspaceId).getState() : useUIState.getState();
   const legacyDebuggerSidebar = nextUiState.activeSidebarView === "debugger";
   const legacyToolBufferSidebar =
     legacyDebuggerSidebar || nextUiState.activeSidebarView === "extensions";
@@ -53,9 +47,12 @@ export const restoreProjectUiState = (projectPath: string | undefined) => {
   state.setActiveView(legacyToolBufferSidebar ? "files" : nextUiState.activeSidebarView);
 };
 
-export const restoreProjectPaneState = (projectPath: string | undefined) => {
-  const uiState = useSessionStore.getState().getUiState(projectPath || "");
-  const buffers = useBufferStore.getState().buffers;
+export const restoreProjectPaneState = (projectPath: string | undefined, workspaceId?: string) => {
+  const uiState = workspaceSessionRepository.loadUi(projectPath);
+  const buffers = workspaceId
+    ? useBufferStore.getStore(workspaceId).getState().buffers
+    : useBufferStore.getState().buffers;
   const paneLayout = buildPaneLayoutFromSession(uiState?.paneState, buffers);
-  usePaneStore.getState().actions.restoreLayout(paneLayout);
+  const paneStore = workspaceId ? usePaneStore.getStore(workspaceId) : usePaneStore;
+  paneStore.getState().actions.restoreLayout(paneLayout);
 };

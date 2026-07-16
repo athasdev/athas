@@ -17,6 +17,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim.store";
+import { isWslPath } from "@/features/wsl/utils/wsl-path";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -198,7 +199,7 @@ export function MainLayout() {
         const activeTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
         if (!activeTab) return null;
 
-        if (activeTab.path.startsWith("remote://")) {
+        if (activeTab.path.startsWith("remote://") || isWslPath(activeTab.path)) {
           return activeTab;
         }
 

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
-import { createWithEqualityFn } from "zustand/traditional";
+import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
@@ -42,6 +42,7 @@ import type {
   TerminalContent,
   TokenEntry,
 } from "@/features/panes/types/pane-content.types";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   isEditorContent,
   isEditableContent,
@@ -352,8 +353,8 @@ const checkExtensionSupport = (path: string) => {
     });
 };
 
-export const useBufferStore = createSelectors(
-  createWithEqualityFn<BufferState>()(
+const createBufferStore = () =>
+  createStore<BufferState>()(
     immer((set, get) => ({
       buffers: [],
       activeBufferId: null,
@@ -1611,8 +1612,10 @@ export const useBufferStore = createSelectors(
         },
       },
     })),
-    isEqual,
-  ),
+  );
+
+export const useBufferStore = createSelectors(
+  createWorkspaceScopedStore("editor-buffer", createBufferStore, isEqual),
 );
 
 export { clearQueuedWorkspaceSessionSave };

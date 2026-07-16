@@ -1,5 +1,5 @@
 import type { FileEntry } from "../types/app.types";
-import { joinPath, pathStartsWithRoot } from "@/utils/path-helpers";
+import { joinPath } from "@/utils/path-helpers";
 import {
   getSymlinkInfo,
   createDirectory as platformCreateDirectory,
@@ -8,13 +8,7 @@ import {
   readFile as platformReadFile,
   writeFile as platformWriteFile,
 } from "./platform";
-import { useFileSystemStore } from "../stores/file-system.store";
 import { shouldHideFromFileTree } from "./utils";
-
-function workspaceRootForDirectory(path: string): string {
-  const currentRoot = useFileSystemStore.getState().rootFolderPath;
-  return currentRoot && pathStartsWithRoot(path, currentRoot) ? currentRoot : path;
-}
 
 export async function readFileContent(path: string): Promise<string> {
   try {
@@ -63,10 +57,12 @@ export async function deleteFileOrDirectory(path: string): Promise<void> {
   await platformDeletePath(path);
 }
 
-export async function readDirectoryContents(path: string): Promise<FileEntry[]> {
+export async function readDirectoryContents(
+  path: string,
+  workspaceRoot = path,
+): Promise<FileEntry[]> {
   try {
     const entries = await platformReadDirectory(path);
-    const workspaceRoot = workspaceRootForDirectory(path);
 
     const filteredEntries = (entries as any[]).filter((entry: any) => {
       const name = entry.name || "Unknown";

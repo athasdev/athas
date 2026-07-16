@@ -1,6 +1,6 @@
 import { useProjectStore } from "@/features/window/stores/project.store";
 import type { BufferSession } from "@/features/window/stores/session.store";
-import { useSessionStore } from "@/features/window/stores/session.store";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import { getEditorWorkspaceScope } from "@/features/file-system/controllers/workspace-session";
 import { createWorkspaceSessionSaveQueue } from "./workspace-session-save-queue";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -73,7 +73,11 @@ const saveSessionToStoreImmediate = (
       ? activeBuffer.path
       : null;
 
-  useSessionStore.getState().saveSession(projectPath, persistableBuffers, activeBufferPath);
+  workspaceSessionRepository.save({
+    projectPath,
+    buffers: persistableBuffers,
+    activeBufferPath,
+  });
 };
 
 const sessionSaveQueue = createWorkspaceSessionSaveQueue(

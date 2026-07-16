@@ -1,4 +1,5 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { getGitLog } from "../api/git-commits-api";
 import { getGitStatus } from "../api/git-status-api";
 import type { GitCommit, GitStash, GitStatus } from "../types/git.types";
@@ -44,122 +45,125 @@ interface GitState {
 
 const COMMITS_PER_PAGE = 50;
 
-export const useGitStore = create<GitState>((set, get) => ({
-  gitStatus: null,
-  workspaceGitStatus: null,
-  commits: [],
-  branches: [],
-  stashes: [],
-  hasMoreCommits: true,
-  isLoadingMoreCommits: false,
-  isLoadingGitData: false,
-  isRefreshing: false,
-  currentRepoPath: null,
-  currentWorkspaceRepoPath: null,
+const createGitStore = () =>
+  createStore<GitState>()((set, get) => ({
+    gitStatus: null,
+    workspaceGitStatus: null,
+    commits: [],
+    branches: [],
+    stashes: [],
+    hasMoreCommits: true,
+    isLoadingMoreCommits: false,
+    isLoadingGitData: false,
+    isRefreshing: false,
+    currentRepoPath: null,
+    currentWorkspaceRepoPath: null,
 
-  actions: {
-    loadFreshGitData: ({ gitStatus, commits, branches, stashes, repoPath }) => {
-      set({
-        gitStatus,
-        commits,
-        branches,
-        stashes,
-        hasMoreCommits: commits.length >= COMMITS_PER_PAGE,
-        currentRepoPath: repoPath,
-      });
-    },
+    actions: {
+      loadFreshGitData: ({ gitStatus, commits, branches, stashes, repoPath }) => {
+        set({
+          gitStatus,
+          commits,
+          branches,
+          stashes,
+          hasMoreCommits: commits.length >= COMMITS_PER_PAGE,
+          currentRepoPath: repoPath,
+        });
+      },
 
-    refreshGitData: async ({ gitStatus, branches, repoPath }) => {
-      const { currentRepoPath, commits: existingCommits } = get();
+      refreshGitData: async ({ gitStatus, branches, repoPath }) => {
+        const { currentRepoPath, commits: existingCommits } = get();
 
-      if (currentRepoPath !== repoPath || existingCommits.length === 0) {
-        set({ gitStatus, branches });
-        return;
-      }
+        if (currentRepoPath !== repoPath || existingCommits.length === 0) {
+          set({ gitStatus, branches });
+          return;
+        }
 
-      const latestCommits = await getGitLog(repoPath, 50, 0);
+        const latestCommits = await getGitLog(repoPath, 50, 0);
 
-      if (latestCommits.length > 0) {
-        const existingHashSet = new Set(existingCommits.map((c) => c.hash));
-        const newCommits = latestCommits.filter((c) => !existingHashSet.has(c.hash));
+        if (latestCommits.length > 0) {
+          const existingHashSet = new Set(existingCommits.map((c) => c.hash));
+          const newCommits = latestCommits.filter((c) => !existingHashSet.has(c.hash));
 
-        if (newCommits.length > 0) {
-          set({
-            gitStatus,
-            branches,
-            commits: [...newCommits, ...existingCommits],
-          });
+          if (newCommits.length > 0) {
+            set({
+              gitStatus,
+              branches,
+              commits: [...newCommits, ...existingCommits],
+            });
+          } else {
+            set({ gitStatus, branches });
+          }
         } else {
           set({ gitStatus, branches });
         }
-      } else {
-        set({ gitStatus, branches });
-      }
-    },
+      },
 
-    refreshWorkspaceGitStatus: async (repoPath) => {
-      const status = await getGitStatus(repoPath);
+      refreshWorkspaceGitStatus: async (repoPath) => {
+        const status = await getGitStatus(repoPath);
 
-      if (get().currentWorkspaceRepoPath !== repoPath) {
-        return;
-      }
-
-      set({
-        workspaceGitStatus: status,
-      });
-    },
-
-    loadMoreCommits: async (repoPath) => {
-      const { commits, hasMoreCommits, isLoadingMoreCommits } = get();
-
-      if (!hasMoreCommits || isLoadingMoreCommits) return;
-
-      set({ isLoadingMoreCommits: true });
-
-      try {
-        const newCommits = await getGitLog(repoPath, COMMITS_PER_PAGE, commits.length);
-
-        const existingHashSet = new Set(commits.map((c) => c.hash));
-        const uniqueNewCommits = newCommits.filter((c) => !existingHashSet.has(c.hash));
-
-        if (uniqueNewCommits.length > 0) {
-          set({
-            commits: [...commits, ...uniqueNewCommits],
-            hasMoreCommits: uniqueNewCommits.length >= COMMITS_PER_PAGE,
-          });
-        } else {
-          set({ hasMoreCommits: false });
+        if (get().currentWorkspaceRepoPath !== repoPath) {
+          return;
         }
-      } finally {
-        set({ isLoadingMoreCommits: false });
-      }
+
+        set({
+          workspaceGitStatus: status,
+        });
+      },
+
+      loadMoreCommits: async (repoPath) => {
+        const { commits, hasMoreCommits, isLoadingMoreCommits } = get();
+
+        if (!hasMoreCommits || isLoadingMoreCommits) return;
+
+        set({ isLoadingMoreCommits: true });
+
+        try {
+          const newCommits = await getGitLog(repoPath, COMMITS_PER_PAGE, commits.length);
+
+          const existingHashSet = new Set(commits.map((c) => c.hash));
+          const uniqueNewCommits = newCommits.filter((c) => !existingHashSet.has(c.hash));
+
+          if (uniqueNewCommits.length > 0) {
+            set({
+              commits: [...commits, ...uniqueNewCommits],
+              hasMoreCommits: uniqueNewCommits.length >= COMMITS_PER_PAGE,
+            });
+          } else {
+            set({ hasMoreCommits: false });
+          }
+        } finally {
+          set({ isLoadingMoreCommits: false });
+        }
+      },
+
+      setGitStatus: (status) => set({ gitStatus: status }),
+      setWorkspaceGitStatus: (status, repoPath) =>
+        set({
+          workspaceGitStatus: status,
+          currentWorkspaceRepoPath: repoPath,
+        }),
+      setCommits: (commits) => set({ commits }),
+      setBranches: (branches) => set({ branches }),
+      setStashes: (stashes) => set({ stashes }),
+      setIsLoadingGitData: (loading) => set({ isLoadingGitData: loading }),
+      setIsRefreshing: (refreshing) => set({ isRefreshing: refreshing }),
+
+      reset: () =>
+        set({
+          gitStatus: null,
+          commits: [],
+          branches: [],
+          stashes: [],
+          hasMoreCommits: true,
+          isLoadingMoreCommits: false,
+          isLoadingGitData: false,
+          isRefreshing: false,
+          currentRepoPath: null,
+          currentWorkspaceRepoPath: null,
+          workspaceGitStatus: null,
+        }),
     },
+  }));
 
-    setGitStatus: (status) => set({ gitStatus: status }),
-    setWorkspaceGitStatus: (status, repoPath) =>
-      set({
-        workspaceGitStatus: status,
-        currentWorkspaceRepoPath: repoPath,
-      }),
-    setCommits: (commits) => set({ commits }),
-    setBranches: (branches) => set({ branches }),
-    setStashes: (stashes) => set({ stashes }),
-    setIsLoadingGitData: (loading) => set({ isLoadingGitData: loading }),
-    setIsRefreshing: (refreshing) => set({ isRefreshing: refreshing }),
-
-    reset: () =>
-      set({
-        gitStatus: null,
-        commits: [],
-        branches: [],
-        stashes: [],
-        hasMoreCommits: true,
-        isLoadingMoreCommits: false,
-        isLoadingGitData: false,
-        isRefreshing: false,
-        currentRepoPath: null,
-        currentWorkspaceRepoPath: null,
-        workspaceGitStatus: null,
-      }),
-  },
-}));
+export const useGitStore = createWorkspaceScopedStore("git", createGitStore);

@@ -1,4 +1,5 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import type { ContextMenuSlice } from "./ui-state/context-menu-slice";
 import { createContextMenuSlice } from "./ui-state/context-menu-slice";
 import type { ModalSlice } from "./ui-state/modal-slice";
@@ -25,11 +26,14 @@ export type UIState = ModalSlice &
   QuickEditSlice;
 
 // Create the combined store
-export const useUIState = create<UIState>()((...a) => ({
-  ...createModalSlice(...a),
-  ...createPanelSlice(...a),
-  ...createViewSlice(...a),
-  ...createContextMenuSlice(...a),
-  ...createTerminalSlice(...a),
-  ...createQuickEditSlice(...a),
-}));
+const createUIStateStore = () =>
+  createStore<UIState>()((...a) => ({
+    ...createModalSlice(...a),
+    ...createPanelSlice(...a),
+    ...createViewSlice(...a),
+    ...createContextMenuSlice(...a),
+    ...createTerminalSlice(...a),
+    ...createQuickEditSlice(...a),
+  }));
+
+export const useUIState = createWorkspaceScopedStore("window-ui", createUIStateStore);
