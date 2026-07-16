@@ -1,10 +1,7 @@
 import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
-import { memo, type ReactNode, useMemo } from "react";
+import { memo, type ReactNode } from "react";
 import { cva } from "class-variance-authority";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
-import { calculateLineHeight } from "@/features/editor/utils/lines";
-import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { cn } from "@/utils/cn";
 
 interface MultibufferFileHeaderProps {
@@ -60,50 +57,32 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
   surface = "card",
   showFileIcon = true,
 }: MultibufferFileHeaderProps) {
-  const editorFontSize = useEditorSettingsStore.use.fontSize();
-  const editorFontFamily = useEditorSettingsStore.use.fontFamily();
-  const editorLineHeight = useEditorSettingsStore.use.lineHeight();
-  const zoomLevel = useZoomStore.use.editorZoomLevel();
-  const fontSize = editorFontSize * zoomLevel;
-  const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
-  const headerHeight = lineHeight + 6;
-  const iconSize = Math.max(12, Math.min(16, Math.round(fontSize * 0.72)));
-  const headerStyle = useMemo(
-    () => ({
-      fontSize: `${fontSize}px`,
-      fontFamily: editorFontFamily,
-      lineHeight: `${lineHeight}px`,
-    }),
-    [editorFontFamily, fontSize, lineHeight],
-  );
-
   return (
     <div className="sticky top-0 z-50 min-w-0 max-w-full bg-primary-bg">
       <div className={multibufferFileHeaderSurfaceVariants({ surface, expanded })}>
-        <div
-          className="font-mono code-editor-font-override flex min-w-0 items-center"
-          style={headerStyle}
-        >
+        <div className="font-sans ui-text-sm flex min-w-0 items-center">
           {onToggle ? (
             <button
               type="button"
               onClick={onToggle}
-              className="relative z-50 flex shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
-              style={{ width: `${headerHeight}px`, height: `${headerHeight}px` }}
+              className="relative z-50 flex size-7 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
               aria-label={expanded ? `Collapse ${fileName}` : `Expand ${fileName}`}
               aria-expanded={expanded}
             >
-              {expanded ? <ChevronDown size={iconSize} /> : <ChevronRight size={iconSize} />}
+              {expanded ? (
+                <ChevronDown className="size-3.5" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
             </button>
           ) : null}
           <button
             type="button"
             onClick={onOpen}
             className={cn(
-              "relative z-50 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left text-text hover:bg-hover/30",
+              "relative z-50 flex h-7 min-w-0 flex-1 items-center gap-1.5 overflow-hidden py-0 pr-2 text-left text-text hover:bg-hover/30",
               !onToggle && "pl-2",
             )}
-            style={{ height: `${headerHeight}px` }}
             aria-label={openAriaLabel}
           >
             {showFileIcon ? (
@@ -133,12 +112,7 @@ export const MultibufferFileHeader = memo(function MultibufferFileHeader({
             ) : null}
           </button>
           {actions ? (
-            <div
-              className="flex shrink-0 items-center pr-1.5 text-text-lighter"
-              style={{ height: `${headerHeight}px` }}
-            >
-              {actions}
-            </div>
+            <div className="flex h-7 shrink-0 items-center pr-1.5 text-text-lighter">{actions}</div>
           ) : null}
         </div>
       </div>

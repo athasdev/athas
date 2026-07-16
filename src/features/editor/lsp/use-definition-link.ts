@@ -28,6 +28,19 @@ interface UseDefinitionLinkProps {
   resolveEditorPosition?: EditorCoordinateResolver;
 }
 
+export function setDefinitionLinkCursor(editor: HTMLElement | null, enabled: boolean): void {
+  if (!editor) return;
+
+  editor.style.removeProperty("cursor");
+  for (const textSurface of editor.querySelectorAll<HTMLElement>(".view-lines, textarea")) {
+    if (enabled) {
+      textSurface.style.setProperty("cursor", "pointer");
+    } else {
+      textSurface.style.removeProperty("cursor");
+    }
+  }
+}
+
 /**
  * Find word boundaries at the given line and column
  */
@@ -102,16 +115,7 @@ export const useDefinitionLink = ({
     latestContentRef.current = content;
   }, [content]);
 
-  const setPointerCursor = useCallback((editor: HTMLElement | null, enabled: boolean) => {
-    if (!editor) return;
-    const cursor = enabled ? "pointer" : "";
-    editor.style.cursor = cursor;
-
-    const textarea = editor.querySelector("textarea") as HTMLElement | null;
-    if (textarea) {
-      textarea.style.cursor = cursor;
-    }
-  }, []);
+  const setPointerCursor = useCallback(setDefinitionLinkCursor, []);
 
   // Calculate position from mouse coordinates
   const calculatePosition = useCallback(
@@ -406,10 +410,18 @@ export const useDefinitionLink = ({
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
 
-      // Cleanup timers on unmount
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
       }
+      if (pendingRequestRef.current) {
+        pendingRequestRef.current.cancelled = true;
+        pendingRequestRef.current = null;
+      }
+      isModifierHeldRef.current = false;
+      currentWordRef.current = null;
+      actions.setDefinitionLinkRange(null);
+      setPointerCursor(editorRefCache.current, false);
     };
   }, [updateDefinitionLink, actions, setPointerCursor]);
 
