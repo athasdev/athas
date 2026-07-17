@@ -53,33 +53,15 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
-  it("normalizes legacy custom editor engine settings", () => {
-    const normalized = normalizeSettings({
-      ...getDefaultSettingsSnapshot(),
-      editorEngine: "custom",
-      customEditorCommand: "",
-    });
-
-    expect(normalized.editorEngine).toBe("monaco");
-  });
-
-  it("normalizes unsupported editor engines", () => {
-    const normalized = normalizeSettings({
-      ...getDefaultSettingsSnapshot(),
-      editorEngine: "emacs" as never,
-    });
-
-    expect(normalized.editorEngine).toBe("monaco");
-  });
-
-  it("migrates legacy Athas editor engine selections to Monaco", () => {
+  it("drops legacy editor engine settings", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       editorEngine: "athas",
-    });
+      externalEditor: "helix",
+    } as never);
 
-    expect(normalized.editorEngine).toBe("monaco");
-    expect(normalizeSettingValue("editorEngine", "athas")).toBe("monaco");
+    expect("editorEngine" in normalized).toBe(false);
+    expect(normalized.externalEditor).toBe("helix");
   });
 
   it("normalizes unsupported remembered settings tabs", () => {
@@ -114,7 +96,6 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.coreFeatures.webViewer).toBe(false);
-    expect(normalized.coreFeatures.athasEditorEngine).toBe(false);
   });
 
   it("migrates legacy icon theme aliases", () => {
@@ -131,14 +112,16 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("athas-icons");
   });
 
-  it("does not migrate legacy external editor settings into editor engine", () => {
+  it("drops the legacy Athas editor feature flag", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
-      editorEngine: "monaco",
-      externalEditor: "helix",
-    });
+      coreFeatures: {
+        ...getDefaultSettingsSnapshot().coreFeatures,
+        athasEditorEngine: true,
+      },
+    } as never);
 
-    expect(normalized.editorEngine).toBe("monaco");
+    expect("athasEditorEngine" in normalized.coreFeatures).toBe(false);
   });
 
   it("removes legacy worktrees from git sidebar settings", () => {

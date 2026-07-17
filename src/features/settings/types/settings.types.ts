@@ -10,7 +10,6 @@ import type {
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
-export type EditorEngine = "monaco" | "athas" | "nvim" | "helix" | "vim" | "custom";
 export type SettingsSection =
   | "account"
   | "general"
@@ -31,7 +30,6 @@ export interface Settings {
   quickOpenPreview: boolean;
   // Editor
   fontFamily: string;
-  editorEngine: EditorEngine;
   fontSize: number;
   editorLineHeight: number;
   tabSize: number;

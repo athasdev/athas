@@ -26,7 +26,6 @@ export const defaultSettings: Settings = {
   quickOpenPreview: true,
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
-  editorEngine: "monaco",
   fontSize: DEFAULT_CODE_FONT_SIZE,
   editorLineHeight: 1.4,
   tabSize: 2,
@@ -122,7 +121,6 @@ export const defaultSettings: Settings = {
     breadcrumbs: true,
     persistentCommands: true,
     webViewer: false,
-    athasEditorEngine: false,
   },
   // Advanced
   enterpriseManagedMode: false,

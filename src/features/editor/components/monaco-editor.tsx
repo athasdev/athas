@@ -47,10 +47,7 @@ import { fileOpenBenchmark } from "../utils/file-open-benchmark";
 import { getLanguageIdFromPath } from "../utils/language-id";
 import { toggleCaseText } from "../utils/text-operations";
 import { editorAPI } from "../extensions/api";
-import type {
-  EditorCoordinateResolver,
-  EditorModelPositionResolver,
-} from "../view-model/view-layout";
+import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { syncContainedEditorFontOptions } from "../engines/monaco/contained-editors";
 import {
   consumeLocalContentSnapshot,
@@ -71,7 +68,7 @@ import {
 } from "../engines/monaco/position";
 import { defineActiveMonacoTheme, defineMonacoTheme } from "../engines/monaco/theme";
 import { useMonacoEditorSettings } from "../engines/monaco/use-monaco-editor-settings";
-import { registerAthasVimCommands, toAthasVimMode } from "../engines/monaco/vim-commands";
+import { registerMonacoVimCommands, toEditorVimMode } from "../engines/monaco/vim-commands";
 import { registerMonacoLspProviders } from "../engines/monaco/lsp-providers";
 
 registerMonacoLspProviders();
@@ -97,9 +94,7 @@ interface MonacoEditorProps {
     previousCursorPosition?: Position,
     previousSelection?: Range,
   ) => void;
-  onVisibleLineRangeChange?: (range: { startLine: number; endLine: number }) => void;
   onScrollOffsetChange?: (scrollTop: number, scrollLeft: number) => void;
-  onCoordinateResolverChange?: (resolver: EditorCoordinateResolver | null) => void;
   onModelPositionResolverChange?: (resolver: EditorModelPositionResolver | null) => void;
   onMouseMove?: MouseEventHandler<HTMLDivElement>;
   onMouseLeave?: () => void;
@@ -122,9 +117,7 @@ export function MonacoEditor({
   lineNumberStart,
   lineNumberMap,
   onContentChange,
-  onVisibleLineRangeChange,
   onScrollOffsetChange,
-  onCoordinateResolverChange,
   onModelPositionResolverChange,
   onMouseMove,
   onMouseLeave,
@@ -204,21 +197,6 @@ export function MonacoEditor({
       return String((lineNumberStart ?? 1) + lineNumber - 1);
     },
     [lineNumberMap, lineNumberStart, vimModeEnabled, vimRelativeLineNumbers],
-  );
-
-  const updateVisibleLineRange = useCallback(
-    (editor: Monaco.editor.IStandaloneCodeEditor) => {
-      const visibleRanges = editor.getVisibleRanges();
-      const firstRange = visibleRanges[0];
-      const lastRange = visibleRanges[visibleRanges.length - 1] ?? firstRange;
-      if (!firstRange || !lastRange) return;
-
-      onVisibleLineRangeChange?.({
-        startLine: Math.max(0, firstRange.startLineNumber - 1 - 30),
-        endLine: Math.max(0, lastRange.endLineNumber - 1 + 30),
-      });
-    },
-    [onVisibleLineRangeChange],
   );
 
   const syncCursorAndSelection = useCallback(() => {
@@ -700,13 +678,11 @@ export function MonacoEditor({
         setScrollForBuffer(viewKey, event.scrollTop, event.scrollLeft);
         onScrollOffsetChange?.(event.scrollTop, event.scrollLeft);
         scheduleMonacoHoverClamp();
-        updateVisibleLineRange(editor);
       }),
       editor.onDidLayoutChange((info) => {
         setViewportHeight(info.height);
         syncBottomScrollPadding(info.height);
         scheduleMonacoHoverClamp();
-        updateVisibleLineRange(editor);
       }),
       editor.onMouseMove(scheduleMonacoHoverClamp),
     ];
@@ -736,14 +712,12 @@ export function MonacoEditor({
       }
     });
 
-    updateVisibleLineRange(editor);
     return () => {
       if (benchmarkRafId !== null) cancelAnimationFrame(benchmarkRafId);
       if (benchmarkTimeoutId !== null) window.clearTimeout(benchmarkTimeoutId);
       if (filePath && fileOpenBenchmark.has(filePath)) {
         fileOpenBenchmark.cancel(filePath, "editor-unmounted-before-ready");
       }
-      onCoordinateResolverChange?.(null);
       onModelPositionResolverChange?.(null);
       unsubscribeCursor();
       unsubscribeSelection();
@@ -790,7 +764,6 @@ export function MonacoEditor({
     syncCursorAndSelection,
     tabSize,
     themeId,
-    updateVisibleLineRange,
     viewStateKey,
     wordWrap,
   ]);
@@ -1022,6 +995,21 @@ export function MonacoEditor({
   }, [isActiveSurface, isPreviewMode, readOnly]);
 
   useEffect(() => {
+    if (!isActiveSurface) return;
+
+    const handleShowHover = () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      editor.focus();
+      editor.trigger("athas", "editor.action.showHover", {});
+    };
+
+    window.addEventListener("editor-show-hover", handleShowHover);
+    return () => window.removeEventListener("editor-show-hover", handleShowHover);
+  }, [isActiveSurface]);
+
+  useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
 
@@ -1128,7 +1116,7 @@ export function MonacoEditor({
       return;
     }
 
-    registerAthasVimCommands();
+    registerMonacoVimCommands();
 
     const statusNode = document.createElement("div");
     statusNode.className = "monaco-vim-statusbar";
@@ -1137,7 +1125,7 @@ export function MonacoEditor({
 
     const adapter = initVimMode(editor, statusNode);
     adapter.on("vim-mode-change", (event: { mode: string }) => {
-      setMode(toAthasVimMode(event.mode));
+      setMode(toEditorVimMode(event.mode));
     });
     adapter.on("dispose", () => {
       useVimStore.getState().actions.setMode("normal");
@@ -1227,36 +1215,9 @@ export function MonacoEditor({
     const editor = editorRef.current;
     const model = modelRef.current;
     if (!editor || !model) {
-      onCoordinateResolverChange?.(null);
       onModelPositionResolverChange?.(null);
       return;
     }
-
-    onCoordinateResolverChange?.((clientX, clientY) => {
-      if (model.isDisposed()) return null;
-      const target = editor.getTargetAtClientPoint(clientX, clientY);
-      const position = target?.position;
-      if (!position) return null;
-      const editorPosition = toEditorPosition(model, position);
-      const top = editor.getTopForLineNumber(position.lineNumber);
-      const left = editor.getOffsetForColumn(position.lineNumber, position.column);
-      return {
-        ...editorPosition,
-        viewLine: position.lineNumber - 1,
-        modelLine: editorPosition.line,
-        top,
-        left,
-        height: lineHeight,
-        segment: {
-          viewLine: position.lineNumber - 1,
-          modelLine: editorPosition.line,
-          startColumn: 0,
-          endColumn: model.getLineLength(position.lineNumber),
-          top,
-          height: lineHeight,
-        },
-      };
-    });
 
     onModelPositionResolverChange?.((line, column) => {
       if (model.isDisposed()) return null;
@@ -1299,10 +1260,9 @@ export function MonacoEditor({
     });
 
     return () => {
-      onCoordinateResolverChange?.(null);
       onModelPositionResolverChange?.(null);
     };
-  }, [lineHeight, onCoordinateResolverChange, onModelPositionResolverChange]);
+  }, [lineHeight, onModelPositionResolverChange]);
 
   useEffect(() => {
     const editor = editorRef.current;

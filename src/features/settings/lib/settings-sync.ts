@@ -19,7 +19,6 @@ type SyncableSettingsKey =
   | "autoSave"
   | "quickOpenPreview"
   | "fontFamily"
-  | "editorEngine"
   | "fontSize"
   | "editorLineHeight"
   | "tabSize"
@@ -82,6 +81,7 @@ type SyncableSettingsKey =
   | "lintOnSave"
   | "autoCompletion"
   | "parameterHints"
+  | "externalEditor"
   | "customEditorCommand"
   | "coreFeatures"
   | "extensionsActiveTab"
@@ -111,7 +111,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoSave",
   "quickOpenPreview",
   "fontFamily",
-  "editorEngine",
   "fontSize",
   "editorLineHeight",
   "tabSize",
@@ -174,6 +173,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "lintOnSave",
   "autoCompletion",
   "parameterHints",
+  "externalEditor",
   "customEditorCommand",
   "coreFeatures",
   "extensionsActiveTab",

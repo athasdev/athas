@@ -70,7 +70,7 @@ export const ExternalEditorTerminal = ({
 
   const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const editorEngine = useSettingsStore((state) => state.settings.editorEngine);
+  const externalEditor = useSettingsStore((state) => state.settings.externalEditor);
   const customEditorCommand = useSettingsStore((state) => state.settings.customEditorCommand);
   const theme = useSettingsStore((state) => state.settings.theme);
   const { getTerminalTheme } = useTerminalTheme();
@@ -131,7 +131,7 @@ export const ExternalEditorTerminal = ({
     (path: string): string => {
       const relativePath = rootFolderPath ? path.replace(rootFolderPath, ".") : path;
 
-      switch (editorEngine) {
+      switch (externalEditor) {
         case "nvim":
           return `nvim "${relativePath}"`;
         case "helix":
@@ -144,7 +144,7 @@ export const ExternalEditorTerminal = ({
           return `nvim "${relativePath}"`;
       }
     },
-    [editorEngine, customEditorCommand, rootFolderPath],
+    [externalEditor, customEditorCommand, rootFolderPath],
   );
 
   const initializeTerminal = useCallback(() => {

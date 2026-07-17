@@ -1,12 +1,12 @@
 import { VimMode } from "monaco-vim";
 import { parseAndExecuteVimCommand, vimCommands } from "@/features/vim/stores/vim-commands";
-import type { VimMode as AthasVimMode } from "@/features/vim/stores/vim.store";
+import type { VimMode as EditorVimMode } from "@/features/vim/stores/vim.store";
 
-let athasVimCommandsRegistered = false;
+let monacoVimCommandsRegistered = false;
 
-export function registerAthasVimCommands(): void {
-  if (athasVimCommandsRegistered) return;
-  athasVimCommandsRegistered = true;
+export function registerMonacoVimCommands(): void {
+  if (monacoVimCommandsRegistered) return;
+  monacoVimCommandsRegistered = true;
 
   const vimApi = (
     VimMode as unknown as {
@@ -40,7 +40,7 @@ export function registerAthasVimCommands(): void {
   }
 }
 
-export function toAthasVimMode(mode: string): AthasVimMode {
+export function toEditorVimMode(mode: string): EditorVimMode {
   if (mode === "insert") return "insert";
   if (mode === "visual") return "visual";
   return "normal";

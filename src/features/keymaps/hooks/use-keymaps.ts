@@ -30,7 +30,6 @@ const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
 const closeWindowShortcut = parseKeybinding("cmd+shift+w").parts[0];
 const INPUT_ALLOWED_COMMANDS = new Set(["file.quickOpen", "workbench.commandPalette"]);
-const EDITOR_TEXTAREA_LOCAL_COMMANDS = new Set(["editor.undo", "editor.redo", "file.save"]);
 
 function isCloseTabShortcut(event: KeyboardEvent) {
   return keysMatch(eventToKey(event), closeTabShortcut);
@@ -176,7 +175,6 @@ export function useKeymaps() {
 
       // Skip if target is an input (except our editor textarea or terminal)
       const isEditorTextarea = isEditorTarget;
-      const isAthasEditorTextarea = target?.classList.contains("editor-textarea") ?? false;
       const isTerminalTextarea = target?.classList.contains("xterm-helper-textarea") ?? false;
       if (isTerminalTextarea && isTerminalAltTextInput(e)) {
         return;
@@ -218,10 +216,6 @@ export function useKeymaps() {
         const matchResult = matchKeybinding(e, keybinding.key, chordState);
 
         if (matchResult.matched) {
-          if (isAthasEditorTextarea && EDITOR_TEXTAREA_LOCAL_COMMANDS.has(keybinding.command)) {
-            return;
-          }
-
           // Full match - execute command
           e.preventDefault();
           e.stopPropagation();

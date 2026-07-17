@@ -787,15 +787,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Open URLs in embedded editor tabs",
     keywords: ["web", "viewer", "browser", "url", "embedded", "experimental"],
   },
-  {
-    id: "features-athas-editor-engine",
-    tab: "advanced",
-    section: "Features",
-    label: "Athas Editor Engine",
-    description: "Use the experimental Athas editor engine instead of Monaco",
-    keywords: ["athas", "editor", "engine", "monaco", "experimental"],
-  },
-
   // Terminal Settings
   {
     id: "terminal-default-shell",

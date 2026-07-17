@@ -1,31 +1,10 @@
-import type { CompletionItem } from "vscode-languageserver-protocol";
 import { create } from "zustand";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import type { FilteredCompletion } from "@/utils/fuzzy-matcher";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { replaceAllSearchMatches, replaceSearchMatch } from "../utils/search-replace";
 import { getBufferById } from "../utils/buffer-index";
-
-// Types
-type HoverInfo = {
-  content: string;
-  position: { top: number; left: number };
-  bounds?: { top: number; right: number; bottom: number; left: number };
-  opensUpward?: boolean;
-};
-
-type CompletionPosition = {
-  top: number;
-  left: number;
-};
-
-type AutocompleteCompletion = {
-  text: string;
-  cursorOffset: number;
-};
 
 type SearchMatch = {
   start: number;
@@ -37,12 +16,6 @@ type SearchOptions = {
   wholeWord: boolean;
   useRegex: boolean;
   preserveCase: boolean;
-};
-
-type DefinitionLinkRange = {
-  line: number;
-  startColumn: number;
-  endColumn: number;
 };
 
 function getActiveTextContent(): string {
@@ -67,20 +40,6 @@ function areSearchMatchesEqual(a: SearchMatch[], b: SearchMatch[]): boolean {
 }
 
 interface EditorUIState {
-  // Completion state
-  lspCompletions: CompletionItem[];
-  filteredCompletions: FilteredCompletion[];
-  currentPrefix: string;
-  selectedLspIndex: number;
-  isLspCompletionVisible: boolean;
-  completionPosition: CompletionPosition;
-  hoverInfo: HoverInfo | null;
-  isHovering: boolean;
-  isApplyingCompletion: boolean;
-  aiCompletion: boolean;
-  autocompleteCompletion: AutocompleteCompletion | null;
-  lastInputTimestamp: number;
-
   // Search state
   searchQuery: string;
   searchMatches: SearchMatch[];
@@ -91,29 +50,11 @@ interface EditorUIState {
   isReplaceVisible: boolean;
   searchOptions: SearchOptions;
 
-  // Definition link state (for Cmd+hover highlighting)
-  definitionLinkRange: DefinitionLinkRange | null;
-
   // Actions
   actions: EditorUIActions;
 }
 
 interface EditorUIActions {
-  // Completion actions
-  setLspCompletions: (completions: CompletionItem[]) => void;
-  setFilteredCompletions: (completions: FilteredCompletion[]) => void;
-  setCurrentPrefix: (prefix: string) => void;
-  setSelectedLspIndex: (index: number) => void;
-  setIsLspCompletionVisible: (visible: boolean) => void;
-  setCompletionPosition: (position: CompletionPosition) => void;
-  setHoverInfo: (info: HoverInfo | null) => void;
-  setIsHovering: (hovering: boolean) => void;
-  setIsApplyingCompletion: (applying: boolean) => void;
-  setAiCompletion: (enabled: boolean) => void;
-  setAutocompleteCompletion: (completion: AutocompleteCompletion | null) => void;
-  setLastInputTimestamp: (timestamp: number) => void;
-  clearTypingTransientState: () => void;
-
   // Search actions
   setSearchQuery: (query: string) => void;
   setSearchMatches: (matches: SearchMatch[]) => void;
@@ -133,29 +74,12 @@ interface EditorUIActions {
   replaceNext: () => void;
   replaceAll: () => void;
 
-  // Definition link actions
-  setDefinitionLinkRange: (range: DefinitionLinkRange | null) => void;
-
   // Buffer switch reset
   resetOnBufferSwitch: () => void;
 }
 
 export const useEditorUIStore = createSelectors(
   create<EditorUIState>()((set, get) => ({
-    // Completion state
-    lspCompletions: [],
-    filteredCompletions: [],
-    currentPrefix: "",
-    selectedLspIndex: 0,
-    isLspCompletionVisible: false,
-    completionPosition: { top: 0, left: 0 },
-    hoverInfo: null,
-    isHovering: false,
-    isApplyingCompletion: false,
-    aiCompletion: false,
-    autocompleteCompletion: null,
-    lastInputTimestamp: 0,
-
     // Search state
     searchQuery: "",
     searchMatches: [],
@@ -171,98 +95,8 @@ export const useEditorUIStore = createSelectors(
       preserveCase: false,
     },
 
-    // Definition link state
-    definitionLinkRange: null,
-
     // Actions
     actions: {
-      // Completion actions
-      setLspCompletions: (completions) => {
-        if (get().lspCompletions !== completions) {
-          set({ lspCompletions: completions });
-        }
-      },
-      setFilteredCompletions: (completions) => {
-        if (get().filteredCompletions !== completions) {
-          set({ filteredCompletions: completions });
-        }
-      },
-      setCurrentPrefix: (prefix) => {
-        if (get().currentPrefix !== prefix) {
-          set({ currentPrefix: prefix });
-        }
-      },
-      setSelectedLspIndex: (index) => {
-        if (get().selectedLspIndex !== index) {
-          set({ selectedLspIndex: index });
-        }
-      },
-      setIsLspCompletionVisible: (visible) => {
-        if (get().isLspCompletionVisible !== visible) {
-          set({ isLspCompletionVisible: visible });
-        }
-      },
-      setCompletionPosition: (position) => {
-        const current = get().completionPosition;
-        if (current.top !== position.top || current.left !== position.left) {
-          set({ completionPosition: position });
-        }
-      },
-      setHoverInfo: (info) => {
-        if (get().hoverInfo !== info) {
-          set({ hoverInfo: info });
-        }
-      },
-      setIsHovering: (hovering) => {
-        if (get().isHovering !== hovering) {
-          set({ isHovering: hovering });
-        }
-      },
-      setIsApplyingCompletion: (applying) => {
-        if (get().isApplyingCompletion !== applying) {
-          set({ isApplyingCompletion: applying });
-        }
-      },
-      setAiCompletion: (enabled) => {
-        if (get().aiCompletion !== enabled) {
-          set({ aiCompletion: enabled });
-        }
-      },
-      setAutocompleteCompletion: (completion) => {
-        const current = get().autocompleteCompletion;
-        if (
-          current === completion ||
-          (current &&
-            completion &&
-            current.text === completion.text &&
-            current.cursorOffset === completion.cursorOffset)
-        ) {
-          return;
-        }
-        set({ autocompleteCompletion: completion });
-      },
-      setLastInputTimestamp: (timestamp) => {
-        if (get().lastInputTimestamp !== timestamp) {
-          set({ lastInputTimestamp: timestamp });
-        }
-      },
-      clearTypingTransientState: () => {
-        const state = get();
-        if (
-          state.hoverInfo === null &&
-          !state.isHovering &&
-          state.autocompleteCompletion === null
-        ) {
-          return;
-        }
-
-        set({
-          hoverInfo: null,
-          isHovering: false,
-          autocompleteCompletion: null,
-        });
-      },
-
       // Search actions
       setSearchQuery: (query) => {
         if (get().searchQuery !== query) {
@@ -415,33 +249,13 @@ export const useEditorUIStore = createSelectors(
         });
       },
 
-      // Definition link actions
-      setDefinitionLinkRange: (range) => set({ definitionLinkRange: range }),
-
       // Buffer switch reset
       resetOnBufferSwitch: () =>
         set({
-          lspCompletions: [],
-          filteredCompletions: [],
-          currentPrefix: "",
-          selectedLspIndex: 0,
-          isLspCompletionVisible: false,
-          completionPosition: { top: 0, left: 0 },
-          hoverInfo: null,
-          isHovering: false,
-          isApplyingCompletion: false,
-          autocompleteCompletion: null,
           searchMatches: [],
           searchResultsLimited: false,
           currentMatchIndex: -1,
-          definitionLinkRange: null,
         }),
     },
   })),
 );
-
-// Subscribe to settings store and sync AI completion setting
-useSettingsStore.subscribe((state) => {
-  const { aiCompletion } = state.settings;
-  useEditorUIStore.getState().actions.setAiCompletion(aiCompletion);
-});

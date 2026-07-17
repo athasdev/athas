@@ -9,6 +9,7 @@ import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git.types";
@@ -378,10 +379,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const handlePaneMouseDownCapture = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
-      const isEditorTextarea = target.classList.contains("editor-textarea");
+      const isEditorTarget = isEditorKeyboardTarget(target);
       const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
       if (
-        !isEditorTextarea &&
+        !isEditorTarget &&
         !isTerminalTextarea &&
         target.closest("button, input, textarea, [role='button'], [role='menu']")
       ) {

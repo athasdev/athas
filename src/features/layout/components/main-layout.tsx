@@ -15,7 +15,6 @@ import { SplitViewRoot } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useVimKeyboard } from "@/features/vim/hooks/use-vim-keyboard";
 import { useVimStore } from "@/features/vim/stores/vim.store";
 import { isWslPath } from "@/features/wsl/utils/wsl-path";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
@@ -56,12 +55,6 @@ const ExtensionGenerationCommand = lazy(() =>
   })),
 );
 const QuickOpen = lazy(() => import("@/features/quick-open/components/quick-open"));
-const VimCommandBar = lazy(() => import("@/features/vim/components/vim-command-bar"));
-const VimSearchBar = lazy(() =>
-  import("@/features/vim/components/vim-search-bar").then((module) => ({
-    default: module.VimSearchBar,
-  })),
-);
 const WindowCloseGuard = lazy(() =>
   import("@/features/window/components/window-close-guard").then((module) => ({
     default: module.WindowCloseGuard,
@@ -173,22 +166,6 @@ export function MainLayout() {
 
   // Initialize event listeners
   useMenuEventsWrapper();
-
-  // Initialize vim mode handling
-  useVimKeyboard({
-    onSave: () => {
-      // Dispatch the same save event that existing keyboard shortcuts use
-      window.dispatchEvent(new CustomEvent("menu-save"));
-    },
-    onGoToLine: (line: number) => {
-      // Dispatch go to line event
-      window.dispatchEvent(
-        new CustomEvent("menu-go-to-line", {
-          detail: { line },
-        }),
-      );
-    },
-  });
 
   // Restore workspace on app startup
   useEffect(() => {
@@ -362,8 +339,6 @@ export function MainLayout() {
       {deferredSurfacesReady ? (
         <Suspense fallback={null}>
           <QuickOpen />
-          <VimCommandBar />
-          <VimSearchBar />
           <CommandPalette />
           <ExtensionGenerationCommand />
           <AgentLauncher />

@@ -1,8 +1,4 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  getLanguageDisplayName as getAthasEditorLanguageDisplayName,
-  getLanguageIdFromPath as getAthasEditorLanguageIdFromPath,
-} from "@/features/editor/utils/language-id";
 import { detectLanguageFromFileName } from "../utils/language-detection";
 import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
 import { isMarkdownFile as isEditorMarkdownFile } from "../utils/lines";
@@ -109,24 +105,6 @@ describe("toMonacoLanguageId", () => {
         `${athasLanguageId} maps to ${monacoLanguageId}`,
       ).toBe(true);
     }
-  });
-});
-
-describe("Athas editor language detection", () => {
-  it("keeps dotfile syntax mappings aligned with the shared editor surface", () => {
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.gitignore")).toBe("gitignore");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/exploration.ipy")).toBe("python");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/analysis.R")).toBe("r");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/report.Rmd")).toBe("rmarkdown");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/notebook.ipynb")).toBe("jupyter-notebook");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.dockerignore")).toBe("gitignore");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.gitattributes")).toBe("gitattributes");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.git/info/exclude")).toBe("gitignore");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.git/info/attributes")).toBe("gitattributes");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/bun.lock")).toBe("lockfile");
-    expect(getAthasEditorLanguageDisplayName("gitattributes")).toBe("Git Attributes");
-    expect(getAthasEditorLanguageDisplayName("lockfile")).toBe("Lockfile");
-    expect(getAthasEditorLanguageDisplayName("rmarkdown")).toBe("R Markdown");
   });
 });
 

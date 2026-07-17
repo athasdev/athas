@@ -1454,13 +1454,10 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
           // Check if external editor is enabled for text files
           const { settings } = useSettingsStore.getState();
           const { openExternalEditorBuffer } = useBufferStore.getState().actions;
-          const externalEditorEngines = new Set(["nvim", "helix", "vim", "custom"]);
-          const usesExternalEditor = externalEditorEngines.has(settings.editorEngine);
-
           const hasExternalEditorCommand =
-            settings.editorEngine !== "custom" || settings.customEditorCommand.trim().length > 0;
+            settings.externalEditor !== "custom" || settings.customEditorCommand.trim().length > 0;
 
-          if (usesExternalEditor && hasExternalEditorCommand && !wslInfo) {
+          if (settings.externalEditor !== "none" && hasExternalEditorCommand && !wslInfo) {
             if (isStaleRequest()) return;
             try {
               const { rootFolderPath } = get();
