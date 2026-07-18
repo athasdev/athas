@@ -22,10 +22,6 @@ html[data-window-resize-dragging] * {
   -moz-user-select: none !important;
 }
 
-.tab-drag-preview {
-  box-shadow: var(--shadow-drag);
-}
-
 .ui-text-sm {
   font-size: var(--ui-text-sm);
 }

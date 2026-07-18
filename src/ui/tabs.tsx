@@ -1,19 +1,172 @@
-import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  MeasuringStrategy,
+  PointerSensor,
+  closestCenter,
+  pointerWithin,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DndContextProps,
+  type DragEndEvent,
+  type DragStartEvent,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
-import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  arrayMove,
+  defaultAnimateLayoutChanges,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { cva } from "class-variance-authority";
 import type {
   HTMLAttributes,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   ReactNode,
+  RefCallback,
 } from "react";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 import { chromeControlVariants, type ChromeControlVariant } from "@/ui/chrome-control";
-import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import "./tabs.css";
+
+const tabCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0 ? pointerCollisions : closestCenter(args);
+};
+
+export type TabDndContextProps = Omit<
+  DndContextProps,
+  "collisionDetection" | "measuring" | "sensors"
+>;
+
+export function TabDndContext(props: TabDndContextProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+  );
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={tabCollisionDetection}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      {...props}
+    />
+  );
+}
+
+interface SortableTabRenderState {
+  isDragging: boolean;
+}
+
+export interface SortableTabProps extends Omit<HTMLAttributes<HTMLDivElement>, "children" | "id"> {
+  id: UniqueIdentifier;
+  orientation?: "horizontal" | "vertical";
+  disabled?: boolean;
+  tabRef?: RefCallback<HTMLDivElement>;
+  children: (state: SortableTabRenderState) => ReactNode;
+}
+
+export function SortableTab({
+  id,
+  orientation = "horizontal",
+  disabled = false,
+  tabRef,
+  className,
+  style,
+  children,
+  ...props
+}: SortableTabProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled,
+    animateLayoutChanges: (args) => defaultAnimateLayoutChanges(args) || args.wasDragging,
+    transition: {
+      duration: 180,
+      easing: "var(--app-ease-smooth)",
+    },
+  });
+
+  return (
+    <div
+      ref={(element) => {
+        setNodeRef(element);
+        tabRef?.(element);
+      }}
+      data-slot="sortable-tab"
+      data-dragging={isDragging}
+      style={{
+        ...style,
+        transform: CSS.Translate.toString(transform),
+        transition,
+      }}
+      className={cn(
+        "relative flex min-w-0 items-stretch will-change-transform",
+        orientation === "vertical" ? "w-full" : "shrink-0",
+        !disabled && "cursor-grab touch-none active:cursor-grabbing",
+        isDragging && "z-10",
+        className,
+      )}
+      {...attributes}
+      {...listeners}
+      {...props}
+    >
+      {children({ isDragging })}
+    </div>
+  );
+}
+
+export function useTabDragClickGuard() {
+  const suppressedIdRef = useRef<string | null>(null);
+  const clearFrameRef = useRef<number | null>(null);
+
+  const cancelScheduledClear = useCallback(() => {
+    if (clearFrameRef.current !== null) {
+      cancelAnimationFrame(clearFrameRef.current);
+      clearFrameRef.current = null;
+    }
+  }, []);
+
+  const suppressNextClick = useCallback(
+    (id: UniqueIdentifier) => {
+      cancelScheduledClear();
+      suppressedIdRef.current = String(id);
+    },
+    [cancelScheduledClear],
+  );
+
+  const releaseClickSuppression = useCallback(() => {
+    cancelScheduledClear();
+    clearFrameRef.current = requestAnimationFrame(() => {
+      suppressedIdRef.current = null;
+      clearFrameRef.current = null;
+    });
+  }, [cancelScheduledClear]);
+
+  const getClickCapture = useCallback(
+    (id: UniqueIdentifier) => (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (suppressedIdRef.current !== String(id)) return;
+
+      cancelScheduledClear();
+      suppressedIdRef.current = null;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    [cancelScheduledClear],
+  );
+
+  useEffect(() => cancelScheduledClear, [cancelScheduledClear]);
+
+  return { getClickCapture, releaseClickSuppression, suppressNextClick };
+}
 
 export type TabSize = "xs" | "sm" | "md";
 export type TabVariant = "default" | "pill" | "segmented" | "connected";
@@ -104,7 +257,7 @@ const tabVariants = cva(
         default: "rounded-md",
         pill: "rounded-full border-0",
         segmented: "size-full rounded-none border-0",
-        connected: "ui-connected-tab isolate mx-1 rounded-lg border-0 active:scale-100",
+        connected: "isolate mx-1 rounded-lg border-0 active:scale-100",
       },
       active: {
         true: "",
@@ -182,6 +335,36 @@ const tabVariants = cva(
   },
 );
 
+function ConnectedTabShoulders() {
+  const size = "var(--tab-shoulder-size)";
+
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-0 z-[-1]"
+        style={{
+          left: `calc(${size} * -1)`,
+          width: size,
+          height: size,
+          borderBottomRightRadius: size,
+          boxShadow: `calc(${size} / 2) calc(${size} / 2) 0 calc(${size} / 2) var(--tab-active-bg)`,
+        }}
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute right-[calc(var(--tab-shoulder-size)*-1)] bottom-0 z-[-1]"
+        style={{
+          width: size,
+          height: size,
+          borderBottomLeftRadius: size,
+          boxShadow: `calc(${size} / -2) calc(${size} / 2) 0 calc(${size} / 2) var(--tab-active-bg)`,
+        }}
+      />
+    </>
+  );
+}
+
 const tabsListVariants = cva("flex rounded-lg bg-secondary-bg/55", {
   variants: {
     variant: {
@@ -252,6 +435,7 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
       style={{ ...(maxWidth == null ? {} : { maxWidth }), ...style }}
       {...props}
     >
+      {variant === "connected" && isActive ? <ConnectedTabShoulders /> : null}
       <div
         className={cn(
           "flex min-w-0 flex-1 items-center",

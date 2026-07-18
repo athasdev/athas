@@ -41,8 +41,7 @@ import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
-import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
-import { TabBarSurface } from "@/ui/tabs";
+import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 import {
   clearInternalTabDragData,
