@@ -140,3 +140,9 @@ html[data-window-transparency="disabled"] .athas-layout-shell,
 html[data-window-transparency="disabled"] .athas-resizable-pane {
   background: var(--color-secondary-bg) !important;
 }
+
+html.platform-windows [data-slot="menubar-content"],
+html.platform-windows [data-slot="menubar-sub-content"],
+html.platform-windows [data-slot="combobox-content"] {
+  will-change: opacity, transform, filter;
+}
