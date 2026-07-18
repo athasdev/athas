@@ -288,6 +288,7 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const renameCancelledRef = useRef(false);
   const [olderAgentsMenu, setOlderAgentsMenu] = useState({
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -331,11 +332,16 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   }, [renamingChatId]);
 
   const startRenamingChat = useCallback((chat: Chat) => {
+    renameCancelledRef.current = false;
     setRenamingChatId(chat.id);
     setRenameValue(chat.title);
   }, []);
 
   const finishRenamingChat = useCallback(() => {
+    if (renameCancelledRef.current) {
+      renameCancelledRef.current = false;
+      return;
+    }
     if (!renamingChatId) return;
 
     const chat = chats.find((candidate) => candidate.id === renamingChatId);
@@ -347,6 +353,7 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   }, [chats, renameValue, renamingChatId, updateChatTitle]);
 
   const cancelRenamingChat = useCallback(() => {
+    renameCancelledRef.current = true;
     setRenamingChatId(null);
     setRenameValue("");
   }, []);
