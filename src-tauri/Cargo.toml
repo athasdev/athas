@@ -1,6 +1,6 @@
 [package]
 name = "athas"
-version = "0.9.0"
+version = "0.9.1-preview.4"
 description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
