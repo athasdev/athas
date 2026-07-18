@@ -1,7 +1,7 @@
 import { Menu, Menubar as BaseMenubar } from "@base-ui/react";
 import { CaretRightIcon } from "@/ui/icons";
 import { createContext, useContext, useMemo, type ComponentProps } from "react";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { cn } from "@/utils/cn";
 
 interface MenubarContextValue {

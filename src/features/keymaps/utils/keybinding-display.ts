@@ -1,5 +1,5 @@
 import { IS_MAC } from "@/utils/platform";
-import { parseKeybinding } from "@/features/keymaps/utils/parser";
+import { parseKeybinding } from "./parser";
 
 function formatModifier(modifier: string) {
   if (modifier === "cmd" && IS_MAC) return "⌘";

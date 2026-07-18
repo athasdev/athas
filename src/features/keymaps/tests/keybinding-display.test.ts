@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { keybindingToDisplay, keybindingToDisplayParts } from "@/utils/keybinding-display";
+import { keybindingToDisplay, keybindingToDisplayParts } from "../utils/keybinding-display";
 import { IS_MAC } from "@/utils/platform";
 
 describe("keybinding display", () => {

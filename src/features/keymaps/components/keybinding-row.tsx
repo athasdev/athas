@@ -3,7 +3,7 @@ import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import KeybindingDisplay from "@/ui/keybinding";
+import KeybindingDisplay from "./keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
 import { useKeymapStore } from "../stores/keymaps.store";

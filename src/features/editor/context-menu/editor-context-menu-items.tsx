@@ -18,7 +18,7 @@ import {
   TextTIcon as Type,
 } from "@/ui/icons";
 import type { MenuItem } from "@/ui/dropdown";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 
 export interface EditorContextMenuHandlers {
   onCopy?: () => void;

@@ -9,7 +9,7 @@ import {
 } from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TerminalTabContextMenuProps {

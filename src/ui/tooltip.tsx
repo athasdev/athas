@@ -1,7 +1,7 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import type React from "react";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { cn } from "@/utils/cn";
 
 interface TooltipProps {

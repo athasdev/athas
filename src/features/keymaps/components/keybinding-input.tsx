@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Button } from "@/ui/button";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "./keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingRecorder } from "../hooks/use-keybinding-recorder";
 

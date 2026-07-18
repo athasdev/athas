@@ -41,7 +41,7 @@ import Command, {
   CommandList,
   useCommandListNavigation,
 } from "@/ui/command";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { createAdvancedActions } from "../constants/advanced-actions";
 import { createDatabaseActions } from "../constants/database-actions";

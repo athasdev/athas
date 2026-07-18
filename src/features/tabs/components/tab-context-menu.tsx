@@ -26,7 +26,7 @@ import type { MenuItem } from "@/ui/dropdown";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TabContextMenuProps {

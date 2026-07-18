@@ -36,7 +36,7 @@ import {
   ComboboxList,
 } from "@/ui/combobox";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
-import Keybinding from "@/ui/keybinding";
+import Keybinding from "@/features/keymaps/components/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
