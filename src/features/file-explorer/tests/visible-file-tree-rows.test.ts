@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vite-plus/test";
 import {
   buildVisibleFileTreeRows,
-  filterFileTreeForSearch,
+  collectFileTreeSearchHits,
+  filterFileTreeEntries,
+  filterFileTreeForFffHits,
   getGuideAncestorRows,
-  getStickyAncestorRow,
-  getStickyAncestorRows,
 } from "../lib/visible-file-tree-rows";
 
 const tree = [
@@ -101,6 +101,32 @@ describe("buildVisibleFileTreeRows", () => {
     expect(rows.map((row) => row.depth)).toEqual([0]);
   });
 
+  test("hides a matching single project root folder", () => {
+    const rows = buildVisibleFileTreeRows(tree, new Set(), { hiddenRootPath: "/root" });
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root/src"]);
+    expect(rows.map((row) => row.depth)).toEqual([0]);
+  });
+
+  test("does not hide roots in a multi-root tree", () => {
+    const rows = buildVisibleFileTreeRows(
+      [
+        ...tree,
+        {
+          name: "other",
+          path: "/other",
+          isDir: true,
+          children: [],
+        },
+      ],
+      new Set(),
+      { hiddenRootPath: "/root" },
+    );
+
+    expect(rows.map((row) => row.file.path)).toEqual(["/root", "/other"]);
+    expect(rows.map((row) => row.depth)).toEqual([0, 0]);
+  });
+
   test("stops compacting at the collapsed folder", () => {
     const rows = buildVisibleFileTreeRows(tree, new Set(["/root", "/root/src"]), {
       compactFolders: true,
@@ -109,32 +135,6 @@ describe("buildVisibleFileTreeRows", () => {
     expect(rows.map((row) => row.file.path)).toEqual(["/root/src/features"]);
     expect(rows.map((row) => row.displayName)).toEqual(["root/src/features"]);
     expect(rows.map((row) => row.isExpanded)).toEqual([false]);
-  });
-
-  test("finds the nearest sticky ancestor for a visible descendant", () => {
-    const rows = buildVisibleFileTreeRows(
-      tree,
-      new Set(["/root", "/root/src", "/root/src/features", "/root/src/features/file-explorer"]),
-    );
-
-    expect(getStickyAncestorRow(rows, 4)?.file.path).toBe("/root/src/features/file-explorer");
-    expect(getStickyAncestorRow(rows, 2)?.file.path).toBe("/root/src");
-    expect(getStickyAncestorRow(rows, 0)).toBeNull();
-  });
-
-  test("finds the full sticky ancestor stack for a visible descendant", () => {
-    const rows = buildVisibleFileTreeRows(
-      tree,
-      new Set(["/root", "/root/src", "/root/src/features", "/root/src/features/file-explorer"]),
-    );
-
-    expect(getStickyAncestorRows(rows, 4).map((row) => row.file.path)).toEqual([
-      "/root",
-      "/root/src",
-      "/root/src/features",
-      "/root/src/features/file-explorer",
-    ]);
-    expect(getStickyAncestorRows(rows, 0)).toEqual([]);
   });
 
   test("finds guide ancestors for each visible depth level", () => {
@@ -152,9 +152,72 @@ describe("buildVisibleFileTreeRows", () => {
   });
 });
 
-describe("filterFileTreeForSearch", () => {
+describe("collectFileTreeSearchHits", () => {
+  test("collects matching file-tree paths in display order", () => {
+    expect(collectFileTreeSearchHits(tree, "file-tree", 10)).toEqual([
+      { path: "/root/src/features/file-explorer/file-tree.tsx" },
+    ]);
+  });
+
+  test("limits collected matches", () => {
+    expect(collectFileTreeSearchHits(tree, "src", 1)).toEqual([{ path: "/root/src" }]);
+  });
+});
+
+describe("filterFileTreeEntries", () => {
+  const baseOptions = {
+    isAlwaysHidden: () => false,
+    isGitIgnored: () => false,
+    isHiddenName: () => false,
+    isUserHidden: () => false,
+    showGitignoredFiles: true,
+    showHiddenFiles: true,
+  };
+
+  test("preserves tree references when nothing is filtered or decorated", () => {
+    const result = filterFileTreeEntries(tree, baseOptions);
+
+    expect(result).toBe(tree);
+    expect(result[0]).toBe(tree[0]);
+    expect(result[0]!.children?.[0]).toBe(tree[0]!.children?.[0]);
+  });
+
+  test("only clones branches affected by hidden descendants", () => {
+    const result = filterFileTreeEntries(tree, {
+      ...baseOptions,
+      isHiddenName: (name) => name === "file-tree.tsx",
+      showHiddenFiles: false,
+    });
+
+    expect(result).not.toBe(tree);
+    expect(result[0]).not.toBe(tree[0]);
+    expect(result[0]!.children?.[0]).not.toBe(tree[0]!.children?.[0]);
+    expect(result[0]!.children?.[0].children?.[0].children?.[0].children).toEqual([]);
+  });
+
+  test("decorates ignored entries without cloning unaffected siblings", () => {
+    const sibling = {
+      name: "package.json",
+      path: "/root/package.json",
+      isDir: false,
+    };
+    const files = [{ ...tree[0]!, children: [...(tree[0]!.children ?? []), sibling] }];
+    const result = filterFileTreeEntries(files, {
+      ...baseOptions,
+      isGitIgnored: (path) => path === sibling.path,
+    });
+
+    expect(result[0]).not.toBe(files[0]);
+    expect(result[0]!.children?.[0]).toBe(files[0]!.children?.[0]);
+    expect(result[0]!.children?.[1]).toEqual({ ...sibling, ignored: true, children: undefined });
+  });
+});
+
+describe("filterFileTreeForFffHits", () => {
   test("keeps matching files with their ancestors expanded", () => {
-    const result = filterFileTreeForSearch(tree, "file-tree");
+    const result = filterFileTreeForFffHits(tree, [
+      { path: "/root/src/features/file-explorer/file-tree.tsx" },
+    ]);
     const rows = buildVisibleFileTreeRows(result.files, result.expandedPaths);
 
     expect(rows.map((row) => row.file.path)).toEqual([
@@ -167,22 +230,40 @@ describe("filterFileTreeForSearch", () => {
     expect(Array.from(result.matchedPaths)).toEqual([
       "/root/src/features/file-explorer/file-tree.tsx",
     ]);
+    expect(result.orderedMatchedPaths).toEqual(["/root/src/features/file-explorer/file-tree.tsx"]);
     expect(result.matchCount).toBe(1);
   });
 
-  test("keeps a matching folder without expanding unmatched descendants", () => {
-    const result = filterFileTreeForSearch(tree, "features");
+  test("keeps a matched folder without expanding unmatched descendants", () => {
+    const result = filterFileTreeForFffHits(tree, [{ path: "/root/src/features" }]);
     const rows = buildVisibleFileTreeRows(result.files, result.expandedPaths);
 
     expect(rows.map((row) => row.file.path)).toEqual(["/root", "/root/src", "/root/src/features"]);
     expect(Array.from(result.matchedPaths)).toEqual(["/root/src/features"]);
   });
 
-  test("returns the original tree for an empty query", () => {
-    const result = filterFileTreeForSearch(tree, " ");
+  test("returns an empty tree for empty fff results", () => {
+    const result = filterFileTreeForFffHits(tree, []);
 
-    expect(result.files).toBe(tree);
+    expect(result.files).toEqual([]);
     expect(result.matchCount).toBe(0);
     expect(result.expandedPaths.size).toBe(0);
+  });
+
+  test("synthesizes fff hits missing from the loaded tree", () => {
+    const result = filterFileTreeForFffHits(tree, [{ path: "/root/src/generated/new-file.ts" }], {
+      rootPath: "/root",
+    });
+    const rows = buildVisibleFileTreeRows(result.files, result.expandedPaths);
+
+    expect(rows.map((row) => row.file.path)).toEqual([
+      "/root",
+      "/root/src",
+      "/root/src/generated",
+      "/root/src/generated/new-file.ts",
+    ]);
+    expect(Array.from(result.matchedPaths)).toEqual(["/root/src/generated/new-file.ts"]);
+    expect(result.orderedMatchedPaths).toEqual(["/root/src/generated/new-file.ts"]);
+    expect(result.matchCount).toBe(1);
   });
 });

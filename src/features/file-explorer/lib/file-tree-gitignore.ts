@@ -1,5 +1,5 @@
 import ignore from "ignore";
-import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   getDirName,
   getRelativePath,

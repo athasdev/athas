@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
-import type { CommandPaletteViewId } from "@/features/command-palette/models/view.types";
-import type { SettingsTab } from "./types";
+import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
+import type { SettingsTab } from "./types/ui-state.types";
 
 export interface ModalState {
   isQuickOpenVisible: boolean;
@@ -12,7 +12,7 @@ export interface ModalState {
   isBranchManagerVisible: boolean;
   isProjectPickerVisible: boolean;
   isDatabaseConnectionVisible: boolean;
-  settingsInitialTab: SettingsTab;
+  settingsInitialTab: SettingsTab | null;
 }
 
 export interface ModalActions {
@@ -44,7 +44,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   isBranchManagerVisible: false,
   isProjectPickerVisible: false,
   isDatabaseConnectionVisible: false,
-  settingsInitialTab: "general",
+  settingsInitialTab: null,
 
   // Actions
   hasOpenModal: () => {
@@ -251,7 +251,7 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
   setSettingsInitialTab: (tab: SettingsTab) => set({ settingsInitialTab: tab }),
 
   openSettingsDialog: (tab?: SettingsTab) =>
-    set((state) => ({
+    set({
       isSettingsDialogVisible: true,
       isQuickOpenVisible: false,
       isCommandPaletteVisible: false,
@@ -259,6 +259,6 @@ export const createModalSlice: StateCreator<ModalSlice, [], [], ModalSlice> = (s
       isBranchManagerVisible: false,
       isProjectPickerVisible: false,
       isDatabaseConnectionVisible: false,
-      settingsInitialTab: tab || state.settingsInitialTab,
-    })),
+      settingsInitialTab: tab ?? null,
+    }),
 });

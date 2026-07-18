@@ -1,11 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  CheckCircle as CheckCircle2,
-  Clock,
-  Pulse as Activity,
-  WarningCircle as AlertCircle,
-  XCircle,
-} from "@phosphor-icons/react";
+  CheckCircleIcon as CheckCircle2,
+  ClockIcon as Clock,
+  PulseIcon as Activity,
+  WarningCircleIcon as AlertCircle,
+  XCircleIcon as XCircle,
+} from "@/ui/icons";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import { GitHubSidebarState } from "./github-sidebar-state";
 import {
@@ -17,16 +17,28 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useRepositoryStore } from "@/features/git/stores/git-repository-store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useGitHubStore } from "../stores/github-store";
-import type { WorkflowRunFilter, WorkflowRunListItem } from "../types/github";
-import { GITHUB_ACTION_LIST_TTL_MS, githubActionListCache } from "../utils/github-data-cache";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useGitHubStore } from "../stores/github.store";
+import type {
+  WorkflowRunDetails,
+  WorkflowRunFilter,
+  WorkflowRunListItem,
+} from "../types/github.types";
+import { groupWorkflowRuns } from "../utils/github-sidebar-groups";
+import { getTimeAgo } from "../utils/github-viewer-utils";
+import {
+  GITHUB_ACTION_DETAILS_TTL_MS,
+  GITHUB_ACTION_LIST_TTL_MS,
+  githubActionDetailsCache,
+  githubActionListCache,
+} from "../utils/github-data-cache";
 import { LoadingIndicator } from "@/ui/loading";
-import { SidebarListItem } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
+import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
+import { GitHubSidebarSection } from "./github-sidebar-section";
 
 const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null) => {
   const normalizedStatus = status?.toLowerCase() ?? "";
@@ -122,47 +134,109 @@ interface WorkflowRunRowProps {
   run: WorkflowRunListItem;
   isActive: boolean;
   onSelect: () => void;
+  onPrefetch?: () => void;
   repoPath?: string | null;
 }
 
-const WorkflowRunRow = memo(({ run, isActive, onSelect, repoPath }: WorkflowRunRowProps) => (
-  <SidebarListItem
-    onClick={onSelect}
-    draggable
-    onDragStart={(event) => {
-      const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
-      writeSidebarResourceDragData(event.dataTransfer, {
-        type: "github-action",
-        repoPath: repoPath ?? undefined,
-        runId: run.databaseId,
-        title,
-        url: run.url,
-        name: title,
-      });
-    }}
-    active={isActive}
-    className="items-start rounded-md px-2 py-2 transition-[transform,background-color,opacity]"
-    leading={<WorkflowRunStatusIcon status={run.status} conclusion={run.conclusion} />}
-  >
-    <div className="min-w-0 flex-1">
-      <div className="ui-text-sm truncate leading-4 text-text">
-        {run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`}
-      </div>
-      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1">
-        {run.workflowName ? (
-          <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
-            <span className="truncate">{run.workflowName}</span>
+function getWorkflowRunBadgeTone(
+  status?: string | null,
+  conclusion?: string | null,
+): GitHubSidebarPreviewBadge["tone"] {
+  const normalizedStatus = status?.toLowerCase() ?? "";
+  const normalizedConclusion = conclusion?.toLowerCase() ?? "";
+
+  if (normalizedConclusion === "success") return "success";
+  if (
+    normalizedConclusion === "failure" ||
+    normalizedConclusion === "timed_out" ||
+    normalizedConclusion === "startup_failure"
+  ) {
+    return "error";
+  }
+  if (
+    normalizedStatus === "in_progress" ||
+    normalizedStatus === "waiting" ||
+    normalizedStatus === "requested"
+  ) {
+    return "accent";
+  }
+  if (normalizedStatus === "queued" || normalizedStatus === "pending") return "warning";
+  return "muted";
+}
+
+const WorkflowRunRow = memo(
+  ({ run, isActive, onSelect, onPrefetch, repoPath }: WorkflowRunRowProps) => {
+    const title = run.displayTitle || run.name || run.workflowName || `Run #${run.databaseId}`;
+    const status = getWorkflowRunStatus(run.status, run.conclusion);
+    const updatedLabel = run.updatedAt ? getTimeAgo(run.updatedAt) : null;
+    const shortSha = run.headSha ? run.headSha.slice(0, 7) : null;
+    const statusIcon = <WorkflowRunStatusIcon status={run.status} conclusion={run.conclusion} />;
+    const badges: GitHubSidebarPreviewBadge[] = [
+      {
+        label: status.label,
+        tone: getWorkflowRunBadgeTone(run.status, run.conclusion),
+      },
+      ...(run.event
+        ? [{ label: run.event, tone: "muted" } satisfies GitHubSidebarPreviewBadge]
+        : []),
+      ...(run.headBranch
+        ? [{ label: run.headBranch, tone: "default" } satisfies GitHubSidebarPreviewBadge]
+        : []),
+    ];
+
+    return (
+      <GitHubSidebarRow
+        title={title}
+        onClick={onSelect}
+        onPrefetch={onPrefetch}
+        draggable
+        onDragStart={(event) => {
+          writeSidebarResourceDragData(event.dataTransfer, {
+            type: "github-action",
+            repoPath: repoPath ?? undefined,
+            runId: run.databaseId,
+            title,
+            url: run.url,
+            name: title,
+          });
+        }}
+        active={isActive}
+        leading={statusIcon}
+        description={
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={status.className}>{status.label}</span>
+            {run.workflowName ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate">{run.workflowName}</span>
+              </>
+            ) : null}
+            {run.headBranch ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate font-mono">{run.headBranch}</span>
+              </>
+            ) : null}
           </span>
-        ) : null}
-        {run.headBranch ? (
-          <span className="ui-text-xs inline-flex min-w-0 max-w-full items-center rounded-md bg-secondary-bg/80 px-1.5 py-0.5 editor-font text-text-lighter">
-            <span className="truncate">{run.headBranch}</span>
-          </span>
-        ) : null}
-      </div>
-    </div>
-  </SidebarListItem>
-));
+        }
+        trailing={updatedLabel}
+        preview={{
+          title,
+          subtitle: run.workflowName || `Run #${run.databaseId}`,
+          icon: statusIcon,
+          badges,
+          details: [
+            { label: "Updated", value: updatedLabel },
+            { label: "Workflow", value: run.workflowName, mono: true },
+            { label: "Branch", value: run.headBranch, mono: true },
+            { label: "Commit", value: shortSha, mono: true },
+            { label: "Run", value: `#${run.databaseId}`, mono: true },
+          ],
+        }}
+      />
+    );
+  },
+);
 
 WorkflowRunRow.displayName = "WorkflowRunRow";
 
@@ -180,12 +254,12 @@ const GitHubActionsView = memo(
     const { isAuthenticated } = useGitHubStore();
     const { checkAuth } = useGitHubStore().actions;
     const { openGitHubActionBuffer } = useBufferStore.use.actions();
-    const buffers = useBufferStore.use.buffers();
-    const activeBufferId = useBufferStore.use.activeBufferId();
-    const activeRunId = useMemo(() => {
-      const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeRunId = useBufferStore((state) => {
+      const activeBuffer = state.activeBufferId
+        ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+        : null;
       return activeBuffer?.type === "githubAction" ? activeBuffer.runId : null;
-    }, [activeBufferId, buffers]);
+    });
     const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -229,6 +303,26 @@ const GitHubActionsView = memo(
         } finally {
           setIsLoading(false);
         }
+      },
+      [repoPath],
+    );
+
+    const prefetchWorkflowRun = useCallback(
+      (run: WorkflowRunListItem) => {
+        if (!repoPath) return;
+
+        const cacheKey = `${repoPath}::${run.databaseId}`;
+        void githubActionDetailsCache
+          .load(
+            cacheKey,
+            () =>
+              invoke<WorkflowRunDetails>("github_get_workflow_run_details", {
+                repoPath,
+                runId: run.databaseId,
+              }),
+            { ttlMs: GITHUB_ACTION_DETAILS_TTL_MS },
+          )
+          .catch(() => undefined);
       },
       [repoPath],
     );
@@ -298,6 +392,38 @@ const GitHubActionsView = memo(
         ].some((value) => value.toLowerCase().includes(query)),
       );
     }, [deferredRuns, deferredSearchQuery, filter]);
+    const groupedRuns = useMemo(
+      () => groupWorkflowRuns(filteredRuns, filter),
+      [filter, filteredRuns],
+    );
+    const forceListSectionsExpanded = deferredSearchQuery.trim().length > 0;
+
+    useEffect(() => {
+      if (!isAuthenticated || !repoPath || filteredRuns.length === 0) return;
+
+      let cancelled = false;
+      const idleApi = window as Window & {
+        requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
+      const prefetchVisibleRuns = () => {
+        if (cancelled) return;
+        filteredRuns.slice(0, 4).forEach((run) => prefetchWorkflowRun(run));
+      };
+      const usesIdleCallback = typeof idleApi.requestIdleCallback === "function";
+      const idleId = usesIdleCallback
+        ? idleApi.requestIdleCallback?.(prefetchVisibleRuns, { timeout: 1200 })
+        : window.setTimeout(prefetchVisibleRuns, 500);
+
+      return () => {
+        cancelled = true;
+        if (usesIdleCallback && idleId !== undefined) {
+          idleApi.cancelIdleCallback(idleId);
+        } else if (idleId !== undefined) {
+          window.clearTimeout(idleId);
+        }
+      };
+    }, [filteredRuns, isAuthenticated, prefetchWorkflowRun, repoPath]);
 
     if (!isAuthenticated) {
       return (
@@ -328,33 +454,44 @@ const GitHubActionsView = memo(
               title="No matching workflow runs"
             />
           ) : (
-            <div className="space-y-px overflow-x-hidden">
+            <div className="space-y-1 overflow-x-hidden">
               {isLoading ? (
                 <div className="flex items-center px-2 py-1.5">
                   <LoadingIndicator label="Refreshing" compact />
                 </div>
               ) : null}
-              {filteredRuns.map((run) => (
-                <WorkflowRunRow
-                  key={run.databaseId}
-                  run={run}
-                  isActive={activeRunId === run.databaseId}
-                  repoPath={repoPath}
-                  onSelect={() =>
-                    startTransition(() => {
-                      openGitHubActionBuffer({
-                        runId: run.databaseId,
-                        repoPath: repoPath ?? undefined,
-                        title:
-                          run.displayTitle ||
-                          run.name ||
-                          run.workflowName ||
-                          `Run #${run.databaseId}`,
-                        url: run.url,
-                      });
-                    })
-                  }
-                />
+              {groupedRuns.map((group) => (
+                <GitHubSidebarSection
+                  key={group.id}
+                  title={group.title}
+                  count={group.items.length}
+                  defaultExpanded={group.defaultExpanded}
+                  forceExpanded={forceListSectionsExpanded}
+                >
+                  {group.items.map((run) => (
+                    <WorkflowRunRow
+                      key={run.databaseId}
+                      run={run}
+                      isActive={activeRunId === run.databaseId}
+                      repoPath={repoPath}
+                      onPrefetch={() => prefetchWorkflowRun(run)}
+                      onSelect={() =>
+                        startTransition(() => {
+                          openGitHubActionBuffer({
+                            runId: run.databaseId,
+                            repoPath: repoPath ?? undefined,
+                            title:
+                              run.displayTitle ||
+                              run.name ||
+                              run.workflowName ||
+                              `Run #${run.databaseId}`,
+                            url: run.url,
+                          });
+                        })
+                      }
+                    />
+                  ))}
+                </GitHubSidebarSection>
               ))}
             </div>
           )}

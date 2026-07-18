@@ -8,6 +8,7 @@ import {
 } from "../languages/language-packager";
 import { extensionInstaller } from "../installer/extension-installer";
 import type { AvailableExtension, ExtensionRuntimeIssue } from "./extension-store-types";
+import { getManifestLanguageContributions } from "../types/extension-contributions";
 import type { ExtensionManifest, ToolRuntime } from "../types/extension-manifest";
 
 type ToolType = "lsp" | "formatter" | "linter";
@@ -15,10 +16,10 @@ type ToolPathMap = Partial<Record<ToolType, string>>;
 type ToolIssueMap = Partial<Record<ToolType, string>>;
 type BackendToolRuntime = Extract<
   ToolRuntime,
-  "bun" | "node" | "python" | "go" | "rust" | "binary"
+  "bun" | "node" | "python" | "go" | "rust" | "ruby" | "r" | "system" | "binary"
 >;
 
-interface BackendToolConfig {
+export interface BackendToolConfig {
   name: string;
   command?: string;
   runtime: BackendToolRuntime;
@@ -29,7 +30,7 @@ interface BackendToolConfig {
   env?: Record<string, string>;
 }
 
-interface BackendLanguageToolConfigSet {
+export interface BackendLanguageToolConfigSet {
   lsp?: BackendToolConfig;
   formatter?: BackendToolConfig;
   linter?: BackendToolConfig;
@@ -37,9 +38,12 @@ interface BackendLanguageToolConfigSet {
 
 const MARKSMAN_LATEST_RELEASE_BASE =
   "https://github.com/artempyanykh/marksman/releases/latest/download";
+const STYLUA_LATEST_RELEASE_BASE =
+  "https://github.com/JohnnyMorganz/StyLua/releases/latest/download";
 const LUA_LANGUAGE_SERVER_VERSION = "3.18.2";
 const LUA_LANGUAGE_SERVER_RELEASE_BASE =
   "https://github.com/LuaLS/lua-language-server/releases/download";
+const ZIG_VERSION = "0.16.0";
 
 interface ResolvedToolPathsResult {
   toolPaths: ToolPathMap;
@@ -60,6 +64,19 @@ function extractFailedToolMessage(toolStatus: unknown): string | null {
   }
 
   return null;
+}
+
+function formatToolResolutionError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function isExpectedMissingToolError(error: unknown): boolean {
+  const message = formatToolResolutionError(error);
+  return (
+    message.includes("system tool not found") ||
+    message.includes("not found in PATH") ||
+    message.includes("known toolchain locations")
+  );
 }
 
 function buildRuntimeIssues(
@@ -172,6 +189,28 @@ function getLuaLanguageServerDownloadUrl(): string {
   return `${LUA_LANGUAGE_SERVER_RELEASE_BASE}/${LUA_LANGUAGE_SERVER_VERSION}/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-${platformArch}.${archiveExtension}`;
 }
 
+function getStyLuaDownloadUrl(): string {
+  if (NODE_PLATFORM === "darwin") {
+    return `${STYLUA_LATEST_RELEASE_BASE}/stylua-macos-${getTargetArchToken()}.zip`;
+  }
+
+  if (NODE_PLATFORM === "win32") {
+    return `${STYLUA_LATEST_RELEASE_BASE}/stylua-windows-x86_64.zip`;
+  }
+
+  const libcSuffix =
+    getLinuxLibcToken() === "musl" && getTargetArchToken() === "x86_64" ? "-musl" : "";
+  return `${STYLUA_LATEST_RELEASE_BASE}/stylua-linux-${getTargetArchToken()}${libcSuffix}.zip`;
+}
+
+function getZigDownloadUrl(): string {
+  const platform =
+    NODE_PLATFORM === "darwin" ? "macos" : NODE_PLATFORM === "win32" ? "windows" : "linux";
+  const archiveExtension = NODE_PLATFORM === "win32" ? "zip" : "tar.xz";
+
+  return `https://ziglang.org/download/${ZIG_VERSION}/zig-${getTargetArchToken()}-${platform}-${ZIG_VERSION}.${archiveExtension}`;
+}
+
 function getKnownToolDownloadUrl(name: string): string | undefined {
   if (name === "marksman") {
     return getMarksmanDownloadUrl();
@@ -179,6 +218,14 @@ function getKnownToolDownloadUrl(name: string): string | undefined {
 
   if (name === "lua-language-server") {
     return getLuaLanguageServerDownloadUrl();
+  }
+
+  if (name === "stylua") {
+    return getStyLuaDownloadUrl();
+  }
+
+  if (name === "zig") {
+    return getZigDownloadUrl();
   }
 
   return undefined;
@@ -285,7 +332,7 @@ function toBackendToolConfig(
   };
 }
 
-function getLanguageToolConfigSet(
+export function getLanguageToolConfigSet(
   manifest?: ExtensionManifest,
 ): BackendLanguageToolConfigSet | undefined {
   if (!manifest) return undefined;
@@ -362,7 +409,11 @@ export function resolveInstalledExtensionId(
   }
 
   for (const [extensionId, extension] of availableExtensions) {
-    if (extension.manifest.languages?.some((lang) => lang.id === installed.languageId)) {
+    if (
+      getManifestLanguageContributions(extension.manifest).some(
+        (lang) => lang.id === installed.languageId,
+      )
+    ) {
       return extensionId;
     }
   }
@@ -377,19 +428,19 @@ async function installLanguageTools(
   const issues: ToolIssueMap = {};
 
   try {
-    const status = await invoke<{ lsp?: string; formatter?: string; linter?: string }>(
-      "install_language_tools",
-      {
-        languageId,
-        tools: getLanguageToolConfigSet(manifest),
-      },
-    );
+    const status = await invoke<{
+      lsp?: string;
+      formatter?: string;
+      linter?: string;
+    }>("install_language_tools", {
+      languageId,
+      tools: getLanguageToolConfigSet(manifest),
+    });
 
     for (const [tool, toolStatus] of Object.entries(status)) {
       const failureMessage = extractFailedToolMessage(toolStatus);
       if (failureMessage) {
         issues[tool as ToolType] = failureMessage;
-        console.warn(`Tool installation failed for ${languageId}/${tool}: ${failureMessage}`);
       }
     }
   } catch (error) {
@@ -412,7 +463,9 @@ async function getToolPath(
       tools: getLanguageToolConfigSet(manifest),
     });
   } catch (error) {
-    console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
+    if (!isExpectedMissingToolError(error)) {
+      console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
+    }
     return null;
   }
 }
@@ -454,17 +507,14 @@ export async function resolveToolPaths(
     if (toolConfig.lsp && !toolPaths.lsp) {
       issues.lsp =
         issues.lsp || "Language server binary could not be resolved. Reinstall the language tools.";
-      console.warn(`LSP configured for ${languageId} but binary path could not be resolved`);
     }
     if (toolConfig.formatter && !toolPaths.formatter) {
       issues.formatter =
         issues.formatter || "Formatter binary could not be resolved. Reinstall the language tools.";
-      console.warn(`Formatter configured for ${languageId} but binary path could not be resolved`);
     }
     if (toolConfig.linter && !toolPaths.linter) {
       issues.linter =
         issues.linter || "Linter binary could not be resolved. Reinstall the language tools.";
-      console.warn(`Linter configured for ${languageId} but binary path could not be resolved`);
     }
   }
 
@@ -483,14 +533,10 @@ export function buildRuntimeManifest(
   toolPaths: ToolPathMap,
 ): ExtensionManifest {
   const managedTools = getLanguageToolConfigSet(manifest);
+  const languages = getManifestLanguageContributions(manifest);
   const runtimeManifest: ExtensionManifest = {
     ...manifest,
-    languages: manifest.languages?.map((lang) => ({
-      ...lang,
-      extensions: [...lang.extensions],
-      aliases: lang.aliases ? [...lang.aliases] : undefined,
-      filenames: lang.filenames ? [...lang.filenames] : undefined,
-    })),
+    ...(languages.length > 0 ? { languages } : {}),
   };
 
   if (runtimeManifest.lsp && managedTools?.lsp) {
@@ -597,28 +643,33 @@ export async function installLanguageExtensionManifest(
   manifest: ExtensionManifest,
   onProgress: (progress: number) => void,
 ) {
-  const languageConfigs = manifest.languages ?? [];
+  const languageConfigs = getManifestLanguageContributions(manifest);
   const languageCount = languageConfigs.length;
 
-  for (const [index, languageConfig] of languageConfigs.entries()) {
-    const languageId = languageConfig.id;
-    const wasmUrl = getWasmUrlForLanguage(languageId);
-    const highlightQueryUrl =
-      getHighlightQueryUrl(languageId) ||
-      getHighlightQueryUrlForExtension(manifest) ||
-      `${wasmUrl.replace(/parser\.wasm$/, "highlights.scm")}`;
+  const progressByLanguage = Array.from({ length: languageCount }, () => 0);
 
-    await extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
-      extensionId,
-      version: manifest.version,
-      checksum: manifest.installation?.checksum || "",
-      onProgress: (progress) => {
-        const completedLanguages = index * 100;
-        const normalizedProgress = (completedLanguages + progress.percentage) / languageCount;
-        onProgress(normalizedProgress);
-      },
-    });
-  }
+  await Promise.all(
+    languageConfigs.map((languageConfig, index) => {
+      const languageId = languageConfig.id;
+      const wasmUrl = getWasmUrlForLanguage(languageId);
+      const highlightQueryUrl =
+        getHighlightQueryUrl(languageId) ||
+        getHighlightQueryUrlForExtension(manifest) ||
+        `${wasmUrl.replace(/parser\.wasm$/, "highlights.scm")}`;
+
+      return extensionInstaller.installLanguage(languageId, wasmUrl, highlightQueryUrl, {
+        extensionId,
+        version: manifest.version,
+        checksum: manifest.installation?.checksum || "",
+        onProgress: (progress) => {
+          progressByLanguage[index] = progress.percentage;
+          const totalProgress = progressByLanguage.reduce((sum, value) => sum + value, 0);
+          const normalizedProgress = totalProgress / languageCount;
+          onProgress(normalizedProgress);
+        },
+      });
+    }),
+  );
 }
 
 export function getExtensionManifestForLanguage(

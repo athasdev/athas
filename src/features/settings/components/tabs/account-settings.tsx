@@ -1,4 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getServiceUrls } from "@/config/services";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import {
   disableSettingsSync,
@@ -6,7 +7,7 @@ import {
   restoreSettingsFromCloud,
   syncSettingsNow,
 } from "@/features/settings/lib/settings-sync";
-import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync-store";
+import { useSettingsSyncStore } from "@/features/settings/stores/settings-sync.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import {
@@ -16,19 +17,19 @@ import {
   getAccountPlanLabel,
   getUsageProgress,
 } from "@/features/window/lib/account-usage";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
-import { getApiBase } from "@/utils/api-base";
 import Section, { SettingRow } from "../settings-section";
 
 export const AccountSettings = () => {
+  const services = getServiceUrls();
   const user = useAuthStore((state) => state.user);
   const subscription = useAuthStore((state) => state.subscription);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const logout = useAuthStore((state) => state.logout);
-  const { isPro } = useProFeature();
+  const { isPro, hasSettingsSync } = useProFeature();
   const { isSigningIn, signIn } = useDesktopSignIn();
   const { showToast } = useToast();
   const settingsSyncEnabled = useSettingsSyncStore((state) => state.enabled);
@@ -47,11 +48,11 @@ export const AccountSettings = () => {
   const usageProgress = getUsageProgress(autocompleteUsage);
 
   const handleManageAccount = async () => {
-    await openUrl(new URL("/dashboard", getApiBase()).toString());
+    await openUrl(services.dashboardUrl);
   };
 
   const handleManagePlan = async () => {
-    await openUrl(new URL(isPaidPlan ? "/dashboard/billing" : "/pricing", getApiBase()).toString());
+    await openUrl(isPaidPlan ? services.dashboardBillingUrl : services.pricingUrl);
   };
 
   const handleToggleSettingsSync = async (checked: boolean) => {
@@ -93,7 +94,7 @@ export const AccountSettings = () => {
 
   const settingsSyncDescription = !isAuthenticated
     ? "Sign in to access cloud settings sync across devices."
-    : !isPaidPlan
+    : !hasSettingsSync
       ? "Cloud settings sync is included with Pro."
       : settingsSyncLastSyncedAt
         ? `Last synced ${new Date(settingsSyncLastSyncedAt).toLocaleString()}${settingsSyncLastSource ? ` from ${settingsSyncLastSource}` : ""}.`
@@ -107,14 +108,14 @@ export const AccountSettings = () => {
           description="Sign in to access account and subscription features."
         >
           {isAuthenticated ? (
-            <span className="ui-font ui-text-md text-text-lighter">{user?.email}</span>
+            <span className="font-sans ui-text-base text-text-lighter">{user?.email}</span>
           ) : (
             <Button
               variant="default"
               onClick={signIn}
               disabled={isSigningIn}
-              className="ui-text-sm"
-              compact
+              className="ui-text-base"
+              size="xs"
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
@@ -130,12 +131,12 @@ export const AccountSettings = () => {
           >
             <div className="mb-3">
               <div className="min-w-0">
-                <div id="account-ai-usage-label" className="ui-font ui-text-sm text-text">
+                <div id="account-ai-usage-label" className="font-sans ui-text-base text-text">
                   AI Usage
                 </div>
                 <div
                   id="account-ai-usage-description"
-                  className="ui-font ui-text-sm text-text-lighter"
+                  className="font-sans ui-text-base text-text-lighter"
                 >
                   Monthly hosted AI usage across chat, agents, inline edits, generation, and other
                   Athas AI features.
@@ -145,30 +146,30 @@ export const AccountSettings = () => {
             {autocompleteUsage ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="ui-font ui-text-xs text-text-lighter">Monthly usage</span>
-                  <span className="ui-font ui-text-sm font-medium text-text">
+                  <span className="font-sans ui-text-base text-text-lighter">Monthly usage</span>
+                  <span className="font-sans ui-text-base font-medium text-text">
                     {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                     {formatUsdFromCents(autocompleteUsage.budgetCents)}
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
                   <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-200"
+                    className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
                     style={{ width: `${usageProgress}%` }}
                   />
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="ui-font ui-text-xs text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-text-lighter/70">
                     {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                     {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
-                  <span className="ui-font ui-text-xs text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-text-lighter/70">
                     Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="ui-font ui-text-xs text-text-lighter">Usage unavailable</div>
+              <div className="font-sans ui-text-base text-text-lighter">Usage unavailable</div>
             )}
           </div>
         )}
@@ -180,12 +181,17 @@ export const AccountSettings = () => {
                 <Badge
                   variant="default"
                   size="compact"
-                  className="border-accent/30 bg-accent/10 font-normal text-accent"
+                  className="bg-accent/10 font-normal text-accent"
                 >
                   {planLabel}
                 </Badge>
               ) : null}
-              <Button variant="default" onClick={handleManagePlan} className="ui-text-sm" compact>
+              <Button
+                variant="default"
+                onClick={handleManagePlan}
+                className="ui-text-base"
+                size="xs"
+              >
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
             </div>
@@ -201,7 +207,7 @@ export const AccountSettings = () => {
                 : settingsSyncDescription
             }
           >
-            {isPaidPlan ? (
+            {hasSettingsSync ? (
               <Switch
                 checked={settingsSyncHydrated ? settingsSyncEnabled : false}
                 onChange={(checked) => void handleToggleSettingsSync(checked)}
@@ -214,7 +220,7 @@ export const AccountSettings = () => {
           </SettingRow>
         )}
 
-        {isPaidPlan && settingsSyncEnabled ? (
+        {hasSettingsSync && settingsSyncEnabled ? (
           <>
             <SettingRow
               label="Sync Now"
@@ -223,7 +229,7 @@ export const AccountSettings = () => {
               <Button
                 variant="default"
                 onClick={() => void handleSyncNow()}
-                className="ui-text-sm"
+                className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
               >
                 {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
@@ -237,7 +243,7 @@ export const AccountSettings = () => {
               <Button
                 variant="default"
                 onClick={() => void handleRestoreFromCloud()}
-                className="ui-text-sm"
+                className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
               >
                 Restore
@@ -251,7 +257,12 @@ export const AccountSettings = () => {
             label="Manage Account"
             description="Open your Athas dashboard to manage billing and subscription details."
           >
-            <Button variant="default" onClick={handleManageAccount} className="ui-text-sm" compact>
+            <Button
+              variant="default"
+              onClick={handleManageAccount}
+              className="ui-text-base"
+              size="xs"
+            >
               Open Dashboard
             </Button>
           </SettingRow>
@@ -262,7 +273,7 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button variant="default" onClick={() => void logout()} className="ui-text-sm">
+            <Button variant="default" onClick={() => void logout()} className="ui-text-base">
               Sign Out
             </Button>
           </SettingRow>

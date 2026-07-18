@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vite-plus/test";
-import type { GitDiff, GitFile, GitStatus } from "../types/git-types";
+import type { GitDiff, GitFile, GitStatus } from "../types/git.types";
 import {
   buildWorkingTreeMultiDiff,
   getDiffableWorkingTreeFiles,
@@ -86,6 +86,7 @@ describe("working-tree multi diff helpers", () => {
     });
 
     expect(result.commitHash).toBe("working-tree");
+    expect(result.repoPath).toBe("/repo");
     expect(result.fileKeys).toEqual(["staged:src/a.ts", "unstaged:src/b.ts"]);
     expect(result.totalFiles).toBe(2);
     expect(result.totalAdditions).toBe(1);

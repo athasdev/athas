@@ -1,6 +1,12 @@
 import { nanoid } from "nanoid";
 import { DEFAULT_SPLIT_RATIO, MIN_PANE_SIZE } from "../constants/pane";
-import type { PaneGroup, PaneNode, PaneSplit, SplitDirection, SplitPlacement } from "../types/pane";
+import type {
+  PaneGroup,
+  PaneNode,
+  PaneSplit,
+  SplitDirection,
+  SplitPlacement,
+} from "../types/pane.types";
 
 export interface FlatPaneEntry {
   node: PaneNode;
@@ -65,24 +71,75 @@ function normalizeSplitSizes(sizes: [number, number]): [number, number] {
   return normalized;
 }
 
+function updatePaneNode(
+  root: PaneNode,
+  nodeId: string,
+  update: (node: PaneNode) => PaneNode,
+): PaneNode {
+  if (root.id === nodeId) {
+    return update(root);
+  }
+
+  if (root.type !== "split") {
+    return root;
+  }
+
+  const first = updatePaneNode(root.children[0], nodeId, update);
+  if (first !== root.children[0]) {
+    return {
+      ...root,
+      children: [first, root.children[1]],
+    };
+  }
+
+  const second = updatePaneNode(root.children[1], nodeId, update);
+  if (second !== root.children[1]) {
+    return {
+      ...root,
+      children: [root.children[0], second],
+    };
+  }
+
+  return root;
+}
+
 function normalizeGroup(group: PaneGroup): PaneGroup {
-  const bufferIds = dedupe(group.bufferIds);
+  const bufferIdSet = new Set(group.bufferIds);
+  const bufferIds = Array.from(bufferIdSet);
   const activeBufferId =
-    group.activeBufferId && bufferIds.includes(group.activeBufferId)
+    group.activeBufferId && bufferIdSet.has(group.activeBufferId)
       ? group.activeBufferId
       : (bufferIds[0] ?? null);
-  const mruBufferIds = dedupe([
-    ...(activeBufferId ? [activeBufferId] : []),
-    ...(group.mruBufferIds ?? []),
-    ...bufferIds,
-  ]).filter((bufferId) => bufferIds.includes(bufferId));
-  const pinnedBufferIds = dedupe(group.pinnedBufferIds ?? []).filter((bufferId) =>
-    bufferIds.includes(bufferId),
-  );
+
+  const seenMruBufferIds = new Set<string>();
+  const mruBufferIds: string[] = [];
+  const appendMruBufferId = (bufferId: string) => {
+    if (!bufferIdSet.has(bufferId) || seenMruBufferIds.has(bufferId)) return;
+    seenMruBufferIds.add(bufferId);
+    mruBufferIds.push(bufferId);
+  };
+
+  if (activeBufferId) {
+    appendMruBufferId(activeBufferId);
+  }
+  for (const bufferId of group.mruBufferIds ?? []) {
+    appendMruBufferId(bufferId);
+  }
+  for (const bufferId of bufferIds) {
+    appendMruBufferId(bufferId);
+  }
+
+  const seenPinnedBufferIds = new Set<string>();
+  const pinnedBufferIds: string[] = [];
+  for (const bufferId of group.pinnedBufferIds ?? []) {
+    if (bufferIdSet.has(bufferId) && !seenPinnedBufferIds.has(bufferId)) {
+      seenPinnedBufferIds.add(bufferId);
+      pinnedBufferIds.push(bufferId);
+    }
+  }
+
   const previewBufferId =
-    group.previewBufferId && bufferIds.includes(group.previewBufferId)
-      ? group.previewBufferId
-      : null;
+    group.previewBufferId && bufferIdSet.has(group.previewBufferId) ? group.previewBufferId : null;
 
   return {
     ...group,
@@ -266,12 +323,20 @@ export function findParentSplit(
   return null;
 }
 
-export function getAllPaneGroups(root: PaneNode): PaneGroup[] {
+function collectPaneGroups(root: PaneNode, groups: PaneGroup[]) {
   if (root.type === "group") {
-    return [root];
+    groups.push(root);
+    return;
   }
 
-  return [...getAllPaneGroups(root.children[0]), ...getAllPaneGroups(root.children[1])];
+  collectPaneGroups(root.children[0], groups);
+  collectPaneGroups(root.children[1], groups);
+}
+
+export function getAllPaneGroups(root: PaneNode): PaneGroup[] {
+  const groups: PaneGroup[] = [];
+  collectPaneGroups(root, groups);
+  return groups;
 }
 
 export function getFirstPaneGroup(root: PaneNode): PaneGroup {
@@ -288,24 +353,16 @@ export function splitPane(
   bufferId?: string,
   placement: SplitPlacement = "after",
 ): PaneNode {
-  if (root.id === paneId && root.type === "group") {
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
+
     const newGroup = createPaneGroup(bufferId ? [bufferId] : [], bufferId ?? null);
     return placement === "before"
-      ? createPaneSplit(direction, newGroup, root)
-      : createPaneSplit(direction, root, newGroup);
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        splitPane(root.children[0], paneId, direction, bufferId, placement),
-        splitPane(root.children[1], paneId, direction, bufferId, placement),
-      ],
-    };
-  }
-
-  return root;
+      ? createPaneSplit(direction, newGroup, node)
+      : createPaneSplit(direction, node, newGroup);
+  });
 }
 
 export function closePane(root: PaneNode, paneId: string): PaneNode | null {
@@ -347,21 +404,9 @@ export function updatePaneSizes(
   splitId: string,
   sizes: [number, number],
 ): PaneNode {
-  if (root.id === splitId && root.type === "split") {
-    return { ...root, sizes: normalizeSplitSizes(sizes) };
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        updatePaneSizes(root.children[0], splitId, sizes),
-        updatePaneSizes(root.children[1], splitId, sizes),
-      ],
-    };
-  }
-
-  return root;
+  return updatePaneNode(root, splitId, (node) =>
+    node.type === "split" ? { ...node, sizes: normalizeSplitSizes(sizes) } : node,
+  );
 }
 
 export function addBufferToPane(
@@ -370,47 +415,43 @@ export function addBufferToPane(
   bufferId: string,
   setActive: boolean = true,
 ): PaneNode {
-  if (root.id === paneId && root.type === "group") {
-    const nextActiveBufferId = setActive ? bufferId : root.activeBufferId;
-    if (root.bufferIds.includes(bufferId)) {
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
+
+    const nextActiveBufferId = setActive ? bufferId : node.activeBufferId;
+    if (node.bufferIds.includes(bufferId)) {
       return normalizeGroup({
-        ...root,
+        ...node,
         activeBufferId: nextActiveBufferId,
         mruBufferIds: setActive
-          ? [bufferId, ...(root.mruBufferIds ?? root.bufferIds).filter((id) => id !== bufferId)]
-          : root.mruBufferIds,
+          ? [bufferId, ...(node.mruBufferIds ?? node.bufferIds).filter((id) => id !== bufferId)]
+          : node.mruBufferIds,
       });
     }
     return normalizeGroup({
-      ...root,
-      bufferIds: [...root.bufferIds, bufferId],
+      ...node,
+      bufferIds: [...node.bufferIds, bufferId],
       activeBufferId: nextActiveBufferId,
       mruBufferIds: setActive
-        ? [bufferId, ...(root.mruBufferIds ?? root.bufferIds)]
-        : root.mruBufferIds,
+        ? [bufferId, ...(node.mruBufferIds ?? node.bufferIds)]
+        : node.mruBufferIds,
     });
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        addBufferToPane(root.children[0], paneId, bufferId, setActive),
-        addBufferToPane(root.children[1], paneId, bufferId, setActive),
-      ],
-    };
-  }
-
-  return root;
+  });
 }
 
 export function removeBufferFromPane(root: PaneNode, paneId: string, bufferId: string): PaneNode {
-  if (root.id === paneId && root.type === "group") {
-    const newBufferIds = root.bufferIds.filter((id) => id !== bufferId);
-    let newActiveBufferId = root.activeBufferId;
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
 
-    if (root.activeBufferId === bufferId) {
-      const currentIndex = root.bufferIds.indexOf(bufferId);
+    const newBufferIds = node.bufferIds.filter((id) => id !== bufferId);
+    let newActiveBufferId = node.activeBufferId;
+
+    if (node.activeBufferId === bufferId) {
+      const currentIndex = node.bufferIds.indexOf(bufferId);
       if (newBufferIds.length > 0) {
         const newIndex = Math.min(currentIndex, newBufferIds.length - 1);
         newActiveBufferId = newBufferIds[newIndex];
@@ -420,26 +461,14 @@ export function removeBufferFromPane(root: PaneNode, paneId: string, bufferId: s
     }
 
     return normalizeGroup({
-      ...root,
+      ...node,
       bufferIds: newBufferIds,
       activeBufferId: newActiveBufferId,
-      mruBufferIds: (root.mruBufferIds ?? root.bufferIds).filter((id) => id !== bufferId),
-      pinnedBufferIds: root.pinnedBufferIds?.filter((id) => id !== bufferId),
-      previewBufferId: root.previewBufferId === bufferId ? null : root.previewBufferId,
+      mruBufferIds: (node.mruBufferIds ?? node.bufferIds).filter((id) => id !== bufferId),
+      pinnedBufferIds: node.pinnedBufferIds?.filter((id) => id !== bufferId),
+      previewBufferId: node.previewBufferId === bufferId ? null : node.previewBufferId,
     });
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        removeBufferFromPane(root.children[0], paneId, bufferId),
-        removeBufferFromPane(root.children[1], paneId, bufferId),
-      ],
-    };
-  }
-
-  return root;
+  });
 }
 
 export function moveBufferBetweenPanes(
@@ -458,31 +487,23 @@ export function setActivePaneBuffer(
   paneId: string,
   bufferId: string | null,
 ): PaneNode {
-  if (root.id === paneId && root.type === "group") {
-    if (bufferId && !root.bufferIds.includes(bufferId)) {
-      return normalizeGroup(root);
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
+
+    if (bufferId && !node.bufferIds.includes(bufferId)) {
+      return normalizeGroup(node);
     }
 
     return normalizeGroup({
-      ...root,
+      ...node,
       activeBufferId: bufferId,
       mruBufferIds: bufferId
-        ? [bufferId, ...(root.mruBufferIds ?? root.bufferIds).filter((id) => id !== bufferId)]
-        : root.mruBufferIds,
+        ? [bufferId, ...(node.mruBufferIds ?? node.bufferIds).filter((id) => id !== bufferId)]
+        : node.mruBufferIds,
     });
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        setActivePaneBuffer(root.children[0], paneId, bufferId),
-        setActivePaneBuffer(root.children[1], paneId, bufferId),
-      ],
-    };
-  }
-
-  return root;
+  });
 }
 
 export function setPanePreviewBuffer(
@@ -490,31 +511,48 @@ export function setPanePreviewBuffer(
   paneId: string,
   bufferId: string | null,
 ): PaneNode {
-  if (root.id === paneId && root.type === "group") {
-    if (bufferId && !root.bufferIds.includes(bufferId)) {
-      return normalizeGroup(root);
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
+
+    if (bufferId && !node.bufferIds.includes(bufferId)) {
+      return normalizeGroup(node);
+    }
+
+    return normalizeGroup({
+      ...node,
+      previewBufferId: bufferId,
+      pinnedBufferIds: bufferId
+        ? node.pinnedBufferIds?.filter((pinnedBufferId) => pinnedBufferId !== bufferId)
+        : node.pinnedBufferIds,
+    });
+  });
+}
+
+export function clearPanePreviewBufferEverywhere(root: PaneNode, bufferId: string): PaneNode {
+  if (root.type === "group") {
+    if (root.previewBufferId !== bufferId) {
+      return root;
     }
 
     return normalizeGroup({
       ...root,
-      previewBufferId: bufferId,
-      pinnedBufferIds: bufferId
-        ? root.pinnedBufferIds?.filter((pinnedBufferId) => pinnedBufferId !== bufferId)
-        : root.pinnedBufferIds,
+      previewBufferId: null,
     });
   }
 
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        setPanePreviewBuffer(root.children[0], paneId, bufferId),
-        setPanePreviewBuffer(root.children[1], paneId, bufferId),
-      ],
-    };
+  const first = clearPanePreviewBufferEverywhere(root.children[0], bufferId);
+  const second = clearPanePreviewBufferEverywhere(root.children[1], bufferId);
+
+  if (first === root.children[0] && second === root.children[1]) {
+    return root;
   }
 
-  return root;
+  return {
+    ...root,
+    children: [first, second],
+  };
 }
 
 export function setPaneBufferPinned(
@@ -523,9 +561,36 @@ export function setPaneBufferPinned(
   bufferId: string,
   pinned: boolean,
 ): PaneNode {
-  if (root.id === paneId && root.type === "group") {
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
+
+    if (!node.bufferIds.includes(bufferId)) {
+      return normalizeGroup(node);
+    }
+
+    const currentPinnedBufferIds = node.pinnedBufferIds ?? [];
+    const pinnedBufferIds = pinned
+      ? [...currentPinnedBufferIds, bufferId]
+      : currentPinnedBufferIds.filter((pinnedBufferId) => pinnedBufferId !== bufferId);
+
+    return normalizeGroup({
+      ...node,
+      pinnedBufferIds,
+      previewBufferId: pinned && node.previewBufferId === bufferId ? null : node.previewBufferId,
+    });
+  });
+}
+
+export function setPaneBufferPinnedEverywhere(
+  root: PaneNode,
+  bufferId: string,
+  pinned: boolean,
+): PaneNode {
+  if (root.type === "group") {
     if (!root.bufferIds.includes(bufferId)) {
-      return normalizeGroup(root);
+      return root;
     }
 
     const currentPinnedBufferIds = root.pinnedBufferIds ?? [];
@@ -540,38 +605,28 @@ export function setPaneBufferPinned(
     });
   }
 
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        setPaneBufferPinned(root.children[0], paneId, bufferId, pinned),
-        setPaneBufferPinned(root.children[1], paneId, bufferId, pinned),
-      ],
-    };
+  const first = setPaneBufferPinnedEverywhere(root.children[0], bufferId, pinned);
+  const second = setPaneBufferPinnedEverywhere(root.children[1], bufferId, pinned);
+
+  if (first === root.children[0] && second === root.children[1]) {
+    return root;
   }
 
-  return root;
+  return {
+    ...root,
+    children: [first, second],
+  };
 }
 
 export function setPaneLocked(root: PaneNode, paneId: string, locked: boolean): PaneNode {
-  if (root.id === paneId && root.type === "group") {
-    return normalizeGroup({
-      ...root,
-      locked,
-    });
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        setPaneLocked(root.children[0], paneId, locked),
-        setPaneLocked(root.children[1], paneId, locked),
-      ],
-    };
-  }
-
-  return root;
+  return updatePaneNode(root, paneId, (node) =>
+    node.type === "group"
+      ? normalizeGroup({
+          ...node,
+          locked,
+        })
+      : node,
+  );
 }
 
 export function reorderPaneBuffers(
@@ -580,38 +635,30 @@ export function reorderPaneBuffers(
   startIndex: number,
   endIndex: number,
 ): PaneNode {
-  if (root.id === paneId && root.type === "group") {
+  return updatePaneNode(root, paneId, (node) => {
+    if (node.type !== "group") {
+      return node;
+    }
+
     if (
       startIndex < 0 ||
       endIndex < 0 ||
-      startIndex >= root.bufferIds.length ||
-      endIndex >= root.bufferIds.length ||
+      startIndex >= node.bufferIds.length ||
+      endIndex >= node.bufferIds.length ||
       startIndex === endIndex
     ) {
-      return root;
+      return node;
     }
 
-    const nextBufferIds = [...root.bufferIds];
+    const nextBufferIds = [...node.bufferIds];
     const [movedBufferId] = nextBufferIds.splice(startIndex, 1);
     nextBufferIds.splice(endIndex, 0, movedBufferId);
 
     return {
-      ...root,
+      ...node,
       bufferIds: nextBufferIds,
     };
-  }
-
-  if (root.type === "split") {
-    return {
-      ...root,
-      children: [
-        reorderPaneBuffers(root.children[0], paneId, startIndex, endIndex),
-        reorderPaneBuffers(root.children[1], paneId, startIndex, endIndex),
-      ],
-    };
-  }
-
-  return root;
+  });
 }
 
 export function getAdjacentPane(

@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from "react";
-import { usePaneStore } from "../stores/pane-store";
-import type { PaneNode } from "../types/pane";
+import { Fragment, useCallback, useMemo } from "react";
+import { usePaneStore } from "../stores/pane.store";
+import type { PaneNode } from "../types/pane.types";
 import { flattenPaneSplit, type FlatPaneEntry } from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneResizeHandle } from "./pane-resize-handle";
@@ -12,13 +12,21 @@ interface PaneNodeRendererProps {
 
 interface FlatResizeHandleProps {
   direction: "horizontal" | "vertical";
+  handleCount: number;
   index: number;
   entries: FlatPaneEntry[];
   onReset: (index: number) => void;
   onResize: (index: number, sizes: [number, number]) => void;
 }
 
-function FlatResizeHandle({ direction, index, entries, onReset, onResize }: FlatResizeHandleProps) {
+function FlatResizeHandle({
+  direction,
+  handleCount,
+  index,
+  entries,
+  onReset,
+  onResize,
+}: FlatResizeHandleProps) {
   const handleResize = useCallback(
     (sizes: [number, number]) => {
       onResize(index, sizes);
@@ -38,6 +46,7 @@ function FlatResizeHandle({ direction, index, entries, onReset, onResize }: Flat
       onResize={handleResize}
       onReset={handleReset}
       initialSizes={initialSizes}
+      resizeHandleCount={handleCount}
     />
   );
 }
@@ -66,7 +75,7 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
 
   if (node.type === "group") {
     if (hiddenPaneId && node.id === hiddenPaneId) {
-      return <div className="h-full w-full bg-primary-bg" aria-hidden="true" />;
+      return <div className="size-full bg-primary-bg" aria-hidden="true" />;
     }
 
     return <PaneContainer pane={node} />;
@@ -74,29 +83,28 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
 
   if (!flatEntries || flatEntries.length === 0) return null;
 
-  const totalSize = flatEntries.reduce((sum, entry) => sum + entry.size, 0);
-  const handleWidth = 4;
   const handleCount = flatEntries.length - 1;
 
   return (
-    <div className={`flex h-full w-full ${isHorizontal ? "flex-row" : "flex-col"}`}>
+    <div
+      className={`flex size-full ${isHorizontal ? "flex-row" : "flex-col"}`}
+      data-pane-split-container="true"
+    >
       {flatEntries.map((entry, index) => {
-        const pct = (entry.size / totalSize) * 100;
-        const handleDeduction = `${(handleWidth * handleCount) / flatEntries.length}px`;
-
         return (
-          <div key={entry.node.id} className="contents">
+          <Fragment key={entry.node.id}>
             <div
               className="min-h-0 min-w-0 overflow-hidden"
               style={{
-                [isHorizontal ? "width" : "height"]: `calc(${pct}% - ${handleDeduction})`,
+                flexBasis: 0,
+                flexGrow: entry.size,
               }}
             >
               {entry.node.type === "split" && entry.node.direction !== node.direction ? (
                 <PaneNodeRenderer node={entry.node} hiddenPaneId={hiddenPaneId} />
               ) : entry.node.type === "group" ? (
                 entry.node.id === hiddenPaneId ? (
-                  <div className="h-full w-full bg-primary-bg" aria-hidden="true" />
+                  <div className="size-full bg-primary-bg" aria-hidden="true" />
                 ) : (
                   <PaneContainer pane={entry.node} />
                 )
@@ -107,13 +115,14 @@ export function PaneNodeRenderer({ node, hiddenPaneId = null }: PaneNodeRenderer
             {index < flatEntries.length - 1 && (
               <FlatResizeHandle
                 direction={node.direction}
+                handleCount={handleCount}
                 index={index}
                 entries={flatEntries}
                 onReset={handleFlatReset}
                 onResize={handleFlatResize}
               />
             )}
-          </div>
+          </Fragment>
         );
       })}
     </div>

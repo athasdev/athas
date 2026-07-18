@@ -1,8 +1,21 @@
-import { Database, Eye, Hash, Plus, RadioButton as Radio, Table } from "@phosphor-icons/react";
-import { Button } from "@/ui/button";
+import {
+  DatabaseIcon as Database,
+  EyeIcon as Eye,
+  HashIcon as Hash,
+  PlusIcon as Plus,
+  RadioButtonIcon as Radio,
+  TableIcon as Table,
+} from "@/ui/icons";
+import {
+  SidebarHeader,
+  SidebarHeaderIconButton,
+  SidebarListItem,
+  SidebarPanel,
+  SidebarSectionLabel,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
-import type { DatabaseObjectKind, TableInfo } from "../models/common.types";
+import type { DatabaseObjectKind, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
 
 interface TableSidebarProps {
@@ -40,60 +53,47 @@ export default function TableSidebar({
   } satisfies Record<DatabaseObjectKind, typeof Table>;
 
   return (
-    <div className="flex w-64 flex-col overflow-hidden">
-      <div className="group px-3 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 ui-font ui-text-sm text-text-lighter">
-            <Database />
-            Objects ({tables.length})
-          </div>
-          <Button
-            onClick={onCreateTable}
-            variant="ghost"
-            className="rounded-md opacity-0 group-hover:opacity-100"
-            aria-label="Create table"
-            compact
-          >
-            <Plus className="text-text-lighter hover:text-text" />
-          </Button>
-        </div>
-      </div>
+    <SidebarPanel className="w-64 overflow-hidden">
+      <SidebarHeader className="group h-9 justify-between border-b border-border/60 px-2">
+        <SidebarSectionLabel
+          className="h-auto flex-1 px-0 ui-text-sm"
+          leading={<Database />}
+          trailing={`(${tables.length})`}
+        >
+          Objects
+        </SidebarSectionLabel>
+        <SidebarHeaderIconButton
+          onClick={onCreateTable}
+          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+          aria-label="Create table"
+          tooltip="Create table"
+          tooltipSide="bottom"
+        >
+          <Plus />
+        </SidebarHeaderIconButton>
+      </SidebarHeader>
       <div className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
         {objectGroups.map((group, index) => {
           const Icon = groupIcon[group.kind];
           return (
             <div key={group.kind}>
-              <div
-                className={cn(
-                  "px-2.5 py-1 ui-font ui-text-xs text-text-lighter uppercase tracking-wide",
-                  index > 0 && "mt-2",
-                )}
-              >
+              <SidebarSectionLabel className={cn("px-2.5 py-1 uppercase", index > 0 && "mt-2")}>
                 {group.label}
-              </div>
+              </SidebarSectionLabel>
               {group.objects.map((t) => {
                 const owner = getDatabaseObjectOwner(t);
                 return (
-                  <Button
+                  <SidebarListItem
                     key={t.name}
                     onClick={() => onSelectTable(t.name)}
                     onContextMenu={(e) => onTableContextMenu(e, t.name, group.kind)}
-                    variant="ghost"
-                    compact
-                    className={cn(
-                      "flex h-auto w-full items-start justify-start gap-1.5 rounded-lg px-2.5 py-1.5 text-left ui-text-xs hover:bg-hover",
-                      selectedTable === t.name && "bg-selected text-text",
-                    )}
+                    active={selectedTable === t.name}
                     aria-label={`Select ${group.kind} ${t.name}`}
+                    leading={<Icon className="mt-0.5 shrink-0" />}
+                    description={owner ? `on ${owner}` : undefined}
                   >
-                    <Icon className="mt-0.5 shrink-0" />
-                    <span className="flex min-w-0 flex-col items-start">
-                      <span className="max-w-full truncate">{t.name}</span>
-                      {owner && (
-                        <span className="max-w-full truncate text-text-lighter">on {owner}</span>
-                      )}
-                    </span>
-                  </Button>
+                    {t.name}
+                  </SidebarListItem>
                 );
               })}
             </div>
@@ -108,6 +108,6 @@ export default function TableSidebar({
         onRemove={onRemoveHistory}
         onClear={onClearHistory}
       />
-    </div>
+    </SidebarPanel>
   );
 }

@@ -11,7 +11,16 @@ export interface LargeFileCheck {
 export interface LargeEditorModeInfo {
   lineCount: number;
   largeContentMode: boolean;
+  lineOffsets?: number[];
 }
+
+export interface LargeContentPosition {
+  line: number;
+  column: number;
+  offset: number;
+}
+
+export type MeasureLargeContentText = (text: string) => number;
 
 const INCREMENTAL_LARGE_FILE_INFO_EDIT_THRESHOLD = 1000;
 
@@ -46,12 +55,84 @@ function countNewlines(text: string): number {
   return count;
 }
 
+function findLineIndexForOffset(lineOffsets: readonly number[], offset: number): number {
+  if (lineOffsets.length === 0) return 0;
+
+  let low = 0;
+  let high = lineOffsets.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const lineStart = lineOffsets[mid] ?? 0;
+    const nextLineStart = lineOffsets[mid + 1] ?? Number.POSITIVE_INFINITY;
+
+    if (offset < lineStart) {
+      high = mid - 1;
+    } else if (offset >= nextLineStart) {
+      low = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+
+  return Math.max(0, Math.min(high, lineOffsets.length - 1));
+}
+
+function findFirstLineStartAfterOffset(lineOffsets: readonly number[], offset: number): number {
+  let low = 0;
+  let high = lineOffsets.length;
+
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if ((lineOffsets[mid] ?? 0) <= offset) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+
+  return low;
+}
+
+function updateLineOffsetsForEdit(
+  previousLineOffsets: readonly number[],
+  editStartOffset: number,
+  previousEditEndOffset: number,
+  insertedText: string,
+  lengthDelta: number,
+): number[] {
+  const startLine = findLineIndexForOffset(previousLineOffsets, editStartOffset);
+  const appendStartLine = findFirstLineStartAfterOffset(previousLineOffsets, previousEditEndOffset);
+  const nextLineOffsets = previousLineOffsets.slice(0, startLine + 1);
+
+  for (let index = 0; index < insertedText.length; index++) {
+    if (insertedText.charCodeAt(index) === 10) {
+      nextLineOffsets.push(editStartOffset + index + 1);
+    }
+  }
+
+  for (let index = appendStartLine; index < previousLineOffsets.length; index++) {
+    nextLineOffsets.push((previousLineOffsets[index] ?? 0) + lengthDelta);
+  }
+
+  return nextLineOffsets;
+}
+
 export function isTooLargeForEditorServices({ contentLength, lineCount }: LargeFileCheck): boolean {
   if (contentLength > LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD) return true;
   if (lineCount != null && lineCount > LARGE_FILE_TOKENIZATION_LINE_THRESHOLD) return true;
 
   if (contentLength >= RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD) return true;
   if (lineCount != null && lineCount >= RESPONSIVE_LARGE_FILE_LINE_THRESHOLD) return true;
+
+  return false;
+}
+
+export function isTooLargeForSyntaxTokenization({
+  contentLength,
+  lineCount,
+}: LargeFileCheck): boolean {
+  if (contentLength > LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD) return true;
+  if (lineCount != null && lineCount > LARGE_FILE_TOKENIZATION_LINE_THRESHOLD) return true;
 
   return false;
 }
@@ -77,21 +158,37 @@ export function getLargeEditorModeInfo(content: string): LargeEditorModeInfo {
 
   let lineCount = 1;
   let crossedResponsiveLineThreshold = false;
+  let lineOffsets: number[] | undefined;
 
   for (let index = 0; index < content.length; index++) {
     if (content.charCodeAt(index) !== 10) continue;
     lineCount++;
+
     if (lineCount >= RESPONSIVE_LARGE_FILE_LINE_THRESHOLD) {
       crossedResponsiveLineThreshold = true;
+      if (lineOffsets) {
+        lineOffsets.push(index + 1);
+      } else {
+        lineOffsets = collectLineOffsets(content, index + 1);
+      }
+    } else if (lineOffsets) {
+      lineOffsets.push(index + 1);
     }
+  }
+
+  const largeContentMode =
+    content.length >= RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD ||
+    crossedResponsiveLineThreshold ||
+    isTooLargeForEditorServices({ contentLength: content.length, lineCount });
+
+  if (largeContentMode && !lineOffsets) {
+    lineOffsets = buildLineOffsets(content);
   }
 
   return {
     lineCount,
-    largeContentMode:
-      content.length >= RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD ||
-      crossedResponsiveLineThreshold ||
-      isTooLargeForEditorServices({ contentLength: content.length, lineCount }),
+    largeContentMode,
+    lineOffsets,
   };
 }
 
@@ -119,17 +216,61 @@ export function applyIncrementalLargeEditorModeInfo(
     return null;
   }
 
+  const insertedText = nextContent.slice(prefixLength, nextEndOffset);
   const removedNewlines = countNewlines(previousContent.slice(prefixLength, previousEndOffset));
-  const insertedNewlines = countNewlines(nextContent.slice(prefixLength, nextEndOffset));
+  const insertedNewlines = countNewlines(insertedText);
   const lineCount = Math.max(1, previousInfo.lineCount + insertedNewlines - removedNewlines);
+  const largeContentMode =
+    previousInfo.largeContentMode ||
+    isTooLargeForEditorServices({
+      contentLength: nextContent.length,
+      lineCount,
+    });
+  let lineOffsets: number[] | undefined;
+
+  if (largeContentMode) {
+    if (previousInfo.lineOffsets) {
+      lineOffsets = updateLineOffsetsForEdit(
+        previousInfo.lineOffsets,
+        prefixLength,
+        previousEndOffset,
+        insertedText,
+        nextContent.length - previousContent.length,
+      );
+      if (lineOffsets.length !== lineCount) {
+        return null;
+      }
+    } else {
+      lineOffsets = buildLineOffsets(nextContent);
+    }
+  }
 
   return {
     lineCount,
-    largeContentMode: isTooLargeForEditorServices({
-      contentLength: nextContent.length,
-      lineCount,
-    }),
+    largeContentMode,
+    lineOffsets,
   };
+}
+
+export function buildLineOffsets(content: string): number[] {
+  const lineOffsets = [0];
+  for (let index = 0; index < content.length; index++) {
+    if (content.charCodeAt(index) === 10) {
+      lineOffsets.push(index + 1);
+    }
+  }
+  return lineOffsets;
+}
+
+function collectLineOffsets(content: string, nextKnownLineOffset: number): number[] {
+  const lineOffsets = [0];
+  for (let index = 0; index < nextKnownLineOffset - 1; index++) {
+    if (content.charCodeAt(index) === 10) {
+      lineOffsets.push(index + 1);
+    }
+  }
+  lineOffsets.push(nextKnownLineOffset);
+  return lineOffsets;
 }
 
 export function countLines(content: string): number {
@@ -235,4 +376,130 @@ export function sliceContentLines(
   pushLine(content.length);
 
   return { lines, offsets };
+}
+
+export function sliceContentLinesByOffsets(
+  content: string,
+  lineOffsets: readonly number[],
+  startLine: number,
+  endLine: number,
+): { lines: string[]; offsets: number[] } {
+  const clampedStart = Math.max(0, Math.min(startLine, lineOffsets.length));
+  const clampedEnd = Math.max(clampedStart, Math.min(endLine, lineOffsets.length));
+  const lines: string[] = [];
+  const offsets: number[] = [];
+
+  for (let lineIndex = clampedStart; lineIndex < clampedEnd; lineIndex++) {
+    const lineStart = lineOffsets[lineIndex] ?? content.length;
+    const nextLineStart = lineOffsets[lineIndex + 1] ?? content.length;
+    let lineEnd = nextLineStart;
+
+    if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 10) {
+      lineEnd--;
+    }
+    if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13) {
+      lineEnd--;
+    }
+
+    lines.push(content.slice(lineStart, lineEnd));
+    offsets.push(lineStart);
+  }
+
+  return { lines, offsets };
+}
+
+export function calculatePositionFromLineOffsets(
+  content: string,
+  lineOffsets: readonly number[],
+  offset: number,
+): LargeContentPosition {
+  const clampedOffset = Math.max(0, Math.min(offset, content.length));
+  if (lineOffsets.length === 0) {
+    return { line: 0, column: clampedOffset, offset: clampedOffset };
+  }
+
+  let low = 0;
+  let high = lineOffsets.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const lineStart = lineOffsets[mid] ?? 0;
+    const nextLineStart = lineOffsets[mid + 1] ?? Number.POSITIVE_INFINITY;
+
+    if (clampedOffset < lineStart) {
+      high = mid - 1;
+    } else if (clampedOffset >= nextLineStart) {
+      low = mid + 1;
+    } else {
+      return {
+        line: mid,
+        column: clampedOffset - lineStart,
+        offset: clampedOffset,
+      };
+    }
+  }
+
+  const line = Math.max(0, Math.min(high, lineOffsets.length - 1));
+  return {
+    line,
+    column: clampedOffset - (lineOffsets[line] ?? 0),
+    offset: clampedOffset,
+  };
+}
+
+export function getLargeContentLineText(
+  content: string,
+  lineOffsets: readonly number[],
+  lineIndex: number,
+): string {
+  if (lineOffsets.length === 0) return "";
+
+  const clampedLine = Math.max(0, Math.min(lineIndex, lineOffsets.length - 1));
+  const lineStart = lineOffsets[clampedLine] ?? content.length;
+  const nextLineStart = lineOffsets[clampedLine + 1] ?? content.length;
+  let lineEnd = nextLineStart;
+
+  if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 10) lineEnd--;
+  if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13) lineEnd--;
+
+  return content.slice(lineStart, lineEnd);
+}
+
+export function getLargeContentOffsetAtPosition(
+  content: string,
+  lineOffsets: readonly number[],
+  line: number,
+  column: number,
+): number {
+  if (lineOffsets.length === 0) return 0;
+
+  const clampedLine = Math.max(0, Math.min(line, lineOffsets.length - 1));
+  const lineText = getLargeContentLineText(content, lineOffsets, clampedLine);
+  const clampedColumn = Math.max(0, Math.min(column, lineText.length));
+
+  return (lineOffsets[clampedLine] ?? 0) + clampedColumn;
+}
+
+export function getLargeContentColumnForX(
+  lineText: string,
+  x: number,
+  measureText: MeasureLargeContentText,
+): number {
+  if (lineText.length === 0 || x <= 0) return 0;
+
+  let low = 0;
+  let high = lineText.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const width = measureText(lineText.slice(0, mid));
+    if (width <= x) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  const currentWidth = measureText(lineText.slice(0, low));
+  const nextWidth = low < lineText.length ? measureText(lineText.slice(0, low + 1)) : currentWidth;
+
+  return nextWidth - x < x - currentWidth ? Math.min(lineText.length, low + 1) : low;
 }

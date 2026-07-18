@@ -8,16 +8,18 @@ import type {
 import {
   convertLSPDiagnostic,
   useDiagnosticsStore,
-} from "@/features/diagnostics/stores/diagnostics-store";
+} from "@/features/diagnostics/stores/diagnostics.store";
 import type {
   ApplyDiagnosticCodeActionResult,
   Diagnostic,
   DiagnosticCodeAction,
-} from "@/features/diagnostics/types/diagnostics";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useBufferStore } from "../stores/buffer-store";
+} from "@/features/diagnostics/types/diagnostics.types";
+import type { BackendLanguageToolConfigSet } from "@/extensions/registry/extension-store-runtime";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useBufferStore } from "../stores/buffer.store";
+import { getSourceEditorBufferByPath } from "../utils/buffer-index";
 import { logger } from "../utils/logger";
-import { useLspStore } from "./lsp-store";
+import { useLspStore } from "./stores/lsp.store";
 import {
   applyWorkspaceEdit,
   applyTextEditsToContent,
@@ -30,6 +32,14 @@ import {
 export interface LspError {
   message: string;
   code?: string;
+}
+
+export interface LspLocation {
+  uri: string;
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
 }
 
 interface PrepareRenameResult {
@@ -93,6 +103,18 @@ function isBenignHoverError(error: unknown): boolean {
     message.includes("column is beyond end of line") ||
     message.includes("column is beyond end of file") ||
     message.includes("no lsp client for this file")
+  );
+}
+
+function isCanceledLspRequest(error: unknown): boolean {
+  const message = stringifyLspError(error).toLowerCase();
+  return (
+    message === "canceled" ||
+    message.includes("canceled: canceled") ||
+    message.includes("request canceled") ||
+    message.includes("request cancelled") ||
+    message.includes("content modified") ||
+    message.includes("-32801")
   );
 }
 
@@ -351,9 +373,7 @@ export class LspClient {
           const filePath = filePathFromUri(uri);
           const isOpenInEditor =
             this.openDocuments.has(filePath) ||
-            useBufferStore
-              .getState()
-              .buffers.some((buffer) => hasTextContent(buffer) && buffer.path === filePath);
+            !!getSourceEditorBufferByPath(useBufferStore.getState().buffers, filePath);
 
           if (!isOpenInEditor) {
             logger.debug("LSPClient", `Ignoring diagnostics for closed document: ${filePath}`);
@@ -426,19 +446,30 @@ export class LspClient {
     try {
       logger.debug("LSPClient", "Starting LSP with workspace:", workspacePath);
 
+      if (workspacePath.startsWith("wsl://") || filePath?.startsWith("wsl://")) {
+        logger.debug("LSPClient", `Skipping host LSP for WSL workspace ${workspacePath}`);
+        return;
+      }
+
       // Get LSP server info from extension registry if file path is provided
       let serverPath: string | undefined;
       let serverArgs: string[] | undefined;
       let languageId: string | undefined;
       let initOptions: Record<string, unknown> | undefined;
+      let tools: BackendLanguageToolConfigSet | undefined;
 
       if (filePath) {
-        const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
+        const [{ extensionRegistry }, { getLanguageToolConfigSet }] = await Promise.all([
+          import("@/extensions/registry/extension-registry"),
+          import("@/extensions/registry/extension-store-runtime"),
+        ]);
+        const extension = extensionRegistry.getExtensionForFilePath(filePath);
 
         serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
         serverArgs = extensionRegistry.getLspServerArgs(filePath);
         languageId = extensionRegistry.getLanguageId(filePath) || undefined;
         initOptions = extensionRegistry.getLspInitializationOptions(filePath);
+        tools = getLanguageToolConfigSet(extension?.manifest);
 
         logger.debug("LSPClient", `Using LSP server: ${serverPath} for language: ${languageId}`);
 
@@ -475,6 +506,8 @@ export class LspClient {
         workspacePath,
         serverPath,
         serverArgs,
+        languageId: languageId || null,
+        tools: tools || null,
         initializationOptions: initOptions || null,
       });
 
@@ -506,8 +539,7 @@ export class LspClient {
       for (const server of serversToRemove) {
         this.activeLanguageServers.delete(server);
         this.activeServerFiles.delete(server);
-        // Extract language from server key and remove from active languages
-        const language = server.split(":")[1];
+        const { languageId: language } = this.parseServerKey(server);
         if (language) {
           const displayName = this.getLanguageDisplayName(language);
           this.activeLanguages.delete(displayName);
@@ -532,13 +564,23 @@ export class LspClient {
     try {
       logger.debug("LSPClient", "Starting LSP for file:", filePath);
 
+      if (workspacePath.startsWith("wsl://") || filePath.startsWith("wsl://")) {
+        logger.debug("LSPClient", `Skipping host LSP for WSL file ${filePath}`);
+        return false;
+      }
+
       // Get LSP server info from extension registry
-      const { extensionRegistry } = await import("@/extensions/registry/extension-registry");
+      const [{ extensionRegistry }, { getLanguageToolConfigSet }] = await Promise.all([
+        import("@/extensions/registry/extension-registry"),
+        import("@/extensions/registry/extension-store-runtime"),
+      ]);
+      const extension = extensionRegistry.getExtensionForFilePath(filePath);
 
       const serverPath = extensionRegistry.getLspServerPath(filePath) || undefined;
       const serverArgs = extensionRegistry.getLspServerArgs(filePath);
       const languageId = extensionRegistry.getLanguageId(filePath) || undefined;
       const initializationOptions = extensionRegistry.getLspInitializationOptions(filePath);
+      const tools = getLanguageToolConfigSet(extension?.manifest);
 
       // If no LSP server is configured for this file type, return early
       if (!serverPath) {
@@ -599,6 +641,8 @@ export class LspClient {
           workspacePath,
           serverPath,
           serverArgs,
+          languageId: languageId || null,
+          tools: tools || null,
           initializationOptions: initializationOptions || null,
         });
         if (languageId) {
@@ -763,17 +807,13 @@ export class LspClient {
 
   async restartAllTrackedServers(): Promise<void> {
     const serverKeys = this.getActiveServerEntries().map((entry) => entry.key);
-    for (const serverKey of serverKeys) {
-      await this.restartTrackedServer(serverKey);
-    }
+    await Promise.all(serverKeys.map((serverKey) => this.restartTrackedServer(serverKey)));
   }
 
   async stopAll(): Promise<void> {
-    // Get unique workspace paths from all active language servers
     const workspaces = new Set<string>();
     for (const key of this.activeLanguageServers) {
-      const workspace = key.split(":")[0];
-      workspaces.add(workspace);
+      workspaces.add(this.parseServerKey(key).workspacePath);
     }
     await Promise.all(Array.from(workspaces).map((ws) => this.stop(ws)));
   }
@@ -821,44 +861,70 @@ export class LspClient {
     }
   }
 
-  async getDefinition(
+  private async getNavigationLocations(
+    command: "lsp_get_definition" | "lsp_get_implementation" | "lsp_get_type_definition",
+    label: string,
     filePath: string,
     line: number,
     character: number,
-  ): Promise<
-    | {
-        uri: string;
-        range: {
-          start: { line: number; character: number };
-          end: { line: number; character: number };
-        };
-      }[]
-    | null
-  > {
+  ): Promise<LspLocation[] | null> {
     try {
-      logger.debug("LSPClient", `Getting definition for ${filePath}:${line}:${character}`);
-      const definition = await invoke<
-        | {
-            uri: string;
-            range: {
-              start: { line: number; character: number };
-              end: { line: number; character: number };
-            };
-          }[]
-        | null
-      >("lsp_get_definition", {
+      logger.debug("LSPClient", `Getting ${label} for ${filePath}:${line}:${character}`);
+      const locations = await invoke<LspLocation[] | null>(command, {
         filePath,
         line,
         character,
       });
-      if (definition) {
-        logger.debug("LSPClient", `Got definition: ${JSON.stringify(definition)}`);
+      if (locations) {
+        logger.debug("LSPClient", `Got ${label}: ${JSON.stringify(locations)}`);
       }
-      return definition;
+      return locations;
     } catch (error) {
-      logger.error("LSPClient", "LSP definition error:", error);
+      logger.error("LSPClient", `LSP ${label} error:`, error);
       return null;
     }
+  }
+
+  async getDefinition(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<LspLocation[] | null> {
+    return this.getNavigationLocations(
+      "lsp_get_definition",
+      "definition",
+      filePath,
+      line,
+      character,
+    );
+  }
+
+  async getImplementation(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<LspLocation[] | null> {
+    return this.getNavigationLocations(
+      "lsp_get_implementation",
+      "implementation",
+      filePath,
+      line,
+      character,
+    );
+  }
+
+  async getTypeDefinition(
+    filePath: string,
+    line: number,
+    character: number,
+  ): Promise<LspLocation[] | null> {
+    return this.getNavigationLocations(
+      "lsp_get_type_definition",
+      "type definition",
+      filePath,
+      line,
+      character,
+    );
   }
 
   async getSemanticTokens(filePath: string): Promise<
@@ -867,12 +933,14 @@ export class LspClient {
       startChar: number;
       length: number;
       tokenType: number;
+      tokenTypeName?: string;
       tokenModifiers: number;
     }[]
   > {
     try {
       return await invoke("lsp_get_semantic_tokens", { filePath });
     } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP semantic tokens error:", error);
       return [];
     }
@@ -889,6 +957,7 @@ export class LspClient {
     try {
       return await invoke("lsp_get_code_lens", { filePath });
     } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP code lens error:", error);
       return [];
     }
@@ -915,6 +984,7 @@ export class LspClient {
         endLine,
       });
     } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
       logger.error("LSPClient", "LSP inlay hints error:", error);
       return [];
     }
@@ -1001,6 +1071,30 @@ export class LspClient {
       return applyTextEditsToContent(content, edits);
     } catch (error) {
       logger.debug("LSPClient", "LSP document formatting unavailable:", error);
+      return null;
+    }
+  }
+
+  async formatRange(
+    filePath: string,
+    content: string,
+    range: {
+      start: { line: number; character: number };
+      end: { line: number; character: number };
+    },
+  ): Promise<string | null> {
+    try {
+      const edits = await invoke<LspTextEdit[]>("lsp_format_range", {
+        filePath,
+        startLine: range.start.line,
+        startCharacter: range.start.character,
+        endLine: range.end.line,
+        endCharacter: range.end.character,
+      });
+      if (!edits.length) return content;
+      return applyTextEditsToContent(content, edits);
+    } catch (error) {
+      logger.debug("LSPClient", "LSP range formatting unavailable:", error);
       return null;
     }
   }

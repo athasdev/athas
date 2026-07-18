@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { useEditorSettingsStore } from "../../stores/settings-store";
-import { useEditorStateStore } from "../../stores/state-store";
+import { useEditorSettingsStore } from "../../stores/settings.store";
+import { useEditorStateStore } from "../../stores/state.store";
 import { getLineHeight } from "../../utils/position";
 
 interface ScrollMetrics {
@@ -85,7 +85,7 @@ export function ScrollDebugOverlay() {
 
   return (
     <div
-      className="fixed right-4 bottom-4 rounded border border-border bg-primary-bg p-3 editor-font text-text ui-text-xs shadow-lg"
+      className="fixed right-4 bottom-4 rounded border border-border bg-primary-bg p-3 font-mono text-text ui-text-sm shadow-[var(--shadow-popover)]"
       style={{
         zIndex: 9999,
         backdropFilter: "blur(8px)",

@@ -28,18 +28,17 @@
 
 ## Branches And Releases
 
-- Default to working directly on `master`.
-- If a branch is needed, branch from `master`.
+- Default to working directly on `main`.
+- If a branch is needed, branch from `main`.
 - Keep branch names short and descriptive.
-- Keep releases and release tags on `master`.
+- Keep releases and release tags on `main`.
 
 ## Commits
 
 - Keep commits focused. One logical change per commit.
 - Commit titles should be short, direct, and describe the outcome of the change.
 - Start commit messages with an uppercase letter.
-- Add a short commit body when the change benefits from extra context.
-- Prefer a short wrapped commit body in plain language.
+- Every commit must include a short wrapped body in plain language.
 - Wrap commit body lines before the commitlint line-length limit instead of leaving warnings behind.
 - Commit bodies should explain what changed and why without headings, boilerplate, or filler.
 - When useful, end the commit message with a separate `Fixes ...` or `Closes ...` line.
@@ -53,15 +52,34 @@
 - Follow existing code style and keep changes aligned with nearby code.
 - Use kebab-case for file and folder names by default.
 - React component files, hook files, and utility files should use descriptive kebab-case names such as `settings-dialog.tsx`, `use-keymaps.ts`, or `theme-loader.ts`.
+- Import React hooks directly and call them by name, such as `useEffect(...)`, instead of qualifying hooks through the React namespace.
 - Avoid new vague filenames such as `helpers.ts`, `misc.ts`, or `utils.ts` when the file can be named after what it actually does.
 - Avoid unnecessary comments in UI components; prefer self-explanatory code.
 - Avoid unnecessary `cn(...)` calls; use it only for conditional or merged class names.
 - Use Tailwind utilities for normal component styling.
+- Keep app-wide CSS in `src/styles/` for base reset, fonts, scrollbars, theme tokens, shared syntax tokens, and platform/window overrides only.
+- Keep feature CSS next to the feature and import it from the owning component entrypoint; use it only for generated markup, third-party DOM, editor layers, or selectors Tailwind cannot express clearly.
+- Prefer `src/ui` primitives and CVA variants for reusable UI styling instead of feature-specific wrapper classes or new global CSS selectors.
 - Do not add exported Tailwind class string constants such as `*_CLASS_NAME`; use CVA variants or UI primitives for reusable styling.
 - Use CSS variables for theme colors; do not hardcode hex values in UI code.
 - Keep font size, font family, theme colors, keymaps, and shortcuts in their existing system-level homes instead of redefining them ad hoc in feature components.
-- Never use hardcoded font-size utilities such as `text-[11px]` in UI code; use the shared UI font-size classes such as `ui-text-xs`, `ui-text-sm`, and related system primitives instead.
+- Never use hardcoded font-size utilities such as `text-[11px]` in UI code; use the shared UI font-size classes such as `ui-text-sm`, `ui-text-base`, and related system primitives instead.
 - Interactive elements must remain accessible, including accessible names for icon-only controls and usable keyboard/focus behavior.
+
+## UI Design System
+
+- Treat `src/ui` primitives and `src/styles/theme.css` as the source of truth for reusable visual behavior.
+- Before creating UI markup or a new component, search `src/ui` and at least two comparable feature surfaces for an existing primitive or composition.
+- Feature components may control placement, responsive layout, and domain content. They must not redefine a shared primitive's height, radius, border, background, typography, or interaction states with local utility classes.
+- When a primitive is missing a needed visual behavior, add a named semantic prop or CVA variant to the primitive and migrate every current consumer that represents the same pattern.
+- Do not create pass-through wrappers, exported Tailwind class constants, or feature-local copies of shared controls. Keep a wrapper only when it owns behavior or a stable composition reused by multiple consumers.
+- If the same visual utility sequence appears in two feature consumers, move that contract into a shared primitive before finishing the change.
+- New app-wide visual concepts require semantic variables in `src/styles/theme.css`, derived from the existing theme colors when possible. Do not add feature-local color mixes or hardcoded light/dark values.
+- Prefer spacing and surface contrast over borders. Borders should communicate a real boundary and should be owned by the primitive rather than added independently by consumers.
+- Use line chevrons for disclosure, expansion, submenu, and directional navigation controls. Reserve triangular play icons for actions that actually start or resume something.
+- Keep `className` escape hatches focused on layout and placement. Repeated visual overrides are evidence that the primitive API needs a semantic variant.
+- When touching a shared primitive, audit all import sites and remove confirmed dead or redundant code in that primitive's module.
+- Before finishing UI work, verify light and dark themes plus hover, active, focus-visible, disabled, overflow, and resized states in the real Tauri app when practical.
 
 ## Zustand
 

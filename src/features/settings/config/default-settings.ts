@@ -11,7 +11,7 @@ import {
   HEADER_TRAILING_ITEM_IDS,
   SIDEBAR_ACTIVITY_ITEM_IDS,
 } from "@/features/layout/config/item-order";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
 export const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
@@ -23,7 +23,6 @@ export const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
 export const defaultSettings: Settings = {
   // General
   autoSave: false,
-  sidebarPosition: "left",
   quickOpenPreview: true,
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
@@ -32,14 +31,21 @@ export const defaultSettings: Settings = {
   tabSize: 2,
   wordWrap: false,
   lineNumbers: true,
+  renderWhitespace: "none",
+  renderIndentGuides: true,
+  highlightOccurrences: true,
   showMinimap: false,
+  inlayHints: true,
+  codeLens: true,
+  semanticTokens: true,
+  breadcrumbShowSymbols: true,
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
   terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
   terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
-  terminalCursorStyle: "block",
+  terminalCursorStyle: "bar",
   terminalCursorBlink: true,
   terminalCursorWidth: 2,
   terminalDefaultShellId: "",
@@ -49,14 +55,13 @@ export const defaultSettings: Settings = {
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark",
-  iconTheme: "material",
+  iconTheme: "athas-icons",
   syncSystemTheme: false,
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
-  sidebarTabsPosition: "top",
-  titleBarProjectMode: "window",
+  windowTransparency: true,
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
@@ -76,8 +81,11 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
   aiSkills: [],
+  v0DesignSystems: [],
+  activeV0DesignSystemId: "",
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
+  activityRailWidth: 180,
   sidebarWidth: 220,
   showGitHubPullRequests: true,
   showGitHubIssues: true,
@@ -106,25 +114,27 @@ export const defaultSettings: Settings = {
     search: true,
     diagnostics: true,
     debugger: false,
+    docker: true,
     outline: true,
     aiChat: true,
     teamCollaboration: true,
-    multiAgents: false,
     breadcrumbs: true,
     persistentCommands: true,
+    webViewer: false,
   },
   // Advanced
   enterpriseManagedMode: false,
   enterpriseRequireExtensionAllowlist: false,
   enterpriseAllowedExtensionIds: [],
   // Other
+  lastSettingsTab: "general",
   extensionsActiveTab: "all",
   maxOpenTabs: 100,
   horizontalTabScroll: false,
   //// File tree
   fileTreeIndentSize: 16,
-  compactFoldersInFileTree: false,
-  fileTreeDensity: "default",
+  compactFoldersInFileTree: true,
+  hideRootFolderInFileTree: false,
   showHiddenFilesInFileTree: true,
   showGitignoredFilesInFileTree: true,
   hiddenFilePatterns: [],
@@ -141,7 +151,7 @@ export const defaultSettings: Settings = {
   collapseEmptyGitSections: false,
   rememberLastGitPanelMode: false,
   gitLastPanelMode: "changes",
-  gitSidebarTabOrder: ["changes", "history", "worktrees"],
+  gitSidebarTabOrder: ["changes", "history"],
   githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
   enableInlineGitBlame: true,
   enableGitGutter: true,
@@ -164,6 +174,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
     footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
+    v0DesignSystems: defaultSettings.v0DesignSystems.map((profile) => ({ ...profile })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }

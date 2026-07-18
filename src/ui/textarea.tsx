@@ -14,14 +14,14 @@ const textareaVariants = cva(
     variants: {
       variant: {
         default: cn(
-          "rounded border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50",
+          "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
+          "focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35",
         ),
         ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
       },
       size: {
         sm: "px-2 py-1 ui-text-sm",
-        md: "px-3 py-2 ui-text-md",
+        md: "px-3 py-2 ui-text-base",
       },
     },
     defaultVariants: {
@@ -32,11 +32,26 @@ const textareaVariants = cva(
 );
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { size = "sm", variant = "default", className, ...props },
+  {
+    size = "sm",
+    variant = "default",
+    className,
+    autoComplete = "off",
+    autoCorrect = "off",
+    spellCheck = "false",
+    ...props
+  },
   ref,
 ) {
   return (
-    <textarea ref={ref} className={cn(textareaVariants({ size, variant }), className)} {...props} />
+    <textarea
+      ref={ref}
+      autoComplete={autoComplete}
+      autoCorrect={autoCorrect}
+      spellCheck={spellCheck}
+      className={cn(textareaVariants({ size, variant }), className)}
+      {...props}
+    />
   );
 });
 

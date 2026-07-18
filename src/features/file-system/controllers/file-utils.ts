@@ -1,5 +1,6 @@
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
-import type { DatabaseType } from "@/features/database/models/provider.types";
+import type { DatabaseType } from "@/features/database/types/provider.types";
+import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 
 /**
@@ -228,6 +229,8 @@ const TEXT_EXTENSIONS = new Set([
 export const isKnownTextFile = (path: string): boolean => {
   const fileName = getBaseName(path, "").toLowerCase();
   if (TEXT_FILE_NAMES.has(fileName)) return true;
+
+  if (getLanguageIdFromPath(path)) return true;
 
   const lowerPath = path.toLowerCase();
   return Array.from(TEXT_EXTENSIONS).some((extension) => lowerPath.endsWith(extension));

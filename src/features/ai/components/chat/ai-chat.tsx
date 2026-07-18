@@ -1,17 +1,15 @@
 import { listen } from "@tauri-apps/api/event";
-import { Key as KeyRound } from "@phosphor-icons/react";
+import "../../styles/ai-chat.css";
+import { KeyIcon as KeyRound } from "@/ui/icons";
 import type React from "react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
-import {
-  appendChatAcpEvent,
-  type ChatAcpEventInput,
-  truncateDetail,
-  updateToolCompletionAcpEvent,
-} from "@/features/ai/lib/acp-event-timeline";
+import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
 import { parseMentionsAndLoadFiles } from "@/features/ai/lib/file-mentions";
+import { extractFollowUpActions } from "@/features/ai/lib/follow-up-actions";
+import { buildConversationHistory } from "@/features/ai/lib/conversation-history";
 import {
   createToolCall,
   markToolCallComplete,
@@ -20,19 +18,22 @@ import {
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { AcpEvent, AcpPermissionOption, AcpToolKind } from "@/features/ai/types/acp";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
-import type { AIChatProps, Message } from "@/features/ai/types/ai-chat";
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp.types";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
+import type { AIChatProps, Message } from "@/features/ai/types/ai-chat.types";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
+import { Conversation } from "../elements/conversation";
 import AIChatInputBar from "../input/chat-input-bar";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
@@ -122,64 +123,22 @@ function getPermissionOptionClassName(option: AcpPermissionOption) {
   }
 }
 
-function getAcpToolTarget(event: Extract<AcpEvent, { type: "tool_start" | "tool_update" }>) {
-  const locations = "locations" in event ? event.locations : null;
-  const location = locations?.[0]?.path;
-  if (location) return location.split("/").pop() || location;
+function getMessageSearchMatches(messages: Message[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [];
 
-  const input = event.input;
-  if (typeof input === "string") return input;
-  if (input && typeof input === "object") {
-    const record = input as Record<string, unknown>;
-    const path =
-      typeof record.file_path === "string"
-        ? record.file_path
-        : typeof record.path === "string"
-          ? record.path
-          : typeof record.filename === "string"
-            ? record.filename
-            : undefined;
+  return messages.flatMap((message) => {
+    const content = message.content.toLowerCase();
+    const matches: Array<{ messageId: string }> = [];
+    let index = content.indexOf(normalizedQuery);
 
-    if (path) return path.split("/").pop() || path;
-    if (typeof record.command === "string") return truncateDetail(record.command, 120);
-    if (typeof record.query === "string") return truncateDetail(record.query, 120);
-  }
-
-  const output = "output" in event ? event.output : null;
-  if (Array.isArray(output)) {
-    const diffItems = output.filter(
-      (item) => item && typeof item === "object" && item.type === "diff",
-    );
-    if (diffItems.length > 0) {
-      const firstPath = (diffItems[0] as Record<string, unknown>).path;
-      const firstFile =
-        typeof firstPath === "string" ? firstPath.split("/").pop() || firstPath : "file";
-      return diffItems.length === 1 ? firstFile : `${diffItems.length} files`;
+    while (index !== -1) {
+      matches.push({ messageId: message.id });
+      index = content.indexOf(normalizedQuery, index + normalizedQuery.length);
     }
-  }
 
-  return undefined;
-}
-
-function getAcpToolLabel(kind: AcpToolKind | null | undefined, completed = false) {
-  switch (kind) {
-    case "edit":
-      return completed ? "Edited file" : "Editing file";
-    case "read":
-      return completed ? "Read file" : "Reading file";
-    case "delete":
-      return completed ? "Deleted file" : "Deleting file";
-    case "move":
-      return completed ? "Moved file" : "Moving file";
-    case "search":
-      return completed ? "Searched" : "Searching";
-    case "execute":
-      return completed ? "Ran command" : "Running command";
-    case "fetch":
-      return completed ? "Fetched" : "Fetching";
-    default:
-      return completed ? "Tool completed" : "Using tool";
-  }
+    return matches;
+  });
 }
 
 const AIChat = memo(function AIChat({
@@ -192,8 +151,8 @@ const AIChat = memo(function AIChat({
   allProjectFiles = [],
   onApplyCode,
 }: AIChatProps) {
-  const { rootFolderPath } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const subscription = useAuthStore((state) => state.subscription);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const isAiChatBlockedByPolicy = Boolean(
@@ -218,8 +177,38 @@ const AIChat = memo(function AIChat({
     }>
   >([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
+  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
+  const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
   const effectiveChatId =
     chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
+  const currentChat = useMemo(
+    () => chatState.chats.find((chat) => chat.id === effectiveChatId),
+    [chatState.chats, effectiveChatId],
+  );
+  const messageSearchMatches = useMemo(
+    () => getMessageSearchMatches(currentChat?.messages ?? [], messageSearchQuery),
+    [currentChat?.messages, messageSearchQuery],
+  );
+  const activeMessageSearchMatch = messageSearchMatches[activeMessageSearchIndex] ?? null;
+
+  const closeMessageSearch = useCallback(() => {
+    setIsMessageSearchOpen(false);
+    setMessageSearchQuery("");
+    setActiveMessageSearchIndex(0);
+  }, []);
+
+  const goToPreviousMessageSearchMatch = useCallback(() => {
+    if (messageSearchMatches.length === 0) return;
+    setActiveMessageSearchIndex((index) =>
+      index === 0 ? messageSearchMatches.length - 1 : index - 1,
+    );
+  }, [messageSearchMatches.length]);
+
+  const goToNextMessageSearchMatch = useCallback(() => {
+    if (messageSearchMatches.length === 0) return;
+    setActiveMessageSearchIndex((index) => (index + 1) % messageSearchMatches.length);
+  }, [messageSearchMatches.length]);
 
   useEffect(() => {
     if (isActiveSurface && activeBuffer) {
@@ -243,14 +232,42 @@ const AIChat = memo(function AIChat({
   ]);
 
   useEffect(() => {
-    chatActions.checkApiKey(settings.aiProviderId);
+    chatActions.checkApiKey(aiProviderId);
     chatActions.checkAllProviderApiKeys();
-  }, [settings.aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
+  }, [aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
 
   // Clear ACP events when switching chats
   useEffect(() => {
     setAcpEvents([]);
-  }, [effectiveChatId]);
+    closeMessageSearch();
+  }, [closeMessageSearch, effectiveChatId]);
+
+  useEffect(() => {
+    setActiveMessageSearchIndex(0);
+  }, [messageSearchQuery]);
+
+  useEffect(() => {
+    if (messageSearchMatches.length === 0) {
+      setActiveMessageSearchIndex(0);
+      return;
+    }
+
+    setActiveMessageSearchIndex((index) => Math.min(index, messageSearchMatches.length - 1));
+  }, [messageSearchMatches.length]);
+
+  useEffect(() => {
+    if (!isActiveSurface || isAiChatBlockedByPolicy) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setIsMessageSearchOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isActiveSurface, isAiChatBlockedByPolicy]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -318,8 +335,7 @@ const AIChat = memo(function AIChat({
     setAcpEvents((prev) => appendChatAcpEvent(prev, event));
   }, []);
 
-  // Agent availability is now handled dynamically by the model-provider-selector component
-  // No need to check Claude Code status on mount
+  // Agent availability is handled dynamically by the agent selector.
 
   const handleDeleteChat = (chatId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -332,10 +348,9 @@ const AIChat = memo(function AIChat({
       chatActions.updateChatTitle(chatId, fallbackTitle);
 
       const authState = useAuthStore.getState();
-      const subscriptionStatus = authState.subscription?.status ?? "free";
       const enterprisePolicy = authState.subscription?.enterprise?.policy;
       const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-      const isPro = subscriptionStatus === "pro";
+      const isPro = hasProductCapability(authState.subscription, "hostedAi");
 
       if (!isPro || (managedPolicy && !managedPolicy.aiCompletionEnabled)) {
         return;
@@ -365,7 +380,7 @@ const AIChat = memo(function AIChat({
         const currentChat = useAIChatStore.getState().getChatById(chatId);
         if (!currentChat) return;
 
-        if (currentChat.title === fallbackTitle || currentChat.title === "New Chat") {
+        if (currentChat.title === fallbackTitle || currentChat.title === "New Session") {
           chatActions.updateChatTitle(chatId, generatedTitle);
         }
       } catch (error) {
@@ -496,7 +511,7 @@ const AIChat = memo(function AIChat({
       : null;
     const currentAgentId = targetChat?.agentId ?? store.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
-    // For ACP agents (Claude Code, etc.), we don't need an API key
+    // For ACP agents, we don't need an API key.
     // For Custom API, we need an API key to be set
     if (!messageContent.trim() || (!isAcp && !store.hasApiKey)) return;
 
@@ -505,6 +520,8 @@ const AIChat = memo(function AIChat({
     let targetChatId = effectiveChatId ?? store.currentChatId;
     if (!targetChatId) {
       targetChatId = chatActions.createNewChat(currentAgentId);
+    } else {
+      targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId);
     }
 
     const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
@@ -515,6 +532,9 @@ const AIChat = memo(function AIChat({
     const latestSettings = useSettingsStore.getState().settings;
     const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
     context.mentionedFiles = mentionedFiles;
+    const conversationContext = buildConversationHistory(
+      useAIChatStore.getState().getMessagesForChat(targetChatId),
+    );
     const userMessage: Message = {
       id: Date.now().toString(),
       content: messageContent.trim(),
@@ -546,6 +566,7 @@ const AIChat = memo(function AIChat({
 
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
+    let currentAssistantRawContent = "";
     let acpProducedStateOnlyUpdate = false;
     let acpCommandResultLabel: string | null = null;
 
@@ -556,6 +577,16 @@ const AIChat = memo(function AIChat({
         if (directAction) {
           const bufferActions = useBufferStore.getState().actions;
           if (directAction.kind === "open_web_viewer" && directAction.url) {
+            if (!useSettingsStore.getState().settings.coreFeatures.webViewer) {
+              chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
+                content: "Web Viewer is disabled. Enable it in Settings > Features to open URLs.",
+                isStreaming: false,
+              });
+              chatActions.setIsTyping(false);
+              chatActions.setStreamingMessageId(null);
+              return;
+            }
+
             bufferActions.openWebViewerBuffer(directAction.url);
             chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
               content: `Opened ${directAction.url} in Athas web viewer.`,
@@ -580,15 +611,6 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const conversationContext = useAIChatStore
-        .getState()
-        .getMessagesForChat(targetChatId)
-        .filter((msg) => msg.role !== "system")
-        .map((msg) => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content,
-        }));
-
       const enhancedMessage = isAcp ? messageContent.trim() : processedMessage;
       if (isAcp) {
         setAcpEvents([]);
@@ -601,13 +623,12 @@ const AIChat = memo(function AIChat({
         enhancedMessage,
         context,
         (chunk: string) => {
-          updateStreamingAssistantMessage(
-            targetChatId,
-            currentAssistantMessageId,
-            (currentMessage) => ({
-              content: (currentMessage?.content || "") + chunk,
-            }),
-          );
+          currentAssistantRawContent += chunk;
+          const extracted = extractFollowUpActions(currentAssistantRawContent);
+          updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
+            content: extracted.content,
+            followUpActions: extracted.actions,
+          }));
           requestAnimationFrame(() => scrollToBottom());
         },
         () => {
@@ -621,8 +642,8 @@ const AIChat = memo(function AIChat({
             currentMessage?.resources?.length,
           );
 
-          if (!hasVisibleResponse && isAcpAgent(currentAgentId)) {
-            if (acpProducedStateOnlyUpdate) {
+          if (!hasVisibleResponse) {
+            if (isAcpAgent(currentAgentId) && acpProducedStateOnlyUpdate) {
               const slashCommand = messageContent.trim().match(/^\/([^\s]+)/)?.[1];
               const fallbackContent =
                 acpCommandResultLabel ||
@@ -639,14 +660,17 @@ const AIChat = memo(function AIChat({
               return;
             }
 
-            const fallbackMessage =
-              "The selected agent did not return a visible response. Try sending the message again.";
+            const isAcp = isAcpAgent(currentAgentId);
+            const fallbackMessage = isAcp
+              ? "The selected agent did not return a visible response. Try sending the message again."
+              : "The selected provider did not return a visible response. Try another model or send the message again.";
+            const emptyResponseSource = isAcp ? "agent session" : "provider request";
             updateStreamingAssistantMessage(targetChatId, currentAssistantMessageId, () => ({
               content: `[ERROR_BLOCK]
 title: No Response
 code: EMPTY_RESPONSE
 message: ${fallbackMessage}
-details: The agent session started, but no content, tool output, or resource was returned.
+details: The ${emptyResponseSource} completed, but no content, tool output, or resource was returned.
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
@@ -772,6 +796,7 @@ details: ${errorDetails || mainError}
         conversationContext,
         () => {
           const newMessageId = Date.now().toString();
+          currentAssistantRawContent = "";
           const newAssistantMessage: Message = {
             id: newMessageId,
             content: "",
@@ -786,13 +811,6 @@ details: ${errorDetails || mainError}
           requestAnimationFrame(() => scrollToBottom(true));
         },
         (event) => {
-          appendAcpEvent({
-            id: `tool-${event.toolId}`,
-            kind: "tool",
-            label: getAcpToolLabel(event.kind),
-            detail: getAcpToolTarget(event),
-            state: event.status === "pending" ? "info" : "running",
-          });
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -814,48 +832,6 @@ details: ${errorDetails || mainError}
           );
         },
         (event) => {
-          if (
-            event.kind ||
-            event.input ||
-            event.output ||
-            event.locations?.length ||
-            event.status
-          ) {
-            setAcpEvents((prev) => {
-              const activityId = `tool-${event.toolId}`;
-              const nextState =
-                event.status === "failed"
-                  ? "error"
-                  : event.status === "completed"
-                    ? "success"
-                    : event.status === "pending"
-                      ? "info"
-                      : "running";
-              const detail = getAcpToolTarget(event);
-
-              if (!prev.some((activity) => activity.id === activityId)) {
-                return appendChatAcpEvent(prev, {
-                  id: activityId,
-                  kind: "tool",
-                  label: getAcpToolLabel(event.kind),
-                  detail,
-                  state: nextState,
-                });
-              }
-
-              return prev.map((activity) =>
-                activity.id === activityId
-                  ? {
-                      ...activity,
-                      label: event.kind ? getAcpToolLabel(event.kind) : activity.label,
-                      detail: detail ?? activity.detail,
-                      state: nextState,
-                      timestamp: new Date(),
-                    }
-                  : activity,
-              );
-            });
-          }
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -874,9 +850,6 @@ details: ${errorDetails || mainError}
           );
         },
         (toolName: string, toolId?: string, output?: unknown, error?: string) => {
-          if (toolId) {
-            setAcpEvents((prev) => updateToolCompletionAcpEvent(prev, `tool-${toolId}`, !error));
-          }
           updateStreamingAssistantMessage(
             targetChatId,
             currentAssistantMessageId,
@@ -926,9 +899,6 @@ details: ${errorDetails || mainError}
             case "tool_update":
               break;
             case "tool_complete":
-              setAcpEvents((prev) =>
-                updateToolCompletionAcpEvent(prev, `tool-${event.toolId}`, event.success),
-              );
               break;
             case "permission_request":
               break; // Handled separately with permission UI
@@ -972,17 +942,17 @@ details: ${errorDetails || mainError}
             case "plan_update": {
               const summary =
                 event.entries.length > 0
-                  ? event.entries
-                      .slice(0, 2)
-                      .map((entry) => entry.content)
-                      .join(" | ")
+                  ? event.entries.map((entry) => entry.content).join(" | ")
                   : "No plan steps";
               appendAcpEvent({
                 kind: "plan",
                 label: `Plan updated (${event.entries.length} steps)`,
-                detail: truncateDetail(summary),
+                detail: summary,
                 state: "info",
               });
+              break;
+            }
+            case "usage_update": {
               break;
             }
             case "status_changed":
@@ -992,7 +962,7 @@ details: ${errorDetails || mainError}
               appendAcpEvent({
                 kind: "error",
                 label: "Agent error",
-                detail: truncateDetail(event.error),
+                detail: event.error,
                 state: "error",
               });
               break;
@@ -1027,7 +997,8 @@ details: ${errorDetails || mainError}
     } catch (error) {
       console.error("Failed to start streaming:", error);
       chatActions.updateMessage(targetChatId, assistantMessageId, {
-        content: "Error: Failed to connect to AI service. Please check your API key and try again.",
+        content:
+          "Error: Failed to connect to Agent service. Please check your API key and try again.",
         isStreaming: false,
       });
       chatActions.setIsTyping(false);
@@ -1053,7 +1024,7 @@ details: ${errorDetails || mainError}
     async (messageContent: string) => {
       const currentAgentId = chatActions.getCurrentAgentId();
       const isAcp = isAcpAgent(currentAgentId);
-      // For ACP agents (Claude Code, etc.), we don't need an API key
+      // For ACP agents, we don't need an API key.
       if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
       chatActions.setInput("");
@@ -1089,6 +1060,7 @@ details: ${errorDetails || mainError}
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
     if (chatState.isTyping || chatState.streamingMessageId) return;
+    if (!isAcpAgent(pendingLaunch.agentId) && !chatState.hasApiKey) return;
 
     chatActions.setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
     chatActions.setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
@@ -1097,6 +1069,7 @@ details: ${errorDetails || mainError}
   }, [
     chatActions,
     effectiveChatId,
+    chatState.hasApiKey,
     chatState.isTyping,
     chatState.pendingAgentLaunchRequest,
     chatState.streamingMessageId,
@@ -1111,6 +1084,8 @@ details: ${errorDetails || mainError}
       ? currentPermission.options
       : getFallbackPermissionOptions()
     : [];
+  const isNewSession = (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
+  const useInitialComposer = isNewSession && !currentPermission;
   const handlePermission = async (approved: boolean, optionId?: string) => {
     if (!currentPermission) return;
     try {
@@ -1134,36 +1109,68 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ai-chat-surface ui-font flex h-full flex-col bg-transparent text-text ui-text-xs ${className || ""}`}
+      className={`ai-chat-surface font-sans flex h-full flex-col bg-transparent text-text ui-text-sm ${className || ""}`}
     >
-      <ChatHeader chatId={effectiveChatId} onDeleteChat={handleDeleteChat} />
+      <ChatHeader
+        chatId={effectiveChatId}
+        onDeleteChat={handleDeleteChat}
+        isMessageSearchOpen={isMessageSearchOpen}
+        messageSearchQuery={messageSearchQuery}
+        onToggleMessageSearch={() => {
+          if (isMessageSearchOpen) {
+            closeMessageSearch();
+            return;
+          }
+
+          setIsMessageSearchOpen(true);
+        }}
+        onCloseMessageSearch={closeMessageSearch}
+        onMessageSearchQueryChange={setMessageSearchQuery}
+        messageSearchMatchCount={messageSearchMatches.length}
+        activeMessageSearchIndex={activeMessageSearchIndex}
+        onPreviousMessageSearchMatch={goToPreviousMessageSearchMatch}
+        onNextMessageSearchMatch={goToNextMessageSearchMatch}
+      />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
           <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
-            <p className="font-medium ui-text-sm text-text">AI chat is disabled</p>
-            <p className="mt-2 text-text-lighter ui-text-xs">
-              Your organization policy has disabled AI chat for this workspace.
+            <p className="font-medium ui-text-sm text-text">Agent is disabled</p>
+            <p className="mt-2 text-text-lighter ui-text-sm">
+              Your organization policy has disabled Agent for this workspace.
             </p>
           </div>
         </div>
       ) : (
         <>
-          <div
-            ref={messagesContainerRef}
-            onScroll={handleMessagesScroll}
-            className="scrollbar-hidden relative z-0 flex-1 overflow-y-auto"
-          >
-            <ChatMessages
-              ref={messagesEndRef}
-              chatId={effectiveChatId}
-              onApplyCode={onApplyCode}
-              acpEvents={acpEvents}
-            />
-          </div>
+          {useInitialComposer ? (
+            <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
+              <AIChatInputBar
+                buffers={buffers}
+                allProjectFiles={allProjectFiles}
+                isActiveSurface={isActiveSurface}
+                presentation="initial"
+                onSendMessage={handleSendMessage}
+                onStopStreaming={stopStreaming}
+              />
+            </div>
+          ) : (
+            <Conversation ref={messagesContainerRef} onScroll={handleMessagesScroll}>
+              <ChatMessages
+                ref={messagesEndRef}
+                chatId={effectiveChatId}
+                onApplyCode={onApplyCode}
+                onSendFollowUp={handleSendMessage}
+                acpEvents={acpEvents}
+                searchQuery={messageSearchQuery}
+                activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
+                activeSearchIndex={activeMessageSearchIndex}
+              />
+            </Conversation>
+          )}
 
           {currentPermission && (
-            <div className="bg-transparent px-3 pt-2 ui-text-xs">
-              <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-sm">
+            <div className="bg-transparent px-3 pt-2 ui-text-sm">
+              <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-[var(--shadow-card)]">
                 <KeyRound className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
                 <div
                   className="min-w-0 flex-1 truncate text-text"
@@ -1171,12 +1178,12 @@ details: ${errorDetails || mainError}
                 >
                   <span className="font-medium text-text-light">Permission</span>
                   <span className="px-1.5 text-text-lighter">/</span>
-                  <span className="editor-font">{currentPermissionSummary}</span>
+                  <span className="font-mono">{currentPermissionSummary}</span>
                 </div>
                 {permissionQueue.length > 1 ? (
-                  <span className="shrink-0 rounded-full bg-secondary-bg px-1.5 py-0.5 ui-text-xs text-text-lighter">
+                  <Badge variant="muted" size="compact" className="shrink-0">
                     +{permissionQueue.length - 1}
-                  </span>
+                  </Badge>
                 ) : null}
                 <div className="flex shrink-0 items-center gap-1">
                   {currentPermissionOptions.map((option) => {
@@ -1205,13 +1212,15 @@ details: ${errorDetails || mainError}
             </div>
           )}
 
-          <AIChatInputBar
-            buffers={buffers}
-            allProjectFiles={allProjectFiles}
-            isActiveSurface={isActiveSurface}
-            onSendMessage={handleSendMessage}
-            onStopStreaming={stopStreaming}
-          />
+          {!useInitialComposer ? (
+            <AIChatInputBar
+              buffers={buffers}
+              allProjectFiles={allProjectFiles}
+              isActiveSurface={isActiveSurface}
+              onSendMessage={handleSendMessage}
+              onStopStreaming={stopStreaming}
+            />
+          ) : null}
 
           <ProviderApiKeyCommand
             isOpen={chatState.apiKeyModalState.isOpen}

@@ -4,17 +4,27 @@ use sha2::{Digest, Sha256};
 use std::{
    collections::HashSet,
    fs,
-   path::PathBuf,
+   path::{Path, PathBuf},
    sync::{
       LazyLock, Mutex,
       atomic::{AtomicU32, Ordering},
    },
+   time::{Instant, SystemTime, UNIX_EPOCH},
 };
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 use tauri::TitleBarStyle;
 use tauri::{Emitter, Manager, WebviewBuilder, WebviewUrl, command, webview::PageLoadEvent};
-#[cfg(target_os = "macos")]
-use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy, clear_vibrancy};
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
+use window_vibrancy::{
+   NSVisualEffectMaterial, NSVisualEffectState, apply_vibrancy, clear_vibrancy,
+};
+
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
+const ATHAS_WINDOW_MATERIAL: NSVisualEffectMaterial = NSVisualEffectMaterial::Menu;
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
+const ATHAS_WINDOW_STATE: NSVisualEffectState = NSVisualEffectState::Active;
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
+const EMBEDDED_WEBVIEW_CORNER_RADIUS: f64 = 7.0;
 
 // Counter for generating unique web viewer labels
 static WEB_VIEWER_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -23,9 +33,9 @@ static EMBEDDED_WEBVIEW_LABELS: LazyLock<Mutex<HashSet<String>>> =
    LazyLock::new(|| Mutex::new(HashSet::new()));
 
 struct EmbeddedWebviewProfile {
-   #[cfg_attr(target_os = "macos", allow(dead_code))]
+   #[cfg_attr(all(target_os = "macos", not(feature = "linux")), allow(dead_code))]
    data_directory: PathBuf,
-   #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+   #[cfg_attr(any(not(target_os = "macos"), feature = "linux"), allow(dead_code))]
    data_store_identifier: [u8; 16],
 }
 
@@ -55,14 +65,23 @@ pub struct CreateAppWindowRequest {
    pub remote_connection_name: Option<String>,
 }
 
-fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
+fn append_window_trace_params(url: String, label: &str, created_at_ms: u128) -> String {
+   let separator = if url.contains('?') { '&' } else { '?' };
+   format!("{url}{separator}athasWindowTraceId={label}&athasWindowCreatedAtMs={created_at_ms}")
+}
+
+fn build_window_open_url(
+   request: Option<&CreateAppWindowRequest>,
+   label: &str,
+   created_at_ms: u128,
+) -> String {
    let Some(request) = request else {
-      return "/".to_string();
+      return append_window_trace_params("/".to_string(), label, created_at_ms);
    };
 
    let has_payload = request.path.is_some() || request.remote_connection_id.is_some();
    if !has_payload {
-      return "/".to_string();
+      return append_window_trace_params("/".to_string(), label, created_at_ms);
    }
 
    let mut serializer = url::form_urlencoded::Serializer::new(String::new());
@@ -91,7 +110,50 @@ fn build_window_open_url(request: Option<&CreateAppWindowRequest>) -> String {
       }
    }
 
-   format!("/?{}", serializer.finish())
+   append_window_trace_params(format!("/?{}", serializer.finish()), label, created_at_ms)
+}
+
+fn window_open_request_kind(request: Option<&CreateAppWindowRequest>) -> &'static str {
+   match request {
+      Some(request) if request.remote_connection_id.is_some() => "remote",
+      Some(request) if request.path.is_some() && request.is_directory.unwrap_or(false) => {
+         "directory"
+      }
+      Some(request) if request.path.is_some() => "file",
+      _ => "empty",
+   }
+}
+
+fn window_open_created_at_ms() -> u128 {
+   SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .unwrap_or_default()
+      .as_millis()
+}
+
+fn window_title_for_request(request: Option<&CreateAppWindowRequest>) -> String {
+   let name = request.and_then(|request| {
+      request
+         .remote_connection_name
+         .as_deref()
+         .filter(|name| !name.trim().is_empty())
+         .map(str::trim)
+         .map(str::to_string)
+         .or_else(|| {
+            request.path.as_deref().and_then(|path| {
+               Path::new(path)
+                  .file_name()
+                  .and_then(|name| name.to_str())
+                  .filter(|name| !name.trim().is_empty())
+                  .map(str::to_string)
+            })
+         })
+   });
+
+   match name {
+      Some(name) => format!("{name} - Athas"),
+      None => "Athas".to_string(),
+   }
 }
 
 fn profile_digest(profile_key: &str) -> [u8; 32] {
@@ -152,13 +214,22 @@ fn normalize_user_agent(user_agent: Option<String>) -> Result<Option<String>, St
 }
 
 pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
-
-      if let Err(error) = apply_vibrancy(window, NSVisualEffectMaterial::Menu, None, None) {
+      if let Err(error) = apply_vibrancy(
+         window,
+         ATHAS_WINDOW_MATERIAL,
+         Some(ATHAS_WINDOW_STATE),
+         None,
+      ) {
          log::warn!("Failed to initialize macOS window vibrancy: {error}");
       }
+   }
+
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
    }
 
    #[cfg(target_os = "windows")]
@@ -172,7 +243,7 @@ pub fn configure_app_window(window: &tauri::WebviewWindow<AthasRuntime>) {
    }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Result<(), String> {
    use objc::{class, msg_send, runtime::Object, sel, sel_impl};
    use std::ffi::CString;
@@ -199,10 +270,42 @@ fn set_ns_appearance(target: *mut std::ffi::c_void, appearance_name: &str) -> Re
    Ok(())
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
+fn apply_embedded_webview_corner_radius(
+   webview: &tauri::Webview<AthasRuntime>,
+) -> Result<(), String> {
+   webview
+      .with_webview(|platform_webview| unsafe {
+         use objc::{
+            msg_send,
+            runtime::{BOOL, Object, YES},
+            sel, sel_impl,
+         };
+
+         let view = platform_webview.inner().cast::<Object>();
+         if view.is_null() {
+            return;
+         }
+
+         let _: () = msg_send![view, setWantsLayer: YES];
+         let layer: *mut Object = msg_send![view, layer];
+         if layer.is_null() {
+            return;
+         }
+
+         let _: () = msg_send![layer, setCornerRadius: EMBEDDED_WEBVIEW_CORNER_RADIUS];
+         let _: () = msg_send![layer, setMasksToBounds: YES];
+         let _: () = msg_send![layer, setAllowsEdgeAntialiasing: YES as BOOL];
+         let _: () = msg_send![layer, setEdgeAntialiasingMask: 15usize];
+      })
+      .map_err(|e| format!("Failed to apply embedded webview corner radius: {e}"))
+}
+
+#[cfg(all(target_os = "macos", not(feature = "linux")))]
 fn sync_macos_window_appearance(
    window: &tauri::WebviewWindow<AthasRuntime>,
    theme_type: &str,
+   transparency_enabled: bool,
 ) -> Result<(), String> {
    let appearance_name = match theme_type {
       "light" => "NSAppearanceNameAqua",
@@ -220,9 +323,19 @@ fn sync_macos_window_appearance(
       .map_err(|e| format!("Failed to access macOS webview: {e}"))?;
    set_ns_appearance(ns_view, appearance_name)?;
 
-   if let Ok(true) = clear_vibrancy(window) {
-      apply_vibrancy(window, NSVisualEffectMaterial::Menu, None, None)
-         .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
+   if transparency_enabled {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+      let _ = clear_vibrancy(window);
+      apply_vibrancy(
+         window,
+         ATHAS_WINDOW_MATERIAL,
+         Some(ATHAS_WINDOW_STATE),
+         None,
+      )
+      .map_err(|e| format!("Failed to refresh macOS vibrancy: {e}"))?;
+   } else {
+      let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+      let _ = clear_vibrancy(window);
    }
 
    Ok(())
@@ -237,16 +350,51 @@ pub fn uses_native_window_chrome() -> bool {
 pub fn set_macos_window_appearance(
    window: tauri::WebviewWindow<AthasRuntime>,
    theme_type: String,
+   transparency_enabled: Option<bool>,
 ) -> Result<(), String> {
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
-      sync_macos_window_appearance(&window, &theme_type)?;
+      sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(true))?;
    }
 
-   #[cfg(not(target_os = "macos"))]
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
    {
       let _ = window;
       let _ = theme_type;
+      let _ = transparency_enabled;
+   }
+
+   Ok(())
+}
+
+#[command]
+pub fn set_window_transparency_enabled(
+   window: tauri::WebviewWindow<AthasRuntime>,
+   enabled: bool,
+) -> Result<(), String> {
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
+   {
+      if enabled {
+         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
+         let _ = clear_vibrancy(&window);
+         if let Err(error) = apply_vibrancy(
+            &window,
+            ATHAS_WINDOW_MATERIAL,
+            Some(ATHAS_WINDOW_STATE),
+            None,
+         ) {
+            log::warn!("Failed to apply macOS window vibrancy: {error}");
+         }
+      } else {
+         let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 255)));
+         let _ = clear_vibrancy(&window);
+      }
+   }
+
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
+   {
+      let _ = window;
+      let _ = enabled;
    }
 
    Ok(())
@@ -257,16 +405,34 @@ fn create_labeled_app_window_internal(
    label: String,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
-   let url = build_window_open_url(request.as_ref());
+   let started_at = Instant::now();
+   let created_at_ms = window_open_created_at_ms();
+   let request_kind = window_open_request_kind(request.as_ref());
+   log::info!("[window-open:{label}] create:start kind={request_kind}");
+
+   let url = build_window_open_url(request.as_ref(), &label, created_at_ms);
+   let title = window_title_for_request(request.as_ref());
+   let trace_label = label.clone();
 
    let builder = tauri::WebviewWindowBuilder::new(app, &label, WebviewUrl::App(url.into()))
-      .title("")
+      .title(title)
       .inner_size(1200.0, 800.0)
       .min_inner_size(400.0, 400.0)
       .center()
       .decorations(true)
+      .transparent(cfg!(target_os = "macos"))
       .resizable(true)
-      .shadow(true);
+      .shadow(true)
+      .on_page_load(move |_window, payload| {
+         let event = match payload.event() {
+            PageLoadEvent::Started => "started",
+            PageLoadEvent::Finished => "finished",
+         };
+         log::info!(
+            "[window-open:{trace_label}] page-load:{event} elapsedMs={}",
+            started_at.elapsed().as_millis()
+         );
+      });
 
    #[cfg(any(
       target_os = "windows",
@@ -274,17 +440,38 @@ fn create_labeled_app_window_internal(
    ))]
    let builder = builder.decorations(false);
 
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    let builder = builder
       .hidden_title(true)
       .title_bar_style(TitleBarStyle::Overlay)
-      .transparent(true);
+      .traffic_light_position(tauri::LogicalPosition::new(14.0, 20.0));
 
+   let build_started_at = Instant::now();
    let window = builder
       .build()
       .map_err(|e| format!("Failed to create app window: {e}"))?;
+   log::info!(
+      "[window-open:{label}] build:end durationMs={} totalMs={}",
+      build_started_at.elapsed().as_millis(),
+      started_at.elapsed().as_millis()
+   );
 
+   let configure_started_at = Instant::now();
    configure_app_window(&window);
+   log::info!(
+      "[window-open:{label}] configure:end durationMs={} totalMs={}",
+      configure_started_at.elapsed().as_millis(),
+      started_at.elapsed().as_millis()
+   );
+
+   let show_started_at = Instant::now();
+   let _ = window.show();
+   let _ = window.set_focus();
+   log::info!(
+      "[window-open:{label}] show-focus:end durationMs={} totalMs={}",
+      show_started_at.elapsed().as_millis(),
+      started_at.elapsed().as_millis()
+   );
 
    Ok(label)
 }
@@ -306,12 +493,31 @@ pub async fn create_app_window(
    app: tauri::AppHandle<AthasRuntime>,
    request: Option<CreateAppWindowRequest>,
 ) -> Result<String, String> {
-   create_app_window_internal(&app, request)
+   let started_at = Instant::now();
+   let request_kind = window_open_request_kind(request.as_ref());
+   log::info!("[window-open:command] create_app_window:start kind={request_kind}");
+   let result = create_app_window_internal(&app, request);
+   match &result {
+      Ok(label) => log::info!(
+         "[window-open:{label}] create_app_window:end durationMs={}",
+         started_at.elapsed().as_millis()
+      ),
+      Err(error) => log::error!(
+         "[window-open:command] create_app_window:error durationMs={} error={error}",
+         started_at.elapsed().as_millis()
+      ),
+   }
+   result
 }
 
-fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
+fn build_webview_bridge_script(
+   webview_label: &str,
+   parent_window_label: &str,
+) -> Result<String, String> {
    let encoded_label = serde_json::to_string(webview_label)
       .map_err(|e| format!("Failed to serialize webview label: {e}"))?;
+   let encoded_parent_window_label = serde_json::to_string(parent_window_label)
+      .map_err(|e| format!("Failed to serialize parent window label: {e}"))?;
 
    Ok(format!(
       r#"
@@ -320,6 +526,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
   window.__ATHAS_WEBVIEW_BRIDGE_LOADED__ = true;
 
   const WEBVIEW_LABEL = {encoded_label};
+  const PARENT_WINDOW_LABEL = {encoded_parent_window_label};
 
   function emit(event, payload) {{
     const invoke = window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke;
@@ -335,6 +542,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 
   function emitShortcut(shortcut) {{
     emit('embedded-webview-shortcut', {{
+      parentWindowLabel: PARENT_WINDOW_LABEL,
       webviewLabel: WEBVIEW_LABEL,
       shortcut
     }});
@@ -493,6 +701,7 @@ fn build_webview_bridge_script(webview_label: &str) -> Result<String, String> {
 #[allow(clippy::too_many_arguments)]
 pub async fn create_embedded_webview(
    app: tauri::AppHandle<AthasRuntime>,
+   window: tauri::WebviewWindow<AthasRuntime>,
    url: String,
    profile_key: String,
    user_agent: Option<String>,
@@ -507,14 +716,8 @@ pub async fn create_embedded_webview(
    let parsed_url = normalize_webview_url(&url)?;
    let profile = resolve_embedded_webview_profile(&app, &profile_key)?;
    let user_agent = normalize_user_agent(user_agent)?;
-
-   // Get the main window
-   let main_webview_window = app
-      .get_webview_window("main")
-      .ok_or("Main window not found")?;
-
-   // Get the underlying Window to use add_child
-   let main_window = main_webview_window.as_ref().window();
+   let parent_window_label = window.label().to_string();
+   let parent_window = window.as_ref().window();
 
    // Build webview with conditional react-grab injection for localhost
    let mut webview_builder = WebviewBuilder::new(
@@ -526,12 +729,12 @@ pub async fn create_embedded_webview(
       ),
    );
 
-   #[cfg(target_os = "macos")]
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
       webview_builder = webview_builder.data_store_identifier(profile.data_store_identifier);
    }
 
-   #[cfg(not(target_os = "macos"))]
+   #[cfg(any(not(target_os = "macos"), feature = "linux"))]
    {
       webview_builder = webview_builder.data_directory(profile.data_directory);
    }
@@ -540,8 +743,10 @@ pub async fn create_embedded_webview(
       webview_builder = webview_builder.user_agent(user_agent);
    }
 
-   webview_builder =
-      webview_builder.initialization_script(build_webview_bridge_script(&webview_label)?);
+   webview_builder = webview_builder.initialization_script(build_webview_bridge_script(
+      &webview_label,
+      &parent_window_label,
+   )?);
    let app_handle = app.clone();
    let event_webview_label = webview_label.clone();
    let navigation_webview_label = webview_label.clone();
@@ -569,8 +774,8 @@ pub async fn create_embedded_webview(
       let _ = app_handle.emit("embedded-webview-page-load", event);
    });
 
-   // Create embedded webview within the main window
-   let webview = main_window
+   // Create embedded webview within the window that requested it.
+   let webview = parent_window
       .add_child(
          webview_builder,
          tauri::LogicalPosition::new(x, y),
@@ -582,6 +787,9 @@ pub async fn create_embedded_webview(
    webview
       .set_auto_resize(false)
       .map_err(|e| format!("Failed to set auto resize: {e}"))?;
+
+   #[cfg(all(target_os = "macos", not(feature = "linux")))]
+   apply_embedded_webview_corner_radius(&webview)?;
 
    if let Ok(mut labels) = EMBEDDED_WEBVIEW_LABELS.lock() {
       labels.insert(webview_label.clone());
@@ -716,6 +924,9 @@ pub async fn set_webview_visible(
          webview
             .hide()
             .map_err(|e| format!("Failed to hide webview: {e}"))?;
+         if let Some(main_webview) = app.get_webview_window("main") {
+            let _ = main_webview.set_focus();
+         }
       }
    } else {
       return Err(format!("Webview not found: {webview_label}"));
@@ -742,6 +953,26 @@ pub async fn open_webview_devtools(
       }
    } else {
       Err(format!("Webview not found: {webview_label}"))
+   }
+}
+
+#[command]
+pub async fn reopen_current_webview_devtools(
+   window: tauri::WebviewWindow<AthasRuntime>,
+) -> Result<(), String> {
+   #[cfg(any(debug_assertions, feature = "devtools"))]
+   {
+      if window.is_devtools_open() {
+         window.close_devtools();
+      }
+      window.open_devtools();
+      Ok(())
+   }
+
+   #[cfg(not(any(debug_assertions, feature = "devtools")))]
+   {
+      let _ = window;
+      Err("Webview devtools are unavailable in release builds".to_string())
    }
 }
 

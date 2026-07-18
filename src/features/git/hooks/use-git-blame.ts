@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useGitBlameStore } from "../stores/git-blame-store";
-import type { GitBlameLine } from "../types/git-types";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useGitBlameStore } from "../stores/git-blame.store";
+import type { GitBlameLine } from "../types/git.types";
 
 export function useGitBlame(filePath: string | undefined) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);

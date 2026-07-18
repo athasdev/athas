@@ -12,17 +12,20 @@ import type {
   PlatformExecutable,
   ToolRuntime,
 } from "../types/extension-manifest";
+import { getManifestLanguageContributions } from "../types/extension-contributions";
 import { registerLanguageAssetOverride } from "@/features/editor/lib/wasm-parser/extension-assets";
+import { getServiceUrls } from "@/config/services";
 
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 const MANIFESTS_URL = `${CDN_BASE_URL}/manifests.json`;
 const BUNDLED_PARSER_BASE_URL = "/tree-sitter/parsers";
 
 interface ExternalLanguageContribution {
   id: string;
-  extensions: string[];
+  extensions?: string[];
   aliases?: string[];
   filenames?: string[];
+  filenamePatterns?: string[];
 }
 
 interface ExternalToolConfig {
@@ -43,7 +46,11 @@ interface ExternalLanguageManifest {
   version?: string;
   publisher?: string;
   categories?: string[];
+  icon?: string;
   languages?: ExternalLanguageContribution[];
+  contributes?: {
+    languages?: ExternalLanguageContribution[];
+  };
   capabilities?: {
     grammar?: {
       wasmPath?: string;
@@ -86,12 +93,30 @@ function normalizeExtensions(extensions: string[]): string[] {
   return extensions.map((ext) => (ext.startsWith(".") ? ext : `.${ext}`));
 }
 
+function getExternalLanguages(manifest: ExternalLanguageManifest): ExternalLanguageContribution[] {
+  return [...(manifest.languages || []), ...(manifest.contributes?.languages || [])];
+}
+
 function defaultCommand(name?: string): PlatformExecutable {
   return { default: name || "" };
 }
 
 function isAbsoluteAssetUrl(value: string): boolean {
   return /^(?:[a-z]+:)?\/\//i.test(value) || value.startsWith("/");
+}
+
+function resolveExtensionAssetUrl(
+  folder: string,
+  assetPath: string | undefined,
+  fallbackFilename: string,
+): string {
+  const normalized = assetPath?.trim() || fallbackFilename;
+
+  if (isAbsoluteAssetUrl(normalized)) {
+    return normalized;
+  }
+
+  return `${CDN_BASE_URL}/${folder}/${normalized.replace(/^\.?\//, "")}`;
 }
 
 export function resolveLanguageAssetUrl(
@@ -113,7 +138,7 @@ export function resolveLanguageAssetUrl(
 
 function createLspConfig(manifest: ExternalLanguageManifest): LspConfiguration | undefined {
   const lsp = manifest.capabilities?.lsp;
-  const languages = manifest.languages || [];
+  const languages = getExternalLanguages(manifest);
   if (!lsp?.name || languages.length === 0) return undefined;
 
   const fileExtensions = languages.flatMap((lang) => normalizeExtensions(lang.extensions || []));
@@ -137,7 +162,7 @@ function createFormatterConfig(
   manifest: ExternalLanguageManifest,
 ): FormatterConfiguration | undefined {
   const formatter = manifest.capabilities?.formatter;
-  const languageIds = (manifest.languages || []).map((lang) => lang.id);
+  const languageIds = getExternalLanguages(manifest).map((lang) => lang.id);
   if (!formatter?.name || languageIds.length === 0) return undefined;
 
   return {
@@ -157,7 +182,7 @@ function createFormatterConfig(
 
 function createLinterConfig(manifest: ExternalLanguageManifest): LinterConfiguration | undefined {
   const linter = manifest.capabilities?.linter;
-  const languageIds = (manifest.languages || []).map((lang) => lang.id);
+  const languageIds = getExternalLanguages(manifest).map((lang) => lang.id);
   if (!linter?.name || languageIds.length === 0) return undefined;
 
   return {
@@ -185,11 +210,12 @@ function convertLanguageManifest(
     throw new Error(`Could not resolve extension folder from path: ${path}`);
   }
 
-  const languages = (manifest.languages || []).map((language) => ({
+  const languages = getExternalLanguages(manifest).map((language) => ({
     id: language.id,
     extensions: normalizeExtensions(language.extensions || []),
     aliases: language.aliases,
     filenames: language.filenames,
+    filenamePatterns: language.filenamePatterns,
   }));
 
   if (languages.length === 0) {
@@ -216,7 +242,11 @@ function convertLanguageManifest(
     version: manifest.version || "1.0.0",
     publisher: manifest.publisher || "Athas",
     categories: toExtensionCategories(manifest.categories),
+    icon: resolveExtensionAssetUrl(folder, manifest.icon, "icon.svg"),
     languages,
+    contributes: {
+      languages,
+    },
     grammar: {
       wasmPath: wasmUrl,
       scopeName: manifest.capabilities?.grammar?.scopeName || `source.${primaryLanguageId}`,
@@ -260,7 +290,7 @@ function processManifests(manifests: Record<string, ExternalLanguageManifest>) {
 
   for (const [folder, manifest] of Object.entries(manifests)) {
     try {
-      if (!manifest.languages?.length) {
+      if (getExternalLanguages(manifest).length === 0) {
         continue;
       }
 
@@ -305,7 +335,7 @@ export async function initializeLanguagePackager(): Promise<void> {
       const manifests: Record<string, ExternalLanguageManifest> = await response.json();
       processManifests(manifests);
     } catch (error) {
-      console.error("Failed to load extension manifests from CDN:", error);
+      console.warn("Failed to load extension manifests from CDN:", error);
       // Initialize with empty state so the editor can still function
       initialized = true;
     }
@@ -336,8 +366,10 @@ export function getHighlightQueryUrl(languageId: string): string {
 }
 
 export function getHighlightQueryUrlForExtension(manifest: ExtensionManifest): string {
+  const languages = getManifestLanguageContributions(manifest);
+
   return (
     highlightUrlByExtensionId.get(manifest.id) ||
-    (manifest.languages?.[0] ? getHighlightQueryUrl(manifest.languages[0].id) : "")
+    (languages[0] ? getHighlightQueryUrl(languages[0].id) : "")
   );
 }

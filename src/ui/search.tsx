@@ -1,16 +1,16 @@
-import { cva } from "class-variance-authority";
 import {
-  TextAa as CaseSensitive,
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  CaretUp as ChevronUp,
-  BracketsCurly as Regex,
-  ArrowsLeftRight as Replace,
-  MagnifyingGlass as Search,
-  TextT as WholeWord,
-  X,
-} from "@phosphor-icons/react";
-import type { ReactNode, RefObject } from "react";
+  TextAaIcon as CaseSensitive,
+  ChevronDownIcon as ChevronDown,
+  ChevronRightIcon as ChevronRight,
+  ChevronUpIcon as ChevronUp,
+  BracketsCurlyIcon as Regex,
+  ArrowsLeftRightIcon as Replace,
+  MagnifyingGlassIcon as Search,
+  TextTIcon as WholeWord,
+  XIcon as X,
+  type Icon as AppIcon,
+} from "@/ui/icons";
+import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -42,54 +42,32 @@ interface SearchPopoverProps {
   className?: string;
 }
 
-const searchSurfaceVariants = cva(
-  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.55)] backdrop-blur-sm",
-);
+export const SearchField = forwardRef<
+  HTMLInputElement,
+  Omit<ComponentProps<typeof Input>, "onChange" | "value" | "leftIcon"> & {
+    value: string;
+    onChange: (value: string) => void;
+    leftIcon?: AppIcon;
+  }
+>(function SearchField(
+  { value, onChange, leftIcon = Search, placeholder = "Search", ...props },
+  ref,
+) {
+  return (
+    <Input
+      ref={ref}
+      type="text"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      leftIcon={leftIcon}
+      placeholder={placeholder}
+      {...props}
+    />
+  );
+});
 
-const searchIconButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-lg border border-transparent text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
-  {
-    variants: {
-      disabled: {
-        true: "cursor-not-allowed opacity-50",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      disabled: false,
-    },
-  },
-);
-
-const searchToggleButtonVariants = cva(
-  "flex size-6 items-center justify-center rounded-lg border border-transparent transition-colors hover:border-border/70 hover:bg-hover",
-  {
-    variants: {
-      active: {
-        true: "border-border/70 bg-hover text-text",
-        false: "text-text-lighter",
-      },
-    },
-    defaultVariants: {
-      active: false,
-    },
-  },
-);
-
-const searchActionButtonVariants = cva(
-  "ui-font ui-text-sm flex h-8 items-center justify-center rounded-lg border border-transparent px-2.5 text-text-lighter transition-colors hover:border-border/70 hover:bg-hover hover:text-text",
-  {
-    variants: {
-      disabled: {
-        true: "cursor-not-allowed opacity-50",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      disabled: false,
-    },
-  },
-);
+const searchSurfaceClass =
+  "w-[320px] rounded-xl border border-border/70 bg-primary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm";
 
 export function SearchPopover({
   value,
@@ -110,7 +88,7 @@ export function SearchPopover({
   className,
 }: SearchPopoverProps) {
   return (
-    <div className={cn(searchSurfaceVariants(), className)}>
+    <div className={cn(searchSurfaceClass, className)}>
       <div className="flex items-center gap-1.5">
         {leadingControl}
 
@@ -130,7 +108,7 @@ export function SearchPopover({
               type="button"
               onClick={() => onChange("")}
               variant="ghost"
-              compact
+              size="icon-xs"
               className="-translate-y-1/2 absolute top-1/2 right-1"
               aria-label="Clear search"
             >
@@ -142,8 +120,8 @@ export function SearchPopover({
         {matchLabel && (
           <span
             className={cn(
-              "ui-font ui-text-sm shrink-0",
-              matchTone === "warning" ? "text-amber-400" : "text-text-lighter",
+              "font-sans ui-text-sm shrink-0",
+              matchTone === "warning" ? "text-warning" : "text-text-lighter",
             )}
           >
             {matchLabel}
@@ -156,9 +134,8 @@ export function SearchPopover({
           type="button"
           onClick={onClose}
           variant="ghost"
-          className={searchIconButtonVariants()}
           aria-label="Close search"
-          compact
+          size="icon-xs"
         >
           <X />
         </Button>
@@ -173,13 +150,11 @@ export function SearchPopover({
                 type="button"
                 onClick={option.onToggle}
                 variant="ghost"
-                className={searchToggleButtonVariants({
-                  active: option.active,
-                })}
+                active={option.active}
                 tooltip={option.label}
                 aria-label={option.label}
                 aria-pressed={option.active}
-                compact
+                size="icon-xs"
               >
                 {option.icon}
               </Button>
@@ -194,11 +169,8 @@ export function SearchPopover({
                   onClick={onPrevious}
                   disabled={!canNavigate}
                   variant="ghost"
-                  className={searchIconButtonVariants({
-                    disabled: !canNavigate,
-                  })}
                   aria-label="Previous match"
-                  compact
+                  size="icon-xs"
                 >
                   <ChevronUp />
                 </Button>
@@ -209,11 +181,8 @@ export function SearchPopover({
                   onClick={onNext}
                   disabled={!canNavigate}
                   variant="ghost"
-                  className={searchIconButtonVariants({
-                    disabled: !canNavigate,
-                  })}
                   aria-label="Next match"
-                  compact
+                  size="icon-xs"
                 >
                   <ChevronDown />
                 </Button>
@@ -246,10 +215,9 @@ export function SearchReplaceToggle({
       type="button"
       onClick={onToggle}
       variant="ghost"
-      className={searchIconButtonVariants()}
       tooltip={label}
       aria-label={label}
-      compact
+      size="icon-xs"
     >
       <ChevronRight className={cn("transition-transform", isExpanded && "rotate-90")} />
     </Button>
@@ -264,6 +232,8 @@ export function SearchReplaceRow({
   onReplace,
   onReplaceAll,
   canReplace,
+  canReplaceAll = canReplace,
+  replaceAllTooltip,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -272,10 +242,12 @@ export function SearchReplaceRow({
   onReplace: () => void;
   onReplaceAll: () => void;
   canReplace: boolean;
+  canReplaceAll?: boolean;
+  replaceAllTooltip?: string;
 }) {
   return (
     <div className="flex items-center gap-1.5 border-border/60 border-t pt-1.5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-primary-bg text-text-lighter">
         <Replace />
       </span>
 
@@ -289,23 +261,15 @@ export function SearchReplaceRow({
         className="ui-text-sm h-8 flex-1 rounded-lg border-border/80 bg-primary-bg py-1"
       />
 
-      <Button
-        type="button"
-        onClick={onReplace}
-        disabled={!canReplace}
-        variant="ghost"
-        className={searchActionButtonVariants({ disabled: !canReplace })}
-        compact
-      >
+      <Button type="button" onClick={onReplace} disabled={!canReplace} variant="ghost">
         Replace
       </Button>
       <Button
         type="button"
         onClick={onReplaceAll}
-        disabled={!canReplace}
+        disabled={!canReplaceAll}
         variant="ghost"
-        className={searchActionButtonVariants({ disabled: !canReplace })}
-        compact
+        tooltip={replaceAllTooltip}
       >
         All
       </Button>
@@ -354,7 +318,7 @@ export function SearchInput({
             type="button"
             onClick={() => onChange("")}
             variant="ghost"
-            compact
+            size="icon-xs"
             className="-translate-y-1/2 absolute top-1/2 right-1"
             aria-label="Clear search"
           >
@@ -371,13 +335,11 @@ export function SearchInput({
               type="button"
               onClick={option.onToggle}
               variant="ghost"
-              className={searchToggleButtonVariants({
-                active: option.active,
-              })}
+              active={option.active}
               tooltip={option.label}
               aria-label={option.label}
               aria-pressed={option.active}
-              compact
+              size="icon-xs"
             >
               {option.icon}
             </Button>
@@ -386,7 +348,7 @@ export function SearchInput({
       )}
 
       {matchLabel && (
-        <span className="ui-font ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
+        <span className="font-sans ui-text-sm shrink-0 text-text-lighter">{matchLabel}</span>
       )}
 
       {extraActions}
@@ -398,4 +360,5 @@ export const SEARCH_TOGGLE_ICONS = {
   caseSensitive: <CaseSensitive />,
   wholeWord: <WholeWord />,
   regex: <Regex />,
+  preserveCase: <span className="font-sans ui-text-sm font-semibold">Aa</span>,
 };

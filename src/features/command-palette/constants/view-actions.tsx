@@ -1,23 +1,22 @@
 import {
-  WarningCircle as AlertCircle,
-  ArrowsLeftRight as ArrowLeftRight,
-  GlobeHemisphereWest as Globe,
-  List as Menu,
-  ChatCircleText as MessageSquare,
-  SidebarSimple as PanelBottom,
-  SidebarSimple as PanelLeft,
-  ArrowCounterClockwise as RotateCcw,
-  MagnifyingGlass as Search,
-  TerminalWindow as Terminal,
-  MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut,
-} from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
-import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
-import type { Action } from "../models/action.types";
+  WarningCircleIcon as AlertCircle,
+  GlobeHemisphereWestIcon as Globe,
+  ListIcon as Menu,
+  ChatCircleTextIcon as MessageSquare,
+  SidebarSimpleIcon as PanelBottom,
+  SidebarSimpleIcon as PanelLeft,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  MagnifyingGlassIcon as Search,
+  TerminalWindowIcon as Terminal,
+  MagnifyingGlassPlusIcon as ZoomIn,
+  MagnifyingGlassMinusIcon as ZoomOut,
+} from "@/ui/icons";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import type { Action } from "../types/action.types";
 
 interface ViewActionsParams {
   isSidebarVisible: boolean;
@@ -30,9 +29,9 @@ interface ViewActionsParams {
   setIsFindVisible: (v: boolean) => void;
   settings: {
     isAIChatVisible: boolean;
-    sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
+    webViewerEnabled: boolean;
   };
   updateSetting: (key: string, value: any) => void | Promise<void>;
   zoomIn: (target: "editor" | "terminal") => void;
@@ -142,22 +141,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    {
-      id: "toggle-sidebar-position",
-      label: "View: Switch Sidebar Position",
-      description:
-        settings.sidebarPosition === "left"
-          ? "Move sidebar to right side"
-          : "Move sidebar to left side",
-      icon: <ArrowLeftRight />,
-      category: "View",
-      commandId: "workbench.toggleSidebarPosition",
-      action: () => {
-        updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
-        onClose();
-      },
-    },
-    ...(!IS_MAC && !IS_WINDOWS
+    ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
       ? [
           {
             id: "toggle-native-menu-bar",
@@ -267,34 +251,38 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    {
-      id: "open-web-viewer",
-      label: "View: Open Web Viewer",
-      description: "Open a new web viewer tab",
-      icon: <Globe />,
-      category: "View",
-      action: () => {
-        openWebViewerBuffer("about:blank");
-        onClose();
-      },
-    },
-    {
-      id: "open-url",
-      label: "View: Open URL...",
-      description: "Open a URL in web viewer",
-      icon: <Globe />,
-      category: "View",
-      action: async () => {
-        const url = await primitivePrompt("Enter URL:", {
-          title: "Open URL",
-          defaultValue: "https://",
-          placeholder: "https://",
-        });
-        if (url?.trim()) {
-          openWebViewerBuffer(url.trim());
-        }
-        onClose();
-      },
-    },
+    ...(settings.webViewerEnabled
+      ? [
+          {
+            id: "open-web-viewer",
+            label: "View: Open Web Viewer",
+            description: "Open a new web viewer tab",
+            icon: <Globe />,
+            category: "View",
+            action: () => {
+              openWebViewerBuffer("about:blank");
+              onClose();
+            },
+          },
+          {
+            id: "open-url",
+            label: "View: Open URL...",
+            description: "Open a URL in web viewer",
+            icon: <Globe />,
+            category: "View",
+            action: async () => {
+              const url = await showPromptDialog("Enter URL:", {
+                title: "Open URL",
+                defaultValue: "https://",
+                placeholder: "https://",
+              });
+              if (url?.trim()) {
+                openWebViewerBuffer(url.trim());
+              }
+              onClose();
+            },
+          },
+        ]
+      : []),
   ];
 };

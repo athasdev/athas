@@ -1,0 +1,17 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.nix",
+  "name": "Nix",
+  "displayName": "Nix",
+  "version": "1.0.0",
+  "description": "Nix language support with syntax highlighting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "nix",
+      "extensions": [".nix"],
+      "aliases": ["Nix", "nix"]
+    }
+  ]
+}

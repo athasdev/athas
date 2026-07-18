@@ -1,26 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  Plus,
-  MagnifyingGlass as Search,
-  SplitHorizontal as SplitSquareHorizontal,
-} from "@phosphor-icons/react";
 import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTabs } from "@/features/terminal/hooks/use-terminal-tabs";
-import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles-store";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
-import { useTerminalShellsStore } from "@/features/terminal/stores/shells-store";
+import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import {
   resolveTerminalLaunch,
   SYSTEM_DEFAULT_PROFILE_ID,
 } from "@/features/terminal/utils/terminal-profiles";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
 import TerminalSession from "./terminal-session";
 import TerminalTabBar from "./terminal-tab-bar";
@@ -61,8 +52,6 @@ const TerminalContainer = ({
     switchToNextTerminal,
     switchToPrevTerminal,
     setTerminalSplitMode,
-    getPersistedTerminals,
-    restoreTerminalsFromPersisted,
   } = useTerminalTabs();
   const terminalDefaultProfileId = useSettingsStore(
     (state) => state.settings.terminalDefaultProfileId,
@@ -97,18 +86,27 @@ const TerminalContainer = ({
 
   const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
+  const workspaceDirectoryRef = useRef(currentDirectory);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void; showSearch: () => void }>>(
     new Map(),
   );
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const {
-    registerTerminalFocus,
-    clearTerminalFocus,
-    setIsBottomPaneVisible,
-    setBottomPaneActiveTab,
-    isBottomPaneVisible,
-    bottomPaneActiveTab,
-  } = useUIState();
+
+  useEffect(() => {
+    if (workspaceDirectoryRef.current === currentDirectory) {
+      return;
+    }
+
+    workspaceDirectoryRef.current = currentDirectory;
+    hasInitializedRef.current = terminals.length > 0;
+    wasVisibleRef.current = false;
+  }, [currentDirectory, terminals.length]);
+  const registerTerminalFocus = useUIState((state) => state.registerTerminalFocus);
+  const clearTerminalFocus = useUIState((state) => state.clearTerminalFocus);
+  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
+  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
   useEffect(() => {
@@ -182,17 +180,6 @@ const TerminalContainer = ({
     },
     [createTerminal, focusNewTerminal, getDisplayNameFromDirectory],
   );
-
-  // Restore persisted terminals on mount. Fresh terminal creation is deferred until pane is visible.
-  useEffect(() => {
-    if (!hasInitializedRef.current && terminals.length === 0) {
-      const persistedTerminals = getPersistedTerminals();
-      if (persistedTerminals.length > 0) {
-        hasInitializedRef.current = true;
-        restoreTerminalsFromPersisted(persistedTerminals);
-      }
-    }
-  }, [terminals.length, getPersistedTerminals, restoreTerminalsFromPersisted]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -479,7 +466,7 @@ const TerminalContainer = ({
         setTimeout(() => {
           invoke("terminal_write", {
             id: connectionId,
-            data: pendingCommand,
+            input: { kind: "text", data: pendingCommand },
           }).catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);
@@ -570,24 +557,6 @@ const TerminalContainer = ({
     closeTerminal,
   ]);
 
-  // Auto-create first terminal when the pane becomes visible
-  useEffect(() => {
-    if (terminals.length === 0 && !hasInitializedRef.current) {
-      const persistedTerminals = getPersistedTerminals();
-      if (persistedTerminals.length > 0) {
-        hasInitializedRef.current = true;
-        restoreTerminalsFromPersisted(persistedTerminals);
-      }
-    }
-  }, [
-    terminals.length,
-    currentDirectory,
-    createTerminal,
-    getDisplayNameFromDirectory,
-    getPersistedTerminals,
-    restoreTerminalsFromPersisted,
-  ]);
-
   // Create terminal when pane becomes visible with no terminals
   useEffect(() => {
     const isTerminalVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
@@ -615,13 +584,11 @@ const TerminalContainer = ({
     onCloseOtherTabs: handleCloseOtherTabs,
     onCloseAllTabs: handleCloseAllTabs,
     onCloseTabsToRight: handleCloseTabsToRight,
-    onSplitView: handleSplitView,
     onSearchTerminal: handleSearchTerminal,
     onNextTerminal: switchToNextTerminal,
     onPrevTerminal: switchToPrevTerminal,
     onFullScreen,
     isFullScreen,
-    isSplitView: terminals.find((t) => t.id === activeTerminalId)?.splitMode || false,
   };
 
   const terminalSessions = (
@@ -684,78 +651,12 @@ const TerminalContainer = ({
 
   const isVertical = tabLayout === "vertical";
   const tabSidebarPosition = useTerminalStore((state) => state.tabSidebarPosition);
-  const isSplitActive = terminals.find((t) => t.id === activeTerminalId)?.splitMode || false;
 
   return (
     <div
       className={`terminal-container flex h-full flex-col overflow-hidden ${className}`}
       data-terminal-container="active"
     >
-      {/* Vertical-only actions header */}
-      {isVertical && (
-        <div className="flex min-h-8 shrink-0 items-center justify-end gap-1 rounded-t-lg bg-primary-bg px-1.5 py-1">
-          <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-            <Button
-              type="button"
-              onClick={handleSearchTerminal}
-              variant="ghost"
-              className="size-6 shrink-0 text-text-lighter"
-              aria-label="Find in Terminal"
-              compact
-            >
-              <Search />
-            </Button>
-          </Tooltip>
-          <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-            <Button
-              type="button"
-              onClick={() => handleNewTerminal()}
-              variant="ghost"
-              compact
-              className="size-6 shrink-0 text-text-lighter"
-              aria-label="New Terminal"
-            >
-              <Plus />
-            </Button>
-          </Tooltip>
-          <Tooltip
-            content={isSplitActive ? "Exit Split View" : "Split Terminal View (Cmd+D)"}
-            side="bottom"
-          >
-            <Button
-              type="button"
-              onClick={handleSplitView}
-              variant="ghost"
-              className={cn(
-                "size-6 shrink-0",
-                isSplitActive ? "border-border/80 bg-primary-bg text-text" : "text-text-lighter",
-              )}
-              aria-label="Split Terminal"
-              compact
-            >
-              <SplitSquareHorizontal />
-            </Button>
-          </Tooltip>
-          {onFullScreen && (
-            <Tooltip
-              content={isFullScreen ? "Exit Full Screen" : "Full Screen Terminal"}
-              side="bottom"
-            >
-              <Button
-                type="button"
-                onClick={onFullScreen}
-                variant="ghost"
-                className="size-6 shrink-0 text-text-lighter"
-                aria-label="Full Screen Terminal"
-                compact
-              >
-                {isFullScreen ? <Minimize2 /> : <Maximize2 />}
-              </Button>
-            </Tooltip>
-          )}
-        </div>
-      )}
-
       <div className={cn("min-h-0 flex-1", isVertical ? "flex flex-row" : "flex flex-col")}>
         {(!isVertical || tabSidebarPosition === "left") && (
           <TerminalTabBar {...terminalTabBarProps} orientation={tabLayout} />

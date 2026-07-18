@@ -1,14 +1,18 @@
+import "@/features/editor/markdown/styles.css";
 import "../styles/github-markdown.css";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { highlightMarkdownCodeBlocks } from "@/features/editor/markdown/code-highlight";
 import { parseMarkdown } from "@/features/editor/markdown/parser";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { parseGitHubEntityLink } from "../utils/github-link-utils";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { isGitHubEntityLinkForRepository, parseGitHubEntityLink } from "../utils/github-link-utils";
+import { normalizeGitHubMarkdown } from "../utils/github-markdown-content";
 
 interface GitHubMarkdownProps {
   content: string;
   className?: string;
   contentClassName?: string;
-  issueBaseUrl?: string;
+  repositoryUrl?: string;
   repoPath?: string;
 }
 
@@ -24,11 +28,11 @@ function getRenderedMarkdownSnapshot(content: string): string | null {
   return cached;
 }
 
-function getCachedRenderedMarkdown(content: string): string {
+async function getCachedRenderedMarkdown(content: string): Promise<string> {
   const cached = getRenderedMarkdownSnapshot(content);
   if (cached) return cached;
 
-  const rendered = stripRedundantBreaks(parseMarkdown(content));
+  const rendered = await highlightMarkdownCodeBlocks(stripRedundantBreaks(parseMarkdown(content)));
   markdownRenderCache.set(content, rendered);
 
   if (markdownRenderCache.size > MARKDOWN_RENDER_CACHE_LIMIT) {
@@ -50,12 +54,12 @@ function stripRedundantBreaks(html: string): string {
 
 // GitHub-flavored markdown renderer for PR descriptions and comments
 const GitHubMarkdown = memo(
-  ({ content, className, contentClassName, issueBaseUrl, repoPath }: GitHubMarkdownProps) => {
+  ({ content, className, contentClassName, repositoryUrl, repoPath }: GitHubMarkdownProps) => {
     const { openPRBuffer, openGitHubIssueBuffer, openGitHubActionBuffer } =
       useBufferStore.use.actions();
     const normalizedContent = useMemo(
-      () => normalizeGitHubMarkdown(content, issueBaseUrl),
-      [content, issueBaseUrl],
+      () => normalizeGitHubMarkdown(content, repositoryUrl),
+      [content, repositoryUrl],
     );
     const [renderedHtml, setRenderedHtml] = useState<string | null>(() =>
       getRenderedMarkdownSnapshot(normalizedContent),
@@ -77,22 +81,22 @@ const GitHubMarkdown = memo(
       };
       const schedule = idleApi.requestIdleCallback;
 
-      const render = () => {
-        const nextHtml = getCachedRenderedMarkdown(normalizedContent);
+      const render = async () => {
+        const nextHtml = await getCachedRenderedMarkdown(normalizedContent);
         if (!cancelled) {
           setRenderedHtml(nextHtml);
         }
       };
 
       if (typeof schedule === "function") {
-        const idleId = schedule(render, { timeout: 200 });
+        const idleId = schedule(() => void render(), { timeout: 200 });
         return () => {
           cancelled = true;
           idleApi.cancelIdleCallback?.(idleId);
         };
       }
 
-      const timeoutId = window.setTimeout(render, 0);
+      const timeoutId = window.setTimeout(() => void render(), 0);
       return () => {
         cancelled = true;
         window.clearTimeout(timeoutId);
@@ -107,40 +111,53 @@ const GitHubMarkdown = memo(
         const anchor = target.closest("a");
         if (!(anchor instanceof HTMLAnchorElement) || !anchor.href) return;
 
-        const entityLink = parseGitHubEntityLink(anchor.href);
-        if (!entityLink || !repoPath) return;
+        const rawHref = anchor.getAttribute("href");
+        if (!rawHref || rawHref.startsWith("#")) return;
 
-        event.preventDefault();
+        const href = rawHref.startsWith("/")
+          ? new URL(rawHref, "https://github.com").toString()
+          : anchor.href;
+        const entityLink = parseGitHubEntityLink(href);
+        if (entityLink && repoPath && isGitHubEntityLinkForRepository(entityLink, repositoryUrl)) {
+          event.preventDefault();
 
-        if (entityLink.kind === "pullRequest") {
+          if (entityLink.kind === "pullRequest") {
+            startTransition(() => {
+              openPRBuffer(entityLink.number, { repoPath });
+            });
+            return;
+          }
+
+          if (entityLink.kind === "issue") {
+            startTransition(() => {
+              openGitHubIssueBuffer({
+                issueNumber: entityLink.number,
+                repoPath,
+                title: `Issue #${entityLink.number}`,
+                url: entityLink.url,
+              });
+            });
+            return;
+          }
+
           startTransition(() => {
-            openPRBuffer(entityLink.number);
-          });
-          return;
-        }
-
-        if (entityLink.kind === "issue") {
-          startTransition(() => {
-            openGitHubIssueBuffer({
-              issueNumber: entityLink.number,
+            openGitHubActionBuffer({
+              runId: entityLink.runId,
               repoPath,
-              title: `Issue #${entityLink.number}`,
+              title: `Run #${entityLink.runId}`,
               url: entityLink.url,
             });
           });
           return;
         }
 
-        startTransition(() => {
-          openGitHubActionBuffer({
-            runId: entityLink.runId,
-            repoPath,
-            title: `Run #${entityLink.runId}`,
-            url: entityLink.url,
-          });
-        });
+        const externalUrl = new URL(href);
+        if (externalUrl.protocol === "http:" || externalUrl.protocol === "https:") {
+          event.preventDefault();
+          void openUrl(externalUrl.toString());
+        }
       },
-      [openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer, repoPath],
+      [openGitHubActionBuffer, openGitHubIssueBuffer, openPRBuffer, repoPath, repositoryUrl],
     );
 
     return (
@@ -161,23 +178,5 @@ const GitHubMarkdown = memo(
 );
 
 GitHubMarkdown.displayName = "GitHubMarkdown";
-
-function normalizeGitHubMarkdown(content: string, issueBaseUrl?: string): string {
-  return content
-    .split("\n")
-    .map((line) => {
-      const trimmedLine = line.trim();
-      if (trimmedLine.match(/^https:\/\/github\.com\/user-attachments\/assets\//)) {
-        return `[View attachment](${trimmedLine})`;
-      }
-      if (issueBaseUrl) {
-        return line.replace(/(^|[^\w/`])#(\d+)\b/g, (match, prefix, issueNumber) => {
-          return `${prefix}[#${issueNumber}](${issueBaseUrl}/issues/${issueNumber})`;
-        });
-      }
-      return line;
-    })
-    .join("\n");
-}
 
 export default GitHubMarkdown;

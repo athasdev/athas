@@ -1,5 +1,5 @@
-import { RadioButton as Radio } from "@phosphor-icons/react";
-import type { PostgresSubscriptionInfo } from "../../../models/common.types";
+import { RadioButtonIcon as Radio } from "@/ui/icons";
+import type { PostgresSubscriptionInfo } from "../../../types/common.types";
 
 interface PostgresSubscriptionSchemaViewProps {
   subscriptionInfo: PostgresSubscriptionInfo;
@@ -49,13 +49,13 @@ export default function PostgresSubscriptionSchemaView({
         <Radio className="text-text-lighter" />
         <div>
           <div className="ui-text-sm">{subscriptionInfo.name}</div>
-          <div className="text-text-lighter ui-text-xs">logical replication subscription</div>
+          <div className="text-text-lighter ui-text-sm">logical replication subscription</div>
         </div>
       </div>
       <div className="mx-3 mb-3 divide-y divide-border/60 rounded-xl bg-secondary-bg/40">
         {fields.map((field) => (
           <div key={field.label} className="px-3 py-2">
-            <div className="text-text-lighter ui-text-xs uppercase tracking-wide">
+            <div className="text-text-lighter ui-text-sm uppercase tracking-wide">
               {field.label}
             </div>
             <div className="mt-1 break-all ui-text-sm">{field.value}</div>

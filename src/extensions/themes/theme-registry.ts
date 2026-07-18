@@ -1,4 +1,4 @@
-import type { ThemeDefinition, ThemeRegistryAPI, ThemeSource } from "./types";
+import type { ThemeDefinition, ThemeRegistryAPI, ThemeSource } from "./theme.types";
 
 class ThemeRegistry implements ThemeRegistryAPI {
   private themes = new Map<string, ThemeDefinition>();
@@ -8,17 +8,15 @@ class ThemeRegistry implements ThemeRegistryAPI {
   private registryCallbacks = new Set<() => void>();
   private isReady = false;
   private readyCallbacks = new Set<() => void>();
+  private version = 0;
 
   registerTheme(theme: ThemeDefinition, source?: ThemeSource): void {
-    console.log("Theme registry: Registering theme", theme.id, theme.name);
     this.themes.set(theme.id, theme);
     if (source) {
       this.themeSources.set(theme.id, source);
     } else {
       this.themeSources.delete(theme.id);
     }
-    console.log("Theme registry: Total themes after registration:", this.themes.size);
-    console.log("Theme registry: All themes:", Array.from(this.themes.keys()));
     this.notifyRegistryChange();
   }
 
@@ -59,6 +57,10 @@ class ThemeRegistry implements ThemeRegistryAPI {
 
   getAllThemes(): ThemeDefinition[] {
     return Array.from(this.themes.values());
+  }
+
+  getVersion(): number {
+    return this.version;
   }
 
   getThemesByCategory(category: ThemeDefinition["category"]): ThemeDefinition[] {
@@ -124,6 +126,7 @@ class ThemeRegistry implements ThemeRegistryAPI {
   }
 
   private notifyRegistryChange(): void {
+    this.version += 1;
     this.registryCallbacks.forEach((callback) => {
       try {
         callback();
@@ -136,7 +139,6 @@ class ThemeRegistry implements ThemeRegistryAPI {
   markAsReady(): void {
     if (!this.isReady) {
       this.isReady = true;
-      console.log("Theme registry: Marked as ready");
       this.notifyReady();
     }
   }

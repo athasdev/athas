@@ -8,12 +8,16 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/features/editor/utils/logger";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
+import { isTerminalAltTextInput } from "@/features/terminal/utils/terminal-keyboard";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX } from "@/utils/platform";
-import { useKeymapStore } from "../stores/store";
+import { useKeymapStore } from "../stores/keymaps.store";
 import { getEffectiveKeybindings } from "../utils/effective-keymaps";
+import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
+import { resolveEffectiveKeymapContexts } from "../utils/effective-contexts";
 import { evaluateWhenClause } from "../utils/context";
 import { eventToKey, keysMatch, matchKeybinding } from "../utils/matcher";
 import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
@@ -24,9 +28,15 @@ import { keymapRegistry } from "../utils/registry";
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
+const closeWindowShortcut = parseKeybinding("cmd+shift+w").parts[0];
+const INPUT_ALLOWED_COMMANDS = new Set(["file.quickOpen", "workbench.commandPalette"]);
 
 function isCloseTabShortcut(event: KeyboardEvent) {
   return keysMatch(eventToKey(event), closeTabShortcut);
+}
+
+function isCloseWindowShortcut(event: KeyboardEvent) {
+  return keysMatch(eventToKey(event), closeWindowShortcut);
 }
 
 export function useKeymaps() {
@@ -78,8 +88,27 @@ export function useKeymaps() {
         return;
       }
 
+      const target = e.target as HTMLElement | null;
+      const isEditorTarget =
+        isEditorKeyboardTarget(target) ||
+        isEditorKeyboardTarget(document.activeElement as HTMLElement | null);
+      const isTerminalTarget =
+        target?.closest(".terminal-container") !== null ||
+        (document.activeElement as HTMLElement | null)?.closest(".terminal-container") !== null;
+      const effectiveContexts = resolveEffectiveKeymapContexts(contexts, {
+        isEditorTarget,
+        isTerminalTarget,
+      });
+
       // Prevent modifier-shortcut floods when key is held down (e.g. Cmd+R auto-repeat)
       if (e.repeat && (e.metaKey || e.ctrlKey || e.altKey)) {
+        return;
+      }
+
+      if (isCloseWindowShortcut(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        keymapRegistry.executeCommand("workbench.closeWindow");
         return;
       }
 
@@ -87,13 +116,19 @@ export function useKeymaps() {
         lastCloseTabShortcutAtRef.current = Date.now();
         e.preventDefault();
         e.stopPropagation();
-        keymapRegistry.executeCommand(contexts.terminalFocus ? "terminal.close" : "file.close");
+        keymapRegistry.executeCommand(
+          effectiveContexts.terminalFocus ? "terminal.close" : "file.close",
+        );
         return;
       }
 
       // When the native menu bar is active, let Tauri's menu accelerators be the only source
       // of truth for overlapping shortcuts to avoid duplicate execution.
-      if (useSettingsStore.getState().settings.nativeMenuBar && isNativeMenuAccelerator(e)) {
+      if (
+        useSettingsStore.getState().settings.nativeMenuBar &&
+        isNativeMenuAccelerator(e) &&
+        !isEditorTarget
+      ) {
         return;
       }
 
@@ -124,17 +159,6 @@ export function useKeymaps() {
         return;
       }
 
-      // Skip if target is an input (except our editor textarea or terminal)
-      const target = e.target as HTMLElement;
-      const isEditorTextarea = target.classList.contains("editor-textarea");
-      const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
-      if (
-        target.tagName === "INPUT" ||
-        (target.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)
-      ) {
-        return;
-      }
-
       // Get keybindings from registry (defaults and extensions)
       const registryKeybindings = keymapRegistry.getAllKeybindings();
 
@@ -149,6 +173,34 @@ export function useKeymaps() {
       // Get current event key
       const eventKey = eventToKey(e);
 
+      // Skip if target is an input (except our editor textarea or terminal)
+      const isEditorTextarea = isEditorTarget;
+      const isTerminalTextarea = target?.classList.contains("xterm-helper-textarea") ?? false;
+      if (isTerminalTextarea && isTerminalAltTextInput(e)) {
+        return;
+      }
+
+      const isNativeTextInput = isNativeTextInputTarget(e.target, document.activeElement);
+      if (isNativeTextInput && !isEditorTextarea && !isTerminalTextarea) {
+        for (const keybinding of allKeybindings) {
+          if (!INPUT_ALLOWED_COMMANDS.has(keybinding.command)) continue;
+          if (!keybinding.enabled && keybinding.enabled !== undefined) continue;
+          if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) continue;
+
+          if (matchKeybinding(e, keybinding.key, chordState).matched) {
+            e.preventDefault();
+            e.stopPropagation();
+            keymapRegistry.executeCommand(keybinding.command, keybinding.args);
+            logger.debug(
+              "Keymaps",
+              `Executed from input: ${keybinding.key} -> ${keybinding.command}`,
+            );
+            return;
+          }
+        }
+        return;
+      }
+
       // Try to match against registered keybindings
       for (const keybinding of allKeybindings) {
         if (!keybinding.enabled && keybinding.enabled !== undefined) {
@@ -156,7 +208,7 @@ export function useKeymaps() {
         }
 
         // Evaluate when clause
-        if (keybinding.when && !evaluateWhenClause(keybinding.when, contexts)) {
+        if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) {
           continue;
         }
 

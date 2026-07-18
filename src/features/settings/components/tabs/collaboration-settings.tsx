@@ -1,10 +1,10 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { UsersThree } from "@phosphor-icons/react";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { getServiceUrls } from "@/config/services";
+import { UsersThreeIcon as UsersThree } from "@/ui/icons";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { getApiBase } from "@/utils/api-base";
 import Section, { SettingRow } from "../settings-section";
 
 export const CollaborationSettings = () => {
@@ -33,7 +33,7 @@ export const CollaborationSettings = () => {
   );
 
   const openDashboardCollaboration = () => {
-    void openUrl(new URL("/dashboard/collaboration", getApiBase()).toString());
+    void openUrl(getServiceUrls().dashboardCollaborationUrl);
   };
 
   return (
@@ -46,9 +46,9 @@ export const CollaborationSettings = () => {
           <Button
             type="button"
             variant="default"
-            className="ui-text-sm"
+            className="ui-text-base"
             onClick={openDashboardCollaboration}
-            compact
+            size="xs"
           >
             <UsersThree />
             Open
@@ -81,7 +81,7 @@ export const CollaborationSettings = () => {
             <Button
               type="button"
               variant="default"
-              className="ui-text-sm"
+              className="ui-text-base"
               disabled={!presenceTarget.channelId && !presenceTarget.followingUserId}
               onClick={() => {
                 collaborationRuntimeActions.setPresenceChannel(null);
@@ -127,7 +127,7 @@ export const CollaborationSettings = () => {
               <Button
                 type="button"
                 variant={presenceTarget.channelId === channel.id ? "accent" : "default"}
-                className="ui-text-sm"
+                className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
               >
@@ -141,7 +141,7 @@ export const CollaborationSettings = () => {
               <Button
                 type="button"
                 variant={presenceTarget.followingUserId === member.userId ? "accent" : "default"}
-                className="ui-text-sm"
+                className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}
               >

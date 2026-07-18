@@ -27,4 +27,17 @@ describe("features config", () => {
       enabled: true,
     });
   });
+
+  it("keeps Web Viewer experimental and off by default", () => {
+    const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
+      (item) => item.id === "webViewer",
+    );
+
+    expect(feature).toMatchObject({
+      name: "Web Viewer",
+      description: "Open URLs in embedded editor tabs",
+      enabled: false,
+      status: "experimental",
+    });
+  });
 });

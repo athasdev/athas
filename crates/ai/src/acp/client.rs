@@ -1,21 +1,24 @@
 use super::{
+   AcpConnection,
    terminal_state::AcpTerminalState,
    types::{
       AcpContentBlock, AcpEvent, AcpPlanEntry, AcpPlanEntryPriority, AcpPlanEntryStatus,
-      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, SessionConfigOption,
+      AcpToolCallLocation, AcpToolCallStatus, AcpToolKind, AcpUsageUpdate, SessionConfigOption,
       SessionConfigOptionKind, SessionConfigOptionValue, UiAction,
    },
+   workspace_path::{path_to_string, resolve_path_against_workspace},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use agent_client_protocol as acp;
-use async_trait::async_trait;
-use athas_terminal::{TerminalConfig, TerminalManager};
+use agent_client_protocol::{self as acp_sdk, schema as acp};
+use athas_terminal::{
+   TerminalConfig, TerminalEvent, TerminalEventHandler, TerminalManager, TerminalSize,
+};
 use std::{
    collections::HashMap,
    path::PathBuf,
    sync::{Arc, Mutex as StdMutex},
 };
-use tauri::{Emitter, Listener};
+use tauri::Emitter;
 use tokio::sync::{Mutex, mpsc, oneshot};
 
 /// Response for permission requests
@@ -30,7 +33,7 @@ pub struct PermissionResponse {
 /// Handles requests from the agent (file access, terminals, permissions)
 pub struct AthasAcpClient {
    app_handle: AppHandle,
-   workspace_path: Option<String>,
+   workspace_path: Option<PathBuf>,
    permission_tx: mpsc::Sender<PermissionResponse>,
    permission_rx: Arc<Mutex<mpsc::Receiver<PermissionResponse>>>,
    current_session_id: Arc<Mutex<Option<String>>>,
@@ -42,7 +45,7 @@ pub struct AthasAcpClient {
 impl AthasAcpClient {
    pub fn new(
       app_handle: AppHandle,
-      workspace_path: Option<String>,
+      workspace_path: Option<PathBuf>,
       terminal_manager: Arc<TerminalManager>,
    ) -> Self {
       let (permission_tx, permission_rx) = mpsc::channel(32);
@@ -73,16 +76,7 @@ impl AthasAcpClient {
    }
 
    fn resolve_path(&self, path: &str) -> PathBuf {
-      let candidate = PathBuf::from(path);
-      if candidate.is_absolute() {
-         return candidate;
-      }
-
-      if let Some(ref workspace) = self.workspace_path {
-         return PathBuf::from(workspace).join(candidate);
-      }
-
-      std::env::current_dir().unwrap_or_default().join(candidate)
+      resolve_path_against_workspace(self.workspace_path.as_deref(), path)
    }
 
    fn extract_first_url(text: &str) -> Option<String> {
@@ -376,14 +370,86 @@ impl AthasAcpClient {
          id: option.id.to_string(),
          name: option.name,
          description: option.description,
-         category: option.category,
+         category: option.category.map(|category| match category {
+            acp::SessionConfigOptionCategory::Mode => "mode".to_string(),
+            acp::SessionConfigOptionCategory::Model => "model".to_string(),
+            acp::SessionConfigOptionCategory::ThoughtLevel => "thought_level".to_string(),
+            acp::SessionConfigOptionCategory::Other(category) => category,
+            _ => "other".to_string(),
+         }),
          kind,
       })
    }
 }
 
-#[async_trait(?Send)]
-impl acp::Client for AthasAcpClient {
+impl AthasAcpClient {
+   pub async fn handle_agent_request(
+      &self,
+      request: acp::AgentRequest,
+   ) -> acp_sdk::Result<acp::ClientResponse> {
+      match request {
+         acp::AgentRequest::WriteTextFileRequest(request) => self
+            .write_text_file(request)
+            .await
+            .map(acp::ClientResponse::WriteTextFileResponse),
+         acp::AgentRequest::ReadTextFileRequest(request) => self
+            .read_text_file(request)
+            .await
+            .map(acp::ClientResponse::ReadTextFileResponse),
+         acp::AgentRequest::RequestPermissionRequest(request) => self
+            .request_permission(request)
+            .await
+            .map(acp::ClientResponse::RequestPermissionResponse),
+         acp::AgentRequest::CreateTerminalRequest(request) => self
+            .create_terminal(request)
+            .await
+            .map(acp::ClientResponse::CreateTerminalResponse),
+         acp::AgentRequest::TerminalOutputRequest(request) => self
+            .terminal_output(request)
+            .await
+            .map(acp::ClientResponse::TerminalOutputResponse),
+         acp::AgentRequest::ReleaseTerminalRequest(request) => self
+            .release_terminal(request)
+            .await
+            .map(acp::ClientResponse::ReleaseTerminalResponse),
+         acp::AgentRequest::WaitForTerminalExitRequest(request) => self
+            .wait_for_terminal_exit(request)
+            .await
+            .map(acp::ClientResponse::WaitForTerminalExitResponse),
+         acp::AgentRequest::KillTerminalRequest(request) => self
+            .kill_terminal_command(request)
+            .await
+            .map(acp::ClientResponse::KillTerminalResponse),
+         acp::AgentRequest::ExtMethodRequest(request) => self
+            .ext_method(request)
+            .await
+            .map(acp::ClientResponse::ExtMethodResponse),
+         request => {
+            log::warn!("Unsupported ACP client request: {}", request.method());
+            Err(acp_sdk::Error::method_not_found())
+         }
+      }
+   }
+
+   pub async fn handle_agent_notification(
+      &self,
+      notification: acp::AgentNotification,
+      _connection: AcpConnection,
+   ) -> acp_sdk::Result<()> {
+      match notification {
+         acp::AgentNotification::SessionNotification(notification) => {
+            self.session_notification(notification).await
+         }
+         acp::AgentNotification::ExtNotification(notification) => {
+            self.ext_notification(notification).await
+         }
+         notification => {
+            log::warn!("Unhandled ACP agent notification: {:?}", notification);
+            Ok(())
+         }
+      }
+   }
+
    async fn request_permission(
       &self,
       args: acp::RequestPermissionRequest,
@@ -466,7 +532,7 @@ impl acp::Client for AthasAcpClient {
 
             if response.approved {
                if let Some(url) = fallback_webviewer_url.clone() {
-                  // Claude Code adapters may try to invoke ext_method via shell command.
+                  // Some ACP adapters may try to invoke ext_method via shell command.
                   // Execute the equivalent Athas UI action directly and reject the shell tool call.
                   self.emit_event(AcpEvent::UiAction {
                      session_id: session_id.clone(),
@@ -732,8 +798,27 @@ impl acp::Client for AthasAcpClient {
                   .collect(),
             });
          }
-         _ => {
-            // Handle other session updates as needed
+         acp::SessionUpdate::UsageUpdate(usage) => {
+            log::info!(
+               "ACP usage update: session={}, used={}, size={}",
+               session_id,
+               usage.used,
+               usage.size
+            );
+            self.emit_event(AcpEvent::UsageUpdate {
+               session_id,
+               usage: AcpUsageUpdate {
+                  used: usage.used,
+                  size: usage.size,
+               },
+            });
+         }
+         update => {
+            log::warn!(
+               "Unhandled ACP session update for {}: {:?}",
+               session_id,
+               update
+            );
          }
       }
       Ok(())
@@ -816,7 +901,7 @@ impl acp::Client for AthasAcpClient {
          .cwd
          .as_ref()
          .map(|p| p.to_string_lossy().to_string())
-         .or_else(|| self.workspace_path.clone());
+         .or_else(|| self.workspace_path.as_deref().map(path_to_string));
 
       let env_map: Option<HashMap<String, String>> = if args.env.is_empty() {
          None
@@ -839,17 +924,32 @@ impl acp::Client for AthasAcpClient {
       let config = TerminalConfig {
          working_directory: working_dir,
          shell: None,
+         wsl_distribution: None,
+         wsl_working_directory: None,
          environment: env_map,
          command: Some(command),
          args: command_args,
-         rows: 24,
-         cols: 80,
+         size: TerminalSize::default(),
+         term_program_version: Some(self.app_handle.package_info().version.to_string()),
       };
 
-      match self
-         .terminal_manager
-         .create_terminal(config, self.app_handle.clone())
-      {
+      let states_for_events = self.terminal_states.clone();
+      let pending_events = Arc::new(StdMutex::new(Vec::<(String, TerminalEvent)>::new()));
+      let pending_events_for_handler = pending_events.clone();
+      let event_handler: TerminalEventHandler = Arc::new(move |terminal_id, event| {
+         let Ok(mut states) = states_for_events.lock() else {
+            return false;
+         };
+
+         if let Some(state) = states.get_mut(terminal_id) {
+            state.handle_event(event);
+         } else if let Ok(mut pending) = pending_events_for_handler.lock() {
+            pending.push((terminal_id.to_string(), event));
+         }
+         true
+      });
+
+      match self.terminal_manager.create_terminal(config, event_handler) {
          Ok(athas_terminal_id) => {
             let terminal_id = athas_terminal_id.clone();
             let output_limit = args.output_byte_limit.map(|l| l as u32);
@@ -857,91 +957,12 @@ impl acp::Client for AthasAcpClient {
             {
                let mut states = self.terminal_states.lock().unwrap();
                states.insert(terminal_id.clone(), state);
-            }
-
-            // Set up output listener
-            let output_event = format!("pty-output-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let output_listener_id = self.app_handle.listen(output_event, move |event| {
-               let payload = event.payload();
-               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload)
-                  && let Some(data) = parsed.get("data").and_then(|d| d.as_str())
-                  && let Ok(mut states) = states_clone.lock()
-                  && let Some(state) = states.get_mut(&terminal_id_clone)
-               {
-                  state.append_output(data);
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(output_listener_id);
-               }
-            }
-
-            // Set up exit-status listener
-            let exit_event = format!("pty-exit-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let exit_listener_id = self.app_handle.listen(exit_event, move |event| {
-               let payload = event.payload();
-               if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload) {
-                  let exit_code = parsed
-                     .get("exitCode")
-                     .and_then(|v| v.as_u64())
-                     .map(|v| v as u32);
-                  let signal = parsed
-                     .get("signal")
-                     .and_then(|v| v.as_str())
-                     .map(str::to_string);
-                  if let Ok(mut states) = states_clone.lock()
-                     && let Some(state) = states.get_mut(&terminal_id_clone)
-                  {
-                     state.set_exit_status(exit_code, signal);
+               if let Ok(mut pending) = pending_events.lock() {
+                  for (_, event) in pending.drain(..).filter(|(id, _)| id == &terminal_id) {
+                     if let Some(state) = states.get_mut(&terminal_id) {
+                        state.handle_event(event);
+                     }
                   }
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(exit_listener_id);
-               }
-            }
-
-            // Set up error listener
-            let error_event = format!("pty-error-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let error_listener_id = self.app_handle.listen(error_event, move |_| {
-               if let Ok(mut states) = states_clone.lock()
-                  && let Some(state) = states.get_mut(&terminal_id_clone)
-               {
-                  state.set_exit_status(Some(1), Some("pty_error".to_string()));
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(error_listener_id);
-               }
-            }
-
-            // Set up close listener
-            let close_event = format!("pty-closed-{}", athas_terminal_id);
-            let states_clone = self.terminal_states.clone();
-            let terminal_id_clone = terminal_id.clone();
-            let close_listener_id = self.app_handle.listen(close_event, move |_| {
-               if let Ok(mut states) = states_clone.lock()
-                  && let Some(state) = states.get_mut(&terminal_id_clone)
-               {
-                  state.set_exit_status(Some(0), None);
-               }
-            });
-            {
-               let mut states = self.terminal_states.lock().unwrap();
-               if let Some(state) = states.get_mut(&terminal_id) {
-                  state.listener_ids.push(close_listener_id);
                }
             }
 
@@ -998,9 +1019,6 @@ impl acp::Client for AthasAcpClient {
       };
 
       if let Some(state) = removed_state {
-         for listener_id in state.listener_ids {
-            self.app_handle.unlisten(listener_id);
-         }
          if let Err(e) = self
             .terminal_manager
             .close_terminal(&state.athas_terminal_id)
@@ -1048,8 +1066,8 @@ impl acp::Client for AthasAcpClient {
 
    async fn kill_terminal_command(
       &self,
-      args: acp::KillTerminalCommandRequest,
-   ) -> acp::Result<acp::KillTerminalCommandResponse> {
+      args: acp::KillTerminalRequest,
+   ) -> acp::Result<acp::KillTerminalResponse> {
       let terminal_id = args.terminal_id.to_string();
       let athas_id = {
          let states = self
@@ -1077,7 +1095,7 @@ impl acp::Client for AthasAcpClient {
          }
       }
 
-      Ok(acp::KillTerminalCommandResponse::new())
+      Ok(acp::KillTerminalResponse::new())
    }
 
    async fn ext_method(&self, args: acp::ExtRequest) -> acp::Result<acp::ExtResponse> {

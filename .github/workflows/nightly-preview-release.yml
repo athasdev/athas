@@ -1,0 +1,114 @@
+name: "Nightly Preview Release"
+
+on:
+  schedule:
+    # Midnight Europe/Istanbul. GitHub Actions cron is UTC.
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  preview-release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.2"
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Use latest main and tags
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          git checkout -B main origin/main
+
+      - name: Check for commits since latest preview
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Preview tags point at tag-only release commits whose parent is main,
+          # so they are not considered merged into HEAD.
+          latest_preview="$(git tag --list 'v*-preview.*' --sort=-creatordate | head -n 1 || true)"
+          if [[ -n "$latest_preview" ]]; then
+            range="${latest_preview}..HEAD"
+          else
+            range="HEAD"
+          fi
+
+          commits="$(
+            git log "$range" --format='%H%x1f%s' |
+              awk -F '\037' '
+                $2 != "Prepare preview release" &&
+                $2 != "Prepare release" &&
+                $2 !~ /^Merge remote-tracking branch / {
+                  print
+                }
+              '
+          )"
+
+          if [[ -z "$commits" ]]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "No product commits found since ${latest_preview:-repository start}."
+            exit 0
+          fi
+
+          commit_count="$(printf '%s\n' "$commits" | wc -l | tr -d ' ')"
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+          echo "commit_count=$commit_count" >> "$GITHUB_OUTPUT"
+          echo "latest_preview=$latest_preview" >> "$GITHUB_OUTPUT"
+          echo "Found $commit_count product commit(s) since ${latest_preview:-repository start}."
+
+      - name: Configure release git identity
+        if: steps.changes.outputs.should_release == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create preview release tag
+        if: steps.changes.outputs.should_release == 'true'
+        id: release
+        env:
+          RELEASE_SKIP_CHECKS: "1"
+          RELEASE_TAG_ONLY: "1"
+        run: |
+          set -euo pipefail
+          bun scripts/release.ts preview patch
+          tag="v$(bun -e 'console.log(JSON.parse(await Bun.file("package.json").text()).version)')"
+          echo "tag_name=$tag" >> "$GITHUB_OUTPUT"
+          echo "Created $tag"
+
+      - name: Dispatch release build
+        if: steps.changes.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          gh workflow run release.yml \
+            --repo "${{ github.repository }}" \
+            --ref "$TAG_NAME" \
+            --field tag="$TAG_NAME"

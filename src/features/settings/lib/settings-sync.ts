@@ -1,9 +1,9 @@
-import type { Settings } from "@/features/settings/types/settings";
-import { useSettingsStore } from "@/features/settings/store";
+import type { Settings } from "@/features/settings/types/settings.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   useSettingsSyncStore,
   type SettingsSyncSource,
-} from "@/features/settings/stores/settings-sync-store";
+} from "@/features/settings/stores/settings-sync.store";
 import {
   fetchSettingsSyncSnapshot,
   isAuthInvalidError,
@@ -17,7 +17,6 @@ const SETTINGS_SYNC_PUSH_DEBOUNCE_MS = 1500;
 
 type SyncableSettingsKey =
   | "autoSave"
-  | "sidebarPosition"
   | "quickOpenPreview"
   | "fontFamily"
   | "fontSize"
@@ -25,6 +24,9 @@ type SyncableSettingsKey =
   | "tabSize"
   | "wordWrap"
   | "lineNumbers"
+  | "renderWhitespace"
+  | "renderIndentGuides"
+  | "highlightOccurrences"
   | "showMinimap"
   | "terminalFontFamily"
   | "terminalFontSize"
@@ -42,8 +44,7 @@ type SyncableSettingsKey =
   | "autoThemeLight"
   | "autoThemeDark"
   | "compactMenuBar"
-  | "sidebarTabsPosition"
-  | "titleBarProjectMode"
+  | "windowTransparency"
   | "headerTrailingItemsOrder"
   | "sidebarActivityItemsOrder"
   | "footerLeadingItemsOrder"
@@ -62,7 +63,10 @@ type SyncableSettingsKey =
   | "aiAutocompleteCustomModelId"
   | "aiDefaultSessionMode"
   | "aiSkills"
+  | "v0DesignSystems"
+  | "activeV0DesignSystemId"
   | "ollamaBaseUrl"
+  | "activityRailWidth"
   | "sidebarWidth"
   | "showGitHubPullRequests"
   | "showGitHubIssues"
@@ -78,6 +82,7 @@ type SyncableSettingsKey =
   | "autoCompletion"
   | "parameterHints"
   | "externalEditor"
+  | "customEditorCommand"
   | "coreFeatures"
   | "extensionsActiveTab"
   | "maxOpenTabs"
@@ -104,7 +109,6 @@ type SyncableSettingsKey =
 
 const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoSave",
-  "sidebarPosition",
   "quickOpenPreview",
   "fontFamily",
   "fontSize",
@@ -112,6 +116,9 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "tabSize",
   "wordWrap",
   "lineNumbers",
+  "renderWhitespace",
+  "renderIndentGuides",
+  "highlightOccurrences",
   "showMinimap",
   "terminalFontFamily",
   "terminalFontSize",
@@ -129,8 +136,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeLight",
   "autoThemeDark",
   "compactMenuBar",
-  "sidebarTabsPosition",
-  "titleBarProjectMode",
+  "windowTransparency",
   "headerTrailingItemsOrder",
   "sidebarActivityItemsOrder",
   "footerLeadingItemsOrder",
@@ -149,7 +155,10 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "aiAutocompleteCustomModelId",
   "aiDefaultSessionMode",
   "aiSkills",
+  "v0DesignSystems",
+  "activeV0DesignSystemId",
   "ollamaBaseUrl",
+  "activityRailWidth",
   "sidebarWidth",
   "showGitHubPullRequests",
   "showGitHubIssues",
@@ -165,6 +174,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoCompletion",
   "parameterHints",
   "externalEditor",
+  "customEditorCommand",
   "coreFeatures",
   "extensionsActiveTab",
   "maxOpenTabs",

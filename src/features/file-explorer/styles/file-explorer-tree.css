@@ -15,9 +15,6 @@
   font-family: var(--app-font-family);
 }
 
-/* Cover gap above sticky headers to prevent content bleeding through (only when stuck) */
-/* Removed JS-managed .is-stuck marker; pure CSS sticky remains */
-
 /* Ensure file tree content wrapper stretches to full scrollable area */
 .file-tree-container > .file-tree-scroll-body {
   width: max-content !important;
@@ -34,7 +31,7 @@
 .file-tree-container .file-tree-item button {
   box-sizing: border-box !important;
   border: 1px solid transparent !important;
-  border-radius: 2px !important;
+  border-radius: var(--radius-lg) !important;
   background-color: transparent !important;
   width: 100% !important;
   min-width: 100% !important;
@@ -67,7 +64,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-lg);
   background-color: transparent;
   content: "";
   pointer-events: none;
@@ -86,9 +83,25 @@
   z-index: 2;
 }
 
+.file-navigator-view-mode-button svg {
+  width: var(--ui-text-sm);
+  height: var(--ui-text-sm);
+}
+
+.file-explorer-search-field svg {
+  left: 0.625rem;
+  width: var(--ui-text-sm);
+  height: var(--ui-text-sm);
+}
+
+.file-explorer-base-text,
+.file-explorer-base-text * {
+  font-size: var(--ui-text-sm);
+}
+
 .file-tree-context-menu [role="menuitem"],
-.file-tree-context-menu [role="menuitem"] .ui-text-sm {
-  font-size: var(--ui-text-xs);
+.file-tree-context-menu [role="menuitem"] * {
+  font-size: var(--ui-text-sm);
 }
 
 .file-tree-row:hover {
@@ -96,7 +109,7 @@
 }
 
 .file-tree-search-highlight {
-  border-radius: 2px;
+  border-radius: var(--radius-md);
   background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
   color: inherit;
   padding: 0 1px;
@@ -130,42 +143,4 @@
   width: 1px;
   background-color: var(--tree-guide-color);
   content: "";
-}
-
-.file-tree-sticky-ancestors {
-  position: sticky;
-  top: calc(var(--file-tree-header-height, 32px) - var(--file-tree-container-inset, 4px));
-  z-index: 12;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.file-tree-sticky-ancestor-stack {
-  position: relative;
-  width: calc(100% + var(--file-tree-container-inset, 4px) + var(--file-tree-container-inset, 4px));
-  min-width: calc(
-    100% + var(--file-tree-container-inset, 4px) + var(--file-tree-container-inset, 4px)
-  );
-  height: var(--file-tree-sticky-stack-height, 24px);
-  margin-left: calc(0px - var(--file-tree-container-inset, 4px));
-  overflow: hidden;
-  background-color: var(--color-primary-bg);
-  box-shadow: 0 -1px 0 0 var(--color-primary-bg);
-  pointer-events: auto;
-}
-
-.file-tree-sticky-ancestor-stack::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 1px;
-  background-color: color-mix(in srgb, var(--color-border) 58%, transparent);
-  content: "";
-  opacity: 0.7;
-}
-
-.file-tree-sticky-ancestor-stack .file-tree-row {
-  height: var(--file-tree-sticky-row-height, 24px);
 }

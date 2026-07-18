@@ -1,20 +1,21 @@
 import {
-  Archive,
-  Download,
-  FolderOpen,
-  GitPullRequest,
-  ArrowClockwise as RefreshCw,
-  ArrowCounterClockwise as RotateCcw,
-  HardDrives as Server,
-  GearSix as Settings,
-  Tag,
-  Upload,
-} from "@phosphor-icons/react";
+  ArchiveIcon as Archive,
+  DownloadIcon as Download,
+  GitBranchIcon as GitBranch,
+  FolderOpenIcon as FolderOpen,
+  GitPullRequestIcon as GitPullRequest,
+  ArrowClockwiseIcon as RefreshCw,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  HardDrivesIcon as Server,
+  GearSixIcon as Settings,
+  TagIcon as Tag,
+  UploadIcon as Upload,
+} from "@/ui/icons";
 import { useState } from "react";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import {
   fetchChanges,
@@ -23,7 +24,7 @@ import {
   type GitRemoteActionResult,
 } from "../api/git-remotes-api";
 import { discardAllChanges, initRepository } from "../api/git-status-api";
-import { useGitStore } from "../stores/git-store";
+import { useGitStore } from "../stores/git.store";
 import { type GitActionsMenuAnchorRect } from "../utils/git-actions-menu-position";
 
 interface GitActionsMenuProps {
@@ -33,6 +34,8 @@ interface GitActionsMenuProps {
   hasGitRepo: boolean;
   repoPath?: string;
   onRefresh?: () => void;
+  onOpenBranchManager?: () => void;
+  onShowBranchDiff?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
   onViewStashes?: () => void;
@@ -49,6 +52,8 @@ const GitActionsMenu = ({
   hasGitRepo,
   repoPath,
   onRefresh,
+  onOpenBranchManager,
+  onShowBranchDiff,
   onOpenRemoteManager,
   onOpenTagManager,
   onViewStashes,
@@ -58,7 +63,7 @@ const GitActionsMenu = ({
   isInitializingRepository,
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { isRefreshing } = useGitStore();
+  const isRefreshing = useGitStore((state) => state.isRefreshing);
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
 
   const handleAction = async (
@@ -136,7 +141,7 @@ const GitActionsMenu = ({
     if (!repoPath) return;
     if (
       confirmBeforeDiscard &&
-      !(await primitiveConfirm("Discard all unstaged changes? This cannot be undone.", {
+      !(await showConfirmDialog("Discard all unstaged changes? This cannot be undone.", {
         title: "Discard Changes",
         confirmLabel: "Discard",
       }))
@@ -162,6 +167,16 @@ const GitActionsMenu = ({
 
   const handleRemoteManager = () => {
     onOpenRemoteManager?.();
+    onClose();
+  };
+
+  const handleBranchManager = () => {
+    onOpenBranchManager?.();
+    onClose();
+  };
+
+  const handleShowBranchDiff = () => {
+    onShowBranchDiff?.();
     onClose();
   };
 
@@ -195,6 +210,19 @@ const GitActionsMenu = ({
         },
         { id: "sep-1", label: "", separator: true, onClick: () => {} },
         {
+          id: "manage-branches",
+          label: "Manage Branches",
+          icon: <GitBranch />,
+          onClick: handleBranchManager,
+        },
+        {
+          id: "show-branch-diff",
+          label: "Show Branch Diff",
+          icon: <GitPullRequest />,
+          onClick: handleShowBranchDiff,
+        },
+        { id: "sep-branches", label: "", separator: true, onClick: () => {} },
+        {
           id: "push",
           label: "Push Changes",
           icon: <Upload />,
@@ -205,7 +233,7 @@ const GitActionsMenu = ({
         {
           id: "pull",
           label: "Pull Changes",
-          icon: <Download />,
+          icon: <Download weight="fill" />,
           disabled: isLoading,
           onClick: handlePull,
         },
@@ -253,7 +281,7 @@ const GitActionsMenu = ({
           label: "Discard All Changes",
           icon: <RotateCcw />,
           disabled: isLoading,
-          className: "text-red-400",
+          className: "text-error",
           onClick: () => void handleDiscardAllChanges(),
         },
       ]

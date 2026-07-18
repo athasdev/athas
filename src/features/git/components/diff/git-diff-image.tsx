@@ -1,13 +1,13 @@
 import {
-  Minus,
-  Plus,
-  MagnifyingGlassPlus as ZoomIn,
-  MagnifyingGlassMinus as ZoomOut,
-} from "@phosphor-icons/react";
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  MagnifyingGlassPlusIcon as ZoomIn,
+  MagnifyingGlassMinusIcon as ZoomOut,
+} from "@/ui/icons";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff-types";
+import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff.types";
 import { getFileStatus, getImgSrc } from "../../utils/git-diff-helpers";
 import DiffHeader from "./git-diff-header";
 
@@ -19,7 +19,7 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
   <div className="flex flex-1 flex-col">
     <div
       className={cn(
-        "flex items-center justify-center gap-1 py-1 ui-text-xs",
+        "flex items-center justify-center gap-1 py-1 ui-text-sm",
         "border-border border-b font-medium",
         labelColor,
       )}
@@ -36,7 +36,7 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
           style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
         />
       ) : (
-        <div className="text-text-lighter ui-text-xs italic">No image</div>
+        <div className="text-text-lighter ui-text-sm italic">No image</div>
       )}
     </div>
   </div>
@@ -78,18 +78,18 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           className="text-text-lighter disabled:opacity-50"
           tooltip="Zoom out"
           aria-label="Zoom out"
-          compact
+          size="icon-xs"
         >
           <ZoomOut />
         </Button>
-        <span className="ui-font w-12 text-center text-text-lighter ui-text-xs">
+        <span className="font-sans w-12 text-center text-text-lighter ui-text-sm">
           {Math.round(zoom * 100)}%
         </span>
         <Button
           onClick={handleZoomIn}
           disabled={zoom >= MAX_ZOOM}
           variant="ghost"
-          compact
+          size="icon-xs"
           className="text-text-lighter disabled:opacity-50"
           tooltip="Zoom in"
           aria-label="Zoom in"
@@ -101,7 +101,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
       <div className="flex flex-1 overflow-hidden">
         {status === "added" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added/20 py-1 font-medium ui-text-xs text-git-added">
+            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-added/20 py-1 font-medium ui-text-sm text-git-added">
               <Plus />
               New Image
             </div>
@@ -116,7 +116,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           </div>
         ) : status === "deleted" ? (
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted/20 py-1 font-medium ui-text-xs text-git-deleted">
+            <div className="flex items-center justify-center gap-1 border-border border-b bg-git-deleted/20 py-1 font-medium ui-text-sm text-git-deleted">
               <Minus />
               Removed Image
             </div>

@@ -1,4 +1,4 @@
-import { useAIChatStore } from "../store/store";
+import { useAIChatStore } from "../stores/ai-chat.store";
 
 export function useChatState() {
   return {
@@ -29,6 +29,7 @@ export function useChatActions() {
     setSelectedFilesPaths: useAIChatStore((state) => state.setSelectedFilesPaths),
     setPendingAgentLaunchRequest: useAIChatStore((state) => state.setPendingAgentLaunchRequest),
     createNewChat: useAIChatStore((state) => state.createNewChat),
+    ensureChatSession: useAIChatStore((state) => state.ensureChatSession),
     ensureChatForAgent: useAIChatStore((state) => state.ensureChatForAgent),
     deleteChat: useAIChatStore((state) => state.deleteChat),
     updateChatTitle: useAIChatStore((state) => state.updateChatTitle),

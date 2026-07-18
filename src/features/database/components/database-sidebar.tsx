@@ -1,40 +1,39 @@
 import {
-  ArrowLeft,
-  Database,
-  FilePlus,
-  FolderOpen,
-  MagnifyingGlass,
-  PlugsConnected,
-  Plus,
-  Trash,
-} from "@phosphor-icons/react";
+  ArrowLeftIcon as ArrowLeft,
+  DatabaseIcon as Database,
+  FilePlusIcon as FilePlus,
+  FolderOpenIcon as FolderOpen,
+  PlugsConnectedIcon as PlugsConnected,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
+} from "@/ui/icons";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { CommandFooter, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandFooter,
+  CommandFooterAction,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItemAction,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
-import {
-  SidebarEmptyActionState,
-  SidebarEmptyState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarHeaderSearch,
-} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { normalizeDatabaseError } from "../lib/database-errors";
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 import { PROVIDER_REGISTRY } from "../providers/provider-registry";
-import { type SavedConnection, useConnectionStore } from "../stores/connection-store";
-import {
-  DATABASE_SIDEBAR_FILES_DROPPED_EVENT,
-  getDatabaseTypeForFilePath,
-} from "../utils/database-file-drop";
+import { type SavedConnection, useConnectionStore } from "../stores/connection.store";
+import { getDatabaseTypeForFilePath } from "../utils/database-file-drop";
 import {
   getDatabaseFilePathKey,
   getSavedFileConnectionPathKeys,
@@ -63,7 +62,13 @@ function getConnectionSubtitle(connection: SavedConnection) {
   return `${provider.label} ${connection.host}:${connection.port}${database}`;
 }
 
-export function DatabaseSidebar() {
+interface DatabaseCommandContentProps {
+  isActive: boolean;
+  onBack: () => void;
+  onClose: () => void;
+}
+
+export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCommandContentProps) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const filesVersion = useFileSystemStore((state) => state.filesVersion);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
@@ -79,7 +84,6 @@ export function DatabaseSidebar() {
     storeCredential,
   } = useConnectionStore.use.actions();
   const openDatabaseBuffer = useBufferStore.use.actions().openDatabaseBuffer;
-  const openSettingsDialog = useUIState((state) => state.openSettingsDialog);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<SidebarMode>("list");
   const [selectedDbType, setSelectedDbType] = useState<DatabaseType>("sqlite");
@@ -95,10 +99,19 @@ export function DatabaseSidebar() {
   const [error, setError] = useState<string | null>(null);
   const [workspaceDatabaseFiles, setWorkspaceDatabaseFiles] = useState<WorkspaceDatabaseFile[]>([]);
   const [isScanningWorkspaceDatabases, setIsScanningWorkspaceDatabases] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadSavedConnections();
   }, [loadSavedConnections, rootFolderPath]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    setQuery("");
+    setMode("list");
+    setError(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [isActive]);
 
   const installedDbTypes = useMemo(() => getInstalledDatabaseTypes(new Map()), []);
   const savedFileConnectionPathKeys = useMemo(
@@ -225,13 +238,14 @@ export function DatabaseSidebar() {
         await saveConnection(config);
         openDatabaseBuffer(filePath, config.name, dbType);
         setMode("list");
+        onClose();
       } catch (err) {
         setError(normalizeDatabaseError(err));
       } finally {
         setBusyConnectionId(null);
       }
     },
-    [openDatabaseBuffer, rootFolderPath, saveConnection],
+    [onClose, openDatabaseBuffer, rootFolderPath, saveConnection],
   );
 
   const chooseDatabaseFile = async (dbType: DatabaseType) => {
@@ -298,6 +312,7 @@ export function DatabaseSidebar() {
       const connectionId = await connect(config, password || undefined);
       openDatabaseBuffer(`connection://${connectionId}`, config.name, selectedDbType, connectionId);
       setMode("list");
+      onClose();
     } catch (err) {
       setError(normalizeDatabaseError(err));
     } finally {
@@ -318,21 +333,6 @@ export function DatabaseSidebar() {
 
     await saveFileConnection(databasePath);
   };
-
-  useEffect(() => {
-    const handleNativeDatabaseDrop = (event: Event) => {
-      const paths = (event as CustomEvent<{ paths?: string[] }>).detail?.paths ?? [];
-      const databasePath = paths.find((path) => getDatabaseTypeForFilePath(path));
-      if (databasePath) {
-        void saveFileConnection(databasePath);
-      }
-    };
-
-    window.addEventListener(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, handleNativeDatabaseDrop);
-    return () => {
-      window.removeEventListener(DATABASE_SIDEBAR_FILES_DROPPED_EVENT, handleNativeDatabaseDrop);
-    };
-  }, [saveFileConnection]);
 
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     if (!Array.from(event.dataTransfer.types).includes("Files")) return;
@@ -357,6 +357,7 @@ export function DatabaseSidebar() {
       }
 
       openDatabaseBuffer(connection.file_path, connection.name, connection.db_type);
+      onClose();
       return;
     }
 
@@ -373,6 +374,7 @@ export function DatabaseSidebar() {
         connection.db_type,
         connectionId,
       );
+      onClose();
     } catch (err) {
       setError(normalizeDatabaseError(err));
     } finally {
@@ -383,6 +385,7 @@ export function DatabaseSidebar() {
   const openDetectedDatabase = (file: WorkspaceDatabaseFile) => {
     setError(null);
     openDatabaseBuffer(file.path, file.name, file.dbType);
+    onClose();
   };
 
   const handleDeleteConnection = async (connectionId: string) => {
@@ -397,242 +400,237 @@ export function DatabaseSidebar() {
     }
   };
 
+  const renderHeader = () =>
+    mode === "list" ? (
+      <CommandHeader onClose={onClose}>
+        <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
+          <ArrowLeft />
+        </CommandHeaderAction>
+        <CommandInput
+          ref={inputRef}
+          value={query}
+          onChange={setQuery}
+          placeholder="Search databases"
+        />
+        <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
+          <Plus />
+        </CommandHeaderAction>
+      </CommandHeader>
+    ) : (
+      <CommandHeader onClose={onClose}>
+        <CommandHeaderAction type="button" onClick={() => setMode("list")}>
+          <ArrowLeft />
+          <span>Databases</span>
+        </CommandHeaderAction>
+        <CommandHeaderAction type="button" onClick={showProviderStep} aria-label="Add database">
+          <Plus />
+        </CommandHeaderAction>
+      </CommandHeader>
+    );
+
   return (
     <div
-      className="relative flex h-full min-h-0 flex-col bg-primary-bg"
+      className="relative flex min-h-0 flex-1 flex-col bg-primary-bg"
       onDrop={(event) => void handleDrop(event)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <SidebarHeader>
-        {mode === "list" ? (
-          <SidebarHeaderSearch
-            value={query}
-            onChange={setQuery}
-            leftIcon={MagnifyingGlass}
-            placeholder="Search"
-            aria-label="Search databases"
-          />
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            compact
-            className="h-6 min-w-0 flex-1 justify-start gap-1.5 rounded-md px-1.5 text-text-lighter"
-            onClick={() => setMode("list")}
-          >
-            <ArrowLeft />
-            <span className="ui-font truncate ui-text-xs">Databases</span>
-          </Button>
-        )}
-        <SidebarHeaderIconButton
-          tooltip="Add Database"
-          tooltipSide="bottom"
-          onClick={showProviderStep}
-        >
-          <Plus />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
+      {renderHeader()}
 
-      <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
+      <CommandList>
         {mode === "choose-provider" ? (
-          <CommandList>
+          <>
             {installedDbTypes.length === 0 ? (
-              <SidebarEmptyActionState
-                className="min-h-0"
-                message="No database providers installed."
-                actionLabel="Open Extensions"
-                onAction={() => openSettingsDialog("extensions")}
-              />
+              <CommandEmpty>
+                <div className="space-y-2">
+                  <div>No database providers installed.</div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => {
+                      useBufferStore.getState().actions.openExtensionsBuffer();
+                    }}
+                  >
+                    Open Extensions
+                  </Button>
+                </div>
+              </CommandEmpty>
             ) : (
               installedDbTypes.map((type) => (
-                <CommandItem key={type} onClick={() => chooseProvider(type)}>
-                  <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-                  <span className="ui-font ui-text-xs text-text">
-                    {PROVIDER_REGISTRY[type].label}
-                  </span>
-                </CommandItem>
+                <CommandItemRow
+                  key={type}
+                  onClick={() => chooseProvider(type)}
+                  icon={<Database className="size-4" weight="duotone" />}
+                  title={PROVIDER_REGISTRY[type].label}
+                />
               ))
             )}
-          </CommandList>
+          </>
         ) : mode === "file-provider" ? (
-          <div className="p-1">
+          <div>
             <button
               type="button"
               className={cn(
-                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-secondary-bg/35 px-3 py-4 text-center text-text-lighter transition-colors hover:border-accent/50 hover:bg-accent/5",
+                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-secondary-bg/35 px-3 py-4 text-center text-text-lighter transition-colors hover:border-accent/50 hover:bg-accent/5",
                 isDraggingFile && "border-accent bg-accent/10 text-text",
               )}
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
               <FolderOpen className="size-5" weight="duotone" />
-              <span className="ui-font ui-text-xs">
+              <span className="font-sans ui-text-sm">
                 Choose or drop a {PROVIDER_REGISTRY[selectedDbType].label} file
               </span>
             </button>
           </div>
         ) : mode === "network-provider" ? (
-          <CommandList>
-            <div className="space-y-2 p-2">
-              <CommandInput
-                value={name}
-                onChange={setName}
-                placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
-                className="h-7 rounded-md bg-secondary-bg px-2"
+          <div className="space-y-2">
+            <CommandInput
+              value={name}
+              onChange={setName}
+              placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
+              className="h-7 rounded-md bg-secondary-bg px-2"
+            />
+            <div className="flex gap-2">
+              <Input
+                value={host}
+                onChange={(event) => setHost(event.target.value)}
+                placeholder="Host"
+                className="h-7 flex-1"
               />
-              <div className="flex gap-2">
-                <Input
-                  value={host}
-                  onChange={(event) => setHost(event.target.value)}
-                  placeholder="Host"
-                  className="h-7 flex-1"
-                />
-                <Input
-                  type="number"
-                  value={port}
-                  onChange={(event) => setPort(Number(event.target.value))}
-                  placeholder="Port"
-                  className="h-7 w-20"
-                />
-              </div>
-              {selectedDbType !== "redis" ? (
-                <Input
-                  value={databaseName}
-                  onChange={(event) => setDatabaseName(event.target.value)}
-                  placeholder="Database"
-                  className="h-7"
-                />
-              ) : null}
-              <div className="flex gap-2">
-                <Input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Username"
-                  className="h-7 flex-1"
-                />
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Password"
-                  className="h-7 flex-1"
-                />
-              </div>
-              <label
-                htmlFor="database-sidebar-save-password"
-                className="flex items-center gap-2 px-1"
-              >
-                <Checkbox
-                  id="database-sidebar-save-password"
-                  checked={saveCredential}
-                  onChange={setSaveCredential}
-                  ariaLabel="Save password securely"
-                />
-                <span className="ui-font text-text-lighter ui-text-xs">Save password securely</span>
-              </label>
+              <Input
+                type="number"
+                value={port}
+                onChange={(event) => setPort(Number(event.target.value))}
+                placeholder="Port"
+                className="h-7 w-20"
+              />
             </div>
-          </CommandList>
+            {selectedDbType !== "redis" ? (
+              <Input
+                value={databaseName}
+                onChange={(event) => setDatabaseName(event.target.value)}
+                placeholder="Database"
+                className="h-7"
+              />
+            ) : null}
+            <div className="flex gap-2">
+              <Input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Username"
+                className="h-7 flex-1"
+              />
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                className="h-7 flex-1"
+              />
+            </div>
+            <label
+              htmlFor="database-sidebar-save-password"
+              className="flex items-center gap-2 px-1"
+            >
+              <Checkbox
+                id="database-sidebar-save-password"
+                checked={saveCredential}
+                onChange={setSaveCredential}
+                ariaLabel="Save password securely"
+              />
+              <span className="font-sans text-text-lighter ui-text-sm">Save password securely</span>
+            </label>
+          </div>
         ) : !rootFolderPath ? (
-          <SidebarEmptyState>Open a workspace to add databases.</SidebarEmptyState>
+          <CommandEmpty>Open a workspace to add databases.</CommandEmpty>
         ) : isLoadingSaved ? (
-          <SidebarEmptyState>
+          <CommandEmpty>
             <LoadingIndicator label="Loading databases" showLabel compact />
-          </SidebarEmptyState>
+          </CommandEmpty>
         ) : workspaceConnections.length === 0 &&
           detectedWorkspaceDatabases.length === 0 &&
           isScanningWorkspaceDatabases ? (
-          <SidebarEmptyState>
+          <CommandEmpty>
             <LoadingIndicator label="Loading databases" showLabel compact />
-          </SidebarEmptyState>
+          </CommandEmpty>
         ) : workspaceConnections.length === 0 && detectedWorkspaceDatabases.length === 0 ? (
-          <SidebarEmptyState>
+          <CommandEmpty>
             {query.trim() ? "No matching databases." : "No databases in this workspace."}
-          </SidebarEmptyState>
+          </CommandEmpty>
         ) : (
           <div className="space-y-0.5">
             {workspaceConnections.map((connection) => {
               const status = getActiveStatus(connection.id);
               const isBusy = busyConnectionId === connection.id || status === "connecting";
               return (
-                <div
+                <CommandItemRow
                   key={connection.id}
-                  className="group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
-                >
-                  <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => void openConnection(connection)}
-                    disabled={isBusy}
-                  >
-                    <div className="ui-font truncate text-text ui-text-xs">{connection.name}</div>
-                    <div className="ui-font truncate ui-text-xs text-text-lighter">
-                      {getConnectionSubtitle(connection)}
-                    </div>
-                  </button>
-                  {status === "connected" ? (
-                    <PlugsConnected className="size-3.5 shrink-0 text-accent" weight="duotone" />
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    compact
-                    aria-label={`Delete ${connection.name}`}
-                    className={cn(
-                      "size-6 shrink-0 p-0 text-text-lighter opacity-0 transition-opacity hover:text-error group-hover:opacity-100",
-                      isBusy && "pointer-events-none opacity-40",
-                    )}
-                    onClick={() => void handleDeleteConnection(connection.id)}
-                  >
-                    <Trash />
-                  </Button>
-                </div>
+                  as="div"
+                  className="group"
+                  disabled={isBusy}
+                  onClick={() => void openConnection(connection)}
+                  icon={<Database className="size-4" weight="duotone" />}
+                  title={connection.name}
+                  description={getConnectionSubtitle(connection)}
+                  accessory={
+                    status === "connected" ? (
+                      <CommandItemBadge>
+                        <PlugsConnected className="size-3.5" weight="duotone" />
+                        Connected
+                      </CommandItemBadge>
+                    ) : null
+                  }
+                  action={
+                    <CommandItemAction
+                      type="button"
+                      tone="danger"
+                      aria-label={`Delete ${connection.name}`}
+                      disabled={isBusy}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleDeleteConnection(connection.id);
+                      }}
+                    >
+                      <Trash />
+                    </CommandItemAction>
+                  }
+                />
               );
             })}
             {detectedWorkspaceDatabases.map((file) => (
-              <div
+              <CommandItemRow
                 key={file.id}
-                className="group flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-hover"
-              >
-                <Database className="size-4 shrink-0 text-text-lighter" weight="duotone" />
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() => openDetectedDatabase(file)}
-                >
-                  <div className="ui-font truncate text-text ui-text-xs">{file.name}</div>
-                  <div className="ui-font truncate ui-text-xs text-text-lighter">
-                    {PROVIDER_REGISTRY[file.dbType].label} / {file.relativePath}
-                  </div>
-                </button>
-              </div>
+                onClick={() => openDetectedDatabase(file)}
+                icon={<Database className="size-4" weight="duotone" />}
+                title={file.name}
+                description={`${PROVIDER_REGISTRY[file.dbType].label} / ${file.relativePath}`}
+                accessory={<CommandItemBadge>Detected</CommandItemBadge>}
+              />
             ))}
           </div>
         )}
-      </div>
+      </CommandList>
 
       {mode === "network-provider" ? (
         <CommandFooter>
-          <Button
+          <CommandFooterAction
             type="button"
-            variant="default"
-            compact
-            className="w-full gap-1.5"
             disabled={busyConnectionId !== null}
             onClick={() => void saveNetworkConnection()}
           >
             <FilePlus />
             Add Database
-          </Button>
+          </CommandFooterAction>
         </CommandFooter>
       ) : null}
 
       {error ? (
-        <div className="border-border border-t px-2 py-1.5 text-error ui-text-xs">{error}</div>
+        <div className="border-border border-t px-2 py-1.5 text-error ui-text-sm">{error}</div>
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border border-accent bg-primary-bg/85 text-accent ui-text-xs backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border border-accent bg-primary-bg/85 text-accent ui-text-sm backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}

@@ -3,7 +3,7 @@ import {
   getDefaultSettingsSnapshot,
 } from "@/features/settings/config/default-settings";
 import { normalizeSettings } from "@/features/settings/lib/settings-normalization";
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 
 const SETTINGS_EXPORT_FORMAT = "athas.settings";
 const SETTINGS_EXPORT_VERSION = 1;

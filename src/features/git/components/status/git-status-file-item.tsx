@@ -1,11 +1,11 @@
 import type { MouseEvent } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/sidebar-resource-drag";
-import { useSettingsStore } from "@/features/settings/store";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Checkbox from "@/ui/checkbox";
-import { SIDEBAR_TREE_ICON_SIZE, SidebarTreeRow } from "@/ui/sidebar-tree";
+import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
 import { cn } from "@/utils/cn";
-import type { GitFile } from "../../types/git-types";
+import type { GitFile } from "../../types/git.types";
 
 interface GitFileItemProps {
   file: GitFile;
@@ -48,7 +48,10 @@ export const GitFileItem = ({
   return (
     <SidebarTreeRow
       depth={indentLevel}
-      className={cn("group leading-[1.35]", className)}
+      className={cn(
+        "group grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-[1.35]",
+        className,
+      )}
       onClick={onClick}
       onContextMenu={onContextMenu}
       draggable={!!repoPath}
@@ -64,46 +67,43 @@ export const GitFileItem = ({
         });
       }}
     >
-      {showFileIcon && (
-        <FileExplorerIcon
-          fileName={fileName}
-          isDir={false}
-          className="relative z-1 shrink-0 text-text-lighter"
-          size={SIDEBAR_TREE_ICON_SIZE}
-        />
-      )}
+      <span className="relative z-1 flex size-3.5 shrink-0 items-center justify-center overflow-hidden text-text-lighter">
+        {showFileIcon ? (
+          <ThemedFileIcon fileName={fileName} isDir={false} className="text-text-lighter" />
+        ) : null}
+      </span>
       <div
-        className="relative z-1 flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+        className="relative z-1 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap"
         title={file.path}
       >
         <span
           className={cn(
-            "min-w-0 truncate leading-[1.35]",
-            showDirectory ? "max-w-[55%]" : "flex-1",
+            "block min-w-0 truncate whitespace-nowrap leading-[1.35]",
+            showDirectory ? "shrink-0 basis-auto max-w-[45%]" : "flex-1",
             "text-text",
           )}
         >
           {fileName}
         </span>
         {showDirectory && directory && (
-          <span className="ui-text-sm min-w-0 flex-1 truncate leading-[1.35] text-text-lighter/80">
+          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-[1.35] text-text-lighter/80">
             {directory}
           </span>
         )}
       </div>
-      <div className="relative z-1 ml-auto flex shrink-0 items-center gap-1.5">
+      <div className="relative z-1 flex min-w-0 shrink-0 items-center justify-end gap-1.5 overflow-hidden">
         {hasDiffStats && (
           <div
             className={cn(
-              "flex items-center leading-[1.35]",
+              "flex w-[5.25rem] shrink-0 items-center justify-end overflow-hidden leading-[1.35] tabular-nums",
               compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >
             {diffStats.additions > 0 && (
-              <span className="text-git-added">+{diffStats.additions}</span>
+              <span className="shrink-0 text-git-added">+{diffStats.additions}</span>
             )}
             {diffStats.deletions > 0 && (
-              <span className="text-git-deleted">-{diffStats.deletions}</span>
+              <span className="shrink-0 text-git-deleted">-{diffStats.deletions}</span>
             )}
           </div>
         )}

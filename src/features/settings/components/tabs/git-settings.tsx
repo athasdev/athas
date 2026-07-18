@@ -1,10 +1,29 @@
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { useShallow } from "zustand/react/shallow";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
 export const GitSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      autoRefreshGitStatus: state.settings.autoRefreshGitStatus,
+      collapseEmptyGitSections: state.settings.collapseEmptyGitSections,
+      compactGitStatusBadges: state.settings.compactGitStatusBadges,
+      confirmBeforeDiscard: state.settings.confirmBeforeDiscard,
+      coreFeatures: state.settings.coreFeatures,
+      enableGitGutter: state.settings.enableGitGutter,
+      enableInlineGitBlame: state.settings.enableInlineGitBlame,
+      gitChangesFolderView: state.settings.gitChangesFolderView,
+      gitDefaultDiffView: state.settings.gitDefaultDiffView,
+      openDiffOnClick: state.settings.openDiffOnClick,
+      rememberLastGitPanelMode: state.settings.rememberLastGitPanelMode,
+      showGitStatusInFileTree: state.settings.showGitStatusInFileTree,
+      showStagedFirst: state.settings.showStagedFirst,
+      showUntrackedFiles: state.settings.showUntrackedFiles,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const handleGitFeatureToggle = (enabled: boolean) => {
     updateSetting("coreFeatures", {
@@ -178,7 +197,7 @@ export const GitSettings = () => {
             ]}
             onChange={(value) => updateSetting("gitDefaultDiffView", value as "unified" | "split")}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"

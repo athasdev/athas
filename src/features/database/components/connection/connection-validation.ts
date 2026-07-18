@@ -1,4 +1,4 @@
-import type { DatabaseType } from "../../models/provider.types";
+import type { DatabaseType } from "../../types/provider.types";
 
 const CONNECTION_DB_TYPES: DatabaseType[] = [
   "sqlite",
@@ -11,7 +11,10 @@ const CONNECTION_DB_TYPES: DatabaseType[] = [
 
 export interface DatabaseExtensionAvailability {
   isInstalled?: boolean;
-  manifest: { databaseProviders?: Array<{ id: string; protocolVersion?: number }> };
+  manifest: {
+    databases?: Array<{ id: string; protocolVersion?: number }>;
+    databaseProviders?: Array<{ id: string; protocolVersion?: number }>;
+  };
 }
 
 export interface ConnectionValidationInput {

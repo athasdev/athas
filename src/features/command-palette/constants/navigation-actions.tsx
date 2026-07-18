@@ -1,18 +1,21 @@
 import {
-  FileText,
-  FolderOpen,
-  BugBeetle,
-  GitBranch,
-  GitPullRequest,
-  Hash,
-  ListBullets,
-  Package,
-  MagnifyingGlass as Search,
-} from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+  FileTextIcon as FileText,
+  FolderOpenIcon as FolderOpen,
+  BugBeetleIcon as BugBeetle,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  HashIcon as Hash,
+  ListBulletsIcon as ListBullets,
+  PackageIcon as Package,
+  MagnifyingGlassIcon as Search,
+} from "@/ui/icons";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import type { BottomPaneTab, SettingsTab } from "@/features/window/stores/ui-state/types";
-import type { Action } from "../models/action.types";
+import type {
+  BottomPaneTab,
+  SettingsTab,
+} from "@/features/window/stores/ui-state/types/ui-state.types";
+import type { Action } from "../types/action.types";
 
 interface NavigationActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
@@ -34,7 +37,6 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setBottomPaneActiveTab,
     setIsQuickOpenVisible,
     openCommandPaletteView,
-    openSettingsDialog,
     coreFeatures,
     onClose,
   } = params;
@@ -124,12 +126,12 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-extensions",
       label: "View: Show Extensions",
-      description: "Open extensions in settings",
+      description: "Open the extensions tab",
       icon: <Package />,
       category: "Navigation",
       action: () => {
         onClose();
-        openSettingsDialog("extensions");
+        useBufferStore.getState().actions.openExtensionsBuffer();
       },
     },
     {

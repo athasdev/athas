@@ -9,7 +9,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
-REQUIRED_ZIG_VERSION="0.16.0"
 
 print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
@@ -69,14 +68,6 @@ version_at_least() {
     [[ "$(printf '%s\n%s\n' "$minimum" "$current" | sort -V | head -n1)" == "$minimum" ]]
 }
 
-get_zig_version() {
-    if ! command_exists zig; then
-        return 1
-    fi
-
-    zig version 2>/dev/null | grep -Eo '[0-9]+(\.[0-9]+){1,3}' | head -n1
-}
-
 install_system_deps() {
     print_status "Installing system dependencies for $DISTRO..."
 
@@ -114,99 +105,6 @@ install_system_deps() {
     esac
 
     print_success "System dependencies installed successfully"
-}
-
-install_zig_with_package_manager() {
-    case $DISTRO in
-        "ubuntu")
-            sudo apt-get install -y zig
-            ;;
-        "fedora")
-            sudo dnf install -y zig
-            ;;
-        "arch")
-            sudo pacman -S --needed --noconfirm zig
-            ;;
-        "opensuse")
-            sudo zypper install -y zig
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
-
-install_zig_from_archive() {
-    local machine
-    local zig_target
-    local install_root
-    local install_dir
-    local archive_dir
-    local archive_url
-    local temp_dir
-
-    machine="$(uname -m)"
-    case "$machine" in
-        "x86_64")
-            zig_target="x86_64-linux"
-            ;;
-        "aarch64"|"arm64")
-            zig_target="aarch64-linux"
-            ;;
-        *)
-            print_error "Unsupported architecture for Zig install: $machine"
-            return 1
-            ;;
-    esac
-
-    install_root="$HOME/.local/share/athas-dev/zig"
-    install_dir="$install_root/$REQUIRED_ZIG_VERSION"
-    archive_dir="zig-$zig_target-$REQUIRED_ZIG_VERSION"
-    archive_url="https://ziglang.org/download/$REQUIRED_ZIG_VERSION/$archive_dir.tar.xz"
-    temp_dir="$(mktemp -d)"
-
-    print_status "Downloading Zig $REQUIRED_ZIG_VERSION from ziglang.org..."
-    curl -fL "$archive_url" -o "$temp_dir/zig.tar.xz"
-
-    rm -rf "$install_dir"
-    mkdir -p "$install_root" "$HOME/.local/bin"
-    tar -xJf "$temp_dir/zig.tar.xz" -C "$install_root"
-    mv "$install_root/$archive_dir" "$install_dir"
-    ln -sfn "$install_dir/zig" "$HOME/.local/bin/zig"
-    export PATH="$HOME/.local/bin:$PATH"
-    rm -rf "$temp_dir"
-}
-
-install_zig() {
-    local zig_version
-
-    zig_version="$(get_zig_version || true)"
-    if version_at_least "$zig_version" "$REQUIRED_ZIG_VERSION"; then
-        print_success "Zig is already installed (v$zig_version)"
-        return
-    fi
-
-    print_status "Installing Zig $REQUIRED_ZIG_VERSION+..."
-    if ! install_zig_with_package_manager; then
-        print_warning "Could not install Zig with the system package manager."
-    fi
-
-    zig_version="$(get_zig_version || true)"
-    if version_at_least "$zig_version" "$REQUIRED_ZIG_VERSION"; then
-        print_success "Zig is ready (v$zig_version)"
-        return
-    fi
-
-    print_warning "System package manager did not provide Zig $REQUIRED_ZIG_VERSION+."
-    install_zig_from_archive
-
-    zig_version="$(get_zig_version || true)"
-    if ! version_at_least "$zig_version" "$REQUIRED_ZIG_VERSION"; then
-        print_error "Zig $REQUIRED_ZIG_VERSION+ is required, but setup could not verify the installed version."
-        exit 1
-    fi
-
-    print_success "Zig is ready (v$zig_version)"
 }
 
 install_rust() {
@@ -274,15 +172,6 @@ verify_basic() {
         print_warning "Tauri CLI not found, but may work after restart"
     fi
 
-    local zig_version
-    zig_version="$(get_zig_version || true)"
-    if version_at_least "$zig_version" "$REQUIRED_ZIG_VERSION"; then
-        print_success "Zig found (v$zig_version)"
-    else
-        print_error "Zig $REQUIRED_ZIG_VERSION+ missing"
-        return 1
-    fi
-
     return 0
 }
 
@@ -300,7 +189,6 @@ main() {
     print_status "Detected libc: $LIBC"
 
     install_system_deps
-    install_zig
     install_rust
     install_tauri_cli
     install_bun

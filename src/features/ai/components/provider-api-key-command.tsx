@@ -1,19 +1,22 @@
 import {
-  CheckCircle,
-  MagnifyingGlass as Search,
-  Trash,
-  WarningCircle,
-} from "@phosphor-icons/react";
+  CheckCircleIcon as CheckCircle,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash,
+  WarningCircleIcon as WarningCircle,
+} from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers";
+import {
+  useAvailableProviders,
+  useProviderById,
+} from "@/features/ai/hooks/use-available-providers";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
@@ -27,7 +30,6 @@ interface ProviderApiKeyCommandProps {
 
 const DASHBOARD_LINKS: Partial<Record<string, string>> = {
   openrouter: "https://openrouter.ai/keys",
-  v0: "https://v0.dev/chat/settings/keys",
   grok: "https://console.x.ai",
   openai: "https://platform.openai.com/api-keys",
   anthropic: "https://console.anthropic.com/settings/keys",
@@ -37,41 +39,71 @@ const DASHBOARD_LINKS: Partial<Record<string, string>> = {
 
 const PLACEHOLDERS: Partial<Record<string, string>> = {
   openrouter: "sk-or-v1-xxxxxxxxxxxxxxxxxxxx",
-  v0: "v0_xxxxxxxxxxxxxxxxxxxx",
   grok: "xai-xxxxxxxxxxxxxxxxxxxx",
   openai: "sk-xxxxxxxxxxxxxxxxxxxx",
   mistral: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 };
+
+const MASKED_API_KEY = "••••••••••••••••••••";
 
 export function ProviderApiKeyCommand({
   isOpen,
   onClose,
   initialProviderId,
 }: ProviderApiKeyCommandProps) {
+  return (
+    <Command isVisible={isOpen} onClose={onClose} className="max-h-[430px] w-[560px]">
+      {isOpen ? (
+        <ProviderApiKeyCommandContent
+          key={initialProviderId ?? "default"}
+          onClose={onClose}
+          initialProviderId={initialProviderId}
+        />
+      ) : null}
+    </Command>
+  );
+}
+
+function ProviderApiKeyCommandContent({
+  onClose,
+  initialProviderId,
+}: Pick<ProviderApiKeyCommandProps, "onClose" | "initialProviderId">) {
   const searchRef = useRef<HTMLInputElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState("");
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("");
-  const [apiKey, setApiKey] = useState("");
-  const [isValidating, setIsValidating] = useState(false);
-  const [status, setStatus] = useState<"idle" | "valid" | "invalid">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
 
   const saveApiKey = useAIChatStore((state) => state.saveApiKey);
   const removeApiKey = useAIChatStore((state) => state.removeApiKey);
   const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
 
+  const availableProviders = useAvailableProviders();
   const providers = useMemo(
-    () => getAvailableProviders().filter((provider) => provider.requiresApiKey),
-    [],
+    () => availableProviders.filter((provider) => provider.requiresApiKey),
+    [availableProviders],
   );
-  const selectedProvider = getProviderById(selectedProviderId);
+  const initialProvider = initialProviderId
+    ? providers.find((provider) => provider.id === initialProviderId)
+    : null;
+  const initialSelectedProviderId = initialProvider?.id || providers[0]?.id || "";
+  const [query, setQuery] = useState("");
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(initialSelectedProviderId);
+  const [apiKey, setApiKey] = useState(() =>
+    initialSelectedProviderId && hasProviderApiKey(initialSelectedProviderId) ? MASKED_API_KEY : "",
+  );
+  const [isValidating, setIsValidating] = useState(false);
+  const [status, setStatus] = useState<"idle" | "valid" | "invalid">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const selectedProvider = useProviderById(selectedProviderId);
   const hasExistingKey = selectedProviderId ? hasProviderApiKey(selectedProviderId) : false;
-  const dashboardLink = selectedProviderId ? DASHBOARD_LINKS[selectedProviderId] : undefined;
+  const dashboardLink =
+    selectedProvider?.apiKeyUrl ||
+    (selectedProviderId ? DASHBOARD_LINKS[selectedProviderId] : undefined);
   const placeholder =
-    selectedProviderId && PLACEHOLDERS[selectedProviderId]
+    selectedProvider?.apiKeyPlaceholder ||
+    (selectedProviderId && PLACEHOLDERS[selectedProviderId]
       ? PLACEHOLDERS[selectedProviderId]
-      : "Enter API key...";
+      : undefined) ||
+    "Enter API key...";
 
   const filteredProviders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -85,24 +117,9 @@ export function ProviderApiKeyCommand({
   }, [providers, query]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const initialProvider = initialProviderId
-      ? providers.find((provider) => provider.id === initialProviderId)
-      : null;
-    setSelectedProviderId(initialProvider?.id || providers[0]?.id || "");
-    setQuery("");
-    setApiKey("");
-    setStatus("idle");
-    setErrorMessage("");
-    requestAnimationFrame(() => searchRef.current?.focus());
-  }, [initialProviderId, isOpen, providers]);
-
-  useEffect(() => {
-    if (!selectedProviderId) return;
-    setApiKey(hasExistingKey ? "••••••••••••••••••••" : "");
-    setStatus("idle");
-    setErrorMessage("");
-  }, [hasExistingKey, selectedProviderId]);
+    const focusFrame = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(focusFrame);
+  }, []);
 
   const handleSave = async () => {
     if (!selectedProviderId) return;
@@ -124,7 +141,7 @@ export function ProviderApiKeyCommand({
         return;
       }
       setStatus("valid");
-      setApiKey("••••••••••••••••••••");
+      setApiKey(MASKED_API_KEY);
     } catch {
       setStatus("invalid");
       setErrorMessage("Failed to validate API key.");
@@ -147,7 +164,7 @@ export function ProviderApiKeyCommand({
   };
 
   return (
-    <Command isVisible={isOpen} onClose={onClose} className="max-h-[430px] w-[560px]">
+    <>
       <CommandHeader onClose={onClose}>
         <Search className="shrink-0 text-text-lighter" size={14} />
         <CommandInput
@@ -168,29 +185,32 @@ export function ProviderApiKeyCommand({
               const hasKey = hasProviderApiKey(provider.id);
 
               return (
-                <CommandItem
+                <CommandItemRow
                   key={provider.id}
                   isSelected={isSelected}
                   onClick={() => {
                     setSelectedProviderId(provider.id);
+                    setApiKey(hasProviderApiKey(provider.id) ? MASKED_API_KEY : "");
+                    setStatus("idle");
+                    setErrorMessage("");
                     requestAnimationFrame(() => apiKeyInputRef.current?.focus());
                   }}
-                  className="mb-1 px-2 py-2 last:mb-0"
-                >
-                  <ProviderIcon
-                    providerId={provider.id}
-                    size={14}
-                    className="shrink-0 text-text-lighter"
-                  />
-                  <span className="min-w-0 flex-1 truncate ui-text-xs text-text">
-                    {provider.name}
-                  </span>
-                  {hasKey ? (
-                    <CheckCircle className="shrink-0 text-success" size={13} />
-                  ) : (
-                    <WarningCircle className="shrink-0 text-warning" size={13} />
-                  )}
-                </CommandItem>
+                  icon={
+                    <ProviderIcon
+                      providerId={provider.id}
+                      size={14}
+                      className="text-text-lighter"
+                    />
+                  }
+                  title={provider.name}
+                  accessory={
+                    hasKey ? (
+                      <CheckCircle className="text-success" size={13} />
+                    ) : (
+                      <WarningCircle className="text-warning" size={13} />
+                    )
+                  }
+                />
               );
             })
           )}
@@ -206,8 +226,8 @@ export function ProviderApiKeyCommand({
                   className="shrink-0 text-text-lighter"
                 />
                 <div className="min-w-0">
-                  <div className="truncate ui-text-sm text-text">{selectedProvider.name}</div>
-                  <div className="ui-text-xs text-text-lighter">
+                  <div className="truncate ui-text-base text-text">{selectedProvider.name}</div>
+                  <div className="ui-text-base text-text-lighter">
                     {hasExistingKey ? "API key saved" : "API key required"}
                   </div>
                 </div>
@@ -234,13 +254,13 @@ export function ProviderApiKeyCommand({
               />
 
               {status === "valid" && (
-                <div className="flex items-center gap-1.5 text-success ui-text-xs">
+                <div className="flex items-center gap-1.5 text-success ui-text-base">
                   <CheckCircle />
                   API key saved.
                 </div>
               )}
               {status === "invalid" && errorMessage && (
-                <div className="flex items-center gap-1.5 text-error ui-text-xs">
+                <div className="flex items-center gap-1.5 text-error ui-text-base">
                   <WarningCircle />
                   {errorMessage}
                 </div>
@@ -252,7 +272,7 @@ export function ProviderApiKeyCommand({
                     href={dashboardLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ui-font text-text-lighter ui-text-xs hover:text-text"
+                    className="font-sans text-text-lighter ui-text-base hover:text-text"
                   >
                     Open dashboard
                   </a>
@@ -288,6 +308,6 @@ export function ProviderApiKeyCommand({
           )}
         </div>
       </div>
-    </Command>
+    </>
   );
 }

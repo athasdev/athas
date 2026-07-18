@@ -65,6 +65,22 @@ pub struct GitDiff {
    pub old_blob_base64: Option<String>,
    pub new_blob_base64: Option<String>,
    pub lines: Vec<GitDiffLine>,
+   #[serde(skip_serializing_if = "Option::is_none")]
+   pub raw_patch: Option<String>,
+   #[serde(skip_serializing_if = "Option::is_none")]
+   pub additions: Option<usize>,
+   #[serde(skip_serializing_if = "Option::is_none")]
+   pub deletions: Option<usize>,
+   #[serde(skip_serializing_if = "Option::is_none")]
+   pub is_truncated: Option<bool>,
+}
+
+#[derive(Serialize)]
+pub struct GitDiffStat {
+   pub file_path: String,
+   pub staged: bool,
+   pub additions: usize,
+   pub deletions: usize,
 }
 
 #[derive(Serialize)]

@@ -1,16 +1,12 @@
 import type React from "react";
 import { memo } from "react";
-import {
-  FILE_TREE_DENSITY_CONFIG,
-  type FileTreeDensity,
-} from "@/features/file-explorer/lib/file-tree-density";
+import { FILE_TREE_ROW_CLASS_NAME } from "@/features/file-explorer/lib/file-tree-row";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
-import { useFileClipboardStore } from "@/features/file-explorer/stores/file-explorer-clipboard-store";
-import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import Input from "@/ui/input";
-import { TreeRow } from "@/ui/tree-row";
+import { TreeRow } from "@/features/sidebar-tree/components/tree-row";
 import { cn } from "@/utils/cn";
-import { FileExplorerIcon } from "./file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 
 export const FILE_TREE_BASE_INDENT = 10;
 
@@ -49,12 +45,12 @@ interface FileExplorerTreeItemProps {
   previousDepth: number;
   nextDepth: number;
   indentSize: number;
-  density: FileTreeDensity;
   isExpanded: boolean;
   isActive: boolean;
-  dragOverPath: string | null;
+  isCut: boolean;
+  isDragOver: boolean;
   isDragging: boolean;
-  editingValue: string;
+  editingValue?: string;
   onEditingValueChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
   onBlur: (file: FileEntry) => void;
@@ -93,10 +89,10 @@ function FileExplorerTreeItemComponent({
   previousDepth,
   nextDepth,
   indentSize,
-  density,
   isExpanded,
   isActive,
-  dragOverPath,
+  isCut,
+  isDragOver,
   isDragging,
   editingValue,
   onEditingValueChange,
@@ -107,12 +103,7 @@ function FileExplorerTreeItemComponent({
   isSearchMatch = false,
   rowId,
 }: FileExplorerTreeItemProps) {
-  const isCut = useFileClipboardStore(
-    (s) =>
-      s.clipboard?.operation === "cut" && s.clipboard.entries.some((e) => e.path === file.path),
-  );
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
-  const densityConfig = FILE_TREE_DENSITY_CONFIG[density];
   const gitStatusDecoration = getGitStatusDecoration(file);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
   const renderTreeGuides = () => (
@@ -149,14 +140,14 @@ function FileExplorerTreeItemComponent({
         {renderTreeGuides()}
         <div
           className={cn(
-            "file-tree-row flex w-full items-center rounded-md",
-            densityConfig.rowClassName,
+            "file-tree-row flex w-full items-center rounded-lg",
+            FILE_TREE_ROW_CLASS_NAME,
           )}
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}
         >
-          <FileExplorerIcon
+          <ThemedFileIcon
             fileName={file.isDir ? "folder" : "file"}
             isDir={file.isDir}
             isExpanded={false}
@@ -178,7 +169,7 @@ function FileExplorerTreeItemComponent({
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
-            value={editingValue}
+            value={editingValue ?? ""}
             onFocus={() => {
               if (file.isRenaming) {
                 onEditingValueChange(file.name);
@@ -188,7 +179,7 @@ function FileExplorerTreeItemComponent({
             onKeyDown={(e) => onKeyDown(e, file)}
             onBlur={() => onBlur(file)}
             variant="ghost"
-            className="ui-font relative z-1 flex-1 border-text border-b px-0 focus:border-text-lighter"
+            className="font-sans ui-text-sm relative z-1 flex-1 border-text border-b px-0 focus:border-text-lighter"
             placeholder={file.isDir ? "folder name" : "file name"}
           />
         </div>
@@ -217,9 +208,8 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          densityConfig.rowClassName,
-          dragOverPath === file.path &&
-            "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
+          FILE_TREE_ROW_CLASS_NAME,
+          isDragOver && "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",
@@ -230,7 +220,7 @@ function FileExplorerTreeItemComponent({
         depth={depth}
         indentSize={indentSize}
       >
-        <FileExplorerIcon
+        <ThemedFileIcon
           fileName={file.name}
           isDir={file.isDir}
           isExpanded={isExpanded}
@@ -260,10 +250,10 @@ export const FileExplorerTreeItem = memo(
     prev.previousDepth === next.previousDepth &&
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&
-    prev.density === next.density &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
-    prev.dragOverPath === next.dragOverPath &&
+    prev.isCut === next.isCut &&
+    prev.isDragOver === next.isDragOver &&
     prev.isDragging === next.isDragging &&
     prev.editingValue === next.editingValue &&
     prev.onEditingValueChange === next.onEditingValueChange &&

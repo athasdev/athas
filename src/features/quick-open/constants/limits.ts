@@ -1,7 +1,3 @@
-// Performance limits for file processing
-// removed the hardcoded limit
-export const MAX_OTHER_FILES_NO_QUERY = 200;
-
 // Result limits
 export const MAX_RESULTS = 20;
 export const MAX_OPEN_BUFFERS_SHOWN = 20;

@@ -1,22 +1,23 @@
 import {
-  Check,
-  Code as Code2,
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  Broom,
-  Minus,
-  Plus,
-  ArrowClockwise as RefreshCw,
-  Lock,
-  Shield,
-  ShieldWarning as ShieldAlert,
-  X,
-  MagnifyingGlassPlus as ZoomIn,
-} from "@phosphor-icons/react";
-import { useRef, useState, type RefObject } from "react";
+  CheckIcon as Check,
+  CodeIcon as Code2,
+  CopyIcon as Copy,
+  ArrowSquareOutIcon as ExternalLink,
+  BroomIcon as Broom,
+  MinusIcon as Minus,
+  PlusIcon as Plus,
+  ArrowClockwiseIcon as RefreshCw,
+  LockIcon as Lock,
+  ShieldIcon as Shield,
+  ShieldWarningIcon as ShieldAlert,
+  XIcon as X,
+  MagnifyingGlassPlusIcon as ZoomIn,
+} from "@/ui/icons";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 
 interface WebViewerToolbarProps {
   canOpenDevTools: boolean;
@@ -25,6 +26,7 @@ interface WebViewerToolbarProps {
   canClearBrowsingData: boolean;
   copied: boolean;
   devToolsTooltip: string;
+  favicon?: string | null;
   hasUrlError: boolean;
   inputUrl: string;
   isLoading: boolean;
@@ -54,6 +56,7 @@ export function WebViewerToolbar({
   canClearBrowsingData,
   copied,
   devToolsTooltip,
+  favicon,
   hasUrlError,
   inputUrl,
   isLoading,
@@ -76,26 +79,96 @@ export function WebViewerToolbar({
   onZoomOut,
 }: WebViewerToolbarProps) {
   const SecurityIcon = isLocalhost ? Shield : isSecure ? Lock : ShieldAlert;
+  const [faviconFailed, setFaviconFailed] = useState(false);
   const [showZoomPopover, setShowZoomPopover] = useState(false);
   const zoomButtonRef = useRef<HTMLButtonElement>(null);
+  const showFavicon = Boolean(favicon) && !faviconFailed;
+
+  useEffect(() => {
+    setFaviconFailed(false);
+  }, [favicon]);
+
+  const restoreSelection = (input: HTMLInputElement, start: number, end = start) => {
+    requestAnimationFrame(() => {
+      input.setSelectionRange(start, end);
+    });
+  };
+
+  const handleUrlInputKeyDown = async (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const isMod = event.metaKey || event.ctrlKey;
+    if (!isMod || event.altKey) return;
+
+    const input = event.currentTarget;
+    const key = event.key.toLowerCase();
+    const selectionStart = input.selectionStart ?? 0;
+    const selectionEnd = input.selectionEnd ?? selectionStart;
+    const selectedText = input.value.slice(selectionStart, selectionEnd);
+
+    if (key === "a") {
+      event.preventDefault();
+      event.stopPropagation();
+      input.select();
+      return;
+    }
+
+    if (key === "c" && selectedText) {
+      event.preventDefault();
+      event.stopPropagation();
+      await writeClipboardText(selectedText);
+      return;
+    }
+
+    if (key === "x" && selectedText) {
+      event.preventDefault();
+      event.stopPropagation();
+      await writeClipboardText(selectedText);
+      const nextValue = `${input.value.slice(0, selectionStart)}${input.value.slice(selectionEnd)}`;
+      onInputUrlChange(nextValue);
+      restoreSelection(input, selectionStart);
+      return;
+    }
+
+    if (key === "v") {
+      event.preventDefault();
+      event.stopPropagation();
+      const pastedText = await readClipboardText();
+      const nextValue = `${input.value.slice(0, selectionStart)}${pastedText}${input.value.slice(
+        selectionEnd,
+      )}`;
+      onInputUrlChange(nextValue);
+      restoreSelection(input, selectionStart + pastedText.length);
+    }
+  };
 
   return (
-    <div className="flex h-11 shrink-0 items-center gap-0.5 border-border border-b bg-secondary-bg px-2">
+    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-primary-bg px-2">
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <div className="relative flex flex-1 items-center">
           <div
-            className={`absolute left-2.5 flex items-center ${securityToneClass}`}
+            className={`absolute left-2.5 flex size-4 items-center justify-center ${
+              showFavicon ? "" : securityToneClass
+            }`}
             title={securityTooltip}
           >
-            <SecurityIcon />
+            {showFavicon ? (
+              <img
+                src={favicon ?? undefined}
+                alt=""
+                className="size-4 rounded-sm object-contain"
+                onError={() => setFaviconFailed(true)}
+              />
+            ) : (
+              <SecurityIcon className="size-4" />
+            )}
           </div>
           <Input
             ref={urlInputRef}
             type="text"
             value={inputUrl}
             onChange={(e) => onInputUrlChange(e.target.value)}
+            onKeyDown={handleUrlInputKeyDown}
             placeholder="Enter URL..."
-            className={`ui-text-sm h-7 w-full rounded-md pr-20 pl-8 focus:ring-accent/30 ${
+            className={`ui-text-sm h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
               hasUrlError
                 ? "border-error/60 bg-error/5 focus:border-error"
                 : "border-border bg-primary-bg focus:border-accent"
@@ -108,9 +181,9 @@ export function WebViewerToolbar({
               onClick={isLoading ? onStopLoading : onRefresh}
               className="text-text-lighter hover:text-text"
               tooltip={isLoading ? "Stop loading" : "Refresh"}
-              compact
+              size="icon-xs"
             >
-              {isLoading ? <X className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
             </Button>
             <Button
               type="button"
@@ -119,19 +192,15 @@ export function WebViewerToolbar({
               disabled={!canCopyUrl}
               className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
-              compact
+              size="icon-xs"
             >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-success" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
+              {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
             </Button>
           </div>
         </div>
       </form>
 
-      <div className="mx-1.5 h-5 w-px bg-border" />
+      <div className="mx-1.5 h-4 w-px bg-border" />
 
       <div className="flex items-center gap-0.5">
         <Button
@@ -139,6 +208,7 @@ export function WebViewerToolbar({
           variant="ghost"
           onClick={() => setShowZoomPopover((open) => !open)}
           tooltip="Zoom controls"
+          size="icon-xs"
         >
           <ZoomIn />
         </Button>
@@ -148,7 +218,7 @@ export function WebViewerToolbar({
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setShowZoomPopover(false)}
-          className="w-[144px] overflow-hidden rounded-lg p-1.5"
+          className="w-36 overflow-hidden rounded-lg p-1.5"
         >
           <div className="space-y-1">
             <Button
@@ -187,7 +257,7 @@ export function WebViewerToolbar({
               className={dropdownItemClassName("justify-between")}
             >
               <span>Reset zoom</span>
-              <span className="text-text-lighter ui-text-xs">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-text-lighter ui-text-sm">{Math.round(zoomLevel * 100)}%</span>
             </Button>
           </div>
         </Dropdown>
@@ -196,7 +266,7 @@ export function WebViewerToolbar({
           onClick={onClearBrowsingData}
           disabled={!canClearBrowsingData}
           tooltip="Clear browsing data"
-          compact
+          size="icon-xs"
         >
           <Broom />
         </Button>
@@ -205,7 +275,7 @@ export function WebViewerToolbar({
           onClick={onOpenDevTools}
           disabled={!canOpenDevTools}
           tooltip={devToolsTooltip}
-          compact
+          size="icon-xs"
         >
           <Code2 />
         </Button>
@@ -214,7 +284,7 @@ export function WebViewerToolbar({
           onClick={onOpenExternal}
           disabled={!canOpenExternal}
           tooltip="Open in browser"
-          compact
+          size="icon-xs"
         >
           <ExternalLink />
         </Button>

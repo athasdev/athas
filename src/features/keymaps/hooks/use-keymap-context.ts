@@ -4,9 +4,10 @@
  */
 
 import { useEffect } from "react";
-import { useSettingsStore } from "@/features/settings/store";
-import { useVimStore } from "@/features/vim/stores/vim-store";
-import { useKeymapStore } from "../stores/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useVimStore } from "@/features/vim/stores/vim.store";
+import { useKeymapStore } from "../stores/keymaps.store";
+import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 
 export function useKeymapContext() {
   const { setContext, setContexts } = useKeymapStore.use.actions();
@@ -27,7 +28,7 @@ export function useKeymapContext() {
   useEffect(() => {
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      const isEditorFocus = target.classList.contains("editor-textarea");
+      const isEditorFocus = isEditorKeyboardTarget(target);
       const isTerminalFocus = target.closest(".terminal-container") !== null;
 
       setContexts({
@@ -48,7 +49,7 @@ export function useKeymapContext() {
           return;
         }
 
-        const isEditorFocus = activeElement.classList.contains("editor-textarea");
+        const isEditorFocus = isEditorKeyboardTarget(activeElement);
         const isTerminalFocus = activeElement.closest(".terminal-container") !== null;
 
         setContexts({

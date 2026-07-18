@@ -1,4 +1,4 @@
-import type { ImageFormat } from "../models/image-operation.types";
+import type { ImageFormat } from "../types/image-operation.types";
 
 export const SUPPORTED_FORMATS: ImageFormat[] = ["png", "jpeg", "webp", "avif"];
 

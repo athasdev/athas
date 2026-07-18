@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PostgreSQL">
+  <rect width="64" height="64" rx="12" fill="#1d4ed8"/>
+  <path d="M20 19h24v26H20z" fill="none" stroke="#fff" stroke-width="4"/>
+  <path d="M26 27h12M26 35h12" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>

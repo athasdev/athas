@@ -1,0 +1,37 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.vue",
+  "name": "Vue",
+  "displayName": "Vue",
+  "version": "1.0.0",
+  "description": "Vue language support with LSP, formatting and linting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "vue",
+      "extensions": [".vue"],
+      "aliases": ["Vue"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "vue-language-server",
+      "runtime": "bun",
+      "package": "@vue/language-server",
+      "args": ["--stdio"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": ["--stdin-filepath", "${file}"]
+    },
+    "linter": {
+      "name": "eslint",
+      "runtime": "bun",
+      "package": "eslint",
+      "args": ["--stdin", "--stdin-filename", "${file}", "--format", "json"]
+    }
+  }
+}

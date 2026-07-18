@@ -5,9 +5,14 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { extensionManager } from "@/features/editor/extensions/manager";
-import type { EditorAPI, ExtensionContext } from "@/features/editor/extensions/types";
+import type { EditorAPI, ExtensionContext } from "@/features/editor/types/editor-extension.types";
 import { logger } from "@/features/editor/utils/logger";
 import { extensionRegistry } from "../registry/extension-registry";
+import {
+  getManifestCommandContributions,
+  getManifestLanguageContributions,
+} from "../types/extension-contributions";
+import { activateExtensionContributions } from "../runtime/extension-contribution-runtime";
 import type { BundledExtension } from "../types/extension-manifest";
 
 /**
@@ -31,6 +36,14 @@ function createDummyEditorAPI(): EditorAPI {
     duplicateLine: () => {},
     deleteLine: () => {},
     toggleComment: () => {},
+    goToMatchingBracket: () => {},
+    selectToBracket: () => {},
+    removeBrackets: () => {},
+    expandSelection: () => {},
+    shrinkSelection: () => {},
+    insertCursorAbove: () => {},
+    insertCursorBelow: () => {},
+    insertCursorsAtLineEnds: () => {},
     moveLineUp: () => {},
     moveLineDown: () => {},
     copyLineUp: () => {},
@@ -44,12 +57,17 @@ function createDummyEditorAPI(): EditorAPI {
     canUndo: () => false,
     canRedo: () => false,
     selectAll: () => {},
+    addSelectionToNextFindMatch: () => false,
+    addSelectionToPreviousFindMatch: () => false,
+    selectAllFindMatches: () => false,
     getSettings: () => ({
       fontSize: 14,
       lineHeight: 1.4,
       tabSize: 2,
       lineNumbers: true,
       wordWrap: false,
+      renderWhitespace: "none",
+      renderIndentGuides: true,
       theme: "athas-dark",
     }),
     updateSettings: () => {},
@@ -91,14 +109,12 @@ class GenericLspExtension {
     logger.info("ExtensionLoader", `Activating ${manifest.displayName} extension`);
 
     // Register languages
-    if (manifest.languages) {
-      for (const lang of manifest.languages) {
-        context.registerLanguage({
-          id: lang.id,
-          extensions: lang.extensions,
-          aliases: lang.aliases,
-        });
-      }
+    for (const lang of getManifestLanguageContributions(manifest)) {
+      context.registerLanguage({
+        id: lang.id,
+        extensions: lang.extensions,
+        aliases: lang.aliases,
+      });
     }
 
     // Load tree-sitter grammar if present
@@ -107,19 +123,17 @@ class GenericLspExtension {
     }
 
     // Register commands from manifest
-    if (manifest.commands) {
-      for (const cmd of manifest.commands) {
-        context.registerCommand(cmd.command, async () => {
-          // Handle restart command
-          if (cmd.command.includes("restart")) {
-            await this.restartLSP();
-          }
-          // Handle toggle command
-          else if (cmd.command.includes("toggle")) {
-            await this.toggleLSP();
-          }
-        });
-      }
+    for (const cmd of getManifestCommandContributions(manifest)) {
+      context.registerCommand(cmd.command, async () => {
+        // Handle restart command
+        if (cmd.command.includes("restart")) {
+          await this.restartLSP();
+        }
+        // Handle toggle command
+        else if (cmd.command.includes("toggle")) {
+          await this.toggleLSP();
+        }
+      });
     }
 
     this.isActivated = true;
@@ -287,7 +301,7 @@ class ExtensionLoader {
       version: extension.manifest.version,
       description: extension.manifest.description,
       contributes: {
-        commands: extension.manifest.commands?.map((cmd) => ({
+        commands: getManifestCommandContributions(extension.manifest).map((cmd) => ({
           id: cmd.command,
           title: cmd.title,
           category: cmd.category,
@@ -306,6 +320,8 @@ class ExtensionLoader {
 
     // Mark extension as activated in registry
     extensionRegistry.setExtensionState(extension.manifest.id, "activated");
+
+    await activateExtensionContributions(extension.manifest.id, extension.manifest, extension.path);
 
     this.loadedExtensions.add(extension.manifest.id);
     logger.info(

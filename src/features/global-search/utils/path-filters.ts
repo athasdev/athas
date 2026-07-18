@@ -35,11 +35,54 @@ function splitGlobQuery(query: string): string[] {
     .filter(Boolean);
 }
 
-function pathMatchesAny(path: string, globs: string[]): boolean {
-  return globs.some((glob) => {
-    const matcher = globToRegExp(glob);
-    return matcher ? matcher.test(path) : path.toLowerCase().includes(glob.toLowerCase());
-  });
+interface PathFilter {
+  matcher: RegExp | null;
+  fallback: string;
+}
+
+function compilePathFilters(query: string): PathFilter[] {
+  return splitGlobQuery(query).map((glob) => ({
+    matcher: globToRegExp(glob),
+    fallback: glob.toLowerCase(),
+  }));
+}
+
+function pathMatchesAny(path: string, filters: PathFilter[]): boolean {
+  const lowerPath = path.toLowerCase();
+  for (const filter of filters) {
+    if (filter.matcher ? filter.matcher.test(path) : lowerPath.includes(filter.fallback)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function createPathFilterPredicate(
+  rootFolderPath: string | null | undefined,
+  includeQuery: string,
+  excludeQuery: string,
+): (path: string) => boolean {
+  const includeFilters = compilePathFilters(includeQuery);
+  const excludeFilters = compilePathFilters(excludeQuery);
+
+  if (includeFilters.length === 0 && excludeFilters.length === 0) {
+    return () => true;
+  }
+
+  return (path: string) => {
+    const relativePath = getRelativePath(path, rootFolderPath);
+
+    if (includeFilters.length > 0 && !pathMatchesAny(relativePath, includeFilters)) {
+      return false;
+    }
+
+    if (excludeFilters.length > 0 && pathMatchesAny(relativePath, excludeFilters)) {
+      return false;
+    }
+
+    return true;
+  };
 }
 
 export function matchesPathFilters(
@@ -48,17 +91,5 @@ export function matchesPathFilters(
   includeQuery: string,
   excludeQuery: string,
 ): boolean {
-  const relativePath = getRelativePath(path, rootFolderPath);
-  const includeGlobs = splitGlobQuery(includeQuery);
-  const excludeGlobs = splitGlobQuery(excludeQuery);
-
-  if (includeGlobs.length > 0 && !pathMatchesAny(relativePath, includeGlobs)) {
-    return false;
-  }
-
-  if (excludeGlobs.length > 0 && pathMatchesAny(relativePath, excludeGlobs)) {
-    return false;
-  }
-
-  return true;
+  return createPathFilterPredicate(rootFolderPath, includeQuery, excludeQuery)(path);
 }

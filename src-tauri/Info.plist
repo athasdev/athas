@@ -3,8 +3,14 @@
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Athas uses the microphone for optional voice input in AI chat.</string>
+  <string>Athas uses the microphone for optional voice input in Agent.</string>
   <key>NSSpeechRecognitionUsageDescription</key>
-  <string>Athas uses speech recognition to transcribe optional voice input in AI chat.</string>
+  <string>Athas uses speech recognition to transcribe optional voice input in Agent.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>Athas needs access to project files in Documents so terminals, Git, and editor tools can run inside your workspace.</string>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>Athas needs access to project files on Desktop so terminals, Git, and editor tools can run inside your workspace.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Athas needs access to project files in Downloads so terminals, Git, and editor tools can run inside your workspace.</string>
 </dict>
 </plist>

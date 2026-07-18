@@ -33,11 +33,6 @@ export interface EditorResolvedPosition extends ViewPosition {
   height: number;
 }
 
-export type EditorCoordinateResolver = (
-  clientX: number,
-  clientY: number,
-) => EditorResolvedPosition | null;
-
 export type EditorModelPositionResolver = (
   line: number,
   column: number,
@@ -60,6 +55,7 @@ export interface EditorViewLayout {
 
 export interface BuildEditorViewLayoutOptions {
   lines: string[];
+  lineCount?: number;
   lineHeight: number;
   wordWrap: boolean;
   contentWidth: number;
@@ -236,25 +232,34 @@ function findColumnForSegmentX(
   measureText: (text: string) => number,
 ): number {
   const localX = Math.max(0, x - EDITOR_CONSTANTS.EDITOR_PADDING_LEFT);
-  let bestColumn = segment.startColumn;
-  let bestDistance = Number.POSITIVE_INFINITY;
+  if (segment.endColumn <= segment.startColumn || localX <= 0) {
+    return segment.startColumn;
+  }
 
-  for (let column = segment.startColumn; column <= segment.endColumn; column++) {
-    const textBeforeColumn = lineText.slice(segment.startColumn, column);
-    const columnX = measureText(textBeforeColumn);
-    const distance = Math.abs(columnX - localX);
-
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestColumn = column;
+  let low = segment.startColumn;
+  let high = segment.endColumn;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const width = measureText(lineText.slice(segment.startColumn, mid));
+    if (width <= localX) {
+      low = mid;
+    } else {
+      high = mid - 1;
     }
   }
 
-  return bestColumn;
+  const currentWidth = measureText(lineText.slice(segment.startColumn, low));
+  const nextWidth =
+    low < segment.endColumn
+      ? measureText(lineText.slice(segment.startColumn, low + 1))
+      : currentWidth;
+
+  return nextWidth - localX < localX - currentWidth ? Math.min(segment.endColumn, low + 1) : low;
 }
 
 export function buildEditorViewLayout({
   lines,
+  lineCount,
   lineHeight,
   wordWrap,
   contentWidth,
@@ -263,12 +268,13 @@ export function buildEditorViewLayout({
   compact = false,
 }: BuildEditorViewLayoutOptions): EditorViewLayout {
   const sourceLines = lines.length > 0 ? lines : [""];
+  const sourceLineCount = Math.max(1, lineCount ?? sourceLines.length);
 
   if (compact && !wordWrap && zones.length === 0) {
-    const totalViewLines = sourceLines.length;
+    const totalViewLines = sourceLineCount;
     const totalHeight = totalViewLines * lineHeight;
     const createSegment = (modelLine: number): ViewLineSegment => {
-      const clampedModelLine = Math.max(0, Math.min(modelLine, sourceLines.length - 1));
+      const clampedModelLine = Math.max(0, Math.min(modelLine, sourceLineCount - 1));
       return {
         viewLine: clampedModelLine,
         modelLine: clampedModelLine,

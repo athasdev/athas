@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { type TerminalSlotProps, useTerminalSlotsStore } from "../stores/terminal-slots-store";
+import { type TerminalSlotProps, useTerminalSlotsStore } from "../stores/terminal-slots.store";
 
 interface Props extends Omit<TerminalSlotProps, "el"> {
   sessionId: string;
@@ -80,5 +80,7 @@ export function TerminalSlot({
     return () => el.removeEventListener("mousedown", handler, true);
   }, [onActivate]);
 
-  return <div ref={ref} data-terminal-slot={sessionId} className="flex h-full w-full flex-col" />;
+  return (
+    <div ref={ref} data-terminal-slot={sessionId} className="flex size-full min-w-0 flex-col" />
+  );
 }

@@ -1,15 +1,19 @@
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
-import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff-types";
-import { groupLinesIntoHunks } from "../../utils/git-diff-helpers";
+import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff.types";
+import { DIFF_HIGHLIGHT_LINE_THRESHOLD } from "../../utils/diff-viewer-scale";
+import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../utils/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
 import DiffLine, {
   getContentColor,
+  getGutterBackground,
+  getGutterTextColor,
   getLineBackground,
+  getRailClassName,
   getSplitLineMeta,
   renderDiffLineContent,
 } from "./git-diff-line";
@@ -48,7 +52,7 @@ function SplitDiffCodePanel({
           return (
             <div
               key={`${side}-gutter-${index}`}
-              className="select-none px-2 py-0.5 text-right text-text-lighter tabular-nums"
+              className={`select-none px-2 py-0.5 text-right tabular-nums ${getGutterBackground(meta.diffType)} ${getRailClassName(meta.diffType)} ${getGutterTextColor(meta.diffType)}`}
               style={{
                 fontSize: `${fontSize}px`,
                 lineHeight: `${lineHeight}px`,
@@ -99,15 +103,18 @@ const TextDiffViewer = memo(
     const selectionScopeRef = useRef<HTMLDivElement>(null);
     const editorFontSize = useEditorSettingsStore.use.fontSize();
     const editorFontFamily = useEditorSettingsStore.use.fontFamily();
+    const editorLineHeight = useEditorSettingsStore.use.lineHeight();
     const editorTabSize = useEditorSettingsStore.use.tabSize();
     const wordWrap = useEditorSettingsStore.use.wordWrap();
     const zoomLevel = useZoomStore.use.editorZoomLevel();
     const fontSize = editorFontSize * zoomLevel;
-    const lineHeight = Math.max(calculateLineHeight(fontSize), Math.ceil(fontSize * 1.6), 22);
+    const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
     const tabSize = editorTabSize;
 
     const hunks = useMemo(() => groupLinesIntoHunks(diff.lines), [diff.lines]);
-    const tokenMap = useDiffHighlighting(diff.lines, diff.file_path);
+    const syntaxPath = diff.new_path || diff.old_path || diff.file_path;
+    const highlightLines = diff.lines.length <= DIFF_HIGHLIGHT_LINE_THRESHOLD ? diff.lines : [];
+    const tokenMap = useDiffHighlighting(highlightLines, syntaxPath);
 
     const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
     useSelectionScope(selectionScopeRef);
@@ -126,7 +133,7 @@ const TextDiffViewer = memo(
 
     if (diff.lines.length === 0) {
       return (
-        <div className="flex items-center justify-center py-8 text-text-lighter ui-text-xs">
+        <div className="flex items-center justify-center py-8 text-text-lighter ui-text-sm">
           No changes in this file
         </div>
       );
@@ -136,7 +143,7 @@ const TextDiffViewer = memo(
       return (
         <div
           ref={selectionScopeRef}
-          className="editor-font code-editor-font-override min-w-0"
+          className="font-mono code-editor-font-override min-w-0"
           style={{
             fontSize: `${fontSize}px`,
             fontFamily: editorFontFamily,
@@ -144,12 +151,14 @@ const TextDiffViewer = memo(
             tabSize,
           }}
         >
-          {hunks.map((hunk) => {
+          {hunks.map((hunk, hunkIndex) => {
             const isCollapsed = collapsedHunks.has(hunk.id);
+            const hiddenLineCount = getSkippedUnchangedLineCount(hunks[hunkIndex - 1], hunk);
             return (
               <div key={`split-${hunk.id}`}>
                 <DiffHunkHeader
                   hunk={hunk}
+                  hiddenLineCount={hiddenLineCount}
                   isCollapsed={isCollapsed}
                   onToggleCollapse={() => toggleHunkCollapse(hunk.id)}
                   isStaged={isStaged}
@@ -198,15 +207,15 @@ const TextDiffViewer = memo(
           isEmbeddedInScrollView
             ? "min-w-0 overflow-x-auto overflow-y-hidden"
             : viewMode === "split"
-              ? "min-w-0 overflow-x-hidden overflow-y-hidden"
+              ? "min-w-0 overflow-hidden"
               : "min-w-0 overflow-x-auto overflow-y-hidden"
         }
       >
         <div
           className={
             viewMode === "split"
-              ? "editor-font code-editor-font-override min-w-0 w-full"
-              : "editor-font code-editor-font-override min-w-full w-fit"
+              ? "font-mono code-editor-font-override min-w-0 w-full"
+              : "font-mono code-editor-font-override min-w-full w-fit"
           }
           style={{
             fontSize: `${fontSize}px`,
@@ -215,12 +224,14 @@ const TextDiffViewer = memo(
             tabSize,
           }}
         >
-          {hunks.map((hunk) => {
+          {hunks.map((hunk, hunkIndex) => {
             const isCollapsed = collapsedHunks.has(hunk.id);
+            const hiddenLineCount = getSkippedUnchangedLineCount(hunks[hunkIndex - 1], hunk);
             return (
               <div key={hunk.id}>
                 <DiffHunkHeader
                   hunk={hunk}
+                  hiddenLineCount={hiddenLineCount}
                   isCollapsed={isCollapsed}
                   onToggleCollapse={() => toggleHunkCollapse(hunk.id)}
                   isStaged={isStaged}

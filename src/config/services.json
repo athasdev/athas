@@ -1,0 +1,17 @@
+{
+  "websiteBaseUrl": "https://athas.dev",
+  "apiBaseUrl": "https://athas.dev",
+  "docsUrl": "https://athas.dev/docs",
+  "telemetryDocsUrl": "https://athas.dev/docs/telemetry",
+  "pricingUrl": "https://athas.dev/pricing",
+  "dashboardUrl": "https://athas.dev/dashboard",
+  "dashboardBillingUrl": "https://athas.dev/dashboard/settings/billing",
+  "dashboardIntegrationsUrl": "https://athas.dev/dashboard/settings/integrations",
+  "dashboardCollaborationUrl": "https://athas.dev/dashboard/collaboration",
+  "extensionsCdnBaseUrl": "https://athas.dev/extensions",
+  "skillsRegistryUrl": "https://athas.dev/skills/index.json",
+  "stableUpdateUrl": "https://athas.dev/api/update/stable",
+  "previewUpdateUrl": "https://athas.dev/api/update/preview",
+  "githubReleasesBaseUrl": "https://github.com/athasdev/athas/releases",
+  "githubReleasesApiBaseUrl": "https://api.github.com/repos/athasdev/athas/releases"
+}

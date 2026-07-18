@@ -7,7 +7,10 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 use app_runtime::AthasRuntime;
 use app_setup::{configure_app, shutdown_background_services};
 use commands::*;
-use terminal::{close_terminal, create_terminal, list_shells, terminal_resize, terminal_write};
+use terminal::{
+   close_terminal, create_terminal, list_shells, terminal_resize, terminal_set_paused,
+   terminal_write,
+};
 
 mod app_runtime;
 mod app_setup;
@@ -17,22 +20,25 @@ mod file_events;
 mod logger;
 mod menu;
 mod secure_storage;
+mod service_urls;
 mod terminal;
 
 #[cfg_attr(all(target_os = "linux", feature = "linux"), tauri::cef_entry_point)]
 fn main() {
+   let _ = rustls::crypto::ring::default_provider().install_default();
+
    #[cfg(target_os = "linux")]
-   if cfg!(not(feature = "linux")) && std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
-      // SAFETY: Called at program start before any threads are spawned
-      unsafe {
-         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-      }
-   }
+   bootstrap::linux::configure_graphics_fallback();
 
    #[cfg(target_os = "macos")]
    bootstrap::macos::disable_macos_autofill_heuristics();
 
-   tauri::Builder::<AthasRuntime>::new()
+   let builder = tauri::Builder::<AthasRuntime>::new();
+
+   #[cfg(all(target_os = "linux", feature = "linux"))]
+   let builder = builder.command_line_args(bootstrap::linux::cef_command_line_args());
+
+   builder
       .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
          app_setup::handle_single_instance_open(app, args, cwd);
       }))
@@ -52,6 +58,8 @@ fn main() {
       .setup(configure_app)
       .invoke_handler(tauri::generate_handler![
          // File system commands
+         read_athas_log,
+         read_local_file,
          open_file_external,
          open_folder_dialog,
          move_file,
@@ -78,6 +86,7 @@ fn main() {
          git_log,
          git_diff_file,
          git_diff_file_with_content,
+         git_status_diff_stats,
          git_commit_diff,
          git_ref_diff,
          git_branches,
@@ -123,7 +132,13 @@ fn main() {
          github_list_workflows,
          github_list_labels,
          github_create_issue,
+         github_update_issue,
          github_create_pull_request,
+         github_update_pull_request,
+         github_add_pr_comment,
+         github_submit_pr_review,
+         github_merge_pull_request,
+         github_close_pull_request,
          github_dispatch_workflow,
          github_get_current_user,
          github_checkout_pr,
@@ -154,6 +169,7 @@ fn main() {
          create_app_window,
          uses_native_window_chrome,
          set_macos_window_appearance,
+         set_window_transparency_enabled,
          create_embedded_webview,
          close_embedded_webview,
          close_all_embedded_webviews,
@@ -162,6 +178,7 @@ fn main() {
          resize_embedded_webview,
          set_webview_visible,
          open_webview_devtools,
+         reopen_current_webview_devtools,
          set_webview_zoom,
          // File watcher commands
          start_watching,
@@ -174,6 +191,7 @@ fn main() {
          create_terminal,
          terminal_write,
          terminal_resize,
+         terminal_set_paused,
          close_terminal,
          list_shells,
          // execute_shell,
@@ -193,7 +211,22 @@ fn main() {
          create_remote_terminal,
          remote_terminal_write,
          remote_terminal_resize,
+         remote_terminal_set_paused,
          close_remote_terminal,
+         // WSL commands
+         wsl_list_distributions,
+         wsl_get_home_dir,
+         wsl_read_directory,
+         wsl_read_file,
+         wsl_read_file_bytes,
+         wsl_write_file,
+         wsl_create_file,
+         wsl_create_directory,
+         wsl_delete_path,
+         wsl_rename_path,
+         wsl_copy_path,
+         wsl_get_symlink_info,
+         wsl_resolve_windows_path,
          // ACP agent commands (new)
          get_available_agents,
          install_acp_agent,
@@ -206,6 +239,8 @@ fn main() {
          set_acp_session_mode,
          set_acp_session_config_option,
          list_acp_sessions,
+         delete_acp_session,
+         logout_acp_agent,
          cancel_acp_prompt,
          // Theme commands
          get_system_theme,
@@ -241,9 +276,12 @@ fn main() {
          lsp_get_completions,
          lsp_get_hover,
          lsp_get_definition,
+         lsp_get_implementation,
+         lsp_get_type_definition,
          lsp_get_semantic_tokens,
          lsp_get_code_lens,
          lsp_format_document,
+         lsp_format_range,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
          lsp_get_signature_help,
@@ -276,9 +314,9 @@ fn main() {
          get_extension_path,
          // Fuzzy matching commands
          fuzzy_match,
-         filter_completions,
          fff_set_workspace,
          fff_search_files,
+         fff_scan_status,
          fff_track_access,
          // Search commands
          search_files_content,
@@ -288,6 +326,9 @@ fn main() {
          format_code,
          // Lint commands
          lint_code,
+         // Notebook commands
+         notebook_run_python_cell,
+         notebook_run_r_cell,
          // CLI commands
          check_cli_installed,
          install_cli_command,
@@ -301,6 +342,33 @@ fn main() {
          get_runtime_version,
          get_js_runtime,
          get_all_runtime_statuses,
+         // Docker commands
+         docker_get_inventory,
+         docker_container_action,
+         docker_get_container_logs,
+         docker_start_container_log_stream,
+         docker_stop_container_log_stream,
+         docker_get_compose_project,
+         docker_compose_action,
+         docker_build_image,
+         docker_run_image,
+         docker_image_action,
+         docker_prune_resources,
+         docker_list_container_files,
+         docker_copy_from_container,
+         docker_copy_to_container,
+         docker_registry_search,
+         docker_registry_login,
+         docker_registry_pull,
+         docker_registry_push,
+         docker_tag_image,
+         docker_get_project_config,
+         docker_save_project_config,
+         docker_read_env_file,
+         docker_open_env_file,
+         docker_write_env_file,
+         docker_delete_env_file,
+         docker_open_dev_container,
          // Tool commands
          install_language_tools,
          install_tool,

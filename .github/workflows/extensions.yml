@@ -1,0 +1,67 @@
+name: Extensions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extensions/**"
+      - "src/extensions/**"
+      - ".github/workflows/extensions.yml"
+  pull_request:
+    paths:
+      - "extensions/**"
+      - "src/extensions/**"
+      - ".github/workflows/extensions.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    if: github.repository == 'athasdev/athas'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.2
+
+      - name: Prepare generated extension CDN output
+        run: bun run extensions:prepare
+
+      - name: Validate extensions
+        run: bun run extensions:validate
+
+      - name: Check generated source changes
+        run: |
+          git diff --exit-code extensions src/extensions package.json .gitignore || (
+            echo "Extension source or generated metadata changed. Run the extension scripts locally."
+            exit 1
+          )
+
+  deploy:
+    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.2
+
+      - name: Prepare generated extension CDN output
+        run: bun run extensions:prepare
+
+      - name: Deploy extensions CDN
+        uses: burnett01/rsync-deployments@7.0.2
+        with:
+          switches: -avz
+          path: extensions/generated/cdn/
+          remote_path: ${{ secrets.EXTENSIONS_CDN_ROOT }}/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_SSH_KEY }}
+          remote_port: ${{ secrets.VPS_PORT || 22 }}
+
+      - name: Verify installable packages on CDN
+        run: bun run extensions:verify-cdn

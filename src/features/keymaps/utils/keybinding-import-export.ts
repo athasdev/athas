@@ -2,7 +2,7 @@ import {
   isKeybindingPreset,
   type KeybindingPreset,
 } from "@/features/keymaps/defaults/keybinding-presets";
-import type { Keybinding } from "@/features/keymaps/types";
+import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 
 const KEYBINDINGS_EXPORT_FORMAT = "athas.keybindings";
 const KEYBINDINGS_EXPORT_VERSION = 1;

@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
-import type { HighlightToken } from "@/features/editor/lib/wasm-parser/types";
+import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { cn } from "@/utils/cn";
-import type { DiffLineProps } from "../../types/git-diff-types";
+import type { DiffLineProps } from "../../types/git-diff.types";
 import { getDiffLineVisualState, getDiffLineVisualType } from "../../utils/git-diff-helpers";
 
 export const getLineBackground = (type: string) => {
@@ -12,6 +12,16 @@ export const getLineBackground = (type: string) => {
 export const getGutterBackground = (type: string) => {
   return getDiffLineVisualState(getDiffLineVisualType(type as DiffLineProps["line"]["line_type"]))
     .gutterBackground;
+};
+
+export const getRailClassName = (type: string) => {
+  return getDiffLineVisualState(getDiffLineVisualType(type as DiffLineProps["line"]["line_type"]))
+    .railClassName;
+};
+
+export const getGutterTextColor = (type: string) => {
+  return getDiffLineVisualState(getDiffLineVisualType(type as DiffLineProps["line"]["line_type"]))
+    .gutterTextColor;
 };
 
 export const getContentColor = (type: string) => {
@@ -115,6 +125,11 @@ export function getSplitLineMeta(line: DiffLineProps["line"], splitSide: "left" 
   };
 }
 
+function getUnifiedLineGutterLabel(line: DiffLineProps["line"]) {
+  if (line.line_type === "removed") return "-";
+  return line.new_line_number ?? line.old_line_number ?? "";
+}
+
 const DiffLine = memo(
   ({
     line,
@@ -155,12 +170,16 @@ const DiffLine = memo(
           : "context";
 
       return (
-        <div className={cn("flex min-w-max", getLineBackground(diffType))} style={rowStyle}>
+        <div
+          className={cn("flex min-w-max", getLineBackground(diffType), getRailClassName(diffType))}
+          style={rowStyle}
+        >
           <div
             className={cn(
               "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-              "editor-font code-editor-font-override text-text-lighter tabular-nums",
+              "font-mono code-editor-font-override tabular-nums",
               getGutterBackground(diffType),
+              getGutterTextColor(diffType),
             )}
             style={gutterStyle}
           >
@@ -168,7 +187,7 @@ const DiffLine = memo(
           </div>
           <div
             className={cn(
-              "editor-font code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
+              "font-mono code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
               diffType === "added"
                 ? getContentColor("added")
                 : diffType === "removed"
@@ -189,14 +208,17 @@ const DiffLine = memo(
           <div
             className={cn(
               "flex min-h-0 min-w-0 basis-1/2 overflow-hidden border-border border-r",
-              line.line_type === "removed" ? getLineBackground("removed") : "",
+              line.line_type === "removed"
+                ? cn(getLineBackground("removed"), getRailClassName("removed"))
+                : "",
             )}
           >
             <div
               className={cn(
                 "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-                "editor-font code-editor-font-override text-text-lighter tabular-nums",
+                "font-mono code-editor-font-override tabular-nums",
                 getGutterBackground(line.line_type === "removed" ? "removed" : ""),
+                getGutterTextColor(line.line_type === "removed" ? "removed" : ""),
               )}
               style={gutterStyle}
             >
@@ -204,7 +226,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "editor-font code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
+                "font-mono code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
                 line.line_type === "removed" ? getContentColor("removed") : "text-text",
               )}
               style={contentStyle}
@@ -216,14 +238,17 @@ const DiffLine = memo(
           <div
             className={cn(
               "flex min-h-0 min-w-0 basis-1/2 overflow-hidden",
-              line.line_type === "added" ? getLineBackground("added") : "",
+              line.line_type === "added"
+                ? cn(getLineBackground("added"), getRailClassName("added"))
+                : "",
             )}
           >
             <div
               className={cn(
                 "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-                "editor-font code-editor-font-override text-text-lighter tabular-nums",
+                "font-mono code-editor-font-override tabular-nums",
                 getGutterBackground(line.line_type === "added" ? "added" : ""),
+                getGutterTextColor(line.line_type === "added" ? "added" : ""),
               )}
               style={gutterStyle}
             >
@@ -231,7 +256,7 @@ const DiffLine = memo(
             </div>
             <div
               className={cn(
-                "editor-font code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
+                "font-mono code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
                 line.line_type === "added" ? getContentColor("added") : "text-text",
               )}
               style={contentStyle}
@@ -245,33 +270,28 @@ const DiffLine = memo(
 
     return (
       <div
-        className={cn("flex min-w-full w-fit", getLineBackground(line.line_type))}
+        className={cn(
+          "flex min-w-full w-fit",
+          getLineBackground(line.line_type),
+          getRailClassName(line.line_type),
+        )}
         style={rowStyle}
       >
         <div
           className={cn(
             "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-            "editor-font code-editor-font-override text-text-lighter tabular-nums",
+            "font-mono code-editor-font-override tabular-nums",
             getGutterBackground(line.line_type),
+            getGutterTextColor(line.line_type),
           )}
           style={gutterStyle}
         >
-          {line.old_line_number}
-        </div>
-        <div
-          className={cn(
-            "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right",
-            "editor-font code-editor-font-override text-text-lighter tabular-nums",
-            getGutterBackground(line.line_type),
-          )}
-          style={gutterStyle}
-        >
-          {line.new_line_number}
+          {getUnifiedLineGutterLabel(line)}
         </div>
 
         <div
           className={cn(
-            "editor-font code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
+            "font-mono code-editor-font-override m-0 min-w-0 flex-1 px-2.5 py-0.5 antialiased",
             getContentColor(line.line_type),
           )}
           style={contentStyle}

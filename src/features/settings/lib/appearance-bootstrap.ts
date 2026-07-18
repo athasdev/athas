@@ -1,148 +1,19 @@
-import type { ThemeDefinition } from "@/extensions/themes/types";
+import type { ThemeDefinition } from "@/extensions/themes/theme.types";
+import {
+  getAthasDefaultCssVariables,
+  getAthasDefaultSyntaxTokens,
+  getAthasDefaultTheme,
+} from "@/extensions/themes/default-theme";
 import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
+  getTypographyFontFallbacks,
 } from "@/features/settings/config/typography-defaults";
-import { normalizeConfiguredFontFamily } from "./font-family-resolution";
+import { IS_WINDOWS } from "@/utils/platform";
+import { buildFontFamilyStack, normalizeConfiguredFontFamily } from "./font-family-resolution";
 import { getUiFontScale, normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "./ui-font-size";
 
 export const APPEARANCE_BOOTSTRAP_CACHE_KEY = "athas.bootstrap.appearance.v1";
-
-const DEFAULT_MONO_FALLBACK =
-  '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
-const WINDOWS_MONO_FALLBACK =
-  '"JetBrains Mono Variable", Consolas, "Cascadia Mono", "Cascadia Code", "Courier New", ui-monospace, monospace';
-
-const DEFAULT_SANS_FALLBACK =
-  '"IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const WINDOWS_SANS_FALLBACK =
-  '"IBM Plex Sans Variable", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
-
-const ATHAS_DARK_COLORS: Record<string, string> = {
-  "primary-bg": "#141413",
-  "secondary-bg": "#1c1b19",
-  text: "#faf9f5",
-  "text-light": "#d7d3c6",
-  "text-lighter": "#b0aea5",
-  border: "#2f2d29",
-  hover: "#252320",
-  selected: "#2c2925",
-  "selection-bg": "rgba(106, 155, 204, 0.30)",
-  accent: "#215CAC",
-  cursor: "#faf9f5",
-  "cursor-vim-normal": "rgba(106, 155, 204, 0.65)",
-  "cursor-vim-insert": "#788c5d",
-  error: "#d97757",
-  success: "#788c5d",
-  warning: "#c89744",
-  info: "#6a9bcc",
-  "git-modified": "#c89744",
-  "git-modified-staged": "#d0a15b",
-  "git-added": "#788c5d",
-  "git-deleted": "#d97757",
-  "git-untracked": "#6a9bcc",
-  "git-renamed": "#b08abf",
-  "terminal-black": "#141413",
-  "terminal-red": "#d97757",
-  "terminal-green": "#788c5d",
-  "terminal-yellow": "#c89744",
-  "terminal-blue": "#6a9bcc",
-  "terminal-magenta": "#b08abf",
-  "terminal-cyan": "#7ea9bc",
-  "terminal-white": "#d7d3c6",
-  "terminal-bright-black": "#6c6a63",
-  "terminal-bright-red": "#e38b6e",
-  "terminal-bright-green": "#8ea274",
-  "terminal-bright-yellow": "#d8ae66",
-  "terminal-bright-blue": "#86b1e0",
-  "terminal-bright-magenta": "#c09ad1",
-  "terminal-bright-cyan": "#9bc2d2",
-  "terminal-bright-white": "#faf9f5",
-};
-
-const ATHAS_DARK_SYNTAX: Record<string, string> = {
-  comment: "#8f8c82",
-  keyword: "#d97757",
-  string: "#6a9bcc",
-  number: "#c89744",
-  function: "#788c5d",
-  variable: "#f0ede3",
-  tag: "#788c5d",
-  attribute: "#d97757",
-  punctuation: "#b0aea5",
-  constant: "#d97757",
-  property: "#86b1e0",
-  type: "#a9bc8f",
-  operator: "#b0aea5",
-  boolean: "#d97757",
-  null: "#b08abf",
-  regex: "#7ea9bc",
-  jsx: "#6a9bcc",
-  "jsx-attribute": "#d97757",
-};
-
-const ATHAS_LIGHT_COLORS: Record<string, string> = {
-  "primary-bg": "#fcfcfd",
-  "secondary-bg": "#f5f6f8",
-  text: "#141413",
-  "text-light": "#4b4f57",
-  "text-lighter": "#787d86",
-  border: "#e4e7ec",
-  hover: "#eef1f5",
-  selected: "#e7ebf0",
-  "selection-bg": "rgba(106, 155, 204, 0.25)",
-  accent: "#215CAC",
-  cursor: "#141413",
-  "cursor-vim-normal": "rgba(106, 155, 204, 0.65)",
-  "cursor-vim-insert": "#788c5d",
-  error: "#c76649",
-  success: "#677a50",
-  warning: "#a67a35",
-  info: "#4f7fae",
-  "git-modified": "#a67a35",
-  "git-modified-staged": "#b9893f",
-  "git-added": "#677a50",
-  "git-deleted": "#c76649",
-  "git-untracked": "#4f7fae",
-  "git-renamed": "#9b72ac",
-  "terminal-black": "#141413",
-  "terminal-red": "#c76649",
-  "terminal-green": "#677a50",
-  "terminal-yellow": "#a67a35",
-  "terminal-blue": "#4f7fae",
-  "terminal-magenta": "#9b72ac",
-  "terminal-cyan": "#5f8ea5",
-  "terminal-white": "#8c9199",
-  "terminal-bright-black": "#767c85",
-  "terminal-bright-red": "#d97757",
-  "terminal-bright-green": "#788c5d",
-  "terminal-bright-yellow": "#c89744",
-  "terminal-bright-blue": "#6a9bcc",
-  "terminal-bright-magenta": "#b08abf",
-  "terminal-bright-cyan": "#7ea9bc",
-  "terminal-bright-white": "#2d3138",
-};
-
-const ATHAS_LIGHT_SYNTAX: Record<string, string> = {
-  comment: "#8f8c82",
-  keyword: "#be664a",
-  string: "#4f7fae",
-  number: "#a67a35",
-  function: "#677a50",
-  variable: "#2f2d29",
-  tag: "#677a50",
-  attribute: "#be664a",
-  punctuation: "#7e7a72",
-  constant: "#be664a",
-  property: "#4f7fae",
-  type: "#607b4a",
-  operator: "#7e7a72",
-  boolean: "#be664a",
-  null: "#9b72ac",
-  regex: "#5f8ea5",
-  jsx: "#4f7fae",
-  "jsx-attribute": "#be664a",
-};
 
 export interface AppearanceBootstrapCache {
   version: 1;
@@ -155,29 +26,18 @@ export interface AppearanceBootstrapCache {
   uiFontSize: number;
 }
 
-const DEFAULT_EDITOR_FONT = DEFAULT_MONO_FONT_FAMILY;
-const DEFAULT_UI_FONT = DEFAULT_UI_FONT_FAMILY;
-
-function prefixRecord(prefix: string, value: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    result[`${prefix}${key}`] = entry;
-  }
-  return result;
-}
-
 export const ATHAS_BOOTSTRAP_DEFAULTS = {
   dark: {
-    id: "athas-dark",
-    type: "dark" as const,
-    colors: ATHAS_DARK_COLORS,
-    syntax: ATHAS_DARK_SYNTAX,
+    id: getAthasDefaultTheme("dark").id,
+    type: getAthasDefaultTheme("dark").type,
+    colors: getAthasDefaultTheme("dark").colors,
+    syntax: getAthasDefaultTheme("dark").syntax,
   },
   light: {
-    id: "athas-light",
-    type: "light" as const,
-    colors: ATHAS_LIGHT_COLORS,
-    syntax: ATHAS_LIGHT_SYNTAX,
+    id: getAthasDefaultTheme("light").id,
+    type: getAthasDefaultTheme("light").type,
+    colors: getAthasDefaultTheme("light").colors,
+    syntax: getAthasDefaultTheme("light").syntax,
   },
 };
 
@@ -185,33 +45,12 @@ export const DEFAULT_APPEARANCE_BOOTSTRAP_CACHE: AppearanceBootstrapCache = {
   version: 1,
   themeId: ATHAS_BOOTSTRAP_DEFAULTS.dark.id,
   themeType: ATHAS_BOOTSTRAP_DEFAULTS.dark.type,
-  cssVariables: prefixRecord("--", ATHAS_BOOTSTRAP_DEFAULTS.dark.colors),
-  syntaxTokens: prefixRecord("--syntax-", ATHAS_BOOTSTRAP_DEFAULTS.dark.syntax),
-  editorFontFamily: DEFAULT_EDITOR_FONT,
-  uiFontFamily: DEFAULT_UI_FONT,
+  cssVariables: getAthasDefaultCssVariables("dark"),
+  syntaxTokens: getAthasDefaultSyntaxTokens("dark"),
+  editorFontFamily: DEFAULT_MONO_FONT_FAMILY,
+  uiFontFamily: DEFAULT_UI_FONT_FAMILY,
   uiFontSize: UI_FONT_SIZE_DEFAULT,
 };
-
-function isWindowsPlatform(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /Windows/i.test(navigator.userAgent);
-}
-
-function stripWrappingQuotes(value: string): string {
-  const trimmed = value.trim();
-  return trimmed.replace(/^['"]+|['"]+$/g, "");
-}
-
-function buildFontVariable(primary: string, fallback: string): string {
-  const normalized = stripWrappingQuotes(primary);
-  if (!normalized) return fallback;
-
-  if (normalized.includes(",")) {
-    return `${normalized}, ${fallback}`;
-  }
-
-  return `"${normalized}", ${fallback}`;
-}
 
 function sanitizeVarMap(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -299,14 +138,13 @@ export function applyBootstrapAppearance(cache: AppearanceBootstrapCache): void 
     root.style.setProperty(key, value);
   }
 
-  const monoFallback = isWindowsPlatform() ? WINDOWS_MONO_FALLBACK : DEFAULT_MONO_FALLBACK;
-  const sansFallback = isWindowsPlatform() ? WINDOWS_SANS_FALLBACK : DEFAULT_SANS_FALLBACK;
+  const { mono, sans } = getTypographyFontFallbacks(IS_WINDOWS);
 
   root.style.setProperty(
     "--editor-font-family",
-    buildFontVariable(cache.editorFontFamily, monoFallback),
+    buildFontFamilyStack(cache.editorFontFamily, mono),
   );
-  root.style.setProperty("--app-font-family", buildFontVariable(cache.uiFontFamily, sansFallback));
+  root.style.setProperty("--app-font-family", buildFontFamilyStack(cache.uiFontFamily, sans));
   const normalizedUiFontSize = normalizeUiFontSize(cache.uiFontSize);
   root.style.setProperty("--app-ui-font-size", `${normalizedUiFontSize}px`);
   root.style.setProperty("--app-ui-scale", `${getUiFontScale(normalizedUiFontSize)}`);

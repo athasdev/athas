@@ -1,13 +1,13 @@
 import {
-  Copy,
-  Download,
-  PencilSimple as Edit,
-  PushPin as Pin,
-  PushPinSlash as PinOff,
-  ArrowCounterClockwise as RotateCcw,
-  X,
-} from "@phosphor-icons/react";
-import type { Terminal } from "@/features/terminal/types/terminal";
+  CopyIcon as Copy,
+  DownloadIcon as Download,
+  PencilSimpleIcon as Edit,
+  PushPinIcon as Pin,
+  PushPinSlashIcon as PinOff,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  XIcon as X,
+} from "@/ui/icons";
+import type { Terminal } from "@/features/terminal/types/terminal.types";
 import type { ContextMenuItem } from "@/ui/context-menu";
 import { ContextMenu } from "@/ui/context-menu";
 import Keybinding from "@/ui/keybinding";
@@ -77,7 +77,7 @@ const TerminalTabContextMenu = ({
         {
           id: "export",
           label: "Export Output",
-          icon: <Download />,
+          icon: <Download weight="fill" />,
           onClick: () => onExport(terminal.id),
         },
         { id: "sep-2", label: "", separator: true, onClick: () => {} },

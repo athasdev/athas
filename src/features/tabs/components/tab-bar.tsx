@@ -1,49 +1,40 @@
+import { type DragEndEvent, type DragMoveEvent, type DragStartEvent } from "@dnd-kit/core";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragMoveEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  Lock,
-  LockOpen,
-  SidebarSimple as PanelLeftClose,
-  SplitHorizontal as SplitSquareHorizontal,
-} from "@phosphor-icons/react";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useJumpListStore } from "@/features/editor/stores/jump-list-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  ArrowsOutIcon as Maximize2,
+  ArrowsInIcon as Minimize2,
+  PlusIcon as Plus,
+  SidebarSimpleIcon as PanelLeftClose,
+} from "@/ui/icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useJumpListStore } from "@/features/editor/stores/jump-list.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { navigateToJumpEntry } from "@/features/editor/utils/jump-navigation";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
+import { writeClipboardText } from "@/utils/clipboard";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { splitEditorGroup } from "@/features/panes/utils/pane-command-actions";
 import { moveBufferToPaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import { findPaneGroup } from "@/features/panes/utils/pane-tree";
-import { useSettingsStore } from "@/features/settings/store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { useEditorAppStore } from "@/features/editor/stores/editor-app-store";
-import { useSidebarStore } from "@/features/layout/stores/sidebar-store";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
-import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-viewer-navigation-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-viewer-navigation.store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
+import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
+import { TabBarSurface } from "@/ui/tabs";
 import { getRelativePath } from "@/utils/path-helpers";
 import { calculateDisplayNames } from "../utils/path-shortener";
 import {
@@ -52,40 +43,45 @@ import {
   setInternalTabDragHover,
   setInternalTabDragData,
 } from "../utils/internal-tab-drag";
-import { NewTabMenu } from "./new-tab-menu";
 import TabBarItem from "./tab-bar-item";
 import TabContextMenu from "./tab-context-menu";
 
 interface TabBarProps {
   paneId?: string;
   onTabClick?: (bufferId: string) => void;
-  onNewTabClose?: () => void;
   disablePaneActions?: boolean;
 }
 
 const TabBar = ({
   paneId,
   onTabClick: externalTabClick,
-  onNewTabClose,
   disablePaneActions = false,
 }: TabBarProps) => {
   // Get everything from stores
-  const allBuffers = useBufferStore.use.buffers();
-  const globalActiveBufferId = useBufferStore.use.activeBufferId();
   const pendingClose = useBufferStore.use.pendingClose();
   const paneRoot = usePaneStore.use.root();
   const bottomRoot = usePaneStore.use.bottomRoot();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
-  const { closePane, togglePaneFullscreen, setPaneLocked } = usePaneStore.use.actions();
+  const { closePane, setActivePane, togglePaneFullscreen, setPaneLocked } =
+    usePaneStore.use.actions();
 
-  // Filter buffers by paneId if provided
-  const pane = paneId
-    ? paneId === BOTTOM_PANE_ID
+  const pane = useMemo(() => {
+    if (!paneId) return null;
+    return paneId === BOTTOM_PANE_ID
       ? findPaneGroup(bottomRoot, BOTTOM_PANE_ID)
-      : findPaneGroup(paneRoot, paneId)
-    : null;
-  const buffers = pane ? allBuffers.filter((b) => pane.bufferIds.includes(b.id)) : allBuffers;
-  const activeBufferId = pane ? pane.activeBufferId : globalActiveBufferId;
+      : findPaneGroup(paneRoot, paneId);
+  }, [bottomRoot, paneId, paneRoot]);
+  const paneBufferIdSet = useMemo(() => {
+    return pane ? new Set(pane.bufferIds) : null;
+  }, [pane?.bufferIds]);
+  const buffers = useBufferStore((state) => {
+    const visibleBuffers = paneBufferIdSet
+      ? state.buffers.filter((buffer) => paneBufferIdSet.has(buffer.id))
+      : state.buffers;
+    return visibleBuffers.filter((buffer) => buffer.type !== "newTab");
+  });
+  const globalActiveBufferId = useBufferStore((state) => (pane ? null : state.activeBufferId));
+  const activeBufferCandidate = pane ? pane.activeBufferId : globalActiveBufferId;
   const {
     handleTabClick,
     handleTabClose,
@@ -97,16 +93,24 @@ const TabBar = ({
     confirmCloseWithoutSaving,
     cancelPendingClose,
     convertPreviewToDefinite,
+    showNewTabView,
   } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
-  const { settings } = useSettingsStore();
-  const { updateActivePath } = useSidebarStore();
+  const horizontalTabScroll = useSettingsStore((state) => state.settings.horizontalTabScroll);
+  const maxOpenTabs = useSettingsStore((state) => state.settings.maxOpenTabs);
+  const updateActivePath = useSidebarStore.use.updateActivePath();
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.() || undefined;
   const jumpListActions = useJumpListStore.use.actions();
-  const activeBuffer = useMemo(
-    () => buffers.find((buffer) => buffer.id === activeBufferId) ?? null,
-    [activeBufferId, buffers],
-  );
+  const bufferById = useMemo(() => {
+    const nextBufferById = new Map<string, PaneContent>();
+    for (const buffer of buffers) {
+      nextBufferById.set(buffer.id, buffer);
+    }
+    return nextBufferById;
+  }, [buffers]);
+  const activeBufferId =
+    activeBufferCandidate && bufferById.has(activeBufferCandidate) ? activeBufferCandidate : null;
+  const activeBuffer = activeBufferId ? (bufferById.get(activeBufferId) ?? null) : null;
   const activeWebViewerNavigation = useWebViewerNavigationStore((state) =>
     activeBuffer?.type === "webViewer" ? state.navigationByBufferId[activeBuffer.id] : undefined,
   );
@@ -136,17 +140,10 @@ const TabBar = ({
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const dragPointRef = useRef<{ x: number; y: number } | null>(null);
   const pointerPointRef = useRef<{ x: number; y: number } | null>(null);
+  const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
   const handleRevealInFolder = useFileSystemStore.use.handleRevealInFolder?.();
   const { clearPositionCache } = useEditorStateStore.getState().actions;
   const terminalSessions = useTerminalStore((state) => state.sessions);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 6,
-      },
-    }),
-  );
-
   const getDirectoryLabel = useCallback((directory?: string) => {
     if (!directory) return "";
     const normalized = directory.replace(/[\\/]+$/, "");
@@ -186,7 +183,7 @@ const TabBar = ({
     const bufferStore = useBufferStore.getState();
     const editorState = useEditorStateStore.getState();
     const currentActiveBufferId = bufferStore.activeBufferId;
-    const currentActiveBuffer = bufferStore.buffers.find((b) => b.id === currentActiveBufferId);
+    const currentActiveBuffer = getBufferById(bufferStore.buffers, currentActiveBufferId);
 
     const currentPosition =
       currentActiveBufferId && currentActiveBuffer?.path
@@ -219,10 +216,11 @@ const TabBar = ({
     }
   }, [activeWebViewerNavigation, jumpListActions, usesWebViewerNavigation]);
 
-  const handleSplitActivePane = useCallback(() => {
+  const handleShowNewTab = useCallback(() => {
     if (!paneId) return;
-    splitEditorGroup(paneId, "horizontal", activeBufferId);
-  }, [activeBufferId, paneId]);
+    setActivePane(paneId);
+    showNewTabView();
+  }, [paneId, setActivePane, showNewTabView]);
 
   const handleTogglePaneFullscreen = useCallback(() => {
     if (!paneId) return;
@@ -246,7 +244,7 @@ const TabBar = ({
     (e: React.WheelEvent<HTMLDivElement>) => {
       const container = tabBarRef.current;
       if (!container) return;
-      if (!settings.horizontalTabScroll) return;
+      if (!horizontalTabScroll) return;
       if (draggedBufferId) return;
       if (e.ctrlKey || e.metaKey) return;
       if (!canScrollTabsHorizontally()) return;
@@ -271,22 +269,37 @@ const TabBar = ({
       e.preventDefault();
       container.scrollLeft = nextScrollLeft;
     },
-    [canScrollTabsHorizontally, draggedBufferId, settings.horizontalTabScroll],
+    [canScrollTabsHorizontally, draggedBufferId, horizontalTabScroll],
   );
 
   const sortedBuffers = useMemo(() => {
-    return [...buffers].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return 0;
-    });
-  }, [buffers]);
-  const sortedBufferIds = useMemo(() => sortedBuffers.map((buffer) => buffer.id), [sortedBuffers]);
-  const draggedBuffer = useMemo(
-    () => sortedBuffers.find((buffer) => buffer.id === draggedBufferId) ?? null,
-    [draggedBufferId, sortedBuffers],
-  );
+    const pinnedBuffers: PaneContent[] = [];
+    const unpinnedBuffers: PaneContent[] = [];
 
+    for (const buffer of buffers) {
+      if (buffer.isPinned) {
+        pinnedBuffers.push(buffer);
+      } else {
+        unpinnedBuffers.push(buffer);
+      }
+    }
+
+    if (pinnedBuffers.length === 0) return unpinnedBuffers;
+    if (unpinnedBuffers.length === 0) return pinnedBuffers;
+    return [...pinnedBuffers, ...unpinnedBuffers];
+  }, [buffers]);
+  const { sortedBufferIds, sortedBufferIndexById } = useMemo(() => {
+    const ids: string[] = [];
+    const indexById = new Map<string, number>();
+
+    for (let index = 0; index < sortedBuffers.length; index++) {
+      const buffer = sortedBuffers[index];
+      ids.push(buffer.id);
+      indexById.set(buffer.id, index);
+    }
+
+    return { sortedBufferIds: ids, sortedBufferIndexById: indexById };
+  }, [sortedBuffers]);
   // Calculate display names for tabs with minimal distinguishing paths
   const displayNames = useMemo(() => {
     return calculateDisplayNames(buffers, rootFolderPath);
@@ -320,20 +333,20 @@ const TabBar = ({
   );
 
   useEffect(() => {
-    if (settings.maxOpenTabs > 0 && buffers.length > settings.maxOpenTabs && handleTabClose) {
+    if (maxOpenTabs > 0 && buffers.length > maxOpenTabs && handleTabClose) {
       const closableBuffers = buffers.filter((b) => !b.isPinned && b.id !== activeBufferId);
 
-      let tabsToClose = buffers.length - settings.maxOpenTabs;
+      let tabsToClose = buffers.length - maxOpenTabs;
       for (let i = 0; i < closableBuffers.length && tabsToClose > 0; i++) {
         handleTabClose(closableBuffers[i].id);
         tabsToClose--;
       }
     }
-  }, [buffers, settings.maxOpenTabs, activeBufferId, handleTabClose]);
+  }, [buffers, maxOpenTabs, activeBufferId, handleTabClose]);
 
   // Auto-scroll active tab into view
   useEffect(() => {
-    const activeIndex = sortedBuffers.findIndex((buffer) => buffer.id === activeBufferId);
+    const activeIndex = activeBufferId ? (sortedBufferIndexById.get(activeBufferId) ?? -1) : -1;
     if (activeIndex !== -1 && tabRefs.current[activeIndex] && tabBarRef.current) {
       const activeTab = tabRefs.current[activeIndex];
       const container = tabBarRef.current;
@@ -352,7 +365,7 @@ const TabBar = ({
         }
       }
     }
-  }, [activeBufferId, sortedBuffers]);
+  }, [activeBufferId, sortedBufferIndexById]);
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent, index: number) => {
@@ -387,24 +400,21 @@ const TabBar = ({
     });
   }, []);
 
-  const handleCopyPath = useCallback(
-    async (path: string) => {
-      await writeText(path);
-    },
-    [writeText],
-  );
+  const handleCopyPath = useCallback(async (path: string) => {
+    await writeClipboardText(path);
+  }, []);
 
   const handleCopyRelativePath = useCallback(
     async (path: string) => {
       if (!rootFolderPath) {
         // If no project is open, copy the full path
-        await writeText(path);
+        await writeClipboardText(path);
         return;
       }
 
-      await writeText(getRelativePath(path, rootFolderPath));
+      await writeClipboardText(getRelativePath(path, rootFolderPath));
     },
-    [rootFolderPath, writeText],
+    [rootFolderPath],
   );
 
   const closeContextMenu = () => {
@@ -414,7 +424,7 @@ const TabBar = ({
   const handleSaveAndClose = useCallback(async () => {
     if (!pendingClose) return;
 
-    const buffer = buffers.find((b) => b.id === pendingClose.bufferId);
+    const buffer = bufferById.get(pendingClose.bufferId);
     if (!buffer) return;
 
     // Save the file
@@ -422,7 +432,7 @@ const TabBar = ({
 
     // Then proceed with closing
     confirmCloseWithoutSaving();
-  }, [pendingClose, buffers, handleSave, confirmCloseWithoutSaving]);
+  }, [pendingClose, bufferById, handleSave, confirmCloseWithoutSaving]);
 
   const handleDiscardAndClose = useCallback(() => {
     confirmCloseWithoutSaving();
@@ -434,14 +444,10 @@ const TabBar = ({
 
   const closeTab = useCallback(
     (bufferId: string) => {
-      const buffer = buffers.find((item) => item.id === bufferId);
-      if (buffer?.type === "newTab") {
-        onNewTabClose?.();
-      }
       handleTabClose(bufferId);
       clearPositionCache(bufferId);
     },
-    [buffers, clearPositionCache, handleTabClose, onNewTabClose],
+    [clearPositionCache, handleTabClose],
   );
 
   const handleTabSelect = useCallback(
@@ -494,7 +500,7 @@ const TabBar = ({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      const buffer = sortedBuffers.find((item) => item.id === String(event.active.id));
+      const buffer = bufferById.get(String(event.active.id));
       if (!buffer) return;
 
       setDraggedBufferId(buffer.id);
@@ -504,9 +510,9 @@ const TabBar = ({
         bufferId: buffer.id,
         paneId,
       });
-      handleTabSelect(buffer);
+      suppressNextClick(buffer.id);
     },
-    [handleTabSelect, paneId, sortedBuffers],
+    [bufferById, paneId, suppressNextClick],
   );
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
@@ -524,7 +530,8 @@ const TabBar = ({
     dragPointRef.current = null;
     pointerPointRef.current = null;
     clearInternalTabDragData();
-  }, []);
+    releaseClickSuppression();
+  }, [releaseClickSuppression]);
 
   useEffect(() => {
     if (!draggedBufferId) return;
@@ -540,7 +547,7 @@ const TabBar = ({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const activeId = String(event.active.id);
-      const dragged = sortedBuffers.find((buffer) => buffer.id === activeId);
+      const dragged = bufferById.get(activeId);
       const point = getDragPoint(event);
       const target = point ? resolveDropTarget(point) : { paneId: null, zone: null };
       const isOutsideTabBar = point ? isPointOutsideTabBar(point) : false;
@@ -569,19 +576,16 @@ const TabBar = ({
           useUIState.getState().setIsBottomPaneVisible(true);
         }
       } else if (event.over && reorderBuffers) {
-        const oldIndex = sortedBuffers.findIndex((buffer) => buffer.id === activeId);
-        const newIndex = sortedBuffers.findIndex((buffer) => buffer.id === String(event.over?.id));
+        const oldIndex = sortedBufferIndexById.get(activeId) ?? -1;
+        const newIndex = sortedBufferIndexById.get(String(event.over.id)) ?? -1;
         if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
           reorderBuffers(oldIndex, newIndex);
-          if (dragged) {
-            handleTabClick(dragged.id);
-          }
         }
       }
 
       resetDrag();
     },
-    [handleTabClick, paneId, reorderBuffers, resetDrag, sortedBuffers],
+    [bufferById, paneId, reorderBuffers, resetDrag, sortedBufferIndexById],
   );
 
   useEffect(() => {
@@ -675,34 +679,32 @@ const TabBar = ({
 
   return (
     <>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
+      <TabDndContext
+        modifiers={[restrictToHorizontalAxis]}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onDragCancel={resetDrag}
       >
-        <div
+        <TabBarSurface
           ref={tabBarRef}
           data-tab-bar-pane-id={paneId ?? ""}
-          className="relative flex h-7 shrink-0 items-center gap-1 overflow-hidden bg-primary-bg px-1.5 py-0.5"
+          className="scrollbar-hidden [overscroll-behavior-x:contain]"
           role="tablist"
           aria-label="Open files"
           onWheel={handleWheel}
         >
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="flex h-8 shrink-0 items-center gap-0.5">
             <Button
               type="button"
               onClick={handleJumpBack}
               disabled={!canGoBack}
               variant="ghost"
-              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
               tooltip="Go Back"
               tooltipSide="bottom"
               commandId="navigation.goBack"
               aria-label="Go back to previous location"
-              compact
+              size="icon-xs"
             >
               <ArrowLeft />
             </Button>
@@ -711,53 +713,67 @@ const TabBar = ({
               onClick={handleJumpForward}
               disabled={!canGoForward}
               variant="ghost"
-              className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
               tooltip="Go Forward"
               tooltipSide="bottom"
               commandId="navigation.goForward"
               aria-label="Go forward to next location"
-              compact
+              size="icon-xs"
             >
               <ArrowRight />
             </Button>
           </div>
 
           <SortableContext items={sortedBufferIds} strategy={horizontalListSortingStrategy}>
-            <div className="scrollbar-hidden flex min-w-0 flex-1 gap-1 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]">
+            <div className="scrollbar-hidden flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]">
               {sortedBuffers.map((buffer, index) => (
-                <SortableEditorTab
+                <SortableTab
                   key={buffer.id}
                   id={buffer.id}
                   tabRef={(el) => {
                     tabRefs.current[index] = el;
                   }}
+                  onClickCapture={getClickCapture(buffer.id)}
                 >
-                  <TabBarItem
-                    buffer={buffer}
-                    displayName={getBufferDisplayName(buffer)}
-                    index={index}
-                    isActive={buffer.id === activeBufferId}
-                    isDraggedTab={buffer.id === draggedBufferId}
-                    onClick={() => handleTabSelect(buffer)}
-                    onDoubleClick={(e) => handleDoubleClick(e, index)}
-                    onContextMenu={(e) => handleContextMenu(e, buffer)}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                    handleTabClose={closeTab}
-                    handleTabPin={handleTabPin}
-                  />
-                </SortableEditorTab>
+                  {({ isDragging }) => (
+                    <TabBarItem
+                      buffer={buffer}
+                      displayName={getBufferDisplayName(buffer)}
+                      index={index}
+                      isActive={buffer.id === activeBufferId}
+                      isDraggedTab={isDragging}
+                      onClick={() => handleTabSelect(buffer)}
+                      onDoubleClick={(e) => handleDoubleClick(e, index)}
+                      onContextMenu={(e) => handleContextMenu(e, buffer)}
+                      onKeyDown={(e) => handleKeyDown(e, index)}
+                      handleTabClose={closeTab}
+                      handleTabPin={handleTabPin}
+                    />
+                  )}
+                </SortableTab>
               ))}
             </div>
           </SortableContext>
 
-          <div className="flex shrink-0 items-center gap-1 pl-0.5">
+          <div className="flex h-8 shrink-0 items-center gap-1 pl-0.5">
+            {paneId && !isBottomPane && (
+              <Button
+                type="button"
+                onClick={handleShowNewTab}
+                variant="ghost"
+                size="icon-xs"
+                tooltip="New Tab"
+                tooltipSide="bottom"
+                aria-label="New tab"
+              >
+                <Plus weight="bold" />
+              </Button>
+            )}
             {paneId && !disablePaneActions && !isBottomPane && isInSplit && (
               <Button
                 type="button"
                 onClick={() => closePane(paneId)}
                 variant="ghost"
-                compact
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
+                size="icon-xs"
                 tooltip="Close Split"
                 tooltipSide="bottom"
                 aria-label="Close split pane"
@@ -765,66 +781,22 @@ const TabBar = ({
                 <PanelLeftClose />
               </Button>
             )}
-            {paneId && !disablePaneActions && !isBottomPane && activeBufferId && (
-              <Button
-                type="button"
-                onClick={handleSplitActivePane}
-                variant="ghost"
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
-                tooltip="Split Editor"
-                tooltipSide="bottom"
-                aria-label="Split editor"
-                compact
-              >
-                <SplitSquareHorizontal />
-              </Button>
-            )}
-            {paneId && !disablePaneActions && !isBottomPane && (
-              <Button
-                type="button"
-                onClick={handleTogglePaneLocked}
-                variant="ghost"
-                className={
-                  isPaneLocked
-                    ? "h-5 min-w-5 shrink-0 rounded-md px-1 text-accent"
-                    : "h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
-                }
-                tooltip={isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group"}
-                tooltipSide="bottom"
-                aria-label={isPaneLocked ? "Unlock editor group" : "Lock editor group"}
-                compact
-              >
-                {isPaneLocked ? <Lock /> : <LockOpen />}
-              </Button>
-            )}
             {paneId && !disablePaneActions && !isBottomPane && (
               <Button
                 type="button"
                 onClick={handleTogglePaneFullscreen}
                 variant="ghost"
-                className="h-5 min-w-5 shrink-0 rounded-md px-1 text-text-lighter"
                 tooltip={isPaneFullscreen ? "Exit Full Screen" : "Full Screen Editor"}
                 tooltipSide="bottom"
                 aria-label="Toggle editor full screen"
-                compact
+                size="icon-xs"
               >
                 {isPaneFullscreen ? <Minimize2 /> : <Maximize2 />}
               </Button>
             )}
-            <div className="flex shrink-0 items-center">
-              <NewTabMenu />
-            </div>
           </div>
-        </div>
-
-        <DragOverlay dropAnimation={null}>
-          {draggedBuffer ? (
-            <div className="tab-drag-preview ui-font flex items-center gap-1.5 rounded-lg border border-border/70 bg-primary-bg/95 px-2 py-1 ui-text-xs opacity-95 shadow-sm">
-              <span className="max-w-[200px] truncate text-text">{draggedBuffer.name}</span>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+        </TabBarSurface>
+      </TabDndContext>
 
       <MemoizedTabContextMenu
         isOpen={contextMenu.isOpen}
@@ -834,7 +806,7 @@ const TabBar = ({
         onClose={closeContextMenu}
         onPin={handleTabPin}
         onCloseTab={(bufferId) => {
-          const buffer = buffers.find((b) => b.id === bufferId);
+          const buffer = bufferById.get(bufferId);
           if (buffer) {
             closeTab(bufferId);
           }
@@ -842,10 +814,14 @@ const TabBar = ({
         onCloseOthers={handleCloseOtherTabs}
         onCloseAll={handleCloseAllTabs}
         onCloseToRight={handleCloseTabsToRight}
+        isPaneLocked={isPaneLocked}
+        onTogglePaneLocked={
+          paneId && !disablePaneActions && !isBottomPane ? handleTogglePaneLocked : undefined
+        }
         onCopyPath={handleCopyPath}
         onCopyRelativePath={handleCopyRelativePath}
         onReload={(bufferId: string) => {
-          const buffer = buffers.find((b) => b.id === bufferId);
+          const buffer = bufferById.get(bufferId);
           if (buffer && buffer.path !== "extensions://marketplace") {
             const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
             closeBuffer(bufferId);
@@ -886,7 +862,7 @@ const TabBar = ({
 
       {pendingClose && (
         <UnsavedChangesDialog
-          fileName={buffers.find((b) => b.id === pendingClose.bufferId)?.name || ""}
+          fileName={bufferById.get(pendingClose.bufferId)?.name || ""}
           onSave={handleSaveAndClose}
           onDiscard={handleDiscardAndClose}
           onCancel={handleCancelClose}
@@ -900,35 +876,5 @@ const TabBar = ({
     </>
   );
 };
-
-interface SortableEditorTabProps {
-  id: string;
-  children: ReactNode;
-  tabRef: (element: HTMLDivElement | null) => void;
-}
-
-function SortableEditorTab({ id, children, tabRef }: SortableEditorTabProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id,
-  });
-
-  return (
-    <div
-      ref={(element) => {
-        setNodeRef(element);
-        tabRef(element);
-      }}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      className={isDragging ? "relative z-10 opacity-40" : "relative"}
-      {...attributes}
-      {...listeners}
-    >
-      {children}
-    </div>
-  );
-}
 
 export default TabBar;

@@ -2,8 +2,8 @@ import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { toast } from "@/ui/toast";
-import type { Settings } from "@/features/settings/types/settings";
-import type { SettingsTab } from "@/features/window/stores/ui-state/types";
+import type { Settings } from "@/features/settings/types/settings.types";
+import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import {
   enqueueWindowOpenRequest,
   parseWindowOpenUrl,
@@ -15,7 +15,7 @@ import {
  * Supports:
  *   athas://open?path=...&line=...&type=directory
  *   athas://extension/install/{extensionId}
- *   athas://settings?tab=extensions
+ *   athas://settings?tab=advanced
  */
 export function useDeepLink() {
   useEffect(() => {
@@ -40,6 +40,8 @@ function handleDeepLink(url: string) {
       void enqueueWindowOpenRequest(action.request);
     } else if (action.type === "extensionInstall") {
       installExtensionFromDeepLink(action.extensionId);
+    } else if (action.type === "extensions") {
+      void openExtensionsTabFromDeepLink(action.extensionsCategory);
     } else {
       void openSettingsFromDeepLink(action.tab, action.extensionsCategory);
     }
@@ -57,6 +59,7 @@ function isSupportedDeepLinkProtocol(protocol: string) {
 export type DeepLinkAction =
   | { type: "windowOpen"; request: WindowOpenRequest }
   | { type: "extensionInstall"; extensionId: string }
+  | { type: "extensions"; extensionsCategory?: Settings["extensionsActiveTab"] }
   | { type: "settings"; tab: SettingsTab; extensionsCategory?: Settings["extensionsActiveTab"] };
 
 const SUPPORTED_SETTINGS_TABS = new Set<SettingsTab>([
@@ -65,12 +68,9 @@ const SUPPORTED_SETTINGS_TABS = new Set<SettingsTab>([
   "editor",
   "git",
   "appearance",
-  "databases",
-  "extensions",
   "ai",
   "keyboard",
   "language",
-  "features",
   "collaboration",
   "enterprise",
   "advanced",
@@ -89,6 +89,10 @@ const SUPPORTED_EXTENSION_CATEGORIES = new Set<Settings["extensionsActiveTab"]>(
 ]);
 
 function parseSettingsTab(value: string | null): SettingsTab {
+  if (value === "features") {
+    return "advanced";
+  }
+
   if (value && SUPPORTED_SETTINGS_TABS.has(value as SettingsTab)) {
     return value as SettingsTab;
   }
@@ -114,6 +118,13 @@ export function parseDeepLinkAction(url: string): DeepLinkAction | null {
   const openRequest = parseWindowOpenUrl(parsed);
   if (openRequest) {
     if (openRequest.type === "settings") {
+      if (parsed.searchParams.get("tab") === "extensions") {
+        return {
+          type: "extensions",
+          extensionsCategory: parseExtensionsCategory(parsed.searchParams.get("category")),
+        };
+      }
+
       return {
         type: "settings",
         tab: parseSettingsTab(parsed.searchParams.get("tab")),
@@ -138,6 +149,13 @@ export function parseDeepLinkAction(url: string): DeepLinkAction | null {
   }
 
   if (segments[0] === "settings") {
+    if (parsed.searchParams.get("tab") === "extensions") {
+      return {
+        type: "extensions",
+        extensionsCategory: parseExtensionsCategory(parsed.searchParams.get("category")),
+      };
+    }
+
     return {
       type: "settings",
       tab: parseSettingsTab(parsed.searchParams.get("tab")),
@@ -150,17 +168,23 @@ export function parseDeepLinkAction(url: string): DeepLinkAction | null {
 
 async function openSettingsFromDeepLink(
   tab: SettingsTab,
-  extensionsCategory?: Settings["extensionsActiveTab"],
+  _extensionsCategory?: Settings["extensionsActiveTab"],
 ) {
-  const [{ useSettingsStore }, { useUIState }] = await Promise.all([
-    import("@/features/settings/store"),
-    import("@/features/window/stores/ui-state-store"),
+  const { useUIState } = await import("@/features/window/stores/ui-state.store");
+  useUIState.getState().openSettingsDialog(tab);
+}
+
+async function openExtensionsTabFromDeepLink(extensionsCategory?: Settings["extensionsActiveTab"]) {
+  const [{ useSettingsStore }, { useBufferStore }] = await Promise.all([
+    import("@/features/settings/stores/settings.store"),
+    import("@/features/editor/stores/buffer.store"),
   ]);
 
-  if (tab === "extensions" && extensionsCategory) {
+  if (extensionsCategory) {
     void useSettingsStore.getState().updateSetting("extensionsActiveTab", extensionsCategory);
   }
-  useUIState.getState().openSettingsDialog(tab);
+
+  useBufferStore.getState().actions.openExtensionsBuffer();
 }
 
 async function installExtensionFromDeepLink(extensionId: string) {

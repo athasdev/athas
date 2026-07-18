@@ -1,12 +1,12 @@
-import { Download, FileCode as FileJson, Rows } from "@phosphor-icons/react";
+import { DownloadIcon as Download, FileCodeIcon as FileJson, RowsIcon as Rows } from "@/ui/icons";
 import { useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorSettingsStore } from "@/features/editor/stores/settings-store";
-import { hasTextContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
-import { TableView } from "@/ui/table-view";
+import { TableView } from "./csv-table-view";
 import { parseCsv } from "./csv-utils";
 
 type Delim = "," | "\t" | ";" | "|";
@@ -27,23 +27,22 @@ function autodetectDelimiter(text: string): Delim {
 }
 
 export function CsvPreview() {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+  const sourceContent = useBufferStore((state) => {
+    const activeBuffer = state.activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      : null;
+    const sourceFilePath =
+      activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
+    const sourceBuffer = sourceFilePath
+      ? state.buffers.find((buffer) => buffer.path === sourceFilePath)
+      : activeBuffer;
+    return sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
+  });
   const fontSize = useEditorSettingsStore.use.fontSize();
   const uiFontFamily = useSettingsStore((state) => state.settings.uiFontFamily);
 
-  // Get the source buffer if this is a preview buffer
-  const sourceFilePath =
-    activeBuffer?.type === "csvPreview" ? activeBuffer.sourceFilePath : undefined;
-  const sourceBuffer = sourceFilePath
-    ? buffers.find((b) => b.path === sourceFilePath)
-    : activeBuffer;
-
   const [delimiter, setDelimiter] = useState<Delim | "auto">("auto");
   const [hasHeader, setHasHeader] = useState(true);
-
-  const sourceContent = sourceBuffer && hasTextContent(sourceBuffer) ? sourceBuffer.content : "";
 
   const { headers, rows } = useMemo(() => {
     const delim = delimiter === "auto" ? autodetectDelimiter(sourceContent) : delimiter;
@@ -91,7 +90,7 @@ export function CsvPreview() {
         actions={
           <div className="flex items-center gap-1">
             {/* Delimiter selector */}
-            <label htmlFor="csv-delimiter" className="ui-font mr-1 text-text-lighter ui-text-xs">
+            <label htmlFor="csv-delimiter" className="font-sans mr-1 text-text-lighter ui-text-sm">
               Delimiter
             </label>
             <Select
@@ -114,7 +113,7 @@ export function CsvPreview() {
             <Button
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
-              compact
+              size="xs"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Toggle header row"
             >
@@ -127,9 +126,9 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Copy as CSV"
-              compact
+              size="xs"
             >
-              <Download /> CSV
+              <Download weight="fill" /> CSV
             </Button>
 
             {/* Copy JSON */}
@@ -138,7 +137,7 @@ export function CsvPreview() {
               variant="default"
               className="h-6 gap-1 text-text-lighter"
               tooltip="Copy as JSON"
-              compact
+              size="xs"
             >
               <FileJson /> JSON
             </Button>

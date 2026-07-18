@@ -1,0 +1,45 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.database.redis",
+  "name": "Redis",
+  "displayName": "Redis Provider",
+  "version": "1.0.0",
+  "description": "Redis connection, key scanning, and value editing provider.",
+  "publisher": "Athas",
+  "categories": ["Database"],
+  "activationEvents": ["onDatabase:redis"],
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/database/redis/darwin-arm64.tar.gz",
+    "size": 746802,
+    "checksum": "5e1e770dd25b49651453e4e022cab8e403849b9b68e793df3a7ddb66a98415f5",
+    "platformArch": {
+      "darwin-arm64": {
+        "downloadUrl": "https://athas.dev/extensions/database/redis/darwin-arm64.tar.gz",
+        "size": 746802,
+        "checksum": "5e1e770dd25b49651453e4e022cab8e403849b9b68e793df3a7ddb66a98415f5"
+      }
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas/tree/master/extensions/official/redis"
+  },
+  "icon": "icon.svg",
+  "databases": [
+    {
+      "id": "redis",
+      "label": "Redis",
+      "isFileBased": false,
+      "protocolVersion": 1,
+      "defaultPort": 6379,
+      "sidecar": {
+        "darwin-arm64": "bin/athas-db-redis",
+        "darwin-x64": "bin/athas-db-redis",
+        "linux-arm64": "bin/athas-db-redis",
+        "linux-x64": "bin/athas-db-redis",
+        "win32-x64": "bin/athas-db-redis.exe"
+      }
+    }
+  ]
+}

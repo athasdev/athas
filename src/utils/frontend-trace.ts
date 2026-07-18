@@ -2,6 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 
 type TraceLevel = "debug" | "info" | "warn" | "error";
 
+const FRONTEND_TRACE_ENABLED = import.meta.env.VITE_FRONTEND_TRACE === "true";
+const FRONTEND_BENCHMARK_TRACE_ENABLED =
+  import.meta.env.DEV || import.meta.env.VITE_FILE_OPEN_BENCHMARK === "1";
+
 function shortPath(value: string) {
   const normalized = value.replace(/[\\/]+$/, "");
   const parts = normalized.split(/[\\/]/);
@@ -27,6 +31,9 @@ export function frontendTrace(
   message: string,
   payload?: Record<string, unknown>,
 ) {
+  const isBenchmarkTrace = scope.startsWith("bench:");
+  if (!FRONTEND_TRACE_ENABLED && !(FRONTEND_BENCHMARK_TRACE_ENABLED && isBenchmarkTrace)) return;
+
   void invoke("frontend_trace", {
     level,
     scope,

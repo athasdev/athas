@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.svelte",
+  "name": "Svelte",
+  "displayName": "Svelte",
+  "version": "1.0.0",
+  "description": "Svelte language support with LSP and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "svelte",
+      "extensions": [".svelte"],
+      "aliases": ["Svelte"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "svelteserver",
+      "runtime": "bun",
+      "package": "svelte-language-server",
+      "args": ["--stdio"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": ["--plugin", "prettier-plugin-svelte", "--stdin-filepath", "${file}"]
+    }
+  }
+}

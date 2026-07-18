@@ -1,7 +1,15 @@
 import type { ExtensionCategory, ExtensionManifest } from "../types/extension-manifest";
+import { filterRetiredExtensions } from "../registry/retired-extensions";
+import {
+  getManifestAIProviderContributions,
+  getManifestDatabaseContributions,
+  getManifestIconContributions,
+} from "../types/extension-contributions";
+import { getServiceUrls } from "@/config/services";
 
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
-const ATHAS_EXTENSIONS_CDN_PREFIX = "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
+const ATHAS_EXTENSIONS_CDN_PREFIX = getServiceUrls().extensionsCdnBaseUrl;
+const USE_LOCAL_MARKETPLACE_SOURCES = import.meta.env.VITE_EXTENSION_MARKETPLACE_LOCAL === "true";
 const withCdnCacheBuster = (url: string) => {
   if (!url.startsWith(ATHAS_EXTENSIONS_CDN_PREFIX)) {
     return url;
@@ -13,7 +21,7 @@ const withCdnCacheBuster = (url: string) => {
 
 const MANIFEST_SOURCES = import.meta.env.VITE_PARSER_CDN_URL
   ? [withCdnCacheBuster(`${CDN_BASE_URL}/manifests.json`)]
-  : import.meta.env.DEV
+  : import.meta.env.DEV && USE_LOCAL_MARKETPLACE_SOURCES
     ? [
         "http://localhost:3000/api/extensions/manifests",
         "http://localhost:3001/manifests.json",
@@ -27,6 +35,7 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
   return rawCategories.map((category) => {
     const normalized = category.trim().toLowerCase();
     if (normalized === "database") return "Database";
+    if (normalized === "ai") return "AI";
     if (normalized === "agent") return "Agent";
     if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
       return "Icon Theme";
@@ -44,11 +53,28 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
 
 function isContributionExtension(manifest: ExtensionManifest): boolean {
   return Boolean(
-    manifest.databaseProviders?.length ||
+    getManifestDatabaseContributions(manifest).length ||
     manifest.agents?.length ||
+    manifest.contributes?.agents?.length ||
+    getManifestAIProviderContributions(manifest).length ||
     manifest.themes?.length ||
-    manifest.iconThemes?.length,
+    manifest.contributes?.themes?.length ||
+    getManifestIconContributions(manifest).length,
   );
+}
+
+function isAbsoluteIconUrl(icon: string): boolean {
+  return /^(?:[a-z]+:)?\/\//i.test(icon) || icon.startsWith("/") || icon.startsWith("data:");
+}
+
+function resolveMarketplaceIcon(path: string, icon: string | undefined): string {
+  const normalizedIcon = icon?.trim() || "icon.svg";
+
+  if (isAbsoluteIconUrl(normalizedIcon)) {
+    return normalizedIcon;
+  }
+
+  return `${CDN_BASE_URL}/${path}/${normalizedIcon.replace(/^\.?\//, "")}`;
 }
 
 let cachedMarketplaceExtensions: ExtensionManifest[] | null = null;
@@ -79,16 +105,17 @@ export async function loadMarketplaceContributionExtensions(): Promise<Extension
 
   try {
     const manifests = await fetchMarketplaceManifests();
-    cachedMarketplaceExtensions = Object.values(manifests)
-      .map((manifest) => ({
+    cachedMarketplaceExtensions = filterRetiredExtensions(
+      Object.entries(manifests).map(([path, manifest]) => ({
         ...manifest,
+        icon: resolveMarketplaceIcon(path, manifest.icon),
         displayName: manifest.displayName || manifest.name,
         description: manifest.description || `${manifest.name} extension`,
         version: manifest.version || "1.0.0",
         publisher: manifest.publisher || "Athas",
         categories: toExtensionCategories(manifest.categories),
-      }))
-      .filter(isContributionExtension);
+      })),
+    ).filter(isContributionExtension);
   } catch (error) {
     console.warn("Failed to load marketplace contribution extensions:", error);
     cachedMarketplaceExtensions = [];

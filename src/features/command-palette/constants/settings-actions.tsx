@@ -1,33 +1,54 @@
 import {
-  WarningCircle as AlertCircle,
-  CaretRight as ChevronRight,
-  Cloud,
-  Code as Code2,
-  GitBranch,
-  Hash,
-  Info,
-  ListBullets,
-  Translate as Languages,
-  Lightbulb,
-  ChatCircleText as MessageSquare,
-  Palette,
-  FloppyDisk as Save,
-  MagnifyingGlass as Search,
-  GearSix as Settings,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
-  TextAlignJustify as WrapText,
-} from "@phosphor-icons/react";
+  WarningCircleIcon as AlertCircle,
+  CaretRightIcon as ChevronRight,
+  CloudIcon as Cloud,
+  CodeIcon as Code2,
+  GitBranchIcon as GitBranch,
+  HashIcon as Hash,
+  InfoIcon as Info,
+  ListBulletsIcon as ListBullets,
+  TranslateIcon as Languages,
+  LightbulbIcon as Lightbulb,
+  ChatCircleTextIcon as MessageSquare,
+  PaletteIcon as Palette,
+  FloppyDiskIcon as Save,
+  MagnifyingGlassIcon as Search,
+  GearSixIcon as Settings,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
+  TextAlignJustifyIcon as WrapText,
+} from "@/ui/icons";
 import { settingsSearchIndex } from "@/features/settings/config/search-index";
-import type { Settings as AppSettings } from "@/features/settings/store";
-import type { SettingsTab } from "@/features/window/stores/ui-state-store";
+import type { Settings as AppSettings } from "@/features/settings/stores/settings.store";
+import type { SettingsTab } from "@/features/window/stores/ui-state.store";
+import { writeClipboardText } from "@/utils/clipboard";
 import { scoreSearchQuery } from "@/utils/search-match";
-import type { Action } from "../models/action.types";
-import type { CommandPaletteViewId } from "../models/view.types";
+import type { Action } from "../types/action.types";
+import type { CommandPaletteViewId } from "../types/view.types";
+
+type CommandPaletteSettings = Pick<
+  AppSettings,
+  | "aiCompletion"
+  | "autoCompletion"
+  | "autoDetectLanguage"
+  | "autoSave"
+  | "codeLens"
+  | "coreFeatures"
+  | "formatOnSave"
+  | "inlayHints"
+  | "lineNumbers"
+  | "parameterHints"
+  | "semanticTokens"
+  | "showMinimap"
+  | "telemetry"
+  | "vimMode"
+  | "vimRelativeLineNumbers"
+  | "wordWrap"
+>;
 
 interface SettingsActionsParams {
   query: string;
-  settings: AppSettings;
+  settings: CommandPaletteSettings;
   setIsSettingsDialogVisible: (v: boolean) => void;
   openSettingsDialog: (tab?: SettingsTab) => void;
   setSettingsSearchQuery: (query: string) => void;
@@ -46,12 +67,9 @@ const settingsTabLabels: Record<SettingsTab, string> = {
   editor: "Editor",
   git: "Git",
   appearance: "Appearance",
-  databases: "Database",
-  extensions: "Extensions",
   ai: "AI",
   keyboard: "Keybindings",
   language: "Editor",
-  features: "Features",
   collaboration: "Collaboration",
   enterprise: "Enterprise",
   advanced: "Advanced",
@@ -68,6 +86,7 @@ function getMatchingSettingsRecords(query: string) {
   if (trimmedQuery.length < 2) return [];
 
   return settingsSearchIndex
+    .filter((record) => record.id !== "editor-vim-mode")
     .map((record) => {
       const score = scoreSearchQuery(trimmedQuery, [
         { value: record.label, weight: 11 },
@@ -165,12 +184,7 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
 
           const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
 
-          try {
-            const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-            await writeText(text);
-          } catch {
-            await navigator.clipboard.writeText(text);
-          }
+          await writeClipboardText(text);
 
           const { openUrl } = await import("@tauri-apps/plugin-opener");
           await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
@@ -239,8 +253,8 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
     },
     {
       id: "toggle-vim-mode",
-      label: settings.vimMode ? "Vim: Disable Vim Mode" : "Vim: Enable Vim keybindings",
-      description: settings.vimMode ? "Switch to normal editing mode" : "Enable Vim keybindings",
+      label: "Vim Mode: Toggle",
+      description: settings.vimMode ? "Currently enabled" : "Currently disabled",
       icon: <Terminal />,
       category: "Vim",
       action: () => {
@@ -285,7 +299,11 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       icon: <Hash />,
       category: "Editor",
       action: () => {
-        updateSetting("vimRelativeLineNumbers", !settings.vimRelativeLineNumbers);
+        const nextEnabled = !settings.vimRelativeLineNumbers;
+        if (nextEnabled && !settings.lineNumbers) {
+          updateSetting("lineNumbers", true);
+        }
+        updateSetting("vimRelativeLineNumbers", nextEnabled);
         onClose();
       },
     },
@@ -359,6 +377,47 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
       category: "Language",
       action: () => {
         updateSetting("parameterHints", !settings.parameterHints);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-inlay-hints",
+      label: settings.inlayHints ? "Language: Disable Inlay Hints" : "Language: Enable Inlay Hints",
+      description: settings.inlayHints
+        ? "Hide inline type and parameter hints from language servers"
+        : "Show inline type and parameter hints from language servers",
+      icon: <Lightbulb />,
+      category: "Language",
+      action: () => {
+        updateSetting("inlayHints", !settings.inlayHints);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-code-lens",
+      label: settings.codeLens ? "Language: Disable Code Lens" : "Language: Enable Code Lens",
+      description: settings.codeLens
+        ? "Hide inline code actions above symbols"
+        : "Show inline code actions above symbols",
+      icon: <ListBullets />,
+      category: "Language",
+      action: () => {
+        updateSetting("codeLens", !settings.codeLens);
+        onClose();
+      },
+    },
+    {
+      id: "toggle-semantic-tokens",
+      label: settings.semanticTokens
+        ? "Language: Disable Semantic Tokens"
+        : "Language: Enable Semantic Tokens",
+      description: settings.semanticTokens
+        ? "Disable language server semantic highlighting"
+        : "Use language server semantic highlighting",
+      icon: <Palette />,
+      category: "Language",
+      action: () => {
+        updateSetting("semanticTokens", !settings.semanticTokens);
         onClose();
       },
     },
@@ -533,24 +592,6 @@ export const createSettingsActions = (params: SettingsActionsParams): Action[] =
         updateSetting("coreFeatures", {
           ...settings.coreFeatures,
           aiChat: !settings.coreFeatures.aiChat,
-        });
-        onClose();
-      },
-    },
-    {
-      id: "toggle-multi-agents-feature",
-      label: settings.coreFeatures.multiAgents
-        ? "Features: Disable Multi Agents"
-        : "Features: Enable Multi Agents",
-      description: settings.coreFeatures.multiAgents
-        ? "Disable multi-agent sidebar"
-        : "Enable multi-agent sidebar",
-      icon: <Sparkles />,
-      category: "Features",
-      action: () => {
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          multiAgents: !settings.coreFeatures.multiAgents,
         });
         onClose();
       },

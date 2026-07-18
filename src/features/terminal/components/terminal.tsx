@@ -1,24 +1,41 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal } from "@xterm/xterm";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
+import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 import { parseRemotePath } from "@/features/remote/utils/remote-path";
-import { useSettingsStore } from "@/features/settings/store";
-import { useZoomStore } from "@/features/window/stores/zoom-store";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
+import { currentPlatform } from "@/utils/platform";
 import {
   createTerminalAddons,
   injectLinkStyles,
   loadWebLinksAddon,
+  registerFileLinksProvider,
   removeLinkStyles,
   type TerminalAddons,
 } from "../hooks/use-terminal-addons";
 import { useTerminalConnection } from "../hooks/use-terminal-connection";
 import { useTerminalTheme } from "../hooks/use-terminal-theme";
-import { useTerminalStore } from "../stores/terminal-store";
+import { useTerminalStore } from "../stores/terminal.store";
+import { formatDroppedPathsForTerminal } from "../utils/terminal-file-drop";
 import { resolveTerminalFont } from "../utils/resolve-font";
+import { getTerminalKeyAction } from "../utils/terminal-keyboard";
+import { getTerminalCompatibilityOptions } from "../utils/terminal-options";
+import { createTerminalEventChannel, getTerminalSize } from "../utils/terminal-protocol";
 import { TerminalSearch, type TerminalSearchOptions } from "./terminal-search";
 import "@xterm/xterm/css/xterm.css";
 import "../styles/terminal.css";
@@ -38,7 +55,7 @@ interface XtermTerminalProps {
   remoteConnectionId?: string;
 }
 
-export const XtermTerminal: React.FC<XtermTerminalProps> = ({
+export const XtermTerminal = ({
   sessionId,
   isActive,
   isVisible = true,
@@ -48,7 +65,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   initialCommand,
   workingDirectory,
   remoteConnectionId,
-}) => {
+}: XtermTerminalProps) => {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const addonsRef = useRef<TerminalAddons | null>(null);
@@ -56,72 +73,41 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchResults, setSearchResults] = useState({ current: 0, total: 0 });
   const isInitializingRef = useRef(false);
+  const fitFrameRef = useRef<number | null>(null);
 
-  const { updateSession, getSession } = useTerminalStore();
-  const session = getSession(sessionId);
+  const updateSession = useTerminalStore((state) => state.updateSession);
+  const getSession = useTerminalStore((state) => state.getSession);
+  const session = useTerminalStore((state) => state.sessions.get(sessionId));
   const connectionId = session?.connectionId;
   const hadExistingConnectionOnMountRef = useRef(Boolean(session?.connectionId));
 
-  const {
-    theme: terminalThemeId,
-    terminalFontFamily,
-    terminalFontSize,
-    terminalLineHeight,
-    terminalLetterSpacing,
-    terminalScrollback,
-    terminalCursorStyle,
-    terminalCursorBlink,
-    terminalCursorWidth,
-  } = useSettingsStore((state) => state.settings);
+  const terminalThemeId = useSettingsStore((state) => state.settings.theme);
+  const terminalFontFamily = useSettingsStore((state) => state.settings.terminalFontFamily);
+  const terminalFontSize = useSettingsStore((state) => state.settings.terminalFontSize);
+  const terminalLineHeight = useSettingsStore((state) => state.settings.terminalLineHeight);
+  const terminalLetterSpacing = useSettingsStore((state) => state.settings.terminalLetterSpacing);
+  const terminalScrollback = useSettingsStore((state) => state.settings.terminalScrollback);
+  const terminalCursorStyle = useSettingsStore((state) => state.settings.terminalCursorStyle);
+  const terminalCursorBlink = useSettingsStore((state) => state.settings.terminalCursorBlink);
+  const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
-  const { rootFolderPath } = useProjectStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const workspaceRootRef = useRef(rootFolderPath);
   const { getTerminalTheme } = useTerminalTheme();
   const effectiveTerminalFontSize = Math.round(terminalFontSize * zoomLevel * 10) / 10;
   const effectiveTerminalLetterSpacing = terminalLetterSpacing * zoomLevel;
   const effectiveTerminalCursorWidth = Math.max(1, Math.round(terminalCursorWidth * zoomLevel));
+  const terminalIsRemote = Boolean(
+    remoteConnectionId ||
+    session?.remoteConnectionId ||
+    parseRemotePath(workingDirectory || session?.currentDirectory || rootFolderPath || ""),
+  );
 
-  const fitTerminal = useCallback((attempts = 1) => {
-    let attempt = 0;
-    let rafId: number | null = null;
+  useEffect(() => {
+    workspaceRootRef.current = rootFolderPath;
+  }, [rootFolderPath]);
 
-    const runFit = () => {
-      const container = terminalContainerRef.current;
-      const addons = addonsRef.current;
-      if (!container || !addons) return;
-
-      const rect = container.getBoundingClientRect();
-      const isContainerVisible = container.offsetParent !== null;
-      if (rect.width <= 0 || rect.height <= 0 || !isContainerVisible) {
-        if (attempt < attempts - 1) {
-          attempt += 1;
-          rafId = requestAnimationFrame(runFit);
-        }
-        return;
-      }
-
-      addons.fitAddon.fit();
-
-      if (attempt < attempts - 1) {
-        attempt += 1;
-        rafId = requestAnimationFrame(runFit);
-      } else {
-        // Final pass: force a renderer refresh so the canvas/WebGL backend
-        // repaints after a size change. Without this, splitting a pane (or any
-        // layout change that resizes the container) leaves the buffer in memory
-        // but unpainted until the window regains focus.
-        const term = xtermRef.current;
-        if (term) term.refresh(0, term.rows - 1);
-      }
-    };
-
-    rafId = requestAnimationFrame(runFit);
-
-    return () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  const { currentConnectionIdRef, writeBuffered } = useTerminalConnection({
+  const { currentConnectionIdRef, sendTerminalSize, writeBuffered } = useTerminalConnection({
     connectionId,
     getTerminalTheme,
     initialCommand,
@@ -134,6 +120,68 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     updateSession,
   });
 
+  const fitTerminal = useCallback(() => {
+    if (fitFrameRef.current !== null) cancelAnimationFrame(fitFrameRef.current);
+
+    fitFrameRef.current = requestAnimationFrame(() => {
+      fitFrameRef.current = null;
+      const container = terminalContainerRef.current;
+      const addons = addonsRef.current;
+      const terminal = xtermRef.current;
+      if (!container || !addons || !terminal) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || container.offsetParent === null) {
+        return;
+      }
+
+      addons.fitAddon.fit();
+      sendTerminalSize(terminal);
+      terminal.refresh(0, terminal.rows - 1);
+    });
+  }, [sendTerminalSize]);
+
+  const handleTerminalFileDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      const paths = extractDroppedFilePaths(event.dataTransfer);
+      const text = formatDroppedPathsForTerminal(paths);
+      if (!text) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      writeBuffered(text);
+      requestAnimationFrame(() => xtermRef.current?.focus());
+    },
+    [writeBuffered],
+  );
+
+  const handleTerminalDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (!Array.from(event.dataTransfer.types).includes("Files")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const pasteIntoTerminal = useCallback(async (terminal: Terminal, text: string) => {
+    if (!text) return;
+
+    const lineCount = text.replace(/\r\n/g, "\n").split("\n").length;
+    const requiresConfirmation =
+      lineCount >= MULTILINE_PASTE_LINE_THRESHOLD || text.length >= LARGE_PASTE_CHAR_THRESHOLD;
+
+    if (
+      requiresConfirmation &&
+      !(await showConfirmDialog(
+        `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
+        { title: "Paste Into Terminal", confirmLabel: "Paste" },
+      ))
+    ) {
+      return;
+    }
+
+    terminal.paste(text);
+  }, []);
+
   const initializeTerminal = useCallback(async () => {
     const container = terminalContainerRef.current;
     if (!container || isInitialized || isInitializingRef.current) return;
@@ -144,7 +192,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     isInitializingRef.current = true;
     const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (!terminalContainerRef.current) {
       isInitializingRef.current = false;
@@ -164,24 +211,53 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
         convertEol: false,
-        macOptionIsMeta: true,
+        macOptionIsMeta: false,
         rightClickSelectsWord: false,
-      });
-
-      const addons = createTerminalAddons(terminal, {
-        skipWebGL: resolved.skipWebGL,
+        ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
       });
 
       terminal.open(terminalContainerRef.current);
+      const addons = createTerminalAddons(terminal, {
+        onRendererFallback: fitTerminal,
+      });
       terminal.attachCustomKeyEventHandler((event) => {
-        if (event.ctrlKey && !event.metaKey) return true;
-        if (
-          event.metaKey &&
-          ["Backspace", "k", "a", "e", "f", "ArrowLeft", "ArrowRight"].includes(event.key)
-        ) {
-          return true;
+        const action = getTerminalKeyAction(event, currentPlatform);
+        if (action.type === "switchTab") {
+          event.preventDefault();
+          window.dispatchEvent(
+            new CustomEvent("terminal-switch-tab", {
+              detail: action.direction,
+            }),
+          );
+          return false;
         }
-        return !event.metaKey;
+
+        if (action.type === "write") {
+          event.preventDefault();
+          writeBuffered(action.data);
+          return false;
+        }
+
+        if (action.type === "copy") {
+          event.preventDefault();
+          const selection = terminal.getSelection();
+          if (selection) {
+            void writeClipboardText(selection).catch((error) =>
+              console.error("Failed to copy terminal selection:", error),
+            );
+          }
+          return false;
+        }
+
+        if (action.type === "paste") {
+          event.preventDefault();
+          void readClipboardText()
+            .then((text) => pasteIntoTerminal(terminal, text))
+            .catch((error) => console.error("Failed to paste into terminal:", error));
+          return false;
+        }
+
+        return action.type === "passthrough";
       });
 
       if (terminal.textarea) {
@@ -202,33 +278,23 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
             const text = event.clipboardData?.getData("text/plain");
             if (!text || !currentConnectionIdRef.current) return;
 
-            const normalizedText = text.replace(/\r\n/g, "\n");
-            const lineCount = normalizedText.split("\n").length;
-            const requiresConfirmation =
-              lineCount >= MULTILINE_PASTE_LINE_THRESHOLD ||
-              normalizedText.length >= LARGE_PASTE_CHAR_THRESHOLD;
-
-            if (requiresConfirmation) {
-              event.preventDefault();
-              event.stopImmediatePropagation();
-              void primitiveConfirm(
-                `Paste ${lineCount} lines into the terminal? This may execute multiple commands.`,
-                { title: "Paste Into Terminal", confirmLabel: "Paste" },
-              ).then((confirmed) => {
-                if (confirmed) writeBuffered(normalizedText);
-              });
-              return;
-            }
-
             event.preventDefault();
             event.stopImmediatePropagation();
-            writeBuffered(normalizedText);
+            void pasteIntoTerminal(terminal, text);
           },
           true,
         );
       }
 
       loadWebLinksAddon(terminal);
+      registerFileLinksProvider(terminal, {
+        getWorkspaceRoot: () => workspaceRootRef.current,
+        openFile: async (link) => {
+          await useFileSystemStore
+            .getState()
+            .handleFileSelect(link.path, false, link.line, link.column);
+        },
+      });
       terminal.unicode.activeVersion = "11";
       injectLinkStyles(sessionId, terminalContainerRef.current.id || `terminal-${sessionId}`);
 
@@ -251,7 +317,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         const targetDirectory =
           workingDirectory || existingSession?.currentDirectory || rootFolderPath;
         const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
+        const wslInfo = targetDirectory ? parseWslPath(targetDirectory) : null;
         const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
+        const size = getTerminalSize(terminal);
+        const events = createTerminalEventChannel();
 
         activeConnectionId = effectiveRemoteConnectionId
           ? await (async () => {
@@ -267,18 +336,23 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
                 password: connection.password || null,
                 keyPath: connection.keyPath || null,
                 workingDirectory: remoteInfo?.remotePath || "/",
-                rows: terminal.rows,
-                cols: terminal.cols,
+                size,
+                onEvent: events.channel,
               });
             })()
           : await invoke<string>("create_terminal", {
               config: {
-                working_directory: targetDirectory || undefined,
-                shell: existingSession?.shell || undefined,
-                rows: terminal.rows,
-                cols: terminal.cols,
+                workingDirectory: targetDirectory || undefined,
+                shell:
+                  existingSession?.shell || (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
+                wslDistribution: wslInfo?.distro,
+                wslWorkingDirectory: wslInfo?.linuxPath,
+                size,
               },
+              onEvent: events.channel,
             });
+
+        events.bind(activeConnectionId);
 
         updateSession(sessionId, {
           connectionId: activeConnectionId,
@@ -294,7 +368,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       isInitializingRef.current = false;
 
       // Re-fit after connection is established so onResize can notify the PTY
-      fitTerminal(3);
+      fitTerminal();
 
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {
@@ -320,6 +394,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     isInitialized,
     onReady,
     onTerminalRef,
+    pasteIntoTerminal,
     rootFolderPath,
     remoteConnectionId,
     sessionId,
@@ -332,6 +407,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     effectiveTerminalLetterSpacing,
     terminalLineHeight,
     terminalScrollback,
+    terminalIsRemote,
     updateSession,
     workingDirectory,
     writeBuffered,
@@ -340,11 +416,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     if (!xtermRef.current) return;
     xtermRef.current.options.theme = getTerminalTheme();
-    const timer = setTimeout(() => {
-      xtermRef.current?.refresh(0, xtermRef.current.rows - 1);
-      fitTerminal(4);
-    }, 10);
-    return () => clearTimeout(timer);
+    fitTerminal();
   }, [terminalThemeId, getTerminalTheme, fitTerminal]);
 
   useEffect(() => {
@@ -356,10 +428,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       const resolved = await resolveTerminalFont(terminalFontFamily, effectiveTerminalFontSize);
       if (cancelled || !xtermRef.current || !addonsRef.current) return;
 
-      if (resolved.skipWebGL) {
-        addonsRef.current.webglAddon?.dispose();
-      }
-
       xtermRef.current.options.fontFamily = resolved.fontFamily;
       xtermRef.current.options.fontSize = effectiveTerminalFontSize;
       xtermRef.current.options.lineHeight = terminalLineHeight;
@@ -369,8 +437,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       xtermRef.current.options.cursorStyle = terminalCursorStyle;
       xtermRef.current.options.cursorWidth = effectiveTerminalCursorWidth;
 
-      fitTerminal(4);
-      xtermRef.current.refresh(0, xtermRef.current.rows - 1);
+      fitTerminal();
     };
 
     void applyFontChange();
@@ -439,6 +506,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   // other layout changes from killing running terminal processes.
   useEffect(() => {
     return () => {
+      if (fitFrameRef.current !== null) {
+        cancelAnimationFrame(fitFrameRef.current);
+        fitFrameRef.current = null;
+      }
       if (xtermRef.current) {
         xtermRef.current.dispose();
         xtermRef.current = null;
@@ -468,9 +539,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ sessionId: string }>).detail;
       if (!detail || detail.sessionId !== sessionId) return;
-      fitTerminal(4);
-      const term = xtermRef.current;
-      if (term) term.refresh(0, term.rows - 1);
+      fitTerminal();
     };
     window.addEventListener("athas-terminal-refit", handler);
     return () => window.removeEventListener("athas-terminal-refit", handler);
@@ -479,27 +548,21 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
   useEffect(() => {
     if (!addonsRef.current || !terminalContainerRef.current || !isInitialized) return;
 
-    let rafId: number | null = null;
-    const resizeObserver = new ResizeObserver(() => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const container = terminalContainerRef.current;
-        if (!addonsRef.current || !container) return;
-
-        const rect = container.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          fitTerminal(3);
-        }
-      });
-    });
+    const resizeObserver = new ResizeObserver(fitTerminal);
+    const visualViewport = window.visualViewport;
 
     resizeObserver.observe(terminalContainerRef.current);
-    const cleanupFit = fitTerminal(12);
+    window.addEventListener("resize", fitTerminal);
+    visualViewport?.addEventListener("resize", fitTerminal);
+    document.fonts.addEventListener("loadingdone", fitTerminal);
+    void document.fonts.ready.then(fitTerminal);
+    fitTerminal();
 
     return () => {
       resizeObserver.disconnect();
-      if (rafId) cancelAnimationFrame(rafId);
-      cleanupFit?.();
+      window.removeEventListener("resize", fitTerminal);
+      visualViewport?.removeEventListener("resize", fitTerminal);
+      document.fonts.removeEventListener("loadingdone", fitTerminal);
     };
   }, [fitTerminal, isInitialized]);
 
@@ -509,7 +572,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     let cancelled = false;
 
     // Fit the terminal first to recalculate dimensions after display:none → display:flex
-    const cleanupFit = fitTerminal(6);
+    fitTerminal();
 
     // Focus with verified retry — wait for layout to fully settle after tab switch
     const ensureFocus = (attempt: number) => {
@@ -536,7 +599,6 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
 
     return () => {
       cancelled = true;
-      cleanupFit?.();
     };
   }, [isActive, isInitialized, isVisible, fitTerminal]);
 
@@ -561,7 +623,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       useSettingsStore.getState().updateSetting("terminalFontSize", newSize);
       if (xtermRef.current) {
         xtermRef.current.options.fontSize = newSize;
-        fitTerminal(4);
+        fitTerminal();
       }
     },
     [fitTerminal, terminalFontSize],
@@ -571,7 +633,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     useSettingsStore.getState().updateSetting("terminalFontSize", 14);
     if (xtermRef.current) {
       xtermRef.current.options.fontSize = 14;
-      fitTerminal(4);
+      fitTerminal();
     }
   }, [fitTerminal]);
 
@@ -687,7 +749,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
     xtermRef.current?.focus();
   }, [clearSearch]);
 
-  React.useImperativeHandle(
+  useImperativeHandle(
     getSession(sessionId)?.ref,
     () => ({
       terminal: xtermRef.current,
@@ -705,13 +767,13 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
       findNext: (term: string) => addonsRef.current?.searchAddon.findNext(term),
       findPrevious: (term: string) => addonsRef.current?.searchAddon.findPrevious(term),
       serialize: () => (xtermRef.current ? addonsRef.current?.serializeAddon.serialize() : ""),
-      resize: () => fitTerminal(4),
+      resize: () => fitTerminal(),
     }),
     [fitTerminal, getSession, isInitialized, sessionId],
   );
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-primary-bg">
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
@@ -721,11 +783,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = ({
         currentMatch={searchResults.current}
         totalMatches={searchResults.total}
       />
-      <div className="flex min-h-0 flex-1 flex-col pl-[16px]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col pl-[16px]">
         <div
           ref={terminalContainerRef}
           id={`terminal-${sessionId}`}
-          className={`xterm-container flex h-full min-h-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          data-terminal-drop-target
+          data-terminal-session-id={sessionId}
+          className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          onDragOver={handleTerminalDragOver}
+          onDrop={handleTerminalFileDrop}
           onMouseDown={() => {
             requestAnimationFrame(() => xtermRef.current?.focus());
           }}

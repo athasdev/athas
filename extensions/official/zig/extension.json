@@ -1,0 +1,29 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.zig",
+  "name": "Zig",
+  "displayName": "Zig",
+  "version": "1.0.0",
+  "description": "Zig language support with LSP",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "zig",
+      "extensions": [".zig", ".zon"],
+      "aliases": ["Zig"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "zls",
+      "runtime": "binary",
+      "args": []
+    },
+    "formatter": {
+      "name": "zig",
+      "runtime": "binary",
+      "args": ["fmt", "--stdin"]
+    }
+  }
+}

@@ -1,13 +1,20 @@
-import { Check, Lock, WarningCircle } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  LockIcon as Lock,
+  WarningCircleIcon as WarningCircle,
+} from "@/ui/icons";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProviderById } from "@/features/ai/hooks/use-available-providers";
+import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
-import { useAIChatStore } from "@/features/ai/store/store";
-import { getProviderById } from "@/features/ai/types/providers";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import { getProviderById } from "@/features/ai/types/providers.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -15,8 +22,15 @@ import { matchesSearchQuery } from "@/utils/search-match";
 import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
+  chatSettingsSelectorTriggerClassName,
 } from "../input/chat-composer-control-styles";
-import { getSelectorDropdownWidth } from "./selector-dropdown-width";
+
+type SelectorModel = {
+  id: string;
+  name: string;
+  maxTokens?: number;
+  proOnly?: boolean;
+};
 
 interface ModelSelectorProps {
   providerId: string;
@@ -53,15 +67,24 @@ export function ModelSelector({
   const triggerInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { isPro } = useProFeature();
+  const { hasHostedAi } = useProFeature();
   const subscription = useAuthStore((state) => state.subscription);
   const { dynamicModels, setDynamicModels } = useAIChatStore();
+  const customModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
+  const autocompleteCustomModelId = useSettingsStore(
+    (state) => state.settings.aiAutocompleteCustomModelId,
+  );
 
-  const provider = getProviderById(providerId);
+  const provider = useProviderById(providerId);
   const isComposer = appearance === "composer";
+  const isCustomProvider = providerId === "custom";
 
   const setOpen = (nextOpen: boolean) => {
     if (disabled && nextOpen) return;
+    if (!nextOpen) {
+      setQuery("");
+      setActiveIndex(0);
+    }
     if (open === undefined) {
       setUncontrolledOpen(nextOpen);
     }
@@ -114,11 +137,16 @@ export function ModelSelector({
   const availableModels = useMemo(() => {
     const staticModels = provider?.models || [];
     const fetchedModels = dynamicModels[providerId] || [];
-    if (fetchedModels.length === 0) {
-      return staticModels;
-    }
+    const customModels = getCustomModelOptions({
+      providerId,
+      modelId,
+      customModelId,
+      autocompleteCustomModelId,
+    });
 
-    const mergedModels = new Map(staticModels.map((model) => [model.id, model]));
+    const mergedModels = new Map<string, SelectorModel>(
+      staticModels.map((model) => [model.id, model]),
+    );
     for (const model of fetchedModels) {
       const existingModel = mergedModels.get(model.id);
       mergedModels.set(model.id, {
@@ -128,9 +156,21 @@ export function ModelSelector({
         maxTokens: model.maxTokens ?? existingModel?.maxTokens ?? 4096,
       });
     }
+    for (const model of customModels) {
+      if (!mergedModels.has(model.id)) {
+        mergedModels.set(model.id, model);
+      }
+    }
 
     return Array.from(mergedModels.values());
-  }, [dynamicModels, provider?.models, providerId]);
+  }, [
+    autocompleteCustomModelId,
+    customModelId,
+    dynamicModels,
+    modelId,
+    provider?.models,
+    providerId,
+  ]);
 
   useEffect(() => {
     if (availableModels.length === 0) return;
@@ -140,11 +180,9 @@ export function ModelSelector({
   }, [availableModels, modelId, onChange]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      return;
-    }
-    requestAnimationFrame(() => triggerInputRef.current?.focus());
+    if (!isOpen) return;
+    const frame = requestAnimationFrame(() => triggerInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
   const currentModelName = useMemo(() => {
@@ -162,36 +200,22 @@ export function ModelSelector({
       return matchesSearchQuery(query, [model.name, model.id]);
     });
   }, [availableModels, query]);
+  const customQueryModelId = query.trim();
+  const canUseCustomQueryModel =
+    isCustomProvider &&
+    customQueryModelId.length > 0 &&
+    !availableModels.some((model) => model.id === customQueryModelId);
 
-  const selectableModelIndexes = useMemo(
-    () =>
-      filteredModels.reduce<number[]>((indexes, model, index) => {
-        if (!(model.proOnly && !isPro)) indexes.push(index);
-        return indexes;
-      }, []),
-    [filteredModels, isPro],
-  );
-  const dropdownWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: filteredModels.map((model) => model.name),
-        min: isComposer ? 156 : 160,
-        max: isComposer ? 260 : 300,
-        chrome: 58,
-      }),
-    [filteredModels, isComposer],
-  );
-  const openTriggerWidth = useMemo(
-    () =>
-      getSelectorDropdownWidth({
-        labels: [currentModelName],
-        min: isComposer ? 120 : 180,
-        max: isComposer ? 176 : 260,
-        chrome: isComposer ? 24 : 36,
-      }),
-    [currentModelName, isComposer],
-  );
-
+  const selectableModelIndexes = useMemo(() => {
+    const indexes = filteredModels.reduce<number[]>((modelIndexes, model, index) => {
+      if (!(model.proOnly && !hasHostedAi)) modelIndexes.push(index);
+      return modelIndexes;
+    }, []);
+    if (canUseCustomQueryModel) {
+      indexes.push(filteredModels.length);
+    }
+    return indexes;
+  }, [canUseCustomQueryModel, filteredModels, hasHostedAi]);
   useEffect(() => {
     if (!isOpen) return;
     const currentIndex = filteredModels.findIndex((model) => model.id === modelId);
@@ -209,8 +233,8 @@ export function ModelSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[176px]")
-      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
+      ? chatComposerControlClassName("max-w-[176px]")
+      : chatSettingsSelectorTriggerClassName("w-[260px]"),
     triggerClassName,
   );
 
@@ -252,9 +276,14 @@ export function ModelSelector({
         break;
       case "Enter": {
         event.preventDefault();
+        if (canUseCustomQueryModel) {
+          onChange(customQueryModelId);
+          setOpen(false);
+          break;
+        }
         const selectedModel =
           filteredModels[activeIndex] ?? filteredModels[selectableModelIndexes[0] ?? 0];
-        if (!selectedModel || (selectedModel.proOnly && !isPro)) return;
+        if (!selectedModel || (selectedModel.proOnly && !hasHostedAi)) return;
         onChange(selectedModel.id);
         setOpen(false);
         break;
@@ -265,31 +294,36 @@ export function ModelSelector({
   return (
     <div className={className}>
       {isOpen ? (
-        <input
+        <div
           ref={(node) => {
-            triggerInputRef.current = node;
             triggerRef.current = node;
           }}
-          type="text"
-          value={query}
-          disabled={disabled}
-          placeholder={currentModelName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
-          aria-label="Search AI models"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={handleTriggerInputKeyDown}
           onMouseDown={(event) => event.stopPropagation()}
+          onClick={() => triggerInputRef.current?.focus()}
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
-              compact: true,
+              size: "xs",
             }),
             triggerClass,
-            "cursor-text text-left outline-none placeholder:text-text",
+            "relative cursor-text",
           )}
-          style={{ width: openTriggerWidth }}
-        />
+        >
+          <span className="invisible block min-w-0 truncate text-text">{currentModelName}</span>
+          <input
+            ref={triggerInputRef}
+            type="text"
+            value={query}
+            disabled={disabled}
+            placeholder={currentModelName}
+            aria-label="Search AI models"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleTriggerInputKeyDown}
+            className="font-sans absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+          />
+        </div>
       ) : (
         <Button
           ref={(node) => {
@@ -297,7 +331,7 @@ export function ModelSelector({
           }}
           type="button"
           variant={isComposer ? "ghost" : "default"}
-          compact
+          size="xs"
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"
@@ -306,7 +340,7 @@ export function ModelSelector({
           onClick={() => setOpen(!isOpen)}
           className={triggerClass}
         >
-          <span className="min-w-0 truncate text-text">{currentModelName}</span>
+          <span className="block min-w-0 truncate text-text">{currentModelName}</span>
         </Button>
       )}
 
@@ -321,63 +355,96 @@ export function ModelSelector({
             : "min-w-0 overflow-hidden rounded-xl p-0",
         )}
         portalContainer={triggerRef.current?.closest(".ai-chat-container")}
-        style={{ maxHeight: "280px", minWidth: 0, width: dropdownWidth }}
+        style={{ maxHeight: "280px", minWidth: 0 }}
+        matchAnchorWidth
+        anchorMinWidth={isComposer ? 260 : 0}
+        animated={!isComposer}
       >
         <div
           className="custom-scrollbar-thin max-h-72 overflow-y-auto overscroll-contain p-1"
           onWheel={(event) => event.stopPropagation()}
         >
           {modelFetchError && (
-            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-xs">
+            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-sm">
               <WarningCircle className="shrink-0 text-warning" />
               <span>{modelFetchError}</span>
             </div>
           )}
 
-          {filteredModels.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter ui-text-xs">No models found</div>
+          {filteredModels.length === 0 && !canUseCustomQueryModel ? (
+            <div className="p-4 text-center text-text-lighter ui-text-sm">
+              {isCustomProvider ? "Type a model name and press Enter" : "No models found"}
+            </div>
           ) : (
-            filteredModels.map((model) => {
-              const isCurrent = model.id === modelId;
-              const isLocked = Boolean(model.proOnly && !isPro);
-              const index = filteredModels.indexOf(model);
-              const isActive = activeIndex === index;
+            <>
+              {filteredModels.map((model) => {
+                const isCurrent = model.id === modelId;
+                const isLocked = Boolean(model.proOnly && !hasHostedAi);
+                const index = filteredModels.indexOf(model);
+                const isActive = activeIndex === index;
 
-              return (
+                return (
+                  <button
+                    key={model.id}
+                    ref={(node) => {
+                      itemRefs.current[index] = node;
+                    }}
+                    type="button"
+                    role="option"
+                    aria-selected={isCurrent}
+                    onClick={() => {
+                      if (isLocked) return;
+                      onChange(model.id);
+                      setOpen(false);
+                    }}
+                    onMouseEnter={() => {
+                      if (!isLocked) setActiveIndex(index);
+                    }}
+                    onPointerMove={() => {
+                      if (!isLocked) setActiveIndex(index);
+                    }}
+                    disabled={isLocked}
+                    className={cn(
+                      dropdownItemClassName(),
+                      "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
+                      isActive && "bg-hover",
+                      isCurrent && "bg-selected/90 ring-1 ring-accent/10",
+                    )}
+                  >
+                    {isLocked && <Lock className="shrink-0 text-text-lighter" />}
+                    <span className="min-w-0 flex-1 truncate text-text">{model.name}</span>
+                    {model.proOnly && <ProBadge />}
+                    {isCurrent && <Check className="shrink-0 text-accent" />}
+                  </button>
+                );
+              })}
+              {canUseCustomQueryModel && (
                 <button
-                  key={model.id}
+                  key="custom-query-model"
                   ref={(node) => {
-                    itemRefs.current[index] = node;
+                    itemRefs.current[filteredModels.length] = node;
                   }}
                   type="button"
                   role="option"
-                  aria-selected={isCurrent}
+                  aria-selected={false}
                   onClick={() => {
-                    if (isLocked) return;
-                    onChange(model.id);
+                    onChange(customQueryModelId);
                     setOpen(false);
                   }}
-                  onMouseEnter={() => {
-                    if (!isLocked) setActiveIndex(index);
-                  }}
-                  onPointerMove={() => {
-                    if (!isLocked) setActiveIndex(index);
-                  }}
-                  disabled={isLocked}
+                  onMouseEnter={() => setActiveIndex(filteredModels.length)}
+                  onPointerMove={() => setActiveIndex(filteredModels.length)}
                   className={cn(
                     dropdownItemClassName(),
-                    "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
-                    isActive && "bg-hover",
-                    isCurrent && "bg-selected/90 ring-1 ring-accent/10",
+                    "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
+                    activeIndex === filteredModels.length && "bg-hover",
                   )}
                 >
-                  {isLocked && <Lock className="shrink-0 text-text-lighter" />}
-                  <span className="min-w-0 flex-1 truncate text-text">{model.name}</span>
-                  {model.proOnly && <ProBadge />}
-                  {isCurrent && <Check className="shrink-0 text-accent" />}
+                  <span className="min-w-0 flex-1 truncate text-text">
+                    Use {customQueryModelId}
+                  </span>
                 </button>
-              );
-            })
+              )}
+            </>
           )}
         </div>
       </Dropdown>

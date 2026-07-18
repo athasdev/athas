@@ -1,19 +1,19 @@
 import {
-  Brain,
-  Bug,
-  BugBeetle,
-  GitBranch,
-  GitPullRequest,
-  ListBullets,
-  ChatCircleText as MessageSquare,
-  NavigationArrow as Navigation,
-  MagnifyingGlass as Search,
-  HardDrives as Server,
-  Sparkle,
-  TerminalWindow as TerminalIcon,
-  UsersThree,
-} from "@phosphor-icons/react";
-import type { CoreFeature, CoreFeaturesState } from "../types/feature";
+  BrainIcon as Brain,
+  BugIcon as Bug,
+  BugBeetleIcon as BugBeetle,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  GlobeHemisphereWestIcon as Globe,
+  ListBulletsIcon as ListBullets,
+  ChatCircleTextIcon as MessageSquare,
+  NavigationArrowIcon as Navigation,
+  MagnifyingGlassIcon as Search,
+  HardDrivesIcon as Server,
+  TerminalWindowIcon as TerminalIcon,
+  UsersThreeIcon as UsersThree,
+} from "@/ui/icons";
+import type { CoreFeature, CoreFeaturesState } from "../types/feature.types";
 
 export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFeature[] => [
   {
@@ -75,8 +75,8 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
   },
   {
     id: "aiChat",
-    name: "AI Assistant",
-    description: "AI-powered code assistance and chat",
+    name: "Agent",
+    description: "Agentic code assistance and workspace tasks",
     icon: MessageSquare,
     enabled: coreFeatures.aiChat,
   },
@@ -86,14 +86,6 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Team workspace invites, roles, projects, and channels",
     icon: UsersThree,
     enabled: coreFeatures.teamCollaboration,
-    status: "experimental",
-  },
-  {
-    id: "multiAgents",
-    name: "Multi Agents",
-    description: "Multi-agent session sidebar",
-    icon: Sparkle,
-    enabled: coreFeatures.multiAgents,
     status: "experimental",
   },
   {
@@ -109,5 +101,13 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "The last used commands appear at the top of the command palette",
     icon: Brain,
     enabled: coreFeatures.persistentCommands,
+  },
+  {
+    id: "webViewer",
+    name: "Web Viewer",
+    description: "Open URLs in embedded editor tabs",
+    icon: Globe,
+    enabled: coreFeatures.webViewer,
+    status: "experimental",
   },
 ];

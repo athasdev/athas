@@ -50,6 +50,22 @@ describe("auth-api desktop auth parsers", () => {
     expect(apiBaseTest.isLocalApiBase("https://athas.dev")).toBe(false);
   });
 
+  it("falls back from local desktop auth to production", () => {
+    expect(__test__.getAuthApiBaseCandidates("http://localhost:3000")).toEqual([
+      "http://localhost:3000",
+      "https://athas.dev",
+    ]);
+    expect(__test__.getAuthApiBaseCandidates("https://athas.dev")).toEqual(["https://athas.dev"]);
+  });
+
+  it("retries production when a local server rejects a saved session", () => {
+    expect(__test__.shouldTryNextAuthApiBase("http://localhost:3000", 401)).toBe(true);
+    expect(__test__.shouldTryNextAuthApiBase("http://localhost:3000", 403)).toBe(true);
+    expect(__test__.shouldTryNextAuthApiBase("http://localhost:3000", 404)).toBe(true);
+    expect(__test__.shouldTryNextAuthApiBase("http://localhost:3000", 500)).toBe(false);
+    expect(__test__.shouldTryNextAuthApiBase("https://athas.dev", 401)).toBe(false);
+  });
+
   it("only treats authorization failures as invalid auth", () => {
     expect(isAuthInvalidError(new AuthApiError("Unauthorized", 401))).toBe(true);
     expect(isAuthInvalidError(new AuthApiError("Forbidden", 403))).toBe(true);
@@ -99,6 +115,27 @@ describe("auth-api desktop auth parsers", () => {
       plan: "teams",
       renews_at: null,
       ends_at: null,
+    });
+  });
+
+  it("parses explicit product capabilities", () => {
+    const parsed = __test__.parseSubscriptionInfoResponse({
+      status: "pro",
+      capabilities: {
+        hostedAi: false,
+        settingsSync: true,
+        collaboration: false,
+        enterprisePolicy: true,
+      },
+      enterprise: { has_access: false, is_admin: false, policy: null },
+      collaboration: null,
+    });
+
+    expect(parsed?.capabilities).toEqual({
+      hostedAi: false,
+      settingsSync: true,
+      collaboration: false,
+      enterprisePolicy: true,
     });
   });
 

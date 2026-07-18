@@ -1,0 +1,31 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.sql",
+  "name": "SQL",
+  "displayName": "SQL",
+  "version": "1.0.0",
+  "description": "SQL language support with LSP and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "sql",
+      "extensions": [".sql", ".dsql"],
+      "aliases": ["SQL", "sql"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "sql-language-server",
+      "runtime": "bun",
+      "package": "sql-language-server",
+      "args": ["up", "--method", "stdio"]
+    },
+    "formatter": {
+      "name": "sql-formatter",
+      "runtime": "bun",
+      "package": "sql-formatter",
+      "args": []
+    }
+  }
+}

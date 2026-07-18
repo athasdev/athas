@@ -1,5 +1,6 @@
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
-import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content";
+import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
+import type { OpenContentSpec, PaneContent } from "@/features/panes/types/pane-content.types";
 
 export const createPaneContent = (id: string, spec: OpenContentSpec): PaneContent => {
   const base = {
@@ -20,6 +21,7 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         isDirty: false,
         isVirtual: spec.isVirtual ?? false,
         isPreview: spec.isPreview ?? false,
+        readOnly: spec.readOnly,
         language: spec.language ?? detectLanguageFromFileName(spec.name),
         tokens: [],
       };
@@ -118,9 +120,12 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "pullRequest",
         path: spec.selectedFilePath
           ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
-          : `pr://${spec.prNumber}`,
+          : spec.initialView === "files"
+            ? `pr://${spec.prNumber}?view=files`
+            : `pr://${spec.prNumber}`,
         name: spec.name ?? "Pull Request",
         isPreview: false,
+        repoPath: spec.repoPath,
         prNumber: spec.prNumber,
         authorAvatarUrl: spec.authorAvatarUrl,
       };
@@ -187,21 +192,18 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         terminalConnectionId: spec.terminalConnectionId,
       };
     case "globalSearch":
-      return {
-        ...base,
-        type: "globalSearch",
-        path: "search://global",
-        name: "Search",
-        isPreview: false,
-      };
     case "diagnostics":
+    case "references":
+    case "extensions": {
+      const metadata = SINGLETON_TOOL_BUFFER_METADATA[spec.type];
       return {
         ...base,
-        type: "diagnostics",
-        path: "diagnostics://problems",
-        name: "Diagnostics",
+        type: spec.type,
+        path: metadata.path,
+        name: metadata.name,
         isPreview: false,
       };
+    }
     case "onboarding":
       return {
         ...base,

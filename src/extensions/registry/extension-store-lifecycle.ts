@@ -1,12 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
+import { getServiceUrls } from "@/config/services";
+import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
   activateExtensionContributions,
   deactivateExtensionContributions,
 } from "../runtime/extension-contribution-runtime";
+import {
+  getManifestLanguageContributions,
+  matchesLanguageContribution,
+} from "../types/extension-contributions";
 import type { PlatformPackage } from "../types/extension-manifest";
+import {
+  markBundledContributionExtensionInstalled,
+  markBundledContributionExtensionUninstalled,
+} from "./bundled-contribution-install-state";
 import { extensionRegistry } from "./extension-registry";
 import {
   buildRuntimeManifest,
@@ -17,11 +28,11 @@ import {
 import type { AvailableExtension, ExtensionInstallationMetadata } from "./extension-store-types";
 
 async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExtension) {
-  if (!extension.manifest.languages?.length) {
+  const languages = getManifestLanguageContributions(extension.manifest);
+  if (languages.length === 0) {
     return;
   }
 
-  const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
   const bufferState = useBufferStore.getState();
   const activeBuffer = bufferState.buffers.find((buffer) => buffer.isActive);
 
@@ -29,12 +40,8 @@ async function refreshSyntaxHighlightingForActiveBuffer(extension: AvailableExte
     return;
   }
 
-  const fileName = activeBuffer.path.split("/").pop() || activeBuffer.path;
-  const lastDotIndex = fileName.lastIndexOf(".");
-  const fileExt = lastDotIndex >= 0 ? fileName.substring(lastDotIndex).toLowerCase() : "";
-  const matchesLanguage = extension.manifest.languages.some(
-    (language) =>
-      language.extensions.includes(fileExt) || Boolean(language.filenames?.includes(fileName)),
+  const matchesLanguage = languages.some((language) =>
+    matchesLanguageContribution(activeBuffer.path, language),
   );
 
   if (!matchesLanguage) {
@@ -73,7 +80,7 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
 }
 
 function withCdnCacheBuster(url: string): string {
-  if (!url.startsWith("https://athas.dev/extensions/")) {
+  if (!url.startsWith(`${getServiceUrls().extensionsCdnBaseUrl}/`)) {
     return url;
   }
 
@@ -120,7 +127,7 @@ function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage
 }
 
 function isCompleteExtensionPackage(
-  extensionPackage: PlatformPackage | undefined,
+  extensionPackage: Partial<PlatformPackage> | undefined,
 ): extensionPackage is PlatformPackage {
   return (
     typeof extensionPackage?.downloadUrl === "string" &&
@@ -152,9 +159,8 @@ export async function installExtensionLifecycle(params: {
     reloadInstalledExtensions,
   } = params;
 
-  if (extension.manifest.languages?.length) {
-    const languageConfigs = extension.manifest.languages;
-
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+  if (languageConfigs.length > 0) {
     await installLanguageExtensionManifest(extensionId, extension.manifest, onProgress);
 
     const primaryLanguageId = languageConfigs[0].id;
@@ -178,18 +184,32 @@ export async function installExtensionLifecycle(params: {
 
     onLanguageInstalled(runtimeManifest, resolvedTools.issues);
 
-    for (const languageConfig of languageConfigs) {
-      await registerLanguageProvider({
-        extensionId,
-        languageId: languageConfig.id,
-        displayName: extension.manifest.displayName,
-        version: extension.manifest.version,
-        extensions: languageConfig.extensions,
-        aliases: languageConfig.aliases,
-      });
-    }
+    await Promise.all(
+      languageConfigs.map((languageConfig) =>
+        registerLanguageProvider({
+          extensionId,
+          languageId: languageConfig.id,
+          displayName: extension.manifest.displayName,
+          version: extension.manifest.version,
+          extensions: languageConfig.extensions,
+          aliases: languageConfig.aliases,
+        }),
+      ),
+    );
 
     await refreshSyntaxHighlightingForActiveBuffer(extension);
+    return;
+  }
+
+  if (isBundledContributionExtension(extension.manifest)) {
+    markBundledContributionExtensionInstalled(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "installed",
+    });
+    await activateExtensionContributions(extensionId, extension.manifest);
+    onNonLanguageInstalled();
     return;
   }
 
@@ -222,8 +242,9 @@ export async function uninstallExtensionLifecycle(params: {
     reloadInstalledExtensions,
   } = params;
 
-  if (extension.manifest.languages?.length) {
-    const languageIds = extension.manifest.languages.map((language) => language.id);
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+  if (languageConfigs.length > 0) {
+    const languageIds = languageConfigs.map((language) => language.id);
 
     await uninstallLanguageArtifacts(languageIds);
     await unloadLanguageProviders(extensionId, languageIds);
@@ -236,10 +257,96 @@ export async function uninstallExtensionLifecycle(params: {
     return;
   }
 
+  if (isBundledContributionExtension(extension.manifest)) {
+    await deactivateExtensionContributions(extensionId, extension.manifest);
+    markBundledContributionExtensionUninstalled(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "not-installed",
+    });
+    onNonLanguageUninstalled();
+    return;
+  }
+
   await deactivateExtensionContributions(extensionId, extension.manifest);
   await invoke("uninstall_extension_new", { extensionId });
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
+}
+
+export async function enableExtensionLifecycle(params: {
+  extensionId: string;
+  extension: AvailableExtension;
+}) {
+  const { extensionId, extension } = params;
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+
+  if (languageConfigs.length > 0) {
+    const primaryLanguageId = languageConfigs[0].id;
+    const resolvedTools = await resolveToolPaths(primaryLanguageId, extension.manifest, {
+      ensureInstalled: false,
+    });
+    const runtimeManifest = buildRuntimeManifest(extension.manifest, resolvedTools.toolPaths);
+
+    extensionRegistry.registerExtension(runtimeManifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "installed",
+    });
+
+    await Promise.all(
+      languageConfigs.map((languageConfig) =>
+        registerLanguageProvider({
+          extensionId,
+          languageId: languageConfig.id,
+          displayName: extension.manifest.displayName,
+          version: extension.manifest.version,
+          extensions: languageConfig.extensions,
+          aliases: languageConfig.aliases,
+        }),
+      ),
+    );
+
+    await refreshSyntaxHighlightingForActiveBuffer(extension);
+    return;
+  }
+
+  extensionRegistry.registerExtension(extension.manifest, {
+    isBundled: false,
+    isEnabled: true,
+    state: "installed",
+  });
+  await activateExtensionContributions(extensionId, extension.manifest);
+}
+
+export async function disableExtensionLifecycle(params: {
+  extensionId: string;
+  extension: AvailableExtension;
+}) {
+  const { extensionId, extension } = params;
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+
+  if (languageConfigs.length > 0) {
+    await unloadLanguageProviders(
+      extensionId,
+      languageConfigs.map((language) => language.id),
+    );
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: false,
+      state: "deactivated",
+    });
+    await refreshSyntaxHighlightingForActiveBuffer(extension);
+    return;
+  }
+
+  await deactivateExtensionContributions(extensionId, extension.manifest);
+  extensionRegistry.registerExtension(extension.manifest, {
+    isBundled: false,
+    isEnabled: false,
+    state: "deactivated",
+  });
 }
 
 export async function updateExtensionLifecycle(params: {
@@ -250,7 +357,9 @@ export async function updateExtensionLifecycle(params: {
 }) {
   const { extensionId, extension, clearInstalledStateForUpdate, reinstall } = params;
 
-  const languageIds = extension.manifest.languages?.map((language) => language.id) || [];
+  const languageIds = getManifestLanguageContributions(extension.manifest).map(
+    (language) => language.id,
+  );
 
   if (languageIds.length > 0) {
     await unloadLanguageProviders(extensionId, languageIds);

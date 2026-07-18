@@ -1,14 +1,15 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { BOTTOM_PANE_ID } from "../constants/pane";
-import { usePaneStore } from "../stores/pane-store";
-import type { PaneNode } from "../types/pane";
+import { usePaneStore } from "../stores/pane.store";
+import type { PaneNode } from "../types/pane.types";
 import { getPaneScopeForPaneId } from "./pane-routing";
 import { createPaneBeside } from "./pane-split-actions";
 import { getAllPaneGroups } from "./pane-tree";
 
 export const getShareableSplitBufferId = (bufferId: string | null | undefined) => {
   if (!bufferId) return undefined;
-  const activeBuffer = useBufferStore.getState().buffers.find((buffer) => buffer.id === bufferId);
+  const activeBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
   if (
     activeBuffer?.type === "terminal" ||
     activeBuffer?.type === "agent" ||

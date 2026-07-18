@@ -1,19 +1,21 @@
 import {
-  CaretDown as ChevronDown,
-  CaretRight as ChevronRight,
-  FileCode,
-  ArrowsOut as Maximize2,
-  ArrowsIn as Minimize2,
-  X,
-} from "@phosphor-icons/react";
+  CaretDownIcon as ChevronDown,
+  CaretRightIcon as ChevronRight,
+  FileCodeIcon as FileCode,
+  ArrowsOutIcon as Maximize2,
+  ArrowsInIcon as Minimize2,
+  XIcon as X,
+} from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
-import { editorAPI } from "@/features/editor/extensions/api";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { readFileContent } from "@/features/file-system/controllers/file-operations";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { LoadingIndicator } from "@/ui/loading";
-import { PaneChip, PaneIconButton, paneHeaderClassName } from "@/ui/pane";
-import { useReferencesStore } from "../stores/references-store";
-import type { Reference } from "../types/reference";
+import {
+  PaneChip,
+  PaneIconButton,
+  paneHeaderClassName,
+} from "@/features/panes/components/pane-chrome";
+import { useReferencesStore } from "../stores/references.store";
+import type { Reference } from "../types/reference.types";
 
 interface ReferencesPaneProps {
   onFullScreen?: () => void;
@@ -35,6 +37,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
   const references = useReferencesStore.use.references();
   const query = useReferencesStore.use.query();
   const isLoading = useReferencesStore.use.isLoading();
+  const handleFileSelect = useFileSystemStore.use.handleFileSelect?.();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const grouped = useMemo<ReferenceGroup[]>(() => {
@@ -57,41 +60,19 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
     setCollapsedGroups((prev) => ({ ...prev, [filePath]: !prev[filePath] }));
   }, []);
 
-  const handleReferenceClick = useCallback(async (ref: Reference) => {
-    const bufferStore = useBufferStore.getState();
-    const existingBuffer = bufferStore.buffers.find((b) => b.path === ref.filePath);
-
-    if (existingBuffer) {
-      bufferStore.actions.setActiveBuffer(existingBuffer.id);
-    } else {
-      const content = await readFileContent(ref.filePath);
-      const fileName = getFileName(ref.filePath);
-      const bufferId = bufferStore.actions.openBuffer(ref.filePath, fileName, content);
-      bufferStore.actions.setActiveBuffer(bufferId);
-    }
-
-    setTimeout(() => {
-      const lines = editorAPI.getLines();
-      let offset = 0;
-      for (let i = 0; i < ref.line; i++) {
-        offset += (lines[i]?.length || 0) + 1;
-      }
-      offset += ref.column;
-
-      editorAPI.setCursorPosition({
-        line: ref.line,
-        column: ref.column,
-        offset,
-      });
-    }, 100);
-  }, []);
+  const handleReferenceClick = useCallback(
+    (ref: Reference) => {
+      void handleFileSelect?.(ref.filePath, false, ref.line + 1, ref.column + 1, undefined, false);
+    },
+    [handleFileSelect],
+  );
 
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className={paneHeaderClassName("justify-between border-border/70 border-b")}>
         <div className="flex items-center gap-1.5">
-          <span className="ui-font ui-text-sm font-medium text-text">References</span>
+          <span className="font-sans ui-text-sm font-medium text-text">References</span>
           {query && <PaneChip>{query.symbol}</PaneChip>}
           <PaneChip>{isLoading ? "..." : references.length}</PaneChip>
         </div>
@@ -121,7 +102,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
           </div>
         ) : references.length === 0 ? (
           <div className="px-3 py-4 text-text-lighter">
-            <span className="ui-font ui-text-sm">
+            <span className="font-sans ui-text-sm">
               {query ? "No references found" : "Use Shift+F12 to find references"}
             </span>
           </div>
@@ -141,10 +122,10 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                     <ChevronDown size={12} className="shrink-0 text-text-lighter" />
                   )}
                   <FileCode size={12} className="shrink-0 text-accent" />
-                  <span className="ui-font ui-text-sm truncate font-medium text-text">
+                  <span className="font-sans ui-text-sm truncate font-medium text-text">
                     {group.fileName}
                   </span>
-                  <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+                  <span className="font-sans ui-text-sm shrink-0 text-text-lighter">
                     {group.items.length}
                   </span>
                 </button>
@@ -156,10 +137,10 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                       onClick={() => void handleReferenceClick(ref)}
                       className="group flex w-full items-baseline gap-2 py-0.5 pr-2 pl-7 text-left transition-colors hover:bg-hover/50"
                     >
-                      <span className="ui-font ui-text-xs shrink-0 tabular-nums text-text-lighter">
+                      <span className="font-sans ui-text-sm shrink-0 tabular-nums text-text-lighter">
                         {ref.line + 1}
                       </span>
-                      <span className="ui-font ui-text-sm truncate text-text-lighter group-hover:text-text">
+                      <span className="font-sans ui-text-sm truncate text-text-lighter group-hover:text-text">
                         {ref.lineContent.trim()}
                       </span>
                     </button>

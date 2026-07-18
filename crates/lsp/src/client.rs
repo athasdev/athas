@@ -6,9 +6,11 @@ use lsp_types::*;
 use serde_json::{Value, json};
 use std::{
    collections::HashMap,
-   ffi::OsStr,
+   env,
+   ffi::{OsStr, OsString},
+   fs,
    io::{BufRead, BufReader, Read, Write},
-   path::PathBuf,
+   path::{Path, PathBuf},
    process::{Child, Command, Stdio},
    sync::{
       Arc, Mutex,
@@ -20,6 +22,79 @@ use tauri::{Emitter, Manager};
 use tokio::sync::oneshot;
 
 type PendingRequests = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>>;
+pub type LspServerEnv = HashMap<String, String>;
+
+fn find_node_modules_dir(server_path: &Path) -> Option<PathBuf> {
+   server_path
+      .ancestors()
+      .find(|path| path.file_name() == Some(OsStr::new("node_modules")))
+      .map(Path::to_path_buf)
+}
+
+fn prepend_env_path(env_overrides: &mut LspServerEnv, key: &str, path: PathBuf) {
+   if !path.exists() {
+      return;
+   }
+
+   let existing = env_overrides
+      .get(key)
+      .map(|value| OsString::from(value.as_str()))
+      .or_else(|| env::var_os(key));
+   let mut paths = vec![path];
+
+   if let Some(existing) = existing {
+      paths.extend(env::split_paths(&existing));
+   }
+
+   if let Ok(joined) = env::join_paths(paths) {
+      env_overrides.insert(key.to_string(), joined.to_string_lossy().to_string());
+   }
+}
+
+fn patch_node_package_env(server_path: &Path, env_overrides: &mut LspServerEnv) {
+   let Some(node_modules_dir) = find_node_modules_dir(server_path) else {
+      return;
+   };
+
+   prepend_env_path(env_overrides, "NODE_PATH", node_modules_dir.clone());
+   prepend_env_path(env_overrides, "PATH", node_modules_dir.join(".bin"));
+}
+
+fn workspace_cwd(workspace_path: Option<&Path>) -> Option<PathBuf> {
+   let workspace_path = workspace_path?;
+   if workspace_path.is_dir() {
+      Some(workspace_path.to_path_buf())
+   } else {
+      None
+   }
+}
+
+fn has_javascript_extension(server_path: &Path) -> bool {
+   server_path
+      .extension()
+      .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
+      .unwrap_or(false)
+}
+
+fn has_node_shebang(server_path: &Path) -> bool {
+   let Ok(mut file) = fs::File::open(server_path) else {
+      return false;
+   };
+
+   let mut buffer = [0_u8; 128];
+   let Ok(bytes_read) = file.read(&mut buffer) else {
+      return false;
+   };
+
+   let contents = String::from_utf8_lossy(&buffer[..bytes_read]);
+   let first_line = contents.lines().next().unwrap_or_default().trim();
+
+   first_line.starts_with("#!") && first_line.contains("node")
+}
+
+fn is_node_script_server(server_path: &Path) -> bool {
+   has_javascript_extension(server_path) || has_node_shebang(server_path)
+}
 
 #[derive(Clone)]
 pub struct LspClient {
@@ -36,12 +111,13 @@ impl LspClient {
       args: Vec<String>,
       _root_uri: Url,
       app_handle: Option<AppHandle>,
+      workspace_path: Option<PathBuf>,
+      mut env_overrides: LspServerEnv,
    ) -> Result<(Self, Child)> {
-      // Check if this is a JavaScript-based language server
-      let is_js_server = server_path
-         .extension()
-         .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
-         .unwrap_or(false);
+      // Check if this is a JavaScript-based language server. Some npm package
+      // bins are extensionless shebang scripts, which cannot be spawned
+      // directly on Windows and should still run through managed Node.
+      let is_js_server = is_node_script_server(&server_path);
 
       let (command_path, final_args) = if is_js_server {
          // JS-based server requires Node.js runtime
@@ -52,7 +128,7 @@ impl LspClient {
                .app_data_dir()
                .map(|dir| dir.join("runtimes"))
                .context("Failed to resolve runtime directory for JS-based language server")?;
-            let runtime = NodeRuntime::get_or_install(Some(&managed_root))
+            let runtime = NodeRuntime::get_or_install_managed_first(Some(&managed_root))
                .await
                .context("Failed to get Node.js runtime for JS-based language server")?;
             runtime.binary_path().clone()
@@ -72,6 +148,7 @@ impl LspClient {
             node_path,
             node_args
          );
+         patch_node_package_env(&server_path, &mut env_overrides);
          (node_path, node_args)
       } else {
          log::info!(
@@ -82,19 +159,27 @@ impl LspClient {
          (server_path, args)
       };
 
+      let cwd = workspace_cwd(workspace_path.as_deref());
       let mut command = Command::new(&command_path);
-      let mut child = configure_background_command(&mut command)
+      let command = configure_background_command(&mut command);
+      command
          .args(&final_args)
          .stdin(Stdio::piped())
          .stdout(Stdio::piped())
-         .stderr(Stdio::piped())
-         .spawn()
-         .with_context(|| {
-            format!(
-               "Failed to spawn LSP server: command={:?}, args={:?}",
-               command_path, final_args
-            )
-         })?;
+         .stderr(Stdio::piped());
+      if let Some(cwd) = cwd.as_ref() {
+         command.current_dir(cwd);
+      }
+      if !env_overrides.is_empty() {
+         command.envs(&env_overrides);
+      }
+
+      let mut child = command.spawn().with_context(|| {
+         format!(
+            "Failed to spawn LSP server: command={:?}, args={:?}, cwd={:?}",
+            command_path, final_args, cwd
+         )
+      })?;
 
       log::info!("Language server process started with PID: {:?}", child.id());
 
@@ -689,6 +774,20 @@ impl LspClient {
       self.request::<request::GotoDefinition>(params).await
    }
 
+   pub async fn text_document_implementation(
+      &self,
+      params: GotoDefinitionParams,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      self.request::<request::GotoImplementation>(params).await
+   }
+
+   pub async fn text_document_type_definition(
+      &self,
+      params: GotoDefinitionParams,
+   ) -> Result<Option<GotoDefinitionResponse>> {
+      self.request::<request::GotoTypeDefinition>(params).await
+   }
+
    pub async fn text_document_code_lens(
       &self,
       params: CodeLensParams,
@@ -710,6 +809,29 @@ impl LspClient {
       self
          .request::<request::SemanticTokensFullRequest>(params)
          .await
+   }
+
+   pub fn semantic_token_type_names(&self) -> Vec<String> {
+      let capabilities = self.capabilities.lock().unwrap();
+      let Some(provider) = capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.semantic_tokens_provider.as_ref())
+      else {
+         return Vec::new();
+      };
+
+      let legend = match provider {
+         SemanticTokensServerCapabilities::SemanticTokensOptions(options) => &options.legend,
+         SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(options) => {
+            &options.semantic_tokens_options.legend
+         }
+      };
+
+      legend
+         .token_types
+         .iter()
+         .map(|token_type| token_type.as_str().to_string())
+         .collect()
    }
 
    pub async fn text_document_inlay_hint(
@@ -738,6 +860,13 @@ impl LspClient {
       params: DocumentFormattingParams,
    ) -> Result<Option<Vec<TextEdit>>> {
       self.request::<request::Formatting>(params).await
+   }
+
+   pub async fn text_document_range_formatting(
+      &self,
+      params: DocumentRangeFormattingParams,
+   ) -> Result<Option<Vec<TextEdit>>> {
+      self.request::<request::RangeFormatting>(params).await
    }
 
    pub fn signature_help_trigger_characters(&self) -> Vec<String> {
@@ -790,5 +919,78 @@ impl LspClient {
 
    pub fn text_document_did_close(&self, params: DidCloseTextDocumentParams) -> Result<()> {
       self.notify::<notification::DidCloseTextDocument>(params)
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use std::{env, ffi::OsStr, fs};
+
+   #[test]
+   fn patches_node_package_env_from_js_entrypoint() {
+      let temp = tempfile::tempdir().unwrap();
+      let package_dir = temp
+         .path()
+         .join("bun")
+         .join("@vtsls")
+         .join("language-server");
+      let node_modules_dir = package_dir.join("node_modules");
+      let bin_dir = node_modules_dir.join(".bin");
+      let entrypoint = node_modules_dir
+         .join("@vtsls")
+         .join("language-server")
+         .join("bin")
+         .join("vtsls.js");
+      fs::create_dir_all(&bin_dir).unwrap();
+      fs::create_dir_all(entrypoint.parent().unwrap()).unwrap();
+
+      let mut env_overrides = LspServerEnv::new();
+      patch_node_package_env(&entrypoint, &mut env_overrides);
+
+      let node_path = env_overrides.get("NODE_PATH").unwrap();
+      assert_eq!(
+         env::split_paths(OsStr::new(node_path)).next().unwrap(),
+         node_modules_dir
+      );
+
+      let path = env_overrides.get("PATH").unwrap();
+      assert_eq!(env::split_paths(OsStr::new(path)).next().unwrap(), bin_dir);
+   }
+
+   #[test]
+   fn treats_extensionless_node_shebang_as_node_script_server() {
+      let temp = tempfile::tempdir().unwrap();
+      let server_path = temp.path().join("vscode-css-language-server");
+      fs::write(
+         &server_path,
+         "#!/usr/bin/env node\nrequire('../cssServerMain')\n",
+      )
+      .unwrap();
+
+      assert!(is_node_script_server(&server_path));
+   }
+
+   #[test]
+   fn does_not_treat_plain_extensionless_binary_as_node_script_server() {
+      let temp = tempfile::tempdir().unwrap();
+      let server_path = temp.path().join("native-language-server");
+      fs::write(&server_path, "not a shebang script").unwrap();
+
+      assert!(!is_node_script_server(&server_path));
+   }
+
+   #[test]
+   fn uses_workspace_directory_as_process_cwd() {
+      let temp = tempfile::tempdir().unwrap();
+      let file_path = temp.path().join("file.ts");
+      fs::write(&file_path, "").unwrap();
+
+      assert_eq!(
+         workspace_cwd(Some(temp.path())).as_deref(),
+         Some(temp.path())
+      );
+      assert_eq!(workspace_cwd(Some(&file_path)), None);
+      assert_eq!(workspace_cwd(None), None);
    }
 }

@@ -1,23 +1,23 @@
 import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  RowsPlusTop as Columns3,
-  SignIn as LogIn,
-  CursorClick as MousePointerClick,
-  PuzzlePiece as Puzzle,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
-} from "@phosphor-icons/react";
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  CheckIcon as Check,
+  RowsPlusTopIcon as Columns3,
+  SignInIcon as LogIn,
+  CursorClickIcon as MousePointerClick,
+  PuzzlePieceIcon as Puzzle,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
+} from "@/ui/icons";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { useUIState } from "@/features/window/stores/ui-state-store";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { requestUIExtensionGeneration } from "../services/ui-extension-generation-service";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
+import { getServiceUrls } from "@/config/services";
 
 type ContributionType = "sidebar" | "toolbar" | "command";
 
@@ -57,6 +57,7 @@ const GENERATING_MESSAGES = [
   "Tightening the structure...",
   "Preparing installable code...",
 ];
+const GENERATED_UI_FONT_SIZE = "var(--ui-text-sm)";
 
 interface GeneratedExtension {
   id: string;
@@ -67,10 +68,8 @@ interface GeneratedExtension {
 }
 
 export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
-  const { isAuthenticated, isPro } = useProFeature();
+  const { isAuthenticated, hasHostedAi } = useProFeature();
   const { signIn, isSigningIn } = useDesktopSignIn();
-  const setActiveView = useUIState((state) => state.setActiveView);
-  const setIsSidebarVisible = useUIState((state) => state.setIsSidebarVisible);
   const [step, setStep] = useState<WizardStep>("type");
   const [selectedType, setSelectedType] = useState<ContributionType | null>(null);
   const [description, setDescription] = useState("");
@@ -177,7 +176,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 if (typeof content === "string") {
                   return createElement("div", {
                     dangerouslySetInnerHTML: { __html: content },
-                    style: { height: "100%", overflow: "auto" },
+                    style: { height: "100%", overflow: "auto", fontSize: GENERATED_UI_FONT_SIZE },
                   });
                 }
 
@@ -231,7 +230,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   flexDirection: "column",
@@ -239,6 +238,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   padding: `${padding}px`,
                   color: "var(--color-text)",
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -261,7 +261,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   alignItems: align,
@@ -269,6 +269,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   gap: `${gap}px`,
                   color: "var(--color-text)",
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -283,7 +284,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   border: "1px solid var(--color-border)",
                   background: "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
@@ -291,6 +292,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   padding: `${padding}px`,
                   color: "var(--color-text)",
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -303,26 +305,24 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             weight?: number;
             style?: Record<string, unknown>;
           }) {
-            const { children, tone = "default", size = "sm", weight = 400, style } = config;
+            const { children, tone = "default", weight = 400, style } = config;
             const color =
               tone === "muted"
                 ? "var(--color-text-lighter)"
                 : tone === "accent"
                   ? "var(--color-accent)"
                   : "var(--color-text)";
-            const fontSize =
-              size === "xs" ? "12px" : size === "md" ? "14px" : size === "lg" ? "16px" : "13px";
 
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   color,
-                  fontSize,
                   fontWeight: weight,
                   lineHeight: 1.45,
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               ...toChildrenArray(children),
@@ -356,16 +356,16 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "span",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "inline-flex",
                   alignItems: "center",
                   borderRadius: "999px",
                   padding: "4px 8px",
-                  fontSize: "12px",
                   fontWeight: 500,
                   ...palette,
                   ...style,
+                  fontSize: GENERATED_UI_FONT_SIZE,
                 },
               },
               label,
@@ -378,7 +378,8 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               {
                 onClick,
                 variant,
-                compact: true,
+                size: "xs",
+                style: { fontSize: GENERATED_UI_FONT_SIZE },
               },
               label,
             );
@@ -392,7 +393,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           }) {
             const { value = "", placeholder, type = "text", readOnly = true, style } = config;
             return createElement("input", {
-              className: "ui-font",
+              className: "font-sans",
               defaultValue: value,
               placeholder,
               type,
@@ -407,6 +408,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 padding: "0 10px",
                 outline: "none",
                 ...style,
+                fontSize: GENERATED_UI_FONT_SIZE,
               },
             });
           },
@@ -420,7 +422,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   flexDirection: "column",
@@ -438,7 +440,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               createElement(
                 "div",
                 {
-                  style: { color: "var(--color-text-lighter)", fontSize: "12px", lineHeight: 1.4 },
+                  style: {
+                    color: "var(--color-text-lighter)",
+                    fontSize: GENERATED_UI_FONT_SIZE,
+                    lineHeight: 1.4,
+                  },
                 },
                 label,
               ),
@@ -447,7 +453,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 {
                   style: {
                     color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
-                    fontSize: "18px",
+                    fontSize: GENERATED_UI_FONT_SIZE,
                     fontWeight: 600,
                     lineHeight: 1.2,
                   },
@@ -466,7 +472,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   alignItems: "flex-start",
@@ -480,7 +486,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 { style: { minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" } },
                 createElement(
                   "div",
-                  { style: { color: "var(--color-text)", fontSize: "14px", fontWeight: 600 } },
+                  {
+                    style: {
+                      color: "var(--color-text)",
+                      fontSize: GENERATED_UI_FONT_SIZE,
+                      fontWeight: 600,
+                    },
+                  },
                   title,
                 ),
                 subtitle
@@ -489,7 +501,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       {
                         style: {
                           color: "var(--color-text-lighter)",
-                          fontSize: "12px",
+                          fontSize: GENERATED_UI_FONT_SIZE,
                           lineHeight: 1.45,
                         },
                       },
@@ -511,7 +523,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   display: "flex",
                   alignItems: "center",
@@ -532,7 +544,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 { style: { minWidth: 0, display: "flex", flexDirection: "column", gap: "4px" } },
                 createElement(
                   "div",
-                  { style: { color: "var(--color-text)", fontSize: "13px", fontWeight: 500 } },
+                  {
+                    style: {
+                      color: "var(--color-text)",
+                      fontSize: GENERATED_UI_FONT_SIZE,
+                      fontWeight: 500,
+                    },
+                  },
                   title,
                 ),
                 subtitle
@@ -541,7 +559,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       {
                         style: {
                           color: "var(--color-text-lighter)",
-                          fontSize: "12px",
+                          fontSize: GENERATED_UI_FONT_SIZE,
                           lineHeight: 1.4,
                         },
                       },
@@ -562,7 +580,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             return createElement(
               "div",
               {
-                className: "ui-font",
+                className: "font-sans",
                 style: {
                   border: "1px dashed var(--color-border)",
                   borderRadius: "12px",
@@ -577,7 +595,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               },
               createElement(
                 "div",
-                { style: { color: "var(--color-text)", fontSize: "13px", fontWeight: 600 } },
+                {
+                  style: {
+                    color: "var(--color-text)",
+                    fontSize: GENERATED_UI_FONT_SIZE,
+                    fontWeight: 600,
+                  },
+                },
                 title,
               ),
               description
@@ -586,7 +610,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                     {
                       style: {
                         color: "var(--color-text-lighter)",
-                        fontSize: "12px",
+                        fontSize: GENERATED_UI_FONT_SIZE,
                         lineHeight: 1.45,
                       },
                     },
@@ -608,20 +632,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         },
       };
 
-      const fn = new Function("api", generatedExtension.code);
-      fn(api);
-
-      store.updateExtensionState(extensionId, "active");
-      if (generatedExtension.contributionType === "sidebar") {
-        const generatedView = Array.from(store.sidebarViews.values()).find(
-          (view) => view.extensionId === extensionId,
-        );
-        if (generatedView) {
-          setActiveView(generatedView.id);
-          setIsSidebarVisible(true);
-        }
-      }
-      setIsInstalled(true);
+      void api;
+      throw new Error(
+        "Generated extension installation is disabled until generated code runs in a sandbox.",
+      );
     } catch (err) {
       store.updateExtensionState(
         extensionId,
@@ -630,7 +644,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       );
       setError(`Installation failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     }
-  }, [generatedExtension, setActiveView, setIsSidebarVisible]);
+  }, [generatedExtension]);
 
   const renderLockedState = () => {
     const title = isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue";
@@ -653,10 +667,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="flex flex-1 flex-col justify-center gap-4">
           <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
             <p className="font-medium ui-text-sm text-text">{title}</p>
-            <p className="mt-1 text-text-lighter ui-text-xs">{description}</p>
+            <p className="mt-1 text-text-lighter ui-text-sm">{description}</p>
           </div>
 
-          <div className="grid gap-2 ui-text-xs text-text-lighter">
+          <div className="grid gap-2 ui-text-sm text-text-lighter">
             <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
               Sidebar views for custom tools and dashboards
             </div>
@@ -669,16 +683,16 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <Button onClick={onClose} variant="ghost" compact>
+            <Button onClick={onClose} variant="ghost" size="xs">
               Close
             </Button>
             {isAuthenticated ? (
               <Button
                 onClick={() =>
-                  window.open("https://athas.dev/pricing", "_blank", "noopener,noreferrer")
+                  window.open(getServiceUrls().pricingUrl, "_blank", "noopener,noreferrer")
                 }
                 variant="accent"
-                compact
+                size="xs"
               >
                 Upgrade to Pro
               </Button>
@@ -686,7 +700,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               <Button
                 onClick={() => void signIn()}
                 variant="accent"
-                compact
+                size="xs"
                 disabled={isSigningIn}
                 className="gap-1.5"
               >
@@ -700,7 +714,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
     );
   };
 
-  if (!isAuthenticated || !isPro) {
+  if (!isAuthenticated || !hasHostedAi) {
     return renderLockedState();
   }
 
@@ -714,7 +728,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               variant="ghost"
               aria-label="Go back"
               disabled={isGenerating}
-              compact
+              size="icon-xs"
             >
               <ArrowLeft />
             </Button>
@@ -738,7 +752,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         <div className="flex flex-col gap-3">
           <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
             <p className="font-medium ui-text-sm text-text">Build a UI extension from a prompt</p>
-            <p className="mt-1 text-text-lighter ui-text-xs">
+            <p className="mt-1 text-text-lighter ui-text-sm">
               Choose where it should live, describe the workflow, then install it directly into
               Athas.
             </p>
@@ -755,7 +769,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium ui-text-sm text-text">{option.label}</p>
-                <p className="text-text-lighter ui-text-xs">{option.description}</p>
+                <p className="text-text-lighter ui-text-sm">{option.description}</p>
               </div>
               <ArrowRight className="ml-auto size-4 text-text-lighter" />
             </button>
@@ -769,7 +783,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             <p className="font-medium ui-text-sm text-text">
               {CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label}
             </p>
-            <p className="mt-1 text-text-lighter ui-text-xs">
+            <p className="mt-1 text-text-lighter ui-text-sm">
               Describe what it should show, what actions it should support, and how the user should
               interact with it.
             </p>
@@ -788,7 +802,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             autoFocus
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-text-lighter ui-text-xs">
+            <p className="text-text-lighter ui-text-sm">
               Hosted generation. No user API key required.
             </p>
             <Button
@@ -796,7 +810,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               variant="accent"
               disabled={!description.trim()}
               className="gap-1.5"
-              compact
+              size="xs"
             >
               <Sparkles className="size-3.5" />
               Generate
@@ -808,7 +822,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "generating" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
           <LoadingIndicator label="Generating" showLabel />
-          <p className="min-h-4 text-center text-text-lighter ui-text-xs">
+          <p className="min-h-4 text-center text-text-lighter ui-text-sm">
             {GENERATING_MESSAGES[generationMessageIndex]}
           </p>
         </div>
@@ -817,25 +831,25 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "done" && (
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
-              <p className="text-red-400 ui-text-xs">{error}</p>
+            <div className="rounded-lg border border-error/30 bg-error/10 p-3">
+              <p className="text-error ui-text-sm">{error}</p>
             </div>
           ) : generatedExtension ? (
             <>
               <div className="rounded-lg border border-border/60 bg-secondary-bg/40 p-3">
                 <div className="mb-1 flex items-center gap-2">
-                  <Check className="size-4 text-green-500" />
+                  <Check className="size-4 text-success" />
                   <span className="font-medium ui-text-sm text-text">
                     {generatedExtension.name}
                   </span>
                 </div>
-                <p className="text-text-lighter ui-text-xs">{generatedExtension.description}</p>
+                <p className="text-text-lighter ui-text-sm">{generatedExtension.description}</p>
               </div>
 
               {isInstalled ? (
-                <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
-                  <Check className="size-4 text-green-500" />
-                  <p className="text-green-400 ui-text-sm">
+                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3">
+                  <Check className="size-4 text-success" />
+                  <p className="text-success ui-text-sm">
                     Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}
@@ -845,11 +859,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Button onClick={handleInstall} variant="accent" className="gap-1.5" compact>
+                  <Button onClick={handleInstall} variant="accent" className="gap-1.5" size="xs">
                     <Puzzle className="size-3.5" />
                     Install
                   </Button>
-                  <Button onClick={handleBack} variant="default" compact>
+                  <Button onClick={handleBack} variant="default" size="xs">
                     Try another prompt
                   </Button>
                 </div>
@@ -858,7 +872,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
           ) : null}
 
           {(isInstalled || error) && (
-            <Button onClick={onClose} variant="ghost" className="self-end" compact>
+            <Button onClick={onClose} variant="ghost" className="self-end" size="xs">
               Done
             </Button>
           )}

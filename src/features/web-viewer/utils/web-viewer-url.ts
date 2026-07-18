@@ -2,7 +2,13 @@ const LOCAL_HOSTNAMES = new Set(["localhost", "0.0.0.0", "[::1]", "::1"]);
 const SUPPORTED_PROTOCOLS = new Set(["http:", "https:", "about:"]);
 
 function stripControlCharacters(value: string) {
-  return value.replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  return Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code > 31 && code !== 127;
+    })
+    .join("")
+    .trim();
 }
 
 function isIpv4Address(hostname: string) {
@@ -37,8 +43,12 @@ function isLikelyLocalHostname(hostname: string) {
   );
 }
 
-function hasSupportedProtocol(value: string) {
-  return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
+function getProtocolCandidate(value: string) {
+  return value.match(/^([a-zA-Z][a-zA-Z\d+\-.]*):/)?.[1]?.toLowerCase() ?? null;
+}
+
+function isLikelyHostWithPort(value: string) {
+  return /^[a-zA-Z\d.-]+:\d{1,5}([/?#].*)?$/.test(value);
 }
 
 function inferProtocol(value: string) {
@@ -86,9 +96,13 @@ export function normalizeWebViewerUrl(url: string): string {
       ? `http://localhost${sanitized}`
       : sanitized;
 
-  const candidate = hasSupportedProtocol(normalizedInput)
-    ? normalizedInput
-    : `${inferProtocol(normalizedInput)}${normalizedInput}`;
+  const protocolCandidate = getProtocolCandidate(normalizedInput);
+  const candidate =
+    protocolCandidate && SUPPORTED_PROTOCOLS.has(`${protocolCandidate}:`)
+      ? normalizedInput
+      : protocolCandidate && !isLikelyHostWithPort(normalizedInput)
+        ? ""
+        : `${inferProtocol(normalizedInput)}${normalizedInput}`;
 
   const parsed = tryParseUrl(candidate);
   if (!parsed) return "";

@@ -1,5 +1,10 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Check, Clock, Copy, GitBranch, GitCommit } from "@phosphor-icons/react";
+import {
+  CheckIcon as Check,
+  ClockIcon as Clock,
+  CopyIcon as Copy,
+  GitBranchIcon as GitBranch,
+  GitCommitIcon as GitCommit,
+} from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEventListener } from "usehooks-ts";
@@ -7,17 +12,16 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useOverlayManager } from "@/features/editor/hooks/use-overlay-manager";
 import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useSettingsStore } from "@/features/settings/store";
+import "@/features/editor/styles/overlay-card.css";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
-import { getCommitDiff } from "../api/git-diff-api";
-import { useGitBlameStore } from "../stores/git-blame-store";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitBlameLine } from "../types/git-types";
-import { countDiffStats } from "../utils/git-diff-helpers";
+import { useGitBlameStore } from "../stores/git-blame.store";
+import type { GitBlameLine } from "../types/git.types";
+import { openCommitDiffBuffer } from "../utils/open-commit-diff-buffer";
 
 interface InlineGitBlameProps {
   blameLine: GitBlameLine;
@@ -41,10 +45,10 @@ export const InlineGitBlame = ({
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const documentRef = useRef(document);
-  const { settings } = useSettingsStore();
-  const effectiveFontSize = fontSize ?? settings.fontSize;
+  const settingsFontSize = useSettingsStore((state) => state.settings.fontSize);
+  const effectiveFontSize = fontSize ?? settingsFontSize;
   const effectiveLineHeight =
-    lineHeight ?? settings.fontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
+    lineHeight ?? settingsFontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
   const [isCopied, setIsCopied] = useState(false);
   const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
 
@@ -122,7 +126,7 @@ export const InlineGitBlame = ({
   const handleCopyCommitHash = useCallback(
     async (e: React.MouseEvent) => {
       e.stopPropagation();
-      await writeText(blameLine.commit_hash.substring(0, 7));
+      await writeClipboardText(blameLine.commit_hash.substring(0, 7));
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 1500);
     },
@@ -137,37 +141,10 @@ export const InlineGitBlame = ({
     if (!repoPath) return;
 
     try {
-      const diffs = await getCommitDiff(repoPath, blameLine.commit_hash);
-
-      if (diffs && diffs.length > 0) {
-        const { additions, deletions } = countDiffStats(diffs);
-
-        const multiDiff: MultiFileDiff = {
-          title: `Commit ${blameLine.commit_hash.substring(0, 7)}`,
-          repoPath,
-          commitHash: blameLine.commit_hash,
-          files: diffs,
-          totalFiles: diffs.length,
-          totalAdditions: additions,
-          totalDeletions: deletions,
-        };
-
-        const virtualPath = `diff://commit/${blameLine.commit_hash}/all-files`;
-        const displayName = `Commit ${blameLine.commit_hash.substring(0, 7)} (${diffs.length} files)`;
-
-        useBufferStore
-          .getState()
-          .actions.openBuffer(
-            virtualPath,
-            displayName,
-            "",
-            false,
-            undefined,
-            true,
-            true,
-            multiDiff,
-          );
-      }
+      await openCommitDiffBuffer({
+        repoPath,
+        commitHash: blameLine.commit_hash,
+      });
     } catch (error) {
       console.error("Error getting commit diff:", error);
     }
@@ -309,27 +286,29 @@ export const InlineGitBlame = ({
                 <span className="truncate font-medium ui-text-sm text-text">
                   {blameLine.author}
                 </span>
-                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-xs">
+                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-sm">
                   <Clock />
                   <span>{formatRelativeTime(blameLine.time)}</span>
                 </div>
               </div>
 
-              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-xs leading-relaxed">
+              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-sm leading-relaxed">
                 {blameLine.commit.trim()}
               </pre>
 
-              <div className="flex items-center gap-1.5 text-text-lighter ui-text-xs">
+              <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
                 <Button
                   type="button"
                   variant="ghost"
                   className="gap-1.5 px-1.5"
                   onClick={handleViewCommit}
                   tooltip="View commit details"
-                  compact
+                  size="xs"
                 >
                   <GitCommit />
-                  <span className="ui-font text-text">{blameLine.commit_hash.substring(0, 7)}</span>
+                  <span className="font-sans text-text">
+                    {blameLine.commit_hash.substring(0, 7)}
+                  </span>
                 </Button>
                 <Button
                   type="button"
@@ -337,9 +316,9 @@ export const InlineGitBlame = ({
                   className="ml-auto text-text-lighter hover:text-text"
                   onClick={handleCopyCommitHash}
                   tooltip="Copy commit hash"
-                  compact
+                  size="icon-xs"
                 >
-                  {isCopied ? <Check className="text-green-500" /> : <Copy />}
+                  {isCopied ? <Check className="text-success" /> : <Copy />}
                 </Button>
               </div>
             </div>

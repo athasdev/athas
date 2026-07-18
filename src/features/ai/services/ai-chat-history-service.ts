@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AgentType, Chat, Message, ToolCall } from "@/features/ai/types/ai-chat";
+import type { AgentType, Chat, Message, ToolCall } from "@/features/ai/types/ai-chat.types";
+import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 
 /**
  * Chat History Database Utilities
@@ -133,16 +134,18 @@ function dataToChat(data: ChatWithMessages): Chat {
     });
   }
 
-  const messages: Message[] = data.messages.map((msg) => ({
-    id: msg.id,
-    role: msg.role as "user" | "assistant" | "system",
-    content: msg.content,
-    timestamp: new Date(msg.timestamp),
-    isStreaming: msg.is_streaming,
-    isToolUse: msg.is_tool_use,
-    toolName: msg.tool_name || undefined,
-    toolCalls: toolCallsMap.get(msg.id),
-  }));
+  const messages: Message[] = data.messages.map((msg) =>
+    normalizeMessageFollowUpActions({
+      id: msg.id,
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+      timestamp: new Date(msg.timestamp),
+      isStreaming: msg.is_streaming,
+      isToolUse: msg.is_tool_use,
+      toolName: msg.tool_name || undefined,
+      toolCalls: toolCallsMap.get(msg.id),
+    }),
+  );
 
   return {
     id: data.chat.id,
@@ -199,7 +202,9 @@ export const loadChatFromDb = async (chatId: string): Promise<Chat> => {
     const data = (await invoke("load_chat", { chatId })) as ChatWithMessages;
     return dataToChat(data);
   } catch (error) {
-    console.error(`Error loading chat ${chatId} from database:`, error);
+    if (!String(error).includes("Query returned no rows")) {
+      console.error(`Error loading chat ${chatId} from database:`, error);
+    }
     throw error;
   }
 };

@@ -1,4 +1,4 @@
-import type { FileEntry } from "../types/app";
+import type { FileEntry } from "../types/app.types";
 import { sortFileEntries } from "./file-tree-utils";
 
 const OS_GENERATED_FILE_PATTERNS: string[] = [
@@ -207,6 +207,35 @@ export function updateDirectoryContents(
         });
       }
 
+      const createEntry = (entry: any): FileEntry => {
+        const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : undefined;
+        return {
+          name: entry.name || "Unknown",
+          path: entry.path,
+          isDir: entry.is_dir || false,
+          expanded: existingChild?.expanded || false,
+          children: existingChild?.children || undefined,
+        };
+      };
+
+      const canReuseEntry = (existingChild: FileEntry | undefined, nextEntry: FileEntry) => {
+        if (!existingChild) return false;
+
+        return (
+          existingChild.name === nextEntry.name &&
+          existingChild.path === nextEntry.path &&
+          existingChild.isDir === nextEntry.isDir &&
+          existingChild.expanded === nextEntry.expanded &&
+          existingChild.children === nextEntry.children &&
+          existingChild.isEditing === undefined &&
+          existingChild.isNewItem === undefined &&
+          existingChild.ignored === undefined &&
+          existingChild.isRenaming === undefined &&
+          existingChild.isSymlink === undefined &&
+          existingChild.symlinkTarget === undefined
+        );
+      };
+
       // Update children with new entries and sort them
       item.children = sortFileEntries(
         newEntries
@@ -215,14 +244,11 @@ export function updateDirectoryContents(
             return !shouldHideFromFileTree(entryName);
           })
           .map((entry: any) => {
-            const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : null;
-            return {
-              name: entry.name || "Unknown",
-              path: entry.path,
-              isDir: entry.is_dir || false,
-              expanded: existingChild?.expanded || false,
-              children: existingChild?.children || undefined,
-            };
+            const existingChild = preserveStates ? existingChildrenMap.get(entry.path) : undefined;
+            const nextEntry = createEntry(entry);
+            return existingChild && canReuseEntry(existingChild, nextEntry)
+              ? existingChild
+              : nextEntry;
           }),
       );
 

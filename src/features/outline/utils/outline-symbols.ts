@@ -1,4 +1,4 @@
-import type { OutlineSymbol } from "../types/outline-symbol";
+import type { OutlineSymbol } from "../types/outline-symbol.types";
 
 export interface RawOutlineSymbol {
   name: string;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -41,8 +41,8 @@ describe("editor view store large files", () => {
 
   afterEach(async () => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorViewStore } = await import("../stores/view-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const { useEditorViewStore } = await import("../stores/view.store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
@@ -52,14 +52,13 @@ describe("editor view store large files", () => {
     useEditorViewStore.setState({
       lines: [""],
       lineCount: 1,
-      lineTokens: new Map(),
     });
     vi.unstubAllGlobals();
   });
 
   it("tracks large active buffers by line count without storing every line", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
-    const { useEditorViewStore } = await import("../stores/view-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const { useEditorViewStore } = await import("../stores/view.store");
     const bufferActions = useBufferStore.getState().actions;
     const content = Array.from({ length: 50_000 }, (_, index) => `line ${index}`).join("\n");
 
@@ -74,13 +73,12 @@ describe("editor view store large files", () => {
 
     const viewState = useEditorViewStore.getState();
     expect(viewState.lineCount).toBe(50_000);
-    expect(viewState.lines).toHaveLength(50_000);
-    expect(Object.keys(viewState.lines)).toHaveLength(0);
+    expect(viewState.lines).toHaveLength(0);
     expect(useEditorViewStore.getState().actions.getLines()).toHaveLength(50_000);
   });
 
   it("updates cached lines incrementally for small typing edits", async () => {
-    const { applyIncrementalLineEdit } = await import("../stores/view-store");
+    const { applyIncrementalLineEdit } = await import("../stores/view.store");
     const previousContent = "first line\nsecond line\nthird line";
     const previousLines = previousContent.split("\n");
 
@@ -110,7 +108,7 @@ describe("editor view store large files", () => {
   });
 
   it("matches full line rebuild for boundary edits", async () => {
-    const { applyIncrementalLineEdit } = await import("../stores/view-store");
+    const { applyIncrementalLineEdit } = await import("../stores/view.store");
     const cases = [
       ["alpha\nbeta\ngamma", "xalpha\nbeta\ngamma"],
       ["alpha\nbeta\ngamma", "alpha\nxbeta\ngamma"],

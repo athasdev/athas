@@ -1,21 +1,24 @@
 import {
-  Columns as Columns2,
-  Copy,
-  FolderOpen,
-  PencilSimpleLine,
-  PushPin as Pin,
-  PushPinSlash as PinOff,
-  ArrowCounterClockwise as RotateCcw,
-  Rows as Rows2,
-  TerminalWindow as Terminal,
-  X,
-} from "@phosphor-icons/react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { isVirtualContent } from "@/features/panes/types/pane-content";
-import { useTerminalStore } from "@/features/terminal/stores/terminal-store";
+  ColumnsIcon as Columns2,
+  CopyIcon as Copy,
+  FolderOpenIcon as FolderOpen,
+  LockIcon as Lock,
+  LockOpenIcon as LockOpen,
+  PencilSimpleLineIcon as PencilSimpleLine,
+  PushPinIcon as Pin,
+  PushPinSlashIcon as PinOff,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  RowsIcon as Rows2,
+  TerminalWindowIcon as Terminal,
+  XIcon as X,
+} from "@/ui/icons";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { isVirtualContent } from "@/features/panes/types/pane-content.types";
+import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { primitivePrompt } from "@/ui/primitive-dialog-service";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
@@ -37,6 +40,8 @@ interface TabContextMenuProps {
   onRevealInFinder?: (path: string) => void;
   onSplitRight?: (paneId: string, bufferId: string) => void;
   onSplitDown?: (paneId: string, bufferId: string) => void;
+  isPaneLocked?: boolean;
+  onTogglePaneLocked?: () => void;
 }
 
 const TabContextMenu = ({
@@ -56,6 +61,8 @@ const TabContextMenu = ({
   onRevealInFinder,
   onSplitRight,
   onSplitDown,
+  isPaneLocked = false,
+  onTogglePaneLocked,
 }: TabContextMenuProps) => {
   if (!isOpen || !buffer) return null;
 
@@ -75,7 +82,7 @@ const TabContextMenu = ({
             icon: <PencilSimpleLine />,
             onClick: async () => {
               const nextName = (
-                await primitivePrompt("Enter a terminal name:", {
+                await showPromptDialog("Enter a terminal name:", {
                   title: "Rename Terminal",
                   defaultValue: buffer.name,
                   placeholder: "Terminal name",
@@ -118,6 +125,17 @@ const TabContextMenu = ({
     ...(paneId && (onSplitRight || onSplitDown)
       ? [{ id: "sep-2", label: "", separator: true, onClick: () => {} }]
       : []),
+    ...(onTogglePaneLocked
+      ? [
+          {
+            id: "toggle-editor-group-lock",
+            label: isPaneLocked ? "Unlock Editor Group" : "Lock Editor Group",
+            icon: isPaneLocked ? <LockOpen /> : <Lock />,
+            onClick: onTogglePaneLocked,
+          },
+          { id: "sep-lock", label: "", separator: true, onClick: () => {} },
+        ]
+      : []),
     {
       id: "copy-path",
       label: "Copy Path",
@@ -129,7 +147,7 @@ const TabContextMenu = ({
         }
 
         try {
-          await navigator.clipboard.writeText(buffer.path);
+          await writeClipboardText(buffer.path);
         } catch (error) {
           console.error("Failed to copy path:", error);
         }

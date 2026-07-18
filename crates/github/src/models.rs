@@ -59,6 +59,8 @@ pub struct StatusCheck {
    pub conclusion: Option<String>,
    #[serde(rename = "workflowName", default)]
    pub workflow_name: Option<String>,
+   #[serde(rename = "detailsUrl", default)]
+   pub details_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

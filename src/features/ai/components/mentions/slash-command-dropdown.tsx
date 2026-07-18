@@ -1,40 +1,51 @@
-import { motion } from "framer-motion";
-import React, { useEffect, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { SlashCommand } from "@/features/ai/types/acp";
-import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { dropdownItemClassName } from "@/ui/dropdown";
-import { cn } from "@/utils/cn";
-import {
-  chatComposerDropdownClassName,
-  chatComposerDropdownItemClassName,
-} from "../input/chat-composer-control-styles";
+import React, { useCallback, useEffect, useRef } from "react";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { SlashCommand } from "@/features/ai/types/acp.types";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import Command, {
+  CommandEmpty,
+  CommandHeader,
+  CommandInput,
+  CommandItemBadge,
+  CommandItemMeta,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 
 interface SlashCommandDropdownProps {
   onSelect: (command: SlashCommand) => void;
+  onClose?: () => void;
 }
-
-const ATTACHED_DROPDOWN_GAP = -1;
-const SLASH_COMMAND_DROPDOWN_MAX_HEIGHT = 300;
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   onSelect,
+  onClose,
 }: SlashCommandDropdownProps) {
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const slashCommandState = useAIChatStore((state) => state.slashCommandState);
   const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
+  const updateSlashCommandSearch = useAIChatStore((state) => state.updateSlashCommandSearch);
+  const selectNextSlashCommand = useAIChatStore((state) => state.selectNextSlashCommand);
+  const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
+  const setSlashCommandSelectedIndex = useAIChatStore(
+    (state) => state.setSlashCommandSelectedIndex,
+  );
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
+  const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
+  const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
 
-  const { position, selectedIndex } = slashCommandState;
+  const { search, selectedIndex } = slashCommandState;
   const filteredCommands = getFilteredSlashCommands();
 
-  // Scroll selected item into view
+  const closeSlashCommands = useCallback(() => {
+    hideSlashCommands();
+    onClose?.();
+  }, [hideSlashCommands, onClose]);
+
   useEffect(() => {
-    const itemsContainer = dropdownRef.current?.querySelector(".items-container");
-    const selectedItem = itemsContainer?.children[selectedIndex] as HTMLElement;
+    const selectedItem = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
     if (selectedItem) {
       selectedItem.scrollIntoView({
         block: "nearest",
@@ -43,162 +54,125 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
     }
   }, [selectedIndex]);
 
-  // Adjust position
-  const adjustedPosition = useMemo(() => {
-    const activeElement = document.activeElement as HTMLElement | null;
-    const activeRect =
-      activeElement?.isContentEditable || activeElement?.tagName === "INPUT"
-        ? activeElement.getBoundingClientRect()
-        : null;
-    const basePosition =
-      position.bottom > 0
-        ? position
-        : activeRect && activeRect.width > 0 && activeRect.bottom > 0
-          ? {
-              top: Math.max(activeRect.top, activeRect.bottom - 24),
-              bottom: activeRect.bottom,
-              left: activeRect.left + 12,
-              width: Math.min(320, Math.max(180, activeRect.width - 24)),
-            }
-          : position;
-    const dropdownWidth = Math.min(Math.max(basePosition.width, 180), window.innerWidth - 16);
-    const dropdownHeight = Math.min(
-      filteredCommands.length * 44 + 12,
-      SLASH_COMMAND_DROPDOWN_MAX_HEIGHT,
-      EDITOR_CONSTANTS.BREADCRUMB_DROPDOWN_MAX_HEIGHT,
-    );
-    const padding = 8;
-
-    let { left } = basePosition;
-
-    if (left + dropdownWidth > window.innerWidth - padding) {
-      left = Math.max(padding, window.innerWidth - dropdownWidth - padding);
-    }
-    if (left < padding) {
-      left = padding;
-    }
-
-    const attachedAboveTop = basePosition.top - dropdownHeight - ATTACHED_DROPDOWN_GAP;
-    const attachedBelowTop = basePosition.bottom + ATTACHED_DROPDOWN_GAP;
-    const top =
-      attachedAboveTop >= padding
-        ? attachedAboveTop
-        : Math.min(attachedBelowTop, window.innerHeight - dropdownHeight - padding);
-
-    return {
-      top: Math.max(padding, top),
-      left: Math.max(padding, left),
-      width: dropdownWidth,
-    };
-  }, [position.bottom, position.left, position.top, position.width, filteredCommands.length]);
-
-  // Handle outside clicks
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        hideSlashCommands();
-      }
-    };
-
     const handleKeyDown = (event: KeyboardEvent) => {
+      const isCommandModifier = event.metaKey || event.ctrlKey;
+      if (isCommandModifier && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSlashCommands();
+        if (event.shiftKey) {
+          setIsCommandPaletteVisible(true);
+        } else {
+          setIsQuickOpenVisible(true);
+        }
+        return;
+      }
+
       if (event.key === "Escape") {
-        hideSlashCommands();
+        event.preventDefault();
+        closeSlashCommands();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [hideSlashCommands]);
+  }, [closeSlashCommands, setIsCommandPaletteVisible, setIsQuickOpenVisible]);
 
-  return createPortal(
-    <motion.div
-      ref={dropdownRef}
-      initial={false}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0 }}
-      className={chatComposerDropdownClassName(
-        "scrollbar-hidden fixed select-none overflow-y-auto p-1.5",
-      )}
-      style={{
-        zIndex: 10040,
-        maxHeight: `${SLASH_COMMAND_DROPDOWN_MAX_HEIGHT}px`,
-        width: `${adjustedPosition.width}px`,
-        left: `${adjustedPosition.left}px`,
-        top: `${adjustedPosition.top}px`,
-        transformOrigin: "top left",
-      }}
-      role="listbox"
-      aria-label="Slash command suggestions"
-    >
+  const handleSearchChange = (value: string) => {
+    const nextSearch = value.startsWith("/") ? value.slice(1) : value;
+    updateSlashCommandSearch(nextSearch.replace(/\s+/g, ""));
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const isCommandModifier = event.metaKey || event.ctrlKey;
+    if (isCommandModifier && event.key.toLowerCase() === "p") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSlashCommands();
+      if (event.shiftKey) {
+        setIsCommandPaletteVisible(true);
+      } else {
+        setIsQuickOpenVisible(true);
+      }
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      selectNextSlashCommand();
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      selectPreviousSlashCommand();
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      const command = filteredCommands[selectedIndex];
+      if (command) {
+        onSelect(command);
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeSlashCommands();
+    }
+  };
+
+  return (
+    <Command isVisible onClose={closeSlashCommands} title="Slash command suggestions">
+      <CommandHeader onClose={closeSlashCommands}>
+        <CommandInput
+          value={`/${search}`}
+          onChange={handleSearchChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Search slash commands"
+        />
+      </CommandHeader>
+
       {filteredCommands.length > 0 ? (
-        <div className="items-container space-y-1" role="presentation">
+        <CommandList ref={listRef} role="listbox" aria-label="Slash command suggestions">
           {filteredCommands.map((command, index) => (
-            <button
+            <CommandItemRow
               key={command.name}
               type="button"
               data-item-index={index}
+              isSelected={index === selectedIndex}
               onClick={() => onSelect(command)}
-              className={cn(
-                dropdownItemClassName(),
-                chatComposerDropdownItemClassName(
-                  "grid w-full grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pr-2",
-                ),
-                index === selectedIndex
-                  ? "bg-selected text-text shadow-[inset_0_0_0_1px_var(--color-border)]"
-                  : "text-text hover:bg-hover",
-              )}
+              onMouseEnter={() => setSlashCommandSelectedIndex(index)}
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
-            >
-              <span className="ui-text-xs flex size-5 items-center justify-center rounded-md border border-border/70 bg-primary-bg/60 font-medium leading-none text-text-lighter">
-                /
-              </span>
-              <div className="min-w-0">
-                <div className="ui-text-xs truncate font-medium leading-[1.35] text-text">
-                  {command.name}
-                </div>
-                <div className="ui-text-xs truncate pt-0.5 text-text-lighter">
-                  {command.description}
-                </div>
-              </div>
-              <div className="min-w-0 justify-self-end">
-                {command.input?.hint ? (
-                  <span className="ui-text-xs block max-w-24 truncate rounded border border-border/60 bg-primary-bg/45 px-1.5 py-0.5 leading-[1.35] text-text-lighter">
-                    {command.input.hint}
-                  </span>
+              icon={<span>/</span>}
+              title={command.name}
+              description={command.description}
+              contentLayout="stacked"
+              accessory={
+                command.input?.hint ? (
+                  <CommandItemBadge>{command.input.hint}</CommandItemBadge>
                 ) : index === selectedIndex ? (
-                  <span className="ui-text-xs rounded border border-border/60 px-1.5 py-0.5 leading-none text-text-lighter">
-                    Enter
-                  </span>
-                ) : null}
-              </div>
-            </button>
+                  <CommandItemMeta>Enter</CommandItemMeta>
+                ) : null
+              }
+            />
           ))}
-        </div>
+        </CommandList>
       ) : (
-        <div className="ui-text-xs px-2.5 py-2 text-text-lighter">
-          {availableSlashCommands.length > 0 ? (
-            <>
-              <div className="font-medium text-text">No matching slash commands</div>
-              <div className="ui-text-xs mt-0.5 opacity-75">Try a different search after `/`.</div>
-            </>
-          ) : (
-            <>
-              <div className="font-medium text-text">No slash commands available yet</div>
-              <div className="ui-text-xs mt-0.5 opacity-75">
-                Start an ACP session to load commands for this agent.
-              </div>
-            </>
-          )}
-        </div>
+        <CommandEmpty>
+          {availableSlashCommands.length > 0
+            ? "No matching slash commands"
+            : "No slash commands available yet"}
+        </CommandEmpty>
       )}
-    </motion.div>,
-    document.body,
+    </Command>
   );
 });

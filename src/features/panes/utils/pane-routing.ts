@@ -1,4 +1,4 @@
-import type { PaneGroup, PaneNode } from "../types/pane";
+import type { PaneGroup, PaneNode } from "../types/pane.types";
 import { getAllPaneGroups } from "./pane-tree";
 
 export interface WritablePaneRoutingInput {

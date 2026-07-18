@@ -6,16 +6,16 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
 import { openUrl } from "@tauri-apps/plugin-opener"; // Keep for external links
-import { ArrowSquareOut as ExternalLink } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon as ExternalLink } from "@/ui/icons";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
-import { primitiveConfirm } from "@/ui/primitive-dialog-service";
+import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
 
@@ -41,7 +41,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { width: containerWidth } = useResizeObserver(containerRef);
   const [isFitted, setIsFitted] = useState(true);
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const relativePath = getRelativePath(filePath, rootFolderPath);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +131,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
       e.preventDefault();
       // External links start with http etc.
       if (anchor.href.startsWith("http")) {
-        const confirmed = await primitiveConfirm(
+        const confirmed = await showConfirmDialog(
           `Do you want to open this external link?\n\n${anchor.href}`,
           { title: "External Link", confirmLabel: "Open" },
         );
@@ -153,11 +153,11 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-primary-bg">
+    <div className="relative size-full overflow-hidden bg-primary-bg">
       {/* Header / Toolbar */}
       <div className="absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2 transition-opacity hover:opacity-100">
         <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate font-medium text-text ui-text-xs" title={fileName}>
+          <span className="truncate font-medium text-text ui-text-sm" title={fileName}>
             {fileName}
           </span>
         </div>
@@ -166,7 +166,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             variant="ghost"
             onClick={handleOpenExternal}
             tooltip="Open in external viewer"
-            compact
+            size="icon-xs"
           >
             <ExternalLink className="text-text" />
           </Button>
@@ -220,7 +220,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             {Array.from({ length: numPages }, (_el, index) => (
               <div
                 key={`page_${index + 1}`}
-                className="pdf-page-container bg-white shadow-lg"
+                className="pdf-page-container bg-white shadow-[var(--shadow-card)]"
                 data-page-number={index + 1}
               >
                 <Page

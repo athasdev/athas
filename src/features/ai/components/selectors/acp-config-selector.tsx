@@ -1,6 +1,6 @@
-import type { SessionConfigOption } from "@/features/ai/types/acp";
+import type { SessionConfigOption } from "@/features/ai/types/acp.types";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { useAIChatStore } from "@/features/ai/store/store";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import { chatComposerControlClassName } from "../input/chat-composer-control-styles";
@@ -10,6 +10,7 @@ interface AcpConfigSelectorProps {
   onChange: (value: string) => void;
   className?: string;
   menuClassName?: string;
+  menuMinWidth?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -19,6 +20,7 @@ export function AcpConfigSelector({
   onChange,
   className,
   menuClassName,
+  menuMinWidth = 180,
   open,
   onOpenChange,
 }: AcpConfigSelectorProps) {
@@ -49,9 +51,10 @@ export function AcpConfigSelector({
       triggerClassName={chatComposerControlClassName("w-fit max-w-[160px]")}
       hideChevron
       menuClassName={menuClassName}
+      menuMinWidth={menuMinWidth}
+      menuAnimated={false}
       tooltip={`Select ${option.name}`}
       aria-label={option.name}
-      title={option.description || option.name}
     />
   );
 }

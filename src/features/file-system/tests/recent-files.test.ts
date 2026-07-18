@@ -15,7 +15,7 @@ function createMockStorage() {
 }
 
 async function loadRecentFilesStore() {
-  const { useRecentFilesStore } = await import("../controllers/recent-files-store");
+  const { useRecentFilesStore } = await import("../stores/recent-files.store");
   useRecentFilesStore.setState({
     recentFiles: [],
     maxRecentFiles: 50,

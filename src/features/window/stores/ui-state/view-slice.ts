@@ -1,22 +1,20 @@
 import type { StateCreator } from "zustand";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import type { BottomPaneTab } from "@/features/window/stores/ui-state/types";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useSessionStore } from "@/features/window/stores/session-store";
-import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-session";
+import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
 
 export interface ViewState {
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   activeSidebarView: SidebarView;
   activeRightSidebarView: SidebarView;
-  activeAgentSidebarView: SidebarView;
 }
 
 export interface ViewActions {
   setActiveView: (view: SidebarView) => void;
   setActiveRightSidebarView: (view: SidebarView) => void;
-  setActiveAgentSidebarView: (view: SidebarView) => void;
 }
 
 export type ViewSlice = ViewState & ViewActions;
@@ -25,8 +23,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
   isGitViewActive: false,
   isGitHubPRsViewActive: false,
   activeSidebarView: "files",
-  activeRightSidebarView: "notifications",
-  activeAgentSidebarView: "multi-agents",
+  activeRightSidebarView: "outline",
 
   setActiveView: (view: SidebarView) => {
     set({
@@ -46,7 +43,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
       bottomPaneActiveTab?: BottomPaneTab;
     };
 
-    useSessionStore.getState().saveUiState(projectPath, {
+    workspaceSessionRepository.saveUi(projectPath, {
       isSidebarVisible: state.isSidebarVisible ?? DEFAULT_PROJECT_UI_STATE.isSidebarVisible,
       isBottomPaneVisible:
         state.isBottomPaneVisible ?? DEFAULT_PROJECT_UI_STATE.isBottomPaneVisible,
@@ -57,8 +54,5 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
   },
   setActiveRightSidebarView: (view: SidebarView) => {
     set({ activeRightSidebarView: view });
-  },
-  setActiveAgentSidebarView: (view: SidebarView) => {
-    set({ activeAgentSidebarView: view });
   },
 });

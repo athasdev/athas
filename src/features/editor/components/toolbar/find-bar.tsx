@@ -1,9 +1,12 @@
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
-import { useEditorUIStore } from "@/features/editor/stores/ui-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
+import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   SEARCH_TOGGLE_ICONS,
   SearchPopover,
@@ -21,6 +24,7 @@ const FindBar = () => {
   const {
     searchQuery,
     searchMatches,
+    searchResultsLimited,
     currentMatchIndex,
     replaceQuery,
     isReplaceVisible,
@@ -29,6 +33,7 @@ const FindBar = () => {
     useShallow((state) => ({
       searchQuery: state.searchQuery,
       searchMatches: state.searchMatches,
+      searchResultsLimited: state.searchResultsLimited,
       currentMatchIndex: state.currentMatchIndex,
       replaceQuery: state.replaceQuery,
       isReplaceVisible: state.isReplaceVisible,
@@ -47,14 +52,14 @@ const FindBar = () => {
   } = useEditorUIStore.use.actions();
 
   const isVisible = isFindVisible;
-  const onClose = () => {
+  const onClose = useCallback(() => {
     setIsFindVisible(false);
     const { editorRef } = useEditorStateStore.getState();
-    const textarea = editorRef?.current?.querySelector("textarea");
+    const textarea = editorRef?.current?.querySelector("[data-monaco-editor-scroll] textarea");
     if (textarea instanceof HTMLTextAreaElement) {
       textarea.focus();
     }
-  };
+  }, [setIsFindVisible]);
   const currentMatch = currentMatchIndex + 1;
   const totalMatches = searchMatches.length;
   const hasNoResults = Boolean(searchQuery) && totalMatches === 0;
@@ -79,9 +84,18 @@ const FindBar = () => {
     if (startOffset === endOffset) return "";
 
     const textarea = editorRef?.current?.querySelector("textarea");
-    if (!(textarea instanceof HTMLTextAreaElement)) return "";
+    const editorContent = (() => {
+      if (textarea instanceof HTMLTextAreaElement && textarea.value) {
+        return textarea.value;
+      }
 
-    const selectedText = textarea.value.slice(startOffset, endOffset);
+      const { activeBufferId, buffers } = useBufferStore.getState();
+      const activeBuffer = getBufferById(buffers, activeBufferId);
+
+      return activeBuffer && hasTextContent(activeBuffer) ? activeBuffer.content : "";
+    })();
+
+    const selectedText = editorContent.slice(startOffset, endOffset);
     if (!selectedText || selectedText.includes("\n")) return "";
 
     return selectedText;
@@ -191,7 +205,7 @@ const FindBar = () => {
           matchLabel={
             searchQuery
               ? totalMatches > 0
-                ? `${currentMatch}/${totalMatches}`
+                ? `${currentMatch}/${totalMatches}${searchResultsLimited ? "+" : ""}`
                 : "No results"
               : null
           }
@@ -227,6 +241,17 @@ const FindBar = () => {
               active: searchOptions.useRegex,
               onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
             },
+            ...(isReplaceVisible
+              ? [
+                  {
+                    id: "preserve-case",
+                    label: "Preserve case",
+                    icon: SEARCH_TOGGLE_ICONS.preserveCase,
+                    active: searchOptions.preserveCase,
+                    onToggle: () => setSearchOption("preserveCase", !searchOptions.preserveCase),
+                  },
+                ]
+              : []),
           ]}
           secondaryRow={
             isReplaceVisible ? (
@@ -238,6 +263,10 @@ const FindBar = () => {
                 onReplace={replaceNext}
                 onReplaceAll={replaceAll}
                 canReplace={Boolean(searchQuery) && totalMatches > 0}
+                canReplaceAll={Boolean(searchQuery) && totalMatches > 0 && !searchResultsLimited}
+                replaceAllTooltip={
+                  searchResultsLimited ? "Refine search to replace all matches" : undefined
+                }
               />
             ) : null
           }

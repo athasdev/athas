@@ -1,9 +1,9 @@
-import { Image } from "@phosphor-icons/react";
+import { ImageIcon as Image } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
-import type { ImageFormat } from "../models/image-operation.types";
+import type { ImageFormat } from "../types/image-operation.types";
 import { convertImageFormat } from "../utils/image-conversion";
 import { formatFileSize, getDataURLSize } from "../utils/image-file-utils";
 
@@ -131,26 +131,26 @@ export function ImageFormatDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <Button onClick={onClose} variant="default" compact>
+          <Button onClick={onClose} variant="default" size="xs">
             Cancel
           </Button>
-          <Button onClick={handleConvert} disabled={isEstimating} variant="accent" compact>
+          <Button onClick={handleConvert} disabled={isEstimating} variant="accent" size="xs">
             Convert
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-1">
-        <p className="text-text ui-text-xs">{config.description}</p>
-        <p className="text-text-lighter ui-text-xs">
-          Current: <span className="ui-font">{currentFileName}</span> •{" "}
+        <p className="text-text ui-text-sm">{config.description}</p>
+        <p className="text-text-lighter ui-text-sm">
+          Current: <span className="font-sans">{currentFileName}</span> •{" "}
           {formatFileSize(currentSize)}
         </p>
       </div>
 
       {config.supportsQuality && (
         <div className="flex flex-col gap-2">
-          <div className="font-semibold text-text ui-text-xs">Quality Setting</div>
+          <div className="font-semibold text-text ui-text-sm">Quality Setting</div>
           <div className="flex flex-col gap-1">
             {config.options.map((option) => (
               <Button
@@ -158,9 +158,9 @@ export function ImageFormatDialog({
                 type="button"
                 onClick={() => setSelectedQuality(option.quality)}
                 variant="ghost"
-                compact
+                size="xs"
                 className={cn(
-                  "flex h-auto items-center justify-between rounded border px-3 py-2 text-left ui-text-xs",
+                  "flex h-auto items-center justify-between rounded border px-3 py-2 text-left ui-text-sm",
                   selectedQuality === option.quality
                     ? "border-accent bg-accent/10 text-text"
                     : "border-border bg-primary-bg text-text hover:bg-hover",
@@ -169,7 +169,7 @@ export function ImageFormatDialog({
                 <span>
                   {option.label}
                   {option.quality === config.recommended && (
-                    <span className="ml-2 ui-text-xs text-accent">★ RECOMMENDED</span>
+                    <span className="ml-2 ui-text-sm text-accent">★ RECOMMENDED</span>
                   )}
                 </span>
                 <span className="text-text-lighter">{Math.round(option.quality * 100)}%</span>
@@ -181,20 +181,20 @@ export function ImageFormatDialog({
 
       <div className="rounded border border-border bg-secondary-bg p-3">
         <div className="flex items-center justify-between">
-          <span className="text-text ui-text-xs">Estimated Size:</span>
+          <span className="text-text ui-text-sm">Estimated Size:</span>
           <div className="flex items-center gap-2">
             {isEstimating ? (
-              <span className="text-text-lighter ui-text-xs">Calculating...</span>
+              <span className="text-text-lighter ui-text-sm">Calculating...</span>
             ) : estimatedSize ? (
               <>
-                <span className="ui-font text-text ui-text-xs">
+                <span className="font-sans text-text ui-text-sm">
                   {formatFileSize(estimatedSize)}
                 </span>
                 {sizeDiff !== 0 && (
                   <span
                     className={cn(
-                      "ui-font ui-text-xs",
-                      sizeDiff < 0 ? "text-green-500" : "text-orange-500",
+                      "font-sans ui-text-sm",
+                      sizeDiff < 0 ? "text-success" : "text-warning",
                     )}
                   >
                     {sizeDiff > 0 ? "+" : ""}
@@ -203,7 +203,7 @@ export function ImageFormatDialog({
                 )}
               </>
             ) : (
-              <span className="text-text-lighter ui-text-xs">--</span>
+              <span className="text-text-lighter ui-text-sm">--</span>
             )}
           </div>
         </div>

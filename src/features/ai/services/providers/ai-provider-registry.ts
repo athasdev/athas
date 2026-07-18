@@ -6,10 +6,26 @@ import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenAICompatibleProvider } from "./openai-compatible-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
-import { V0Provider } from "./v0-provider";
 import type { AIProvider, ProviderConfig } from "./ai-provider-interface";
+import type { Settings } from "@/features/settings/types/settings.types";
+import {
+  registerModelProviderExtension,
+  unregisterModelProviderExtensions,
+  type ModelProvider,
+} from "@/features/ai/types/providers.types";
 
 const providers = new Map<string, AIProvider>();
+const extensionProviderIds = new Map<string, Set<string>>();
+const providerFetchModes = new Map<string, boolean>();
+const providerSystemPromptBuilders = new Map<string, (settings: Settings) => string>();
+
+export interface AIProviderRuntimeContribution {
+  extensionId: string;
+  provider: ModelProvider;
+  createProvider: (config: ProviderConfig) => AIProvider;
+  useTauriFetch?: boolean;
+  buildSystemPromptContext?: (settings: Settings) => string;
+}
 
 function initializeProviders(): void {
   const anthropicConfig: ProviderConfig = {
@@ -29,15 +45,6 @@ function initializeProviders(): void {
     maxTokens: 4096,
   };
   providers.set("openai", new OpenAIProvider(openAIConfig));
-
-  const v0Config: ProviderConfig = {
-    id: "v0",
-    name: "v0",
-    apiUrl: "https://api.v0.dev/v1/chat/completions",
-    requiresApiKey: true,
-    maxTokens: 32768,
-  };
-  providers.set("v0", new V0Provider(v0Config));
 
   const openRouterConfig: ProviderConfig = {
     id: "openrouter",
@@ -112,17 +119,83 @@ function initializeProviders(): void {
   providers.set("ollama", new OllamaProvider(ollamaConfig));
 }
 
-export function getProvider(providerId: string): AIProvider | undefined {
+function ensureProvidersInitialized(): void {
   if (providers.size === 0) {
     initializeProviders();
   }
+}
+
+export function registerAIProviderExtension(contribution: AIProviderRuntimeContribution): void {
+  ensureProvidersInitialized();
+
+  const maxTokens =
+    contribution.provider.maxTokens ??
+    Math.max(4096, ...contribution.provider.models.map((model) => model.maxTokens));
+  const config: ProviderConfig = {
+    id: contribution.provider.id,
+    name: contribution.provider.name,
+    apiUrl: contribution.provider.apiUrl,
+    requiresApiKey: contribution.provider.requiresApiKey,
+    maxTokens,
+  };
+
+  providers.set(contribution.provider.id, contribution.createProvider(config));
+  providerFetchModes.set(contribution.provider.id, Boolean(contribution.useTauriFetch));
+
+  if (contribution.buildSystemPromptContext) {
+    providerSystemPromptBuilders.set(
+      contribution.provider.id,
+      contribution.buildSystemPromptContext,
+    );
+  } else {
+    providerSystemPromptBuilders.delete(contribution.provider.id);
+  }
+
+  const providerIds = extensionProviderIds.get(contribution.extensionId) ?? new Set<string>();
+  providerIds.add(contribution.provider.id);
+  extensionProviderIds.set(contribution.extensionId, providerIds);
+  registerModelProviderExtension(contribution.extensionId, contribution.provider);
+}
+
+export function unregisterAIProviderExtension(extensionId: string): void {
+  ensureProvidersInitialized();
+
+  const providerIds = extensionProviderIds.get(extensionId);
+  if (!providerIds) return;
+
+  providerIds.forEach((providerId) => {
+    providers.delete(providerId);
+    providerFetchModes.delete(providerId);
+    providerSystemPromptBuilders.delete(providerId);
+  });
+  extensionProviderIds.delete(extensionId);
+  unregisterModelProviderExtensions(extensionId);
+}
+
+export function shouldUseTauriFetchForProvider(providerId: string): boolean {
+  if (providerFetchModes.has(providerId)) {
+    return providerFetchModes.get(providerId) ?? false;
+  }
+
+  return (
+    providerId === "gemini" ||
+    providerId === "ollama" ||
+    providerId === "anthropic" ||
+    providerId === "openrouter"
+  );
+}
+
+export function buildProviderSystemPromptContext(providerId: string, settings: Settings): string {
+  return providerSystemPromptBuilders.get(providerId)?.(settings) ?? "";
+}
+
+export function getProvider(providerId: string): AIProvider | undefined {
+  ensureProvidersInitialized();
   return providers.get(providerId);
 }
 
 function getOllamaProvider(): OllamaProvider | undefined {
-  if (providers.size === 0) {
-    initializeProviders();
-  }
+  ensureProvidersInitialized();
   const ollama = providers.get("ollama");
   return ollama instanceof OllamaProvider ? ollama : undefined;
 }
@@ -136,9 +209,7 @@ export function setOllamaApiKey(apiKey: string | null): void {
 }
 
 function getCustomProvider(): OpenAICompatibleProvider | undefined {
-  if (providers.size === 0) {
-    initializeProviders();
-  }
+  ensureProvidersInitialized();
   const custom = providers.get("custom");
   return custom instanceof OpenAICompatibleProvider ? custom : undefined;
 }

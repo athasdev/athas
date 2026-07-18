@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useEffect } from "react";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getExplorerTargetPath } from "@/features/file-explorer/utils/file-explorer-tree-utils";
 
 interface UseFileExplorerSyncOptions {
@@ -13,15 +13,13 @@ export function useFileExplorerSync({
   updateActivePath,
   revealPathInTree,
 }: UseFileExplorerSyncOptions) {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const explorerTargetPath = useBufferStore((state) => {
+    const activeBuffer = state.activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      : null;
 
-  const activeBuffer = useMemo(
-    () => buffers.find((buffer) => buffer.id === activeBufferId) || null,
-    [buffers, activeBufferId],
-  );
-
-  const explorerTargetPath = useMemo(() => getExplorerTargetPath(activeBuffer), [activeBuffer]);
+    return getExplorerTargetPath(activeBuffer ?? null);
+  });
 
   useEffect(() => {
     if (!explorerTargetPath) {

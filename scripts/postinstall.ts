@@ -57,6 +57,7 @@ interface ParserSource {
 
 // All bundled parsers — built from source using tree-sitter-cli.
 const BUNDLED_PARSERS: Record<string, ParserSource> = {
+  astro: { package: "tree-sitter-astro" },
   bash: { package: "tree-sitter-bash" },
   c: { package: "tree-sitter-c" },
   c_sharp: { package: "tree-sitter-c-sharp" },

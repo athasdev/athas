@@ -81,7 +81,7 @@ describe("undo grouping", () => {
     }
   });
 
-  it("matches VS Code style spacing boundaries", () => {
+  it("groups spacing boundaries predictably", () => {
     const firstSpace = classifyUndoEdit("abc", "abc ", "typing.other");
     const nextCharacter = classifyUndoEdit("abc ", "abc d", firstSpace);
     const consecutiveSpace = classifyUndoEdit("abc ", "abc  ", firstSpace);

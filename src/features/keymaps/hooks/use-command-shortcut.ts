@@ -6,10 +6,10 @@
  * reference equality short-circuits re-renders in the common case.
  */
 
-import { useKeymapStore } from "../stores/store";
+import { useKeymapStore } from "../stores/keymaps.store";
 import { getEffectiveKeybindingForCommand } from "../utils/effective-keymaps";
 import { keymapRegistry } from "../utils/registry";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 
 export function useCommandShortcut(commandId?: string): string | undefined {
   const userKeybindings = useKeymapStore((state) => state.keybindings);

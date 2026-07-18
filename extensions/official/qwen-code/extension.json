@@ -1,0 +1,24 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.agent.qwen-code",
+  "name": "Qwen Code",
+  "displayName": "Qwen Code",
+  "description": "Alibaba Qwen's command-line coding agent with native ACP support.",
+  "version": "1.0.0",
+  "publisher": "Alibaba",
+  "categories": ["Agent"],
+  "agents": [
+    {
+      "id": "qwen-code",
+      "name": "Qwen Code",
+      "binaryName": "qwen",
+      "description": "Alibaba Qwen Code agent with native ACP support.",
+      "args": ["--acp"],
+      "install": {
+        "runtime": "node",
+        "package": "@qwen-code/qwen-code",
+        "command": "qwen"
+      }
+    }
+  ]
+}

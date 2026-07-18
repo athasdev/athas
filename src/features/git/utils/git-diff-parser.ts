@@ -1,6 +1,6 @@
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
-import type { MultiFileDiff } from "../types/git-diff-types";
-import type { GitDiff, GitDiffLine } from "../types/git-types";
+import type { MultiFileDiff } from "../types/git-diff.types";
+import type { GitDiff, GitDiffLine } from "../types/git.types";
 import { countDiffStats } from "./git-diff-helpers";
 
 function stripGitPrefix(path: string): string {
@@ -240,7 +240,21 @@ export function isDiffFile(path: string, content?: string): boolean {
     return true;
   }
 
-  if (content?.includes("@@")) {
+  if (
+    content &&
+    /^diff --git a\/.+ b\/.+$/m.test(content) &&
+    /^--- (?:a\/.+|\/dev\/null)$/m.test(content) &&
+    /^\+\+\+ (?:b\/.+|\/dev\/null)$/m.test(content)
+  ) {
+    return true;
+  }
+
+  if (
+    content &&
+    /^--- .+$/m.test(content) &&
+    /^\+\+\+ .+$/m.test(content) &&
+    /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/m.test(content)
+  ) {
     return true;
   }
 

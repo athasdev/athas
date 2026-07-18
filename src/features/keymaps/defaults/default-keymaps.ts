@@ -1,9 +1,9 @@
 /**
  * Default keybindings for all platforms
- * Uses VS Code-style syntax, automatically normalized per platform
+ * Uses compact shortcut syntax, automatically normalized per platform
  */
 
-import type { Keybinding } from "../types";
+import type { Keybinding } from "../types/keymaps.types";
 
 export const defaultKeymaps: Keybinding[] = [
   // File Operations
@@ -32,10 +32,21 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "cmd+alt+s",
+    command: "file.saveAll",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
     key: "cmd+w",
     command: "file.close",
     source: "default",
     when: "!terminalFocus",
+  },
+  {
+    key: "cmd+shift+w",
+    command: "workbench.closeWindow",
+    source: "default",
   },
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
   {
@@ -97,6 +108,12 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "cmd+shift+l",
+    command: "editor.selectAllOccurrences",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
     key: "cmd+t",
     command: "terminal.new",
     source: "default",
@@ -127,6 +144,60 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "cmd+k cmd+0",
+    command: "editor.foldAll",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+1",
+    command: "editor.foldLevel1",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+2",
+    command: "editor.foldLevel2",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+3",
+    command: "editor.foldLevel3",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+4",
+    command: "editor.foldLevel4",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+5",
+    command: "editor.foldLevel5",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+6",
+    command: "editor.foldLevel6",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+7",
+    command: "editor.foldLevel7",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+j",
+    command: "editor.unfoldAll",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
     key: "alt+up",
     command: "editor.moveLineUp",
     source: "default",
@@ -151,8 +222,56 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "cmd+alt+up",
+    command: "editor.insertCursorAbove",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+alt+down",
+    command: "editor.insertCursorBelow",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "shift+alt+i",
+    command: "editor.insertCursorsAtLineEnds",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
     key: "shift+alt+f",
     command: "editor.formatDocument",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+f",
+    command: "editor.formatSelection",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "ctrl+space",
+    command: "editor.triggerSuggest",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+shift+space",
+    command: "editor.triggerParameterHints",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+k cmd+i",
+    command: "editor.showHover",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+.",
+    command: "editor.quickFix",
     source: "default",
     when: "editorFocus",
   },
@@ -214,11 +333,6 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "shift+F5", command: "debug.stop", source: "default" },
   { key: "F9", command: "debug.toggleBreakpoint", source: "default" },
   {
-    key: "cmd+shift+b",
-    command: "workbench.toggleSidebarPosition",
-    source: "default",
-  },
-  {
     key: "cmd+shift+space",
     command: "workbench.agentLauncher",
     source: "default",
@@ -269,8 +383,38 @@ export const defaultKeymaps: Keybinding[] = [
     when: "editorFocus",
   },
   {
+    key: "cmd+F12",
+    command: "editor.goToImplementation",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
     key: "shift+F12",
     command: "editor.goToReferences",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+shift+\\",
+    command: "editor.goToBracket",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+alt+backspace",
+    command: "editor.removeBrackets",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+ctrl+shift+right",
+    command: "editor.expandSelection",
+    source: "default",
+    when: "editorFocus",
+  },
+  {
+    key: "cmd+ctrl+shift+left",
+    command: "editor.shrinkSelection",
     source: "default",
     when: "editorFocus",
   },
@@ -287,6 +431,12 @@ export const defaultKeymaps: Keybinding[] = [
   },
   { key: "cmd+r", command: "workbench.toggleAIChat", source: "default" },
   { key: "cmd+shift+m", command: "workbench.toggleMinimap", source: "default" },
+  {
+    key: "alt+z",
+    command: "editor.toggleWordWrap",
+    source: "default",
+    when: "editorFocus",
+  },
   {
     key: "cmd+k cmd+s",
     command: "workbench.openKeyboardShortcuts",

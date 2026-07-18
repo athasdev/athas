@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
-import {
-  FILE_TREE_DENSITY_OPTIONS,
-  type FileTreeDensity,
-} from "@/features/file-explorer/lib/file-tree-density";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { useShallow } from "zustand/react/shallow";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
-import Select from "@/ui/select";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import { controlFieldSurfaceVariants } from "@/ui/control-field";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 
 export const FileTreeSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      compactFoldersInFileTree: state.settings.compactFoldersInFileTree,
+      fileTreeIndentSize: state.settings.fileTreeIndentSize,
+      hiddenDirectoryPatterns: state.settings.hiddenDirectoryPatterns,
+      hiddenFilePatterns: state.settings.hiddenFilePatterns,
+      hideRootFolderInFileTree: state.settings.hideRootFolderInFileTree,
+      showGitignoredFilesInFileTree: state.settings.showGitignoredFilesInFileTree,
+      showHiddenFilesInFileTree: state.settings.showHiddenFilesInFileTree,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const [filePatternsInput, setFilePatternsInput] = useState(
     settings.hiddenFilePatterns.join(", "),
@@ -60,23 +67,7 @@ export const FileTreeSettings = () => {
             value={settings.fileTreeIndentSize}
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Density"
-          description="Choose file tree row spacing"
-          onReset={() => updateSetting("fileTreeDensity", getDefaultSetting("fileTreeDensity"))}
-          canReset={settings.fileTreeDensity !== getDefaultSetting("fileTreeDensity")}
-        >
-          <Select
-            value={settings.fileTreeDensity}
-            options={FILE_TREE_DENSITY_OPTIONS}
-            onChange={(value) => updateSetting("fileTreeDensity", value as FileTreeDensity)}
-            className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
-            variant="default"
+            size="md"
           />
         </SettingRow>
 
@@ -93,6 +84,23 @@ export const FileTreeSettings = () => {
           <Switch
             checked={settings.compactFoldersInFileTree}
             onChange={(checked) => updateSetting("compactFoldersInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Hide Root Folder"
+          description="Show project files directly at the top level"
+          onReset={() =>
+            updateSetting("hideRootFolderInFileTree", getDefaultSetting("hideRootFolderInFileTree"))
+          }
+          canReset={
+            settings.hideRootFolderInFileTree !== getDefaultSetting("hideRootFolderInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.hideRootFolderInFileTree}
+            onChange={(checked) => updateSetting("hideRootFolderInFileTree", checked)}
             size="sm"
           />
         </SettingRow>
@@ -165,7 +173,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-sm w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "font-sans ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>
@@ -195,7 +203,7 @@ export const FileTreeSettings = () => {
             rows={2}
             className={cn(
               controlFieldSurfaceVariants({ variant: "secondary" }),
-              "ui-font ui-text-sm w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
+              "font-sans ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
             )}
           />
         </SettingRow>

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.markdown",
+  "name": "Markdown",
+  "displayName": "Markdown",
+  "version": "1.0.0",
+  "description": "Markdown language support with LSP and formatting",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "markdown",
+      "extensions": [".md", ".markdown", ".mdx"],
+      "aliases": ["Markdown", "md"]
+    },
+    {
+      "id": "rmarkdown",
+      "extensions": [".Rmd", ".rmd"],
+      "aliases": ["R Markdown", "Rmd", "rmarkdown"]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "marksman",
+      "runtime": "binary",
+      "downloadUrl": "https://athas.dev/extensions/markdown/markdown-${os}-${arch}.tar.gz",
+      "args": ["server"]
+    },
+    "formatter": {
+      "name": "prettier",
+      "runtime": "bun",
+      "package": "prettier",
+      "args": ["--stdin-filepath", "${file}"]
+    }
+  }
+}

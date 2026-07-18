@@ -1,11 +1,23 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { GitWorktree } from "../types/git-types";
+import type { GitWorktree } from "../types/git.types";
+import {
+  isNotGitRepositoryError,
+  resolveRepositoryPath,
+  resolveRepositoryPathOrThrow,
+} from "./git-repo-api";
 
 export const getWorktrees = async (repoPath: string): Promise<GitWorktree[]> => {
   try {
-    return await tauriInvoke<GitWorktree[]>("git_get_worktrees", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return [];
+    }
+
+    return await tauriInvoke<GitWorktree[]>("git_get_worktrees", { repoPath: resolvedRepoPath });
   } catch (error) {
-    console.error("Failed to get worktrees:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get worktrees:", error);
+    }
     return [];
   }
 };
@@ -17,7 +29,13 @@ export const addWorktree = async (
   createBranch: boolean = false,
 ): Promise<boolean> => {
   try {
-    await tauriInvoke("git_add_worktree", { repoPath, path, branch, createBranch });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_add_worktree", {
+      repoPath: resolvedRepoPath,
+      path,
+      branch,
+      createBranch,
+    });
     return true;
   } catch (error) {
     console.error("Failed to add worktree:", error);
@@ -31,7 +49,8 @@ export const removeWorktree = async (
   force: boolean = false,
 ): Promise<boolean> => {
   try {
-    await tauriInvoke("git_remove_worktree", { repoPath, path, force });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_remove_worktree", { repoPath: resolvedRepoPath, path, force });
     return true;
   } catch (error) {
     console.error("Failed to remove worktree:", error);
@@ -41,7 +60,8 @@ export const removeWorktree = async (
 
 export const pruneWorktrees = async (repoPath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_prune_worktrees", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_prune_worktrees", { repoPath: resolvedRepoPath });
     return true;
   } catch (error) {
     console.error("Failed to prune worktrees:", error);

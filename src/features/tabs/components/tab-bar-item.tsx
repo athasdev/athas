@@ -1,28 +1,28 @@
 import {
-  Pulse as Activity,
-  Database,
-  GitBranch,
-  GitPullRequest,
-  GlobeHemisphereWest as Globe,
-  MagnifyingGlass as Search,
-  ChatCircleText as MessageSquare,
-  Package,
-  PushPin as Pin,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
-  WarningCircle,
-  X,
-} from "@phosphor-icons/react";
+  PulseIcon as Activity,
+  DatabaseIcon as Database,
+  GitBranchIcon as GitBranch,
+  GitPullRequestIcon as GitPullRequest,
+  GlobeHemisphereWestIcon as Globe,
+  MagnifyingGlassIcon as Search,
+  ChatCircleTextIcon as MessageSquare,
+  PackageIcon as Package,
+  PushPinIcon as Pin,
+  SparkleIcon as Sparkles,
+  TerminalWindowIcon as Terminal,
+  WarningCircleIcon as WarningCircle,
+  XIcon as X,
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
-import { Tab } from "@/ui/tabs";
+import { TabBarTab } from "@/ui/tabs";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
-import type { MultiFileDiff } from "@/features/git/types/git-diff-types";
-import type { GitDiff } from "@/features/git/types/git-types";
+import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
+import type { GitDiff } from "@/features/git/types/git.types";
 
 interface TabBarItemProps {
   buffer: PaneContent;
@@ -57,6 +57,15 @@ const TabBarItem = memo(function TabBarItem({
   handleTabPin,
 }: TabBarItemProps) {
   const [faviconError, setFaviconError] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+  const authorAvatarUrl =
+    buffer.type === "pullRequest" || buffer.type === "githubIssue"
+      ? buffer.authorAvatarUrl
+      : undefined;
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [authorAvatarUrl]);
 
   const getDiffIconName = () => {
     if (buffer.type !== "diff") return buffer.name;
@@ -90,14 +99,13 @@ const TabBarItem = memo(function TabBarItem({
       {showDropIndicatorBefore ? (
         <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
       ) : null}
-      <Tab
+      <TabBarTab
         role="tab"
         aria-selected={isActive}
         aria-label={`${buffer.name}${buffer.type === "editor" && buffer.isDirty ? " (unsaved)" : ""}${buffer.isPinned ? " (pinned)" : ""}${buffer.isPreview ? " (preview)" : ""}`}
         tabIndex={isActive ? 0 : -1}
         isActive={isActive}
         isDragged={isDraggedTab}
-        className={cn("h-5 pl-2 pr-6", isActive && "bg-hover/80")}
         onClick={onClick}
         onMouseDown={onMouseDown}
         onDoubleClick={onDoubleClick}
@@ -107,7 +115,7 @@ const TabBarItem = memo(function TabBarItem({
         action={
           <Button
             type="button"
-            compact
+            size="icon-xs"
             variant="ghost"
             onClick={(e) => {
               e.stopPropagation();
@@ -118,8 +126,7 @@ const TabBarItem = memo(function TabBarItem({
               }
             }}
             className={cn(
-              "-translate-y-1/2 absolute top-1/2 right-1 h-4 min-w-4 cursor-pointer select-none rounded-sm px-0 text-text-lighter transition-opacity",
-              "hover:text-text",
+              "-translate-y-1/2 absolute top-1/2 right-1 transition-opacity",
               buffer.isPinned || isActive ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
             )}
             tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
@@ -158,23 +165,25 @@ const TabBarItem = memo(function TabBarItem({
           ) : buffer.type === "database" ? (
             <Database className="text-text-lighter" />
           ) : buffer.type === "pullRequest" ? (
-            buffer.authorAvatarUrl ? (
+            authorAvatarUrl && !avatarError ? (
               <img
-                src={buffer.authorAvatarUrl}
+                src={authorAvatarUrl}
                 alt=""
                 className="size-3 rounded-full object-cover"
                 loading="lazy"
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <GitPullRequest className="text-text-lighter" />
             )
           ) : buffer.type === "githubIssue" ? (
-            buffer.authorAvatarUrl ? (
+            authorAvatarUrl && !avatarError ? (
               <img
-                src={buffer.authorAvatarUrl}
+                src={authorAvatarUrl}
                 alt=""
                 className="size-3 rounded-full object-cover"
                 loading="lazy"
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <MessageSquare className="text-text-lighter" />
@@ -185,18 +194,19 @@ const TabBarItem = memo(function TabBarItem({
             <Search className="text-text-lighter" />
           ) : buffer.type === "diagnostics" ? (
             <WarningCircle className="text-text-lighter" />
+          ) : buffer.type === "references" ? (
+            <Search className="text-text-lighter" />
           ) : (
-            <FileExplorerIcon
+            <ThemedFileIcon
               fileName={getDiffIconName() ?? buffer.name}
               isDir={false}
               className="text-text-lighter"
-              size={12}
             />
           )}
         </div>
         <span
           className={cn(
-            "ui-font ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+            "font-sans ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
             isActive ? "text-text" : "text-text-lighter",
             buffer.isPreview && "italic",
           )}
@@ -212,7 +222,7 @@ const TabBarItem = memo(function TabBarItem({
             aria-label="Unsaved changes"
           />
         )}
-      </Tab>
+      </TabBarTab>
     </div>
   );
 });

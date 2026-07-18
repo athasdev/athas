@@ -41,6 +41,30 @@ impl NodeRuntime {
       Self::download_and_install(managed_root).await
    }
 
+   /// Get Node.js runtime, preferring an existing Athas-managed runtime over
+   /// the user's PATH. This keeps app-launched language servers more stable
+   /// across shells and machines while still avoiding a download when no
+   /// managed runtime has been installed yet.
+   pub async fn get_or_install_managed_first(
+      managed_root: Option<&Path>,
+   ) -> Result<Self, RuntimeError> {
+      if let Some(root) = managed_root {
+         let managed_dir = Self::get_managed_dir(Some(root))?;
+         if let Ok(runtime) = Self::from_managed_path(&managed_dir) {
+            log::info!("Using Athas-managed Node.js at {:?}", runtime.binary_path);
+            return Ok(runtime);
+         }
+      }
+
+      if let Ok(runtime) = Self::detect_system().await {
+         log::info!("Using system Node.js at {:?}", runtime.binary_path);
+         return Ok(runtime);
+      }
+
+      log::info!("No suitable Node.js found, downloading v{}", NODE_VERSION);
+      Self::download_and_install(managed_root).await
+   }
+
    /// Get runtime status without installing
    pub async fn get_status(managed_root: Option<&Path>) -> RuntimeStatus {
       // Check system first

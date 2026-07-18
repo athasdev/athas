@@ -21,6 +21,19 @@ export interface FileSearchResult {
   total_matches: number;
 }
 
+export interface SearchFilesResponse {
+  results: FileSearchResult[];
+  total_files: number;
+  searched_files: number;
+  searchable_files: number;
+  files_with_matches: number;
+  next_file_offset: number;
+  has_more: boolean;
+  is_indexing: boolean;
+  indexed_files: number;
+  regex_fallback_error?: string | null;
+}
+
 export interface SearchFilesRequest {
   root_path: string;
   query: string;
@@ -28,11 +41,14 @@ export interface SearchFilesRequest {
   whole_word?: boolean;
   use_regex?: boolean;
   max_results?: number;
+  file_offset?: number;
   context_lines?: number;
 }
 
-export async function searchFilesContent(request: SearchFilesRequest): Promise<FileSearchResult[]> {
-  return invoke<FileSearchResult[]>("search_files_content", { request });
+export async function searchFilesContent(
+  request: SearchFilesRequest,
+): Promise<SearchFilesResponse> {
+  return invoke<SearchFilesResponse>("search_files_content", { request });
 }
 
 export interface FffSearchHit {
@@ -44,6 +60,18 @@ export interface FffSearchHit {
 
 export async function fffSetWorkspace(basePath: string): Promise<void> {
   return invoke("fff_set_workspace", { basePath });
+}
+
+export interface FffScanStatus {
+  is_scanning: boolean;
+  scanned_files_count: number;
+  indexed_files: number;
+  is_watcher_ready: boolean;
+  is_warmup_complete: boolean;
+}
+
+export async function fffScanStatus(rootPath: string): Promise<FffScanStatus> {
+  return invoke<FffScanStatus>("fff_scan_status", { rootPath });
 }
 
 export async function fffSearchFiles(

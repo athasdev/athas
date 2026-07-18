@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 export interface LintOptions {
   filePath: string;
@@ -31,6 +31,13 @@ export interface LintResult {
  */
 export async function lintContent(options: LintOptions): Promise<LintResult> {
   const { filePath, languageId } = options;
+
+  if (filePath.startsWith("wsl://")) {
+    return {
+      success: true,
+      diagnostics: [],
+    };
+  }
 
   try {
     // Try to get linter by file path first, then by language ID
@@ -114,6 +121,8 @@ export async function lintContent(options: LintOptions): Promise<LintResult> {
  * Check if linting is available for a file
  */
 export function isLintingAvailable(filePath: string, languageId?: string): boolean {
+  if (filePath.startsWith("wsl://")) return false;
+
   const linterConfig = extensionRegistry.getLinterForFile(filePath);
   if (linterConfig) return true;
 

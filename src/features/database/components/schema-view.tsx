@@ -1,19 +1,20 @@
 import {
-  Calendar,
-  FileText,
-  Funnel as Filter,
-  Hash,
-  Key,
-  Link,
-  TextT as Type,
-} from "@phosphor-icons/react";
+  CalendarIcon as Calendar,
+  FileTextIcon as FileText,
+  FunnelIcon as Filter,
+  HashIcon as Hash,
+  KeyIcon as Key,
+  LinkIcon as Link,
+  TextTIcon as Type,
+} from "@/ui/icons";
 import { Button } from "@/ui/button";
 import {
   formatForeignKeyLabel,
   getColumnConstraintLabels,
   mapForeignKeysByColumn,
 } from "../lib/database-schema";
-import type { ColumnInfo, ForeignKeyInfo } from "../models/common.types";
+import type { ColumnInfo, ForeignKeyInfo } from "../types/common.types";
+import { databaseCardClassName } from "./database-surface";
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
   int: { icon: Hash, color: "text-accent" },
@@ -55,12 +56,12 @@ export default function SchemaView({
   const fkMap = mapForeignKeysByColumn(foreignKeys);
 
   return (
-    <div className="flex-1 overflow-auto ui-font">
+    <div className="flex-1 overflow-auto font-sans">
       <div className="px-3 py-3">
         <div className="ui-text-sm text-text">{tableName}</div>
-        <div className="ui-text-xs text-text-lighter">{columns.length} columns</div>
+        <div className="ui-text-sm text-text-lighter">{columns.length} columns</div>
       </div>
-      <div className="mx-3 mb-3 divide-y divide-border/60 rounded-lg border border-border/60 bg-secondary-bg/40">
+      <div className={databaseCardClassName("mx-3 mb-3 divide-y divide-border/60")}>
         {columns.map((column) => {
           const fk = fkMap.get(column.name);
           const constraintLabels = getColumnConstraintLabels(column);
@@ -72,14 +73,14 @@ export default function SchemaView({
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 {getColumnIcon(column.type, column.primary_key, !!fk)}
                 <span className="truncate ui-text-sm text-text">{column.name}</span>
-                <span className="ui-text-xs text-text-lighter">{column.type}</span>
+                <span className="ui-text-sm text-text-lighter">{column.type}</span>
                 {constraintLabels.map((label) => (
-                  <span key={label} className="truncate ui-text-xs text-text-lighter">
+                  <span key={label} className="truncate ui-text-sm text-text-lighter">
                     {label}
                   </span>
                 ))}
                 {fk && (
-                  <span className="truncate ui-text-xs text-accent">
+                  <span className="truncate ui-text-sm text-accent">
                     {formatForeignKeyLabel(fk)}
                   </span>
                 )}
@@ -89,8 +90,9 @@ export default function SchemaView({
                   type="button"
                   variant="ghost"
                   onClick={() => onAddFilter(column.name)}
-                  className="rounded-md text-text-lighter opacity-60 hover:text-text hover:opacity-100"
+                  className="text-text-lighter opacity-60 hover:text-text hover:opacity-100"
                   aria-label={`Filter by ${column.name}`}
+                  size="icon"
                 >
                   <Filter />
                 </Button>

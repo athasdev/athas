@@ -1,4 +1,4 @@
-import type { QueryResult } from "../models/common.types";
+import type { QueryResult } from "../types/common.types";
 
 function normalizePageSize(pageSize: number): number {
   if (!Number.isFinite(pageSize)) return 50;

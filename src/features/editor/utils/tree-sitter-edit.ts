@@ -3,7 +3,7 @@
  * Calculates the Edit object needed for incremental parsing
  */
 
-import type { Edit, Point } from "web-tree-sitter";
+import { Edit, type Point } from "web-tree-sitter";
 
 /**
  * Convert a byte offset to a Point (row, column)
@@ -90,14 +90,14 @@ export function calculateEdit(oldContent: string, newContent: string): Edit | nu
   const oldEndPosition = offsetToPoint(oldContent, oldEndIndex);
   const newEndPosition = offsetToPoint(newContent, newEndIndex);
 
-  return {
+  return new Edit({
     startIndex,
     oldEndIndex,
     newEndIndex,
     startPosition,
     oldEndPosition,
     newEndPosition,
-  };
+  });
 }
 
 /**

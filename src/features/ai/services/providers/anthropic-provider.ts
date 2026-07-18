@@ -81,7 +81,7 @@ export class AnthropicProvider extends AIProvider {
           "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
-          model: "claude-haiku-4-5",
+          model: "claude-sonnet-4-6",
           max_tokens: 1,
           messages: [{ role: "user", content: "hi" }],
         }),

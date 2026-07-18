@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ROOT_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 
 const createMockStorage = () => {
   const storage = new Map<string, string>();
@@ -42,7 +42,7 @@ describe("buffer preview pane integration", () => {
 
   afterEach(async () => {
     usePaneStore.getState().actions.reset();
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     useBufferStore.setState({
       buffers: [],
       activeBufferId: null,
@@ -53,7 +53,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("replaces preview buffers only within the target pane", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -100,7 +100,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("clears pane preview metadata when a preview becomes definite", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -123,7 +123,7 @@ describe("buffer preview pane integration", () => {
   });
 
   it("pins preview buffers as definite pane metadata", async () => {
-    const { useBufferStore } = await import("../stores/buffer-store");
+    const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
     const paneActions = usePaneStore.getState().actions;
 
@@ -143,5 +143,61 @@ describe("buffer preview pane integration", () => {
     expect(buffer?.isPinned).toBe(true);
     expect(pane?.previewBufferId).toBeNull();
     expect(pane?.pinnedBufferIds).toEqual([previewId]);
+  });
+
+  it("opens a new tab placeholder in the active pane", async () => {
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const bufferActions = useBufferStore.getState().actions;
+    const paneActions = usePaneStore.getState().actions;
+
+    const editorId = bufferActions.openContent({
+      type: "editor",
+      path: "/workspace/a.ts",
+      name: "a.ts",
+      content: "",
+    });
+    const newTabId = bufferActions.openContent({ type: "newTab" });
+
+    const newTabBuffer = useBufferStore.getState().buffers.find((buffer) => buffer.id === newTabId);
+    expect(newTabBuffer?.type).toBe("newTab");
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.bufferIds).toEqual([editorId, newTabId]);
+    expect(paneActions.getPaneById(ROOT_PANE_ID)?.activeBufferId).toBe(newTabId);
+    expect(useBufferStore.getState().activeBufferId).toBe(newTabId);
+  });
+
+  it("opens tool buffers as singletons", async () => {
+    const { useBufferStore } = await import("../stores/buffer.store");
+    const bufferActions = useBufferStore.getState().actions;
+
+    const firstSearchId = bufferActions.openGlobalSearchBuffer();
+    const secondSearchId = bufferActions.openGlobalSearchBuffer();
+    const firstReferencesId = bufferActions.openReferencesBuffer();
+    const secondReferencesId = bufferActions.openReferencesBuffer();
+    const diagnosticsId = bufferActions.openDiagnosticsBuffer();
+
+    expect(secondSearchId).toBe(firstSearchId);
+    expect(secondReferencesId).toBe(firstReferencesId);
+    expect(useBufferStore.getState().buffers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: firstSearchId,
+          type: "globalSearch",
+          path: "search://global",
+          name: "Search",
+        }),
+        expect.objectContaining({
+          id: firstReferencesId,
+          type: "references",
+          path: "references://results",
+          name: "References",
+        }),
+        expect.objectContaining({
+          id: diagnosticsId,
+          type: "diagnostics",
+          path: "diagnostics://problems",
+          name: "Diagnostics",
+        }),
+      ]),
+    );
   });
 });

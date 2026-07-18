@@ -1,46 +1,87 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Folder, PushPin, HardDrives as Server, WarningCircle } from "@phosphor-icons/react";
-import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs-store";
+import {
+  ArrowLeftIcon as ArrowLeft,
+  FolderIcon as Folder,
+  PushPinIcon as PushPin,
+  HardDrivesIcon as Server,
+  WarningCircleIcon as WarningCircle,
+} from "@/ui/icons";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
-import { useRecentFoldersStore } from "@/features/file-system/controllers/recent-folders-store";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import type { RecentFolder } from "@/features/file-system/types/recent-folders";
-import ConnectionDialog from "@/features/remote/connection-dialog";
-import PasswordPromptDialog from "@/features/remote/password-prompt-dialog";
+import { IdeSettingsImportContent } from "@/features/file-system/components/ide-settings-import-dialog";
+import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
+import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import ConnectionForm from "@/features/remote/components/connection-form";
+import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
 import {
   connectRemoteConnection,
   loadRemoteConnections,
+  testRemoteConnection,
 } from "@/features/remote/services/remote-connection-actions";
-import type { RemoteConnection, RemoteConnectionFormData } from "@/features/remote/types";
+import type {
+  RemoteConnection,
+  RemoteConnectionFormData,
+} from "@/features/remote/types/remote.types";
+import type { WslDistribution } from "@/features/wsl/controllers/wsl-workspace";
 import { getFriendlyRemoteError, isRemoteAuthFailure } from "@/features/remote/utils/remote-errors";
-import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
   CommandFooter,
+  CommandFooterAction,
   CommandHeader,
+  CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemBadge,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { Button } from "@/ui/button";
+import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import { connectionStore } from "@/features/remote/services/remote-connection-store";
+import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 
 interface ProjectPickerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const createRemoteConnectionFormData = (): RemoteConnectionFormData => ({
+  name: "",
+  host: "",
+  port: 22,
+  username: "",
+  password: "",
+  keyPath: "",
+  type: "ssh",
+  saveCredentials: false,
+});
+
 const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const remoteNameInputRef = useRef<HTMLInputElement>(null);
   const [connections, setConnections] = useState<RemoteConnection[]>([]);
+  const [wslDistributions, setWslDistributions] = useState<WslDistribution[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [editingConnection, setEditingConnection] = useState<RemoteConnection | null>(null);
+  const [commandStep, setCommandStep] = useState<"picker" | "addRemote" | "importSettings">(
+    "picker",
+  );
+  const [remoteFormData, setRemoteFormData] = useState<RemoteConnectionFormData>(
+    createRemoteConnectionFormData,
+  );
+  const [showRemotePassword, setShowRemotePassword] = useState(false);
+  const [remoteValidationStatus, setRemoteValidationStatus] = useState<
+    "idle" | "valid" | "invalid"
+  >("idle");
+  const [remoteErrorMessage, setRemoteErrorMessage] = useState("");
+  const [isRemoteSaving, setIsRemoteSaving] = useState(false);
+  const [isRemoteTesting, setIsRemoteTesting] = useState(false);
+  const [remoteTestStatus, setRemoteTestStatus] = useState<"idle" | "success" | "error">("idle");
+  const [remoteTestMessage, setRemoteTestMessage] = useState("");
   const [passwordPromptConnection, setPasswordPromptConnection] = useState<RemoteConnection | null>(
     null,
   );
@@ -48,8 +89,9 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const [statusMap, setStatusMap] = useState<Record<string, "idle" | "error">>({});
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
-  const { openRecentFolder } = useRecentFoldersStore();
-  const { handleOpenFolder } = useFileSystemStore();
+  const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const handleOpenWslProject = useFileSystemStore((state) => state.handleOpenWslProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
 
   // Load connections
@@ -61,14 +103,43 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     }
   }, []);
 
+  const loadWslDistributions = useCallback(async () => {
+    try {
+      setWslDistributions(await invoke<WslDistribution[]>("wsl_list_distributions"));
+    } catch {
+      setWslDistributions([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       setQuery("");
       setSelectedIndex(0);
+      setCommandStep("picker");
+      setRemoteFormData(createRemoteConnectionFormData());
+      setShowRemotePassword(false);
+      setRemoteValidationStatus("idle");
+      setRemoteErrorMessage("");
+      setRemoteTestStatus("idle");
+      setRemoteTestMessage("");
       loadConnections();
+      loadWslDistributions();
       window.setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [isOpen, loadConnections]);
+  }, [isOpen, loadConnections, loadWslDistributions]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (commandStep === "picker") {
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+      return;
+    }
+
+    if (commandStep === "addRemote") {
+      window.setTimeout(() => remoteNameInputRef.current?.focus(), 0);
+    }
+  }, [commandStep, isOpen]);
 
   // Listen for connection status changes
   useEffect(() => {
@@ -98,12 +169,26 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   };
 
   const handleImportSettingsClick = () => {
-    setIsImportDialogOpen(true);
+    setCommandStep("importSettings");
+  };
+
+  const resetRemoteForm = () => {
+    setRemoteFormData(createRemoteConnectionFormData());
+    setShowRemotePassword(false);
+    setRemoteValidationStatus("idle");
+    setRemoteErrorMessage("");
+    setRemoteTestStatus("idle");
+    setRemoteTestMessage("");
   };
 
   const handleAddRemoteConnectionClick = () => {
-    setEditingConnection(null);
-    setIsConnectionDialogOpen(true);
+    resetRemoteForm();
+    setCommandStep("addRemote");
+  };
+
+  const handleBackToPicker = () => {
+    resetRemoteForm();
+    setCommandStep("picker");
   };
 
   const handleRecentFolderClick = async (folder: RecentFolder) => {
@@ -143,20 +228,92 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     }
   };
 
-  const handleSaveConnection = async (formData: RemoteConnectionFormData): Promise<boolean> => {
+  const handleOpenWslDistribution = useCallback(
+    async (distribution: WslDistribution) => {
+      try {
+        const home = await invoke<string>("wsl_get_home_dir", { distro: distribution.name }).catch(
+          () => "/",
+        );
+        const selectedPath = await showPromptDialog("Linux project path", {
+          title: `Open ${distribution.name}`,
+          defaultValue: home,
+          placeholder: "/home/me/project",
+          confirmLabel: "Open",
+        });
+        if (!selectedPath) return;
+
+        onClose();
+        await handleOpenWslProject(distribution.name, selectedPath);
+      } catch (error) {
+        console.error("Failed to open WSL project:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to open WSL project.");
+      }
+    },
+    [handleOpenWslProject, onClose],
+  );
+
+  const updateRemoteFormData = (updates: Partial<RemoteConnectionFormData>) => {
+    setRemoteFormData((prev) => ({ ...prev, ...updates }));
+    setRemoteValidationStatus("idle");
+    setRemoteErrorMessage("");
+    setRemoteTestStatus("idle");
+    setRemoteTestMessage("");
+  };
+
+  const isRemoteFormValid =
+    remoteFormData.name.trim() && remoteFormData.host.trim() && remoteFormData.username.trim();
+
+  const handleTestRemoteConnection = async () => {
+    if (!remoteFormData.host.trim() || !remoteFormData.username.trim()) {
+      setRemoteTestStatus("error");
+      setRemoteTestMessage("Host and username are required to test.");
+      return;
+    }
+
+    setIsRemoteTesting(true);
+    setRemoteTestStatus("idle");
+    setRemoteTestMessage("");
+
     try {
-      const connectionId = editingConnection?.id || `conn-${Date.now()}`;
+      await testRemoteConnection(remoteFormData);
+      setRemoteTestStatus("success");
+      setRemoteTestMessage("Connection successful.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setRemoteTestStatus("error");
+      setRemoteTestMessage(message || "Connection failed.");
+    } finally {
+      setIsRemoteTesting(false);
+    }
+  };
+
+  const handleSaveRemoteConnection = async () => {
+    if (!isRemoteFormValid) {
+      setRemoteErrorMessage("Please fill in all required fields");
+      setRemoteValidationStatus("invalid");
+      return;
+    }
+
+    setIsRemoteSaving(true);
+    setRemoteValidationStatus("idle");
+    setRemoteErrorMessage("");
+
+    try {
       await connectionStore.saveConnection({
-        id: connectionId,
-        ...formData,
+        id: `conn-${Date.now()}`,
+        ...remoteFormData,
       });
       await loadConnections();
-      setIsConnectionDialogOpen(false);
-      setEditingConnection(null);
-      return true;
+      setRemoteValidationStatus("valid");
+      window.setTimeout(() => {
+        handleBackToPicker();
+      }, 600);
     } catch (error) {
       console.error("Failed to save connection:", error);
-      return false;
+      setRemoteValidationStatus("invalid");
+      setRemoteErrorMessage("Failed to save connection. Please try again.");
+    } finally {
+      setIsRemoteSaving(false);
     }
   };
 
@@ -177,6 +334,15 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     );
   }, [connections, normalizedQuery]);
 
+  const filteredWslDistributions = useMemo(() => {
+    if (!normalizedQuery) return wslDistributions;
+    return wslDistributions.filter((distribution) =>
+      ["wsl", distribution.name, distribution.state ?? "", String(distribution.version ?? "")].some(
+        (value) => value.toLowerCase().includes(normalizedQuery),
+      ),
+    );
+  }, [normalizedQuery, wslDistributions]);
+
   const commandEntries = useMemo(
     () => [
       ...filteredRecentFolders.map((folder) => ({
@@ -187,8 +353,17 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
         id: `remote:${connection.id}`,
         onSelect: () => void handleConnect(connection.id),
       })),
+      ...filteredWslDistributions.map((distribution) => ({
+        id: `wsl:${distribution.name}`,
+        onSelect: () => void handleOpenWslDistribution(distribution),
+      })),
     ],
-    [filteredConnections, filteredRecentFolders],
+    [
+      filteredConnections,
+      filteredRecentFolders,
+      filteredWslDistributions,
+      handleOpenWslDistribution,
+    ],
   );
 
   useEffect(() => {
@@ -216,146 +391,240 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
 
   return (
     <>
-      <Command isVisible={isOpen} onClose={onClose} title="Open Project">
-        <CommandHeader onClose={onClose}>
-          <CommandInput
-            ref={inputRef}
-            value={query}
-            onChange={setQuery}
-            onKeyDown={handleCommandKeyDown}
-            placeholder="Open project or remote connection"
-          />
-        </CommandHeader>
-        <CommandList>
-          {filteredRecentFolders.length > 0 ? (
-            <div className="p-0">
-              {filteredRecentFolders.map((folder) => {
-                const matchingTab = projectTabs.find((t) => t.path === folder.path);
-                const iconPath = folder.customIcon ?? matchingTab?.customIcon;
-                const entryIndex = getEntryIndex(`recent:${folder.path}`);
-
-                return (
-                  <CommandItem
-                    key={folder.path}
-                    isSelected={selectedIndex === entryIndex}
-                    onMouseEnter={() => setSelectedIndex(entryIndex)}
-                    onClick={() => handleRecentFolderClick(folder)}
-                    className={cn("px-3 py-1.5", folder.missing && "text-text-lighter")}
-                  >
-                    {iconPath ? (
-                      <img
-                        src={convertFileSrc(iconPath)}
-                        alt=""
-                        className="shrink-0 rounded-sm object-contain"
-                        style={{
-                          width: "var(--app-ui-font-size)",
-                          height: "var(--app-ui-font-size)",
-                        }}
-                      />
-                    ) : folder.missing ? (
-                      <WarningCircle className="shrink-0 text-warning" />
-                    ) : (
-                      <Folder className="shrink-0 text-text-lighter" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-xs">
-                        <span className="text-text">{folder.name}</span>
-                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
-                          {folder.path}
-                        </span>
-                      </div>
-                    </div>
-                    {folder.pinned ? (
-                      <PushPin className="shrink-0 fill-current text-accent" />
-                    ) : null}
-                    {folder.missing ? (
-                      <span className="shrink-0 rounded bg-warning/10 px-1 py-0.5 font-medium ui-text-xs text-warning">
-                        Missing
-                      </span>
-                    ) : null}
-                  </CommandItem>
-                );
-              })}
+      <Command
+        isVisible={isOpen}
+        onClose={onClose}
+        title={
+          commandStep === "addRemote"
+            ? "New Remote Connection"
+            : commandStep === "importSettings"
+              ? "Import Settings"
+              : "Open Project"
+        }
+        autoFocus={commandStep === "picker"}
+      >
+        {commandStep === "importSettings" ? (
+          <IdeSettingsImportContent onClose={onClose} onBack={handleBackToPicker} />
+        ) : commandStep === "picker" ? (
+          <CommandHeader onClose={onClose}>
+            <CommandInput
+              ref={inputRef}
+              value={query}
+              onChange={setQuery}
+              onKeyDown={handleCommandKeyDown}
+              placeholder="Open project or remote connection"
+            />
+          </CommandHeader>
+        ) : (
+          <CommandHeader onClose={onClose}>
+            <CommandHeaderAction aria-label="Back to projects" onClick={handleBackToPicker}>
+              <ArrowLeft />
+            </CommandHeaderAction>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Server className="shrink-0 text-text-lighter" />
+              <span className="min-w-0 truncate font-sans ui-text-base font-medium text-text">
+                New Remote Connection
+              </span>
             </div>
-          ) : null}
+          </CommandHeader>
+        )}
 
-          {filteredConnections.length > 0 ? (
-            <div className="p-0">
-              {filteredConnections.map((connection) => {
-                const entryIndex = getEntryIndex(`remote:${connection.id}`);
+        {commandStep === "importSettings" ? null : commandStep === "picker" ? (
+          <CommandList>
+            {filteredRecentFolders.length > 0 ? (
+              <div className="p-0">
+                {filteredRecentFolders.map((folder) => {
+                  const matchingTab = projectTabs.find((t) => t.path === folder.path);
+                  const iconPath = folder.customIcon ?? matchingTab?.customIcon;
+                  const entryIndex = getEntryIndex(`recent:${folder.path}`);
 
-                return (
-                  <CommandItem
-                    key={connection.id}
-                    isSelected={selectedIndex === entryIndex}
-                    onMouseEnter={() => setSelectedIndex(entryIndex)}
-                    onClick={() => handleConnect(connection.id)}
-                    className={cn(
-                      "px-3 py-1.5",
-                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
-                    )}
-                    disabled={!!connectingMap[connection.id]}
-                  >
-                    <Server className="shrink-0 text-text-lighter" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate ui-text-xs">
-                        <span className="text-text">{connection.name}</span>
-                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
-                          {connection.type.toUpperCase()}
-                        </span>
-                        <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">
-                          {connectingMap[connection.id]
-                            ? "Connecting..."
-                            : statusMap[connection.id] === "error"
-                              ? "Connection failed"
-                              : `${connection.username}@${connection.host}`}
-                        </span>
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "size-2 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-green-500" : "bg-text-lighter/40",
-                      )}
+                  return (
+                    <CommandItemRow
+                      key={folder.path}
+                      isSelected={selectedIndex === entryIndex}
+                      onMouseEnter={() => setSelectedIndex(entryIndex)}
+                      onClick={() => handleRecentFolderClick(folder)}
+                      className={folder.missing ? "text-text-lighter" : undefined}
+                      icon={
+                        iconPath ? (
+                          <img
+                            src={convertFileSrc(iconPath)}
+                            alt=""
+                            className="size-(--app-ui-font-size) rounded-sm object-contain"
+                          />
+                        ) : folder.missing ? (
+                          <WarningCircle className="text-warning" />
+                        ) : (
+                          <Folder className="text-text-lighter" />
+                        )
+                      }
+                      title={folder.name}
+                      description={folder.path}
+                      accessory={
+                        <>
+                          {folder.pinned ? <PushPin className="fill-current text-accent" /> : null}
+                          {folder.missing ? <CommandItemBadge>Missing</CommandItemBadge> : null}
+                        </>
+                      }
                     />
-                    <span className="sr-only">
-                      {connection.isConnected ? "Connected" : "Disconnected"}
-                    </span>
-                  </CommandItem>
-                );
-              })}
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {filteredConnections.length > 0 ? (
+              <div className="p-0">
+                {filteredConnections.map((connection) => {
+                  const entryIndex = getEntryIndex(`remote:${connection.id}`);
+
+                  return (
+                    <CommandItemRow
+                      key={connection.id}
+                      isSelected={selectedIndex === entryIndex}
+                      onMouseEnter={() => setSelectedIndex(entryIndex)}
+                      onClick={() => handleConnect(connection.id)}
+                      className={
+                        connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : undefined
+                      }
+                      disabled={!!connectingMap[connection.id]}
+                      icon={<Server className="text-text-lighter" />}
+                      title={connection.name}
+                      description={
+                        <>
+                          <span>{connection.type.toUpperCase()}</span>
+                          <span>
+                            {connectingMap[connection.id]
+                              ? "Connecting..."
+                              : statusMap[connection.id] === "error"
+                                ? "Connection failed"
+                                : `${connection.username}@${connection.host}`}
+                          </span>
+                        </>
+                      }
+                      accessory={
+                        <>
+                          <span
+                            className={cn(
+                              "size-2 rounded-full",
+                              connection.isConnected ? "bg-success" : "bg-text-lighter/40",
+                            )}
+                          />
+                          <span className="sr-only">
+                            {connection.isConnected ? "Connected" : "Disconnected"}
+                          </span>
+                        </>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {filteredWslDistributions.length > 0 ? (
+              <div className="p-0">
+                {filteredWslDistributions.map((distribution) => {
+                  const entryIndex = getEntryIndex(`wsl:${distribution.name}`);
+
+                  return (
+                    <CommandItemRow
+                      key={distribution.name}
+                      isSelected={selectedIndex === entryIndex}
+                      onMouseEnter={() => setSelectedIndex(entryIndex)}
+                      onClick={() => handleOpenWslDistribution(distribution)}
+                      icon={<Server className="text-text-lighter" />}
+                      title={distribution.name}
+                      description={
+                        <>
+                          <span>WSL</span>
+                          <span>
+                            {distribution.state ?? "Installed"}
+                            {distribution.version ? `, WSL ${distribution.version}` : ""}
+                          </span>
+                        </>
+                      }
+                      accessory={
+                        distribution.is_default ? (
+                          <CommandItemBadge>Default</CommandItemBadge>
+                        ) : null
+                      }
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {filteredRecentFolders.length === 0 &&
+            filteredConnections.length === 0 &&
+            filteredWslDistributions.length === 0 ? (
+              <CommandEmpty>
+                {normalizedQuery ? `No projects match "${query}".` : "No recent projects"}
+              </CommandEmpty>
+            ) : null}
+          </CommandList>
+        ) : (
+          <CommandList className="p-4">
+            <ConnectionForm
+              formId="project-picker-add-remote-form"
+              idPrefix="project-picker-remote"
+              formData={remoteFormData}
+              onChange={updateRemoteFormData}
+              showPassword={showRemotePassword}
+              onShowPasswordChange={setShowRemotePassword}
+              validationStatus={remoteValidationStatus}
+              errorMessage={remoteErrorMessage}
+              testStatus={remoteTestStatus}
+              testMessage={remoteTestMessage}
+              disabled={isRemoteSaving}
+              intro="Connect to remote servers via SSH or SFTP."
+              nameInputRef={remoteNameInputRef}
+              onSubmit={() => void handleSaveRemoteConnection()}
+            />
+          </CommandList>
+        )}
+
+        {commandStep === "importSettings" ? null : commandStep === "picker" ? (
+          <CommandFooter>
+            <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
+              Open Folder
+            </CommandFooterAction>
+            <CommandFooterAction onClick={handleImportSettingsClick}>
+              Import Settings
+            </CommandFooterAction>
+            <CommandFooterAction onClick={handleAddRemoteConnectionClick}>
+              Add Remote
+            </CommandFooterAction>
+          </CommandFooter>
+        ) : (
+          <CommandFooter>
+            <div className="flex w-full justify-end gap-2">
+              <Button type="button" onClick={handleBackToPicker} variant="ghost" size="xs">
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleTestRemoteConnection()}
+                variant="ghost"
+                size="xs"
+                disabled={isRemoteTesting}
+              >
+                {isRemoteTesting ? (
+                  <LoadingIndicator label="Testing" showLabel compact />
+                ) : (
+                  "Test Connection"
+                )}
+              </Button>
+              <Button
+                type="submit"
+                form="project-picker-add-remote-form"
+                disabled={!isRemoteFormValid || isRemoteSaving}
+                size="xs"
+              >
+                {isRemoteSaving ? "Saving..." : "Save Connection"}
+              </Button>
             </div>
-          ) : null}
-
-          {filteredRecentFolders.length === 0 && filteredConnections.length === 0 ? (
-            <CommandEmpty>
-              {normalizedQuery ? `No projects match "${query}".` : "No recent projects"}
-            </CommandEmpty>
-          ) : null}
-        </CommandList>
-        <CommandFooter>
-          <Button variant="ghost" compact onClick={() => void handleOpenFolderClick()}>
-            Open Folder
-          </Button>
-          <Button variant="ghost" compact onClick={handleImportSettingsClick}>
-            Import Settings
-          </Button>
-          <Button variant="ghost" compact onClick={handleAddRemoteConnectionClick}>
-            Add Remote
-          </Button>
-        </CommandFooter>
+          </CommandFooter>
+        )}
       </Command>
-
-      {/* Connection Dialog */}
-      <ConnectionDialog
-        isOpen={isConnectionDialogOpen}
-        onClose={() => {
-          setIsConnectionDialogOpen(false);
-          setEditingConnection(null);
-        }}
-        onSave={handleSaveConnection}
-        editingConnection={editingConnection}
-      />
 
       {/* Password Prompt Dialog */}
       <PasswordPromptDialog
@@ -364,10 +633,6 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
         onClose={() => setPasswordPromptConnection(null)}
         onConnect={handleConnect}
       />
-
-      {isImportDialogOpen && (
-        <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />
-      )}
     </>
   );
 });

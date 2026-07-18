@@ -1,7 +1,7 @@
-import type { EditorContent } from "@/features/panes/types/pane-content";
-import type { PersistedEditorViewState } from "../types/editor-session";
-import { useFoldStore } from "./fold-store";
-import { useEditorStateStore, type EditorViewState } from "./state-store";
+import type { EditorContent } from "@/features/panes/types/pane-content.types";
+import type { PersistedEditorViewState } from "../types/editor-session.types";
+import { useFoldStore } from "./fold.store";
+import { useEditorStateStore, type EditorViewState } from "./state.store";
 
 const hasPersistedEditorViewState = (state: PersistedEditorViewState) =>
   !!state.cursor ||

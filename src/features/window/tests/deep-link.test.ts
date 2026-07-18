@@ -39,15 +39,27 @@ describe("parseDeepLinkAction", () => {
   });
 
   it("maps settings URLs to settings dialog actions", () => {
-    expect(parseDeepLinkAction("athas://settings?tab=extensions&category=agent")).toEqual({
+    expect(parseDeepLinkAction("athas://settings?tab=features")).toEqual({
       type: "settings",
-      tab: "extensions",
+      tab: "advanced",
+      extensionsCategory: undefined,
+    });
+
+    expect(parseDeepLinkAction("athas://settings?tab=advanced")).toEqual({
+      type: "settings",
+      tab: "advanced",
+      extensionsCategory: undefined,
+    });
+  });
+
+  it("maps legacy extension settings URLs to the extensions tab", () => {
+    expect(parseDeepLinkAction("athas://settings?tab=extensions&category=agent")).toEqual({
+      type: "extensions",
       extensionsCategory: "agent",
     });
 
     expect(parseDeepLinkAction("athas://open?type=settings&tab=extensions")).toEqual({
-      type: "settings",
-      tab: "extensions",
+      type: "extensions",
       extensionsCategory: undefined,
     });
   });

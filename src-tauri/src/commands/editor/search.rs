@@ -1,11 +1,7 @@
 use crate::{app_runtime::AppHandle, commands::fuzzy::FffSearchState};
 use athas_fff_search::{GrepMode, GrepSearchOptions, parse_grep_query};
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, Instant};
 use tauri::State;
-
-const INITIAL_SCAN_WAIT_TIMEOUT: Duration = Duration::from_millis(1500);
-const INITIAL_SCAN_WAIT_INTERVAL: Duration = Duration::from_millis(25);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SearchMatchRange {
@@ -32,6 +28,20 @@ pub struct FileSearchResult {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SearchFilesResponse {
+   pub results: Vec<FileSearchResult>,
+   pub total_files: usize,
+   pub searched_files: usize,
+   pub searchable_files: usize,
+   pub files_with_matches: usize,
+   pub next_file_offset: usize,
+   pub has_more: bool,
+   pub is_indexing: bool,
+   pub indexed_files: usize,
+   pub regex_fallback_error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SearchFilesRequest {
    pub root_path: String,
    pub query: String,
@@ -39,6 +49,7 @@ pub struct SearchFilesRequest {
    pub whole_word: Option<bool>,
    pub use_regex: Option<bool>,
    pub max_results: Option<usize>,
+   pub file_offset: Option<usize>,
    pub context_lines: Option<usize>,
 }
 
@@ -75,7 +86,25 @@ fn build_fff_grep_pattern(request: &SearchFilesRequest) -> (String, GrepMode) {
 }
 
 fn should_skip_fff_path(path: &str) -> bool {
-   path.starts_with("remote://") || path.starts_with("diff://") || path.trim().is_empty()
+   path.starts_with("remote://")
+      || path.starts_with("wsl://")
+      || path.starts_with("diff://")
+      || path.trim().is_empty()
+}
+
+fn empty_search_response(is_indexing: bool, indexed_files: usize) -> SearchFilesResponse {
+   SearchFilesResponse {
+      results: Vec::new(),
+      total_files: indexed_files,
+      searched_files: 0,
+      searchable_files: 0,
+      files_with_matches: 0,
+      next_file_offset: 0,
+      has_more: false,
+      is_indexing,
+      indexed_files,
+      regex_fallback_error: None,
+   }
 }
 
 fn byte_offset_to_char_offset(text: &str, byte_offset: usize) -> usize {
@@ -100,42 +129,30 @@ pub fn search_files_content(
    app: AppHandle,
    state: State<'_, FffSearchState>,
    request: SearchFilesRequest,
-) -> Result<Vec<FileSearchResult>, String> {
+) -> Result<SearchFilesResponse, String> {
    if request.query.trim().is_empty() || should_skip_fff_path(&request.root_path) {
-      return Ok(Vec::new());
+      return Ok(empty_search_response(false, 0));
    }
 
+   let _operation_guard = state.lock_operation()?;
    state.ensure_workspace(&app, std::path::Path::new(&request.root_path))?;
    let fff = state.get_or_init(&app)?;
-   let wait_started = Instant::now();
-
-   while wait_started.elapsed() < INITIAL_SCAN_WAIT_TIMEOUT {
-      let is_scanning = {
-         let picker_guard = fff
-            .picker
-            .read()
-            .map_err(|e| format!("fff picker read: {e}"))?;
-
-         picker_guard
-            .as_ref()
-            .map(|picker| picker.get_scan_progress().is_scanning)
-            .unwrap_or(false)
-      };
-
-      if !is_scanning {
-         break;
-      }
-
-      std::thread::sleep(INITIAL_SCAN_WAIT_INTERVAL);
-   }
 
    let picker_guard = fff
       .picker
       .read()
       .map_err(|e| format!("fff picker read: {e}"))?;
    let Some(picker) = picker_guard.as_ref() else {
-      return Ok(Vec::new());
+      return Ok(empty_search_response(false, 0));
    };
+
+   let scan_progress = picker.get_scan_progress();
+   if scan_progress.is_scanning {
+      return Ok(empty_search_response(
+         true,
+         scan_progress.scanned_files_count,
+      ));
+   }
 
    let (pattern, mode) = build_fff_grep_pattern(&request);
    let parsed_query = parse_grep_query(&pattern);
@@ -143,13 +160,13 @@ pub fn search_files_content(
    let grep_result = picker.grep(
       &parsed_query,
       &GrepSearchOptions {
-         max_file_size: 1_000_000,
-         max_matches_per_file: 50,
+         max_file_size: u64::MAX,
+         max_matches_per_file: usize::MAX,
          smart_case: false,
-         file_offset: 0,
+         file_offset: request.file_offset.unwrap_or(0),
          page_limit: request.max_results.unwrap_or(100).max(1),
          mode,
-         time_budget_ms: 250,
+         time_budget_ms: 120,
          before_context: context_lines,
          after_context: context_lines,
          classify_definitions: false,
@@ -210,5 +227,66 @@ pub fn search_files_content(
       grouped.total_matches += 1;
    }
 
-   Ok(grouped_results)
+   Ok(SearchFilesResponse {
+      results: grouped_results,
+      total_files: grep_result.total_files,
+      searched_files: grep_result.total_files_searched,
+      searchable_files: grep_result.filtered_file_count,
+      files_with_matches: grep_result.files_with_matches,
+      next_file_offset: grep_result.next_file_offset,
+      has_more: grep_result.next_file_offset > 0,
+      is_indexing: false,
+      indexed_files: grep_result.total_files,
+      regex_fallback_error: grep_result.regex_fallback_error,
+   })
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   fn request(query: &str) -> SearchFilesRequest {
+      SearchFilesRequest {
+         root_path: "/project".to_string(),
+         query: query.to_string(),
+         case_sensitive: Some(true),
+         whole_word: Some(false),
+         use_regex: Some(false),
+         max_results: None,
+         file_offset: None,
+         context_lines: None,
+      }
+   }
+
+   #[test]
+   fn keeps_case_sensitive_literals_on_the_plain_text_path() {
+      let (pattern, mode) = build_fff_grep_pattern(&request("needle"));
+
+      assert_eq!(pattern, "needle");
+      assert!(matches!(mode, GrepMode::PlainText));
+   }
+
+   #[test]
+   fn escapes_literals_before_adding_case_insensitive_regex_flags() {
+      let mut search_request = request("value.*");
+      search_request.case_sensitive = Some(false);
+      let (pattern, mode) = build_fff_grep_pattern(&search_request);
+
+      assert_eq!(pattern, r"(?i:value\.\*)");
+      assert!(matches!(mode, GrepMode::Regex));
+   }
+
+   #[test]
+   fn converts_utf8_byte_ranges_to_character_ranges() {
+      assert_eq!(byte_range_to_char_range("aé日z", 1, 6), (1, 3));
+   }
+
+   #[test]
+   fn rejects_virtual_and_empty_search_roots() {
+      assert!(should_skip_fff_path("remote://host/project"));
+      assert!(should_skip_fff_path("wsl://Ubuntu/project"));
+      assert!(should_skip_fff_path("diff://change"));
+      assert!(should_skip_fff_path("  "));
+      assert!(!should_skip_fff_path("/project"));
+   }
 }

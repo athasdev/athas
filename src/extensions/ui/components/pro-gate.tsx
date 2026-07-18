@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Lock } from "@phosphor-icons/react";
+import { LockIcon as Lock } from "@/ui/icons";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { ProBadge } from "./pro-badge";
 
@@ -9,9 +9,9 @@ interface ProGateProps {
 }
 
 export function ProGate({ children, fallback }: ProGateProps) {
-  const { isPro } = useProFeature();
+  const { hasHostedAi } = useProFeature();
 
-  if (isPro) {
+  if (hasHostedAi) {
     return <>{children}</>;
   }
 
@@ -29,7 +29,7 @@ export function ProGate({ children, fallback }: ProGateProps) {
           <p className="font-medium ui-text-sm text-text">Pro Feature</p>
           <ProBadge />
         </div>
-        <p className="mt-1 text-text-lighter ui-text-xs">Upgrade to Pro to unlock this feature.</p>
+        <p className="mt-1 text-text-lighter ui-text-sm">Upgrade to Pro to unlock this feature.</p>
       </div>
     </div>
   );

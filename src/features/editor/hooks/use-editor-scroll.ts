@@ -1,5 +1,6 @@
 import { type RefObject, useCallback, useEffect, useRef } from "react";
-import { useEditorStateStore } from "../stores/state-store";
+import { useEditorStateStore } from "../stores/state.store";
+import { applyEditorScrollTransform, type ScrollLayerRef } from "../utils/scroll-layers";
 import { scrollLogger } from "../utils/scroll-logger";
 
 const SCROLL_STATE_UPDATE_INTERVAL_MS = 33;
@@ -11,16 +12,7 @@ interface UseEditorScrollOptions {
   minimapEnabled: boolean;
   lockVerticalScroll?: boolean;
   switchGuardRef: RefObject<number>;
-  highlightRef: RefObject<HTMLDivElement | null>;
-  primaryCursorRef: RefObject<HTMLDivElement | null>;
-  multiCursorRef: RefObject<HTMLDivElement | null>;
-  searchHighlightRef: RefObject<HTMLDivElement | null>;
-  selectionLayerRef: RefObject<HTMLDivElement | null>;
-  vimCursorRef: RefObject<HTMLDivElement | null>;
-  autocompleteCompletionRef: RefObject<HTMLDivElement | null>;
-  inlineEditOverlayRef: RefObject<HTMLDivElement | null>;
-  gitBlameRef: RefObject<HTMLDivElement | null>;
-  inlineDiffRef: RefObject<HTMLDivElement | null>;
+  scrollLayerRefs: readonly ScrollLayerRef[];
   setEditorScrollTop: (top: number) => void;
   handleViewportScroll: (scrollTop: number, totalLines: number) => void;
 }
@@ -32,16 +24,7 @@ export function useEditorScroll({
   minimapEnabled,
   lockVerticalScroll = false,
   switchGuardRef,
-  highlightRef,
-  primaryCursorRef,
-  multiCursorRef,
-  searchHighlightRef,
-  selectionLayerRef,
-  vimCursorRef,
-  autocompleteCompletionRef,
-  inlineEditOverlayRef,
-  gitBlameRef,
-  inlineDiffRef,
+  scrollLayerRefs,
   setEditorScrollTop,
   handleViewportScroll,
 }: UseEditorScrollOptions) {
@@ -52,7 +35,7 @@ export function useEditorScroll({
   const lastStoreScrollUpdateRef = useRef(0);
 
   const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLTextAreaElement>) => {
+    (e: React.UIEvent<HTMLElement>) => {
       if (lockVerticalScroll && e.currentTarget.scrollTop !== 0) {
         e.currentTarget.scrollTop = 0;
       }
@@ -75,37 +58,7 @@ export function useEditorScroll({
       }
 
       scrollLogger.log(scrollTop, scrollLeft, "editor-scroll");
-
-      if (highlightRef.current) {
-        highlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (primaryCursorRef.current) {
-        primaryCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (multiCursorRef.current) {
-        multiCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (searchHighlightRef.current) {
-        searchHighlightRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (selectionLayerRef.current) {
-        selectionLayerRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (vimCursorRef.current) {
-        vimCursorRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (autocompleteCompletionRef.current) {
-        autocompleteCompletionRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (inlineEditOverlayRef.current) {
-        inlineEditOverlayRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (gitBlameRef.current) {
-        gitBlameRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
-      if (inlineDiffRef.current) {
-        inlineDiffRef.current.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
-      }
+      applyEditorScrollTransform(scrollLayerRefs, scrollLeft, scrollTop);
 
       if (scrollRafRef.current === null) {
         scrollRafRef.current = requestAnimationFrame(() => {
@@ -138,6 +91,7 @@ export function useEditorScroll({
       scrollTimeoutRef.current = setTimeout(() => {
         isScrollingRef.current = false;
         const { top, left } = lastScrollRef.current;
+        handleViewportScroll(top, linesCount);
         useEditorStateStore
           .getState()
           .actions.setScrollForBuffer(viewStateKey ?? currentBufferId, top, left);
@@ -152,16 +106,7 @@ export function useEditorScroll({
       minimapEnabled,
       lockVerticalScroll,
       switchGuardRef,
-      highlightRef,
-      primaryCursorRef,
-      multiCursorRef,
-      searchHighlightRef,
-      selectionLayerRef,
-      vimCursorRef,
-      autocompleteCompletionRef,
-      inlineEditOverlayRef,
-      gitBlameRef,
-      inlineDiffRef,
+      scrollLayerRefs,
       setEditorScrollTop,
     ],
   );

@@ -1,4 +1,4 @@
-import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders";
+import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders.types";
 
 export const MAX_RECENT_PROJECTS = 12;
 
@@ -39,6 +39,22 @@ export function limitRecentFolders(folders: RecentFolder[]) {
   const unpinned = sorted.filter((folder) => !folder.pinned).slice(0, MAX_RECENT_PROJECTS);
 
   return [...pinned, ...unpinned];
+}
+
+export function uniqueRecentFolderImports<T extends { path: string }>(folders: T[]) {
+  const seenPaths = new Set<string>();
+  const uniqueFolders: T[] = [];
+
+  for (const folder of folders) {
+    if (seenPaths.has(folder.path)) {
+      continue;
+    }
+
+    seenPaths.add(folder.path);
+    uniqueFolders.push(folder);
+  }
+
+  return uniqueFolders;
 }
 
 export function upsertRecentFolder(

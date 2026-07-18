@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
-import { FadersHorizontal } from "@phosphor-icons/react";
-import { useAIChatStore } from "@/features/ai/store/store";
-import type { ChatMode } from "@/features/ai/store/types";
+import { FadersHorizontalIcon as FadersHorizontal } from "@/ui/icons";
+import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { ChatMode } from "@/features/ai/types/ai-chat-store.types";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import {
@@ -17,7 +17,7 @@ interface ModeSelectorProps {
 }
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
-  { id: "chat", label: "Chat" },
+  { id: "chat", label: "Ask" },
   { id: "plan", label: "Plan" },
 ];
 
@@ -82,7 +82,7 @@ export const ModeSelector = memo(function ModeSelector({
         setMode(value as ChatMode);
       }}
       disabled={isSelectorDisabled}
-      size="xs"
+      size="sm"
       openDirection="up"
       variant="ghost"
       open={open}
@@ -95,10 +95,11 @@ export const ModeSelector = memo(function ModeSelector({
           : chatComposerControlClassName("w-fit max-w-[108px]")
       }
       menuClassName="!min-w-0 w-max max-w-[160px]"
+      menuAnimated={false}
       hideChevron
       iconOnly={iconOnly}
-      tooltip="Select chat mode"
-      aria-label="Select chat mode"
+      tooltip="Select agent mode"
+      aria-label="Select agent mode"
     />
   );
 });

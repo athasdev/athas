@@ -1,4 +1,11 @@
-import { ArrowLeft, ArrowRight, Columns, Lock, Rows, X } from "@phosphor-icons/react";
+import {
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  ColumnsIcon as Columns,
+  LockIcon as Lock,
+  RowsIcon as Rows,
+  XIcon as X,
+} from "@/ui/icons";
 import {
   closeActiveEditorGroup,
   closeOtherEditorGroups,
@@ -7,7 +14,7 @@ import {
   splitActiveEditorGroup,
   toggleActiveEditorGroupLock,
 } from "@/features/panes/utils/pane-command-actions";
-import type { Action } from "../models/action.types";
+import type { Action } from "../types/action.types";
 
 interface PaneActionsParams {
   onClose: () => void;

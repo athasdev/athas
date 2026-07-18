@@ -1,12 +1,12 @@
 import {
-  WarningCircle as AlertCircle,
-  CheckCircle as CheckCircle2,
-  Clock as Clock3,
-  Key as KeyRound,
-  Sparkle as Sparkles,
-  Wrench,
-} from "@phosphor-icons/react";
-import type { ChatAcpEvent } from "@/features/ai/types/chat-ui";
+  WarningCircleIcon as AlertCircle,
+  CheckCircleIcon as CheckCircle2,
+  ClockIcon as Clock3,
+  KeyIcon as KeyRound,
+  SparkleIcon as Sparkles,
+  WrenchIcon as Wrench,
+} from "@/ui/icons";
+import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import { cn } from "@/utils/cn";
 import { ChatActivityLine } from "./chat-activity-line";
 

@@ -1,14 +1,3 @@
-import {
-  DEFAULT_MONO_FONT_FAMILY,
-  DEFAULT_UI_FONT_FAMILY,
-} from "@/features/settings/config/typography-defaults";
-
-const LEGACY_FONT_MIGRATIONS: Record<string, string> = {
-  geist: DEFAULT_UI_FONT_FAMILY,
-  "geist sans": DEFAULT_UI_FONT_FAMILY,
-  "geist mono": DEFAULT_MONO_FONT_FAMILY,
-};
-
 export function getPrimaryFontFamily(fontFamily: string): string {
   return fontFamily
     .split(",")[0]
@@ -18,13 +7,21 @@ export function getPrimaryFontFamily(fontFamily: string): string {
 
 export function normalizeConfiguredFontFamily(fontFamily: string, fallback: string): string {
   const primaryFontFamily = getPrimaryFontFamily(fontFamily);
-  const normalizedPrimaryFamily = primaryFontFamily.toLowerCase();
 
-  if (!normalizedPrimaryFamily) {
+  if (!primaryFontFamily) {
     return fallback;
   }
 
-  return LEGACY_FONT_MIGRATIONS[normalizedPrimaryFamily] ?? fontFamily;
+  return fontFamily;
+}
+
+export function buildFontFamilyStack(primary: string, fallback: string): string {
+  const trimmed = primary.trim();
+  if (!trimmed) return fallback;
+  if (trimmed.includes(",")) return trimmed;
+
+  const normalized = trimmed.replace(/^(['"])(.*)\1$/, "$2");
+  return `"${normalized}", ${fallback}`;
 }
 
 export function resolveAvailableFontFamily(

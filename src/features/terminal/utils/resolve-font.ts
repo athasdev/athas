@@ -121,17 +121,24 @@ export function buildTerminalFontFamily(primaryFont: string): string {
  * Returns `true` if the font is ready, `false` if it failed/timed out.
  */
 export async function loadAndVerifyFont(fontFamily: string, fontSize: number): Promise<boolean> {
-  const testString = `${fontSize}px "${fontFamily}"`;
+  const primaryFont = splitFontFamilyList(fontFamily)[0];
+  if (!primaryFont) return false;
+
+  const quotedFont = quoteFontName(primaryFont);
+  const normalFace = `${fontSize}px ${quotedFont}`;
+  const boldFace = `700 ${fontSize}px ${quotedFont}`;
 
   try {
-    await document.fonts.load(testString);
+    await Promise.all([
+      document.fonts.load(normalFace),
+      document.fonts.load(boldFace),
+      document.fonts.ready,
+    ]);
   } catch {
     return false;
   }
 
-  // `check()` returns true only if every glyph in the test string can be
-  // rendered with the requested font (i.e. the font actually loaded).
-  return document.fonts.check(testString);
+  return document.fonts.check(normalFace) && document.fonts.check(boldFace);
 }
 
 /**
@@ -143,14 +150,12 @@ export async function loadAndVerifyFont(fontFamily: string, fontSize: number): P
 export async function resolveTerminalFont(
   requestedFont: string,
   fontSize: number,
-): Promise<{ fontFamily: string; skipWebGL: boolean }> {
+): Promise<{ fontFamily: string }> {
   const loaded = await loadAndVerifyFont(requestedFont, fontSize);
 
   if (loaded) {
     return {
       fontFamily: buildTerminalFontFamily(requestedFont),
-      // Variable/space-containing fonts have WebGL texture atlas issues
-      skipWebGL: requestedFont.includes(" "),
     };
   }
 
@@ -158,6 +163,5 @@ export async function resolveTerminalFont(
   const fallback = getPlatformFallback();
   return {
     fontFamily: buildTerminalFontFamily(fallback),
-    skipWebGL: false,
   };
 }

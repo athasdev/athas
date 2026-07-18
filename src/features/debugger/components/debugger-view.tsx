@@ -1,10 +1,18 @@
-import { Bug, FolderOpen, ListBullets, Pause, Play, Square, Trash } from "@phosphor-icons/react";
+import {
+  BugIcon as Bug,
+  FolderOpenIcon as FolderOpen,
+  ListBulletsIcon as ListBullets,
+  PauseIcon as Pause,
+  PlayIcon as Play,
+  SquareIcon as Square,
+  TrashIcon as Trash,
+} from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
-import { useProjectStore } from "@/features/window/stores/project-store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -17,7 +25,7 @@ import {
   stopDebugAdapterSession,
   syncDebugBreakpoints,
 } from "../services/debug-adapter-service";
-import { useDebuggerStore } from "../stores/debugger-store";
+import { useDebuggerStore } from "../stores/debugger.store";
 import {
   buildDebugCommand,
   createGeneratedDebugConfig,
@@ -34,11 +42,10 @@ import {
 import { DebugWatchPanel } from "./debugger-watch-panel";
 import { DebugVariablesPanel } from "./debugger-variables-panel";
 
-const getActiveDebuggableFile = () => {
-  const bufferStore = useBufferStore.getState();
-  const activeBuffer = bufferStore.buffers.find(
-    (buffer) => buffer.id === bufferStore.activeBufferId,
-  );
+const getActiveDebuggableFile = (state: ReturnType<typeof useBufferStore.getState>) => {
+  const activeBuffer = state.activeBufferId
+    ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+    : null;
   if (!activeBuffer || activeBuffer.type !== "editor" || activeBuffer.isVirtual) return null;
 
   return {
@@ -61,8 +68,7 @@ function DebugStatusBadge({ status }: { status: "idle" | "running" | "paused" })
 
 export default function DebuggerView() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const buffers = useBufferStore.use.buffers();
+  const activeFile = useBufferStore(getActiveDebuggableFile);
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const handleFileOpen = useFileSystemStore.use.handleFileOpen?.();
   const breakpoints = useDebuggerStore.use.breakpoints();
@@ -85,7 +91,6 @@ export default function DebuggerView() {
   const [startError, setStartError] = useState<string | null>(null);
   const syncedBreakpointFilesRef = useRef<Set<string>>(new Set());
 
-  const activeFile = useMemo(() => getActiveDebuggableFile(), [activeBufferId, buffers]);
   const generatedConfig = useMemo(
     () => createGeneratedDebugConfig(activeFile, rootFolderPath),
     [activeFile, rootFolderPath],
@@ -274,9 +279,8 @@ export default function DebuggerView() {
   };
 
   const toggleCurrentLineBreakpoint = () => {
-    const file = getActiveDebuggableFile();
-    if (!file) return;
-    debuggerActions.toggleBreakpoint(file.path, cursorPosition.line);
+    if (!activeFile) return;
+    debuggerActions.toggleBreakpoint(activeFile.path, cursorPosition.line);
   };
 
   const selectStackFrame = async (frameId: number, sourcePath?: string, line?: number) => {
@@ -314,7 +318,7 @@ export default function DebuggerView() {
           tooltip="Toggle breakpoint on current line"
           onClick={toggleCurrentLineBreakpoint}
           disabled={!activeFile}
-          compact
+          size="icon-xs"
         >
           <ListBullets />
         </Button>
@@ -324,7 +328,7 @@ export default function DebuggerView() {
         <aside className="flex min-h-0 flex-col border-border/70 border-r">
           <div className="space-y-3 p-3">
             <div className="space-y-1.5">
-              <div className="ui-font text-text-lighter ui-text-xs">Configuration</div>
+              <div className="font-sans text-text-lighter ui-text-sm">Configuration</div>
               <Select
                 value={selectedConfig.id}
                 onChange={(value) => debuggerActions.setActiveConfigId(value)}
@@ -337,7 +341,7 @@ export default function DebuggerView() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="ui-font text-text-lighter ui-text-xs">Command</div>
+              <div className="font-sans text-text-lighter ui-text-sm">Command</div>
               {resolvedSelectedConfig.runtime === "custom" ? (
                 <Input
                   value={customCommand}
@@ -346,7 +350,7 @@ export default function DebuggerView() {
                   size="sm"
                 />
               ) : (
-                <div className="ui-font min-h-8 truncate rounded-md border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-xs text-text-lighter">
+                <div className="font-sans min-h-8 truncate rounded-lg border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}
@@ -368,6 +372,7 @@ export default function DebuggerView() {
                 disabled={!canSendAdapterThreadRequest}
                 onClick={() => void sendAdapterThreadRequest(isPaused ? "continue" : "pause")}
                 aria-label={isPaused ? "Continue debugging" : "Pause debugging"}
+                size="icon"
               >
                 {isPaused ? <Play /> : <Pause />}
               </Button>
@@ -377,6 +382,7 @@ export default function DebuggerView() {
                 disabled={!isActiveSession}
                 onClick={stopDebugging}
                 commandId="debug.stop"
+                size="icon"
               >
                 <Square />
               </Button>
@@ -388,7 +394,7 @@ export default function DebuggerView() {
                 tooltip="Step over"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("next")}
-                compact
+                size="xs"
               >
                 Over
               </Button>
@@ -397,7 +403,7 @@ export default function DebuggerView() {
                 tooltip="Step into"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepIn")}
-                compact
+                size="xs"
               >
                 Into
               </Button>
@@ -406,37 +412,37 @@ export default function DebuggerView() {
                 tooltip="Step out"
                 disabled={!canStep}
                 onClick={() => void sendAdapterThreadRequest("stepOut")}
-                compact
+                size="xs"
               >
                 Out
               </Button>
             </div>
 
             {startError ? (
-              <div className="ui-font rounded-md border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-xs">
+              <div className="font-sans rounded-lg border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
                 {startError}
               </div>
             ) : null}
           </div>
 
           {activeSession && activeSession.status !== "idle" ? (
-            <div className="border-border/70 border-t px-3 py-2 ui-text-xs">
+            <div className="border-border/70 border-t px-3 py-2 ui-text-sm">
               <div className="flex items-center gap-2">
                 <DebugSessionStatusIcon status={activeSession.status} />
                 <span className="truncate font-medium">{activeSession.name}</span>
                 {stoppedState ? (
-                  <Badge variant="default" size="compact" className="text-warning">
+                  <Badge variant="warning" size="compact">
                     Paused
                   </Badge>
                 ) : null}
               </div>
-              <div className="mt-1 line-clamp-2 ui-text-xs text-text-lighter">
+              <div className="mt-1 line-clamp-2 ui-text-sm text-text-lighter">
                 {stoppedState?.description || stoppedState?.reason || activeSession.command}
               </div>
             </div>
           ) : null}
 
-          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-xs text-text-lighter">
+          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-sm text-text-lighter">
             <div className="flex items-center gap-1.5">
               <FolderOpen size={12} />
               <span className="truncate">
@@ -484,7 +490,7 @@ export default function DebuggerView() {
                   variant="ghost"
                   tooltip="Clear console"
                   onClick={debuggerActions.clearAdapterTranscript}
-                  compact
+                  size="icon-xs"
                 >
                   <Trash />
                 </Button>
@@ -499,7 +505,7 @@ export default function DebuggerView() {
                   <div
                     key={`${output.sessionId}-${index}`}
                     className={cn(
-                      "whitespace-pre-wrap break-words px-3 py-1 font-mono ui-text-xs",
+                      "whitespace-pre-wrap break-words px-3 py-1 font-mono ui-text-sm",
                       output.stream === "stderr" ? "text-error" : "text-text-lighter",
                     )}
                   >
@@ -520,7 +526,7 @@ export default function DebuggerView() {
                   variant="ghost"
                   tooltip="Clear breakpoints"
                   onClick={debuggerActions.clearBreakpoints}
-                  compact
+                  size="icon-xs"
                 >
                   <Trash />
                 </Button>

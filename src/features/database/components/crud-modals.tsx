@@ -1,11 +1,11 @@
-import { Plus as PlusIcon, X as XIcon } from "@phosphor-icons/react";
+import { PlusIcon, XIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
-import type { ColumnInfo, DatabaseRow } from "../models/common.types";
+import type { ColumnInfo, DatabaseRow } from "../types/common.types";
 import {
   getInitialCreateTableColumn,
   normalizeCreateTableColumns,
@@ -53,9 +53,9 @@ export const CreateRowModal = ({
             const fieldId = `create-row-field-${index}`;
             return (
               <div key={column.name} className="space-y-1">
-                <label htmlFor={fieldId} className="ui-font block ui-text-sm text-text">
+                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-text">
                   {column.name}
-                  <span className="ml-1 text-text-lighter ui-text-xs">({column.type})</span>
+                  <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
                 </label>
                 <Input
                   id={fieldId}
@@ -77,10 +77,10 @@ export const CreateRowModal = ({
           })}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} compact>
+          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
             Cancel
           </Button>
-          <Button type="submit" className="gap-1" compact>
+          <Button type="submit" className="gap-1" size="xs">
             <PlusIcon size="14" />
             Add Row
           </Button>
@@ -139,9 +139,9 @@ export const EditRowModal = ({
             const fieldId = `edit-row-field-${index}`;
             return (
               <div key={column.name} className="space-y-1">
-                <label htmlFor={fieldId} className="ui-font block ui-text-sm text-text">
+                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-text">
                   {column.name}
-                  <span className="ml-1 text-text-lighter ui-text-xs">({column.type})</span>
+                  <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
                 </label>
                 <Input
                   id={fieldId}
@@ -163,10 +163,10 @@ export const EditRowModal = ({
           })}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} compact>
+          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
             Cancel
           </Button>
-          <Button type="submit" compact>
+          <Button type="submit" size="xs">
             Save Changes
           </Button>
         </div>
@@ -225,7 +225,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
     <Dialog onClose={handleClose} title="Create New Table" icon={PlusIcon} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
-          <label htmlFor="table-name" className="ui-font block ui-text-sm text-text">
+          <label htmlFor="table-name" className="font-sans block ui-text-sm text-text">
             Table Name
           </label>
           <Input
@@ -238,7 +238,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
         </div>
 
         <div className="space-y-2">
-          <div className="ui-font block ui-text-sm text-text">Columns</div>
+          <div className="font-sans block ui-text-sm text-text">Columns</div>
           {columns.map((column, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -260,11 +260,11 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   { value: "BLOB", label: "BLOB" },
                 ]}
                 size="md"
-                className="bg-input"
+                className="bg-secondary-bg"
               />
               <label
                 htmlFor={`column-not-null-${index}`}
-                className="ui-font flex items-center gap-1 text-text ui-text-xs"
+                className="font-sans flex items-center gap-1 text-text ui-text-sm"
               >
                 <Checkbox
                   id={`column-not-null-${index}`}
@@ -278,23 +278,23 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 <Button
                   type="button"
                   onClick={() => removeColumn(index)}
-                  variant="ghost"
-                  compact
-                  className="rounded-md text-red-400"
+                  variant="danger"
+                  size="icon-xs"
+                  aria-label={`Remove ${column.name || `column ${index + 1}`}`}
                 >
                   <XIcon size="14" />
                 </Button>
               )}
             </div>
           ))}
-          <Button type="button" onClick={addColumn} variant="ghost" className="rounded-md" compact>
+          <Button type="button" onClick={addColumn} variant="ghost" size="xs">
             <PlusIcon size="12" />
             Add Column
           </Button>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={handleClose} compact>
+          <Button type="button" variant="ghost" onClick={handleClose} size="xs">
             Cancel
           </Button>
           <Button type="submit" disabled={!canSubmit}>

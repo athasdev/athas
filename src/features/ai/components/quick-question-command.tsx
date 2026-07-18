@@ -1,19 +1,26 @@
-import { CaretLeft, Copy, Sparkle as Sparkles } from "@phosphor-icons/react";
+import { CaretLeftIcon as CaretLeft, CopyIcon as Copy, SparkleIcon as Sparkles } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getQuickQuestionCompletionStream } from "@/features/ai/services/ai-chat-service";
-import type { ContextInfo } from "@/features/ai/types/ai-context";
+import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import MarkdownRenderer from "@/features/ai/components/messages/markdown-renderer";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import type { PaneContent } from "@/features/panes/types/pane-content";
-import { useSettingsStore } from "@/features/settings/store";
-import { getModelById, getProviderById } from "@/features/ai/types/providers";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
+import { writeClipboardText } from "@/utils/clipboard";
 
 interface QuickQuestionCommandContentProps {
-  isActive: boolean;
   onBack: () => void;
   onClose: () => void;
   activeBuffer: PaneContent | null;
@@ -62,16 +69,10 @@ function getReadableError(error: string): string {
 }
 
 async function copyText(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 }
 
 export function QuickQuestionCommandContent({
-  isActive,
   onBack,
   onClose,
   activeBuffer,
@@ -80,7 +81,8 @@ export function QuickQuestionCommandContent({
 }: QuickQuestionCommandContentProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
-  const { settings } = useSettingsStore();
+  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
   const [question, setQuestion] = useState("");
@@ -88,8 +90,8 @@ export function QuickQuestionCommandContent({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const provider = getProviderById(settings.aiProviderId);
-  const model = getModelById(settings.aiProviderId, settings.aiModelId);
+  const provider = getProviderById(aiProviderId);
+  const model = getModelById(aiProviderId, aiModelId);
   const enterprisePolicy = subscription?.enterprise?.policy;
   const isBlockedByPolicy = Boolean(
     enterprisePolicy?.managedMode && !enterprisePolicy.aiChatEnabled,
@@ -102,31 +104,27 @@ export function QuickQuestionCommandContent({
       activeBuffer: contextualActiveBuffer,
       openBuffers: buffers.filter((buffer) => buffer.type !== "agent"),
       projectRoot: projectRoot || undefined,
-      providerId: settings.aiProviderId,
+      providerId: aiProviderId,
       agentId: "custom",
       language: getLanguageForBuffer(activeBuffer),
     };
-  }, [activeBuffer, buffers, projectRoot, settings.aiProviderId]);
+  }, [activeBuffer, aiProviderId, buffers, projectRoot]);
 
   useEffect(() => {
-    if (!isActive) {
-      requestIdRef.current += 1;
-      return;
-    }
+    const focusFrame = requestAnimationFrame(() => inputRef.current?.focus());
 
-    setQuestion("");
-    setAnswer("");
-    setError("");
-    setIsLoading(false);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, [isActive]);
+    return () => {
+      requestIdRef.current += 1;
+      cancelAnimationFrame(focusFrame);
+    };
+  }, []);
 
   const handleSubmit = async () => {
     const trimmedQuestion = question.trim();
     if (!trimmedQuestion || isLoading) return;
 
     if (isBlockedByPolicy) {
-      setError("AI chat is disabled by enterprise policy.");
+      setError("Agent is disabled by enterprise policy.");
       return;
     }
 
@@ -137,8 +135,8 @@ export function QuickQuestionCommandContent({
     setIsLoading(true);
 
     await getQuickQuestionCompletionStream(
-      settings.aiProviderId,
-      settings.aiModelId,
+      aiProviderId,
+      aiModelId,
       trimmedQuestion,
       context,
       (chunk) => {
@@ -163,7 +161,7 @@ export function QuickQuestionCommandContent({
     showToast({ message: "Answer copied.", type: "success" });
   };
 
-  const modelLabel = `${provider?.name || settings.aiProviderId} / ${model?.name || settings.aiModelId}`;
+  const modelLabel = `${provider?.name || aiProviderId} / ${model?.name || aiModelId}`;
 
   return (
     <div
@@ -180,22 +178,15 @@ export function QuickQuestionCommandContent({
       }}
     >
       <CommandHeader onClose={onClose}>
-        <Button
-          type="button"
-          variant="ghost"
-          className="rounded"
-          onClick={onBack}
-          aria-label="Back to commands"
-          compact
-        >
-          <CaretLeft className="text-text-lighter" />
-        </Button>
+        <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
+          <CaretLeft />
+        </CommandHeaderAction>
         <Sparkles className="shrink-0 text-text-lighter" size={15} weight="duotone" />
         <CommandInput
           ref={inputRef}
           value={question}
           onChange={setQuestion}
-          placeholder="Ask AI a quick question..."
+          placeholder="Ask a quick question..."
           className="min-w-0"
         />
       </CommandHeader>
@@ -204,7 +195,7 @@ export function QuickQuestionCommandContent({
         {!question.trim() && !answer && !error && !isLoading ? (
           <CommandEmpty>
             <div className="flex items-center justify-center gap-1.5">
-              <ProviderIcon providerId={settings.aiProviderId} size={12} />
+              <ProviderIcon providerId={aiProviderId} size={12} />
               <span className="truncate">{modelLabel}</span>
             </div>
           </CommandEmpty>
@@ -214,12 +205,12 @@ export function QuickQuestionCommandContent({
           </CommandEmpty>
         ) : answer ? (
           <div className="px-3 py-2">
-            <div className="ui-text-sm max-h-48 overflow-y-auto text-text">
+            <div className="ui-text-base max-h-48 overflow-y-auto text-text">
               <MarkdownRenderer content={answer} />
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 border-border border-t pt-2">
-              <div className="flex min-w-0 items-center gap-1.5 ui-text-xs text-text-lighter">
-                <ProviderIcon providerId={settings.aiProviderId} size={11} />
+              <div className="flex min-w-0 items-center gap-1.5 ui-text-base text-text-lighter">
+                <ProviderIcon providerId={aiProviderId} size={11} />
                 <span className="truncate">{modelLabel}</span>
               </div>
               <Button
@@ -228,6 +219,7 @@ export function QuickQuestionCommandContent({
                 className="rounded"
                 onClick={() => void handleCopy()}
                 tooltip="Copy answer"
+                size="icon"
               >
                 <Copy className="text-text-lighter" size={12} />
               </Button>
@@ -236,19 +228,13 @@ export function QuickQuestionCommandContent({
         ) : isLoading ? (
           <CommandEmpty>Thinking...</CommandEmpty>
         ) : (
-          <CommandItem
+          <CommandItemRow
             isSelected
             onClick={() => void handleSubmit()}
-            className="h-8 px-3 py-0"
             disabled={!question.trim()}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="shrink-0 truncate ui-text-xs leading-none">Ask quick question</div>
-              <div className="min-w-0 truncate ui-text-xs leading-none text-text-lighter">
-                {modelLabel}
-              </div>
-            </div>
-          </CommandItem>
+            title="Ask quick question"
+            description={modelLabel}
+          />
         )}
       </CommandList>
     </div>

@@ -1,20 +1,21 @@
 import {
-  Copy,
-  FileText,
-  FlipHorizontal,
-  FlipVertical,
-  FolderOpen,
-  Image,
-  ArrowCounterClockwise as RotateCcw,
-  ArrowClockwise as RotateCw,
-  FloppyDisk as Save,
-  ArrowCounterClockwise as Undo2,
-} from "@phosphor-icons/react";
+  CopyIcon as Copy,
+  FileTextIcon as FileText,
+  FlipHorizontalIcon as FlipHorizontal,
+  FlipVerticalIcon as FlipVertical,
+  FolderOpenIcon as FolderOpen,
+  ImageIcon as Image,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  ArrowClockwiseIcon as RotateCw,
+  FloppyDiskIcon as Save,
+  ArrowCounterClockwiseIcon as Undo2,
+} from "@/ui/icons";
 import { useState } from "react";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
-import type { ImageFormat } from "@/features/image-editor/models/image-operation.types";
+import type { ImageFormat } from "@/features/image-editor/types/image-operation.types";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { writeClipboardText } from "@/utils/clipboard";
 
 interface ImageContextMenuProps {
   x: number;
@@ -80,8 +81,7 @@ export function ImageContextMenu({
 
   const handleCopyPath = async () => {
     try {
-      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-      await writeText(filePath);
+      await writeClipboardText(filePath);
     } catch (error) {
       console.error("Failed to copy path:", error);
     }

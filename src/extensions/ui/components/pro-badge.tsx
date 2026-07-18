@@ -1,3 +1,4 @@
+import Badge from "@/ui/badge";
 import { cn } from "@/utils/cn";
 
 interface ProBadgeProps {
@@ -6,13 +7,8 @@ interface ProBadgeProps {
 
 export function ProBadge({ className }: ProBadgeProps) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-md bg-accent/15 px-1.5 py-0.5 font-semibold ui-text-xs text-accent leading-none tracking-wide",
-        className,
-      )}
-    >
+    <Badge variant="accent" size="compact" className={cn("font-medium tracking-wide", className)}>
       PRO
-    </span>
+    </Badge>
   );
 }

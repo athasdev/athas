@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { evictLeastRecentAutoClosableBuffer } from "../stores/buffer-eviction";
 
 const buffer = (
@@ -45,6 +45,20 @@ describe("buffer auto eviction", () => {
 
     expect(result.evictedBuffer).toBeNull();
     expect(result.buffers.map((item) => item.id)).toEqual(["terminal", "web", "agent"]);
+  });
+
+  it("does not evict singleton tool buffers", () => {
+    const result = evictLeastRecentAutoClosableBuffer(
+      [
+        buffer("search", "globalSearch"),
+        buffer("diagnostics", "diagnostics"),
+        buffer("references", "references"),
+      ],
+      1,
+    );
+
+    expect(result.evictedBuffer).toBeNull();
+    expect(result.buffers.map((item) => item.id)).toEqual(["search", "diagnostics", "references"]);
   });
 
   it("can ignore preview buffers for editor-file opens", () => {

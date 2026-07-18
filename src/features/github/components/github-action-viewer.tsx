@@ -1,23 +1,24 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  CheckCircle as CheckCircle2,
-  Clock,
-  Pulse as Activity,
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  ArrowClockwise as RefreshCw,
-  FileText,
-  XCircle,
-} from "@phosphor-icons/react";
+  CheckCircleIcon as CheckCircle2,
+  ClockIcon as Clock,
+  PulseIcon as Activity,
+  CopyIcon as Copy,
+  MagnifyingGlassIcon as Search,
+  ArrowClockwiseIcon as RefreshCw,
+  XCircleIcon as XCircle,
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { ActionMenu } from "@/ui/action-menu";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
-import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
-import type { WorkflowRunDetails, WorkflowRunJob } from "../types/github";
+import type { WorkflowRunDetails, WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
 import {
@@ -132,18 +133,151 @@ const formatDuration = (startedAt?: string | null, completedAt?: string | null) 
   return `${hours}h ${minutes % 60}m`;
 };
 
+const stripLogTimestamp = (line: string) => {
+  return line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s+/, "");
+};
+
+const normalizeLogTitle = (value: string) => {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^run\s+/, "")
+    .replace(/\s+/g, " ");
+};
+
+const getLogGroupTitle = (line: string) => {
+  const cleanLine = stripLogTimestamp(line).trim();
+  if (!cleanLine.startsWith("##[group]")) return null;
+  return cleanLine.replace(/^##\[group\]/, "").trim();
+};
+
+const parseWorkflowLogChunks = (logs: string) => {
+  const lines = logs.split(/\r?\n/);
+  const chunks: Array<{ title: string; text: string }> = [];
+  let currentTitle: string | null = null;
+  let currentStart = 0;
+
+  lines.forEach((line, index) => {
+    const nextTitle = getLogGroupTitle(line);
+    if (nextTitle) {
+      if (currentTitle && currentStart < index) {
+        chunks.push({
+          title: currentTitle,
+          text: lines.slice(currentStart, index).join("\n").trim(),
+        });
+      }
+
+      currentTitle = nextTitle;
+      currentStart = index;
+      return;
+    }
+
+    if (currentTitle && stripLogTimestamp(line).trim() === "##[endgroup]") {
+      chunks.push({
+        title: currentTitle,
+        text: lines
+          .slice(currentStart, index + 1)
+          .join("\n")
+          .trim(),
+      });
+      currentTitle = null;
+      currentStart = index + 1;
+    }
+  });
+
+  if (currentTitle && currentStart < lines.length) {
+    chunks.push({
+      title: currentTitle,
+      text: lines.slice(currentStart).join("\n").trim(),
+    });
+  }
+
+  return chunks.filter((chunk) => chunk.text.length > 0);
+};
+
+const getStepLogChunk = (
+  chunks: Array<{ title: string; text: string }>,
+  step: WorkflowRunStep,
+  stepIndex: number,
+) => {
+  const normalizedStepName = normalizeLogTitle(step.name);
+  const matchingChunk = chunks.find((chunk) => {
+    const normalizedChunkTitle = normalizeLogTitle(chunk.title);
+    return (
+      normalizedChunkTitle === normalizedStepName ||
+      normalizedChunkTitle.includes(normalizedStepName) ||
+      normalizedStepName.includes(normalizedChunkTitle)
+    );
+  });
+
+  return matchingChunk ?? chunks[stepIndex] ?? null;
+};
+
+const getSelectedStepLogs = (
+  logs: string | undefined,
+  steps: WorkflowRunStep[],
+  selectedStepIndex: number | null,
+) => {
+  if (!logs || selectedStepIndex === null || !steps[selectedStepIndex]) return logs;
+
+  const chunks = parseWorkflowLogChunks(logs);
+  if (chunks.length === 0) return logs;
+
+  return getStepLogChunk(chunks, steps[selectedStepIndex], selectedStepIndex)?.text ?? logs;
+};
+
+const filterLogLines = (logs: string | undefined, query: string) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!logs || !normalizedQuery) return logs;
+
+  return logs
+    .split(/\r?\n/)
+    .filter((line) => line.toLowerCase().includes(normalizedQuery))
+    .join("\n");
+};
+
+const getLogLineSegments = (line: string, query: string) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [{ text: line, isMatch: false }];
+
+  const lowerLine = line.toLowerCase();
+  const segments: Array<{ text: string; isMatch: boolean }> = [];
+  let currentIndex = 0;
+
+  while (currentIndex < line.length) {
+    const matchIndex = lowerLine.indexOf(normalizedQuery, currentIndex);
+    if (matchIndex < 0) break;
+
+    if (matchIndex > currentIndex) {
+      segments.push({ text: line.slice(currentIndex, matchIndex), isMatch: false });
+    }
+
+    const matchEnd = matchIndex + normalizedQuery.length;
+    segments.push({ text: line.slice(matchIndex, matchEnd), isMatch: true });
+    currentIndex = matchEnd;
+  }
+
+  if (currentIndex < line.length) {
+    segments.push({ text: line.slice(currentIndex), isMatch: false });
+  }
+
+  return segments.length > 0 ? segments : [{ text: line, isMatch: false }];
+};
+
 const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionViewerProps) => {
-  const buffers = useBufferStore.use.buffers();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
   const [details, setDetails] = useState<WorkflowRunDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visibleJobCount, setVisibleJobCount] = useState(10);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null);
   const [jobLogs, setJobLogs] = useState<Record<number, string>>({});
   const [jobLogErrors, setJobLogErrors] = useState<Record<number, string>>({});
   const [loadingJobLogId, setLoadingJobLogId] = useState<number | null>(null);
-  const buffer = buffers.find((item) => item.id === bufferId);
+  const [isLogSearchVisible, setIsLogSearchVisible] = useState(false);
+  const [logSearchQuery, setLogSearchQuery] = useState("");
   const visibleJobs = useMemo(
     () => details?.jobs.slice(0, visibleJobCount) ?? [],
     [details?.jobs, visibleJobCount],
@@ -224,19 +358,13 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
   useEffect(() => {
     setVisibleJobCount(10);
     setSelectedJobId(null);
+    setSelectedStepIndex(null);
     setJobLogs({});
     setJobLogErrors({});
     setLoadingJobLogId(null);
+    setIsLogSearchVisible(false);
+    setLogSearchQuery("");
   }, [details?.databaseId]);
-
-  useEffect(() => {
-    if (!details?.jobs.length || selectedJobId !== null) return;
-
-    const failedJob =
-      details.jobs.find((job) => job.conclusion === "failure" || job.conclusion === "cancelled") ??
-      details.jobs.find((job) => job.id);
-    setSelectedJobId(failedJob?.id ?? null);
-  }, [details?.jobs, selectedJobId]);
 
   useEffect(() => {
     const totalJobs = details?.jobs.length ?? 0;
@@ -331,18 +459,16 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
     void loadJobLogs(selectedJobId);
   }, [loadJobLogs, selectedJobId, selectedJobLogsDownloadable]);
 
-  const handleSelectJob = useCallback((jobId: number | null) => {
-    setSelectedJobId(jobId);
-  }, []);
-
-  const handleCopyJobLogs = useCallback(() => {
-    if (!selectedJobId || !jobLogs[selectedJobId]) {
-      toast.error("Job logs are not loaded.");
+  const handleSelectJob = useCallback((job: WorkflowRunJob) => {
+    if (job.id == null) {
+      setSelectedJobId(null);
+      setSelectedStepIndex(null);
       return;
     }
 
-    void copyToClipboard(jobLogs[selectedJobId], "Job logs copied");
-  }, [jobLogs, selectedJobId]);
+    setSelectedJobId(job.id);
+    setSelectedStepIndex(job.steps.length > 0 ? 0 : null);
+  }, []);
 
   const runTitle = useMemo(
     () =>
@@ -383,6 +509,37 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       ).length,
     };
   }, [details?.jobs]);
+  const selectedStep = useMemo(
+    () => (selectedJob && selectedStepIndex !== null ? selectedJob.steps[selectedStepIndex] : null),
+    [selectedJob, selectedStepIndex],
+  );
+  const selectedStepLogs = useMemo(
+    () =>
+      selectedJob?.id
+        ? getSelectedStepLogs(jobLogs[selectedJob.id], selectedJob.steps, selectedStepIndex)
+        : undefined,
+    [jobLogs, selectedJob, selectedStepIndex],
+  );
+  const filteredStepLogs = useMemo(
+    () => filterLogLines(selectedStepLogs, logSearchQuery),
+    [logSearchQuery, selectedStepLogs],
+  );
+  const hasLogSearchQuery = Boolean(logSearchQuery.trim());
+  const handleCopySelectedLogs = useCallback(() => {
+    if (!selectedStepLogs) {
+      toast.error("Step logs are not loaded.");
+      return;
+    }
+
+    void copyToClipboard(selectedStepLogs, "Step logs copied");
+  }, [selectedStepLogs]);
+  const handleToggleLogSearch = useCallback(() => {
+    setIsLogSearchVisible((current) => {
+      const next = !current;
+      if (!next) setLogSearchQuery("");
+      return next;
+    });
+  }, []);
 
   return (
     <GitHubViewerShell
@@ -418,42 +575,19 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             </>
           }
           actions={
-            <>
-              <Tooltip content="Refresh action run" side="bottom">
-                <Button
-                  onClick={() => void fetchWorkflowRun(true)}
-                  variant="ghost"
-                  compact
-                  aria-label="Refresh action run"
-                >
-                  {isLoading && details ? (
-                    <LoadingIndicator label="Loading action run" compact />
-                  ) : (
-                    <RefreshCw />
-                  )}
-                </Button>
-              </Tooltip>
-              <Tooltip content="Open on GitHub" side="bottom">
-                <Button
-                  onClick={handleOpenInBrowser}
-                  variant="ghost"
-                  aria-label="Open action run on GitHub"
-                  compact
-                >
-                  <ExternalLink />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Copy run link" side="bottom">
-                <Button
-                  onClick={handleCopyRunLink}
-                  variant="ghost"
-                  aria-label="Copy run link"
-                  compact
-                >
-                  <Copy />
-                </Button>
-              </Tooltip>
-            </>
+            <ActionMenu
+              label="Action run actions"
+              items={[
+                {
+                  id: "refresh",
+                  label: isLoading && details ? "Refreshing..." : "Refresh",
+                  disabled: isLoading && Boolean(details),
+                  onClick: () => void fetchWorkflowRun(true),
+                },
+                { id: "open-browser", label: "Open on GitHub", onClick: handleOpenInBrowser },
+                { id: "copy-link", label: "Copy link", onClick: handleCopyRunLink },
+              ]}
+            />
           }
         />
       }
@@ -461,12 +595,12 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       {error ? (
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <p className="ui-font ui-text-sm text-error">{error}</p>
+            <p className="font-sans ui-text-sm text-error">{error}</p>
             <Button
               onClick={() => void fetchWorkflowRun(true)}
               variant="default"
-              compact
-              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              size="xs"
+              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
             >
               Retry
             </Button>
@@ -474,107 +608,230 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
         </div>
       ) : details ? (
         <div className="space-y-4">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border/70 border-b pb-3">
             {runSummaryItems.map((item) => (
-              <div
-                key={item.label}
-                className="min-w-0 rounded-md border border-border/60 bg-secondary-bg/20 px-2.5 py-2"
-              >
-                <div className="ui-text-xs text-text-lighter">{item.label}</div>
-                <div
+              <div key={item.label} className="ui-text-sm flex min-w-0 items-baseline gap-1.5">
+                <dt className="shrink-0 text-text-lighter">{item.label}</dt>
+                <dd
                   className={cn(
-                    "mt-0.5 truncate text-text",
-                    item.mono ? "ui-text-xs editor-font" : "ui-text-sm",
+                    "min-w-0 truncate text-text",
+                    item.mono ? "font-mono ui-text-sm" : "ui-text-sm",
                   )}
                 >
                   {item.value}
-                </div>
+                </dd>
               </div>
             ))}
-          </div>
+          </dl>
 
           <div className="space-y-2">
-            {visibleJobs.map((job) => (
-              <button
-                type="button"
-                key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
-                onClick={() => handleSelectJob(job.id ?? null)}
-                className={cn(
-                  "w-full rounded-md border border-transparent bg-secondary-bg/20 px-3 py-2 text-left transition-[background-color,border-color]",
-                  "hover:border-border/70 hover:bg-hover/50 focus-visible:border-accent/70 focus-visible:outline-none",
-                  selectedJobId === job.id && "border-border/80 bg-hover/60",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 flex-1 items-start gap-2">
-                    <WorkflowStatusIcon
-                      status={job.status}
-                      conclusion={job.conclusion}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="ui-text-sm min-w-0 truncate text-text">{job.name}</span>
-                        <span className="ui-text-xs text-text-lighter">
-                          {getWorkflowRunStatus(job.status, job.conclusion).label}
-                        </span>
-                      </div>
-                      <div className="ui-text-xs mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
-                        {formatDuration(job.startedAt, job.completedAt) ? (
-                          <span>{formatDuration(job.startedAt, job.completedAt)}</span>
-                        ) : null}
-                        {job.startedAt ? <span>{formatRunTime(job.startedAt)}</span> : null}
-                        {job.runnerName ? <span>{job.runnerName}</span> : null}
-                        {(job.labels ?? []).slice(0, 3).map((label) => (
-                          <span
-                            key={label}
-                            className="rounded bg-secondary-bg/80 px-1.5 py-0.5 text-text-lighter"
-                          >
-                            {label}
+            {visibleJobs.map((job) => {
+              const isSelectedJob = job.id != null && selectedJobId === job.id;
+
+              return (
+                <section
+                  key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
+                  className={cn(
+                    "rounded-xl border border-transparent bg-secondary-bg/20 transition-[background-color,border-color]",
+                    isSelectedJob && "border-border/80 bg-hover/40",
+                  )}
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => handleSelectJob(job)}
+                    className={cn(
+                      "h-auto w-full justify-start rounded-xl px-3 py-2 text-left",
+                      "hover:bg-hover/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70",
+                    )}
+                  >
+                    <div className="flex min-w-0 items-start gap-2">
+                      <WorkflowStatusIcon
+                        status={job.status}
+                        conclusion={job.conclusion}
+                        className="mt-0.5 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="ui-text-sm min-w-0 truncate text-text">{job.name}</span>
+                          <span className="ui-text-sm text-text-lighter">
+                            {getWorkflowRunStatus(job.status, job.conclusion).label}
                           </span>
-                        ))}
+                        </div>
+                        <div className="ui-text-sm mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                          {formatDuration(job.startedAt, job.completedAt) ? (
+                            <span>{formatDuration(job.startedAt, job.completedAt)}</span>
+                          ) : null}
+                          {job.startedAt ? <span>{formatRunTime(job.startedAt)}</span> : null}
+                          {job.runnerName ? <span>{job.runnerName}</span> : null}
+                          {(job.labels ?? []).slice(0, 3).map((label) => (
+                            <Badge
+                              key={label}
+                              variant="default"
+                              size="compact"
+                              className="bg-secondary-bg/80"
+                            >
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {job.id ? (
-                    <span
-                      className={cn(
-                        "ui-text-sm inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-text-lighter",
-                        selectedJobId === job.id && "bg-secondary-bg text-text",
-                      )}
-                    >
-                      <FileText />
-                      Log
-                    </span>
+                  </Button>
+
+                  {isSelectedJob ? (
+                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
+                      <div className="w-64 shrink-0 overflow-auto border-border/70 border-r bg-secondary-bg/20 p-1.5">
+                        {job.steps.length > 0 ? (
+                          job.steps.map((step, index) => (
+                            <Button
+                              type="button"
+                              key={`${job.name}-${step.name}-${index}`}
+                              variant="ghost"
+                              size="xs"
+                              onClick={() => setSelectedStepIndex(index)}
+                              className={cn(
+                                "h-auto w-full min-w-0 justify-start gap-2 rounded-lg px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
+                                selectedStepIndex === index && "bg-selected text-text",
+                              )}
+                            >
+                              <WorkflowStatusIcon
+                                status={step.status}
+                                conclusion={step.conclusion}
+                                className="shrink-0"
+                              />
+                              <span className="min-w-0 flex-1 truncate">{step.name}</span>
+                            </Button>
+                          ))
+                        ) : (
+                          <div className="px-2 py-2 ui-text-sm text-text-lighter">
+                            No steps reported.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2 border-border/70 border-b px-3 py-2">
+                          <div className="min-w-0">
+                            <div className="ui-text-sm truncate text-text">
+                              {selectedStep?.name ?? job.name}
+                            </div>
+                            <div className="ui-text-sm text-text-lighter">
+                              {selectedStep
+                                ? getWorkflowRunStatus(selectedStep.status, selectedStep.conclusion)
+                                    .label
+                                : getWorkflowRunStatus(job.status, job.conclusion).label}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {isLogSearchVisible ? (
+                              <Input
+                                value={logSearchQuery}
+                                onChange={(event) => setLogSearchQuery(event.target.value)}
+                                size="xs"
+                                className="w-40 bg-secondary-bg/40"
+                                placeholder="Search logs"
+                                aria-label="Search logs"
+                              />
+                            ) : null}
+                            <Button
+                              type="button"
+                              onClick={handleToggleLogSearch}
+                              variant="ghost"
+                              size="icon-xs"
+                              tooltip={isLogSearchVisible ? "Hide log search" : "Search logs"}
+                            >
+                              <Search />
+                            </Button>
+                            {job.id ? (
+                              <Button
+                                type="button"
+                                onClick={() => void loadJobLogs(job.id!, true)}
+                                variant="ghost"
+                                size="icon-xs"
+                                tooltip="Refresh job logs"
+                                disabled={!areJobLogsDownloadable(job)}
+                              >
+                                {loadingJobLogId === job.id ? (
+                                  <LoadingIndicator label="Loading job logs" compact />
+                                ) : (
+                                  <RefreshCw />
+                                )}
+                              </Button>
+                            ) : null}
+                            <Button
+                              type="button"
+                              onClick={handleCopySelectedLogs}
+                              variant="ghost"
+                              tooltip="Copy job logs"
+                              disabled={!job.id || !selectedStepLogs}
+                              size="icon-xs"
+                            >
+                              <Copy />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="max-h-[52vh] overflow-auto p-3">
+                          {!areJobLogsDownloadable(job) ? (
+                            <p className="ui-text-sm text-text-lighter">
+                              Logs are available after this job finishes.
+                            </p>
+                          ) : job.id && loadingJobLogId === job.id && !jobLogs[job.id] ? (
+                            <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
+                              <LoadingIndicator label="Loading logs" showLabel compact />
+                            </div>
+                          ) : job.id && jobLogErrors[job.id] ? (
+                            <div className="space-y-2">
+                              <p className="ui-text-sm text-error">{jobLogErrors[job.id]}</p>
+                              <Button
+                                type="button"
+                                onClick={() => void loadJobLogs(job.id!, true)}
+                                variant="default"
+                                size="xs"
+                                className="border border-error/40 text-error/90 hover:bg-error/10"
+                              >
+                                Retry
+                              </Button>
+                            </div>
+                          ) : filteredStepLogs ? (
+                            <pre className="ui-text-sm whitespace-pre-wrap break-words font-mono leading-5 text-text-light">
+                              {filteredStepLogs.split(/\r?\n/).map((line, lineIndex, lines) => (
+                                <span key={`${lineIndex}-${line}`}>
+                                  {getLogLineSegments(line, logSearchQuery).map(
+                                    (segment, segmentIndex) =>
+                                      segment.isMatch ? (
+                                        <mark
+                                          key={segmentIndex}
+                                          className="rounded bg-warning/20 px-0.5 text-text"
+                                        >
+                                          {segment.text}
+                                        </mark>
+                                      ) : (
+                                        <span key={segmentIndex}>{segment.text}</span>
+                                      ),
+                                  )}
+                                  {lineIndex < lines.length - 1 ? "\n" : null}
+                                </span>
+                              ))}
+                            </pre>
+                          ) : hasLogSearchQuery && selectedStepLogs ? (
+                            <p className="ui-text-sm text-text-lighter">
+                              No log lines match this search.
+                            </p>
+                          ) : (
+                            <p className="ui-text-sm text-text-lighter">
+                              No logs available for this step.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ) : null}
-                </div>
-                {job.steps.length > 0 && (
-                  <div className="mt-2 grid gap-1 pl-6">
-                    {job.steps.slice(0, 8).map((step, index) => (
-                      <div
-                        key={`${job.name}-${step.name}-${index}`}
-                        className="ui-text-sm flex items-center gap-2 text-text-lighter"
-                      >
-                        <WorkflowStatusIcon
-                          status={step.status}
-                          conclusion={step.conclusion}
-                          className="shrink-0"
-                        />
-                        <span className="min-w-0 flex-1 truncate">{step.name}</span>
-                        <span className="ui-text-xs shrink-0 text-text-lighter">
-                          {getWorkflowRunStatus(step.status, step.conclusion).label}
-                        </span>
-                      </div>
-                    ))}
-                    {job.steps.length > 8 ? (
-                      <div className="ui-text-xs text-text-lighter">
-                        {`${job.steps.length - 8} more steps`}
-                      </div>
-                    ) : null}
-                  </div>
-                )}
-              </button>
-            ))}
+                </section>
+              );
+            })}
             {details.jobs.length > visibleJobs.length ? (
               <div className="px-1 py-2">
                 <LoadingIndicator
@@ -585,93 +842,6 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
               </div>
             ) : null}
           </div>
-
-          {selectedJob ? (
-            <div className="rounded-md border border-border/70 bg-secondary-bg/20">
-              <div className="flex items-center justify-between gap-2 border-border/70 border-b px-3 py-2">
-                <div className="flex min-w-0 items-start gap-2">
-                  <WorkflowStatusIcon
-                    status={selectedJob.status}
-                    conclusion={selectedJob.conclusion}
-                    className="mt-0.5 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <div className="ui-text-sm truncate text-text">{selectedJob.name}</div>
-                    <div className="ui-text-xs flex flex-wrap items-center gap-x-2 text-text-lighter">
-                      <span>
-                        {getWorkflowRunStatus(selectedJob.status, selectedJob.conclusion).label}
-                      </span>
-                      {formatDuration(selectedJob.startedAt, selectedJob.completedAt) ? (
-                        <span>
-                          {formatDuration(selectedJob.startedAt, selectedJob.completedAt)}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {selectedJob.id ? (
-                    <Button
-                      type="button"
-                      onClick={() => void loadJobLogs(selectedJob.id!, true)}
-                      variant="ghost"
-                      compact
-                      aria-label="Refresh job logs"
-                      disabled={!selectedJobLogsDownloadable}
-                    >
-                      {loadingJobLogId === selectedJob.id ? (
-                        <LoadingIndicator label="Loading job logs" compact />
-                      ) : (
-                        <RefreshCw />
-                      )}
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    onClick={handleCopyJobLogs}
-                    variant="ghost"
-                    aria-label="Copy job logs"
-                    disabled={!selectedJob.id || !jobLogs[selectedJob.id]}
-                    compact
-                  >
-                    <Copy />
-                  </Button>
-                </div>
-              </div>
-              <div className="max-h-[55vh] overflow-auto p-3">
-                {!selectedJobLogsDownloadable ? (
-                  <p className="ui-text-sm text-text-lighter">
-                    Logs are available after this job finishes.
-                  </p>
-                ) : selectedJob.id &&
-                  loadingJobLogId === selectedJob.id &&
-                  !jobLogs[selectedJob.id] ? (
-                  <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
-                    <LoadingIndicator label="Loading logs" showLabel compact />
-                  </div>
-                ) : selectedJob.id && jobLogErrors[selectedJob.id] ? (
-                  <div className="space-y-2">
-                    <p className="ui-text-sm text-error">{jobLogErrors[selectedJob.id]}</p>
-                    <Button
-                      type="button"
-                      onClick={() => void loadJobLogs(selectedJob.id!, true)}
-                      variant="default"
-                      compact
-                      className="border-error/40 text-error/90 hover:bg-error/10"
-                    >
-                      Retry
-                    </Button>
-                  </div>
-                ) : selectedJob.id && jobLogs[selectedJob.id] ? (
-                  <pre className="ui-text-xs whitespace-pre-wrap break-words font-mono leading-5 text-text-light">
-                    {jobLogs[selectedJob.id]}
-                  </pre>
-                ) : (
-                  <p className="ui-text-sm text-text-lighter">No logs available for this job.</p>
-                )}
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : (
         <GitHubViewerLoadingState label="Loading action run" />

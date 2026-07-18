@@ -1,4 +1,9 @@
-import Command, { CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import Command, {
+  CommandHeader,
+  CommandHeaderBadge,
+  CommandInput,
+  CommandList,
+} from "@/ui/command";
 import { useQuickOpen } from "../hooks/use-quick-open";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";
@@ -12,6 +17,7 @@ const QuickOpen = () => {
     setQuery,
     debouncedQuery,
     inputRef,
+    handleInputKeyDown,
     scrollContainerRef,
     onClose,
     files,
@@ -38,6 +44,7 @@ const QuickOpen = () => {
   const hasResults =
     openBufferFiles.length > 0 || recentFilesInResults.length > 0 || otherFiles.length > 0;
   const totalResults = openBufferFiles.length + recentFilesInResults.length + otherFiles.length;
+  const symbolSearchQuery = query.startsWith("@") ? query.slice(1).trim() : query;
 
   return (
     <Command isVisible={isVisible} onClose={onClose}>
@@ -46,13 +53,14 @@ const QuickOpen = () => {
           ref={inputRef}
           value={query}
           onChange={setQuery}
+          onKeyDown={handleInputKeyDown}
           placeholder={isSymbolMode ? "Type to filter symbols..." : "Type to search files..."}
-          className="ui-font"
+          className="font-sans"
         />
         {isSymbolMode ? (
-          <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+          <CommandHeaderBadge>
             {isLoadingSymbols ? "..." : `${symbols.length} symbols`}
-          </span>
+          </CommandHeaderBadge>
         ) : (
           <FileCountBadge
             totalFiles={files.length}
@@ -67,7 +75,7 @@ const QuickOpen = () => {
         {isSymbolMode ? (
           symbols.length === 0 ? (
             <div className="flex items-center justify-center p-4 text-text-lighter">
-              <span className="ui-font ui-text-sm">
+              <span className="font-sans ui-text-base">
                 {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
               </span>
             </div>
@@ -80,6 +88,7 @@ const QuickOpen = () => {
                 isSelected={index === selectedIndex}
                 onClick={handleSymbolSelect}
                 onMouseEnter={(idx) => setSelectedIndex(idx)}
+                searchQuery={symbolSearchQuery}
               />
             ))
           )
@@ -106,6 +115,7 @@ const QuickOpen = () => {
                     onClick={handleItemSelect}
                     onMouseEnter={handleItemHover}
                     rootFolderPath={rootFolderPath}
+                    searchQuery={debouncedQuery}
                   />
                 ))}
               </div>
@@ -125,6 +135,7 @@ const QuickOpen = () => {
                       onClick={handleItemSelect}
                       onMouseEnter={handleItemHover}
                       rootFolderPath={rootFolderPath}
+                      searchQuery={debouncedQuery}
                     />
                   );
                 })}
@@ -145,6 +156,7 @@ const QuickOpen = () => {
                       onClick={handleItemSelect}
                       onMouseEnter={handleItemHover}
                       rootFolderPath={rootFolderPath}
+                      searchQuery={debouncedQuery}
                     />
                   );
                 })}

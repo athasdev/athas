@@ -1,26 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Check, Plus, Sparkle } from "@phosphor-icons/react";
+import { CheckIcon as Check, PlusIcon as Plus, SparkleIcon as Sparkle } from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { getBranches } from "@/features/git/api/git-branches-api";
 import { getRefDiff } from "@/features/git/api/git-diff-api";
 import { getGitStatus } from "@/features/git/api/git-status-api";
 import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit-service";
-import { useSettingsStore } from "@/features/settings/store";
-import { useAuthStore } from "@/features/window/stores/auth-store";
-import { Button } from "@/ui/button";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import Command, {
   CommandEmpty,
   CommandFooter,
+  CommandFooterAction,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { Button } from "@/ui/button";
+import Checkbox from "@/ui/checkbox";
+import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import Textarea from "@/ui/textarea";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import type { IssueListItem, Label, PullRequest, WorkflowListItem } from "../types/github";
+import type { IssueListItem, Label, PullRequest, WorkflowListItem } from "../types/github.types";
 
 export type GitHubCreateKind = "pull-request" | "issue" | "action";
 
@@ -99,6 +103,46 @@ export function GitHubCreateCommand({
   onWorkflowDispatched,
 }: GitHubCreateCommandProps) {
   const isVisible = Boolean(kind && repoPath);
+
+  if (!isVisible || !kind || !repoPath) {
+    return (
+      <Command isVisible={false} onClose={onClose} title="GitHub">
+        {null}
+      </Command>
+    );
+  }
+
+  return (
+    <GitHubCreateCommandContent
+      key={`${kind}:${repoPath}:${defaultHead ?? ""}`}
+      kind={kind}
+      repoPath={repoPath}
+      defaultHead={defaultHead}
+      onClose={onClose}
+      onIssueCreated={onIssueCreated}
+      onPullRequestCreated={onPullRequestCreated}
+      onWorkflowDispatched={onWorkflowDispatched}
+    />
+  );
+}
+
+interface GitHubCreateCommandContentProps extends Omit<
+  GitHubCreateCommandProps,
+  "kind" | "repoPath"
+> {
+  kind: GitHubCreateKind;
+  repoPath: string;
+}
+
+function GitHubCreateCommandContent({
+  kind,
+  repoPath,
+  defaultHead,
+  onClose,
+  onIssueCreated,
+  onPullRequestCreated,
+  onWorkflowDispatched,
+}: GitHubCreateCommandContentProps) {
   const [mode, setMode] = useState<PickerMode>("form");
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState("");
@@ -113,7 +157,7 @@ export function GitHubCreateCommand({
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [workflowId, setWorkflowId] = useState("");
   const [workflowRef, setWorkflowRef] = useState(defaultHead || "master");
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -121,29 +165,7 @@ export function GitHubCreateCommand({
   const subscription = useAuthStore((state) => state.subscription);
 
   useEffect(() => {
-    if (!isVisible) {
-      setMode("form");
-      setQuery("");
-      setTitle("");
-      setBody("");
-      setHead(defaultHead ?? "");
-      setBase("master");
-      setDraft(false);
-      setAssignees("");
-      setSelectedLabels(new Set());
-      setWorkflowId("");
-      setWorkflowRef(defaultHead || "master");
-      setIsGenerating(false);
-      setError(null);
-    }
-  }, [defaultHead, isVisible]);
-
-  useEffect(() => {
-    if (!isVisible || !repoPath) return;
-
     let cancelled = false;
-    setIsLoadingMetadata(true);
-    setError(null);
 
     Promise.all([
       getBranches(repoPath),
@@ -164,9 +186,11 @@ export function GitHubCreateCommand({
           setHead(cleanBranches[0]);
           setWorkflowRef(cleanBranches[0]);
         }
-        if (!cleanBranches.includes(base) && cleanBranches.includes("main")) {
-          setBase("main");
-        }
+        setBase((currentBase) =>
+          !cleanBranches.includes(currentBase) && cleanBranches.includes("main")
+            ? "main"
+            : currentBase,
+        );
       })
       .catch((nextError) => {
         if (!cancelled) {
@@ -182,7 +206,7 @@ export function GitHubCreateCommand({
     return () => {
       cancelled = true;
     };
-  }, [base, defaultHead, isVisible, kind, repoPath]);
+  }, [defaultHead, kind, repoPath]);
 
   const selectedWorkflow = workflows.find((workflow) => workflow.id.toString() === workflowId);
   const selectedLabelNames = Array.from(selectedLabels);
@@ -276,7 +300,7 @@ export function GitHubCreateCommand({
 
     try {
       const enterprisePolicy = subscription?.enterprise?.policy;
-      const isPro = subscription?.status === "pro";
+      const isPro = hasProductCapability(subscription, "hostedAi");
       if (enterprisePolicy?.managedMode && enterprisePolicy.aiCompletionEnabled === false) {
         setError("AI generation is disabled by your organization policy.");
         return;
@@ -354,38 +378,27 @@ ${statusSummary}`;
   };
 
   return (
-    <Command
-      isVisible={isVisible}
-      onClose={onClose}
-      title={kind ? titleByKind[kind] : "GitHub"}
-      className="max-h-[540px]"
-    >
+    <Command isVisible onClose={onClose} title={titleByKind[kind]} className="max-h-[540px]">
       <CommandHeader onClose={mode === "form" ? onClose : closePicker}>
-        {mode === "form" && kind === "action" ? (
-          <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">Run workflow</span>
+        {mode === "form" ? (
+          <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-text">
+            {titleByKind[kind]}
+          </span>
         ) : (
           <CommandInput
-            value={mode === "form" ? title : query}
-            onChange={mode === "form" ? setTitle : setQuery}
+            value={query}
+            onChange={setQuery}
             placeholder={
-              mode === "form"
-                ? kind === "issue"
-                  ? "Issue title"
-                  : "Pull request title"
-                : mode === "workflow"
-                  ? "Search workflows"
-                  : mode === "labels"
-                    ? "Search labels"
-                    : "Search branches"
+              mode === "workflow"
+                ? "Search workflows"
+                : mode === "labels"
+                  ? "Search labels"
+                  : "Search branches"
             }
             onKeyDown={(event) => {
-              if (event.key === "Escape" && mode !== "form") {
+              if (event.key === "Escape") {
                 event.preventDefault();
                 closePicker();
-              }
-              if (event.key === "Enter" && mode === "form" && canSubmit) {
-                event.preventDefault();
-                void handleSubmit();
               }
             }}
           />
@@ -402,19 +415,16 @@ ${statusSummary}`;
             filteredWorkflows.map((workflow) => {
               const selected = workflow.id.toString() === workflowId;
               return (
-                <CommandItem
+                <CommandItemRow
                   key={workflow.id}
                   isSelected={selected}
                   onClick={() => {
                     setWorkflowId(workflow.id.toString());
                     closePicker();
                   }}
-                >
-                  <span className="min-w-0 flex-1 truncate ui-text-sm">
-                    {workflow.name || workflow.path}
-                  </span>
-                  {selected ? <Check className="size-3.5 text-accent" /> : null}
-                </CommandItem>
+                  title={workflow.name || workflow.path}
+                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                />
               );
             })
           )}
@@ -429,7 +439,7 @@ ${statusSummary}`;
             filteredLabels.map((label) => {
               const selected = selectedLabels.has(label.name);
               return (
-                <CommandItem
+                <CommandItemRow
                   key={label.name}
                   isSelected={selected}
                   onClick={() => {
@@ -443,14 +453,15 @@ ${statusSummary}`;
                       return next;
                     });
                   }}
-                >
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: label.color ? `#${label.color}` : undefined }}
-                  />
-                  <span className="min-w-0 flex-1 truncate ui-text-sm">{label.name}</span>
-                  {selected ? <Check className="size-3.5 text-accent" /> : null}
-                </CommandItem>
+                  icon={
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ backgroundColor: label.color ? `#${label.color}` : undefined }}
+                    />
+                  }
+                  title={label.name}
+                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                />
               );
             })
           )}
@@ -470,7 +481,7 @@ ${statusSummary}`;
                     ? branch === base
                     : branch === workflowRef;
               return (
-                <CommandItem
+                <CommandItemRow
                   key={branch}
                   isSelected={selected}
                   onClick={() => {
@@ -479,10 +490,9 @@ ${statusSummary}`;
                     if (mode === "ref") setWorkflowRef(branch);
                     closePicker();
                   }}
-                >
-                  <span className="min-w-0 flex-1 truncate ui-text-sm">{branch}</span>
-                  {selected ? <Check className="size-3.5 text-accent" /> : null}
-                </CommandItem>
+                  title={branch}
+                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                />
               );
             })
           )}
@@ -505,6 +515,18 @@ ${statusSummary}`;
               </>
             ) : (
               <>
+                <Input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && canSubmit) {
+                      event.preventDefault();
+                      void handleSubmit();
+                    }
+                  }}
+                  placeholder={kind === "issue" ? "Issue title" : "Pull request title"}
+                  size="md"
+                />
                 {kind === "pull-request" ? (
                   <div className="grid grid-cols-2 gap-2">
                     <FieldButton
@@ -523,7 +545,8 @@ ${statusSummary}`;
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
                   placeholder="Description"
-                  className="min-h-24 resize-none rounded-md"
+                  size="md"
+                  className="min-h-24 resize-none"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <FieldButton
@@ -531,56 +554,52 @@ ${statusSummary}`;
                     value={selectedLabelNames.length > 0 ? selectedLabelNames.join(", ") : "None"}
                     onClick={() => setMode("labels")}
                   />
-                  <input
+                  <Input
                     value={assignees}
                     onChange={(event) => setAssignees(event.target.value)}
                     placeholder="Assignees"
-                    className="ui-font h-8 min-w-0 rounded-md border border-border bg-secondary-bg px-2 ui-text-sm text-text outline-none placeholder:text-text-lighter focus:border-accent/45"
+                    size="md"
                   />
                 </div>
                 {kind === "pull-request" ? (
-                  <label className="flex items-center gap-2 px-1 ui-font ui-text-xs text-text-lighter">
-                    <input
-                      type="checkbox"
+                  <label className="flex items-center gap-2 px-1 font-sans ui-text-base text-text-lighter">
+                    <Checkbox
                       checked={draft}
-                      onChange={(event) => setDraft(event.target.checked)}
-                      className="size-3.5 accent-accent"
+                      onChange={setDraft}
+                      ariaLabel="Create as draft pull request"
                     />
                     Draft
                   </label>
                 ) : null}
               </>
             )}
-            {error ? <div className="ui-text-xs text-error">{error}</div> : null}
+            {error ? <div className="ui-text-base text-error">{error}</div> : null}
           </div>
         </CommandList>
       )}
 
       <CommandFooter>
         {mode === "labels" ? (
-          <Button type="button" compact className="ml-auto" onClick={closePicker}>
+          <CommandFooterAction type="button" onClick={closePicker}>
             Done
-          </Button>
+          </CommandFooterAction>
         ) : (
           <>
-            <span className="min-w-0 flex-1 truncate px-1 ui-text-xs text-text-lighter">
-              {mode === "form" ? (repoPath ?? "") : titleByKind[kind ?? "issue"]}
+            <span className="min-w-0 flex-1 truncate px-1 ui-text-base text-text-lighter">
+              {mode === "form" ? repoPath : titleByKind[kind]}
             </span>
             {kind !== "action" ? (
-              <Button
+              <CommandFooterAction
                 type="button"
-                compact
-                variant="ghost"
                 disabled={mode !== "form" || isGenerating || isSubmitting}
                 onClick={handleGenerateDraft}
               >
                 {isGenerating ? <LoadingIndicator label="Generating" compact /> : <Sparkle />}
                 Generate
-              </Button>
+              </CommandFooterAction>
             ) : null}
-            <Button
+            <CommandFooterAction
               type="button"
-              compact
               disabled={mode !== "form" || !canSubmit || isSubmitting}
               onClick={handleSubmit}
             >
@@ -590,7 +609,7 @@ ${statusSummary}`;
                 <Plus />
               )}
               {kind === "action" ? "Run" : "Create"}
-            </Button>
+            </CommandFooterAction>
           </>
         )}
       </CommandFooter>
@@ -608,15 +627,17 @@ function FieldButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="default"
+      size="xs"
       onClick={onClick}
       className={cn(
-        "flex h-8 min-w-0 items-center gap-2 rounded-md bg-secondary-bg px-2 text-left transition-colors hover:bg-hover",
+        "h-8 min-w-0 justify-start gap-2 bg-secondary-bg px-2 text-left hover:bg-hover",
       )}
     >
-      <span className="shrink-0 ui-font ui-text-xs text-text-lighter">{label}</span>
-      <span className="min-w-0 flex-1 truncate ui-font ui-text-sm text-text">{value}</span>
-    </button>
+      <span className="shrink-0 font-sans ui-text-base text-text-lighter">{label}</span>
+      <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-text">{value}</span>
+    </Button>
   );
 }

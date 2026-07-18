@@ -11,6 +11,16 @@ interface FileOpenBenchmarkSession {
   }>;
 }
 
+interface FileOpenBenchmarkMeta {
+  lineCount?: number;
+  contentLength?: number;
+  fileType?: string;
+  largeContentMode?: boolean;
+  languageId?: string;
+  themeId?: string;
+  tokenTypes?: string[];
+}
+
 const sessions = new Map<string, FileOpenBenchmarkSession>();
 const DEV_ENABLED = import.meta.env.DEV;
 const BUILD_ENABLED = import.meta.env.VITE_FILE_OPEN_BENCHMARK === "1";
@@ -38,6 +48,12 @@ function shortPath(path: string): string {
   const normalized = path.replace(/[\\/]+$/, "");
   const parts = normalized.split(/[\\/]/);
   return parts[parts.length - 1] || path;
+}
+
+function getFileType(path: string): string {
+  const fileName = shortPath(path);
+  const extension = fileName.includes(".") ? fileName.split(".").pop() : "";
+  return extension?.toLowerCase() || "none";
 }
 
 function pushMark(session: FileOpenBenchmarkSession, label: string, detail?: string): void {
@@ -109,7 +125,7 @@ export const fileOpenBenchmark = {
     pushMark(session, label, detail);
   },
 
-  finish(path: string, label = "done", detail?: string): void {
+  finish(path: string, label = "done", detail?: string, meta: FileOpenBenchmarkMeta = {}): void {
     if (!isEnabled()) return;
 
     const session = sessions.get(path);
@@ -118,9 +134,22 @@ export const fileOpenBenchmark = {
     pushMark(session, label, detail);
     const summary = summarize(session);
     const level = getBenchmarkLevel(summary.total);
+    const seconds = summary.total / 1000;
+    const fileType = meta.fileType ?? getFileType(path);
     logger.info("FileOpenBenchmark", summary.text);
+    console.info(
+      `[athas:file-open] file=${shortPath(path)} type=${fileType} lines=${meta.lineCount ?? "unknown"} totalMs=${summary.total.toFixed(1)} seconds=${seconds.toFixed(3)} chars=${meta.contentLength ?? "unknown"} large=${meta.largeContentMode ?? "unknown"}`,
+    );
     frontendTrace(level, "bench:file-open", shortPath(path), {
       totalMs: Math.round(summary.total * 100) / 100,
+      seconds: Math.round(seconds * 1000) / 1000,
+      lineCount: meta.lineCount ?? null,
+      contentLength: meta.contentLength ?? null,
+      fileType,
+      largeContentMode: meta.largeContentMode ?? null,
+      languageId: meta.languageId ?? null,
+      themeId: meta.themeId ?? null,
+      tokenTypes: meta.tokenTypes ?? null,
       phases: summary.phases.map((phase) => ({
         label: phase.label,
         durationMs: Math.round(phase.duration * 100) / 100,
@@ -143,5 +172,9 @@ export const fileOpenBenchmark = {
 
   has(path: string): boolean {
     return sessions.has(path);
+  },
+
+  hasMark(path: string, label: string): boolean {
+    return sessions.get(path)?.marks.some((mark) => mark.label === label) ?? false;
   },
 };

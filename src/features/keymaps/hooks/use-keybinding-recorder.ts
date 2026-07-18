@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { keybindingToDisplay } from "@/utils/keybinding-display";
 import { normalizeKey } from "@/utils/platform";
-import { useKeymapStore } from "../stores/store";
+import { useKeymapStore } from "../stores/keymaps.store";
 import { eventToKey } from "../utils/matcher";
 
 interface RecorderState {
@@ -20,6 +20,15 @@ export function useKeybindingRecorder(commandId: string) {
     useKeymapStore.use.actions();
 
   const isRecording = recordingCommandId === commandId;
+
+  useEffect(() => {
+    return () => {
+      const { recordingCommandId: activeRecordingCommandId, actions } = useKeymapStore.getState();
+      if (activeRecordingCommandId === commandId) {
+        actions.stopRecording();
+      }
+    };
+  }, [commandId]);
 
   const startRecording = useCallback(() => {
     storeStartRecording(commandId);

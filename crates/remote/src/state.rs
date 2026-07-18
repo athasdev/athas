@@ -1,3 +1,4 @@
+use athas_terminal::TerminalReaderControl;
 use ssh2::{Channel, Session, Sftp};
 use std::{
    collections::HashMap,
@@ -15,4 +16,5 @@ lazy_static::lazy_static! {
 pub(super) struct RemoteTerminal {
    pub _session: Arc<Mutex<Session>>,
    pub channel: Arc<Mutex<Channel>>,
+   pub reader_control: Arc<TerminalReaderControl>,
 }

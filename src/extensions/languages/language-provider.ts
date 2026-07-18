@@ -2,15 +2,16 @@ import type {
   ExtensionContext,
   LanguageExtension,
   Token,
-} from "@/features/editor/extensions/types";
+} from "@/features/editor/types/editor-extension.types";
 import {
   convertToEditorTokens,
   tokenizeCode,
 } from "@/features/editor/lib/wasm-parser/wasm-parser-api";
 import { indexedDBParserCache } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
+import { getServiceUrls } from "@/config/services";
 
 // CDN base URL for downloading WASM parsers and highlight queries
-const CDN_BASE_URL = import.meta.env.VITE_PARSER_CDN_URL || "https://athas.dev/extensions";
+const CDN_BASE_URL = getServiceUrls().extensionsCdnBaseUrl;
 
 export interface LanguageConfig {
   id: string;
@@ -18,6 +19,7 @@ export interface LanguageConfig {
   extensions: string[];
   aliases?: string[];
   filenames?: string[];
+  filenamePatterns?: string[];
   description?: string;
   wasmPath?: string;
   highlightQueryPath?: string;
@@ -32,6 +34,7 @@ export abstract class BaseLanguageProvider implements LanguageExtension {
   readonly extensions: string[];
   readonly aliases?: string[];
   readonly filenames?: string[];
+  readonly filenamePatterns?: string[];
   readonly description?: string;
   readonly wasmPath: string;
   readonly highlightQueryPath: string;
@@ -44,6 +47,7 @@ export abstract class BaseLanguageProvider implements LanguageExtension {
     this.extensions = config.extensions;
     this.aliases = config.aliases;
     this.filenames = config.filenames;
+    this.filenamePatterns = config.filenamePatterns;
     this.description = config.description;
     this.wasmPath = config.wasmPath || `${CDN_BASE_URL}/${config.id}/parser.wasm`;
     this.highlightQueryPath =

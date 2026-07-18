@@ -1,12 +1,12 @@
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DebuggerView from "@/features/debugger/components/debugger-view";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
-import { usePaneStore } from "@/features/panes/stores/pane-store";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getAllPaneGroups } from "@/features/panes/utils/pane-tree";
-import { useSettingsStore } from "@/features/settings/store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -14,24 +14,34 @@ import {
 } from "@/features/tabs/utils/internal-tab-drag";
 import TerminalContainer from "@/features/terminal/components/terminal-container";
 import { cn } from "@/utils/cn";
-import { IS_MAC } from "@/utils/platform";
-import { useProjectStore } from "@/features/window/stores/project-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import ReferencesPane from "../../../references/components/references-pane";
+import { useProjectStore } from "@/features/window/stores/project.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {
-  const { isBottomPaneVisible, bottomPaneActiveTab } = useUIState();
-  const { rootFolderPath } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
+  const debuggerEnabled = useSettingsStore((state) => state.settings.coreFeatures.debugger);
   const bottomRoot = usePaneStore.use.bottomRoot();
-  const bottomPaneBufferIds = getAllPaneGroups(bottomRoot).flatMap((pane) => pane.bufferIds);
+  const bottomPaneBufferIds = useMemo(() => {
+    const bufferIds: string[] = [];
+    for (const pane of getAllPaneGroups(bottomRoot)) {
+      for (const bufferId of pane.bufferIds) {
+        bufferIds.push(bufferId);
+      }
+    }
+    return bufferIds;
+  }, [bottomRoot]);
   const { moveBufferToPane } = usePaneStore.use.actions();
   const { openTerminalBuffer } = useBufferStore.use.actions();
   const [height, setHeight] = useState(320);
   const [isResizing, setIsResizing] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isInternalHoverTarget, setIsInternalHoverTarget] = useState(false);
+  const paneFrameRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const syncHover = () => {
@@ -43,20 +53,19 @@ const BottomPane = () => {
   }, []);
 
   useEffect(() => {
-    if (isBottomPaneVisible && bottomPaneActiveTab === "diagnostics") {
+    if (
+      isBottomPaneVisible &&
+      (bottomPaneActiveTab === "diagnostics" || bottomPaneActiveTab === "references")
+    ) {
       useUIState.getState().setIsBottomPaneVisible(false);
     }
   }, [bottomPaneActiveTab, isBottomPaneVisible]);
 
   useEffect(() => {
-    if (
-      isBottomPaneVisible &&
-      bottomPaneActiveTab === "debugger" &&
-      !settings.coreFeatures.debugger
-    ) {
+    if (isBottomPaneVisible && bottomPaneActiveTab === "debugger" && !debuggerEnabled) {
       useUIState.getState().setIsBottomPaneVisible(false);
     }
-  }, [bottomPaneActiveTab, isBottomPaneVisible, settings.coreFeatures.debugger]);
+  }, [bottomPaneActiveTab, isBottomPaneVisible, debuggerEnabled]);
 
   useEffect(() => {
     if (
@@ -76,14 +85,31 @@ const BottomPane = () => {
 
       const startY = e.clientY;
       const startHeight = height;
+      const frameEl = paneFrameRef.current;
+      let currentHeight = startHeight;
+      let rafId: number | null = null;
 
       const handleMouseMove = (e: MouseEvent) => {
-        const deltaY = startY - e.clientY; // Reverse direction since we're resizing from top
-        const newHeight = Math.min(Math.max(startHeight + deltaY, 200), window.innerHeight * 0.8); // Min 200px, max 80% of screen
-        setHeight(newHeight);
+        const deltaY = startY - e.clientY;
+        currentHeight = Math.min(Math.max(startHeight + deltaY, 200), window.innerHeight * 0.8);
+
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          if (frameEl) {
+            frameEl.style.height = `calc(${currentHeight}px + var(--athas-workbench-gap))`;
+          }
+        });
       };
 
       const handleMouseUp = () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        if (frameEl) {
+          frameEl.style.height = `calc(${currentHeight}px + var(--athas-workbench-gap))`;
+        }
+        setHeight(currentHeight);
         setIsResizing(false);
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
@@ -99,8 +125,6 @@ const BottomPane = () => {
     [height],
   );
 
-  const titleBarHeight = IS_MAC ? 44 : 28; // h-11 for macOS, h-7 for Windows/Linux
-  const footerHeight = 32; // Footer height matches min-h-[32px] from editor-footer
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.types.includes("application/tab-data") && !getInternalTabDragData()) {
       return;
@@ -165,50 +189,42 @@ const BottomPane = () => {
     [moveBufferToPane, openTerminalBuffer],
   );
 
-  return (
+  const resizeGutter = !isFullScreen ? (
+    <div
+      onMouseDown={handleMouseDown}
+      className={cn(
+        "group relative flex h-[var(--athas-workbench-gap)] w-full shrink-0 cursor-ns-resize items-center justify-center",
+        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/8",
+        isResizing && "bg-accent/8",
+      )}
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize bottom pane"
+    >
+      <div
+        className={cn(
+          "h-px w-full bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",
+          isResizing && "bg-accent",
+        )}
+      />
+    </div>
+  ) : null;
+
+  const paneContent = (
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "athas-glass-island relative flex flex-col overflow-hidden rounded-lg border border-border/70 bg-primary-bg",
+        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-primary-bg",
         isInternalHoverTarget && "ring-2 ring-accent ring-inset",
-        isFullScreen && "fixed inset-x-2 z-[10040] rounded-xl shadow-2xl",
-        !isBottomPaneVisible && "hidden",
+        isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
+        !isFullScreen && "flex-1",
       )}
-      style={
-        isFullScreen
-          ? {
-              top: `${titleBarHeight + 8}px`,
-              bottom: `${footerHeight + 8}px`,
-            }
-          : {
-              height: `${height}px`,
-              flexShrink: 0,
-            }
-      }
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Resize Handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        className={cn(
-          "group absolute top-0 right-0 left-0 z-10 h-1",
-          "cursor-ns-resize transition-colors duration-150 hover:bg-blue-500/30",
-          isResizing && "bg-blue-500/50",
-        )}
-      >
-        <div
-          className={cn(
-            "-translate-y-[1px] absolute top-0 right-0 left-0 h-[3px]",
-            "bg-blue-500 opacity-0 transition-opacity duration-150 group-hover:opacity-100",
-          )}
-        />
-      </div>
-
-      {/* Content Area */}
       <div className="h-full overflow-hidden">
         {/* Terminal Container - Always mounted to preserve terminal sessions */}
-        {settings.coreFeatures.terminal && (
+        {terminalEnabled && (
           <TerminalContainer
             currentDirectory={rootFolderPath}
             className={cn("h-full", bottomPaneActiveTab === "terminal" ? "block" : "hidden")}
@@ -217,19 +233,9 @@ const BottomPane = () => {
           />
         )}
 
-        {settings.coreFeatures.debugger && bottomPaneActiveTab === "debugger" && (
+        {debuggerEnabled && bottomPaneActiveTab === "debugger" && (
           <div className="h-full">
             <DebuggerView />
-          </div>
-        )}
-
-        {/* References Pane */}
-        {bottomPaneActiveTab === "references" && (
-          <div className="h-full">
-            <ReferencesPane
-              onFullScreen={() => setIsFullScreen(!isFullScreen)}
-              isFullScreen={isFullScreen}
-            />
           </div>
         )}
 
@@ -239,6 +245,30 @@ const BottomPane = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+
+  const pane = isFullScreen ? (
+    <WorkbenchFullscreenSurface>{paneContent}</WorkbenchFullscreenSurface>
+  ) : (
+    paneContent
+  );
+
+  if (isFullScreen) {
+    return isBottomPaneVisible ? pane : null;
+  }
+
+  return (
+    <div
+      ref={paneFrameRef}
+      className={cn("flex shrink-0 flex-col", !isBottomPaneVisible && "hidden")}
+      style={{
+        height: `calc(${height}px + var(--athas-workbench-gap))`,
+      }}
+    >
+      {resizeGutter}
+      {pane}
+      {isResizing ? <div className="fixed inset-0 z-40 cursor-ns-resize" /> : null}
     </div>
   );
 };

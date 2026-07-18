@@ -10,9 +10,10 @@ use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
 use log::{debug, info};
-use std::{path::PathBuf, sync::Arc};
+use serde::Serialize;
+use std::{path::PathBuf, sync::Arc, time::Instant};
 use tauri::{Emitter, Manager};
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
 use tauri_plugin_os::platform;
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
@@ -34,14 +35,14 @@ pub fn configure_app(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn s
 fn configure_menu(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    let store = app.store("settings.json")?;
 
-   #[cfg(target_os = "windows")]
+   #[cfg(any(target_os = "windows", target_os = "linux"))]
    {
       store.set("nativeMenuBar", false);
       let _ = store.save();
       return Ok(());
    }
 
-   #[cfg(not(target_os = "windows"))]
+   #[cfg(target_os = "macos")]
    {
       let native_menu_bar = store
          .get("nativeMenuBar")
@@ -82,6 +83,7 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
    app.manage(ThemeCache::new(std::collections::HashMap::new()));
    app.manage(FileClipboard::new(None));
    app.manage(FffSearchState::new());
+   app.manage(commands::development::docker::DockerLogStreams::default());
    app.manage(commands::development::cli_args::PendingCliOpenRequests::default());
 }
 
@@ -161,8 +163,18 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_new_tab" => Some("workbench.newTab"),
       "command_reopen_closed_tab" => Some("file.reopenClosed"),
       "command_close_all_tabs" => Some("file.closeAll"),
+      "command_close_other_tabs" => Some("file.closeOthers"),
+      "command_close_saved_tabs" => Some("file.closeSaved"),
+      "command_close_tabs_to_left" => Some("file.closeTabsToLeft"),
+      "command_close_tabs_to_right" => Some("file.closeTabsToRight"),
+      "command_save_all" => Some("file.saveAll"),
+      "command_revert_file" => Some("file.revert"),
       "command_local_history" => Some("file.localHistory"),
       "command_format_document" => Some("editor.formatDocument"),
+      "command_format_selection" => Some("editor.formatSelection"),
+      "command_quick_fix" => Some("editor.quickFix"),
+      "command_show_hover" => Some("editor.showHover"),
+      "command_trigger_parameter_hints" => Some("editor.triggerParameterHints"),
       "command_duplicate_line" => Some("editor.duplicateLine"),
       "command_delete_line" => Some("editor.deleteLine"),
       "command_move_line_up" => Some("editor.moveLineUp"),
@@ -173,8 +185,10 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_source_control" => Some("workbench.showSourceControl"),
       "command_github" => Some("workbench.showGitHub"),
       "command_debugger" => Some("workbench.showDebugger"),
-      "command_toggle_sidebar_position" => Some("workbench.toggleSidebarPosition"),
       "command_toggle_minimap" => Some("workbench.toggleMinimap"),
+      "command_toggle_word_wrap" => Some("editor.toggleWordWrap"),
+      "command_toggle_line_numbers" => Some("editor.toggleLineNumbers"),
+      "command_toggle_render_whitespace" => Some("editor.toggleRenderWhitespace"),
       "command_zoom_in" => Some("workbench.zoomIn"),
       "command_zoom_out" => Some("workbench.zoomOut"),
       "command_zoom_reset" => Some("workbench.zoomReset"),
@@ -183,6 +197,8 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
       "command_go_back" => Some("navigation.goBack"),
       "command_go_forward" => Some("navigation.goForward"),
       "command_go_to_definition" => Some("editor.goToDefinition"),
+      "command_go_to_implementation" => Some("editor.goToImplementation"),
+      "command_go_to_type_definition" => Some("editor.goToTypeDefinition"),
       "command_go_to_references" => Some("editor.goToReferences"),
       "command_rename_symbol" => Some("editor.renameSymbol"),
       "command_new_terminal" => Some("terminal.new"),
@@ -198,150 +214,193 @@ fn command_id_for_menu_event(event_id: &str) -> Option<&'static str> {
    }
 }
 
+fn emit_menu_event<P>(window: &tauri::WebviewWindow<AthasRuntime>, event: &str, payload: P)
+where
+   P: Serialize + Clone,
+{
+   let _ = window.emit_to(window.label(), event, payload);
+}
+
 fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::menu::MenuEvent) {
    match event.id().0.as_str() {
       "new_window" => {
-         let app_handle = app_handle.clone();
-         std::thread::spawn(move || {
-            if let Err(error) = commands::ui::window::create_app_window_internal(&app_handle, None)
-            {
-               log::error!("Failed to create app window from menu: {}", error);
+         let received_at = Instant::now();
+         log::info!("[window-open:menu] new_window:received");
+         match commands::ui::window::create_app_window_internal(app_handle, None) {
+            Ok(label) => log::info!(
+               "[window-open:{label}] menu:create:end totalMs={}",
+               received_at.elapsed().as_millis()
+            ),
+            Err(error) => {
+               log::error!(
+                  "[window-open:menu] new_window:error totalMs={} error={}",
+                  received_at.elapsed().as_millis(),
+                  error
+               );
             }
-         });
+         }
       }
       event_id => {
          if let Some(window) = get_active_webview_window(app_handle) {
             match event_id {
                "quit" => {
                   info!("Quit menu item clicked");
-                  let _ = window.emit("menu_quit_app", ());
+                  emit_menu_event(&window, "menu_quit_app", ());
                }
                "quit_app" => {
                   info!("Quit app menu item triggered");
-                  let _ = window.emit("menu_quit_app", ());
+                  emit_menu_event(&window, "menu_quit_app", ());
                }
                "new_file" => {
-                  let _ = window.emit("menu_new_file", ());
+                  emit_menu_event(&window, "menu_new_file", ());
                }
                "open_folder" => {
-                  let _ = window.emit("menu_open_folder", ());
+                  emit_menu_event(&window, "menu_open_folder", ());
                }
                "close_folder" => {
-                  let _ = window.emit("menu_close_folder", ());
+                  emit_menu_event(&window, "menu_close_folder", ());
                }
                "save" => {
-                  let _ = window.emit("menu_save", ());
+                  emit_menu_event(&window, "menu_save", ());
                }
                "save_as" => {
-                  let _ = window.emit("menu_save_as", ());
+                  emit_menu_event(&window, "menu_save_as", ());
                }
                "close_tab" => {
                   debug!("Close tab menu item triggered");
-                  let _ = window.emit("menu_close_tab", ());
+                  emit_menu_event(&window, "menu_close_tab", ());
+               }
+               "close_window" => {
+                  debug!("Close window menu item triggered");
+                  emit_menu_event(&window, "menu_close_window", ());
                }
                "undo" => {
-                  let _ = window.emit("menu_undo", ());
+                  emit_menu_event(&window, "menu_undo", ());
                }
                "redo" => {
-                  let _ = window.emit("menu_redo", ());
+                  emit_menu_event(&window, "menu_redo", ());
+               }
+               "select_all" => {
+                  emit_menu_event(&window, "menu_select_all", ());
                }
                "find" => {
-                  let _ = window.emit("menu_find", ());
+                  emit_menu_event(&window, "menu_find", ());
                }
                "find_replace" => {
-                  let _ = window.emit("menu_find_replace", ());
+                  emit_menu_event(&window, "menu_find_replace", ());
                }
                "toggle_comment" => {
-                  let _ = window.emit("menu_toggle_comment", ());
+                  emit_menu_event(&window, "menu_toggle_comment", ());
                }
                "command_palette" => {
-                  let _ = window.emit("menu_command_palette", ());
+                  emit_menu_event(&window, "menu_command_palette", ());
                }
                "toggle_sidebar" => {
-                  let _ = window.emit("menu_toggle_sidebar", ());
+                  emit_menu_event(&window, "menu_toggle_sidebar", ());
                }
                "toggle_terminal" => {
-                  let _ = window.emit("menu_toggle_terminal", ());
+                  emit_menu_event(&window, "menu_toggle_terminal", ());
                }
                "toggle_ai_chat" => {
-                  let _ = window.emit("menu_toggle_ai_chat", ());
+                  emit_menu_event(&window, "menu_toggle_ai_chat", ());
                }
                "split_editor" => {
-                  let _ = window.emit("menu_split_editor", ());
+                  emit_menu_event(&window, "menu_split_editor", ());
                }
                "toggle_menu_bar" => {
-                  let current_menu = app_handle.menu();
-                  if current_menu.is_some() {
-                     if let Err(e) = app_handle.remove_menu() {
-                        log::error!("Failed to hide menu: {}", e);
-                     } else {
-                        if let Ok(store) = app_handle.store("settings.json") {
-                           store.set("nativeMenuBar", false);
-                           let _ = store.save();
-                        }
-                        log::info!("Menu bar hidden");
+                  #[cfg(target_os = "linux")]
+                  {
+                     if let Ok(store) = app_handle.store("settings.json") {
+                        store.set("nativeMenuBar", false);
+                        let _ = store.save();
                      }
-                  } else {
-                     match menu::create_menu(app_handle) {
-                        Ok(new_menu) => {
-                           if let Err(e) = app_handle.set_menu(new_menu) {
-                              log::error!("Failed to show menu: {}", e);
-                           } else {
-                              if let Ok(store) = app_handle.store("settings.json") {
-                                 store.set("nativeMenuBar", true);
-                                 let _ = store.save();
-                              }
-                              log::info!("Menu bar shown");
+                     log::info!("Native menu bar is disabled on Linux");
+                  }
+
+                  #[cfg(not(target_os = "linux"))]
+                  {
+                     let current_menu = app_handle.menu();
+                     if current_menu.is_some() {
+                        if let Err(e) = app_handle.remove_menu() {
+                           log::error!("Failed to hide menu: {}", e);
+                        } else {
+                           if let Ok(store) = app_handle.store("settings.json") {
+                              store.set("nativeMenuBar", false);
+                              let _ = store.save();
                            }
+                           log::info!("Menu bar hidden");
                         }
-                        Err(e) => {
-                           log::error!("Failed to create menu: {}", e);
+                     } else {
+                        match menu::create_menu(app_handle) {
+                           Ok(new_menu) => {
+                              if let Err(e) = app_handle.set_menu(new_menu) {
+                                 log::error!("Failed to show menu: {}", e);
+                              } else {
+                                 if let Ok(store) = app_handle.store("settings.json") {
+                                    store.set("nativeMenuBar", true);
+                                    let _ = store.save();
+                                 }
+                                 log::info!("Menu bar shown");
+                              }
+                           }
+                           Err(e) => {
+                              log::error!("Failed to create menu: {}", e);
+                           }
                         }
                      }
                   }
                }
                "toggle_vim" => {
-                  let _ = window.emit("menu_toggle_vim", ());
+                  emit_menu_event(&window, "menu_toggle_vim", ());
                }
                "quick_open" => {
-                  let _ = window.emit("menu_quick_open", ());
+                  emit_menu_event(&window, "menu_quick_open", ());
                }
                "go_to_line" => {
-                  let _ = window.emit("menu_go_to_line", ());
+                  emit_menu_event(&window, "menu_go_to_line", ());
                }
                "next_tab" => {
-                  let _ = window.emit("menu_next_tab", ());
+                  emit_menu_event(&window, "menu_next_tab", ());
                }
                "prev_tab" => {
-                  let _ = window.emit("menu_prev_tab", ());
+                  emit_menu_event(&window, "menu_prev_tab", ());
                }
                command_event_id if command_id_for_menu_event(command_event_id).is_some() => {
                   let command_id = command_id_for_menu_event(command_event_id).unwrap();
-                  let _ = window.emit("menu_execute_command", command_id);
+                  emit_menu_event(&window, "menu_execute_command", command_id);
+               }
+               "open_web_inspector" => {
+                  #[cfg(any(debug_assertions, feature = "devtools"))]
+                  {
+                     if window.is_devtools_open() {
+                        window.close_devtools();
+                     }
+                     window.open_devtools();
+                  }
                }
                "documentation" => {
-                  let _ = window.emit("menu_documentation", ());
+                  emit_menu_event(&window, "menu_documentation", ());
                }
                "changelog" => {
-                  let _ = window.emit("menu_changelog", ());
+                  emit_menu_event(&window, "menu_changelog", ());
                }
                "whats_new" => {
-                  let _ = window.emit("menu_whats_new", ());
+                  emit_menu_event(&window, "menu_whats_new", ());
                }
                "report_bug" => {
-                  let _ = window.emit("menu_report_bug", ());
+                  emit_menu_event(&window, "menu_report_bug", ());
                }
                "request_feature" => {
-                  let _ = window.emit("menu_request_feature", ());
+                  emit_menu_event(&window, "menu_request_feature", ());
                }
                "check_updates" => {
-                  let _ = window.emit("menu_check_updates", ());
+                  emit_menu_event(&window, "menu_check_updates", ());
                }
                "open_settings" => {
-                  let _ = window.emit("menu_open_settings", ());
+                  emit_menu_event(&window, "menu_open_settings", ());
                }
                "open_extensions" => {
-                  let _ = window.emit("menu_open_extensions", ());
+                  emit_menu_event(&window, "menu_open_extensions", ());
                }
                "minimize_window" => {
                   if let Err(e) = window.minimize() {
@@ -360,7 +419,7 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
                   }
                }
                theme_id if theme_id.contains('-') => {
-                  let _ = window.emit("menu_theme_change", theme_id);
+                  emit_menu_event(&window, "menu_theme_change", theme_id);
                }
                _ => {}
             }

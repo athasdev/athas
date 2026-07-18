@@ -2,8 +2,12 @@ import {
   cacheFontsForBootstrap,
   cacheThemeForBootstrap,
 } from "@/features/settings/lib/appearance-bootstrap";
+import {
+  resolveEffectiveTheme,
+  subscribeSystemThemePreference,
+} from "@/features/settings/lib/theme-resolution";
 import { invoke } from "@tauri-apps/api/core";
-import type { Settings, Theme } from "@/features/settings/types/settings";
+import type { Settings, Theme } from "@/features/settings/types/settings.types";
 
 const ALL_THEME_CLASSES = [
   "force-athas-light",
@@ -18,70 +22,42 @@ function applyFallbackTheme(theme: Theme) {
   document.documentElement.classList.add(`force-${theme}`);
 }
 
-type SystemThemePreference = "light" | "dark";
-
-interface LegacyMediaQueryList extends MediaQueryList {
-  addListener(listener: (event: MediaQueryListEvent) => void): void;
-  removeListener(listener: (event: MediaQueryListEvent) => void): void;
-}
-
-let currentThemeSyncQuery: MediaQueryList | null = null;
 let removeThemeSyncListener: (() => void) | null = null;
+let latestThemeSyncSettings: Settings | null = null;
+let cancelPendingThemeApplication: (() => void) | null = null;
 
-function getSystemThemePreference(): SystemThemePreference {
-  if (typeof window !== "undefined" && window.matchMedia) {
-    try {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    } catch (error) {
-      console.warn("matchMedia not available:", error);
-    }
-  }
+function applyWindowTransparency(enabled: boolean) {
+  if (typeof document === "undefined") return;
 
-  return "dark";
-}
+  document.documentElement.setAttribute(
+    "data-window-transparency",
+    enabled ? "enabled" : "disabled",
+  );
 
-function getEffectiveTheme(
-  settings: Pick<Settings, "theme" | "syncSystemTheme" | "autoThemeLight" | "autoThemeDark">,
-): Theme {
-  if (!settings.syncSystemTheme) {
-    return settings.theme;
-  }
-
-  return getSystemThemePreference() === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
+  void invoke("set_window_transparency_enabled", { enabled }).catch((error) => {
+    console.warn("Failed to sync window transparency", error);
+  });
 }
 
 function stopSystemThemeSync() {
   removeThemeSyncListener?.();
   removeThemeSyncListener = null;
-  currentThemeSyncQuery = null;
+  latestThemeSyncSettings = null;
 }
 
 function syncThemeWithSystem(settings: Settings) {
-  if (typeof window === "undefined" || !window.matchMedia) {
-    return;
-  }
-
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  latestThemeSyncSettings = settings;
   const handleChange = () => {
-    void applyTheme(getEffectiveTheme(settings));
+    if (latestThemeSyncSettings) {
+      void applyTheme(resolveEffectiveTheme(latestThemeSyncSettings));
+    }
   };
 
-  if (currentThemeSyncQuery === mediaQuery && removeThemeSyncListener) {
+  if (removeThemeSyncListener) {
     return;
   }
 
-  stopSystemThemeSync();
-
-  if ("addEventListener" in mediaQuery) {
-    mediaQuery.addEventListener("change", handleChange);
-    removeThemeSyncListener = () => mediaQuery.removeEventListener("change", handleChange);
-  } else {
-    const legacyMediaQuery = mediaQuery as LegacyMediaQueryList;
-    legacyMediaQuery.addListener(handleChange);
-    removeThemeSyncListener = () => legacyMediaQuery.removeListener(handleChange);
-  }
-
-  currentThemeSyncQuery = mediaQuery;
+  removeThemeSyncListener = subscribeSystemThemePreference(handleChange);
 }
 
 export async function applyTheme(theme: Theme) {
@@ -90,24 +66,44 @@ export async function applyTheme(theme: Theme) {
   try {
     const { themeRegistry } = await import("@/extensions/themes/theme-registry");
 
+    const applyRegisteredTheme = () => {
+      themeRegistry.applyTheme(theme);
+      const appliedTheme = themeRegistry.getTheme(theme);
+      if (appliedTheme) {
+        cacheThemeForBootstrap(appliedTheme);
+        syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+      }
+    };
+
+    const waitForThemeRegistration = () => {
+      cancelPendingThemeApplication?.();
+      cancelPendingThemeApplication = themeRegistry.onRegistryChange(() => {
+        if (!themeRegistry.getTheme(theme)) return;
+        cancelPendingThemeApplication?.();
+        cancelPendingThemeApplication = null;
+        applyRegisteredTheme();
+      });
+    };
+
     if (!themeRegistry.isRegistryReady()) {
       themeRegistry.onReady(() => {
-        themeRegistry.applyTheme(theme);
-        const appliedTheme = themeRegistry.getTheme(theme);
-        if (appliedTheme) {
-          cacheThemeForBootstrap(appliedTheme);
-          syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+        if (themeRegistry.getTheme(theme)) {
+          applyRegisteredTheme();
+        } else {
+          waitForThemeRegistration();
         }
       });
       return;
     }
 
-    themeRegistry.applyTheme(theme);
-    const appliedTheme = themeRegistry.getTheme(theme);
-    if (appliedTheme) {
-      cacheThemeForBootstrap(appliedTheme);
-      syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+    if (!themeRegistry.getTheme(theme)) {
+      waitForThemeRegistration();
+      return;
     }
+
+    cancelPendingThemeApplication?.();
+    cancelPendingThemeApplication = null;
+    applyRegisteredTheme();
   } catch (error) {
     console.error("Failed to apply theme via registry:", error);
     applyFallbackTheme(theme);
@@ -115,7 +111,12 @@ export async function applyTheme(theme: Theme) {
 }
 
 function syncMacOSWindowAppearance(themeType: "light" | "dark") {
-  void invoke("set_macos_window_appearance", { themeType }).catch((error) => {
+  const transparencyEnabled =
+    typeof document === "undefined"
+      ? true
+      : document.documentElement.getAttribute("data-window-transparency") !== "disabled";
+
+  void invoke("set_macos_window_appearance", { themeType, transparencyEnabled }).catch((error) => {
     console.warn("Failed to sync macOS window appearance", error);
   });
 }
@@ -162,7 +163,8 @@ export async function syncOllamaApiKey() {
 
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
-  void applyTheme(getEffectiveTheme(settings));
+  applyWindowTransparency(settings.windowTransparency);
+  void applyTheme(resolveEffectiveTheme(settings));
   if (settings.syncSystemTheme) {
     syncThemeWithSystem(settings);
   } else {
@@ -179,12 +181,12 @@ export function applySettingSideEffect<K extends keyof Settings>(
   getSettings: () => Settings,
 ) {
   if (key === "theme") {
-    void applyTheme(getEffectiveTheme(getSettings()));
+    void applyTheme(resolveEffectiveTheme(getSettings()));
   }
 
   if (key === "syncSystemTheme" || key === "autoThemeLight" || key === "autoThemeDark") {
     const settings = getSettings();
-    void applyTheme(getEffectiveTheme(settings));
+    void applyTheme(resolveEffectiveTheme(settings));
 
     if (settings.syncSystemTheme) {
       syncThemeWithSystem(settings);
@@ -203,5 +205,9 @@ export function applySettingSideEffect<K extends keyof Settings>(
 
   if (key === "fontFamily" || key === "uiFontFamily" || key === "uiFontSize") {
     cacheFontSettings(getSettings());
+  }
+
+  if (key === "windowTransparency") {
+    applyWindowTransparency(value as boolean);
   }
 }

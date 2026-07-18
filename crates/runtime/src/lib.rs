@@ -7,7 +7,7 @@ pub use bun::BunRuntime;
 pub use node::NodeRuntime;
 use serde::{Deserialize, Serialize};
 use std::{
-   fmt,
+   env, fmt,
    path::{Path, PathBuf},
 };
 
@@ -102,19 +102,43 @@ impl RuntimeManager {
       if let Ok(path) = which::which("python") {
          return Ok(path);
       }
+      if let Some(path) = find_binary_in_dirs("python3", common_system_binary_dirs()) {
+         return Ok(path);
+      }
+      if let Some(path) = find_binary_in_dirs("python", common_system_binary_dirs()) {
+         return Ok(path);
+      }
       Err(RuntimeError::NotFound("python".to_string()))
    }
 
    fn detect_go() -> Result<PathBuf, RuntimeError> {
-      if let Ok(path) = which::which("go") {
+      Self::detect_go_from_sources(
+         which::which("go").ok(),
+         env::var("GOROOT").ok(),
+         common_system_binary_dirs(),
+      )
+   }
+
+   fn detect_go_from_sources(
+      path_go: Option<PathBuf>,
+      goroot: Option<String>,
+      common_dirs: Vec<PathBuf>,
+   ) -> Result<PathBuf, RuntimeError> {
+      if let Some(path) = path_go {
          return Ok(path);
       }
-      if let Ok(goroot) = std::env::var("GOROOT") {
+
+      if let Some(goroot) = goroot {
          let go_path = PathBuf::from(goroot).join("bin").join("go");
          if go_path.exists() {
             return Ok(go_path);
          }
       }
+
+      if let Some(path) = find_binary_in_dirs("go", common_dirs) {
+         return Ok(path);
+      }
+
       Err(RuntimeError::NotFound("go".to_string()))
    }
 
@@ -128,13 +152,118 @@ impl RuntimeManager {
             return Ok(cargo_path);
          }
       }
-      if let Ok(home) = std::env::var("HOME") {
+      if let Ok(home) = env::var("HOME") {
          let cargo_path = PathBuf::from(home).join(".cargo").join("bin").join("cargo");
          if cargo_path.exists() {
             return Ok(cargo_path);
          }
       }
+      if let Some(path) = find_binary_in_dirs("cargo", common_system_binary_dirs()) {
+         return Ok(path);
+      }
       Err(RuntimeError::NotFound("cargo".to_string()))
+   }
+}
+
+fn find_binary_in_dirs(
+   binary_name: &str,
+   dirs: impl IntoIterator<Item = PathBuf>,
+) -> Option<PathBuf> {
+   let binary_name = platform_binary_name(binary_name);
+
+   dirs
+      .into_iter()
+      .map(|dir| dir.join(&binary_name))
+      .find(|path| path.exists())
+}
+
+fn platform_binary_name(binary_name: &str) -> String {
+   if cfg!(windows) && !binary_name.ends_with(".exe") {
+      format!("{}.exe", binary_name)
+   } else {
+      binary_name.to_string()
+   }
+}
+
+fn common_system_binary_dirs() -> Vec<PathBuf> {
+   let mut dirs = Vec::new();
+
+   if cfg!(target_os = "macos") {
+      dirs.extend([
+         PathBuf::from("/opt/homebrew/bin"),
+         PathBuf::from("/usr/local/bin"),
+         PathBuf::from("/opt/local/bin"),
+      ]);
+   }
+
+   if cfg!(not(windows)) {
+      dirs.extend([PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
+   }
+
+   dirs
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn finds_binary_in_candidate_dirs() {
+      let temp = tempfile::tempdir().expect("tempdir");
+      let bin_dir = temp.path().join("bin");
+      std::fs::create_dir_all(&bin_dir).expect("bin dir");
+      let binary_path = bin_dir.join(platform_binary_name("go"));
+      std::fs::write(&binary_path, "").expect("binary");
+
+      assert_eq!(find_binary_in_dirs("go", [bin_dir]), Some(binary_path));
+   }
+
+   #[test]
+   fn misses_binary_outside_candidate_dirs() {
+      let temp = tempfile::tempdir().expect("tempdir");
+
+      assert_eq!(
+         find_binary_in_dirs("go", [temp.path().join("missing")]),
+         None
+      );
+   }
+
+   #[test]
+   #[cfg(target_os = "macos")]
+   fn common_system_dirs_include_homebrew_locations() {
+      let dirs = common_system_binary_dirs();
+
+      assert!(dirs.iter().any(|dir| dir == Path::new("/opt/homebrew/bin")));
+      assert!(dirs.iter().any(|dir| dir == Path::new("/usr/local/bin")));
+   }
+
+   #[test]
+   #[cfg(target_os = "macos")]
+   fn detects_go_from_common_system_dirs_when_path_and_goroot_miss() {
+      let temp = tempfile::tempdir().expect("tempdir");
+      let bin_dir = temp.path().join("bin");
+      std::fs::create_dir_all(&bin_dir).expect("bin dir");
+      let go_path = bin_dir.join(platform_binary_name("go"));
+      std::fs::write(&go_path, "").expect("go binary");
+
+      let detected =
+         RuntimeManager::detect_go_from_sources(None, None, vec![bin_dir]).expect("go fallback");
+
+      assert_eq!(detected, go_path);
+   }
+
+   #[test]
+   #[cfg(target_os = "macos")]
+   fn common_system_dirs_find_homebrew_go_when_available() {
+      let homebrew_go = Path::new("/opt/homebrew/bin/go");
+      if !homebrew_go.exists() {
+         return;
+      }
+
+      assert_eq!(
+         find_binary_in_dirs("go", common_system_binary_dirs()).as_deref(),
+         Some(homebrew_go)
+      );
    }
 }
 

@@ -1,6 +1,6 @@
 /**
  * Syntax tokenization hook backed by a dedicated worker.
- * This keeps Tree-sitter parsing and query execution off the UI thread.
+ * This keeps Tree-sitter parsing and query execution off the UI thread for non-Monaco surfaces.
  */
 
 import { useCallback, useRef, useState } from "react";
@@ -8,12 +8,22 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { getLanguageAssetConfig } from "../lib/wasm-parser/extension-assets";
 import { tokenizerWorkerClient } from "../lib/wasm-parser/tokenizer-worker-client";
-import type { HighlightToken } from "../lib/wasm-parser/types";
+import type { HighlightToken } from "../types/wasm-parser/wasm-parser.types";
 import { buildLineOffsetMap, normalizeLineEndings, type Token } from "../utils/html";
 import { getLanguageIdFromPath } from "../utils/language-id";
+import {
+  hasLineBasedSyntaxFallback,
+  hasLineBasedSyntaxHighlighter,
+  tokenizeLineBasedSyntax,
+} from "../utils/line-based-syntax";
 import { calculateEdit, isSimpleEdit } from "../utils/tree-sitter-edit";
 import { usePerformanceMonitor } from "./use-performance";
-import type { ViewportRange } from "./use-viewport-lines";
+
+export interface ViewportRange {
+  startLine: number;
+  endLine: number;
+  totalLines: number;
+}
 
 interface TokenizerOptions {
   filePath: string | undefined;
@@ -59,6 +69,7 @@ function convertToToken(highlightToken: HighlightToken): Token {
 }
 
 const LARGE_FILE_LINE_THRESHOLD = 20000;
+const LARGE_FILE_RANGE_TOKENIZATION_BUFFER_LINES = 160;
 const BACKGROUND_FULL_TOKENIZE_CHAR_THRESHOLD = 200_000;
 const BACKGROUND_FULL_TOKENIZE_LINE_THRESHOLD = 4_000;
 const BACKGROUND_FULL_TOKENIZE_DELAY_MS = 900;
@@ -167,6 +178,49 @@ export function resolveSyntaxTokensForContent({
   return retargetedTokens.length > 0 ? retargetedTokens : sourceTokens;
 }
 
+export function expandTokenizationViewportRange(
+  viewportRange: ViewportRange,
+  lineCount: number,
+): ViewportRange {
+  const lastLine = Math.max(lineCount - 1, 0);
+  const startLine = Math.max(0, Math.min(viewportRange.startLine, lastLine));
+  const endLine = Math.max(startLine, Math.min(viewportRange.endLine, lastLine));
+  const bufferLines =
+    lineCount >= LARGE_FILE_LINE_THRESHOLD
+      ? LARGE_FILE_RANGE_TOKENIZATION_BUFFER_LINES
+      : EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES;
+
+  return {
+    startLine: Math.max(0, startLine - bufferLines),
+    endLine: Math.min(lastLine, endLine + bufferLines),
+    totalLines: lineCount,
+  };
+}
+
+export function mergeTokenizedRange({
+  cachedTokens,
+  rangeTokens,
+  rangeStartOffset,
+  rangeEndOffset,
+  retainOutsideRange,
+}: {
+  cachedTokens: Token[];
+  rangeTokens: Token[];
+  rangeStartOffset: number;
+  rangeEndOffset: number;
+  retainOutsideRange: boolean;
+}): Token[] {
+  if (!retainOutsideRange) {
+    return [...rangeTokens].sort((a, b) => a.start - b.start);
+  }
+
+  const cachedTokensOutsideRange = cachedTokens.filter(
+    (token) => token.end <= rangeStartOffset || token.start >= rangeEndOffset,
+  );
+
+  return [...cachedTokensOutsideRange, ...rangeTokens].sort((a, b) => a.start - b.start);
+}
+
 export function useTokenizer({
   filePath,
   bufferId,
@@ -241,10 +295,22 @@ export function useTokenizer({
         setTokenState({ bufferId, tokens: [] });
         return;
       }
-      const languageAssets = getLanguageAssetConfig(languageId);
 
       const requestVersion = ++requestVersionRef.current;
       const normalizedText = normalizeLineEndings(text);
+
+      if (hasLineBasedSyntaxHighlighter(languageId)) {
+        const newTokens = tokenizeLineBasedSyntax(normalizedText, languageId);
+        setTokenState({ bufferId, tokens: newTokens });
+        setTokenizedContent(normalizedText);
+        cacheRef.current = {
+          fullTokens: newTokens,
+          previousContent: normalizedText,
+        };
+        return;
+      }
+
+      const languageAssets = getLanguageAssetConfig(languageId);
 
       retargetCachedTokens(normalizedText);
       setLoading(true);
@@ -272,6 +338,16 @@ export function useTokenizer({
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
         logger.warn("Editor", "[Tokenizer] Full tokenization failed:", error);
+        if (hasLineBasedSyntaxFallback(languageId)) {
+          const fallbackTokens = tokenizeLineBasedSyntax(normalizedText, languageId);
+          setTokenState({ bufferId, tokens: fallbackTokens });
+          setTokenizedContent(normalizedText);
+          cacheRef.current = {
+            fullTokens: fallbackTokens,
+            previousContent: normalizedText,
+          };
+          return;
+        }
         setTokenState({ bufferId, tokens: [] });
         setTokenizedContent("");
       } finally {
@@ -298,7 +374,6 @@ export function useTokenizer({
 
       const languageId = languageIdOverride || getLanguageId(filePath);
       if (!languageId) return;
-      const languageAssets = getLanguageAssetConfig(languageId);
 
       const requestVersion = ++requestVersionRef.current;
       const { normalizedText, lineOffsets, lineCount } = getTextMetrics(text);
@@ -309,13 +384,33 @@ export function useTokenizer({
       retargetCachedTokens(normalizedText);
       setLoading(true);
       startMeasure("tokenizeRangeInternal");
+      const tokenizationRange = expandTokenizationViewportRange(viewportRange, lineCount);
 
       try {
-        const clampedStartLine = Math.max(0, Math.min(viewportRange.startLine, lineCount - 1));
-        const clampedEndLine = Math.max(
-          clampedStartLine + 1,
-          Math.min(viewportRange.endLine, Math.max(lineCount - 1, 0)),
-        );
+        if (hasLineBasedSyntaxHighlighter(languageId)) {
+          const rangeTokens = tokenizeLineBasedSyntax(normalizedText, languageId, {
+            startLine: tokenizationRange.startLine,
+            endLine: tokenizationRange.endLine,
+          });
+          const rangeStartOffset = lineOffsets[tokenizationRange.startLine] ?? 0;
+          const rangeEndOffset =
+            lineOffsets[tokenizationRange.endLine + 1] ?? normalizedText.length;
+          const mergedTokens = mergeTokenizedRange({
+            cachedTokens: cacheRef.current.fullTokens,
+            rangeTokens,
+            rangeStartOffset,
+            rangeEndOffset,
+            retainOutsideRange: lineCount < LARGE_FILE_LINE_THRESHOLD,
+          });
+
+          setTokenState({ bufferId, tokens: mergedTokens });
+          setTokenizedContent(normalizedText);
+          cacheRef.current.fullTokens = mergedTokens;
+          cacheRef.current.previousContent = normalizedText;
+          return;
+        }
+
+        const languageAssets = getLanguageAssetConfig(languageId);
 
         const result = await tokenizerWorkerClient.tokenize({
           bufferId,
@@ -325,31 +420,23 @@ export function useTokenizer({
           highlightQueryUrl: languageAssets.highlightQueryUrl,
           mode: "range",
           viewportRange: {
-            startLine: clampedStartLine,
-            endLine:
-              lineCount >= LARGE_FILE_LINE_THRESHOLD
-                ? clampedEndLine
-                : Math.min(clampedEndLine + EDITOR_CONSTANTS.VIEWPORT_BUFFER_LINES, lineCount - 1),
+            startLine: tokenizationRange.startLine,
+            endLine: tokenizationRange.endLine,
           },
         });
 
         if (requestVersion !== requestVersionRef.current) return;
 
         const rangeTokens = result.tokens.map(convertToToken);
-        const rangeStartOffset = lineOffsets[clampedStartLine] || 0;
-        const rangeEndLine = Math.min(clampedEndLine + 1, lineOffsets.length - 1);
-        const rangeEndOffset =
-          rangeEndLine >= 0 && lineOffsets[rangeEndLine] !== undefined
-            ? lineOffsets[rangeEndLine]
-            : normalizedText.length;
-
-        const cachedTokensOutsideRange = cacheRef.current.fullTokens.filter(
-          (token) => token.end <= rangeStartOffset || token.start >= rangeEndOffset,
-        );
-
-        const mergedTokens = [...cachedTokensOutsideRange, ...rangeTokens].sort(
-          (a, b) => a.start - b.start,
-        );
+        const rangeStartOffset = lineOffsets[tokenizationRange.startLine] ?? 0;
+        const rangeEndOffset = lineOffsets[tokenizationRange.endLine + 1] ?? normalizedText.length;
+        const mergedTokens = mergeTokenizedRange({
+          cachedTokens: cacheRef.current.fullTokens,
+          rangeTokens,
+          rangeStartOffset,
+          rangeEndOffset,
+          retainOutsideRange: lineCount < LARGE_FILE_LINE_THRESHOLD,
+        });
 
         setTokenState({ bufferId, tokens: mergedTokens });
         setTokenizedContent(result.normalizedText);
@@ -381,6 +468,27 @@ export function useTokenizer({
       } catch (error) {
         if (requestVersion !== requestVersionRef.current) return;
         logger.warn("Editor", "[Tokenizer] Range tokenization failed:", error);
+        if (hasLineBasedSyntaxFallback(languageId)) {
+          const fallbackTokens = tokenizeLineBasedSyntax(normalizedText, languageId, {
+            startLine: tokenizationRange.startLine,
+            endLine: tokenizationRange.endLine,
+          });
+          const rangeStartOffset = lineOffsets[tokenizationRange.startLine] ?? 0;
+          const rangeEndOffset =
+            lineOffsets[tokenizationRange.endLine + 1] ?? normalizedText.length;
+          const mergedTokens = mergeTokenizedRange({
+            cachedTokens: cacheRef.current.fullTokens,
+            rangeTokens: fallbackTokens,
+            rangeStartOffset,
+            rangeEndOffset,
+            retainOutsideRange: lineCount < LARGE_FILE_LINE_THRESHOLD,
+          });
+
+          setTokenState({ bufferId, tokens: mergedTokens });
+          setTokenizedContent(normalizedText);
+          cacheRef.current.fullTokens = mergedTokens;
+          cacheRef.current.previousContent = normalizedText;
+        }
       } finally {
         if (requestVersion === requestVersionRef.current) {
           setLoading(false);

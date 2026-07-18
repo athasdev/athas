@@ -1,10 +1,10 @@
 import {
-  ArrowLeft,
-  ArrowRight,
-  ArrowCounterClockwise as RotateCcw,
-  X,
-} from "@phosphor-icons/react";
-import type { Action } from "@/features/command-palette/models/action.types";
+  ArrowLeftIcon as ArrowLeft,
+  ArrowRightIcon as ArrowRight,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  XIcon as X,
+} from "@/ui/icons";
+import type { Action } from "@/features/command-palette/types/action.types";
 
 interface TabActionsParams {
   activeBufferId: string | null;

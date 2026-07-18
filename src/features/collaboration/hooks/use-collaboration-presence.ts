@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
-import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime-store";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useEditorStateStore } from "@/features/editor/stores/state-store";
+import { useEffect, useRef } from "react";
+import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/collaboration-runtime.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
   appendCollaborationDocumentUpdate,
   getCollaborationClientId,
@@ -10,7 +10,7 @@ import {
   streamCollaborationDocumentUpdates,
   updateCollaborationPresence,
 } from "@/features/window/services/auth-api";
-import { useAuthStore } from "@/features/window/stores/auth-store";
+import { useAuthStore } from "@/features/window/stores/auth.store";
 
 const PRESENCE_HEARTBEAT_MS = 60_000;
 const DOCUMENT_STREAM_RECONNECT_MS = 2_000;
@@ -47,8 +47,14 @@ export function useCollaborationPresence() {
   const activeDocumentStream = useCollaborationRuntimeStore((state) => state.activeDocumentStream);
   const mediaState = useCollaborationRuntimeStore((state) => state.mediaState);
   const collaborationRuntimeActions = useCollaborationRuntimeStore((state) => state.actions);
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const buffers = useBufferStore.use.buffers();
+  const activeFilePath = useBufferStore((state) => {
+    const buffer = state.activeBufferId
+      ? state.buffers.find((entry) => entry.id === state.activeBufferId)
+      : null;
+    if (!buffer || !("path" in buffer)) return null;
+    if (buffer.path.startsWith("untitled:") || buffer.path.includes("://")) return null;
+    return buffer.path;
+  });
   const cursorPosition = useEditorStateStore.use.cursorPosition();
   const selection = useEditorStateStore.use.selection?.();
   const scrollTop = useEditorStateStore.use.scrollTop();
@@ -56,13 +62,6 @@ export function useCollaborationPresence() {
   const viewportHeight = useEditorStateStore.use.viewportHeight();
   const lastPublishedCursorKey = useRef<string | null>(null);
   const lastPublishedViewportKey = useRef<string | null>(null);
-
-  const activeFilePath = useMemo(() => {
-    const buffer = buffers.find((entry) => entry.id === activeBufferId);
-    if (!buffer || !("path" in buffer)) return null;
-    if (buffer.path.startsWith("untitled:") || buffer.path.includes("://")) return null;
-    return buffer.path;
-  }, [activeBufferId, buffers]);
 
   useEffect(() => {
     if (!isAuthenticated || !collaborationEnabled || !presenceEnabled) return;

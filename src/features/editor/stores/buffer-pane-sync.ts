@@ -1,6 +1,6 @@
-import { usePaneStore } from "@/features/panes/stores/pane-store";
-import type { PaneGroup } from "@/features/panes/types/pane";
-import type { PaneContent } from "@/features/panes/types/pane-content";
+import { usePaneStore } from "@/features/panes/stores/pane.store";
+import type { PaneGroup } from "@/features/panes/types/pane.types";
+import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
 import { resolveWritablePaneForBuffer } from "@/features/panes/utils/pane-routing";
 import { createPaneBeside } from "@/features/panes/utils/pane-split-actions";
@@ -76,6 +76,6 @@ export const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] =
     return buffers;
   }
 
-  removeBufferFromPanes(newTabBuffer.id);
+  removeBufferFromPanes(newTabBuffer.id, true);
   return buffers.filter((buffer) => buffer.id !== newTabBuffer.id);
 };

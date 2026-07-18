@@ -1,9 +1,10 @@
-import type { IconThemeDefinition, IconThemeSource } from "./types";
+import type { IconThemeDefinition, IconThemeSource } from "./icon-theme.types";
 
 class IconThemeRegistry {
   private themes: Map<string, IconThemeDefinition> = new Map();
   private themeSources: Map<string, IconThemeSource> = new Map();
   private listeners: Set<() => void> = new Set();
+  private version = 0;
 
   registerTheme(theme: IconThemeDefinition, source?: IconThemeSource) {
     this.themes.set(theme.id, theme);
@@ -77,12 +78,17 @@ class IconThemeRegistry {
     return Array.from(this.themes.values());
   }
 
+  getVersion(): number {
+    return this.version;
+  }
+
   onRegistryChange(callback: () => void): () => void {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
   }
 
   private notifyListeners() {
+    this.version += 1;
     for (const listener of this.listeners) {
       listener();
     }

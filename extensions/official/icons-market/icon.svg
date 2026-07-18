@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Market Icons">
+  <rect width="64" height="64" rx="12" fill="#0f172a"/>
+  <path fill="#f59e0b" d="M14 22h14l4 5h18v19H14z"/>
+  <path fill="#60a5fa" d="M20 16h18l8 8v22H20z"/>
+  <path fill="#dbeafe" d="M38 16v9h8z"/>
+</svg>

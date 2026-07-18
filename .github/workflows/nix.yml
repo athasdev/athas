@@ -2,7 +2,7 @@ name: Nix
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - ".github/workflows/nix.yml"
       - ".envrc"

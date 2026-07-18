@@ -16,7 +16,7 @@ const DATABASE_SIDECAR_PROTOCOL_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize)]
 struct ExtensionManifest {
-   #[serde(rename = "databaseProviders", default)]
+   #[serde(rename = "databases", alias = "databaseProviders", default)]
    database_providers: Vec<DatabaseProviderContribution>,
 }
 
@@ -99,10 +99,10 @@ fn validate_database_provider_protocol(
          "Unsupported database sidecar protocol version for provider {}: {}",
          provider.id, version
       )),
-      None => Err(format!(
-         "Database provider {} manifest was missing protocolVersion",
-         provider.id
-      )),
+      // Older installed database provider packages did not declare
+      // protocolVersion. Their sidecars already speak v1, so keep those
+      // installs working while catalog validation enforces the explicit field.
+      None => Ok(()),
    }
 }
 
@@ -473,7 +473,7 @@ mod tests {
    }
 
    #[test]
-   fn rejects_database_provider_manifest_without_protocol_version() {
+   fn accepts_legacy_database_provider_manifest_without_protocol_version() {
       let provider = DatabaseProviderContribution {
          id: "postgres".to_string(),
          protocol_version: None,
@@ -486,13 +486,8 @@ mod tests {
          },
       };
 
-      let error = validate_database_provider_protocol(&provider)
-         .expect_err("missing protocol version should fail");
-
-      assert_eq!(
-         error,
-         "Database provider postgres manifest was missing protocolVersion"
-      );
+      validate_database_provider_protocol(&provider)
+         .expect("legacy v1 manifest should remain supported");
    }
 
    #[test]

@@ -1,4 +1,4 @@
-import type { Chat } from "@/features/ai/types/ai-chat";
+import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { saveChatToDb } from "@/features/ai/services/ai-chat-history-service";
 
 /**
@@ -81,30 +81,28 @@ export async function migrateChatsToSQLite(): Promise<{
   let migratedCount = 0;
 
   try {
-    console.log("Starting chat migration from localStorage to SQLite...");
-
     const legacyChats = getLegacyChats();
     if (legacyChats.length === 0) {
-      console.log("No legacy chats found to migrate");
       return { success: true, migratedCount: 0, errors: [] };
     }
 
-    console.log(`Found ${legacyChats.length} chats to migrate`);
+    const migrationResults = await Promise.allSettled(
+      legacyChats.map((chat) => saveChatToDb(chat).then(() => chat.id)),
+    );
 
-    // Migrate each chat
-    for (const chat of legacyChats) {
+    for (const [index, result] of migrationResults.entries()) {
+      const chat = legacyChats[index];
       try {
-        await saveChatToDb(chat);
+        if (result.status === "rejected") {
+          throw result.reason;
+        }
         migratedCount++;
-        console.log(`Migrated chat: ${chat.title} (${chat.id})`);
       } catch (error) {
         const errorMsg = `Failed to migrate chat ${chat.id}: ${error}`;
         console.error(errorMsg);
         errors.push(errorMsg);
       }
     }
-
-    console.log(`Migration complete: ${migratedCount}/${legacyChats.length} chats migrated`);
 
     return {
       success: errors.length === 0,
@@ -128,7 +126,6 @@ export async function migrateChatsToSQLite(): Promise<{
 export function clearLegacyData(): void {
   try {
     localStorage.removeItem(OLD_STORAGE_KEY);
-    console.log("Legacy localStorage data cleared");
   } catch (error) {
     console.error("Error clearing legacy data:", error);
   }
@@ -170,13 +167,11 @@ export async function performMigrationIfNeeded(): Promise<boolean> {
   // Check if migration already completed
   const migrationStatus = getMigrationStatus();
   if (migrationStatus?.completed) {
-    console.log("Chat migration already completed previously");
     return true;
   }
 
   // Check if legacy data exists
   if (!hasLegacyData()) {
-    console.log("No legacy data to migrate");
     // Mark migration as completed (nothing to migrate)
     setMigrationStatus({
       completed: true,
@@ -187,7 +182,6 @@ export async function performMigrationIfNeeded(): Promise<boolean> {
   }
 
   // Perform migration
-  console.log("Performing chat migration...");
   const result = await migrateChatsToSQLite();
 
   if (result.success) {
@@ -201,7 +195,6 @@ export async function performMigrationIfNeeded(): Promise<boolean> {
       migratedCount: result.migratedCount,
     });
 
-    console.log(`Migration successful: ${result.migratedCount} chats migrated`);
     return true;
   } else {
     console.error(`Migration failed with ${result.errors.length} errors`);

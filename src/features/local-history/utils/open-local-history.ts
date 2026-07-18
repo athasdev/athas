@@ -1,6 +1,6 @@
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
-import { useLocalHistoryStore } from "@/features/local-history/store/local-history-store";
-import { useUIState } from "@/features/window/stores/ui-state-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useLocalHistoryStore } from "@/features/local-history/stores/local-history.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "@/ui/toast";
 
 export function openLocalHistoryForPath(path: string | null | undefined): void {

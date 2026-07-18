@@ -1,13 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
-  ArrowClockwise as RefreshCw,
-  Sparkle as Sparkles,
-  TerminalWindow as Terminal,
-} from "@phosphor-icons/react";
-import { useUIState } from "@/features/window/stores/ui-state-store";
-import { primitiveAlert } from "@/ui/primitive-dialog-service";
-import type { Action } from "../models/action.types";
-import type { CommandPaletteViewId } from "../models/view.types";
+  ArrowClockwiseIcon as RefreshCw,
+  SparkleIcon as Sparkles,
+  SquareIcon as Square,
+  TerminalWindowIcon as Terminal,
+} from "@/ui/icons";
+import {
+  restartAllLanguageServers,
+  stopAllLanguageServers,
+} from "@/features/keymaps/commands/lsp-command-actions";
+import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
+import { useUIState } from "@/features/window/stores/ui-state.store";
+import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import type { Action } from "../types/action.types";
+import type { CommandPaletteViewId } from "../types/view.types";
 
 interface AdvancedActionsParams {
   lspStatus: {
@@ -15,14 +21,6 @@ interface AdvancedActionsParams {
     activeWorkspaces: string[];
     lastError?: string | null | undefined;
   };
-  updateLspStatus: (
-    status: string,
-    workspaces?: string[],
-    error?: string,
-    languages?: string[],
-  ) => void;
-  clearLspError: () => void;
-  rootFolderPath: string | null | undefined;
   vimMode: boolean;
   vimCommands: Array<{ name: string; description: string; execute: () => void }>;
   setMode: (mode: "normal" | "insert" | "visual") => void;
@@ -39,9 +37,6 @@ interface AdvancedActionsParams {
 export const createAdvancedActions = (params: AdvancedActionsParams): Action[] => {
   const {
     lspStatus,
-    updateLspStatus,
-    clearLspError,
-    rootFolderPath,
     vimMode,
     vimCommands,
     setMode,
@@ -99,7 +94,7 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       icon: <Terminal />,
       category: "LSP",
       action: async () => {
-        await primitiveAlert(
+        await showAlertDialog(
           `LSP Status: ${lspStatus.status}\nActive workspaces: ${lspStatus.activeWorkspaces.join(", ") || "None"}\nError: ${lspStatus.lastError || "None"}`,
           "LSP Status",
         );
@@ -107,17 +102,44 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
       },
     },
     {
-      id: "lsp-restart",
-      label: "LSP: Restart Server",
-      description: "Restart the LSP server",
+      id: "developer-open-athas-log",
+      label: "Developer: Open Athas Log",
+      description: "Open the current Athas application log in a read-only editor tab",
+      icon: <Terminal />,
+      category: "Developer",
+      action: async () => {
+        try {
+          await openAthasLogBuffer();
+        } catch (error) {
+          showToast({
+            message: error instanceof Error ? error.message : "Failed to open Athas log",
+            type: "error",
+          });
+        }
+        onClose();
+      },
+    },
+    {
+      id: "lsp.restartAllServers",
+      label: "Language Server: Restart All Servers",
+      description: "Restart every active language server",
       icon: <RefreshCw />,
-      category: "LSP",
-      action: () => {
-        updateLspStatus("connecting");
-        clearLspError();
-        setTimeout(() => {
-          updateLspStatus("connected", [rootFolderPath || ""]);
-        }, 1000);
+      category: "Language Server",
+      commandId: "lsp.restartAllServers",
+      action: async () => {
+        await restartAllLanguageServers();
+        onClose();
+      },
+    },
+    {
+      id: "lsp.stopAllServers",
+      label: "Language Server: Stop All Servers",
+      description: "Stop every active language server",
+      icon: <Square />,
+      category: "Language Server",
+      commandId: "lsp.stopAllServers",
+      action: async () => {
+        await stopAllLanguageServers();
         onClose();
       },
     },

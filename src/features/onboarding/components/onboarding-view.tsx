@@ -1,8 +1,9 @@
-import { FileText, FolderOpen } from "@phosphor-icons/react";
+import { FolderOpenIcon as FolderOpen } from "@/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useShallow } from "zustand/react/shallow";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import {
   type KeybindingPreset,
   keybindingPresetDefinitions,
@@ -11,15 +12,16 @@ import {
 import { markOnboardingCompleted } from "@/features/onboarding/lib/onboarding-state";
 import type { OnboardingContext } from "@/features/onboarding/lib/onboarding-state";
 import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-view-model";
-import {
-  REQUIRED_UPDATE_TELEMETRY_NOTICE,
-  USAGE_TELEMETRY_DESCRIPTION,
-} from "@/features/settings/lib/telemetry-copy";
-import { useSettingsStore } from "@/features/settings/store";
-import { useWhatsNewStore } from "@/features/settings/stores/whats-new-store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { getServiceUrls } from "@/config/services";
+
+const telemetryDescription =
+  "Athas sends anonymous operational metadata for updates and, when enabled, heartbeats, extensions, and crashes; it never sends file paths, project names, prompts, or editor content.";
+const telemetryLearnMoreUrl = getServiceUrls().telemetryDocsUrl;
 
 interface OnboardingViewProps {
   bufferId: string;
@@ -32,15 +34,15 @@ function SettingRow({
   children,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between gap-5 border-border/70 border-b px-5 py-4 last:border-b-0">
       <div className="min-w-0">
-        <div className="ui-font ui-text-sm font-medium text-text">{title}</div>
+        <div className="font-sans ui-text-sm font-medium text-text">{title}</div>
         {description ? (
-          <p className="ui-font ui-text-sm mt-1 max-w-[560px] text-text-light">{description}</p>
+          <p className="font-sans ui-text-sm mt-1 max-w-[560px] text-text-light">{description}</p>
         ) : null}
       </div>
       <div className="shrink-0">{children}</div>
@@ -49,7 +51,15 @@ function SettingRow({
 }
 
 export default function OnboardingView({ bufferId, context }: OnboardingViewProps) {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      keybindingPreset: state.settings.keybindingPreset,
+      openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
+      telemetry: state.settings.telemetry,
+      vimMode: state.settings.vimMode,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const closeBufferForce = useBufferStore.use.actions().closeBufferForce;
   const openWhatsNew = useWhatsNewStore((state) => state.open);
@@ -115,8 +125,8 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
     <div className="flex h-full min-h-0 w-full overflow-auto bg-primary-bg">
       <div className="mx-auto flex w-full max-w-[820px] flex-col px-8 py-10">
         <div className="mb-7">
-          <h1 className="ui-font ui-text-lg font-semibold text-text">{viewModel.title}</h1>
-          <p className="ui-font ui-text-sm mt-2 text-text-light">{viewModel.description}</p>
+          <h1 className="font-sans ui-text-base font-semibold text-text">{viewModel.title}</h1>
+          <p className="font-sans ui-text-sm mt-2 text-text-light">{viewModel.description}</p>
         </div>
 
         {viewModel.showSettings ? (
@@ -137,7 +147,19 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
 
             <SettingRow
               title="Share anonymous telemetry"
-              description={`${USAGE_TELEMETRY_DESCRIPTION} ${REQUIRED_UPDATE_TELEMETRY_NOTICE}`}
+              description={
+                <>
+                  {telemetryDescription}{" "}
+                  <a
+                    href={telemetryLearnMoreUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-link hover:underline"
+                  >
+                    Learn more
+                  </a>
+                </>
+              }
             >
               <Switch checked={telemetry} onChange={setTelemetry} />
             </SettingRow>
@@ -161,10 +183,10 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
           </div>
         ) : (
           <div className="rounded-lg border border-border/70 bg-secondary-bg/45 px-5 py-4">
-            <div className="ui-font ui-text-sm font-medium text-text">
+            <div className="font-sans ui-text-sm font-medium text-text">
               Your settings are unchanged
             </div>
-            <p className="ui-font ui-text-sm mt-1 text-text-light">
+            <p className="font-sans ui-text-sm mt-1 text-text-light">
               Existing editor, privacy, keyboard, and window preferences remain in place after this
               update.
             </p>
@@ -176,7 +198,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
             {viewModel.secondaryLabel}
           </Button>
           <Button variant="accent" onClick={() => void handlePrimaryAction()}>
-            {viewModel.primaryAction === "open-whats-new" ? <FileText /> : <FolderOpen />}
+            {viewModel.primaryAction !== "open-whats-new" && <FolderOpen />}
             {viewModel.primaryLabel}
           </Button>
         </div>

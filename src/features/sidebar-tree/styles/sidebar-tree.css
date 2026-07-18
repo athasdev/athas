@@ -1,0 +1,61 @@
+.file-tree-item {
+  position: relative;
+  width: 100% !important;
+  min-width: 100% !important;
+  --file-tree-hover-bg: color-mix(in srgb, var(--color-hover) 68%, transparent);
+  --file-tree-guide-icon-offset: 7px;
+  --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
+}
+
+.file-tree-item::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--radius-lg);
+  background-color: transparent;
+  content: "";
+  pointer-events: none;
+}
+
+.file-tree-item:hover::before {
+  background-color: var(--file-tree-hover-bg);
+}
+
+.file-tree-item[data-active="true"]::before {
+  background-color: var(--color-selected);
+}
+
+.file-tree-row {
+  position: relative;
+  z-index: 2;
+}
+
+.file-tree-row:hover {
+  background-color: transparent !important;
+}
+
+.file-tree-guides {
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+}
+
+.file-tree-guide {
+  position: absolute;
+  width: 7px;
+  cursor: pointer;
+  opacity: 0.9;
+  pointer-events: auto;
+  transform: translateX(-3px);
+}
+
+.file-tree-guide::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background-color: var(--tree-guide-color);
+  content: "";
+}

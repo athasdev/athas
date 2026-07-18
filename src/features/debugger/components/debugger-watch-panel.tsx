@@ -1,8 +1,12 @@
-import { ArrowsClockwise, Plus, Trash } from "@phosphor-icons/react";
+import {
+  ArrowsClockwiseIcon as ArrowsClockwise,
+  PlusIcon as Plus,
+  TrashIcon as Trash,
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
-import { useDebuggerStore } from "../stores/debugger-store";
-import type { DebugRequestContext } from "../types/debugger";
+import { useDebuggerStore } from "../stores/debugger.store";
+import type { DebugRequestContext } from "../types/debugger.types";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 
@@ -98,7 +102,7 @@ export function DebugWatchPanel({
           tooltip="Add watch"
           disabled={!newExpression.trim()}
           onClick={addExpression}
-          compact
+          size="icon-xs"
         >
           <Plus />
         </Button>
@@ -107,14 +111,14 @@ export function DebugWatchPanel({
           tooltip="Refresh watches"
           disabled={!activeSessionId || !isPaused || watchExpressions.length === 0}
           onClick={evaluateAll}
-          compact
+          size="icon-xs"
         >
           <ArrowsClockwise />
         </Button>
       </div>
 
       {watchExpressions.length === 0 ? (
-        <div className="px-1 py-3 text-center text-text-lighter ui-text-xs">
+        <div className="px-1 py-3 text-center text-text-lighter ui-text-sm">
           Add expressions to inspect while paused.
         </div>
       ) : (
@@ -126,12 +130,12 @@ export function DebugWatchPanel({
             return (
               <div
                 key={watchExpression.id}
-                className="group rounded-md border border-border/60 bg-secondary-bg/40 px-2 py-1.5"
+                className="group rounded-lg border border-border/60 bg-secondary-bg/40 px-2 py-1.5"
               >
                 <div className="flex items-start gap-2">
                   <button
                     type="button"
-                    className="min-w-0 flex-1 truncate text-left font-mono ui-text-xs text-text"
+                    className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-text"
                     onClick={() =>
                       void evaluateExpression(watchExpression.id, watchExpression.expression)
                     }
@@ -143,11 +147,12 @@ export function DebugWatchPanel({
                     className="opacity-0 group-hover:opacity-100"
                     tooltip="Remove watch"
                     onClick={() => debuggerActions.removeWatchExpression(watchExpression.id)}
+                    size="icon"
                   >
                     <Trash />
                   </Button>
                 </div>
-                <div className="mt-1 truncate font-mono ui-text-xs text-text-lighter">
+                <div className="mt-1 truncate font-mono ui-text-sm text-text-lighter">
                   {isPending
                     ? "Evaluating..."
                     : result?.error

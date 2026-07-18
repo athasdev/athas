@@ -1,5 +1,6 @@
-import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content";
-import { primitiveChoice } from "@/ui/primitive-dialog-service";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";
+import { showChoiceDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 
 export type ProjectTransitionAction =
@@ -30,15 +31,13 @@ export const getUnsavedProjectTransitionMessage = (
 };
 
 const saveDirtyEditorBuffers = async (dirtyBuffers: PaneContent[]) => {
-  const { useBufferStore } = await import("@/features/editor/stores/buffer-store");
-  const { useEditorAppStore } = await import("@/features/editor/stores/editor-app-store");
+  const { useBufferStore } = await import("@/features/editor/stores/buffer.store");
+  const { useEditorAppStore } = await import("@/features/editor/stores/editor-app.store");
   const { setActiveBuffer } = useBufferStore.getState().actions;
   const { handleSave } = useEditorAppStore.getState().actions;
 
   for (const dirtyBuffer of dirtyBuffers) {
-    const currentBuffer = useBufferStore
-      .getState()
-      .buffers.find((buffer) => buffer.id === dirtyBuffer.id);
+    const currentBuffer = getBufferById(useBufferStore.getState().buffers, dirtyBuffer.id);
 
     if (!currentBuffer || !isEditorContent(currentBuffer) || !currentBuffer.isDirty) {
       continue;
@@ -47,9 +46,7 @@ const saveDirtyEditorBuffers = async (dirtyBuffers: PaneContent[]) => {
     setActiveBuffer(currentBuffer.id);
     await handleSave();
 
-    const savedBuffer = useBufferStore
-      .getState()
-      .buffers.find((buffer) => buffer.id === currentBuffer.id);
+    const savedBuffer = getBufferById(useBufferStore.getState().buffers, currentBuffer.id);
 
     if (savedBuffer && isEditorContent(savedBuffer) && savedBuffer.isDirty) {
       toast.warning(`Save "${savedBuffer.name}" before continuing.`);
@@ -80,7 +77,7 @@ export const prepareProjectTransitionWithUnsavedBuffers = async (
     return true;
   }
 
-  const choice = await primitiveChoice<UnsavedProjectTransitionChoice>(message, {
+  const choice = await showChoiceDialog<UnsavedProjectTransitionChoice>(message, {
     title: "Unsaved Changes",
     choices: [
       { value: "cancel", label: "Cancel", variant: "default" },

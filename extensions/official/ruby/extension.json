@@ -1,0 +1,57 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.ruby",
+  "name": "Ruby",
+  "displayName": "Ruby",
+  "version": "1.0.0",
+  "description": "Ruby language support (Ruby, ERB and common Rails templates)",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "ruby",
+      "extensions": [
+        ".rb",
+        ".rbw",
+        ".erb",
+        ".rake",
+        ".gemspec",
+        ".ru",
+        ".builder",
+        ".jbuilder",
+        ".rxml",
+        ".rjs",
+        ".rabl",
+        ".thor",
+        ".podspec",
+        ".arb"
+      ],
+      "aliases": ["Ruby", "rb", "erb"],
+      "filenames": [
+        "Rakefile",
+        "Gemfile",
+        "Gemfile.lock",
+        "Guardfile",
+        "Capfile",
+        "Appraisals",
+        "Berksfile",
+        "Brewfile",
+        "Cheffile",
+        "Dangerfile",
+        "Fastfile",
+        "Podfile",
+        "Rantfile",
+        "Thorfile",
+        "Vagrantfile",
+        "Puppetfile"
+      ]
+    }
+  ],
+  "capabilities": {
+    "lsp": {
+      "name": "solargraph",
+      "runtime": "binary",
+      "args": ["stdio"]
+    }
+  }
+}

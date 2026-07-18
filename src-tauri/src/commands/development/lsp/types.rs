@@ -66,6 +66,7 @@ pub struct FlatSemanticToken {
    pub start_char: u32,
    pub length: u32,
    pub token_type: u32,
+   pub token_type_name: Option<String>,
    pub token_modifiers: u32,
 }
 

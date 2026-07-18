@@ -1,39 +1,40 @@
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, type Transition } from "framer-motion";
 import {
   type CSSProperties,
   type ReactNode,
   type RefObject,
-  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
+import { motionDuration, motionEase } from "@/ui/motion";
+import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { MagnifyingGlass as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
     variant: "default",
-    compact: true,
+    size: "xs",
   }),
-  "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
+  "min-w-0 gap-1 rounded-md px-2 text-text-lighter",
 );
 
-const dropdownRootVariants = cva(
-  "pointer-events-auto fixed z-[10040] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm [overscroll-behavior:contain]",
-);
+export type DropdownDensity = "default" | "compact";
 
 const dropdownItemVariants = cva(
-  "ui-font ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
+  "font-sans ui-text-sm flex w-full items-center justify-between whitespace-nowrap text-left text-text transition-colors",
   {
     variants: {
+      density: {
+        default: "gap-3 rounded-lg px-2.5 py-1.5",
+        compact: "gap-2 rounded-md px-2 py-1",
+      },
       disabled: {
         true: "cursor-not-allowed opacity-50",
         false: "cursor-pointer hover:bg-hover",
@@ -44,13 +45,24 @@ const dropdownItemVariants = cva(
       },
     },
     defaultVariants: {
+      density: "default",
       disabled: false,
       focused: false,
     },
   },
 );
 
-const dropdownSectionLabelVariants = cva("ui-font ui-text-sm px-2.5 py-1 text-text-lighter");
+const dropdownSectionLabelVariants = cva("font-sans ui-text-sm text-text-lighter", {
+  variants: {
+    density: {
+      default: "px-2.5 py-1",
+      compact: "px-2 py-0.5",
+    },
+  },
+  defaultVariants: {
+    density: "default",
+  },
+});
 
 export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
 
@@ -60,35 +72,6 @@ export function dropdownTriggerClassName(className?: string) {
 
 export function dropdownItemClassName(className?: string) {
   return cn(DROPDOWN_ITEM_BASE, className);
-}
-
-function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
-  const root = event.currentTarget;
-  const deltaY = event.deltaY;
-
-  if (deltaY === 0) return;
-
-  let node = event.target instanceof HTMLElement ? event.target : null;
-
-  while (node) {
-    const style = window.getComputedStyle(node);
-    const canScrollY =
-      (style.overflowY === "auto" || style.overflowY === "scroll") &&
-      node.scrollHeight > node.clientHeight;
-
-    if (canScrollY) {
-      const maxScrollTop = node.scrollHeight - node.clientHeight;
-      if ((deltaY < 0 && node.scrollTop > 0) || (deltaY > 0 && node.scrollTop < maxScrollTop)) {
-        return;
-      }
-    }
-
-    if (node === root) break;
-    node = node.parentElement;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 export interface MenuItem {
@@ -102,60 +85,14 @@ export interface MenuItem {
   className?: string;
 }
 
-interface MenuPopoverProps {
-  isOpen: boolean;
-  menuRef: RefObject<HTMLDivElement | null>;
-  children: ReactNode;
-  className?: string;
-  portalContainer?: Element | DocumentFragment | null;
-  style?: CSSProperties;
-  initial?: { opacity: number; scale: number; y?: number };
-  animate?: { opacity: number; scale: number; y?: number };
-  exit?: { opacity: number; scale: number; y?: number };
-  transition?: Transition;
-}
-
-export function MenuPopover({
-  isOpen,
-  menuRef,
-  children,
-  className,
-  portalContainer,
-  style,
-  initial = { opacity: 0, scale: 0.95 },
-  animate = { opacity: 1, scale: 1 },
-  exit = { opacity: 0, scale: 0.95 },
-  transition = { duration: 0.12, ease: "easeOut" as const },
-}: MenuPopoverProps) {
-  if (typeof document === "undefined") return null;
-
-  const node = isOpen ? (
-    <motion.div
-      ref={menuRef}
-      data-prevent-dialog-escape="true"
-      onMouseDown={(event) => event.stopPropagation()}
-      onPointerDown={(event) => event.stopPropagation()}
-      onWheelCapture={containScrollChain}
-      initial={initial}
-      animate={animate}
-      exit={exit}
-      transition={transition}
-      className={cn(dropdownRootVariants(), className)}
-      style={style}
-    >
-      {children}
-    </motion.div>
-  ) : null;
-
-  return createPortal(<AnimatePresence>{node}</AnimatePresence>, portalContainer ?? document.body);
-}
-
 interface MenuItemsListProps {
   items: MenuItem[];
   onItemSelect?: () => void;
   className?: string;
   itemClassName?: string;
   focusIndex?: number;
+  density?: DropdownDensity;
+  showIcons?: boolean;
 }
 
 export function MenuItemsList({
@@ -164,6 +101,8 @@ export function MenuItemsList({
   className,
   itemClassName,
   focusIndex = -1,
+  density = "default",
+  showIcons = true,
 }: MenuItemsListProps) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -203,6 +142,7 @@ export function MenuItemsList({
             disabled={item.disabled}
             className={cn(
               dropdownItemVariants({
+                density,
                 disabled: item.disabled,
                 focused: isFocused,
               }),
@@ -210,10 +150,26 @@ export function MenuItemsList({
               item.className,
             )}
           >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
+            {showIcons && item.icon && (
+              <span
+                className={cn(
+                  "grid shrink-0 place-items-center [&>svg]:block",
+                  density === "compact"
+                    ? "size-4 [&>svg]:size-4"
+                    : "size-[1.125rem] [&>svg]:size-[1.125rem]",
+                )}
+              >
+                {item.icon}
+              </span>
+            )}
             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
             {item.keybinding && (
-              <span className="ui-text-sm ml-8 shrink-0 whitespace-nowrap text-text-lighter">
+              <span
+                className={cn(
+                  "ui-text-sm shrink-0 whitespace-nowrap text-text-lighter",
+                  density === "compact" ? "ml-5" : "ml-8",
+                )}
+              >
                 {item.keybinding}
               </span>
             )}
@@ -241,6 +197,11 @@ interface DropdownBaseProps {
   style?: CSSProperties;
   portalContainer?: Element | DocumentFragment | null;
   closeOnSelect?: boolean;
+  animated?: boolean;
+  matchAnchorWidth?: boolean;
+  anchorMinWidth?: number;
+  density?: DropdownDensity;
+  showIcons?: boolean;
 }
 
 interface AnchorPositioning {
@@ -327,6 +288,11 @@ export function Dropdown(props: DropdownProps) {
     searchPlaceholder,
     portalContainer,
     closeOnSelect = true,
+    animated = true,
+    matchAnchorWidth = false,
+    anchorMinWidth = 0,
+    density = "default",
+    showIcons = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -390,8 +356,17 @@ export function Dropdown(props: DropdownProps) {
       menu.style.maxHeight = `${nextHeight}px`;
     };
 
+    const applyAnchorWidth = (anchorRect: DOMRect) => {
+      if (!matchAnchorWidth || hasExplicitWidth) return;
+
+      const anchorWidth = Math.round(anchorRect.width);
+      if (Number.isFinite(anchorWidth)) {
+        menu.style.width = `${Math.max(anchorMinWidth, anchorWidth)}px`;
+      }
+    };
+
     const applyLockedWidth = () => {
-      if (hasExplicitWidth) return;
+      if (hasExplicitWidth || matchAnchorWidth) return;
 
       if (lockedWidthRef.current == null) {
         lockedWidthRef.current = menu.getBoundingClientRect().width;
@@ -420,6 +395,7 @@ export function Dropdown(props: DropdownProps) {
 
       const availableHeight = finalSide === "bottom" ? spaceBelow : spaceAbove;
       applyMaxHeight(Math.max(120, Math.min(viewportMaxHeight, availableHeight)));
+      applyAnchorWidth(anchorRect);
       applyLockedWidth();
 
       const menuRect = menu.getBoundingClientRect();
@@ -621,16 +597,27 @@ export function Dropdown(props: DropdownProps) {
     originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
 
   return (
-    <MenuPopover
+    <PopoverContent
       isOpen={isOpen}
-      menuRef={menuRef}
+      contentRef={menuRef}
       portalContainer={portalContainer}
       className={className}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
-      initial={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      animated={animated}
+      initial={{
+        opacity: 0,
+        scale: 0.98,
+        y: resolvedSide === "top" ? 4 : -4,
+        filter: "blur(2px)",
+      }}
+      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={{
+        opacity: 0,
+        scale: 0.98,
+        y: resolvedSide === "top" ? 4 : -4,
+        filter: "blur(2px)",
+      }}
+      transition={{ duration: motionDuration.fast, ease: motionEase.smooth }}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (
@@ -656,6 +643,8 @@ export function Dropdown(props: DropdownProps) {
             items={getFilteredItems()}
             focusIndex={focusIndex}
             onItemSelect={closeOnSelect ? onClose : undefined}
+            density={density}
+            showIcons={showIcons}
           />
         )}
         {hasSections &&
@@ -663,15 +652,17 @@ export function Dropdown(props: DropdownProps) {
             <div key={section.id}>
               {sectionIdx > 0 && <div className="my-0.5 border-border/70 border-t" />}
               {section.label && (
-                <div className={dropdownSectionLabelVariants()}>{section.label}</div>
+                <div className={dropdownSectionLabelVariants({ density })}>{section.label}</div>
               )}
               <MenuItemsList
                 items={section.items}
                 onItemSelect={closeOnSelect ? onClose : undefined}
+                density={density}
+                showIcons={showIcons}
               />
             </div>
           ))}
       </div>
-    </MenuPopover>
+    </PopoverContent>
   );
 }

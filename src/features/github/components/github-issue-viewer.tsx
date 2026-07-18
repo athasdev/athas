@@ -1,22 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  Copy,
-  ArrowSquareOut as ExternalLink,
-  ChatCircleText as MessageSquare,
-  ArrowClockwise as RefreshCw,
-} from "@phosphor-icons/react";
+import { ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { useBufferStore } from "@/features/editor/stores/buffer-store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
 import { LoadingIndicator } from "@/ui/loading";
 import { toast } from "@/ui/toast";
-import Tooltip from "@/ui/tooltip";
-import type { IssueDetails } from "../types/github";
-import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
+import type { IssueDetails } from "../types/github.types";
+import {
+  GITHUB_ISSUE_DETAILS_TTL_MS,
+  githubIssueDetailsCache,
+  githubIssueListCache,
+} from "../utils/github-data-cache";
 import { copyToClipboard } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
+import { GitHubAvatar } from "./github-avatar";
 import GitHubMarkdown from "./github-markdown";
+import { GitHubTitleBodyForm } from "./github-title-body-form";
 import { AssigneesList, LabelBadges } from "./pr-status";
 import {
   GitHubViewerHeader,
@@ -31,14 +32,15 @@ interface GitHubIssueViewerProps {
 }
 
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
-  const buffers = useBufferStore.use.buffers();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
   const [details, setDetails] = useState<IssueDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
-  const buffer = buffers.find((item) => item.id === bufferId);
-  const issueBaseUrl = useMemo(
+  const repositoryUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
     [details?.url],
   );
@@ -122,6 +124,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
 
   useEffect(() => {
     setVisibleCommentCount(8);
+    setIsEditingDetails(false);
   }, [details?.number]);
 
   useEffect(() => {
@@ -171,6 +174,38 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     void copyToClipboard(details.url, "Issue link copied");
   }, [details?.url]);
 
+  const handleSaveDetails = useCallback(
+    async ({ title, body }: { title: string; body: string }) => {
+      if (!repoPath || !details || !buffer || buffer.type !== "githubIssue") return;
+
+      setIsSavingDetails(true);
+      try {
+        const nextDetails = await invoke<IssueDetails>("github_update_issue", {
+          repoPath,
+          issueNumber,
+          title,
+          body,
+        });
+        const cacheKey = `${repoPath}::${issueNumber}`;
+        githubIssueDetailsCache.set(cacheKey, nextDetails);
+        githubIssueListCache.clear();
+        setDetails(nextDetails);
+        updateBuffer({
+          ...buffer,
+          name: nextDetails.title,
+          url: nextDetails.url,
+        });
+        setIsEditingDetails(false);
+        toast.success(`Updated issue #${issueNumber}`);
+      } catch (nextError) {
+        toast.error(nextError instanceof Error ? nextError.message : "Failed to update issue");
+      } finally {
+        setIsSavingDetails(false);
+      }
+    },
+    [buffer, details, issueNumber, repoPath, updateBuffer],
+  );
+
   return (
     <GitHubViewerShell
       header={
@@ -183,14 +218,11 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 <>
                   <span>&middot;</span>
                   <span className="inline-flex items-center gap-2">
-                    <img
-                      src={
-                        details.author.avatarUrl ||
-                        `https://github.com/${encodeURIComponent(details.author.login)}.png?size=32`
-                      }
-                      alt={details.author.login}
-                      className="size-4 rounded-full bg-secondary-bg"
-                      loading="lazy"
+                    <GitHubAvatar
+                      login={details.author.login}
+                      avatarUrl={details.author.avatarUrl}
+                      size={32}
+                      className="size-4"
                     />
                     <span>{details.author.login}</span>
                   </span>
@@ -212,40 +244,27 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           }
           actions={
             <>
-              <Tooltip content="Refresh issue" side="bottom">
-                <Button
-                  onClick={() => void fetchIssue(true)}
-                  variant="ghost"
-                  compact
-                  aria-label="Refresh issue"
-                >
-                  {isLoading && details ? (
-                    <LoadingIndicator label="Loading issue" compact />
-                  ) : (
-                    <RefreshCw />
-                  )}
-                </Button>
-              </Tooltip>
-              <Tooltip content="Open on GitHub" side="bottom">
-                <Button
-                  onClick={handleOpenInBrowser}
-                  variant="ghost"
-                  aria-label="Open issue on GitHub"
-                  compact
-                >
-                  <ExternalLink />
-                </Button>
-              </Tooltip>
-              <Tooltip content="Copy issue link" side="bottom">
-                <Button
-                  onClick={handleCopyIssueLink}
-                  variant="ghost"
-                  aria-label="Copy issue link"
-                  compact
-                >
-                  <Copy />
-                </Button>
-              </Tooltip>
+              <Button
+                onClick={() => setIsEditingDetails(true)}
+                disabled={!details}
+                variant="ghost"
+                size="xs"
+              >
+                Edit
+              </Button>
+              <ActionMenu
+                label="Issue actions"
+                items={[
+                  {
+                    id: "refresh",
+                    label: isLoading && details ? "Refreshing..." : "Refresh",
+                    disabled: isLoading && Boolean(details),
+                    onClick: () => void fetchIssue(true),
+                  },
+                  { id: "open-browser", label: "Open on GitHub", onClick: handleOpenInBrowser },
+                  { id: "copy-link", label: "Copy link", onClick: handleCopyIssueLink },
+                ]}
+              />
             </>
           }
         >
@@ -261,45 +280,55 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       {error ? (
         <div className="flex items-center justify-center p-8">
           <div className="text-center">
-            <p className="ui-font ui-text-sm text-error">{error}</p>
+            <p className="font-sans ui-text-sm text-error">{error}</p>
             <Button
               onClick={() => void fetchIssue(true)}
               variant="default"
-              compact
-              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
+              size="xs"
+              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
             >
               Retry
             </Button>
           </div>
         </div>
       ) : details ? (
-        <div className="space-y-5">
-          {details.body ? (
+        <div className="w-full space-y-5">
+          {isEditingDetails ? (
+            <GitHubTitleBodyForm
+              title={details.title}
+              body={details.body}
+              titlePlaceholder="Issue title"
+              submitLabel="Save"
+              isSubmitting={isSavingDetails}
+              onCancel={() => setIsEditingDetails(false)}
+              onSubmit={(value) => void handleSaveDetails(value)}
+            />
+          ) : details.body ? (
             <GitHubMarkdown
               content={details.body}
-              className="github-markdown-pr"
-              contentClassName="github-markdown-pr-content"
-              issueBaseUrl={issueBaseUrl}
+              className="github-markdown-pr w-full"
+              contentClassName="github-markdown-pr-content w-full max-w-none"
+              repositoryUrl={repositoryUrl}
               repoPath={repoPath}
             />
           ) : (
-            <p className="ui-font ui-text-sm italic text-text-lighter">No description provided</p>
+            <p className="font-sans ui-text-sm italic text-text-lighter">No description provided</p>
           )}
 
-          <div className="space-y-1">
+          <div className="w-full space-y-1">
             {details.comments.length > 0 ? (
               visibleComments.map((comment, index) => (
                 <CommentItem
                   key={`${comment.author.login}-${comment.createdAt}-${index}`}
                   comment={comment}
-                  issueBaseUrl={issueBaseUrl}
+                  repositoryUrl={repositoryUrl}
                   repoPath={repoPath}
                 />
               ))
             ) : (
               <div className="flex items-center gap-2 px-1 py-2 text-text-lighter">
                 <MessageSquare className="size-4" />
-                <p className="ui-font ui-text-sm">No comments</p>
+                <p className="font-sans ui-text-sm">No comments</p>
               </div>
             )}
             {details.comments.length > visibleComments.length ? (

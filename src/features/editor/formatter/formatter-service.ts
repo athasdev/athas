@@ -2,12 +2,21 @@ import { invoke } from "@tauri-apps/api/core";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { getLanguageIdFromPath } from "@/features/editor/utils/language-id";
 import { logger } from "@/features/editor/utils/logger";
-import { useFileSystemStore } from "@/features/file-system/controllers/store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 export interface FormatOptions {
   filePath: string;
   content: string;
   languageId?: string;
+}
+
+export interface FormatRange {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+}
+
+export interface FormatRangeOptions extends FormatOptions {
+  range: FormatRange;
 }
 
 export interface FormatResult {
@@ -21,6 +30,13 @@ export interface FormatResult {
  */
 export async function formatContent(options: FormatOptions): Promise<FormatResult> {
   const { filePath, languageId } = options;
+
+  if (filePath.startsWith("wsl://")) {
+    return {
+      success: false,
+      error: "Formatting is not available for WSL files.",
+    };
+  }
 
   try {
     // Try to get formatter by file path first, then by language ID
@@ -103,6 +119,40 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
   }
 }
 
+export async function formatRange(options: FormatRangeOptions): Promise<FormatResult> {
+  const { filePath, content, range } = options;
+
+  if (filePath.startsWith("wsl://")) {
+    return {
+      success: false,
+      error: "Range formatting is not available for WSL files.",
+    };
+  }
+
+  try {
+    const lspFormatted = await formatRangeWithLsp(filePath, content, range);
+    if (lspFormatted !== null) {
+      return {
+        success: true,
+        formattedContent: lspFormatted,
+      };
+    }
+
+    logger.debug("FormatterService", `No range formatter configured for ${filePath}`);
+    return {
+      success: false,
+      error: "No range formatter configured for this file type",
+    };
+  } catch (error) {
+    logger.error("FormatterService", `Failed to format range in ${filePath}:`, error);
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 async function formatWithLsp(filePath: string, content: string): Promise<string | null> {
   try {
     const { LspClient } = await import("@/features/editor/lsp/lsp-client");
@@ -113,10 +163,26 @@ async function formatWithLsp(filePath: string, content: string): Promise<string 
   }
 }
 
+async function formatRangeWithLsp(
+  filePath: string,
+  content: string,
+  range: FormatRange,
+): Promise<string | null> {
+  try {
+    const { LspClient } = await import("@/features/editor/lsp/lsp-client");
+    return await LspClient.getInstance().formatRange(filePath, content, range);
+  } catch (error) {
+    logger.debug("FormatterService", `LSP range formatter unavailable for ${filePath}:`, error);
+    return null;
+  }
+}
+
 /**
  * Check if formatting is available for a file
  */
 export function isFormattingAvailable(filePath: string, languageId?: string): boolean {
+  if (filePath.startsWith("wsl://")) return false;
+
   const formatterConfig = extensionRegistry.getFormatterForFile(filePath);
   if (formatterConfig) return true;
 

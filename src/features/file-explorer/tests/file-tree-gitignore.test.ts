@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { FileEntry } from "@/features/file-system/types/app";
+import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   collectGitIgnoreFileReferences,
   createFileTreeGitIgnoreRules,

@@ -9,7 +9,12 @@ export { parserCache } from "./cache";
 export { convertToEditorToken, convertToEditorTokens } from "./converter";
 export { wasmParserLoader } from "./loader";
 export { tokenizeByLine, tokenizeCode, tokenizeRange } from "./tokenizer";
-export type { HighlightToken, LoadedParser, ParseResult, ParserConfig } from "./types";
+export type {
+  HighlightToken,
+  LoadedParser,
+  ParseResult,
+  ParserConfig,
+} from "../../types/wasm-parser/wasm-parser.types";
 
 const PRELOAD_LANGUAGE_IDS = [
   "typescript",

@@ -31,6 +31,7 @@ bun.lock
 
 # rust compiled folders
 target/
+.zig-cache/
 
 # test video for streaming example
 streaming_example_test_video.mp4
@@ -78,6 +79,9 @@ public/tree-sitter/queries/
 
 # Bundled tree-sitter grammars
 src/extensions/bundled/*/grammars/*.wasm
+
+# Generated extension CDN output
+extensions/generated/
 
 # local codex settings
 src-tauri/.claude/settings.local.json

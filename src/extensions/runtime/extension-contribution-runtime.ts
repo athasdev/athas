@@ -1,53 +1,29 @@
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { IconThemeContribution, ThemeContribution } from "../types/extension-manifest";
 import { iconThemeRegistry } from "../icon-themes/icon-theme-registry";
-import type { IconThemeDefinition } from "../icon-themes/types";
+import type { IconResult, IconThemeDefinition } from "../icon-themes/icon-theme.types";
 import { themeRegistry } from "../themes/theme-registry";
-import type { ThemeDefinition } from "../themes/types";
+import { toThemeDefinition as convertThemeToDefinition } from "../themes/theme-file";
+import type { ThemeDefinition } from "../themes/theme.types";
 import type { ExtensionManifest } from "../types/extension-manifest";
+import { getManifestIconContributions } from "../types/extension-contributions";
+import { isRetiredExtensionId } from "../registry/retired-extensions";
+import {
+  activateBundledContributionModule,
+  deactivateBundledContributionModule,
+} from "../bundled/bundled-contribution-modules";
 
-function toCssVariables(colors: Record<string, string>): Record<string, string> {
-  const variables: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(colors)) {
-    const normalizedKey = key.startsWith("--") ? key : `--${key}`;
-    variables[normalizedKey] = value;
-
-    if (!normalizedKey.startsWith("--color-")) {
-      variables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
-  }
-
-  return variables;
+function getThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
+  return [...(manifest.themes ?? []), ...(manifest.contributes?.themes ?? [])];
 }
 
-function toSyntaxVariables(syntax: Record<string, string> | undefined): Record<string, string> {
-  const variables: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(syntax ?? {})) {
-    const normalizedKey = key.startsWith("--") ? key : `--syntax-${key}`;
-    variables[normalizedKey] = value;
-
-    if (!normalizedKey.startsWith("--color-")) {
-      variables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
-  }
-
-  return variables;
+function getIconThemeContributions(manifest: ExtensionManifest): IconThemeContribution[] {
+  return getManifestIconContributions(manifest);
 }
 
 function toThemeDefinition(contribution: ThemeContribution): ThemeDefinition {
-  const isDark = contribution.appearance === "dark";
-
-  return {
-    id: contribution.id,
-    name: contribution.name,
-    description: contribution.description || "",
-    category: isDark ? "Dark" : "Light",
-    cssVariables: toCssVariables(contribution.colors),
-    syntaxTokens: toSyntaxVariables(contribution.syntax),
-    isDark,
-  };
+  return convertThemeToDefinition(contribution);
 }
 
 function normalizeLookupMap(map: Record<string, string> | undefined, withDot = false) {
@@ -61,20 +37,64 @@ function normalizeLookupMap(map: Record<string, string> | undefined, withDot = f
   return normalized;
 }
 
-function resolveIconSvg(
+function resolveIcon(
   definitions: Record<string, string>,
   iconKey: string | undefined,
-): string | undefined {
-  if (!iconKey) return undefined;
-  return definitions[iconKey] ?? iconKey;
+  extensionPath?: string,
+): IconResult {
+  if (!iconKey) return {};
+
+  const definition = definitions[iconKey] ?? iconKey;
+
+  if (definition.trim().startsWith("<svg")) {
+    return { svg: definition };
+  }
+
+  if (
+    definition.startsWith("http://") ||
+    definition.startsWith("https://") ||
+    definition.startsWith("data:") ||
+    definition.startsWith("asset:")
+  ) {
+    return { url: definition };
+  }
+
+  if (definition.startsWith("./") && extensionPath) {
+    return { url: convertFileSrc(`${extensionPath}/${definition.slice(2)}`) };
+  }
+
+  if (definition.startsWith("/")) {
+    return { url: convertFileSrc(definition) };
+  }
+
+  return {};
 }
 
-function getFileExtension(fileName: string): string {
-  const index = fileName.lastIndexOf(".");
-  return index > 0 ? fileName.slice(index).toLowerCase() : "";
+function getIconDefinitionsForAppearance(contribution: IconThemeContribution) {
+  const currentThemeId =
+    themeRegistry.getCurrentTheme() || useSettingsStore.getState().settings.theme;
+  const currentTheme = themeRegistry.getTheme(currentThemeId);
+
+  if (currentTheme && !currentTheme.isDark) {
+    return contribution.lightIconDefinitions ?? contribution.iconDefinitions;
+  }
+
+  return contribution.iconDefinitions;
 }
 
-function toIconThemeDefinition(contribution: IconThemeContribution): IconThemeDefinition {
+function getFileExtensionCandidates(fileName: string): string[] {
+  const parts = fileName.toLowerCase().split(".");
+  if (parts.length < 2 || parts[0] === "") {
+    return [];
+  }
+
+  return parts.map((_, index) => `.${parts.slice(index).join(".")}`);
+}
+
+function toIconThemeDefinition(
+  contribution: IconThemeContribution,
+  extensionPath?: string,
+): IconThemeDefinition {
   const filenames = normalizeLookupMap(contribution.filenames);
   const fileExtensions = normalizeLookupMap(contribution.fileExtensions, true);
   const folders = normalizeLookupMap(contribution.folders);
@@ -85,6 +105,7 @@ function toIconThemeDefinition(contribution: IconThemeContribution): IconThemeDe
     name: contribution.name,
     description: contribution.description || "",
     getFileIcon: (fileName, isDir, isExpanded = false) => {
+      const iconDefinitions = getIconDefinitionsForAppearance(contribution);
       const normalizedName = fileName.split(/[\\/]/).pop()?.toLowerCase() || fileName.toLowerCase();
 
       if (isDir) {
@@ -94,17 +115,44 @@ function toIconThemeDefinition(contribution: IconThemeContribution): IconThemeDe
           (isExpanded ? contribution.defaultFolderOpen : undefined) ||
           contribution.defaultFolder;
 
-        return { svg: resolveIconSvg(contribution.iconDefinitions, folderIcon) };
+        return resolveIcon(iconDefinitions, folderIcon, extensionPath);
       }
 
       const icon =
         filenames.get(normalizedName) ||
-        fileExtensions.get(getFileExtension(normalizedName)) ||
+        getFileExtensionCandidates(normalizedName)
+          .map((extension) => fileExtensions.get(extension))
+          .find(Boolean) ||
         contribution.defaultFile;
 
-      return { svg: resolveIconSvg(contribution.iconDefinitions, icon) };
+      return resolveIcon(iconDefinitions, icon, extensionPath);
     },
   };
+}
+
+function iconThemeUsesRelativePaths(iconThemes: IconThemeContribution[]): boolean {
+  return iconThemes.some((theme) =>
+    [theme.iconDefinitions, theme.lightIconDefinitions].some((definitions) =>
+      Object.values(definitions ?? {}).some((definition) => definition.startsWith("./")),
+    ),
+  );
+}
+
+async function resolveContributionExtensionPath(
+  extensionId: string,
+  iconThemes: IconThemeContribution[],
+  extensionPath: string | undefined,
+): Promise<string | undefined> {
+  if (extensionPath || !iconThemeUsesRelativePaths(iconThemes)) {
+    return extensionPath;
+  }
+
+  try {
+    return await invoke<string>("get_extension_path", { extensionId });
+  } catch (error) {
+    console.warn(`Failed to resolve extension path for ${extensionId}:`, error);
+    return undefined;
+  }
 }
 
 function fallbackThemeIfNeeded(themes: ThemeContribution[]) {
@@ -131,22 +179,39 @@ function fallbackIconThemeIfNeeded(iconThemes: IconThemeContribution[]) {
 export async function activateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
+  extensionPath?: string,
 ): Promise<void> {
-  for (const theme of manifest.themes ?? []) {
+  if (isRetiredExtensionId(extensionId)) {
+    return;
+  }
+
+  const iconThemes = getIconThemeContributions(manifest);
+  const resolvedExtensionPath = await resolveContributionExtensionPath(
+    extensionId,
+    iconThemes,
+    extensionPath,
+  );
+
+  for (const theme of getThemeContributions(manifest)) {
     themeRegistry.registerTheme(toThemeDefinition(theme), { extensionId });
   }
 
-  for (const iconTheme of manifest.iconThemes ?? []) {
-    iconThemeRegistry.registerTheme(toIconThemeDefinition(iconTheme), { extensionId });
+  for (const iconTheme of iconThemes) {
+    iconThemeRegistry.registerTheme(toIconThemeDefinition(iconTheme, resolvedExtensionPath), {
+      extensionId,
+    });
   }
+
+  await activateBundledContributionModule(extensionId, manifest);
 }
 
 export async function deactivateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
-  fallbackThemeIfNeeded(manifest.themes ?? []);
-  fallbackIconThemeIfNeeded(manifest.iconThemes ?? []);
+  await deactivateBundledContributionModule(extensionId, manifest);
+  fallbackThemeIfNeeded(getThemeContributions(manifest));
+  fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
   themeRegistry.unregisterThemesByExtension(extensionId);
   iconThemeRegistry.unregisterThemesByExtension(extensionId);
 }

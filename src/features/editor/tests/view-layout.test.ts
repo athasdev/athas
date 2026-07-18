@@ -142,6 +142,30 @@ describe("buildEditorViewLayout", () => {
     expect(position.left).toBe(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 10);
   });
 
+  it("hit-tests long unwrapped lines without scanning every column", () => {
+    let measureCallCount = 0;
+    const measuredText = (text: string) => {
+      measureCallCount++;
+      return text.length * 10;
+    };
+    const layout = buildEditorViewLayout({
+      lines: ["a".repeat(1024)],
+      lineHeight: 20,
+      wordWrap: false,
+      contentWidth: contentWidthForColumns(2000),
+      measureText: measuredText,
+    });
+
+    measureCallCount = 0;
+    const position = layout.editorPointToModelPosition(
+      EDITOR_CONSTANTS.EDITOR_PADDING_LEFT + 5050,
+      EDITOR_CONSTANTS.EDITOR_PADDING_TOP,
+    );
+
+    expect(position.column).toBe(505);
+    expect(measureCallCount).toBeLessThan(30);
+  });
+
   it("keeps empty model lines addressable", () => {
     const layout = buildEditorViewLayout({
       lines: [""],

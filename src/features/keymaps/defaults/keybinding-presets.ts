@@ -1,6 +1,6 @@
-import type { Settings } from "@/features/settings/types/settings";
+import type { Settings } from "@/features/settings/types/settings.types";
 import { defaultKeymaps } from "./default-keymaps";
-import type { Keybinding } from "../types";
+import type { Keybinding } from "../types/keymaps.types";
 
 export type KeybindingPreset = Settings["keybindingPreset"];
 

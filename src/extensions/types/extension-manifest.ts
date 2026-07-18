@@ -12,7 +12,19 @@ export type PlatformArch =
   | "linux-arm64"
   | "win32-x64";
 
-export type ToolRuntime = "bun" | "node" | "python" | "go" | "rust" | "binary";
+export type ToolRuntime =
+  | "bun"
+  | "node"
+  | "python"
+  | "go"
+  | "rust"
+  | "ruby"
+  | "r"
+  // Uses a system executable from PATH or known toolchain locations.
+  | "system"
+  // Uses a system executable when present, otherwise an Athas-managed binary.
+  | "binary";
+export type ExtensionKind = "ui" | "workspace" | "web";
 
 export interface ExtensionManifest {
   // Core metadata
@@ -26,19 +38,31 @@ export interface ExtensionManifest {
   // Categories
   categories: ExtensionCategory[];
 
+  // Engine compatibility metadata from declarative package manifests.
+  engines?: {
+    athas?: string;
+    vscode?: string;
+    [engine: string]: string | undefined;
+  };
+
   // Language support
   languages?: LanguageContribution[];
 
   // Database provider sidecars
+  databases?: DatabaseProviderContribution[];
   databaseProviders?: DatabaseProviderContribution[];
 
   // ACP agent contributions
   agents?: AgentContribution[];
 
+  // AI provider contributions
+  aiProviders?: AIProviderContribution[];
+
   // Color theme contributions
   themes?: ThemeContribution[];
 
   // File icon theme contributions
+  icons?: IconThemeContribution[];
   iconThemes?: IconThemeContribution[];
 
   // LSP configuration
@@ -64,6 +88,9 @@ export interface ExtensionManifest {
 
   // Dependencies
   dependencies?: Record<string, string>;
+  extensionDependencies?: string[];
+  extensionPack?: string[];
+  extensionKind?: ExtensionKind | ExtensionKind[];
 
   // Activation events
   activationEvents?: string[];
@@ -73,6 +100,11 @@ export interface ExtensionManifest {
 
   // Entry point (for custom extension code)
   main?: string;
+  browser?: string;
+
+  // Runtime capability metadata used by Athas extension packages before they
+  // are normalized into concrete LSP/formatter/linter/grammar fields.
+  capabilities?: Record<string, unknown>;
 
   // Extension icon
   icon?: string;
@@ -93,6 +125,7 @@ export interface ExtensionManifest {
 export type ExtensionCategory =
   | "Language"
   | "Database"
+  | "AI"
   | "Agent"
   | "Icon Theme"
   | "Linter"
@@ -108,6 +141,7 @@ export interface LanguageContribution {
   extensions: string[]; // File extensions (e.g., [".rs"])
   aliases?: string[]; // Language aliases
   filenames?: string[]; // Exact filenames (e.g., ["Dockerfile", ".bashrc"])
+  filenamePatterns?: string[]; // Filename globs (e.g., ["tsconfig.*.json"])
   configuration?: string; // Path to language configuration
   firstLine?: string; // First line regex match
 }
@@ -200,6 +234,25 @@ export interface AgentContribution {
   };
 }
 
+export interface AIProviderModelContribution {
+  id: string;
+  name: string;
+  maxTokens: number;
+  proOnly?: boolean;
+}
+
+export interface AIProviderContribution {
+  id: string;
+  name: string;
+  apiUrl: string;
+  requiresApiKey: boolean;
+  requiresAuth?: boolean;
+  maxTokens?: number;
+  apiKeyUrl?: string;
+  apiKeyPlaceholder?: string;
+  models: AIProviderModelContribution[];
+}
+
 export interface ThemeContribution {
   id: string;
   name: string;
@@ -214,6 +267,7 @@ export interface IconThemeContribution {
   name: string;
   description?: string;
   iconDefinitions: Record<string, string>;
+  lightIconDefinitions?: Record<string, string>;
   fileExtensions?: Record<string, string>;
   filenames?: Record<string, string>;
   folders?: Record<string, string>;
@@ -390,14 +444,16 @@ export interface Snippet {
 }
 
 export interface InstallationMetadata {
+  type?: "download" | "bundled";
+
   // Download URL for the extension package (used when no platform-specific packages)
-  downloadUrl: string;
+  downloadUrl?: string;
 
   // Package size in bytes
-  size: number;
+  size?: number;
 
   // SHA256 checksum for verification
-  checksum: string;
+  checksum?: string;
 
   // Minimum editor version required
   minEditorVersion?: string;
@@ -428,10 +484,21 @@ export interface PlatformPackage {
 }
 
 export interface UIContributions {
-  sidebarViews?: SidebarViewContribution[];
-  toolbarActions?: ToolbarActionContribution[];
+  languages?: LanguageContribution[];
+  databases?: DatabaseProviderContribution[];
+  databaseProviders?: DatabaseProviderContribution[];
+  agents?: AgentContribution[];
+  aiProviders?: AIProviderContribution[];
+  grammars?: GrammarConfiguration[];
+  snippets?: SnippetContribution[];
+  themes?: ThemeContribution[];
+  icons?: IconThemeContribution[];
+  iconThemes?: IconThemeContribution[];
+  keybindings?: KeybindingContribution[];
   commands?: CommandContribution[];
   menus?: MenuContribution[];
+  sidebarViews?: SidebarViewContribution[];
+  toolbarActions?: ToolbarActionContribution[];
 }
 
 export interface SidebarViewContribution {

@@ -1,17 +1,17 @@
 import {
-  CaretDown as ChevronDown,
-  FlipHorizontal,
-  FlipVertical,
-  Image,
-  ArrowCounterClockwise as RotateCcw,
-  ArrowClockwise as RotateCw,
-  FloppyDisk as Save,
-  ArrowCounterClockwise as Undo2,
-} from "@phosphor-icons/react";
+  CaretDownIcon as ChevronDown,
+  FlipHorizontalIcon as FlipHorizontal,
+  FlipVerticalIcon as FlipVertical,
+  ImageIcon as Image,
+  ArrowCounterClockwiseIcon as RotateCcw,
+  ArrowClockwiseIcon as RotateCw,
+  FloppyDiskIcon as Save,
+  ArrowCounterClockwiseIcon as Undo2,
+} from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
-import type { ImageFormat } from "../models/image-operation.types";
+import type { ImageFormat } from "../types/image-operation.types";
 import { ImageFormatDialog } from "./image-format-dialog";
 
 interface ImageEditorToolbarProps {
@@ -48,7 +48,7 @@ export function ImageEditorToolbar({
   currentFileName,
 }: ImageEditorToolbarProps) {
   const menuItemClass = cn(
-    "ui-font h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text ui-text-xs",
+    "font-sans h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text ui-text-sm",
   );
 
   const [showEditMenu, setShowEditMenu] = useState(false);
@@ -80,11 +80,11 @@ export function ImageEditorToolbar({
         <Button
           onClick={() => setShowEditMenu(!showEditMenu)}
           variant="ghost"
-          compact
+          size="xs"
           disabled={isProcessing}
           tooltip="Edit operations"
         >
-          <span className="ui-text-xs">Edit</span>
+          <span className="ui-text-sm">Edit</span>
           <ChevronDown className="ml-1" />
         </Button>
 
@@ -98,7 +98,7 @@ export function ImageEditorToolbar({
             <div
               className={cn(
                 "absolute top-full left-0 z-50 mt-1",
-                "w-48 rounded border border-border bg-secondary-bg shadow-lg",
+                "w-48 rounded border border-border bg-secondary-bg shadow-[var(--shadow-popover)]",
               )}
             >
               <div className="py-1">
@@ -106,7 +106,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onResize)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -117,7 +117,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onRotateCW)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <RotateCw />
@@ -127,7 +127,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onRotateCCW)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <RotateCcw />
@@ -137,7 +137,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onRotate180)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <RotateCw />
@@ -148,7 +148,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onFlipHorizontal)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <FlipHorizontal />
@@ -158,7 +158,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleEdit(onFlipVertical)}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <FlipVertical />
@@ -175,11 +175,11 @@ export function ImageEditorToolbar({
         <Button
           onClick={() => setShowConvertMenu(!showConvertMenu)}
           variant="ghost"
-          compact
+          size="xs"
           disabled={isProcessing}
           tooltip="Convert format"
         >
-          <span className="ui-text-xs">Convert</span>
+          <span className="ui-text-sm">Convert</span>
           <ChevronDown className="ml-1" />
         </Button>
 
@@ -193,7 +193,7 @@ export function ImageEditorToolbar({
             <div
               className={cn(
                 "absolute top-full left-0 z-50 mt-1",
-                "w-40 rounded border border-border bg-secondary-bg shadow-lg",
+                "w-40 rounded border border-border bg-secondary-bg shadow-[var(--shadow-popover)]",
               )}
             >
               <div className="py-1">
@@ -201,7 +201,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("png")}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -211,7 +211,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("jpeg")}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -221,7 +221,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("webp")}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -231,7 +231,7 @@ export function ImageEditorToolbar({
                   type="button"
                   onClick={() => handleFormatSelect("avif")}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={menuItemClass}
                 >
                   <Image />
@@ -252,7 +252,7 @@ export function ImageEditorToolbar({
         variant="ghost"
         disabled={!canUndo || isProcessing}
         tooltip="Undo last operation"
-        compact
+        size="icon-xs"
       >
         <Undo2 />
       </Button>
@@ -265,7 +265,7 @@ export function ImageEditorToolbar({
           disabled={isProcessing}
           tooltip="Save changes"
           className="text-accent"
-          compact
+          size="icon-xs"
         >
           <Save />
         </Button>

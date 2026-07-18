@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { DatabaseType } from "../models/provider.types";
+import type { DatabaseType } from "../types/provider.types";
 
 export type DatabaseViewerProps = { databasePath: string } | { connectionId: string };
 

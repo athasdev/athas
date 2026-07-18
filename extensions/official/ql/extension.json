@@ -1,0 +1,17 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.ql",
+  "name": "QL",
+  "displayName": "QL",
+  "version": "1.0.0",
+  "description": "QL language support",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "ql",
+      "extensions": [".ql", ".qll"],
+      "aliases": ["QL", "CodeQL"]
+    }
+  ]
+}

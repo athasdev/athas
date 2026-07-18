@@ -1,13 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { MagnifyingGlass as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import {
-  ArrowLeft,
-  CirclesThree,
-  Cube,
-  DownloadSimple,
-  Sliders,
-  User,
-} from "@phosphor-icons/react";
+  ArrowLeftIcon as ArrowLeft,
+  CirclesThreeIcon as CirclesThree,
+  CubeIcon as Cube,
+  DownloadSimpleIcon as DownloadSimple,
+  SlidersIcon as Sliders,
+  UserIcon as User,
+} from "@/ui/icons";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useMemo, useState } from "react";
@@ -21,15 +21,15 @@ import {
   getKeybindingPresetDiffReport,
   keybindingPresetOptions,
 } from "@/features/keymaps/defaults/keybinding-presets";
-import { useKeymapStore } from "@/features/keymaps/stores/store";
-import type { Keybinding } from "@/features/keymaps/types";
+import { useKeymapStore } from "@/features/keymaps/stores/keymaps.store";
+import type { Keybinding } from "@/features/keymaps/types/keymaps.types";
 import { getEffectiveKeybindingForCommand } from "@/features/keymaps/utils/effective-keymaps";
 import {
   createKeybindingsExportPayload,
   getExportableUserKeybindings,
   parseKeybindingsImportJson,
 } from "@/features/keymaps/utils/keybinding-import-export";
-import { getDefaultSetting, useSettingsStore } from "@/features/settings/store";
+import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
@@ -38,6 +38,7 @@ import { SegmentedControl } from "@/ui/segmented-control";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
+import { motionDuration, motionEase } from "@/ui/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingRow } from "../settings-section";
@@ -48,14 +49,14 @@ const editorStepTransition = {
   initial: { opacity: 0, x: 14 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: -14 },
-  transition: { duration: 0.16, ease: "easeOut" as const },
+  transition: { duration: motionDuration.fast, ease: motionEase.smooth },
 };
 
 const summaryStepTransition = {
   initial: { opacity: 0, x: -14 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: 14 },
-  transition: { duration: 0.16, ease: "easeOut" as const },
+  transition: { duration: motionDuration.fast, ease: motionEase.smooth },
 };
 
 export const KeyboardSettings = () => {
@@ -63,7 +64,9 @@ export const KeyboardSettings = () => {
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [isEditingKeybindings, setIsEditingKeybindings] = useState(false);
   const { showToast } = useToast();
-  const { settings, updateSetting } = useSettingsStore();
+  const keybindingPreset = useSettingsStore((state) => state.settings.keybindingPreset);
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   const userKeybindings = useKeymapStore.use.keybindings();
   const { resetToDefaults } = useKeymapStore.use.actions();
@@ -74,18 +77,18 @@ export const KeyboardSettings = () => {
   const getKeybindingForCommand = (commandId: string): Keybinding | undefined =>
     getEffectiveKeybindingForCommand({
       commandId,
-      preset: settings.keybindingPreset,
+      preset: keybindingPreset,
       registryKeybindings,
       userKeybindings,
     });
 
   const selectedPresetCoverage = useMemo(
-    () => getKeybindingPresetCoverageReport(settings.keybindingPreset),
-    [settings.keybindingPreset],
+    () => getKeybindingPresetCoverageReport(keybindingPreset),
+    [keybindingPreset],
   );
   const selectedPresetDiff = useMemo(
-    () => getKeybindingPresetDiffReport(settings.keybindingPreset),
-    [settings.keybindingPreset],
+    () => getKeybindingPresetDiffReport(keybindingPreset),
+    [keybindingPreset],
   );
 
   const filteredCommands = useMemo(() => {
@@ -122,7 +125,7 @@ export const KeyboardSettings = () => {
     searchQuery,
     filterType,
     selectedPresetDiff.changedCommandIds,
-    settings.keybindingPreset,
+    keybindingPreset,
     userKeybindings,
     registryKeybindings,
   ]);
@@ -154,7 +157,7 @@ export const KeyboardSettings = () => {
       }
 
       const payload = createKeybindingsExportPayload({
-        keybindingPreset: settings.keybindingPreset,
+        keybindingPreset,
         keybindings: userBindings,
       });
 
@@ -235,7 +238,7 @@ export const KeyboardSettings = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" onClick={handleImport} compact>
+                <Button variant="default" onClick={handleImport} size="xs">
                   Import
                 </Button>
                 <Button variant="default" onClick={() => void handleExport()}>
@@ -250,7 +253,7 @@ export const KeyboardSettings = () => {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 leftIcon={Search}
-                size="sm"
+                size="md"
                 containerClassName="w-full"
               />
             </div>
@@ -259,7 +262,7 @@ export const KeyboardSettings = () => {
               <SegmentedControl
                 value={filterType}
                 onChange={(value) => setFilterType(value as FilterType)}
-                className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-xl border border-border/60 bg-secondary-bg/40 p-1"
+                className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-lg border border-border/60 bg-secondary-bg/40 p-1"
                 options={[
                   {
                     value: "all",
@@ -279,7 +282,7 @@ export const KeyboardSettings = () => {
                   {
                     value: "preset",
                     label: "Preset",
-                    icon: <DownloadSimple size={14} weight="duotone" />,
+                    icon: <DownloadSimple size={14} weight="fill" />,
                   },
                   {
                     value: "preset-changes",
@@ -310,7 +313,7 @@ export const KeyboardSettings = () => {
                   </TableHeader>
 
                   {filteredCommands.length === 0 ? (
-                    <div className="ui-font ui-text-md flex items-center justify-center py-12 text-text-lighter">
+                    <div className="font-sans ui-text-base flex items-center justify-center py-12 text-text-lighter">
                       No keybindings found
                     </div>
                   ) : (
@@ -331,10 +334,10 @@ export const KeyboardSettings = () => {
               label="Vim Mode"
               description="Enable vim keybindings and commands"
               onReset={() => updateSetting("vimMode", getDefaultSetting("vimMode"))}
-              canReset={settings.vimMode !== getDefaultSetting("vimMode")}
+              canReset={vimMode !== getDefaultSetting("vimMode")}
             >
               <Switch
-                checked={settings.vimMode}
+                checked={vimMode}
                 onChange={(checked) => updateSetting("vimMode", checked)}
                 size="sm"
               />
@@ -346,13 +349,13 @@ export const KeyboardSettings = () => {
               onReset={() =>
                 updateSetting("keybindingPreset", getDefaultSetting("keybindingPreset"))
               }
-              canReset={settings.keybindingPreset !== getDefaultSetting("keybindingPreset")}
+              canReset={keybindingPreset !== getDefaultSetting("keybindingPreset")}
             >
               <Select
-                value={settings.keybindingPreset}
+                value={keybindingPreset}
                 onChange={(value) => updateSetting("keybindingPreset", value as KeybindingPreset)}
                 options={keybindingPresetOptions}
-                size="sm"
+                size="md"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -360,8 +363,8 @@ export const KeyboardSettings = () => {
               />
             </SettingRow>
 
-            {settings.keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
-              <div className="ui-font ui-text-sm rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
+            {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
+              <div className="font-sans ui-text-base rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
                 This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
                 built-in command
                 {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still
@@ -375,7 +378,7 @@ export const KeyboardSettings = () => {
               </Button>
             </SettingRow>
             {userOverrideCount > 0 ? (
-              <div className="ui-font ui-text-sm px-1 text-text-lighter">
+              <div className="font-sans ui-text-base px-1 text-text-lighter">
                 {userOverrideCount} user override{userOverrideCount === 1 ? "" : "s"} currently
                 saved.
               </div>

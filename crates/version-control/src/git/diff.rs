@@ -1,14 +1,118 @@
-use crate::git::{DiffLineType, GitDiff, GitDiffLine, get_blob_base64, is_image_file};
+use crate::git::{DiffLineType, GitDiff, GitDiffLine, GitDiffStat, get_blob_base64, is_image_file};
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
 use git2::{Diff, DiffFormat, Oid, Repository, Tree};
 use std::{collections::HashMap, path::Path};
 
-pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> {
+const LARGE_DIFF_LINE_THRESHOLD: usize = 20_000;
+const MAX_RAW_PATCH_BYTES: usize = 2 * 1024 * 1024;
+const MAX_CONTENT_DIFF_CELLS: usize = 5_000_000;
+
+#[derive(Default)]
+pub struct ParsedDiffLines {
+   pub lines: Vec<GitDiffLine>,
+   pub is_truncated: bool,
+}
+
+#[derive(Default)]
+struct ParsedDiffFile {
+   lines: Vec<GitDiffLine>,
+   raw_patch: Option<String>,
+   additions: usize,
+   deletions: usize,
+   line_count: usize,
+   is_truncated: bool,
+}
+
+impl ParsedDiffFile {
+   fn push_raw_line(&mut self, origin: char, content: &[u8]) {
+      let raw_patch = self.raw_patch.get_or_insert_with(String::new);
+      if raw_patch.len() >= MAX_RAW_PATCH_BYTES {
+         self.is_truncated = true;
+         return;
+      }
+
+      match origin {
+         '+' | '-' | ' ' => raw_patch.push(origin),
+         _ => {}
+      }
+
+      let text = String::from_utf8_lossy(content);
+      let remaining_bytes = MAX_RAW_PATCH_BYTES.saturating_sub(raw_patch.len());
+      if text.len() > remaining_bytes {
+         let mut end = remaining_bytes;
+         while end > 0 && !text.is_char_boundary(end) {
+            end -= 1;
+         }
+         raw_patch.push_str(&text[..end]);
+         raw_patch.push_str("\n# Athas truncated this diff to keep the editor responsive.\n");
+         self.is_truncated = true;
+         return;
+      }
+
+      raw_patch.push_str(&text);
+   }
+
+   fn push_line(&mut self, origin: char, line: GitDiffLine, content: &[u8]) {
+      self.line_count += 1;
+      if matches!(origin, '+') {
+         self.additions += 1;
+      } else if matches!(origin, '-') {
+         self.deletions += 1;
+      }
+
+      if self.raw_patch.is_some() {
+         self.push_raw_line(origin, content);
+         return;
+      }
+
+      if self.line_count > LARGE_DIFF_LINE_THRESHOLD {
+         self.is_truncated = true;
+         let mut raw_patch = String::new();
+         for existing_line in &self.lines {
+            match &existing_line.line_type {
+               DiffLineType::Added => raw_patch.push('+'),
+               DiffLineType::Removed => raw_patch.push('-'),
+               DiffLineType::Context => raw_patch.push(' '),
+               DiffLineType::Header => {}
+            }
+            raw_patch.push_str(&existing_line.content);
+            if !existing_line.content.ends_with('\n') {
+               raw_patch.push('\n');
+            }
+         }
+         self.lines.clear();
+         self.raw_patch = Some(raw_patch);
+         self.push_raw_line(origin, content);
+         return;
+      }
+
+      self.lines.push(line);
+   }
+}
+
+pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<ParsedDiffLines, String> {
    let mut lines: Vec<GitDiffLine> = Vec::new();
+   let mut is_truncated = false;
 
    diff
       .print(DiffFormat::Patch, |_delta, _hunk, line| {
+         if lines.len() >= LARGE_DIFF_LINE_THRESHOLD {
+            if !is_truncated {
+               lines.push(GitDiffLine {
+                  line_type: DiffLineType::Header,
+                  content: format!(
+                     "Athas truncated this diff after {LARGE_DIFF_LINE_THRESHOLD} lines to keep \
+                      the editor responsive."
+                  ),
+                  old_line_number: None,
+                  new_line_number: None,
+               });
+               is_truncated = true;
+            }
+            return true;
+         }
+
          let origin = line.origin();
          match origin {
             'F' | 'H' => {
@@ -56,7 +160,10 @@ pub fn parse_diff_to_lines(diff: &mut Diff) -> Result<Vec<GitDiffLine>, String> 
       })
       .map_err(|e| e.to_string())?;
 
-   Ok(lines)
+   Ok(ParsedDiffLines {
+      lines,
+      is_truncated,
+   })
 }
 
 fn diff_delta_file_path(delta: &git2::DiffDelta<'_>) -> String {
@@ -76,53 +183,70 @@ fn diff_delta_file_path(delta: &git2::DiffDelta<'_>) -> String {
    }
 }
 
-fn parse_diff_to_file_lines(diff: &mut Diff) -> Result<HashMap<String, Vec<GitDiffLine>>, String> {
-   let mut file_lines: HashMap<String, Vec<GitDiffLine>> = HashMap::new();
+fn parse_diff_to_file_entries(diff: &mut Diff) -> Result<HashMap<String, ParsedDiffFile>, String> {
+   let mut file_entries: HashMap<String, ParsedDiffFile> = HashMap::new();
 
    diff
       .print(DiffFormat::Patch, |delta, _hunk, line| {
          let file_path = diff_delta_file_path(&delta);
-         let entry = file_lines.entry(file_path).or_default();
+         let entry = file_entries.entry(file_path).or_default();
          let origin = line.origin();
+         let content = line.content();
 
          match origin {
             'F' | 'H' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Header,
-                  content: String::from_utf8_lossy(line.content()).to_string(),
-                  old_line_number: None,
-                  new_line_number: None,
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Header,
+                     content: String::from_utf8_lossy(content).to_string(),
+                     old_line_number: None,
+                     new_line_number: None,
+                  },
+                  content,
+               );
             }
             '+' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Added,
-                  content: String::from_utf8_lossy(line.content())
-                     .trim_end_matches('\n')
-                     .to_string(),
-                  old_line_number: None,
-                  new_line_number: line.new_lineno(),
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Added,
+                     content: String::from_utf8_lossy(content)
+                        .trim_end_matches('\n')
+                        .to_string(),
+                     old_line_number: None,
+                     new_line_number: line.new_lineno(),
+                  },
+                  content,
+               );
             }
             '-' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Removed,
-                  content: String::from_utf8_lossy(line.content())
-                     .trim_end_matches('\n')
-                     .to_string(),
-                  old_line_number: line.old_lineno(),
-                  new_line_number: None,
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Removed,
+                     content: String::from_utf8_lossy(content)
+                        .trim_end_matches('\n')
+                        .to_string(),
+                     old_line_number: line.old_lineno(),
+                     new_line_number: None,
+                  },
+                  content,
+               );
             }
             ' ' => {
-               entry.push(GitDiffLine {
-                  line_type: DiffLineType::Context,
-                  content: String::from_utf8_lossy(line.content())
-                     .trim_end_matches('\n')
-                     .to_string(),
-                  old_line_number: line.old_lineno(),
-                  new_line_number: line.new_lineno(),
-               });
+               entry.push_line(
+                  origin,
+                  GitDiffLine {
+                     line_type: DiffLineType::Context,
+                     content: String::from_utf8_lossy(content)
+                        .trim_end_matches('\n')
+                        .to_string(),
+                     old_line_number: line.old_lineno(),
+                     new_line_number: line.new_lineno(),
+                  },
+                  content,
+               );
             }
             _ => {}
          }
@@ -131,7 +255,91 @@ fn parse_diff_to_file_lines(diff: &mut Diff) -> Result<HashMap<String, Vec<GitDi
       })
       .map_err(|e| e.to_string())?;
 
-   Ok(file_lines)
+   Ok(file_entries)
+}
+
+fn count_line_stats(lines: &[GitDiffLine]) -> (usize, usize) {
+   let mut additions = 0;
+   let mut deletions = 0;
+
+   for line in lines {
+      match line.line_type {
+         DiffLineType::Added => additions += 1,
+         DiffLineType::Removed => deletions += 1,
+         _ => {}
+      }
+   }
+
+   (additions, deletions)
+}
+
+fn collect_diff_stats(
+   diff: &mut Diff,
+   staged: bool,
+) -> Result<HashMap<String, GitDiffStat>, String> {
+   let mut stats_by_path: HashMap<String, GitDiffStat> = HashMap::new();
+
+   diff
+      .print(DiffFormat::Patch, |delta, _hunk, line| {
+         let origin = line.origin();
+         if origin != '+' && origin != '-' {
+            return true;
+         }
+
+         let file_path = diff_delta_file_path(&delta);
+         if file_path.is_empty() {
+            return true;
+         }
+
+         let entry = stats_by_path
+            .entry(file_path.clone())
+            .or_insert_with(|| GitDiffStat {
+               file_path,
+               staged,
+               additions: 0,
+               deletions: 0,
+            });
+
+         if origin == '+' {
+            entry.additions += 1;
+         } else {
+            entry.deletions += 1;
+         }
+
+         true
+      })
+      .map_err(|error| error.to_string())?;
+
+   Ok(stats_by_path)
+}
+
+pub fn git_status_diff_stats(repo_path: String) -> Result<Vec<GitDiffStat>, String> {
+   let repo =
+      Repository::open(&repo_path).map_err(|e| format!("Failed to open repository: {e}"))?;
+   let head_tree = repo
+      .head()
+      .ok()
+      .and_then(|head| head.peel_to_commit().ok())
+      .and_then(|commit| commit.tree().ok());
+   let index = repo
+      .index()
+      .map_err(|e| format!("Failed to get index: {e}"))?;
+
+   let mut staged_diff = repo
+      .diff_tree_to_index(head_tree.as_ref(), Some(&index), None)
+      .map_err(|e| format!("Failed to create staged diff: {e}"))?;
+
+   let mut unstaged_options = git2::DiffOptions::new();
+   unstaged_options.include_untracked(true);
+   unstaged_options.recurse_untracked_dirs(false);
+   let mut unstaged_diff = repo
+      .diff_index_to_workdir(Some(&index), Some(&mut unstaged_options))
+      .map_err(|e| format!("Failed to create unstaged diff: {e}"))?;
+
+   let mut stats = collect_diff_stats(&mut staged_diff, true)?;
+   stats.extend(collect_diff_stats(&mut unstaged_diff, false)?);
+
+   Ok(stats.into_values().collect())
 }
 
 pub fn git_diff_file(
@@ -173,6 +381,7 @@ pub fn git_diff_file(
    let mut old_blob_base64 = None;
    let mut new_blob_base64 = None;
    let mut lines = Vec::new();
+   let mut is_truncated = false;
 
    let deltas: Vec<_> = diff.deltas().collect();
 
@@ -279,9 +488,13 @@ pub fn git_diff_file(
                   };
 
                   if let Ok(mut single_diff) = single_diff_result {
-                     lines = parse_diff_to_lines(&mut single_diff).unwrap_or_default();
+                     let parsed = parse_diff_to_lines(&mut single_diff).unwrap_or_default();
+                     is_truncated = parsed.is_truncated;
+                     lines = parsed.lines;
                   }
                }
+
+               let (additions, deletions) = count_line_stats(&lines);
 
                return Ok(GitDiff {
                   file_path: file_path.clone(),
@@ -295,6 +508,10 @@ pub fn git_diff_file(
                   old_blob_base64,
                   new_blob_base64,
                   lines,
+                  raw_patch: None,
+                  additions: Some(additions),
+                  deletions: Some(deletions),
+                  is_truncated: is_truncated.then_some(true),
                });
             }
          }
@@ -371,8 +588,12 @@ pub fn git_diff_file(
 
       lines = Vec::new();
    } else {
-      lines = parse_diff_to_lines(&mut diff)?;
+      let parsed = parse_diff_to_lines(&mut diff)?;
+      is_truncated = parsed.is_truncated;
+      lines = parsed.lines;
    }
+
+   let (additions, deletions) = count_line_stats(&lines);
 
    Ok(GitDiff {
       file_path: file_path.clone(),
@@ -386,13 +607,31 @@ pub fn git_diff_file(
       old_blob_base64,
       new_blob_base64,
       lines,
+      raw_patch: None,
+      additions: Some(additions),
+      deletions: Some(deletions),
+      is_truncated: is_truncated.then_some(true),
    })
 }
 
 fn create_diff_lines(old_lines: &[&str], new_lines: &[&str]) -> Vec<GitDiffLine> {
    let mut result = Vec::new();
 
-   // Use a simple but effective diff algorithm based on LCS
+   if old_lines.len().saturating_mul(new_lines.len()) > MAX_CONTENT_DIFF_CELLS {
+      result.push(GitDiffLine {
+         line_type: DiffLineType::Header,
+         content: format!(
+            "Athas skipped inline diffing for this buffer after {} x {} lines to keep the editor \
+             responsive.",
+            old_lines.len(),
+            new_lines.len()
+         ),
+         old_line_number: None,
+         new_line_number: None,
+      });
+      return result;
+   }
+
    let lcs = longest_common_subsequence(old_lines, new_lines);
    let mut old_idx = 0;
    let mut new_idx = 0;
@@ -593,6 +832,14 @@ pub fn git_diff_file_with_content(
       }
    }
 
+   let is_truncated = lines.iter().any(|line| {
+      matches!(line.line_type, DiffLineType::Header)
+         && line
+            .content
+            .starts_with("Athas skipped inline diffing for this buffer")
+   });
+   let (additions, deletions) = count_line_stats(&lines);
+
    Ok(GitDiff {
       file_path: file_path.clone(),
       old_path: Some(file_path.clone()),
@@ -605,6 +852,10 @@ pub fn git_diff_file_with_content(
       old_blob_base64,
       new_blob_base64,
       lines,
+      raw_patch: None,
+      additions: Some(additions),
+      deletions: Some(deletions),
+      is_truncated: is_truncated.then_some(true),
    })
 }
 
@@ -651,7 +902,7 @@ pub fn git_commit_diff(
       )
       .map_err(|e| format!("Failed to create commit diff: {e}"))?;
    let mut diff = diff;
-   let mut diff_lines_by_file = parse_diff_to_file_lines(&mut diff).unwrap_or_default();
+   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff).unwrap_or_default();
    let mut results: Vec<GitDiff> = Vec::new();
    for delta in diff.deltas() {
       let old_path = delta
@@ -676,6 +927,10 @@ pub fn git_commit_diff(
       let is_new = delta.status() == git2::Delta::Added;
       let is_deleted = delta.status() == git2::Delta::Deleted;
       let is_renamed = delta.status() == git2::Delta::Renamed;
+      let mut raw_patch = None;
+      let mut additions = 0;
+      let mut deletions = 0;
+      let mut is_truncated = false;
       let lines = if is_image {
          is_binary = true;
          let old_oid = delta.old_file().id();
@@ -723,7 +978,12 @@ pub fn git_commit_diff(
          }
          Vec::new()
       } else {
-         diff_lines_by_file.remove(&file_path).unwrap_or_default()
+         let parsed = diff_entries_by_file.remove(&file_path).unwrap_or_default();
+         raw_patch = parsed.raw_patch;
+         additions = parsed.additions;
+         deletions = parsed.deletions;
+         is_truncated = parsed.is_truncated;
+         parsed.lines
       };
       results.push(GitDiff {
          file_path: file_path.clone(),
@@ -737,6 +997,10 @@ pub fn git_commit_diff(
          old_blob_base64,
          new_blob_base64,
          lines,
+         raw_patch,
+         additions: Some(additions),
+         deletions: Some(deletions),
+         is_truncated: is_truncated.then_some(true),
       });
    }
    Ok(results)
@@ -777,7 +1041,7 @@ fn git_diff_between_trees(
    let mut diff = repo
       .diff_tree_to_tree(base_tree, target_tree, None)
       .map_err(|e| format!("Failed to create ref diff: {e}"))?;
-   let mut diff_lines_by_file = parse_diff_to_file_lines(&mut diff).unwrap_or_default();
+   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff).unwrap_or_default();
    let mut results: Vec<GitDiff> = Vec::new();
 
    for delta in diff.deltas() {
@@ -803,6 +1067,10 @@ fn git_diff_between_trees(
       let is_new = delta.status() == git2::Delta::Added;
       let is_deleted = delta.status() == git2::Delta::Deleted;
       let is_renamed = delta.status() == git2::Delta::Renamed;
+      let mut raw_patch = None;
+      let mut additions = 0;
+      let mut deletions = 0;
+      let mut is_truncated = false;
       let lines = if is_image {
          is_binary = true;
          let old_oid = delta.old_file().id();
@@ -850,7 +1118,12 @@ fn git_diff_between_trees(
          }
          Vec::new()
       } else {
-         diff_lines_by_file.remove(&file_path).unwrap_or_default()
+         let parsed = diff_entries_by_file.remove(&file_path).unwrap_or_default();
+         raw_patch = parsed.raw_patch;
+         additions = parsed.additions;
+         deletions = parsed.deletions;
+         is_truncated = parsed.is_truncated;
+         parsed.lines
       };
 
       results.push(GitDiff {
@@ -865,6 +1138,10 @@ fn git_diff_between_trees(
          old_blob_base64,
          new_blob_base64,
          lines,
+         raw_patch,
+         additions: Some(additions),
+         deletions: Some(deletions),
+         is_truncated: is_truncated.then_some(true),
       });
    }
 

@@ -1,13 +1,15 @@
-@theme {
-  --font-sans:
-    "IBM Plex Sans Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --editor-font:
-    "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-    "Liberation Mono", monospace;
-}
-
 @theme inline {
+  --font-sans: var(--app-font-family);
+  --font-mono: var(--editor-font-family);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
   --color-primary-bg: var(--primary-bg);
   --color-secondary-bg: var(--secondary-bg);
   --color-text: var(--text);
@@ -17,6 +19,10 @@
   --color-hover: var(--hover);
   --color-selected: var(--selected);
   --color-selection-bg: var(--selection-bg);
+
+  --color-tab-bar: var(--tab-bar-bg);
+  --color-tab-active: var(--tab-active-bg);
+  --color-tab-hover: var(--tab-hover-bg);
 
   --color-accent: var(--accent);
 
@@ -55,6 +61,14 @@
   --color-syntax-jsx: var(--syntax-jsx);
   --color-syntax-jsx-attribute: var(--syntax-jsx-attribute);
 
+  --color-symbol-function: var(--symbol-function);
+  --color-symbol-type: var(--symbol-type);
+  --color-symbol-interface: var(--symbol-interface);
+  --color-symbol-enum: var(--symbol-enum);
+  --color-symbol-variable: var(--symbol-variable);
+  --color-symbol-property: var(--symbol-property);
+  --color-symbol-type-parameter: var(--symbol-type-parameter);
+
   --color-terminal-black: var(--terminal-black);
   --color-terminal-red: var(--terminal-red);
   --color-terminal-green: var(--terminal-green);
@@ -75,167 +89,67 @@
 
 @layer base {
   :root {
-    --app-font-family: var(--font-sans);
-    --editor-font-family: var(--editor-font);
+    --app-font-family:
+      "Geist Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    --editor-font-family:
+      "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+      monospace;
     --app-ui-font-size: 15px;
     --app-ui-scale: 1;
-    --ui-text-xs: calc(var(--app-ui-font-size) * 0.79);
     --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
-    --ui-text-md: var(--app-ui-font-size);
-    --ui-text-lg: calc(var(--app-ui-font-size) * 1.14);
-    --app-ui-control-font-size: var(--ui-text-md);
-    --app-ui-control-icon-size: calc(var(--app-ui-font-size) * 0.86);
-    --app-ui-icon-size-xs: calc(10px * var(--app-ui-scale));
-    --app-ui-icon-size-sm: calc(12px * var(--app-ui-scale));
-    --app-ui-icon-size-md: calc(14px * var(--app-ui-scale));
+    --ui-text-base: var(--app-ui-font-size);
+    --athas-title-bar-height: 2rem;
+    --athas-footer-height: 2rem;
+    --athas-workbench-gap: 8px;
+    --radius: 10px;
+    --app-duration-fast: 150ms;
+    --app-duration-normal: 200ms;
+    --app-duration-slow: 280ms;
+    --app-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+    --app-ease-out: cubic-bezier(0.17, 1, 0.32, 1);
+    --app-ease-spring: cubic-bezier(0.35, 1.55, 0.65, 1);
+    --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
+    --app-press-scale: 0.98;
+    --tab-bar-bg: color-mix(in srgb, var(--secondary-bg) 72%, var(--primary-bg));
+    --tab-active-bg: var(--primary-bg);
+    --tab-hover-bg: color-mix(in srgb, var(--hover) 72%, transparent);
+    --tab-radius: calc(var(--radius) * 1.2);
+    --tab-shoulder-size: 8px;
+    --shadow-card:
+      0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+    --shadow-popover:
+      0 8px 16px rgb(0 0 0 / 0.04), 0 16px 32px rgb(0 0 0 / 0.03), 0 2px 4px rgb(0 0 0 / 0.04),
+      0 0 0 0.5px rgb(0 0 0 / 0.1);
+    --shadow-dialog:
+      0 8px 16px rgb(0 0 0 / 0.04), 0 24px 56px rgb(0 0 0 / 0.08), 0 2px 6px rgb(0 0 0 / 0.04),
+      0 0 0 0.5px rgb(0 0 0 / 0.12);
+    --shadow-drag:
+      0 8px 18px rgb(0 0 0 / 0.12), 0 18px 44px rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+    --shadow-editor-sticky: 0 8px 16px -14px rgb(0 0 0 / 0.28);
 
-    --primary-bg: #ffffff;
-    --secondary-bg: #f8f8f8;
-    --text: #333333;
-    --text-light: #666666;
-    --text-lighter: #999999;
-    --border: #e0e0e0;
-    --hover: #f0f0f0;
-    --selected: #e8e8e8;
-    --selection-bg: rgba(173, 214, 255, 0.4);
-
-    --accent: #3b82f6;
-
-    --color-primary-bg: var(--primary-bg);
-    --color-secondary-bg: var(--secondary-bg);
-    --color-text: var(--text);
-    --color-text-light: var(--text-light);
-    --color-text-lighter: var(--text-lighter);
-    --color-border: var(--border);
-    --color-hover: var(--hover);
-    --color-selected: var(--selected);
-    --color-accent: var(--accent);
-    --color-syntax-comment: var(--syntax-comment);
-    --color-syntax-keyword: var(--syntax-keyword);
-    --color-syntax-string: var(--syntax-string);
-    --color-syntax-number: var(--syntax-number);
-    --color-syntax-function: var(--syntax-function);
-    --color-syntax-variable: var(--syntax-variable);
-    --color-syntax-operator: var(--syntax-operator);
-
-    --cursor: #1a1a1a;
-    --cursor-vim-normal: #3b82f6a6;
-    --cursor-vim-insert: #22c55e;
-
-    --error: #c53030;
-    --success: #10b981;
-    --warning: #d69e2e;
-    --info: #3182ce;
-
-    --git-modified: #d69e2e;
-    --git-modified-staged: #e67e22;
-    --git-added: #28a745;
-    --git-deleted: #dc3545;
-    --git-untracked: #17a2b8;
-    --git-renamed: #6f42c1;
-
-    --syntax-comment: #6a737d;
-    --syntax-keyword: #d73a49;
-    --syntax-string: #032f62;
-    --syntax-number: #005cc5;
-    --syntax-function: #6f42c1;
-    --syntax-variable: #e36209;
-    --syntax-tag: #22863a;
-    --syntax-attribute: #6f42c1;
-    --syntax-punctuation: #24292e;
-
-    --terminal-black: #24292e;
-    --terminal-red: #d73a49;
-    --terminal-green: #22863a;
-    --terminal-yellow: #e36209;
-    --terminal-blue: #005cc5;
-    --terminal-magenta: #6f42c1;
-    --terminal-cyan: #032f62;
-    --terminal-white: #666666;
-    --terminal-bright-black: #6a737d;
-    --terminal-bright-red: #c53030;
-    --terminal-bright-green: #28a745;
-    --terminal-bright-yellow: #d69e2e;
-    --terminal-bright-blue: #3182ce;
-    --terminal-bright-magenta: #8b5cf6;
-    --terminal-bright-cyan: #0891b2;
-    --terminal-bright-white: #333333;
+    --symbol-function: var(--syntax-function);
+    --symbol-type: var(--syntax-type, var(--syntax-tag));
+    --symbol-interface: var(--syntax-regex, var(--syntax-operator, var(--syntax-attribute)));
+    --symbol-enum: var(--syntax-number);
+    --symbol-variable: var(--syntax-property, var(--syntax-variable));
+    --symbol-property: var(--syntax-string);
+    --symbol-type-parameter: var(--syntax-operator, var(--syntax-attribute));
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --primary-bg: #1a1a1a;
-      --secondary-bg: #2a2a2a;
-      --text: #e5e5e5;
-      --text-light: #b3b3b3;
-      --text-lighter: #808080;
-      --border: #404040;
-      --hover: #333333;
-      --selected: #404040;
-      --selection-bg: rgba(38, 79, 120, 0.6);
-
-      --accent: #60a5fa;
-
-      --color-primary-bg: var(--primary-bg);
-      --color-secondary-bg: var(--secondary-bg);
-      --color-text: var(--text);
-      --color-text-light: var(--text-light);
-      --color-text-lighter: var(--text-lighter);
-      --color-border: var(--border);
-      --color-hover: var(--hover);
-      --color-selected: var(--selected);
-      --color-accent: var(--accent);
-      --color-syntax-comment: var(--syntax-comment);
-      --color-syntax-keyword: var(--syntax-keyword);
-      --color-syntax-string: var(--syntax-string);
-      --color-syntax-number: var(--syntax-number);
-      --color-syntax-function: var(--syntax-function);
-      --color-syntax-variable: var(--syntax-variable);
-      --color-syntax-operator: var(--syntax-operator);
-
-      --cursor: #e5e5e5;
-      --cursor-vim-normal: #3b82f6a6;
-      --cursor-vim-insert: #22c55e;
-
-      --error: #f87171;
-      --success: #10b981;
-      --warning: #fbbf24;
-      --info: #60a5fa;
-
-      --git-modified: #fbbf24;
-      --git-modified-staged: #f59e0b;
-      --git-added: #10b981;
-      --git-deleted: #ef4444;
-      --git-untracked: #06b6d4;
-      --git-renamed: #8b5cf6;
-
-      --syntax-comment: #8b949e;
-      --syntax-keyword: #ff7b72;
-      --syntax-string: #a5d6ff;
-      --syntax-number: #79c0ff;
-      --syntax-function: #d2a8ff;
-      --syntax-variable: #ffa657;
-      --syntax-tag: #7ee787;
-      --syntax-attribute: #d2a8ff;
-      --syntax-punctuation: #b3b3b3;
-
-      --terminal-black: #1a1a1a;
-      --terminal-red: #ff7b72;
-      --terminal-green: #7ee787;
-      --terminal-yellow: #ffa657;
-      --terminal-blue: #79c0ff;
-      --terminal-magenta: #d2a8ff;
-      --terminal-cyan: #a5d6ff;
-      --terminal-white: #b3b3b3;
-      --terminal-bright-black: #8b949e;
-      --terminal-bright-red: #f87171;
-      --terminal-bright-green: #86efac;
-      --terminal-bright-yellow: #fbbf24;
-      --terminal-bright-blue: #60a5fa;
-      --terminal-bright-magenta: #c084fc;
-      --terminal-bright-cyan: #67e8f9;
-      --terminal-bright-white: #e5e5e5;
-    }
+  :root[data-theme-type="dark"] {
+    --shadow-card:
+      0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);
+    --shadow-popover:
+      0 8px 16px rgb(0 0 0 / 0.26), 0 16px 32px rgb(0 0 0 / 0.22), 0 2px 4px rgb(0 0 0 / 0.22),
+      0 0 0 0.5px rgb(255 255 255 / 0.1);
+    --shadow-dialog:
+      0 8px 16px rgb(0 0 0 / 0.3), 0 24px 56px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24),
+      0 0 0 0.5px rgb(255 255 255 / 0.12);
+    --shadow-drag:
+      0 8px 18px rgb(0 0 0 / 0.36), 0 18px 44px rgb(0 0 0 / 0.34),
+      0 0 0 0.5px rgb(255 255 255 / 0.12);
+    --shadow-editor-sticky: 0 10px 20px -16px rgb(0 0 0 / 0.72);
   }
 
   html {
