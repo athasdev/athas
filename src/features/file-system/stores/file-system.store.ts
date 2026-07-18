@@ -152,6 +152,21 @@ function readFileOnce<T>(key: string, loader: () => Promise<T>): Promise<T> {
   return promise;
 }
 
+function waitForWorkspaceIdle(): Promise<void> {
+  return new Promise((resolve) => {
+    const idleScheduler = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+    };
+
+    if (idleScheduler.requestIdleCallback) {
+      idleScheduler.requestIdleCallback(() => resolve(), { timeout: 250 });
+      return;
+    }
+
+    globalThis.setTimeout(resolve, 50);
+  });
+}
+
 /**
  * Wraps the file tree with a root folder entry
  */
@@ -397,8 +412,24 @@ const initializeLocalWorkspaceInBackground = (
       await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot(path);
       logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
 
-      if (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId) {
-        void syncFffWorkspace(get);
+      await waitForWorkspaceIdle();
+
+      if (
+        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
+        get().rootFolderPath !== path
+      ) {
+        return;
+      }
+
+      void syncFffWorkspace(get);
+
+      await waitForWorkspaceIdle();
+
+      if (
+        workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId ||
+        get().rootFolderPath !== path
+      ) {
+        return;
       }
 
       const gitStatusStartedAt = performance.now();
@@ -1246,6 +1277,13 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
         let resolvedPath = path;
 
         const isKnownTextPath = isKnownTextFile(path);
+        if (isKnownTextPath) {
+          void import("@/features/editor/engines/monaco/prepare-language")
+            .then(({ prepareMonacoLanguageForPath }) => prepareMonacoLanguageForPath(path))
+            .catch((error) => {
+              console.error(`Failed to prepare Monaco language for ${path}:`, error);
+            });
+        }
         const selectedFileEntry = findFileInTree(get().files, path);
         const shouldResolveSymlink =
           selectedFileEntry?.isSymlink === true &&

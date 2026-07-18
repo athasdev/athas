@@ -14,19 +14,44 @@ pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, Strin
       .unwrap_or(&path)
       .to_string();
    let started_at = Instant::now();
-   let bytes = tauri::async_runtime::spawn_blocking(move || {
-      let resolved = require_path_under_home(&path)?;
-      fs::read(&resolved).map_err(|error| format!("Failed to read file: {error}"))
-   })
-   .await
-   .map_err(|error| format!("File read task failed: {error}"))??;
+   let (bytes, queue_elapsed, guard_elapsed, read_elapsed) =
+      tauri::async_runtime::spawn_blocking(move || {
+         let worker_started_at = Instant::now();
+         let guard_started_at = Instant::now();
+         let resolved = require_path_under_home(&path)?;
+         let guard_elapsed = guard_started_at.elapsed();
+         let read_started_at = Instant::now();
+         let bytes =
+            fs::read(&resolved).map_err(|error| format!("Failed to read file: {error}"))?;
+         Ok::<_, String>((
+            bytes,
+            worker_started_at.duration_since(started_at),
+            guard_elapsed,
+            read_started_at.elapsed(),
+         ))
+      })
+      .await
+      .map_err(|error| format!("File read task failed: {error}"))??;
    let elapsed = started_at.elapsed();
 
    if elapsed.as_millis() >= 50 {
       log::warn!(
-         "[file-read] {} {}ms {} bytes",
+         "[file-read] {} total={}ms queue={}ms guard={}ms read={}ms {} bytes",
          short_path,
          elapsed.as_millis(),
+         queue_elapsed.as_millis(),
+         guard_elapsed.as_millis(),
+         read_elapsed.as_millis(),
+         bytes.len()
+      );
+   } else if cfg!(debug_assertions) && elapsed.as_millis() >= 10 {
+      log::info!(
+         "[file-read] {} total={}ms queue={}ms guard={}ms read={}ms {} bytes",
+         short_path,
+         elapsed.as_millis(),
+         queue_elapsed.as_millis(),
+         guard_elapsed.as_millis(),
+         read_elapsed.as_millis(),
          bytes.len()
       );
    }
