@@ -1,0 +1,126 @@
+name: Update Nix package
+
+# Keeps nix/package.nix pinned to the latest stable Linux release.
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-nix:
+    # Preview archives use a different product name and are not the default package.
+    if: >-
+      github.repository == 'athasdev/athas' &&
+      (github.event_name != 'release' || github.event.release.prerelease == false)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve target version
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # On a release event use that tag; otherwise take the latest published release of this repo
+          if [ "$EVENT_NAME" = "release" ] && [ -n "${RELEASE_TAG:-}" ]; then
+            version="$RELEASE_TAG"
+          else
+            version="$(gh release view --repo "$REPO" --json tagName -q .tagName)"
+          fi
+
+          version="${version#v}"
+          if ! printf '%s' "$version" | grep -qP '^\d+\.\d+\.\d+$'; then
+            echo "::error::Unexpected version format: '$version'"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether an update is needed
+        id: check
+        run: |
+          set -euo pipefail
+          current="$(grep -m1 'version = "' nix/package.nix | sed 's/.*"\(.*\)".*/\1/')"
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+
+          if [ "$current" = "${{ steps.release.outputs.version }}" ]; then
+            echo "Already pinned to ${current}; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Pinned: ${current} -> target: ${{ steps.release.outputs.version }}"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute SRI hashes for both arches
+        if: steps.check.outputs.skip != 'true'
+        id: hash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for arch in x86_64 aarch64; do
+            url="https://github.com/${REPO}/releases/download/v${VERSION}/Athas_${VERSION}_linux-${arch}.tar.gz"
+            tmp="$(mktemp)"
+            echo "Fetching ${url}"
+            curl -fSL --retry 3 --retry-delay 10 "$url" -o "$tmp"
+            sri="sha256-$(sha256sum "$tmp" | cut -d' ' -f1 | xxd -r -p | base64 -w0)"
+            rm -f "$tmp"
+            echo "${arch}: ${sri}"
+            echo "${arch}=${sri}" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Update nix/package.nix
+        if: steps.check.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          X86_HASH: ${{ steps.hash.outputs.x86_64 }}
+          ARM_HASH: ${{ steps.hash.outputs.aarch64 }}
+        run: |
+          set -euo pipefail
+          sed -i "s|version = \".*\";|version = \"${VERSION}\";|" nix/package.nix
+          sed -i "s|\"x86_64-linux\" = \"sha256-[^\"]*\";|\"x86_64-linux\" = \"${X86_HASH}\";|" nix/package.nix
+          sed -i "s|\"aarch64-linux\" = \"sha256-[^\"]*\";|\"aarch64-linux\" = \"${ARM_HASH}\";|" nix/package.nix
+
+          echo "----- diff -----"
+          git diff -- nix/package.nix
+
+      - name: Create pull request
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          branch="nix/update-${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # If the bump PR branch already exists, don't duplicate it.
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch ${branch} already exists; skipping."
+            exit 0
+          fi
+
+          git checkout -b "$branch"
+          git add nix/package.nix
+          git commit \
+            -m "Update the wrapped Athas Linux release" \
+            -m "Bump the pinned Linux package to v${VERSION} and update both architecture hashes."
+          git push origin "$branch"
+
+          gh pr create \
+            --title "Update the wrapped Athas Linux release" \
+            --body "Update the wrapped Athas Linux release to v${VERSION}.
+
+          - Update \`version\` and both per-arch SRI hashes in \`nix/package.nix\`
+          - Generated automatically by the \`Update Nix package\` workflow"
