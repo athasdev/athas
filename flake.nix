@@ -30,8 +30,24 @@
             overlays = [ rust-overlay.overlays.default ];
           };
         in
+        let
+          athas = pkgs.callPackage ./nix/package.nix { };
+        in
         {
           devShells.default = pkgs.callPackage ./nix/dev-shell.nix { };
+
+          packages = {
+            default = athas;
+            athas = athas;
+          };
+
+          apps.default = {
+            type = "app";
+            program = "${athas}/bin/athas";
+            meta = {
+              description = "Run the Athas editor (prebuilt Linux release)";
+            };
+          };
         }
       );
 }

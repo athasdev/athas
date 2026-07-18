@@ -1,7 +1,7 @@
-use super::types::{FlatInlayHint, FlatSymbol, LspDiagnosticContext};
+use super::types::{FlatInlayHint, FlatSymbol, FlatWorkspaceSymbol, LspDiagnosticContext};
 use lsp_types::{
    Diagnostic as LspDiagnostic, DiagnosticSeverity, DocumentSymbol, InlayHint, InlayHintLabel,
-   NumberOrString, Position, Range, SymbolKind,
+   NumberOrString, OneOf, Position, Range, SymbolKind, Url, WorkspaceSymbolResponse,
 };
 
 fn symbol_kind_to_string(kind: SymbolKind) -> String {
@@ -137,4 +137,153 @@ pub(super) fn convert_diagnostic_context_to_lsp(context: LspDiagnosticContext) -
 
 pub(super) fn symbol_kind_label(kind: SymbolKind) -> String {
    symbol_kind_to_string(kind)
+}
+
+fn uri_to_file_path(uri: &Url) -> String {
+   uri.to_file_path()
+      .map(|path| path.to_string_lossy().into_owned())
+      .unwrap_or_else(|_| uri.to_string())
+}
+
+pub(super) fn flatten_workspace_symbol_response(
+   responses: Vec<WorkspaceSymbolResponse>,
+) -> Vec<FlatWorkspaceSymbol> {
+   let mut seen = std::collections::HashSet::new();
+   let mut out = Vec::new();
+
+   for response in responses {
+      match response {
+         WorkspaceSymbolResponse::Flat(infos) => {
+            for info in infos {
+               let file_path = uri_to_file_path(&info.location.uri);
+               let key = (
+                  file_path.clone(),
+                  info.location.range.start.line,
+                  info.location.range.start.character,
+                  info.name.clone(),
+               );
+               if !seen.insert(key) {
+                  continue;
+               }
+               out.push(FlatWorkspaceSymbol {
+                  name: info.name,
+                  kind: symbol_kind_label(info.kind),
+                  detail: None,
+                  line: info.location.range.start.line,
+                  character: info.location.range.start.character,
+                  end_line: info.location.range.end.line,
+                  end_character: info.location.range.end.character,
+                  container_name: info.container_name,
+                  file_path,
+               });
+            }
+         }
+         WorkspaceSymbolResponse::Nested(symbols) => {
+            for symbol in symbols {
+               // `WorkspaceSymbol.location` is `OneOf<Location, WorkspaceLocation>` in this
+               // pinned lsp-types version: servers may return a full `Location` (uri + range)
+               // or, per the 3.17 spec, a bare `WorkspaceLocation` (uri only, no range) when
+               // the client advertises `workspace.symbol.resolveSupport` (which we don't).
+               // We don't set that capability, so servers should send the full form, but
+               // handle the range-less form defensively by falling back to (0, 0).
+               let (file_path, start_line, start_character, end_line, end_character) =
+                  match symbol.location {
+                     OneOf::Left(location) => (
+                        uri_to_file_path(&location.uri),
+                        location.range.start.line,
+                        location.range.start.character,
+                        location.range.end.line,
+                        location.range.end.character,
+                     ),
+                     OneOf::Right(workspace_location) => {
+                        (uri_to_file_path(&workspace_location.uri), 0, 0, 0, 0)
+                     }
+                  };
+
+               let key = (
+                  file_path.clone(),
+                  start_line,
+                  start_character,
+                  symbol.name.clone(),
+               );
+               if !seen.insert(key) {
+                  continue;
+               }
+               out.push(FlatWorkspaceSymbol {
+                  name: symbol.name,
+                  kind: symbol_kind_label(symbol.kind),
+                  detail: None,
+                  line: start_line,
+                  character: start_character,
+                  end_line,
+                  end_character,
+                  container_name: symbol.container_name,
+                  file_path,
+               });
+            }
+         }
+      }
+   }
+   out
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use lsp_types::{Location, Range, SymbolInformation};
+
+   fn symbol_info(name: &str, uri: &str, line: u32, character: u32) -> SymbolInformation {
+      #[allow(deprecated)]
+      SymbolInformation {
+         name: name.to_string(),
+         kind: SymbolKind::FUNCTION,
+         tags: None,
+         deprecated: None,
+         location: Location {
+            uri: Url::parse(uri).unwrap(),
+            range: Range {
+               start: Position { line, character },
+               end: Position {
+                  line,
+                  character: character + 5,
+               },
+            },
+         },
+         container_name: None,
+      }
+   }
+
+   #[test]
+   fn dedupes_identical_symbol_from_two_servers() {
+      let response =
+         WorkspaceSymbolResponse::Flat(vec![symbol_info("foo", "file:///workspace/a.rs", 10, 4)]);
+      let responses = vec![response.clone(), response];
+
+      let flattened = flatten_workspace_symbol_response(responses);
+      assert_eq!(flattened.len(), 1);
+      assert_eq!(flattened[0].name, "foo");
+   }
+
+   #[test]
+   fn keeps_different_symbols_in_same_file() {
+      let responses = vec![
+         WorkspaceSymbolResponse::Flat(vec![symbol_info("foo", "file:///workspace/a.rs", 10, 4)]),
+         WorkspaceSymbolResponse::Flat(vec![symbol_info("bar", "file:///workspace/a.rs", 20, 4)]),
+      ];
+
+      let flattened = flatten_workspace_symbol_response(responses);
+      assert_eq!(flattened.len(), 2);
+      let names: std::collections::HashSet<_> = flattened
+         .iter()
+         .map(|symbol| symbol.name.as_str())
+         .collect();
+      assert!(names.contains("foo"));
+      assert!(names.contains("bar"));
+   }
+
+   #[test]
+   fn empty_input_yields_empty_output() {
+      let flattened = flatten_workspace_symbol_response(Vec::new());
+      assert!(flattened.is_empty());
+   }
 }

@@ -61,11 +61,40 @@ interface PendingClose {
   keepBufferId?: string;
 }
 
-interface ClosedBuffer {
+type ClosedBufferType =
+  | "editor"
+  | "image"
+  | "pdf"
+  | "binary"
+  | "diff"
+  | "markdownPreview"
+  | "htmlPreview"
+  | "csvPreview";
+
+interface ClosedBufferBase {
+  type: ClosedBufferType;
   path: string;
   name: string;
   isPinned: boolean;
 }
+
+interface ClosedEditorLikeBuffer extends ClosedBufferBase {
+  type: "editor" | "image" | "pdf" | "binary";
+}
+
+interface ClosedDiffBuffer extends ClosedBufferBase {
+  type: "diff";
+  content: string;
+  diffData?: GitDiff | MultiFileDiff;
+}
+
+interface ClosedPreviewBuffer extends ClosedBufferBase {
+  type: "markdownPreview" | "htmlPreview" | "csvPreview";
+  content: string;
+  sourceFilePath: string;
+}
+
+type ClosedBuffer = ClosedEditorLikeBuffer | ClosedDiffBuffer | ClosedPreviewBuffer;
 
 interface BufferState {
   buffers: PaneContent[];
@@ -288,6 +317,60 @@ const activateBufferInState = (state: BufferState, bufferId: string | null): Pan
   }
 
   return activeBuffer;
+};
+
+const isReopenableBuffer = (
+  buffer: PaneContent,
+): buffer is Extract<PaneContent, { type: ClosedBufferType }> => {
+  return (
+    (buffer.type === "editor" && !buffer.isVirtual) ||
+    buffer.type === "image" ||
+    buffer.type === "pdf" ||
+    buffer.type === "binary" ||
+    buffer.type === "diff" ||
+    buffer.type === "markdownPreview" ||
+    buffer.type === "htmlPreview" ||
+    buffer.type === "csvPreview"
+  );
+};
+
+const getClosedBufferHistoryKey = (buffer: ClosedBuffer) => `${buffer.type}:${buffer.path}`;
+
+const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer | null => {
+  if (!isReopenableBuffer(buffer) || !buffer.path) return null;
+
+  switch (buffer.type) {
+    case "editor":
+    case "image":
+    case "pdf":
+    case "binary":
+      return {
+        type: buffer.type,
+        path: buffer.path,
+        name: buffer.name,
+        isPinned: buffer.isPinned,
+      };
+    case "diff":
+      return {
+        type: "diff",
+        path: buffer.path,
+        name: buffer.name,
+        isPinned: buffer.isPinned,
+        content: buffer.content,
+        diffData: buffer.diffData,
+      };
+    case "markdownPreview":
+    case "htmlPreview":
+    case "csvPreview":
+      return {
+        type: buffer.type,
+        path: buffer.path,
+        name: buffer.name,
+        isPinned: buffer.isPinned,
+        content: buffer.content,
+        sourceFilePath: buffer.sourceFilePath,
+      };
+  }
 };
 
 /**
@@ -1097,18 +1180,17 @@ const createBufferStore = () =>
               .catch((error) => {
                 logger.error("BufferStore", "Failed to stop LSP:", error);
               });
+          }
 
-            // Add to closed history
-            const closedBufferInfo: ClosedBuffer = {
-              path: closedBuffer.path,
-              name: closedBuffer.name,
-              isPinned: closedBuffer.isPinned,
-            };
-
-            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
-              0,
-              EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
-            );
+          const closedBufferInfo = buildClosedBufferHistoryEntry(closedBuffer);
+          if (closedBufferInfo) {
+            const updatedHistory = [
+              closedBufferInfo,
+              ...closedBuffersHistory.filter(
+                (entry) =>
+                  getClosedBufferHistoryKey(entry) !== getClosedBufferHistoryKey(closedBufferInfo),
+              ),
+            ].slice(0, EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY);
 
             set((state) => {
               state.closedBuffersHistory = updatedHistory;
@@ -1587,32 +1669,76 @@ const createBufferStore = () =>
         },
 
         reopenClosedTab: async () => {
-          const { closedBuffersHistory } = get();
+          const { closedBuffersHistory, buffers } = get();
 
           if (closedBuffersHistory.length === 0) {
+            const { toast } = await import("@/ui/toast");
+            toast.info("No recently closed tabs");
             return;
           }
 
-          const [closedBuffer, ...remainingHistory] = closedBuffersHistory;
+          // Pop the most recently closed entry. Skip any entry that's already open
+          // (re-add to head would be a no-op) — pull the next one instead.
+          let closedBuffer: ClosedBuffer | undefined;
+          let remainingHistory = closedBuffersHistory;
+          while (remainingHistory.length > 0) {
+            const [head, ...rest] = remainingHistory;
+            remainingHistory = rest;
+            if (!buffers.some((b) => b.path === head.path)) {
+              closedBuffer = head;
+              break;
+            }
+          }
 
           set((state) => {
             state.closedBuffersHistory = remainingHistory;
           });
 
-          try {
-            const content = await readFileContent(closedBuffer.path);
-            const bufferId = get().actions.openContent({
-              type: "editor",
-              path: closedBuffer.path,
-              name: closedBuffer.name,
-              content,
-            });
+          if (!closedBuffer) {
+            const { toast } = await import("@/ui/toast");
+            toast.info("No recently closed tabs");
+            return;
+          }
 
-            if (closedBuffer.isPinned) {
-              get().actions.handleTabPin(bufferId);
+          try {
+            let reopenedBufferId: string | null = null;
+
+            if (
+              closedBuffer.type === "markdownPreview" ||
+              closedBuffer.type === "htmlPreview" ||
+              closedBuffer.type === "csvPreview"
+            ) {
+              reopenedBufferId = get().actions.openContent({
+                type: closedBuffer.type,
+                path: closedBuffer.path,
+                name: closedBuffer.name,
+                content: closedBuffer.content,
+                sourceFilePath: closedBuffer.sourceFilePath,
+              });
+            } else if (closedBuffer.type === "diff") {
+              reopenedBufferId = get().actions.openContent({
+                type: "diff",
+                path: closedBuffer.path,
+                name: closedBuffer.name,
+                content: closedBuffer.content,
+                diffData: closedBuffer.diffData,
+              });
+            } else {
+              // Delegate file-backed types to handleFileSelect so reopen stays aligned
+              // with the main file-open routing.
+              const { useFileSystemStore } =
+                await import("@/features/file-system/stores/file-system.store");
+              await useFileSystemStore.getState().handleFileSelect(closedBuffer.path, false);
+              reopenedBufferId = getBufferByPath(get().buffers, closedBuffer.path)?.id ?? null;
+            }
+
+            if (closedBuffer.isPinned && reopenedBufferId) {
+              get().actions.handleTabPin(reopenedBufferId);
             }
           } catch (error) {
             logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
+            const { toast } = await import("@/ui/toast");
+            toast.error(`Couldn't reopen ${closedBuffer.name}`);
           }
         },
       },

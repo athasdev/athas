@@ -85,7 +85,9 @@ import {
   isPdfFile,
 } from "../controllers/file-utils";
 import { useFileWatcherStore } from "../stores/file-watcher.store";
-import { fffSetWorkspace, fffTrackAccess } from "@/features/global-search/lib/rust-api/search";
+import { fffListFiles, fffTrackAccess } from "@/features/file-search/lib/file-search-api";
+import { canUseNativeFileSearch } from "@/features/file-search/utils/file-search-paths";
+import { ensureWorkspaceFileSearch } from "@/features/file-search/services/workspace-file-search";
 import { getSymlinkInfo, openFolder, readDirectory, renameFile } from "../controllers/platform";
 import { useRecentFoldersStore } from "../stores/recent-folders.store";
 import { useRecentFilesStore } from "../stores/recent-files.store";
@@ -172,6 +174,14 @@ const getWorkspaceFolderPaths = (get: FileSystemGet) =>
   normalizeWorkspaceFolders(get().rootFolderPath, get().workspaceFolders).map(
     (folder) => folder.path,
   );
+
+const syncFffWorkspace = async (get: FileSystemGet): Promise<void> => {
+  try {
+    await ensureWorkspaceFileSearch(getWorkspaceFolderPaths(get));
+  } catch (error) {
+    console.error("[fff] workspace sync failed:", error);
+  }
+};
 
 const readWorkspaceRootEntry = async (path: string): Promise<FileEntry> => {
   const projectName = getFolderName(path);
@@ -388,9 +398,7 @@ const initializeLocalWorkspaceInBackground = (
       logWorkspaceOpenStep("end", "setProjectRoot", path, watcherStartedAt);
 
       if (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId) {
-        fffSetWorkspace(path).catch((error) => {
-          console.error("[fff] set_workspace failed:", error);
-        });
+        void syncFffWorkspace(get);
       }
 
       const gitStatusStartedAt = performance.now();
@@ -609,9 +617,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
             }),
           resume: async (workspaceId) => {
             await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot(selected);
-            void fffSetWorkspace(selected).catch((error) => {
-              console.error("[fff] set_workspace failed:", error);
-            });
+            void syncFffWorkspace(get);
           },
         });
       },
@@ -696,6 +702,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
               state.workspaceFolders = foldersToRestore;
             });
           }
+          void syncFffWorkspace(get);
         }
 
         useTerminalTabsStore.getStore(workspaceId).getState().dispatch({
@@ -915,9 +922,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
             }),
           resume: async (workspaceId) => {
             await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot(path);
-            void fffSetWorkspace(path).catch((error) => {
-              console.error("[fff] set_workspace failed:", error);
-            });
+            void syncFffWorkspace(get);
           },
         });
       },
@@ -960,6 +965,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
             state.isFileTreeLoading = false;
             state.projectFilesCache = undefined;
           });
+          void syncFffWorkspace(get);
 
           const expandedPaths = new Set(useFileTreeStore.getState().getExpandedPaths());
           expandedPaths.add(selectedPath);
@@ -1008,6 +1014,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
           state.filesVersion++;
           state.projectFilesCache = undefined;
         });
+        void syncFffWorkspace(get);
 
         useFileTreeStore.getState().collapsePath(folder.path);
         get().persistActiveProjectSession();
@@ -2016,6 +2023,24 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
           workspaceFolders: workspaceFolderPaths,
         });
 
+        if (canUseNativeFileSearch(rootFolderPath)) {
+          const nativeRootPaths = await ensureWorkspaceFileSearch(workspaceFolderPaths);
+          const indexedFiles = await fffListFiles(nativeRootPaths);
+          const files = indexedFiles.map<FileEntry>((file) => ({
+            name: file.name,
+            path: file.path,
+            isDir: false,
+          }));
+          frontendTrace("info", "project-files", "getAllProjectFiles:end", {
+            rootFolderPath,
+            workspaceFolders: workspaceFolderPaths,
+            files: files.length,
+            source: "fff",
+            durationMs: Math.round((performance.now() - scanStartedAt) * 100) / 100,
+          });
+          return files;
+        }
+
         // Check cache first (cache for 5 minutes for better UX)
         const now = Date.now();
         if (
@@ -2509,9 +2534,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
               await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
             } else {
               await useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot(path);
-              void fffSetWorkspace(path).catch((error) => {
-                console.error("[fff] set_workspace failed:", error);
-              });
+              void syncFffWorkspace(() => targetStore);
               void getGitStatus(path)
                 .then((gitStatus) => {
                   useGitStore

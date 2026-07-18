@@ -1,4 +1,4 @@
-import type { FileSearchResult, SearchMatch } from "../lib/rust-api/search";
+import type { FileSearchResult, SearchMatch } from "@/features/file-search/lib/file-search-api";
 import { getBaseName, getDirectoryPath, getRelativePath } from "@/utils/path-helpers";
 
 export interface SearchExcerptHighlight {

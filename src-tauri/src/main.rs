@@ -284,6 +284,7 @@ fn main() {
          lsp_format_range,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
+         lsp_get_workspace_symbols,
          lsp_get_signature_help,
          lsp_get_signature_trigger_characters,
          lsp_get_references,
@@ -314,9 +315,10 @@ fn main() {
          get_extension_path,
          // Fuzzy matching commands
          fuzzy_match,
-         fff_set_workspace,
+         fff_ensure_workspaces,
          fff_search_files,
          fff_scan_status,
+         fff_list_files,
          fff_track_access,
          // Search commands
          search_files_content,

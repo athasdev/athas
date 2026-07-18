@@ -2,7 +2,10 @@ import { buildSearchRegex } from "@/features/editor/utils/search";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import type { FileSearchResult, SearchFilesResponse } from "../lib/rust-api/search";
+import type {
+  FileSearchResult,
+  SearchFilesResponse,
+} from "@/features/file-search/lib/file-search-api";
 import { shouldIgnoreInCommandPalette } from "../constants/ignored-patterns";
 import type { ContentSearchOptions } from "../types/global-search.types";
 import { buildFileSearchResult } from "../utils/content-search-results";

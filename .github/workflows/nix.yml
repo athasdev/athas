@@ -32,6 +32,9 @@ jobs:
       - name: Validate flake
         run: nix flake check --no-write-lock-file
 
+      - name: Validate packaged editor
+        run: nix build --no-write-lock-file --no-link .#athas
+
       - name: Validate dev tools
         run: |
           nix develop --no-write-lock-file --command bash -lc '

@@ -156,6 +156,16 @@ impl WorkspaceClients {
       None
    }
 
+   pub(super) fn get_clients_for_workspace(&self, workspace_path: &Path) -> Vec<LspClient> {
+      let mut clients = self.inner.lock().unwrap();
+      Self::prune_dead_instances(&mut clients);
+      clients
+         .iter()
+         .filter(|((ws, _), _)| ws == workspace_path)
+         .map(|(_, instance)| instance.client.clone())
+         .collect()
+   }
+
    pub(super) fn shutdown_all(&self) {
       let mut clients = self.inner.lock().unwrap();
       for ((workspace, server_name), mut instance) in clients.drain() {
