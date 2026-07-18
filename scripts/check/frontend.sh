@@ -2,6 +2,6 @@
 
 set -euo pipefail
 
-bun services:check
+bun check:services
 bun typecheck
 bunx vp check

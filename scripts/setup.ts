@@ -1,13 +1,3 @@
-import { $ } from "bun";
+import { runSetup } from "./setup/run";
 
-const WINDOWS = "win32";
-const MAC = "darwin";
-const LINUX = "linux";
-
-const platform = process.platform;
-
-if (platform === WINDOWS) {
-  await $`powershell -ExecutionPolicy Bypass -File ./scripts/setup/windows.ps1`;
-} else if (platform === MAC || platform === LINUX) {
-  await $`chmod +x scripts/setup/linux.sh && ./scripts/setup/linux.sh`;
-}
+await runSetup();

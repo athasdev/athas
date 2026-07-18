@@ -1,5 +1,13 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
+import {
+  bumpStableBase,
+  formatVersion,
+  getReleaseCommitMessage,
+  parseVersion,
+  sameStableBase,
+  type ParsedVersion,
+} from "./version";
 
 const colors = {
   reset: "\x1b[0m",
@@ -11,24 +19,12 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
-type ReleaseChannel = "preview";
-type ReleaseBump = "patch" | "minor" | "major";
 const VERSIONED_FILES = [
   "package.json",
   "src-tauri/tauri.conf.json",
   "src-tauri/Cargo.toml",
   "Cargo.lock",
 ] as const;
-
-interface ParsedVersion {
-  major: number;
-  minor: number;
-  patch: number;
-  prerelease?: {
-    channel: ReleaseChannel;
-    number: number;
-  };
-}
 
 function log(message: string, color: keyof typeof colors = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
@@ -45,71 +41,6 @@ function success(message: string) {
 
 function info(message: string) {
   log(message, "cyan");
-}
-
-function parseVersion(version: string): ParsedVersion {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(preview)\.(\d+))?$/);
-  if (!match) {
-    error(`Invalid version format: ${version}`);
-  }
-
-  return {
-    major: parseInt(match[1]),
-    minor: parseInt(match[2]),
-    patch: parseInt(match[3]),
-    prerelease:
-      match[4] && match[5]
-        ? {
-            channel: match[4] as ReleaseChannel,
-            number: parseInt(match[5]),
-          }
-        : undefined,
-  };
-}
-
-function formatVersion(version: ParsedVersion): string {
-  const base = `${version.major}.${version.minor}.${version.patch}`;
-  if (!version.prerelease) {
-    return base;
-  }
-
-  return `${base}-${version.prerelease.channel}.${version.prerelease.number}`;
-}
-
-function getReleaseCommitMessage(version: ParsedVersion): string {
-  if (version.prerelease) {
-    return "Prepare preview release";
-  }
-
-  return "Prepare release";
-}
-
-function getStableBase(version: ParsedVersion): ParsedVersion {
-  return {
-    major: version.major,
-    minor: version.minor,
-    patch: version.patch,
-  };
-}
-
-function bumpStableBase(version: ParsedVersion, bump: ReleaseBump): ParsedVersion {
-  const stable = getStableBase(version);
-
-  switch (bump) {
-    case "major":
-      return { major: stable.major + 1, minor: 0, patch: 0 };
-    case "minor":
-      return { major: stable.major, minor: stable.minor + 1, patch: 0 };
-    case "patch":
-      if (version.prerelease) {
-        return stable;
-      }
-      return { major: stable.major, minor: stable.minor, patch: stable.patch + 1 };
-  }
-}
-
-function sameStableBase(left: ParsedVersion, right: ParsedVersion): boolean {
-  return left.major === right.major && left.minor === right.minor && left.patch === right.patch;
 }
 
 async function getLatestPreviewNumber(baseVersion: ParsedVersion): Promise<number> {
@@ -219,7 +150,7 @@ async function updateCargoToml(newVersion: string) {
   );
 
   if (updatedCargoToml === cargoToml) {
-    error("Could not update version in src-tauri/Cargo.toml");
+    throw new Error("Could not update version in src-tauri/Cargo.toml");
   }
 
   await Bun.write(cargoPath, updatedCargoToml);
@@ -230,7 +161,7 @@ async function updateCargoLock() {
   const result = await $`cargo check -p athas`.nothrow().cwd(process.cwd());
 
   if (result.exitCode !== 0) {
-    error("Could not refresh Cargo.lock");
+    throw new Error("Could not refresh Cargo.lock");
   }
 
   success("Updated Cargo.lock");
