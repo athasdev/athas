@@ -527,6 +527,12 @@ function shouldFallbackFromAuthApiBase(apiBase: string): boolean {
   );
 }
 
+function shouldTryNextAuthApiBase(apiBase: string, status: number): boolean {
+  return (
+    shouldFallbackFromAuthApiBase(apiBase) && (status === 401 || status === 403 || status === 404)
+  );
+}
+
 // Secure token storage via Rust backend
 export const getAuthToken = async (): Promise<string | null> => {
   if (authTokenCache !== undefined) {
@@ -576,8 +582,11 @@ async function authenticatedFetch(
   for (const apiBase of getAuthApiBaseCandidates()) {
     try {
       const response = await tauriFetch(`${apiBase}${path}`, requestOptions);
-      if (response.status === 404 && shouldFallbackFromAuthApiBase(apiBase)) {
-        fallbackError = new Error(`Auth endpoint not found at ${apiBase}`);
+      if (shouldTryNextAuthApiBase(apiBase, response.status)) {
+        fallbackError = new AuthApiError(
+          `Auth request was rejected at ${apiBase}: ${response.status}`,
+          response.status,
+        );
         continue;
       }
 
@@ -1337,4 +1346,5 @@ export const __test__ = {
   parseCollaborationSseBlock,
   getApiBaseUnavailableMessage,
   getAuthApiBaseCandidates,
+  shouldTryNextAuthApiBase,
 };

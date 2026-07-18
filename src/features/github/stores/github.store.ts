@@ -91,6 +91,7 @@ const initialState: GitHubState = {
 
 let prsRequestSeq = 0;
 let authCheckedAt = 0;
+let authCheckInFlight: Promise<void> | null = null;
 let selectedPRRequestSeq = 0;
 const prDetailsRequestSeqByKey: Record<string, number> = {};
 const prContentRequestSeqByKey: Record<string, number> = {};
@@ -219,10 +220,31 @@ export const useGitHubStore = create(
   combine(initialState, (set, get) => ({
     actions: {
       checkAuth: async (options?: { force?: boolean }) => {
-        if (!options?.force && authCheckedAt && isFresh(authCheckedAt, AUTH_CACHE_TTL_MS)) {
+        if (authCheckInFlight) {
+          await authCheckInFlight;
           return;
         }
 
+        const authState = get();
+        const hasResolvedAuthState =
+          authState.isAuthenticated ||
+          authState.githubAccountStatus === "notSignedIn" ||
+          authState.githubAccountStatus === "notConnected" ||
+          authState.authError !== null;
+
+        if (
+          !options?.force &&
+          authCheckedAt &&
+          isFresh(authCheckedAt, AUTH_CACHE_TTL_MS) &&
+          hasResolvedAuthState
+        ) {
+          return;
+        }
+
+        let finishAuthCheck!: () => void;
+        authCheckInFlight = new Promise<void>((resolve) => {
+          finishAuthCheck = resolve;
+        });
         set({ isCheckingAuth: true, authError: null });
 
         try {
@@ -309,6 +331,9 @@ export const useGitHubStore = create(
             currentUser: null,
           });
           authCheckedAt = Date.now();
+        } finally {
+          authCheckInFlight = null;
+          finishAuthCheck();
         }
       },
 

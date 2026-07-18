@@ -812,11 +812,16 @@ pub fn github_check_auth(github_token: Option<String>) -> Result<GitHubAuthStatu
    let api = GitHubApi::new_authenticated(github_token)?;
    match get_current_user(&api) {
       Ok(_) => Ok(GitHubAuthStatus::Authenticated),
-      Err(error) => {
+      Err(error) if is_github_authentication_error(&error) => {
          log::warn!("GitHub authentication check failed: {error}");
          Ok(GitHubAuthStatus::NotAuthenticated)
       }
+      Err(error) => Err(error),
    }
+}
+
+fn is_github_authentication_error(error: &str) -> bool {
+   error.starts_with("GitHub authentication failed.")
 }
 
 pub fn github_list_prs(
@@ -1539,6 +1544,19 @@ mod api_tests {
          super::parse_github_error_message(body).as_deref(),
          Some(super::WORKFLOW_JOB_LOGS_UNAVAILABLE_MESSAGE)
       );
+   }
+
+   #[test]
+   fn only_treats_explicit_github_authentication_failures_as_invalid_tokens() {
+      assert!(super::is_github_authentication_error(
+         "GitHub authentication failed. Connect GitHub in Athas and try again."
+      ));
+      assert!(!super::is_github_authentication_error(
+         "GitHub API request failed (503 Service Unavailable): unavailable"
+      ));
+      assert!(!super::is_github_authentication_error(
+         "Failed to call GitHub API: connection timed out"
+      ));
    }
 
    #[test]

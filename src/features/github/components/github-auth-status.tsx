@@ -34,6 +34,25 @@ export function GitHubAuthStatusMessage() {
     );
   }
 
+  if (authError && githubAccountStatus === "unknown") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
+        <AlertCircle className="mb-2 text-text-lighter" />
+        <p className="ui-text-sm text-text">GitHub is temporarily unavailable</p>
+        <p className="ui-text-sm mt-1 max-w-64 text-balance text-text-lighter">{authError}</p>
+        <Button
+          onClick={retry}
+          variant="ghost"
+          className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          aria-label="Retry GitHub authentication check"
+          size="xs"
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   if (!isAthasAuthenticated || githubAccountStatus === "notSignedIn") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
