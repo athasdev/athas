@@ -17,9 +17,11 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
 import type { IssueDetails, IssueFilter, IssueListItem } from "../types/github.types";
+import { groupIssues } from "../utils/github-sidebar-groups";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import { GitHubAvatar } from "./github-avatar";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
+import { GitHubSidebarSection } from "./github-sidebar-section";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
   GITHUB_ISSUE_LIST_TTL_MS,
@@ -39,8 +41,9 @@ interface IssueListItemProps {
 const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: IssueListItemProps) => {
   const updatedLabel = getTimeAgo(issue.updatedAt);
   const labels = issue.labels.slice(0, 3);
+  const isOpen = issue.state.toUpperCase() === "OPEN";
   const badges: GitHubSidebarPreviewBadge[] = [
-    { label: issue.state, tone: issue.state === "open" ? "success" : "muted" },
+    { label: issue.state, tone: isOpen ? "success" : "muted" },
     ...labels.map((label) => ({ label: label.name, tone: "default" as const })),
   ];
   const authorAvatar = (
@@ -72,8 +75,33 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
         });
       }}
       active={isActive}
-      leading={authorAvatar}
-      trailing={updatedLabel}
+      leading={
+        <MessageSquare className={isOpen ? "size-4 text-success" : "size-4 text-text-lighter"} />
+      }
+      description={
+        <span className="flex min-w-0 items-center gap-1.5 capitalize">
+          <span className="font-mono">#{issue.number}</span>
+          <span aria-hidden="true">·</span>
+          <span>{issue.state.toLowerCase()}</span>
+          {labels[0] ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="truncate normal-case">{labels[0].name}</span>
+            </>
+          ) : null}
+        </span>
+      }
+      trailing={
+        <>
+          <GitHubAvatar
+            login={issue.author.login}
+            avatarUrl={issue.author.avatarUrl}
+            size={24}
+            className="size-4"
+          />
+          <span>{updatedLabel}</span>
+        </>
+      }
       preview={{
         title: issue.title,
         subtitle: `#${issue.number} by ${issue.author.login}`,
@@ -231,6 +259,11 @@ const GitHubIssuesView = memo(
         ].some((value) => value.toLowerCase().includes(query)),
       );
     }, [deferredIssues, deferredSearchQuery]);
+    const groupedIssues = useMemo(
+      () => groupIssues(filteredIssues, filter),
+      [filter, filteredIssues],
+    );
+    const forceListSectionsExpanded = deferredSearchQuery.trim().length > 0;
 
     useEffect(() => {
       if (!isAuthenticated || !repoPath || filteredIssues.length === 0) return;
@@ -288,33 +321,43 @@ const GitHubIssuesView = memo(
               title="No matching issues"
             />
           ) : (
-            <div className="space-y-px overflow-x-hidden">
+            <div className="space-y-1 overflow-x-hidden">
               {isLoading ? (
                 <div className="flex items-center px-2 py-1.5">
                   <LoadingIndicator label="Refreshing" compact />
                 </div>
               ) : null}
-              {filteredIssues.map((issue) => (
-                <IssueRow
-                  key={issue.number}
-                  issue={issue}
-                  isActive={activeIssueNumber === issue.number}
-                  repoPath={repoPath}
-                  onPrefetch={() => prefetchIssue(issue)}
-                  onSelect={() =>
-                    startTransition(() => {
-                      openGitHubIssueBuffer({
-                        issueNumber: issue.number,
-                        repoPath: repoPath ?? undefined,
-                        title: issue.title,
-                        authorAvatarUrl:
-                          issue.author.avatarUrl ||
-                          `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
-                        url: issue.url,
-                      });
-                    })
-                  }
-                />
+              {groupedIssues.map((group) => (
+                <GitHubSidebarSection
+                  key={group.id}
+                  title={group.title}
+                  count={group.items.length}
+                  defaultExpanded={group.defaultExpanded}
+                  forceExpanded={forceListSectionsExpanded}
+                >
+                  {group.items.map((issue) => (
+                    <IssueRow
+                      key={issue.number}
+                      issue={issue}
+                      isActive={activeIssueNumber === issue.number}
+                      repoPath={repoPath}
+                      onPrefetch={() => prefetchIssue(issue)}
+                      onSelect={() =>
+                        startTransition(() => {
+                          openGitHubIssueBuffer({
+                            issueNumber: issue.number,
+                            repoPath: repoPath ?? undefined,
+                            title: issue.title,
+                            authorAvatarUrl:
+                              issue.author.avatarUrl ||
+                              `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
+                            url: issue.url,
+                          });
+                        })
+                      }
+                    />
+                  ))}
+                </GitHubSidebarSection>
               ))}
             </div>
           )}

@@ -9,11 +9,11 @@ interface CommentItemProps {
     body: string;
     createdAt: string;
   };
-  issueBaseUrl?: string;
+  repositoryUrl?: string;
   repoPath?: string;
 }
 
-export const CommentItem = memo(({ comment, issueBaseUrl, repoPath }: CommentItemProps) => {
+export const CommentItem = memo(({ comment, repositoryUrl, repoPath }: CommentItemProps) => {
   const authorLogin = comment.author.login;
 
   return (
@@ -29,7 +29,7 @@ export const CommentItem = memo(({ comment, issueBaseUrl, repoPath }: CommentIte
             content={comment.body}
             className="github-markdown-pr"
             contentClassName="ui-text-sm leading-6 text-text-light"
-            issueBaseUrl={issueBaseUrl}
+            repositoryUrl={repositoryUrl}
             repoPath={repoPath}
           />
         </div>

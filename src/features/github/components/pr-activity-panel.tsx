@@ -27,7 +27,7 @@ interface ActivityItemCommit {
 
 interface PRActivityPanelProps {
   body: string;
-  issueBaseUrl: string;
+  repositoryUrl: string;
   repoPath?: string;
   activityItems: Array<ActivityItemComment | ActivityItemCommit>;
   isLoadingContent: boolean;
@@ -38,7 +38,7 @@ interface PRActivityPanelProps {
 
 export function PRActivityPanel({
   body,
-  issueBaseUrl,
+  repositoryUrl,
   repoPath,
   activityItems,
   isLoadingContent,
@@ -95,7 +95,7 @@ export function PRActivityPanel({
           content={body}
           className="github-markdown-pr w-full"
           contentClassName="github-markdown-pr-content w-full max-w-none"
-          issueBaseUrl={issueBaseUrl}
+          repositoryUrl={repositoryUrl}
           repoPath={repoPath}
         />
       ) : (
@@ -132,16 +132,11 @@ export function PRActivityPanel({
                 <CommentItem
                   key={item.id}
                   comment={item.comment}
-                  issueBaseUrl={issueBaseUrl}
+                  repositoryUrl={repositoryUrl}
                   repoPath={repoPath}
                 />
               ) : (
-                <CommitItem
-                  key={item.id}
-                  commit={item.commit}
-                  issueBaseUrl={issueBaseUrl}
-                  repoPath={repoPath}
-                />
+                <CommitItem key={item.id} commit={item.commit} repoPath={repoPath} />
               ),
             )}
             {activityItems.length > visibleActivityItems.length ? (

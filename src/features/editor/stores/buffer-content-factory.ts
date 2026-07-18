@@ -120,7 +120,9 @@ export const createPaneContent = (id: string, spec: OpenContentSpec): PaneConten
         type: "pullRequest",
         path: spec.selectedFilePath
           ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
-          : `pr://${spec.prNumber}`,
+          : spec.initialView === "files"
+            ? `pr://${spec.prNumber}?view=files`
+            : `pr://${spec.prNumber}`,
         name: spec.name ?? "Pull Request",
         isPreview: false,
         repoPath: spec.repoPath,

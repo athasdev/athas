@@ -112,6 +112,7 @@ interface BufferActions {
       repoPath?: string;
       authorAvatarUrl?: string;
       selectedFilePath?: string;
+      initialView?: "activity" | "files";
     },
   ) => string;
   openGitHubIssueBuffer: (options: {
@@ -564,7 +565,9 @@ const createBufferStore = () =>
             case "pullRequest": {
               const path = spec.selectedFilePath
                 ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
-                : `pr://${spec.prNumber}`;
+                : spec.initialView === "files"
+                  ? `pr://${spec.prNumber}?view=files`
+                  : `pr://${spec.prNumber}`;
               const existing = buffers.find(
                 (b) =>
                   b.type === "pullRequest" &&
@@ -949,6 +952,7 @@ const createBufferStore = () =>
             repoPath?: string;
             authorAvatarUrl?: string;
             selectedFilePath?: string;
+            initialView?: "activity" | "files";
           },
         ): string => {
           return get().actions.openContent({
@@ -958,6 +962,7 @@ const createBufferStore = () =>
             repoPath: metadata?.repoPath,
             authorAvatarUrl: metadata?.authorAvatarUrl,
             selectedFilePath: metadata?.selectedFilePath,
+            initialView: metadata?.initialView,
           });
         },
 

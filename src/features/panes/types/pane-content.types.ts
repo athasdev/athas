@@ -369,6 +369,7 @@ export type OpenContentSpec =
       authorAvatarUrl?: string;
       name?: string;
       selectedFilePath?: string;
+      initialView?: "activity" | "files";
     }
   | {
       type: "githubIssue";

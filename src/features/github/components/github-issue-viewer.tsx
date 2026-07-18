@@ -40,7 +40,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
-  const issueBaseUrl = useMemo(
+  const repositoryUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
     [details?.url],
   );
@@ -308,7 +308,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               content={details.body}
               className="github-markdown-pr w-full"
               contentClassName="github-markdown-pr-content w-full max-w-none"
-              issueBaseUrl={issueBaseUrl}
+              repositoryUrl={repositoryUrl}
               repoPath={repoPath}
             />
           ) : (
@@ -321,7 +321,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 <CommentItem
                   key={`${comment.author.login}-${comment.createdAt}-${index}`}
                   comment={comment}
-                  issueBaseUrl={issueBaseUrl}
+                  repositoryUrl={repositoryUrl}
                   repoPath={repoPath}
                 />
               ))

@@ -27,6 +27,7 @@ import type {
   WorkflowRunFilter,
   WorkflowRunListItem,
 } from "../types/github.types";
+import { groupWorkflowRuns } from "../utils/github-sidebar-groups";
 import { getTimeAgo } from "../utils/github-viewer-utils";
 import {
   GITHUB_ACTION_DETAILS_TTL_MS,
@@ -37,6 +38,7 @@ import {
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
+import { GitHubSidebarSection } from "./github-sidebar-section";
 
 const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null) => {
   const normalizedStatus = status?.toLowerCase() ?? "";
@@ -200,6 +202,23 @@ const WorkflowRunRow = memo(
         }}
         active={isActive}
         leading={statusIcon}
+        description={
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={status.className}>{status.label}</span>
+            {run.workflowName ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate">{run.workflowName}</span>
+              </>
+            ) : null}
+            {run.headBranch ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate font-mono">{run.headBranch}</span>
+              </>
+            ) : null}
+          </span>
+        }
         trailing={updatedLabel}
         preview={{
           title,
@@ -373,6 +392,11 @@ const GitHubActionsView = memo(
         ].some((value) => value.toLowerCase().includes(query)),
       );
     }, [deferredRuns, deferredSearchQuery, filter]);
+    const groupedRuns = useMemo(
+      () => groupWorkflowRuns(filteredRuns, filter),
+      [filter, filteredRuns],
+    );
+    const forceListSectionsExpanded = deferredSearchQuery.trim().length > 0;
 
     useEffect(() => {
       if (!isAuthenticated || !repoPath || filteredRuns.length === 0) return;
@@ -430,34 +454,44 @@ const GitHubActionsView = memo(
               title="No matching workflow runs"
             />
           ) : (
-            <div className="space-y-px overflow-x-hidden">
+            <div className="space-y-1 overflow-x-hidden">
               {isLoading ? (
                 <div className="flex items-center px-2 py-1.5">
                   <LoadingIndicator label="Refreshing" compact />
                 </div>
               ) : null}
-              {filteredRuns.map((run) => (
-                <WorkflowRunRow
-                  key={run.databaseId}
-                  run={run}
-                  isActive={activeRunId === run.databaseId}
-                  repoPath={repoPath}
-                  onPrefetch={() => prefetchWorkflowRun(run)}
-                  onSelect={() =>
-                    startTransition(() => {
-                      openGitHubActionBuffer({
-                        runId: run.databaseId,
-                        repoPath: repoPath ?? undefined,
-                        title:
-                          run.displayTitle ||
-                          run.name ||
-                          run.workflowName ||
-                          `Run #${run.databaseId}`,
-                        url: run.url,
-                      });
-                    })
-                  }
-                />
+              {groupedRuns.map((group) => (
+                <GitHubSidebarSection
+                  key={group.id}
+                  title={group.title}
+                  count={group.items.length}
+                  defaultExpanded={group.defaultExpanded}
+                  forceExpanded={forceListSectionsExpanded}
+                >
+                  {group.items.map((run) => (
+                    <WorkflowRunRow
+                      key={run.databaseId}
+                      run={run}
+                      isActive={activeRunId === run.databaseId}
+                      repoPath={repoPath}
+                      onPrefetch={() => prefetchWorkflowRun(run)}
+                      onSelect={() =>
+                        startTransition(() => {
+                          openGitHubActionBuffer({
+                            runId: run.databaseId,
+                            repoPath: repoPath ?? undefined,
+                            title:
+                              run.displayTitle ||
+                              run.name ||
+                              run.workflowName ||
+                              `Run #${run.databaseId}`,
+                            url: run.url,
+                          });
+                        })
+                      }
+                    />
+                  ))}
+                </GitHubSidebarSection>
               ))}
             </div>
           )}

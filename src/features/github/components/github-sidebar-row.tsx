@@ -14,6 +14,8 @@ export interface GitHubSidebarPreviewDetail {
   value?: ReactNode;
   mono?: boolean;
   className?: string;
+  onClick?: () => void;
+  actionLabel?: string;
 }
 
 export interface GitHubSidebarPreview {
@@ -27,6 +29,7 @@ export interface GitHubSidebarPreview {
 
 interface GitHubSidebarRowProps {
   title: ReactNode;
+  description?: ReactNode;
   leading: ReactNode;
   trailing?: ReactNode;
   active?: boolean;
@@ -59,6 +62,7 @@ function previewBadgeClassName(tone: PreviewBadgeTone = "default") {
 export function GitHubSidebarRow({
   active = false,
   className,
+  description,
   draggable = false,
   leading,
   onClick,
@@ -77,22 +81,31 @@ export function GitHubSidebarRow({
   );
 
   const rowClassName = cn(
-    "font-sans ui-text-base group/github-row flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 text-left leading-[1.35] text-text-lighter transition-[background-color,color]",
+    "font-sans group/github-row flex min-h-12 w-full min-w-0 cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
     "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
     active && "bg-hover/80 text-text",
     className,
   );
   const rowContent = (
     <>
-      <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden">
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center overflow-hidden">
         {leading}
       </span>
-      <span className="min-w-0 flex-1 truncate whitespace-nowrap text-text">{title}</span>
-      {trailing ? (
-        <span className="ml-auto max-w-16 shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
-          {trailing}
+      <span className="min-w-0 flex-1">
+        <span className="ui-text-base block truncate whitespace-nowrap font-medium leading-5 text-text">
+          {title}
         </span>
-      ) : null}
+        {description || trailing ? (
+          <span className="ui-text-sm mt-0.5 flex min-w-0 items-center gap-2 leading-4 text-text-lighter">
+            <span className="min-w-0 flex-1 truncate whitespace-nowrap">{description}</span>
+            {trailing ? (
+              <span className="ml-auto flex max-w-[45%] shrink-0 items-center gap-1.5 truncate whitespace-nowrap text-right">
+                {trailing}
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+      </span>
     </>
   );
 
@@ -179,14 +192,25 @@ export function GitHubSidebarRow({
                   detail.value ? (
                     <div key={index} className="contents">
                       <dt className="text-text-lighter">{detail.label}</dt>
-                      <dd
-                        className={cn(
-                          "min-w-0 truncate text-text",
-                          detail.mono && "font-mono",
-                          detail.className,
+                      <dd className="min-w-0 truncate text-text">
+                        {detail.onClick ? (
+                          <button
+                            type="button"
+                            aria-label={detail.actionLabel}
+                            className={cn(
+                              "-mx-1 -my-0.5 max-w-full cursor-pointer truncate rounded px-1 py-0.5 text-left hover:bg-hover focus-visible:bg-hover focus-visible:outline-none",
+                              detail.mono && "font-mono",
+                              detail.className,
+                            )}
+                            onClick={detail.onClick}
+                          >
+                            {detail.value}
+                          </button>
+                        ) : (
+                          <span className={cn(detail.mono && "font-mono", detail.className)}>
+                            {detail.value}
+                          </span>
                         )}
-                      >
-                        {detail.value}
                       </dd>
                     </div>
                   ) : null,

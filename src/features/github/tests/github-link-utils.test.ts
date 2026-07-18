@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseGitHubEntityLink } from "../utils/github-link-utils";
+import {
+  buildPRBufferPath,
+  isGitHubEntityLinkForRepository,
+  isPRFilesViewPath,
+  parseGitHubEntityLink,
+} from "../utils/github-link-utils";
 
 describe("parseGitHubEntityLink", () => {
   it("parses pull request links with extra path segments and fragments", () => {
@@ -45,5 +50,35 @@ describe("parseGitHubEntityLink", () => {
   it("rejects non-GitHub hosts and malformed entity ids", () => {
     expect(parseGitHubEntityLink("https://example.com/athasdev/athas/pull/568")).toBeNull();
     expect(parseGitHubEntityLink("https://github.com/athasdev/athas/pull/not-a-number")).toBeNull();
+  });
+
+  it("matches entity links to their repository", () => {
+    const entityLink = parseGitHubEntityLink("https://github.com/athasdev/athas/issues/714");
+
+    expect(entityLink).not.toBeNull();
+    if (!entityLink) return;
+
+    expect(isGitHubEntityLinkForRepository(entityLink, "https://github.com/athasdev/athas")).toBe(
+      true,
+    );
+    expect(isGitHubEntityLinkForRepository(entityLink, "https://github.com/athasdev/www")).toBe(
+      false,
+    );
+  });
+});
+
+describe("pull request buffer paths", () => {
+  it("builds and recognizes a changed-files overview path", () => {
+    const path = buildPRBufferPath(714, null, "files");
+
+    expect(path).toBe("pr://714?view=files");
+    expect(isPRFilesViewPath(path)).toBe(true);
+  });
+
+  it("recognizes selected-file paths as the files view", () => {
+    const path = buildPRBufferPath(714, "src/app.tsx");
+
+    expect(isPRFilesViewPath(path)).toBe(true);
+    expect(isPRFilesViewPath(buildPRBufferPath(714))).toBe(false);
   });
 });

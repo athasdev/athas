@@ -13,7 +13,6 @@ import { GitHubAvatar } from "./github-avatar";
 
 interface CommitItemProps {
   commit: Commit;
-  issueBaseUrl?: string;
   repoPath?: string;
 }
 

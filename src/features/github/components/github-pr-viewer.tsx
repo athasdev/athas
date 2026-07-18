@@ -15,6 +15,7 @@ import type {
 } from "../types/github-pr-viewer.types";
 import {
   buildPRBufferPath,
+  isPRFilesViewPath,
   parseSelectedFilePathFromPRBufferPath,
 } from "../utils/github-link-utils";
 import {
@@ -111,7 +112,9 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     useGitHubStore().actions;
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
-  const [activeTab, setActiveTab] = useState<TabType>("activity");
+  const [activeTab, setActiveTab] = useState<TabType>(() =>
+    isPRFilesViewPath(prBuffer?.path ?? "") ? "files" : "activity",
+  );
   const [fileQuery, setFileQuery] = useState("");
   const [fileStatusFilter, setFileStatusFilter] = useState<FileStatusFilter>("all");
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(
@@ -132,7 +135,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
 
   useEffect(() => {
     const deepLinkedFilePath = parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "");
-    setActiveTab(deepLinkedFilePath ? "files" : "activity");
+    setActiveTab(isPRFilesViewPath(prBuffer?.path ?? "") ? "files" : "activity");
     setFileQuery("");
     setFileStatusFilter("all");
     setSelectedFilePath(deepLinkedFilePath ?? null);
@@ -143,11 +146,11 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
 
   useEffect(() => {
     const deepLinkedFilePath = parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "");
-    if (deepLinkedFilePath) {
+    if (isPRFilesViewPath(prBuffer?.path ?? "")) {
       if (activeTab !== "files") {
         setActiveTab("files");
       }
-      if (deepLinkedFilePath !== selectedFilePath) {
+      if (deepLinkedFilePath && deepLinkedFilePath !== selectedFilePath) {
         setSelectedFilePath(deepLinkedFilePath);
       }
       return;
@@ -210,7 +213,11 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   useEffect(() => {
     if (!prBuffer || prBuffer.type !== "pullRequest") return;
 
-    const nextPath = buildPRBufferPath(prNumber, activeTab === "files" ? selectedFilePath : null);
+    const nextPath = buildPRBufferPath(
+      prNumber,
+      activeTab === "files" ? selectedFilePath : null,
+      activeTab,
+    );
     if (prBuffer.path === nextPath) return;
 
     updateBuffer({
@@ -628,7 +635,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       : pr.reviewDecision === "REVIEW_REQUIRED"
         ? "review required"
         : null;
-  const issueBaseUrl = pr.url.replace(/\/pull\/\d+$/, "");
+  const repositoryUrl = pr.url.replace(/\/pull\/\d+$/, "");
   return (
     <GitHubViewerShell
       contentClassName={activeTab === "files" ? "px-0 pb-0 sm:px-0" : undefined}
@@ -694,7 +701,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       {activeTab === "activity" && (
         <PRActivityPanel
           body={pr.body}
-          issueBaseUrl={issueBaseUrl}
+          repositoryUrl={repositoryUrl}
           repoPath={repoPath ?? undefined}
           activityItems={activityItems}
           isLoadingContent={isLoadingContent}
