@@ -114,20 +114,18 @@ export function SettingRow({
       return;
     }
 
-    const segmentedControl = controlRef.current?.querySelector<HTMLElement>(
-      "[data-slot='segmented-control']",
+    const toggleGroup = controlRef.current?.querySelector<HTMLElement>(
+      "[data-slot='toggle-group']",
     );
-    if (segmentedControl) {
-      const segmentedItems = Array.from(
-        segmentedControl.querySelectorAll<HTMLElement>("[role='button']"),
+    if (toggleGroup) {
+      const toggleItems = Array.from(
+        toggleGroup.querySelectorAll<HTMLElement>("[data-slot='toggle-group-item']"),
       ).filter((item) => !item.hasAttribute("disabled"));
-      const activeIndex = segmentedItems.findIndex(
-        (item) => item.getAttribute("data-active") === "true",
-      );
+      const activeIndex = toggleItems.findIndex((item) => item.hasAttribute("data-pressed"));
 
-      if (segmentedItems.length > 0) {
-        const nextIndex = activeIndex >= 0 ? (activeIndex + 1) % segmentedItems.length : 0;
-        const nextItem = segmentedItems[nextIndex];
+      if (toggleItems.length > 0) {
+        const nextIndex = activeIndex >= 0 ? (activeIndex + 1) % toggleItems.length : 0;
+        const nextItem = toggleItems[nextIndex];
         nextItem?.focus();
         nextItem?.click();
         return;

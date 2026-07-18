@@ -34,10 +34,10 @@ import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { SegmentedControl } from "@/ui/segmented-control";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
+import { ToggleGroup } from "@/ui/toggle-group";
 import { motionDuration, motionEase } from "@/ui/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
@@ -259,10 +259,10 @@ export const KeyboardSettings = () => {
             </div>
 
             <div className="mb-3 overflow-x-auto">
-              <SegmentedControl
+              <ToggleGroup
                 value={filterType}
-                onChange={(value) => setFilterType(value as FilterType)}
-                className="inline-flex h-auto min-w-max max-w-full flex-wrap items-stretch gap-1 overflow-visible self-start rounded-lg border border-border/60 bg-secondary-bg/40 p-1"
+                onValueChange={setFilterType}
+                ariaLabel="Keybinding filter"
                 options={[
                   {
                     value: "all",

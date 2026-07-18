@@ -31,10 +31,10 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { SegmentedControl } from "@/ui/segmented-control";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
+import { ToggleGroup } from "@/ui/toggle-group";
 import { fetchAutocompleteModels } from "@/features/editor/services/editor-autocomplete-service";
 import {
   CUSTOM_AUTOCOMPLETE_PROVIDER_ID,
@@ -543,15 +543,16 @@ export const AISettings = () => {
       {(isOllamaSelected || settings.ollamaBaseUrl !== DEFAULT_OLLAMA_BASE_URL) && (
         <Section title="Ollama">
           <SettingRow label="Mode" description="Run Ollama locally or use Ollama Cloud">
-            <SegmentedControl
+            <ToggleGroup
               value={isOllamaCloud ? "cloud" : "local"}
-              onChange={(nextValue) => {
+              onValueChange={(nextValue) => {
                 if (nextValue === "local") {
                   handleResetOllamaUrl();
                   return;
                 }
                 handleUseOllamaCloud();
               }}
+              ariaLabel="Ollama mode"
               options={[
                 { value: "local", label: "Local", icon: <Laptop /> },
                 { value: "cloud", label: "Cloud", icon: <Cloud /> },
@@ -743,18 +744,19 @@ export const AISettings = () => {
                 settings.aiAutocompleteProvider !== getDefaultSetting("aiAutocompleteProvider")
               }
             >
-              <SegmentedControl
+              <ToggleGroup
                 value={settings.aiAutocompleteProvider}
                 options={[
                   { value: "openrouter", label: "OpenRouter" },
                   { value: "custom", label: "Custom" },
                 ]}
-                onChange={(value) =>
+                onValueChange={(value) =>
                   updateSetting(
                     "aiAutocompleteProvider",
                     value === "custom" ? "custom" : "openrouter",
                   )
                 }
+                ariaLabel="Autocomplete provider"
                 size="xs"
                 wrap={false}
               />
