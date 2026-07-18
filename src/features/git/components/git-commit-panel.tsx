@@ -12,9 +12,9 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { Button } from "@/ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { SidebarComposerBody } from "@/ui/sidebar";
-import { SplitActionButton } from "@/ui/split-action-button";
 import Textarea from "@/ui/textarea";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -457,21 +457,34 @@ const GitCommitPanel = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <SplitActionButton
-            ref={generateMenuAnchorRef}
-            label={<Sparkles />}
-            actionAriaLabel="Generate commit message with AI"
-            menuAriaLabel="Commit message format"
-            menuIcon={<ChevronDown />}
-            onAction={() => void handleGenerateCommitMessage()}
-            onMenu={() => setIsGenerateModeMenuOpen((open) => !open)}
-            disabled={isGenerateDisabled}
-            menuDisabled={isGenerating || isCommitting}
-            expanded={isGenerateModeMenuOpen}
-            active={isGenerateModeMenuOpen}
-            actionTooltip="Generate commit message with AI"
-            menuTooltip="Commit message format"
-          />
+          <ButtonGroup ref={generateMenuAnchorRef}>
+            <Button
+              type="button"
+              variant="default"
+              size="xs"
+              onClick={() => void handleGenerateCommitMessage()}
+              disabled={isGenerateDisabled}
+              tooltip="Generate commit message with AI"
+              aria-label="Generate commit message with AI"
+            >
+              <Sparkles />
+            </Button>
+            <ButtonGroupSeparator />
+            <Button
+              type="button"
+              variant="default"
+              size="icon-xs"
+              onClick={() => setIsGenerateModeMenuOpen((open) => !open)}
+              disabled={isGenerating || isCommitting}
+              active={isGenerateModeMenuOpen}
+              tooltip="Commit message format"
+              aria-label="Commit message format"
+              aria-haspopup="menu"
+              aria-expanded={isGenerateModeMenuOpen}
+            >
+              <ChevronDown />
+            </Button>
+          </ButtonGroup>
           <Dropdown
             isOpen={isGenerateModeMenuOpen}
             anchorRef={generateMenuAnchorRef}

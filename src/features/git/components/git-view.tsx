@@ -15,6 +15,7 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
@@ -29,7 +30,6 @@ import {
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
-import { SplitActionButton } from "@/ui/split-action-button";
 import { toast } from "@/ui/toast";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -1351,19 +1351,32 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-1 pb-0.5">
-              <SplitActionButton
-                ref={syncMenuAnchorRef}
-                label={syncActionLabel}
-                actionAriaLabel={`${syncActionLabel} remote changes`}
-                menuAriaLabel="Choose remote action"
-                menuIcon={<CaretDown className="size-3" />}
-                onAction={() => void handleRemoteAction(primaryRemoteAction)}
-                onMenu={() => setIsSyncMenuOpen((open) => !open)}
-                disabled={!activeRepoPath || isRemoteActionLoading}
-                menuDisabled={!activeRepoPath || isRemoteActionLoading}
-                active={isSyncMenuOpen}
-                expanded={isSyncMenuOpen}
-              />
+              <ButtonGroup ref={syncMenuAnchorRef}>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="xs"
+                  onClick={() => void handleRemoteAction(primaryRemoteAction)}
+                  disabled={!activeRepoPath || isRemoteActionLoading}
+                  aria-label={`${syncActionLabel} remote changes`}
+                >
+                  <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon-xs"
+                  onClick={() => setIsSyncMenuOpen((open) => !open)}
+                  disabled={!activeRepoPath || isRemoteActionLoading}
+                  active={isSyncMenuOpen}
+                  aria-label="Choose remote action"
+                  aria-haspopup="menu"
+                  aria-expanded={isSyncMenuOpen}
+                >
+                  <CaretDown className="size-3" />
+                </Button>
+              </ButtonGroup>
               <Dropdown
                 isOpen={isSyncMenuOpen}
                 anchorRef={syncMenuAnchorRef}

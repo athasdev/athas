@@ -15,12 +15,12 @@ import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/side
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import Checkbox from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
 import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
-import { SplitActionButton } from "@/ui/split-action-button";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
@@ -667,19 +667,32 @@ const GitStatusPanel = ({
         <>
           <div className="flex min-h-7 shrink-0 items-center justify-between gap-1.5 bg-primary-bg px-2.5 py-1">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
-              <SplitActionButton
-                ref={diffMenuAnchorRef}
-                label="View Diff"
-                actionAriaLabel="View all diffs"
-                menuAriaLabel="Choose diff source"
-                menuIcon={<CaretDown className="size-3" />}
-                onAction={() => openScopedDiff("all")}
-                onMenu={() => setIsDiffMenuOpen((open) => !open)}
-                disabled={!onViewDiff || isLoading}
-                menuDisabled={isLoading}
-                active={isDiffMenuOpen}
-                expanded={isDiffMenuOpen}
-              />
+              <ButtonGroup ref={diffMenuAnchorRef}>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="xs"
+                  onClick={() => openScopedDiff("all")}
+                  disabled={!onViewDiff || isLoading}
+                  aria-label="View all diffs"
+                >
+                  View Diff
+                </Button>
+                <ButtonGroupSeparator />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="icon-xs"
+                  onClick={() => setIsDiffMenuOpen((open) => !open)}
+                  disabled={isLoading}
+                  active={isDiffMenuOpen}
+                  aria-label="Choose diff source"
+                  aria-haspopup="menu"
+                  aria-expanded={isDiffMenuOpen}
+                >
+                  <CaretDown className="size-3" />
+                </Button>
+              </ButtonGroup>
               <Dropdown
                 isOpen={isDiffMenuOpen}
                 anchorRef={diffMenuAnchorRef}
