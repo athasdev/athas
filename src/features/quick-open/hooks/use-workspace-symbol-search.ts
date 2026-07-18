@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useLspStore } from "@/features/editor/lsp/stores/lsp.store";
+import { normalizeWorkspaceFolders } from "@/features/file-system/controllers/workspace-session";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { pathStartsWithRoot } from "@/utils/path-helpers";
 import { SEARCH_DEBOUNCE_DELAY } from "../constants/limits";
 
 export interface WorkspaceSymbolItem {
@@ -14,33 +17,39 @@ export interface WorkspaceSymbolItem {
   filePath: string;
 }
 
-/**
- * Resolve which active LSP workspace root a file belongs to, using a
- * longest-prefix match (so nested workspace roots resolve to the most
- * specific one). Returns null when there is no active buffer path or no
- * workspace covers it, rather than guessing.
- */
-export function resolveWorkspaceForFile(
-  filePath: string,
+export function getActiveProjectWorkspaces(
+  projectWorkspacePaths: string[],
   activeWorkspaces: string[],
-): string | null {
-  let bestMatch: string | null = null;
+): string[] {
+  return activeWorkspaces.filter((workspace) =>
+    projectWorkspacePaths.some((projectPath) => pathStartsWithRoot(workspace, projectPath)),
+  );
+}
 
-  for (const workspace of activeWorkspaces) {
-    const normalizedWorkspace = workspace.endsWith("/") ? workspace.slice(0, -1) : workspace;
-    const isExactMatch = filePath === normalizedWorkspace;
-    const isNestedMatch = filePath.startsWith(`${normalizedWorkspace}/`);
+export function getWorkspaceSymbolKey(symbol: WorkspaceSymbolItem): string {
+  return JSON.stringify([symbol.filePath, symbol.line, symbol.character, symbol.name, symbol.kind]);
+}
 
-    if (!isExactMatch && !isNestedMatch) continue;
-    if (!bestMatch || normalizedWorkspace.length > bestMatch.length) {
-      bestMatch = normalizedWorkspace;
-    }
+export function mergeWorkspaceSymbolResults(
+  resultGroups: WorkspaceSymbolItem[][],
+): WorkspaceSymbolItem[] {
+  const seen = new Set<string>();
+  const symbols: WorkspaceSymbolItem[] = [];
+
+  for (const symbol of resultGroups.flat()) {
+    const key = getWorkspaceSymbolKey(symbol);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    symbols.push(symbol);
   }
 
-  return bestMatch;
+  return symbols;
 }
 
 export const useWorkspaceSymbolSearch = (query: string, isActive: boolean) => {
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const activeWorkspaces = useLspStore((state) => state.lspStatus.activeWorkspaces);
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const trimmedQuery = debouncedQuery.slice(1).trim();
   const [state, setState] = useState<{ key: string | null; symbols: WorkspaceSymbolItem[] }>({
@@ -48,39 +57,41 @@ export const useWorkspaceSymbolSearch = (query: string, isActive: boolean) => {
     symbols: [],
   });
 
-  const searchKey = isActive && trimmedQuery ? trimmedQuery : null;
+  const projectWorkspacePaths = useMemo(
+    () => normalizeWorkspaceFolders(rootFolderPath, workspaceFolders).map((folder) => folder.path),
+    [rootFolderPath, workspaceFolders],
+  );
+  const activeProjectWorkspaces = useMemo(
+    () => getActiveProjectWorkspaces(projectWorkspacePaths, activeWorkspaces),
+    [projectWorkspacePaths, activeWorkspaces],
+  );
+  const searchKey =
+    isActive && trimmedQuery ? JSON.stringify([trimmedQuery, activeProjectWorkspaces]) : null;
 
   useEffect(() => {
     if (!searchKey) return;
     let cancelled = false;
 
     (async () => {
-      const bufferStore = useBufferStore.getState();
-      const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
-      if (!activeBuffer?.path) {
+      if (activeProjectWorkspaces.length === 0) {
         if (!cancelled) setState({ key: searchKey, symbols: [] });
         return;
       }
 
       const lspClient = LspClient.getInstance();
-      const workspacePath = resolveWorkspaceForFile(
-        activeBuffer.path,
-        lspClient.getActiveWorkspaces(),
+      const resultGroups = await Promise.all(
+        activeProjectWorkspaces.map((workspacePath) =>
+          lspClient.getWorkspaceSymbols(trimmedQuery, workspacePath),
+        ),
       );
-      if (!workspacePath) {
-        if (!cancelled) setState({ key: searchKey, symbols: [] });
-        return;
-      }
-
-      const result = await lspClient.getWorkspaceSymbols(trimmedQuery, workspacePath);
       if (cancelled) return;
-      setState({ key: searchKey, symbols: result });
+      setState({ key: searchKey, symbols: mergeWorkspaceSymbolResults(resultGroups) });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [searchKey, trimmedQuery]);
+  }, [activeProjectWorkspaces, searchKey, trimmedQuery]);
 
   const hasCurrentResult = searchKey !== null && state.key === searchKey;
 

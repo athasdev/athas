@@ -1332,11 +1332,9 @@ export class LspClient {
   }
 
   getActiveWorkspaces(): string[] {
-    // Get unique workspace paths from all active language servers
     const workspaces = new Set<string>();
     for (const key of this.activeLanguageServers) {
-      const workspace = key.split(":")[0];
-      workspaces.add(workspace);
+      workspaces.add(this.parseServerKey(key).workspacePath);
     }
     return Array.from(workspaces);
   }

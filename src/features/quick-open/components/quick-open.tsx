@@ -5,6 +5,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { useQuickOpen } from "../hooks/use-quick-open";
+import { getWorkspaceSymbolKey } from "../hooks/use-workspace-symbol-search";
 import { EmptyState } from "./empty-state";
 import { FileCountBadge } from "./file-count-badge";
 import { FileListItem } from "./file-list-item";
@@ -116,7 +117,7 @@ const QuickOpen = () => {
           ) : (
             workspaceSymbols.map((symbol, index) => (
               <SymbolListItem
-                key={`${symbol.filePath}:${symbol.line}:${symbol.character}`}
+                key={getWorkspaceSymbolKey(symbol)}
                 symbol={symbol}
                 index={index}
                 isSelected={index === selectedIndex}

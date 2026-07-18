@@ -1,33 +1,68 @@
 import { describe, expect, it } from "vite-plus/test";
-import { resolveWorkspaceForFile } from "./use-workspace-symbol-search";
+import {
+  getActiveProjectWorkspaces,
+  getWorkspaceSymbolKey,
+  mergeWorkspaceSymbolResults,
+  type WorkspaceSymbolItem,
+} from "./use-workspace-symbol-search";
 
-describe("resolveWorkspaceForFile", () => {
-  it("matches the exact workspace root", () => {
-    expect(resolveWorkspaceForFile("/repo", ["/repo"])).toBe("/repo");
+const createSymbol = (
+  name: string,
+  overrides: Partial<WorkspaceSymbolItem> = {},
+): WorkspaceSymbolItem => ({
+  name,
+  kind: "function",
+  line: 1,
+  character: 2,
+  filePath: "/repo/src/index.ts",
+  ...overrides,
+});
+
+describe("getActiveProjectWorkspaces", () => {
+  it("matches all active language-server roots in the current project", () => {
+    expect(
+      getActiveProjectWorkspaces(["/repo"], ["/repo", "/repo/packages/app", "/repo-other"]),
+    ).toEqual(["/repo", "/repo/packages/app"]);
   });
 
-  it("resolves a nested file to its containing workspace root", () => {
-    expect(resolveWorkspaceForFile("/repo/src/index.ts", ["/repo"])).toBe("/repo");
+  it("includes active roots from every declared workspace folder", () => {
+    expect(
+      getActiveProjectWorkspaces(["/repo", "/shared"], ["/repo", "/shared/packages/app", "/other"]),
+    ).toEqual(["/repo", "/shared/packages/app"]);
   });
 
-  it("picks the longest-prefix match among nested workspace roots", () => {
-    const workspaces = ["/repo", "/repo/packages/app"];
-    expect(resolveWorkspaceForFile("/repo/packages/app/src/index.ts", workspaces)).toBe(
-      "/repo/packages/app",
-    );
-    expect(resolveWorkspaceForFile("/repo/src/index.ts", workspaces)).toBe("/repo");
+  it("matches Windows paths across case and separator differences", () => {
+    expect(getActiveProjectWorkspaces(["C:\\Repo"], ["c:/repo", "D:\\Repo"])).toEqual(["c:/repo"]);
   });
 
-  it("returns null when no workspace covers the file", () => {
-    expect(resolveWorkspaceForFile("/other/file.ts", ["/repo"])).toBeNull();
+  it("handles trailing separators without matching sibling prefixes", () => {
+    expect(getActiveProjectWorkspaces(["/repo/"], ["/repo", "/repo-other"])).toEqual(["/repo"]);
+  });
+});
+
+describe("getWorkspaceSymbolKey", () => {
+  it("distinguishes symbols with different names at the same location", () => {
+    const first = createSymbol("first");
+    const second = createSymbol("second");
+
+    expect(getWorkspaceSymbolKey(first)).not.toBe(getWorkspaceSymbolKey(second));
+  });
+});
+
+describe("mergeWorkspaceSymbolResults", () => {
+  it("deduplicates overlapping workspace results without dropping collocated symbols", () => {
+    const first = createSymbol("first");
+    const second = createSymbol("second");
+
+    expect(mergeWorkspaceSymbolResults([[first, second], [first]])).toEqual([first, second]);
   });
 
-  it("handles trailing slashes on workspace roots", () => {
-    expect(resolveWorkspaceForFile("/repo/src/index.ts", ["/repo/"])).toBe("/repo");
-    expect(resolveWorkspaceForFile("/repo", ["/repo/"])).toBe("/repo");
-  });
+  it("keeps symbols from different files", () => {
+    const first = createSymbol("shared");
+    const second = createSymbol("shared", {
+      filePath: "/repo/src/other.ts",
+    });
 
-  it("does not match a sibling directory with a shared prefix", () => {
-    expect(resolveWorkspaceForFile("/repo-other/file.ts", ["/repo"])).toBeNull();
+    expect(mergeWorkspaceSymbolResults([[first], [second]])).toEqual([first, second]);
   });
 });

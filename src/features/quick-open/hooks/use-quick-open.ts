@@ -17,7 +17,11 @@ import { useFileLoader } from "./use-file-loader";
 import { useFileSearch } from "./use-file-search";
 import { useKeyboardNavigation } from "./use-keyboard-navigation";
 import { type SymbolItem, useSymbolSearch } from "./use-symbol-search";
-import { type WorkspaceSymbolItem, useWorkspaceSymbolSearch } from "./use-workspace-symbol-search";
+import {
+  getWorkspaceSymbolKey,
+  type WorkspaceSymbolItem,
+  useWorkspaceSymbolSearch,
+} from "./use-workspace-symbol-search";
 
 export const useQuickOpen = () => {
   const isQuickOpenVisible = useUIState((state) => state.isQuickOpenVisible);
@@ -181,13 +185,12 @@ export const useQuickOpen = () => {
     [symbolByPath, handleSymbolSelect],
   );
 
-  // Workspace-symbol results span multiple files, so the keyboard-nav key must include the
-  // file path (two different files could otherwise share the same symbol name and line).
+  // Workspace symbols need a stable identity across files and overlapping locations.
   const { workspaceSymbolResultsAsFiles, workspaceSymbolByPath } = useMemo(() => {
     const nextWorkspaceSymbolResultsAsFiles = [];
     const nextWorkspaceSymbolByPath = new Map<string, WorkspaceSymbolItem>();
     for (const symbol of workspaceSymbols) {
-      const path = `${symbol.filePath}:${symbol.line}:${symbol.character}`;
+      const path = getWorkspaceSymbolKey(symbol);
       nextWorkspaceSymbolResultsAsFiles.push({
         name: symbol.name,
         path,
