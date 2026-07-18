@@ -29,7 +29,7 @@ import { getGitStatus } from "@/features/git/api/git-status-api";
 import { isNotGitRepositoryError, resolveRepositoryPath } from "@/features/git/api/git-repo-api";
 import GitProjectSelector from "@/features/git/components/git-project-selector";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";

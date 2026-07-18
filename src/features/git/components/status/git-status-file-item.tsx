@@ -1,9 +1,9 @@
 import type { MouseEvent } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Checkbox from "@/ui/checkbox";
-import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
+import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git.types";
 

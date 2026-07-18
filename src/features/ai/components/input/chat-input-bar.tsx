@@ -20,13 +20,13 @@ import type { SlashCommand } from "@/features/ai/types/acp.types";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { getProviderById } from "@/features/ai/types/providers.types";
-import { openSidebarResourceBuffer } from "@/features/sidebar-drag/utils/open-sidebar-resource";
+import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   SIDEBAR_RESOURCE_DROP_ON_AI_EVENT,
   type SidebarDragResource,
-} from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+} from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";

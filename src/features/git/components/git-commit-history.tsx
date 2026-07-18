@@ -1,6 +1,6 @@
 import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import type { MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { Avatar } from "@/ui/avatar";

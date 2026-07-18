@@ -15,12 +15,12 @@ import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git.types";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { formatDiffBufferLabel } from "@/features/git/utils/diff-buffer-label";
-import { openSidebarResourceBuffer } from "@/features/sidebar-drag/utils/open-sidebar-resource";
+import { openSidebarResourceBuffer } from "@/features/sidebar/utils/open-sidebar-resource";
 import {
   hasSidebarResourceDragData,
   readSidebarResourceDragData,
   type SidebarDragResource,
-} from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+} from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";

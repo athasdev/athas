@@ -2,7 +2,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { moveFile } from "@/features/file-system/controllers/platform";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import { dispatchSidebarResourceDropOnAI } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { dispatchSidebarResourceDropOnAI } from "@/features/sidebar/utils/sidebar-resource-drag";
 import {
   setInternalTabDragHover,
   setInternalTabDragHoverTarget,

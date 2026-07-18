@@ -11,7 +11,7 @@ import {
 import type React from "react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -20,7 +20,7 @@ import Checkbox from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
-import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
+import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {

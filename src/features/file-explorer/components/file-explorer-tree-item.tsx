@@ -4,7 +4,7 @@ import { FILE_TREE_ROW_CLASS_NAME } from "@/features/file-explorer/lib/file-tree
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import Input from "@/ui/input";
-import { TreeRow } from "@/features/sidebar-tree/components/tree-row";
+import { TreeRow } from "@/features/sidebar/components/tree-row";
 import { cn } from "@/utils/cn";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 

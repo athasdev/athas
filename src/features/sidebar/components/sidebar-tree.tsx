@@ -1,4 +1,4 @@
-import "@/features/sidebar-tree/styles/sidebar-tree.css";
+import "@/features/sidebar/styles/sidebar-tree.css";
 import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
 import type React from "react";
 import { forwardRef } from "react";

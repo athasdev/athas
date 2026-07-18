@@ -20,7 +20,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
-import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useGitHubStore } from "../stores/github.store";
 import type {
   WorkflowRunDetails,
