@@ -4,11 +4,7 @@ import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import {
-  instantTransition,
-  overlayEntrance,
-  quickTransition,
-} from "@/design-system/motion-presets";
+import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion-presets";
 import { cn } from "@/utils/cn";
 
 interface StashMessageModalProps {

@@ -7,7 +7,7 @@ import {
   instantTransition,
   overlayEntrance,
   quickTransition,
-} from "@/design-system/motion-presets";
+} from "@/utils/motion-presets";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 

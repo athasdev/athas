@@ -8,7 +8,7 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
-import { instantTransition, quickTransition } from "@/design-system/motion-presets";
+import { instantTransition, quickTransition } from "@/utils/motion-presets";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 

@@ -12,7 +12,7 @@ import {
 } from "react";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
-import { quickTransition } from "@/design-system/motion-presets";
+import { quickTransition } from "@/utils/motion-presets";
 import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";

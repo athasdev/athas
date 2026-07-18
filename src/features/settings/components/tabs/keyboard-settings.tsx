@@ -38,7 +38,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
 import { ToggleGroup } from "@/ui/toggle-group";
-import { quickTransition } from "@/design-system/motion-presets";
+import { quickTransition } from "@/utils/motion-presets";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingRow } from "../settings-section";
