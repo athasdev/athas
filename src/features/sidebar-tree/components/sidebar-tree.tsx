@@ -1,5 +1,5 @@
 import "@/features/sidebar-tree/styles/sidebar-tree.css";
-import { CaretDownIcon as CaretDown, CaretRightIcon as CaretRight } from "@phosphor-icons/react";
+import { ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight } from "@/ui/icons";
 import type React from "react";
 import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
@@ -93,7 +93,7 @@ export const SidebarTreeRow = forwardRef<HTMLButtonElement, SidebarTreeRowProps>
           depth={depth}
           indentSize={indentSize}
           baseIndent={baseIndent}
-          className={cn("h-6 gap-1.5 border border-transparent px-1.5 py-1", className)}
+          className={cn("gap-1.5 border border-transparent px-1.5 py-1 leading-[1.35]", className)}
           {...props}
         >
           {children}
@@ -127,9 +127,9 @@ export function SidebarTreeDisclosure({
     >
       {visible ? (
         expanded ? (
-          <CaretDown className="size-3" weight="bold" />
+          <ChevronDown className="size-3" weight="bold" />
         ) : (
-          <CaretRight className="size-3" weight="bold" />
+          <ChevronRight className="size-3" weight="bold" />
         )
       ) : (
         <span className="size-3" />

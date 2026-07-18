@@ -1,6 +1,6 @@
 [package]
 name = "athas"
-version = "0.7.2"
+version = "0.9.0"
 description = "Athas code editor"
 authors = ["you"]
 edition = "2024"
@@ -37,7 +37,8 @@ name = "athas_text_lib"
 crate-type = ["rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618cdc8fe1ad9b8f3c80c6c26c", features = [
+] }
 
 [dependencies]
 anyhow = "1.0"
@@ -54,6 +55,7 @@ athas-runtime = { path = "../crates/runtime" }
 athas-tooling = { path = "../crates/tooling", default-features = false }
 athas-lsp = { path = "../crates/lsp", default-features = false }
 athas-remote = { path = "../crates/remote", default-features = false }
+athas-wsl = { path = "../crates/wsl" }
 athas-project = { path = "../crates/project" }
 athas-version-control = { path = "../crates/version-control" }
 athas-extensions = { path = "../crates/extensions", default-features = false }
@@ -70,6 +72,7 @@ lsp-types = { version = "0.95", features = ["proposed"] }
 portable-pty = "0.9"
 regex = "1.10"
 reqwest = "0.12"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 roxmltree = "0.20"
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 sha256 = "1.5"
@@ -78,7 +81,12 @@ flate2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
 serde_json = "1.0"
-keyring = "3.6.3"
+keyring = { version = "3.6.3", features = [
+  "apple-native",
+  "crypto-rust",
+  "sync-secret-service",
+  "windows-native",
+] }
 tauri = { version = "2", default-features = false, features = [
   "compression",
   "common-controls-v6",
@@ -116,7 +124,7 @@ nucleo-matcher = "0.3.1"
 toml = "0.8"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-deep-link = "2"
-agent-client-protocol = "0.9"
+agent-client-protocol = "0.14"
 async-trait = "0.1"
 tokio-util = { version = "0.7", features = ["compat"] }
 

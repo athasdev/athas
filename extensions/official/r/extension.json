@@ -1,0 +1,18 @@
+{
+  "$schema": "https://athas.dev/schemas/extension.json",
+  "id": "athas.r",
+  "name": "R",
+  "displayName": "R",
+  "version": "1.0.0",
+  "description": "R language support for statistical programming and reproducible analysis",
+  "publisher": "Athas",
+  "categories": ["Language"],
+  "languages": [
+    {
+      "id": "r",
+      "extensions": [".R", ".r"],
+      "aliases": ["R", "Rscript"],
+      "filenames": [".Rprofile"]
+    }
+  ]
+}

@@ -2,24 +2,19 @@ import {
   ListBulletsIcon as ListBullets,
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as SlidersHorizontal,
-} from "@phosphor-icons/react";
-import { memo, useMemo } from "react";
+} from "@/ui/icons";
+import { memo, useMemo, useState } from "react";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
+  type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
-import { Button, buttonVariants } from "@/ui/button";
+import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { LoadingIndicator } from "@/ui/loading";
 import Select from "@/ui/select";
-import { cn } from "@/utils/cn";
 import type { FileStatusFilter } from "../types/github-pr-viewer.types";
 import { FileDiffView } from "./file-diff-view";
-
-const compactToolbarButtonClass = cn(
-  buttonVariants({ variant: "ghost", compact: true }),
-  "h-5 rounded px-1.5 ui-text-xs text-text-lighter hover:bg-hover hover:text-text",
-);
 
 const statusClass: Record<DiffFileItem["status"], string> = {
   added: "text-git-added",
@@ -38,9 +33,6 @@ interface DiffFileItem {
 }
 
 interface DiffDebugSummary {
-  diffReady: boolean;
-  indexedSections: number;
-  loadedCount: number;
   errorCount: number;
 }
 
@@ -86,6 +78,9 @@ export const PRFilesPanel = memo(
     onSelectFile,
     onOpenChangedFile,
   }: PRFilesPanelProps) => {
+    const [fileNavigatorViewMode, setFileNavigatorViewMode] =
+      useState<FileNavigatorViewMode>("flat");
+
     const fileTreeItems = useMemo<FileNavigatorItem[]>(
       () =>
         filteredDiff.map((file) => ({
@@ -116,12 +111,12 @@ export const PRFilesPanel = memo(
       return (
         <div className="flex items-center justify-center p-8 text-center">
           <div>
-            <p className="ui-font ui-text-sm text-error">{contentError}</p>
+            <p className="font-sans ui-text-sm text-error">{contentError}</p>
             <Button
               onClick={onRetry}
               variant="default"
-              className="mt-2 border-error/40 text-error/90 hover:bg-error/10"
-              compact
+              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
+              size="xs"
             >
               Retry
             </Button>
@@ -133,7 +128,7 @@ export const PRFilesPanel = memo(
     if (diffFiles.length === 0) {
       return (
         <div className="flex items-center justify-center p-8">
-          <p className="ui-font ui-text-sm text-text-lighter">No file changes</p>
+          <p className="font-sans ui-text-sm text-text-lighter">No file changes</p>
         </div>
       );
     }
@@ -141,82 +136,74 @@ export const PRFilesPanel = memo(
     if (filteredDiff.length === 0) {
       return (
         <div className="flex items-center justify-center p-8">
-          <p className="ui-font ui-text-sm text-text-lighter">No files match your filters</p>
+          <p className="font-sans ui-text-sm text-text-lighter">No files match your filters</p>
         </div>
       );
     }
 
     return (
-      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden rounded-md border border-border/70 bg-primary-bg">
+      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden bg-primary-bg">
         {isFileTreeVisible ? (
           <FileNavigatorSidebar
             items={fileTreeItems}
             selectedKey={selectedFilePath}
             onSelect={onSelectFile}
             ariaLabel="Changed files"
+            viewMode={fileNavigatorViewMode}
+            onViewModeChange={setFileNavigatorViewMode}
+            surface="review"
+            className="h-auto self-stretch"
+            searchMode="fuzzy"
           />
         ) : null}
 
-        <div className="min-w-0 flex-1 space-y-3 p-2">
-          <div className="rounded-md bg-terniary-bg px-3 py-1.5">
-            <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
-              <div className="flex min-w-0 flex-wrap items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onToggleFileTree}
-                  className={compactToolbarButtonClass}
-                  aria-label={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
-                  compact
-                >
-                  <ListBullets weight="duotone" />
-                </Button>
-                <span className="ui-text-sm text-text-lighter">
-                  {filteredDiff.length} / {diffFiles.length}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-h-10 flex-wrap items-center justify-between gap-2 border-border/60 border-b px-3 py-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onToggleFileTree}
+                aria-label={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
+                size="icon-xs"
+              >
+                <ListBullets weight="duotone" />
+              </Button>
+              <span className="ui-text-sm text-text-lighter">
+                {filteredDiff.length} of {diffFiles.length} files
+              </span>
+              {diffDebugSummary.errorCount > 0 ? (
+                <span className="ui-text-sm text-error">
+                  {diffDebugSummary.errorCount} patch errors
                 </span>
-              </div>
-              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
-                <Input
-                  value={fileQuery}
-                  onChange={(e) => onFileQueryChange(e.target.value)}
-                  placeholder="Search files..."
-                  leftIcon={Search}
-                  size="sm"
-                  className="h-7 w-full border-0 bg-primary-bg/70 sm:w-56"
-                />
-                <Select
-                  value={fileStatusFilter}
-                  onChange={(value) => onFileStatusFilterChange(value as FileStatusFilter)}
-                  options={[
-                    { value: "all", label: "All" },
-                    { value: "added", label: "Added" },
-                    { value: "modified", label: "Modified" },
-                    { value: "deleted", label: "Deleted" },
-                    { value: "renamed", label: "Renamed" },
-                  ]}
-                  size="sm"
-                  leftIcon={SlidersHorizontal}
-                  className="h-7 border-0 bg-primary-bg/70"
-                />
-              </div>
+              ) : null}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+              <Input
+                value={fileQuery}
+                onChange={(e) => onFileQueryChange(e.target.value)}
+                placeholder="Search files..."
+                leftIcon={Search}
+                size="sm"
+                className="w-full sm:w-56"
+              />
+              <Select
+                value={fileStatusFilter}
+                onChange={(value) => onFileStatusFilterChange(value as FileStatusFilter)}
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "added", label: "Added" },
+                  { value: "modified", label: "Modified" },
+                  { value: "deleted", label: "Deleted" },
+                  { value: "renamed", label: "Renamed" },
+                ]}
+                size="sm"
+                leftIcon={SlidersHorizontal}
+              />
             </div>
           </div>
 
-          <div className="ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
-            <span>{diffDebugSummary.diffReady ? "diff ready" : "diff missing"}</span>
-            <span>&middot;</span>
-            <span>{`${diffDebugSummary.indexedSections} indexed`}</span>
-            <span>&middot;</span>
-            <span>{`${diffDebugSummary.loadedCount} loaded`}</span>
-            {diffDebugSummary.errorCount > 0 && (
-              <>
-                <span>&middot;</span>
-                <span className="text-error">{`${diffDebugSummary.errorCount} errors`}</span>
-              </>
-            )}
-          </div>
-
-          <div className="min-h-[560px] min-w-0 overflow-hidden rounded-xl bg-secondary-bg/12">
+          <div className="min-h-[560px] min-w-0 overflow-hidden bg-primary-bg">
             {selectedDiffFile ? (
               <FileDiffView
                 file={selectedDiffFile}
@@ -229,7 +216,7 @@ export const PRFilesPanel = memo(
               />
             ) : (
               <div className="flex h-full items-center justify-center p-8">
-                <p className="ui-font ui-text-sm text-text-lighter">Select a file</p>
+                <p className="font-sans ui-text-sm text-text-lighter">Select a file</p>
               </div>
             )}
           </div>

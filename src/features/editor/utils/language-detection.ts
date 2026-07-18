@@ -61,10 +61,14 @@ export function detectLanguageFromPath(filePath: string): string {
     csv: "csv",
     dockerfile: "dockerfile",
     makefile: "makefile",
+    ipy: "python",
     r: "r",
+    rmd: "rmarkdown",
+    ipynb: "jupyter-notebook",
     lua: "lua",
     vim: "vim",
     elm: "elm",
+    astro: "astro",
   };
 
   return languageMap[extension] || "text";
@@ -119,6 +123,10 @@ export function detectLanguageFromFileName(fileName: string): string {
 
   if (lowercaseName === ".gitattributes") {
     return "gitattributes";
+  }
+
+  if (lowercaseName === ".rprofile") {
+    return "r";
   }
 
   return detectLanguageFromPath(fileName);

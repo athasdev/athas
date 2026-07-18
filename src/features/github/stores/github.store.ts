@@ -47,6 +47,7 @@ interface GitHubState {
   isCheckingAuth: boolean;
   authStatus: GitHubAuthStatus;
   githubAccountStatus: GitHubAccountStatus;
+  authError: string | null;
   currentUser: string | null;
   // Selected PR state
   selectedPRNumber: number | null;
@@ -72,6 +73,7 @@ const initialState: GitHubState = {
   isCheckingAuth: false,
   authStatus: "notAuthenticated" as GitHubAuthStatus,
   githubAccountStatus: "unknown" as GitHubAccountStatus,
+  authError: null,
   currentUser: null,
   // Selected PR state
   selectedPRNumber: null,
@@ -89,9 +91,11 @@ const initialState: GitHubState = {
 
 let prsRequestSeq = 0;
 let authCheckedAt = 0;
+let authCheckInFlight: Promise<void> | null = null;
+let selectedPRRequestSeq = 0;
 const prDetailsRequestSeqByKey: Record<string, number> = {};
 const prContentRequestSeqByKey: Record<string, number> = {};
-const prDetailsInFlightByKey: Record<string, Promise<void> | undefined> = {};
+const prDetailsInFlightByKey: Record<string, Promise<PullRequestDetails> | undefined> = {};
 const prContentInFlightByKey: Record<string, Promise<void> | undefined> = {};
 
 function getPRListCacheKey(repoPath: string, filter: PRFilter): string {
@@ -110,6 +114,20 @@ function getAccountStatus(syncStatus: GitHubTokenSyncStatus): GitHubAccountStatu
   if (syncStatus === "synced") return "connected";
   if (syncStatus === "notSignedIn") return "notSignedIn";
   return "notConnected";
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return String(error);
 }
 
 function normalizePullRequestFiles(files: unknown): PullRequestFile[] {
@@ -186,15 +204,48 @@ function normalizePullRequestDetails(details: PullRequestDetails): PullRequestDe
   };
 }
 
+async function fetchNormalizedPRDetails(
+  repoPath: string,
+  prNumber: number,
+): Promise<PullRequestDetails> {
+  const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
+    repoPath,
+    prNumber,
+  });
+
+  return normalizePullRequestDetails(detailsResponse);
+}
+
 export const useGitHubStore = create(
   combine(initialState, (set, get) => ({
     actions: {
       checkAuth: async (options?: { force?: boolean }) => {
-        if (!options?.force && authCheckedAt && isFresh(authCheckedAt, AUTH_CACHE_TTL_MS)) {
+        if (authCheckInFlight) {
+          await authCheckInFlight;
           return;
         }
 
-        set({ isCheckingAuth: true });
+        const authState = get();
+        const hasResolvedAuthState =
+          authState.isAuthenticated ||
+          authState.githubAccountStatus === "notSignedIn" ||
+          authState.githubAccountStatus === "notConnected" ||
+          authState.authError !== null;
+
+        if (
+          !options?.force &&
+          authCheckedAt &&
+          isFresh(authCheckedAt, AUTH_CACHE_TTL_MS) &&
+          hasResolvedAuthState
+        ) {
+          return;
+        }
+
+        let finishAuthCheck!: () => void;
+        authCheckInFlight = new Promise<void>((resolve) => {
+          finishAuthCheck = resolve;
+        });
+        set({ isCheckingAuth: true, authError: null });
 
         try {
           const status = await invoke<GitHubAuthStatus>("github_check_auth");
@@ -207,6 +258,7 @@ export const useGitHubStore = create(
               githubAccountStatus: "connected",
               currentUser: user,
               error: null,
+              authError: null,
             });
           } else {
             let githubAccountStatus = get().githubAccountStatus;
@@ -228,6 +280,7 @@ export const useGitHubStore = create(
                       githubAccountStatus,
                       currentUser: user,
                       error: null,
+                      authError: null,
                     });
                     authCheckedAt = Date.now();
                     return;
@@ -239,12 +292,16 @@ export const useGitHubStore = create(
                     authStatus: syncedStatus,
                     githubAccountStatus,
                     currentUser: null,
+                    authError:
+                      "A GitHub token was synced from your Athas account, but GitHub rejected it.",
                   });
                   authCheckedAt = Date.now();
                   return;
                 }
               } catch (error) {
-                console.warn("Failed to sync GitHub account token:", error);
+                const message = getErrorMessage(error);
+                console.error("Failed to sync GitHub account token:", error);
+                set({ authError: `Failed to sync GitHub account token: ${message}` });
               }
             }
 
@@ -254,18 +311,29 @@ export const useGitHubStore = create(
               authStatus: status,
               githubAccountStatus,
               currentUser: null,
+              authError:
+                get().authError ??
+                (status === "notAuthenticated"
+                  ? "No valid GitHub token is available for this workspace."
+                  : null),
             });
           }
           authCheckedAt = Date.now();
-        } catch {
+        } catch (error) {
+          const message = getErrorMessage(error);
+          console.error("Failed to check GitHub authentication:", error);
           set({
             isAuthenticated: false,
             isCheckingAuth: false,
             authStatus: "notAuthenticated",
             githubAccountStatus: get().githubAccountStatus,
+            authError: message,
             currentUser: null,
           });
           authCheckedAt = Date.now();
+        } finally {
+          authCheckInFlight = null;
+          finishAuthCheck();
         }
       },
 
@@ -317,12 +385,14 @@ export const useGitHubStore = create(
           const isAuthError = /unauthorized|forbidden|401|403|credential|auth|token/i.test(message);
 
           if (isAuthError) {
+            console.warn("GitHub pull request fetch failed authentication:", err);
             authCheckedAt = 0;
             set({
               isAuthenticated: false,
               currentUser: null,
               isLoading: false,
               error: null,
+              authError: message,
             });
             return;
           }
@@ -374,43 +444,82 @@ export const useGitHubStore = create(
         }
       },
 
+      prefetchPR: async (repoPath: string, prNumber: number) => {
+        const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
+        const cached = get().prDetailsCache[cacheKey];
+
+        if (cached && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS)) {
+          return;
+        }
+
+        const existingRequest = prDetailsInFlightByKey[cacheKey];
+        if (existingRequest) {
+          try {
+            await existingRequest;
+          } catch {
+            return;
+          }
+          return;
+        }
+
+        let request: Promise<PullRequestDetails>;
+        request = fetchNormalizedPRDetails(repoPath, prNumber)
+          .then((details) => {
+            set((state) => ({
+              prDetailsCache: {
+                ...state.prDetailsCache,
+                [cacheKey]: {
+                  ...state.prDetailsCache[cacheKey],
+                  fetchedAt: Date.now(),
+                  details,
+                },
+              },
+            }));
+            return details;
+          })
+          .finally(() => {
+            if (prDetailsInFlightByKey[cacheKey] === request) {
+              delete prDetailsInFlightByKey[cacheKey];
+            }
+          });
+
+        prDetailsInFlightByKey[cacheKey] = request;
+
+        try {
+          await request;
+        } catch {
+          return;
+        }
+      },
+
       selectPR: async (repoPath: string, prNumber: number, options?: { force?: boolean }) => {
         const force = options?.force ?? false;
         const cacheKey = getPRDetailsCacheKey(repoPath, prNumber);
         const cached = get().prDetailsCache[cacheKey];
         const hasFreshDetails =
           cached && !force && isFresh(cached.fetchedAt, PR_DETAILS_CACHE_TTL_MS);
+        const selectionRequestId = ++selectedPRRequestSeq;
 
-        if (!force && prDetailsInFlightByKey[cacheKey]) {
-          await prDetailsInFlightByKey[cacheKey];
-          return;
-        }
-
-        if (hasFreshDetails) {
+        const applyCachedSelection = (entry: PRDetailsCacheEntry, isRefreshing: boolean) => {
           set({
             selectedPRNumber: prNumber,
-            selectedPRDetails: cached.details,
-            selectedPRDiff: cached.diff ?? null,
-            selectedPRFiles: cached.files ?? [],
-            selectedPRComments: cached.comments ?? [],
-            isLoadingDetails: false,
+            selectedPRDetails: entry.details,
+            selectedPRDiff: entry.diff ?? null,
+            selectedPRFiles: entry.files ?? [],
+            selectedPRComments: entry.comments ?? [],
+            isLoadingDetails: isRefreshing,
             detailsError: null,
             contentError: null,
           });
+        };
+
+        if (hasFreshDetails) {
+          applyCachedSelection(cached, false);
           return;
         }
 
         if (cached) {
-          set({
-            selectedPRNumber: prNumber,
-            selectedPRDetails: cached.details,
-            selectedPRDiff: cached.diff ?? null,
-            selectedPRFiles: cached.files ?? [],
-            selectedPRComments: cached.comments ?? [],
-            isLoadingDetails: true,
-            detailsError: null,
-            contentError: null,
-          });
+          applyCachedSelection(cached, true);
         } else {
           set({
             selectedPRNumber: prNumber,
@@ -427,44 +536,67 @@ export const useGitHubStore = create(
         const requestId = (prDetailsRequestSeqByKey[cacheKey] ?? 0) + 1;
         prDetailsRequestSeqByKey[cacheKey] = requestId;
 
-        const run = (async () => {
-          try {
-            const detailsResponse = await invoke<PullRequestDetails>("github_get_pr_details", {
-              repoPath,
-              prNumber,
+        const existingRequest = !force ? prDetailsInFlightByKey[cacheKey] : undefined;
+        let request = existingRequest;
+        if (!request) {
+          request = fetchNormalizedPRDetails(repoPath, prNumber)
+            .then((details) => {
+              if (requestId === prDetailsRequestSeqByKey[cacheKey]) {
+                set((state) => ({
+                  prDetailsCache: {
+                    ...state.prDetailsCache,
+                    [cacheKey]: {
+                      ...state.prDetailsCache[cacheKey],
+                      fetchedAt: Date.now(),
+                      details,
+                    },
+                  },
+                }));
+              }
+              return details;
+            })
+            .finally(() => {
+              if (prDetailsInFlightByKey[cacheKey] === request) {
+                delete prDetailsInFlightByKey[cacheKey];
+              }
             });
-            const details = normalizePullRequestDetails(detailsResponse);
 
-            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
+          prDetailsInFlightByKey[cacheKey] = request;
+        }
 
+        try {
+          await request;
+          if (
+            selectionRequestId !== selectedPRRequestSeq ||
+            requestId !== prDetailsRequestSeqByKey[cacheKey]
+          ) {
+            return;
+          }
+
+          const nextCached = get().prDetailsCache[cacheKey];
+          if (nextCached) {
+            applyCachedSelection(nextCached, false);
+          } else {
             set((state) => ({
-              selectedPRDetails: details,
+              selectedPRDetails: state.selectedPRDetails,
               isLoadingDetails: false,
               detailsError: null,
               contentError: null,
-              prDetailsCache: {
-                ...state.prDetailsCache,
-                [cacheKey]: {
-                  ...state.prDetailsCache[cacheKey],
-                  fetchedAt: Date.now(),
-                  details,
-                },
-              },
             }));
-          } catch (err) {
-            if (requestId !== prDetailsRequestSeqByKey[cacheKey]) return;
-
-            set({
-              detailsError: err instanceof Error ? err.message : String(err),
-              isLoadingDetails: false,
-            });
-          } finally {
-            delete prDetailsInFlightByKey[cacheKey];
           }
-        })();
+        } catch (err) {
+          if (
+            selectionRequestId !== selectedPRRequestSeq ||
+            requestId !== prDetailsRequestSeqByKey[cacheKey]
+          ) {
+            return;
+          }
 
-        prDetailsInFlightByKey[cacheKey] = run;
-        await run;
+          set({
+            detailsError: err instanceof Error ? err.message : String(err),
+            isLoadingDetails: false,
+          });
+        }
       },
 
       fetchPRContent: async (
@@ -557,7 +689,12 @@ export const useGitHubStore = create(
                 : Promise.resolve(undefined),
             ]);
 
-            if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
+            if (
+              requestId !== prContentRequestSeqByKey[cacheKey] ||
+              get().selectedPRNumber !== prNumber
+            ) {
+              return;
+            }
 
             const normalizedFiles = shouldFetchFiles ? normalizePullRequestFiles(files) : undefined;
 
@@ -611,7 +748,12 @@ export const useGitHubStore = create(
               };
             });
           } catch (err) {
-            if (requestId !== prContentRequestSeqByKey[cacheKey]) return;
+            if (
+              requestId !== prContentRequestSeqByKey[cacheKey] ||
+              get().selectedPRNumber !== prNumber
+            ) {
+              return;
+            }
 
             set({
               contentError: err instanceof Error ? err.message : String(err),

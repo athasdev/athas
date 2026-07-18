@@ -3,7 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -18,6 +18,7 @@ import {
   MenubarTrigger,
 } from "@/ui/menubar";
 import { cn } from "@/utils/cn";
+import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
 
 interface Props {
   activeMenu: string | null;
@@ -26,12 +27,68 @@ interface Props {
 }
 
 const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
-  const { settings } = useSettingsStore();
+  const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const themes = useRegisteredThemes();
+  const menuWindowRaiseRef = useRef<{ restoreTo: boolean } | null>(null);
+  const shouldRaiseWindowForMenu = (IS_WINDOWS || IS_LINUX) && Boolean(activeMenu);
+
+  useEffect(() => {
+    let disposed = false;
+    const window = getCurrentWindow();
+
+    const restoreWindowLevel = async () => {
+      const previous = menuWindowRaiseRef.current;
+      if (!previous) return;
+
+      menuWindowRaiseRef.current = null;
+
+      try {
+        await window.setAlwaysOnTop(previous.restoreTo);
+      } catch (error) {
+        console.error("Failed to restore window menu level:", error);
+      }
+    };
+
+    if (!shouldRaiseWindowForMenu) {
+      void restoreWindowLevel();
+      return;
+    }
+
+    if (menuWindowRaiseRef.current) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const wasAlwaysOnTop = await window.isAlwaysOnTop();
+
+        if (!wasAlwaysOnTop) {
+          await window.setAlwaysOnTop(true);
+        }
+
+        if (disposed) {
+          if (!wasAlwaysOnTop) {
+            await window.setAlwaysOnTop(false);
+          }
+          return;
+        }
+
+        menuWindowRaiseRef.current = { restoreTo: wasAlwaysOnTop };
+      } catch (error) {
+        console.error("Failed to raise window menu level:", error);
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      void restoreWindowLevel();
+    };
+  }, [shouldRaiseWindowForMenu]);
 
   const handleClickEmit = useCallback(
     (event: string, payload?: unknown) => {
-      void getCurrentWebviewWindow().emit(event, payload);
+      const currentWindow = getCurrentWebviewWindow();
+      void currentWindow.emitTo(currentWindow.label, event, payload);
       setActiveMenu(null);
     },
     [setActiveMenu],
@@ -83,6 +140,12 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenubarSeparator />
           <MenubarItem shortcut="mod+w" onClick={() => handleClickEmit("menu_close_tab")}>
             Close Tab
+          </MenubarItem>
+          <MenubarItem
+            shortcut="mod+shift+w"
+            onClick={() => handleCommand("workbench.closeWindow")}
+          >
+            Close Window
           </MenubarItem>
           <MenubarItem onClick={() => handleCommand("file.closeAll")}>Close All Tabs</MenubarItem>
           <MenubarItem onClick={() => handleCommand("file.closeOthers")}>
@@ -237,9 +300,6 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenubarItem onClick={() => handleCommand("editor.toggleRenderWhitespace")}>
             Toggle Render Whitespace
           </MenubarItem>
-          <MenubarItem onClick={() => handleCommand("workbench.toggleSidebarPosition")}>
-            Toggle Sidebar Position
-          </MenubarItem>
           <MenubarSeparator />
           <MenubarItem shortcut="mod+=" onClick={() => handleCommand("workbench.zoomIn")}>
             Zoom In
@@ -332,10 +392,10 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           </MenubarItem>
         </MenubarContent>
       ),
-      AI: (
+      Agent: (
         <MenubarContent>
           <MenubarItem shortcut="mod+r" onClick={() => handleClickEmit("menu_toggle_ai_chat")}>
-            Toggle AI Chat
+            Toggle Agent
           </MenubarItem>
           <MenubarItem
             shortcut="mod+shift+space"
@@ -387,11 +447,15 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           >
             Maximize
           </MenubarItem>
-          <MenubarSeparator />
-          <MenubarItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
-            Toggle Menu Bar
-          </MenubarItem>
-          <MenubarSeparator />
+          {!IS_LINUX && (
+            <>
+              <MenubarSeparator />
+              <MenubarItem shortcut="alt+m" onClick={() => handleClickEmit("menu_toggle_menu_bar")}>
+                Toggle Menu Bar
+              </MenubarItem>
+              <MenubarSeparator />
+            </>
+          )}
           <MenubarItem
             shortcut="f11"
             onClick={async () => {
@@ -430,24 +494,24 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     [handleClickEmit, handleCommand, setActiveMenu, themes],
   );
 
-  if (settings.compactMenuBar && !activeMenu) return null;
+  if (compactMenuBar && !activeMenu) return null;
 
   return (
     <div
       className={cn(
         "z-[10030] flex flex-col",
-        settings.compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
-        settings.compactMenuBar && !compactFloating && "absolute inset-0",
+        compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
+        compactMenuBar && !compactFloating && "absolute inset-0",
       )}
     >
       <Menubar
         value={activeMenu ?? ""}
         onValueChange={(value) => setActiveMenu(value || null)}
         className={cn(
-          settings.compactMenuBar &&
+          compactMenuBar &&
             compactFloating &&
-            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-xl backdrop-blur-sm",
-          settings.compactMenuBar &&
+            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
+          compactMenuBar &&
             !compactFloating &&
             "h-full rounded-none border-none bg-transparent px-2 py-0",
         )}

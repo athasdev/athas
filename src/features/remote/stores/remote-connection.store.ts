@@ -4,6 +4,18 @@ import { load } from "@tauri-apps/plugin-store";
 const CONNECTIONS_STORE = "remote-connections.json";
 const CREDENTIALS_STORE = "credentials.json";
 
+interface RemoteConnectionInput {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  keyPath?: string;
+  type: "ssh" | "sftp";
+  saveCredentials?: boolean;
+}
+
 class ConnectionStore {
   private connectionsStore: any = null;
   private credentialsStore: any = null;
@@ -48,17 +60,7 @@ class ConnectionStore {
     }
   }
 
-  async saveConnection(connection: {
-    id: string;
-    name: string;
-    host: string;
-    port: number;
-    username: string;
-    password?: string;
-    keyPath?: string;
-    type: "ssh" | "sftp";
-    saveCredentials?: boolean;
-  }) {
+  async saveConnection(connection: RemoteConnectionInput) {
     const connectionsStore = await this.getConnectionsStore();
 
     const connectionData = {
@@ -106,21 +108,23 @@ class ConnectionStore {
     const connectedIds = await this.getConnectedIds();
 
     const connectionIds: string[] = await connectionsStore.keys();
-    const connections = [];
+    const connections = await Promise.all(
+      connectionIds.map(async (id) => {
+        const connection = await connectionsStore.get(id);
+        if (!connection) return null;
 
-    for (const id of connectionIds) {
-      const connection = await connectionsStore.get(id);
-      if (connection) {
         const password = await this.getPassword(id);
-        connections.push({
+        return {
           ...connection,
           isConnected: connectedIds.includes(id),
           password: password || undefined,
-        });
-      }
-    }
+        };
+      }),
+    );
 
-    return connections;
+    return connections.filter(
+      (connection): connection is NonNullable<typeof connection> => connection !== null,
+    );
   }
 
   async deleteConnection(connectionId: string) {
@@ -152,14 +156,16 @@ class ConnectionStore {
     try {
       const stored = localStorage.getItem("athas-remote-connections");
       if (stored) {
-        const connections = JSON.parse(stored);
+        const connections = JSON.parse(stored) as RemoteConnectionInput[];
 
-        for (const conn of connections) {
-          await this.saveConnection({
-            ...conn,
-            saveCredentials: !!conn.password,
-          });
-        }
+        await Promise.all(
+          connections.map((conn) =>
+            this.saveConnection({
+              ...conn,
+              saveCredentials: !!conn.password,
+            }),
+          ),
+        );
 
         localStorage.removeItem("athas-remote-connections");
         console.log("Successfully migrated connections from localStorage to Tauri Store");
@@ -179,22 +185,24 @@ class ConnectionStore {
       return;
     }
 
-    for (const connectionId of credentialIds) {
-      const legacyCredentials = await credentialsStore.get(connectionId);
-      const password =
-        legacyCredentials &&
-        typeof legacyCredentials === "object" &&
-        "password" in legacyCredentials &&
-        typeof legacyCredentials.password === "string"
-          ? legacyCredentials.password
-          : null;
+    await Promise.all(
+      credentialIds.map(async (connectionId) => {
+        const legacyCredentials = await credentialsStore.get(connectionId);
+        const password =
+          legacyCredentials &&
+          typeof legacyCredentials === "object" &&
+          "password" in legacyCredentials &&
+          typeof legacyCredentials.password === "string"
+            ? legacyCredentials.password
+            : null;
 
-      if (password) {
-        await this.storePassword(connectionId, password);
-      }
+        if (password) {
+          await this.storePassword(connectionId, password);
+        }
 
-      await credentialsStore.delete(connectionId);
-    }
+        await credentialsStore.delete(connectionId);
+      }),
+    );
 
     await credentialsStore.save();
     console.log("Successfully migrated remote credentials to secure storage");

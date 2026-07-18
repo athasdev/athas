@@ -15,6 +15,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { writeFile } from "@/features/file-system/controllers/platform";
 import type { Position, Range } from "../types/editor.types";
+import { getBufferById } from "../utils/buffer-index";
 import { trackBufferHistoryChange } from "./buffer-history-tracking";
 import { useBufferStore } from "./buffer.store";
 
@@ -35,8 +36,9 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
     useBufferStore.getState().actions;
   const { updateSettingsFromJSON } = useSettingsStore.getState();
   const { markPendingSave } = useFileWatcherStore.getState();
-  const activeBuffer = buffers.find((buffer) => buffer.id === bufferId);
+  const activeBuffer = getBufferById(buffers, bufferId);
   if (!activeBuffer || !isEditorContent(activeBuffer)) return false;
+  if (activeBuffer.readOnly) return false;
 
   const { parseCollaborationNoteBufferPath } =
     await import("@/features/collaboration/lib/collaboration-sidebar-model");
@@ -192,7 +194,8 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
 
 function getDirtyEditorBuffers(buffers: PaneContent[]): EditorContent[] {
   return buffers.filter(
-    (buffer): buffer is EditorContent => isEditorContent(buffer) && buffer.isDirty,
+    (buffer): buffer is EditorContent =>
+      isEditorContent(buffer) && buffer.isDirty && !buffer.readOnly,
   );
 }
 
@@ -249,7 +252,7 @@ export const useEditorAppStore = createSelectors(
           const { markPendingSave } = useFileWatcherStore.getState();
           const contentAlreadyApplied = options?.contentAlreadyApplied === true;
 
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
+          const activeBuffer = getBufferById(buffers, activeBufferId);
           if (!activeBuffer || !isEditorContent(activeBuffer)) return;
           const { parseCollaborationNoteBufferPath } =
             await import("@/features/collaboration/lib/collaboration-sidebar-model");
@@ -322,8 +325,8 @@ export const useEditorAppStore = createSelectors(
 
         handleSave: async () => {
           const { activeBufferId, buffers } = useBufferStore.getState();
-          const activeBuffer = buffers.find((b) => b.id === activeBufferId);
-          if (!activeBuffer || !isEditorContent(activeBuffer)) return;
+          const activeBuffer = getBufferById(buffers, activeBufferId);
+          if (!activeBuffer || !isEditorContent(activeBuffer) || activeBuffer.readOnly) return;
 
           await saveEditorBufferById(activeBuffer.id);
         },
@@ -332,19 +335,15 @@ export const useEditorAppStore = createSelectors(
           const dirtyBufferIds = getDirtyEditorBuffers(useBufferStore.getState().buffers).map(
             (buffer) => buffer.id,
           );
-          let savedCount = 0;
+          const saveResults = await Promise.all(
+            dirtyBufferIds.map(async (bufferId) => {
+              const saved = await saveEditorBufferById(bufferId);
+              const nextBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
+              return saved && (!nextBuffer || !isEditorContent(nextBuffer) || !nextBuffer.isDirty);
+            }),
+          );
 
-          for (const bufferId of dirtyBufferIds) {
-            const saved = await saveEditorBufferById(bufferId);
-            const nextBuffer = useBufferStore
-              .getState()
-              .buffers.find((buffer) => buffer.id === bufferId);
-            if (saved && (!nextBuffer || !isEditorContent(nextBuffer) || !nextBuffer.isDirty)) {
-              savedCount += 1;
-            }
-          }
-
-          return savedCount;
+          return saveResults.filter(Boolean).length;
         },
 
         openQuickEdit: (params) => {

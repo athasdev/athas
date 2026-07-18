@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { PLATFORM_ARCH } from "@/utils/platform";
+import { getServiceUrls } from "@/config/services";
+import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
 import { extensionInstaller } from "../installer/extension-installer";
 import {
   activateExtensionContributions,
@@ -12,6 +14,10 @@ import {
   matchesLanguageContribution,
 } from "../types/extension-contributions";
 import type { PlatformPackage } from "../types/extension-manifest";
+import {
+  markBundledContributionExtensionInstalled,
+  markBundledContributionExtensionUninstalled,
+} from "./bundled-contribution-install-state";
 import { extensionRegistry } from "./extension-registry";
 import {
   buildRuntimeManifest,
@@ -74,7 +80,7 @@ async function uninstallLanguageArtifacts(languageIds: string[]) {
 }
 
 function withCdnCacheBuster(url: string): string {
-  if (!url.startsWith("https://athas.dev/extensions/")) {
+  if (!url.startsWith(`${getServiceUrls().extensionsCdnBaseUrl}/`)) {
     return url;
   }
 
@@ -121,7 +127,7 @@ function resolveExtensionPackage(extension: AvailableExtension): PlatformPackage
 }
 
 function isCompleteExtensionPackage(
-  extensionPackage: PlatformPackage | undefined,
+  extensionPackage: Partial<PlatformPackage> | undefined,
 ): extensionPackage is PlatformPackage {
   return (
     typeof extensionPackage?.downloadUrl === "string" &&
@@ -178,18 +184,32 @@ export async function installExtensionLifecycle(params: {
 
     onLanguageInstalled(runtimeManifest, resolvedTools.issues);
 
-    for (const languageConfig of languageConfigs) {
-      await registerLanguageProvider({
-        extensionId,
-        languageId: languageConfig.id,
-        displayName: extension.manifest.displayName,
-        version: extension.manifest.version,
-        extensions: languageConfig.extensions,
-        aliases: languageConfig.aliases,
-      });
-    }
+    await Promise.all(
+      languageConfigs.map((languageConfig) =>
+        registerLanguageProvider({
+          extensionId,
+          languageId: languageConfig.id,
+          displayName: extension.manifest.displayName,
+          version: extension.manifest.version,
+          extensions: languageConfig.extensions,
+          aliases: languageConfig.aliases,
+        }),
+      ),
+    );
 
     await refreshSyntaxHighlightingForActiveBuffer(extension);
+    return;
+  }
+
+  if (isBundledContributionExtension(extension.manifest)) {
+    markBundledContributionExtensionInstalled(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "installed",
+    });
+    await activateExtensionContributions(extensionId, extension.manifest);
+    onNonLanguageInstalled();
     return;
   }
 
@@ -237,10 +257,96 @@ export async function uninstallExtensionLifecycle(params: {
     return;
   }
 
+  if (isBundledContributionExtension(extension.manifest)) {
+    await deactivateExtensionContributions(extensionId, extension.manifest);
+    markBundledContributionExtensionUninstalled(extensionId);
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "not-installed",
+    });
+    onNonLanguageUninstalled();
+    return;
+  }
+
   await deactivateExtensionContributions(extensionId, extension.manifest);
   await invoke("uninstall_extension_new", { extensionId });
   await reloadInstalledExtensions();
   onNonLanguageUninstalled();
+}
+
+export async function enableExtensionLifecycle(params: {
+  extensionId: string;
+  extension: AvailableExtension;
+}) {
+  const { extensionId, extension } = params;
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+
+  if (languageConfigs.length > 0) {
+    const primaryLanguageId = languageConfigs[0].id;
+    const resolvedTools = await resolveToolPaths(primaryLanguageId, extension.manifest, {
+      ensureInstalled: false,
+    });
+    const runtimeManifest = buildRuntimeManifest(extension.manifest, resolvedTools.toolPaths);
+
+    extensionRegistry.registerExtension(runtimeManifest, {
+      isBundled: false,
+      isEnabled: true,
+      state: "installed",
+    });
+
+    await Promise.all(
+      languageConfigs.map((languageConfig) =>
+        registerLanguageProvider({
+          extensionId,
+          languageId: languageConfig.id,
+          displayName: extension.manifest.displayName,
+          version: extension.manifest.version,
+          extensions: languageConfig.extensions,
+          aliases: languageConfig.aliases,
+        }),
+      ),
+    );
+
+    await refreshSyntaxHighlightingForActiveBuffer(extension);
+    return;
+  }
+
+  extensionRegistry.registerExtension(extension.manifest, {
+    isBundled: false,
+    isEnabled: true,
+    state: "installed",
+  });
+  await activateExtensionContributions(extensionId, extension.manifest);
+}
+
+export async function disableExtensionLifecycle(params: {
+  extensionId: string;
+  extension: AvailableExtension;
+}) {
+  const { extensionId, extension } = params;
+  const languageConfigs = getManifestLanguageContributions(extension.manifest);
+
+  if (languageConfigs.length > 0) {
+    await unloadLanguageProviders(
+      extensionId,
+      languageConfigs.map((language) => language.id),
+    );
+    extensionRegistry.registerExtension(extension.manifest, {
+      isBundled: false,
+      isEnabled: false,
+      state: "deactivated",
+    });
+    await refreshSyntaxHighlightingForActiveBuffer(extension);
+    return;
+  }
+
+  await deactivateExtensionContributions(extensionId, extension.manifest);
+  extensionRegistry.registerExtension(extension.manifest, {
+    isBundled: false,
+    isEnabled: false,
+    state: "deactivated",
+  });
 }
 
 export async function updateExtensionLifecycle(params: {

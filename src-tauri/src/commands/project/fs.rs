@@ -1,10 +1,38 @@
 use super::path_guard::{require_path_under_home, require_symlink_container_under_home};
 use crate::app_runtime::AppHandle;
 use serde::Serialize;
-use std::{fs, path::Path};
+use std::{fs, path::Path, time::Instant};
 use tauri::command;
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
+
+#[command]
+pub async fn read_local_file(path: String) -> Result<tauri::ipc::Response, String> {
+   let short_path = Path::new(&path)
+      .file_name()
+      .and_then(|name| name.to_str())
+      .unwrap_or(&path)
+      .to_string();
+   let started_at = Instant::now();
+   let bytes = tauri::async_runtime::spawn_blocking(move || {
+      let resolved = require_path_under_home(&path)?;
+      fs::read(&resolved).map_err(|error| format!("Failed to read file: {error}"))
+   })
+   .await
+   .map_err(|error| format!("File read task failed: {error}"))??;
+   let elapsed = started_at.elapsed();
+
+   if elapsed.as_millis() >= 50 {
+      log::warn!(
+         "[file-read] {} {}ms {} bytes",
+         short_path,
+         elapsed.as_millis(),
+         bytes.len()
+      );
+   }
+
+   Ok(tauri::ipc::Response::new(bytes))
+}
 
 #[command]
 pub fn open_file_external(path: String) -> Result<(), String> {

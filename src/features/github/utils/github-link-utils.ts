@@ -24,6 +24,26 @@ export interface GitHubActionRunLink {
 
 export type GitHubEntityLink = GitHubPullRequestLink | GitHubIssueLink | GitHubActionRunLink;
 
+export function isGitHubEntityLinkForRepository(
+  entityLink: GitHubEntityLink,
+  repositoryUrl?: string,
+): boolean {
+  if (!repositoryUrl) return false;
+
+  try {
+    const url = new URL(repositoryUrl);
+    if (!isGitHubHost(url.hostname)) return false;
+
+    const [owner, repo] = url.pathname.split("/").filter(Boolean);
+    return (
+      owner?.toLowerCase() === entityLink.owner.toLowerCase() &&
+      repo?.toLowerCase() === entityLink.repo.toLowerCase()
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function parseGitHubEntityLink(value: string): GitHubEntityLink | null {
   try {
     const url = new URL(value);
@@ -83,10 +103,23 @@ export function parseSelectedFilePathFromPRBufferPath(path: string): string | nu
   }
 }
 
-export function buildPRBufferPath(prNumber: number, selectedFilePath?: string | null): string {
+export function isPRFilesViewPath(path: string): boolean {
+  try {
+    const url = new URL(path);
+    return url.searchParams.has("file") || url.searchParams.get("view") === "files";
+  } catch {
+    return false;
+  }
+}
+
+export function buildPRBufferPath(
+  prNumber: number,
+  selectedFilePath?: string | null,
+  view: "activity" | "files" = selectedFilePath ? "files" : "activity",
+): string {
   const base = `pr://${prNumber}`;
-  if (!selectedFilePath) return base;
-  return `${base}?file=${encodeURIComponent(selectedFilePath)}`;
+  if (selectedFilePath) return `${base}?file=${encodeURIComponent(selectedFilePath)}`;
+  return view === "files" ? `${base}?view=files` : base;
 }
 
 function isNumericId(value: string | undefined): value is string {

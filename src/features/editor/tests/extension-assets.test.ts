@@ -34,6 +34,27 @@ describe("extension-assets", () => {
     }
   });
 
+  it("reuses bundled parser assets for research document formats", () => {
+    expect(getLanguageAssetConfig("rmarkdown")).toMatchObject({
+      parserLanguageId: "markdown",
+      queryLanguageId: "markdown",
+      wasmPath: "/tree-sitter/parsers/markdown/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/markdown/highlights.scm",
+    });
+    expect(getLanguageAssetConfig("jupyter-notebook")).toMatchObject({
+      parserLanguageId: "json",
+      queryLanguageId: "json",
+      wasmPath: "/tree-sitter/parsers/json/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/json/highlights.scm",
+    });
+    expect(getLanguageAssetConfig("r")).toMatchObject({
+      parserLanguageId: "r",
+      queryLanguageId: "r",
+      wasmPath: "/tree-sitter/parsers/r/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/r/highlights.scm",
+    });
+  });
+
   it("resolves bundled parser assets for reported editor highlight languages", () => {
     expect(getLanguageAssetConfig("typescriptreact")).toMatchObject({
       parserLanguageId: "tsx",
@@ -58,6 +79,12 @@ describe("extension-assets", () => {
       queryLanguageId: "elisp",
       wasmPath: "/tree-sitter/parsers/elisp/parser.wasm",
       highlightQueryUrl: "/tree-sitter/parsers/elisp/highlights.scm",
+    });
+    expect(getLanguageAssetConfig("astro")).toMatchObject({
+      parserLanguageId: "astro",
+      queryLanguageId: "astro",
+      wasmPath: "/tree-sitter/parsers/astro/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/astro/highlights.scm",
     });
   });
 

@@ -1,7 +1,8 @@
-import { PlusIcon as Plus, XIcon as X } from "@phosphor-icons/react";
+import { PlusIcon as Plus, XIcon as X } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
+import { databaseCardClassName } from "./database-surface";
 import type { ColumnFilter, ColumnInfo, FilterOperator } from "../types/common.types";
 
 const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -41,18 +42,18 @@ export default function ColumnFilters({
   if (filters.length === 0) return null;
 
   return (
-    <div className="mx-3 mb-2 rounded-lg border border-border/60 bg-secondary-bg/60 px-3 py-2">
+    <div className={databaseCardClassName("mx-3 mb-2 bg-secondary-bg/60 px-3 py-2")}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="ui-font ui-text-sm text-text-lighter">
+          <span className="font-sans ui-text-sm text-text-lighter">
             {filters.length} filter{filters.length !== 1 ? "s" : ""}
           </span>
           {columns.length > 0 && (
             <Button
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
-              compact
-              className="rounded-md gap-0.5 text-text-lighter"
+              size="xs"
+              className="gap-0.5 text-text-lighter"
               aria-label="Add filter"
             >
               <Plus />
@@ -63,16 +64,16 @@ export default function ColumnFilters({
         <Button
           onClick={onClear}
           variant="ghost"
-          className="rounded-md text-text-lighter"
+          className="text-text-lighter"
           aria-label="Clear all filters"
-          compact
+          size="xs"
         >
           Clear all
         </Button>
       </div>
       <div className="space-y-1">
         {filters.map((filter, index) => (
-          <div key={index} className="flex items-center gap-2 ui-font ui-text-sm">
+          <div key={index} className="flex items-center gap-2 font-sans ui-text-sm">
             <Select
               value={filter.column}
               options={columns.map((column) => ({ value: column.name, label: column.name }))}
@@ -111,8 +112,8 @@ export default function ColumnFilters({
             <Button
               onClick={() => onRemove(index)}
               variant="ghost"
-              compact
-              className="text-text-lighter hover:text-red-500"
+              size="icon-xs"
+              className="text-text-lighter hover:text-error"
               aria-label="Remove filter"
             >
               <X />

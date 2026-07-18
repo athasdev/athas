@@ -1,13 +1,16 @@
-interface ModelProvider {
+export interface ModelProvider {
   id: string;
   name: string;
   apiUrl: string;
   requiresApiKey: boolean;
   requiresAuth?: boolean;
+  apiKeyUrl?: string;
+  apiKeyPlaceholder?: string;
+  maxTokens?: number;
   models: Model[];
 }
 
-interface Model {
+export interface Model {
   id: string;
   name: string;
   maxTokens: number;
@@ -48,19 +51,19 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "claude-opus-4-7",
-        name: "Claude Opus 4.7",
-        maxTokens: 128000,
+        id: "claude-opus-4-8",
+        name: "Claude Opus 4.8",
+        maxTokens: 1000000,
       },
       {
         id: "claude-sonnet-4-6",
         name: "Claude Sonnet 4.6",
-        maxTokens: 64000,
+        maxTokens: 1000000,
       },
       {
         id: "claude-haiku-4-5",
         name: "Claude Haiku 4.5",
-        maxTokens: 64000,
+        maxTokens: 200000,
       },
     ],
   },
@@ -73,6 +76,11 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gpt-5.5",
         name: "GPT-5.5",
+        maxTokens: 1047576,
+      },
+      {
+        id: "gpt-5.5-pro",
+        name: "GPT-5.5 Pro",
         maxTokens: 1047576,
       },
       {
@@ -93,105 +101,7 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "gpt-5.4-nano",
         name: "GPT-5.4 Nano",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-5.2",
-        name: "GPT-5.2",
         maxTokens: 400000,
-      },
-      {
-        id: "gpt-5.2-pro",
-        name: "GPT-5.2 Pro",
-        maxTokens: 400000,
-      },
-      {
-        id: "gpt-5.1",
-        name: "GPT-5.1",
-        maxTokens: 400000,
-      },
-      {
-        id: "gpt-5",
-        name: "GPT-5",
-        maxTokens: 400000,
-      },
-      {
-        id: "gpt-5-mini",
-        name: "GPT-5 Mini",
-        maxTokens: 400000,
-      },
-      {
-        id: "gpt-5-nano",
-        name: "GPT-5 Nano",
-        maxTokens: 400000,
-      },
-      {
-        id: "gpt-4.1",
-        name: "GPT-4.1",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-4.1-mini",
-        name: "GPT-4.1 Mini",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-4.1-nano",
-        name: "GPT-4.1 Nano",
-        maxTokens: 1047576,
-      },
-      {
-        id: "gpt-4o",
-        name: "GPT-4o",
-        maxTokens: 128000,
-      },
-      {
-        id: "gpt-4o-mini",
-        name: "GPT-4o Mini",
-        maxTokens: 128000,
-      },
-      {
-        id: "o3",
-        name: "o3",
-        maxTokens: 200000,
-      },
-      {
-        id: "o3-mini",
-        name: "o3 Mini",
-        maxTokens: 200000,
-      },
-      {
-        id: "o4-mini",
-        name: "o4 Mini",
-        maxTokens: 200000,
-      },
-      {
-        id: "o1",
-        name: "o1",
-        maxTokens: 200000,
-      },
-    ],
-  },
-  {
-    id: "v0",
-    name: "v0",
-    apiUrl: "https://api.v0.dev/v1/chat/completions",
-    requiresApiKey: true,
-    models: [
-      {
-        id: "v0-1.5-lg",
-        name: "v0 1.5 Large",
-        maxTokens: 512000,
-      },
-      {
-        id: "v0-1.5-md",
-        name: "v0 1.5 Medium",
-        maxTokens: 128000,
-      },
-      {
-        id: "v0-1.0-md",
-        name: "v0 1.0 Medium",
-        maxTokens: 128000,
       },
     ],
   },
@@ -207,28 +117,18 @@ export const AI_PROVIDERS: ModelProvider[] = [
         maxTokens: 1048576,
       },
       {
+        id: "gemini-3.5-flash",
+        name: "Gemini 3.5 Flash",
+        maxTokens: 1048576,
+      },
+      {
         id: "gemini-3-flash-preview",
         name: "Gemini 3 Flash Preview",
         maxTokens: 1048576,
       },
       {
-        id: "gemini-3.1-flash-lite-preview",
-        name: "Gemini 3.1 Flash-Lite Preview",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.5-pro",
-        name: "Gemini 2.5 Pro",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.5-flash",
-        name: "Gemini 2.5 Flash",
-        maxTokens: 1048576,
-      },
-      {
-        id: "gemini-2.5-flash-lite",
-        name: "Gemini 2.5 Flash-Lite",
+        id: "gemini-3.1-flash-lite",
+        name: "Gemini 3.1 Flash-Lite",
         maxTokens: 1048576,
       },
     ],
@@ -240,48 +140,13 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "grok-4.20-reasoning",
-        name: "Grok 4.20 Reasoning",
-        maxTokens: 2000000,
+        id: "grok-4.3",
+        name: "Grok 4.3",
+        maxTokens: 1000000,
       },
       {
-        id: "grok-4.20-non-reasoning",
-        name: "Grok 4.20 Non-Reasoning",
-        maxTokens: 2000000,
-      },
-      {
-        id: "grok-4.20-multi-agent",
-        name: "Grok 4.20 Multi-Agent",
-        maxTokens: 2000000,
-      },
-      {
-        id: "grok-4-1-fast-reasoning",
-        name: "Grok 4.1 Fast Reasoning",
-        maxTokens: 2000000,
-      },
-      {
-        id: "grok-4-1-fast-non-reasoning",
-        name: "Grok 4.1 Fast Non-Reasoning",
-        maxTokens: 2000000,
-      },
-      {
-        id: "grok-4-fast-reasoning",
-        name: "Grok 4 Fast Reasoning",
-        maxTokens: 2000000,
-      },
-      {
-        id: "grok-4-fast-non-reasoning",
-        name: "Grok 4 Fast Non-Reasoning",
-        maxTokens: 2000000,
-      },
-      {
-        id: "grok-code-fast-1",
-        name: "Grok Code Fast 1",
-        maxTokens: 256000,
-      },
-      {
-        id: "grok-4",
-        name: "Grok 4",
+        id: "grok-build-0.1",
+        name: "Grok Build 0.1",
         maxTokens: 256000,
       },
     ],
@@ -293,14 +158,14 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "deepseek-chat",
-        name: "DeepSeek V3.2",
-        maxTokens: 128000,
+        id: "deepseek-v4-flash",
+        name: "DeepSeek V4 Flash",
+        maxTokens: 1000000,
       },
       {
-        id: "deepseek-reasoner",
-        name: "DeepSeek V3.2 Reasoner",
-        maxTokens: 128000,
+        id: "deepseek-v4-pro",
+        name: "DeepSeek V4 Pro",
+        maxTokens: 1000000,
       },
     ],
   },
@@ -311,29 +176,24 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "mistral-large-3-25-12",
-        name: "Mistral Large 3",
-        maxTokens: 131072,
+        id: "mistral-medium-2604",
+        name: "Mistral Medium 3.5",
+        maxTokens: 262144,
       },
       {
-        id: "mistral-medium-3-1-25-08",
-        name: "Mistral Medium 3.1",
-        maxTokens: 131072,
-      },
-      {
-        id: "mistral-small-4-0-26-03",
+        id: "mistral-small-2603",
         name: "Mistral Small 4",
-        maxTokens: 131072,
+        maxTokens: 262144,
       },
       {
-        id: "codestral-25-08",
+        id: "mistral-large-2512",
+        name: "Mistral Large 3",
+        maxTokens: 262144,
+      },
+      {
+        id: "codestral-2508",
         name: "Codestral",
         maxTokens: 256000,
-      },
-      {
-        id: "devstral-2-25-12",
-        name: "Devstral 2",
-        maxTokens: 131072,
       },
     ],
   },
@@ -344,8 +204,8 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "qwen3.6-plus",
-        name: "Qwen 3.6 Plus",
+        id: "qwen3-max",
+        name: "Qwen 3 Max",
         maxTokens: 1000000,
       },
       {
@@ -356,6 +216,16 @@ export const AI_PROVIDERS: ModelProvider[] = [
       {
         id: "qwen3.5-flash",
         name: "Qwen 3.5 Flash",
+        maxTokens: 1000000,
+      },
+      {
+        id: "qwen3-coder-plus",
+        name: "Qwen 3 Coder Plus",
+        maxTokens: 1000000,
+      },
+      {
+        id: "qwen3-coder-flash",
+        name: "Qwen 3 Coder Flash",
         maxTokens: 1000000,
       },
     ],
@@ -383,9 +253,47 @@ export const AI_PROVIDERS: ModelProvider[] = [
   },
 ];
 
+const extensionProviders = new Map<string, ModelProvider>();
+const providerIdsByExtension = new Map<string, Set<string>>();
+const providerListeners = new Set<() => void>();
+let availableProvidersSnapshot: ModelProvider[] | null = null;
+
+function emitProvidersChanged() {
+  availableProvidersSnapshot = null;
+  providerListeners.forEach((listener) => listener());
+}
+
+export function subscribeToAvailableProviders(listener: () => void): () => void {
+  providerListeners.add(listener);
+  return () => providerListeners.delete(listener);
+}
+
+export function registerModelProviderExtension(extensionId: string, provider: ModelProvider): void {
+  extensionProviders.set(provider.id, provider);
+
+  const extensionProviderIds = providerIdsByExtension.get(extensionId) ?? new Set<string>();
+  extensionProviderIds.add(provider.id);
+  providerIdsByExtension.set(extensionId, extensionProviderIds);
+
+  emitProvidersChanged();
+}
+
+export function unregisterModelProviderExtensions(extensionId: string): void {
+  const providerIds = providerIdsByExtension.get(extensionId);
+  if (!providerIds) return;
+
+  providerIds.forEach((providerId) => extensionProviders.delete(providerId));
+  providerIdsByExtension.delete(extensionId);
+  emitProvidersChanged();
+}
+
 // Get all API providers. CLI agents are handled by the agent selector.
 export const getAvailableProviders = (): ModelProvider[] => {
-  return AI_PROVIDERS;
+  if (!availableProvidersSnapshot) {
+    availableProvidersSnapshot = [...AI_PROVIDERS, ...extensionProviders.values()];
+  }
+
+  return availableProvidersSnapshot;
 };
 
 // Get installed agents only
@@ -394,7 +302,7 @@ export const getInstalledAgents = (): AIAgent[] => {
 };
 
 export const getProviderById = (id: string): ModelProvider | undefined => {
-  return AI_PROVIDERS.find((provider) => provider.id === id);
+  return getAvailableProviders().find((provider) => provider.id === id);
 };
 
 export const getModelById = (providerId: string, modelId: string): Model | undefined => {

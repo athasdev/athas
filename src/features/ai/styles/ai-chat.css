@@ -1,0 +1,20 @@
+.ai-chat-surface {
+  user-select: none;
+}
+
+.ai-chat-surface ::selection {
+  color: var(--text);
+  background: var(--selection-bg);
+}
+
+.ai-chat-message-content,
+.ai-chat-message-content * {
+  user-select: text;
+}
+
+.ai-chat-message-content button,
+.ai-chat-message-content [role="button"],
+.ai-chat-message-content [aria-label],
+.ai-chat-message-content .select-none {
+  user-select: none;
+}

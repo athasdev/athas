@@ -1,4 +1,4 @@
-import { ArrowLeftIcon as ArrowLeft, ArrowRightIcon as ArrowRight } from "@phosphor-icons/react";
+import { ArrowLeftIcon as ArrowLeft, ArrowRightIcon as ArrowRight } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -65,7 +65,7 @@ export default function Pagination({
           size="xs"
           className="min-w-16"
         />
-        <span className="ui-font ui-text-sm text-text-lighter">per page</span>
+        <span className="font-sans ui-text-sm text-text-lighter">per page</span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -73,7 +73,7 @@ export default function Pagination({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           variant="ghost"
-          compact
+          size="icon-xs"
           className="text-text-lighter hover:text-text disabled:opacity-50"
           aria-label="Previous page"
           tooltip="Previous page"
@@ -92,16 +92,16 @@ export default function Pagination({
             min={1}
             max={totalPages}
             aria-label="Current page"
-            className="ui-font ui-text-sm h-6 w-12 px-1 py-0 text-center"
+            className="font-sans ui-text-sm h-6 w-12 px-1 py-0 text-center"
           />
-          <span className="ui-font ui-text-sm text-text-lighter">/ {totalPages}</span>
+          <span className="font-sans ui-text-sm text-text-lighter">/ {totalPages}</span>
         </form>
 
         <Button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           variant="ghost"
-          compact
+          size="icon-xs"
           className="text-text-lighter hover:text-text disabled:opacity-50"
           aria-label="Next page"
           tooltip="Next page"

@@ -5,8 +5,9 @@ import {
   CheckCircleIcon as CheckCircle2,
   InfoIcon as Info,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
+import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
 import { LoadingIndicator } from "@/ui/loading";
 import { createSelectors } from "@/utils/zustand-selectors";
 
@@ -56,6 +57,22 @@ interface ToastState {
 
 const DISMISS_ANIMATION_MS = 300;
 const MAX_NOTIFICATIONS = 20;
+
+function withDefaultErrorAction(toast: Omit<Toast, "id">): Omit<Toast, "id"> {
+  if (toast.type !== "error" || toast.action) return toast;
+
+  return {
+    ...toast,
+    action: {
+      label: "Open Log",
+      onClick: () => {
+        void openAthasLogBuffer().catch((error) => {
+          console.error("Failed to open Athas log", error);
+        });
+      },
+    },
+  };
+}
 
 function removeToastLater(id: string) {
   setTimeout(() => {
@@ -138,12 +155,13 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
   notifications: [],
   actions: {
     show: (toast) => {
-      const existingToast = toast.key
-        ? get().toasts.find((item) => item.key === toast.key)
+      const nextToastInput = withDefaultErrorAction(toast);
+      const existingToast = nextToastInput.key
+        ? get().toasts.find((item) => item.key === nextToastInput.key)
         : undefined;
 
       if (existingToast) {
-        const updatedToast = { ...existingToast, ...toast };
+        const updatedToast = { ...existingToast, ...nextToastInput };
         set((state) => ({
           toasts: state.toasts.map((item) => (item.id === existingToast.id ? updatedToast : item)),
           notifications: upsertNotification(state.notifications, updatedToast),
@@ -153,7 +171,7 @@ const useToastStoreBase = create<ToastState>()((set, get) => ({
       }
 
       const id = globalThis.crypto?.randomUUID?.() ?? Date.now().toString();
-      const nextToast: Toast = { ...toast, id };
+      const nextToast: Toast = { ...nextToastInput, id };
       set((state) => ({
         toasts: [...state.toasts, nextToast],
         notifications: upsertNotification(state.notifications, nextToast),
@@ -278,14 +296,14 @@ export const ToastContainer = () => {
       }}
       toastOptions={{
         closeButton: true,
-        className: "ui-font font-normal group",
-        descriptionClassName: "ui-font font-normal",
+        className: "font-sans font-normal group",
+        descriptionClassName: "font-sans font-normal",
         classNames: {
           toast:
-            "group ui-font rounded-xl border border-border bg-primary-bg text-text font-normal shadow-xl backdrop-blur-sm",
+            "group font-sans rounded-xl border border-border bg-primary-bg text-text font-normal shadow-[var(--shadow-popover)] backdrop-blur-sm",
           content: "pr-8",
-          title: "ui-font ui-text-sm font-normal leading-5 text-text",
-          description: "ui-font ui-text-sm font-normal leading-5 text-text-light",
+          title: "font-sans ui-text-sm font-normal leading-5 text-text",
+          description: "font-sans ui-text-sm font-normal leading-5 text-text-light",
           icon: "mt-0.5",
           success: "border-border",
           info: "border-border",
@@ -293,9 +311,9 @@ export const ToastContainer = () => {
           error: "border-border",
           loading: "border-border",
           closeButton:
-            "absolute left-auto right-2 top-2 m-0 opacity-0 transition-opacity group-hover:opacity-100 border-none bg-transparent text-text-lighter hover:bg-hover hover:text-text",
-          actionButton: "ui-font border-none bg-hover text-text hover:bg-border",
-          cancelButton: "ui-font border-none bg-hover text-text hover:bg-border",
+            "absolute left-auto right-2 top-2 m-0 opacity-0 transition-[transform,opacity,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:opacity-100 border-none bg-transparent text-text-lighter hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
+          actionButton: "font-sans border-none bg-hover text-text hover:bg-border",
+          cancelButton: "font-sans border-none bg-hover text-text hover:bg-border",
         },
         actionButtonStyle: {
           background: "var(--color-hover)",
@@ -309,7 +327,6 @@ export const ToastContainer = () => {
           background: "var(--color-primary-bg)",
           border: "1px solid var(--color-border)",
           color: "var(--color-text)",
-          fontFamily: "var(--font-ui)",
           fontWeight: "400",
         },
       }}

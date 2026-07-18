@@ -10,7 +10,7 @@ import {
   LinkIcon as Link,
   PlusIcon as Plus,
   TextTIcon as Type,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
@@ -391,13 +391,13 @@ export default function DataGrid({
   if (queryResult.rows.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <span className="ui-font ui-text-sm text-text-lighter">No data</span>
+        <span className="font-sans ui-text-sm text-text-lighter">No data</span>
       </div>
     );
   }
 
   return (
-    <div className="ui-font flex min-h-0 flex-1 flex-col">
+    <div className="font-sans flex min-h-0 flex-1 flex-col">
       <div className="group flex h-9 items-center justify-between border-border/70 border-b px-3">
         <span className="ui-text-sm text-text-lighter">
           {queryResult.rows.length} {resultLabel}
@@ -412,7 +412,7 @@ export default function DataGrid({
           )}
           aria-label="Add row"
           disabled={!canCreateRows}
-          compact
+          size="icon-xs"
         >
           <Plus className="text-text-lighter hover:text-text" />
         </Button>
@@ -461,7 +461,7 @@ export default function DataGrid({
                         </span>
                         {fk && (
                           <span
-                            className="ui-text-xs text-text-lighter"
+                            className="ui-text-sm text-text-lighter"
                             title={`FK: ${fk.to_table}.${fk.to_column}`}
                           >
                             FK
@@ -479,12 +479,13 @@ export default function DataGrid({
                             !canFilterColumns && "pointer-events-none opacity-20",
                           )}
                           aria-label={`Filter by ${col}`}
+                          size="icon"
                         >
                           <Filter className="text-text-lighter hover:text-text" />
                         </Button>
                       </div>
                       {showColumnTypes && info && (
-                        <div className="ui-text-xs text-text-lighter">
+                        <div className="ui-text-sm text-text-lighter">
                           {info.type}
                           {info.primary_key && " PK"}
                           {info.notnull && " NN"}
@@ -588,7 +589,7 @@ export default function DataGrid({
                               if (e.key === "Escape") setEditing(null);
                             }}
                             onBlur={handleSubmit}
-                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 ui-text-xs focus:border-accent/60"
+                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 ui-text-sm focus:border-accent/60"
                           />
                         ) : (
                           <CellRenderer

@@ -9,12 +9,7 @@ tauri-wry = ["athas-terminal/tauri-wry", "tauri/wry", "tauri/x11"]
 linux = ["athas-terminal/linux", "tauri/cef"]
 
 [dependencies]
-agent-client-protocol = { version = "0.9", features = [
-  "unstable_session_config_options",
-  "unstable_session_info_update",
-  "unstable_session_list",
-  "unstable_session_resume",
-] }
+agent-client-protocol = { version = "0.14", features = ["unstable"] }
 anyhow = "1.0"
 async-trait = "0.1"
 log = "0.4"

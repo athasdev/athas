@@ -23,11 +23,9 @@ export const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
 export const defaultSettings: Settings = {
   // General
   autoSave: false,
-  sidebarPosition: "left",
   quickOpenPreview: true,
   // Editor
   fontFamily: DEFAULT_MONO_FONT_FAMILY,
-  editorEngine: "monaco",
   fontSize: DEFAULT_CODE_FONT_SIZE,
   editorLineHeight: 1.4,
   tabSize: 2,
@@ -37,6 +35,10 @@ export const defaultSettings: Settings = {
   renderIndentGuides: true,
   highlightOccurrences: true,
   showMinimap: false,
+  inlayHints: true,
+  codeLens: true,
+  semanticTokens: true,
+  breadcrumbShowSymbols: true,
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
   terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
@@ -53,15 +55,13 @@ export const defaultSettings: Settings = {
   uiFontSize: UI_FONT_SIZE_DEFAULT,
   // Theme
   theme: "athas-dark",
-  iconTheme: "symbols",
+  iconTheme: "athas-icons",
   syncSystemTheme: false,
   autoThemeLight: "athas-light",
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
   windowTransparency: true,
-  sidebarTabsPosition: "top",
-  titleBarProjectMode: "window",
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],
@@ -81,8 +81,11 @@ export const defaultSettings: Settings = {
   aiAutocompleteCustomModelId: "",
   aiDefaultSessionMode: "",
   aiSkills: [],
+  v0DesignSystems: [],
+  activeV0DesignSystemId: "",
   ollamaBaseUrl: "http://localhost:11434",
   // Layout
+  activityRailWidth: 180,
   sidebarWidth: 220,
   showGitHubPullRequests: true,
   showGitHubIssues: true,
@@ -111,6 +114,7 @@ export const defaultSettings: Settings = {
     search: true,
     diagnostics: true,
     debugger: false,
+    docker: true,
     outline: true,
     aiChat: true,
     teamCollaboration: true,
@@ -129,8 +133,8 @@ export const defaultSettings: Settings = {
   horizontalTabScroll: false,
   //// File tree
   fileTreeIndentSize: 16,
-  compactFoldersInFileTree: false,
-  fileTreeDensity: "default",
+  compactFoldersInFileTree: true,
+  hideRootFolderInFileTree: false,
   showHiddenFilesInFileTree: true,
   showGitignoredFilesInFileTree: true,
   hiddenFilePatterns: [],
@@ -170,6 +174,7 @@ export function getDefaultSettingsSnapshot(): Settings {
     footerLeadingItemsOrder: [...defaultSettings.footerLeadingItemsOrder],
     footerTrailingItemsOrder: [...defaultSettings.footerTrailingItemsOrder],
     aiSkills: defaultSettings.aiSkills.map((skill) => ({ ...skill })),
+    v0DesignSystems: defaultSettings.v0DesignSystems.map((profile) => ({ ...profile })),
     uiFontSize: normalizeUiFontSize(defaultSettings.uiFontSize),
   };
 }

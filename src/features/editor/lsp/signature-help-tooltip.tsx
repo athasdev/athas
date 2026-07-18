@@ -2,7 +2,6 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorLayout } from "@/features/editor/hooks/use-layout";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { useEditorUIStore } from "@/features/editor/stores/ui.store";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import type { EditorModelPositionResolver } from "../view-model/view-layout";
 import { LspClient } from "./lsp-client";
@@ -23,8 +22,6 @@ interface SignatureHelpResult {
   activeParameter?: number;
 }
 
-const DEFAULT_TRIGGER_CHARS = ["(", ","];
-
 interface SignatureHelpTooltipProps {
   editorRef: RefObject<HTMLDivElement | null>;
   filePath: string | undefined;
@@ -43,7 +40,6 @@ export const SignatureHelpTooltip = ({
   const cursorPositionRef = useRef(useEditorStateStore.getState().cursorPosition);
   const signatureHelpRef = useRef<SignatureHelpResult | null>(null);
   const [tooltipCursorPosition, setTooltipCursorPosition] = useState(cursorPositionRef.current);
-  const [triggerCharacters, setTriggerCharacters] = useState(DEFAULT_TRIGGER_CHARS);
 
   useEffect(() => {
     signatureHelpRef.current = signatureHelp;
@@ -65,25 +61,6 @@ export const SignatureHelpTooltip = ({
     handleScroll();
     return () => textarea.removeEventListener("scroll", handleScroll);
   }, [editorRef, filePath]);
-
-  useEffect(() => {
-    if (!filePath || !extensionRegistry.isLspSupported(filePath)) {
-      setTriggerCharacters(DEFAULT_TRIGGER_CHARS);
-      return;
-    }
-
-    let cancelled = false;
-    const lspClient = LspClient.getInstance();
-
-    lspClient.getSignatureTriggerCharacters(filePath).then((characters) => {
-      if (cancelled) return;
-      setTriggerCharacters(characters.length > 0 ? characters : DEFAULT_TRIGGER_CHARS);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [filePath]);
 
   const fetchSignatureHelp = useCallback(async () => {
     if (!filePath || !extensionRegistry.isLspSupported(filePath)) {
@@ -155,37 +132,6 @@ export const SignatureHelpTooltip = ({
       window.removeEventListener("editor-trigger-signature-help", handleTriggerSignatureHelp);
   }, [fetchSignatureHelp]);
 
-  // Trigger on typing
-  useEffect(() => {
-    let lastInputTimestamp = useEditorUIStore.getState().lastInputTimestamp;
-
-    const unsubscribe = useEditorUIStore.subscribe((state) => {
-      if (state.lastInputTimestamp === 0 || state.lastInputTimestamp === lastInputTimestamp) {
-        return;
-      }
-
-      lastInputTimestamp = state.lastInputTimestamp;
-
-      // Check if the character just typed is a trigger character
-      const textarea = editorRef.current?.querySelector("textarea");
-      if (!textarea) return;
-
-      const content = textarea.value;
-      const offset = cursorPositionRef.current.offset;
-      if (offset <= 0) return;
-
-      const charBefore = content[offset - 1];
-      if (triggerCharacters.includes(charBefore)) {
-        setTooltipCursorPosition(cursorPositionRef.current);
-        void fetchSignatureHelp();
-      } else if (charBefore === ")") {
-        setSignatureHelp(null);
-      }
-    });
-
-    return unsubscribe;
-  }, [editorRef, fetchSignatureHelp, triggerCharacters]);
-
   const position = useMemo(() => {
     const cursorPosition = tooltipCursorPosition;
     const resolvedPosition = resolveModelPosition?.(cursorPosition.line, cursorPosition.column);
@@ -248,13 +194,13 @@ export const SignatureHelpTooltip = ({
 
   return (
     <div
-      className="absolute z-50 max-w-md rounded-md border border-border/70 bg-secondary-bg px-2.5 py-1.5 shadow-lg"
+      className="absolute z-50 max-w-md rounded-md border border-border/70 bg-secondary-bg px-2.5 py-1.5 shadow-[var(--shadow-popover)]"
       style={{
         top: `${Math.max(4, position.top)}px`,
         left: `${Math.max(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT, position.left)}px`,
       }}
     >
-      <div className="ui-font ui-text-sm editor-font text-text">{renderLabel()}</div>
+      <div className="font-sans ui-text-sm font-mono text-text">{renderLabel()}</div>
     </div>
   );
 };

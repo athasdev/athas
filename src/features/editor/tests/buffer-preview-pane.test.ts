@@ -165,17 +165,26 @@ describe("buffer preview pane integration", () => {
     expect(useBufferStore.getState().activeBufferId).toBe(newTabId);
   });
 
-  it("opens references as a singleton buffer like diagnostics", async () => {
+  it("opens tool buffers as singletons", async () => {
     const { useBufferStore } = await import("../stores/buffer.store");
     const bufferActions = useBufferStore.getState().actions;
 
+    const firstSearchId = bufferActions.openGlobalSearchBuffer();
+    const secondSearchId = bufferActions.openGlobalSearchBuffer();
     const firstReferencesId = bufferActions.openReferencesBuffer();
     const secondReferencesId = bufferActions.openReferencesBuffer();
     const diagnosticsId = bufferActions.openDiagnosticsBuffer();
 
+    expect(secondSearchId).toBe(firstSearchId);
     expect(secondReferencesId).toBe(firstReferencesId);
     expect(useBufferStore.getState().buffers).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          id: firstSearchId,
+          type: "globalSearch",
+          path: "search://global",
+          name: "Search",
+        }),
         expect.objectContaining({
           id: firstReferencesId,
           type: "references",

@@ -31,6 +31,13 @@ export interface FormatResult {
 export async function formatContent(options: FormatOptions): Promise<FormatResult> {
   const { filePath, languageId } = options;
 
+  if (filePath.startsWith("wsl://")) {
+    return {
+      success: false,
+      error: "Formatting is not available for WSL files.",
+    };
+  }
+
   try {
     // Try to get formatter by file path first, then by language ID
     let formatterConfig = extensionRegistry.getFormatterForFile(filePath);
@@ -115,6 +122,13 @@ export async function formatContent(options: FormatOptions): Promise<FormatResul
 export async function formatRange(options: FormatRangeOptions): Promise<FormatResult> {
   const { filePath, content, range } = options;
 
+  if (filePath.startsWith("wsl://")) {
+    return {
+      success: false,
+      error: "Range formatting is not available for WSL files.",
+    };
+  }
+
   try {
     const lspFormatted = await formatRangeWithLsp(filePath, content, range);
     if (lspFormatted !== null) {
@@ -167,6 +181,8 @@ async function formatRangeWithLsp(
  * Check if formatting is available for a file
  */
 export function isFormattingAvailable(filePath: string, languageId?: string): boolean {
+  if (filePath.startsWith("wsl://")) return false;
+
   const formatterConfig = extensionRegistry.getFormatterForFile(filePath);
   if (formatterConfig) return true;
 

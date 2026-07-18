@@ -1,5 +1,10 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitTag } from "../types/git.types";
+import {
+  isNotGitRepositoryError,
+  resolveRepositoryPath,
+  resolveRepositoryPathOrThrow,
+} from "./git-repo-api";
 import type { GitRemoteActionResult } from "./git-remotes-api";
 
 interface CheckoutTagResult {
@@ -10,10 +15,17 @@ interface CheckoutTagResult {
 
 export const getTags = async (repoPath: string): Promise<GitTag[]> => {
   try {
-    const tags = await tauriInvoke<GitTag[]>("git_get_tags", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+    if (!resolvedRepoPath) {
+      return [];
+    }
+
+    const tags = await tauriInvoke<GitTag[]>("git_get_tags", { repoPath: resolvedRepoPath });
     return tags;
   } catch (error) {
-    console.error("Failed to get tags:", error);
+    if (!isNotGitRepositoryError(error)) {
+      console.error("Failed to get tags:", error);
+    }
     return [];
   }
 };
@@ -26,7 +38,14 @@ export const createTag = async (
   signed = false,
 ): Promise<boolean> => {
   try {
-    await tauriInvoke("git_create_tag", { repoPath, name, message, commit, signed });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_create_tag", {
+      repoPath: resolvedRepoPath,
+      name,
+      message,
+      commit,
+      signed,
+    });
     return true;
   } catch (error) {
     console.error("Failed to create tag:", error);
@@ -40,7 +59,8 @@ export const pushTag = async (
   remote: string,
 ): Promise<GitRemoteActionResult> => {
   try {
-    await tauriInvoke("git_push_tag", { repoPath, name, remote });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_push_tag", { repoPath: resolvedRepoPath, name, remote });
     return { success: true };
   } catch (error) {
     console.error("Failed to push tag:", error);
@@ -57,7 +77,8 @@ export const deleteRemoteTag = async (
   remote: string,
 ): Promise<GitRemoteActionResult> => {
   try {
-    await tauriInvoke("git_delete_remote_tag", { repoPath, name, remote });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_delete_remote_tag", { repoPath: resolvedRepoPath, name, remote });
     return { success: true };
   } catch (error) {
     console.error("Failed to delete remote tag:", error);
@@ -70,7 +91,11 @@ export const deleteRemoteTag = async (
 
 export const checkoutTag = async (repoPath: string, name: string): Promise<CheckoutTagResult> => {
   try {
-    return await tauriInvoke<CheckoutTagResult>("git_checkout_tag", { repoPath, name });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    return await tauriInvoke<CheckoutTagResult>("git_checkout_tag", {
+      repoPath: resolvedRepoPath,
+      name,
+    });
   } catch (error) {
     console.error("Failed to checkout tag:", error);
     return {
@@ -83,7 +108,8 @@ export const checkoutTag = async (repoPath: string, name: string): Promise<Check
 
 export const deleteTag = async (repoPath: string, name: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_delete_tag", { repoPath, name });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_delete_tag", { repoPath: resolvedRepoPath, name });
     return true;
   } catch (error) {
     console.error("Failed to delete tag:", error);

@@ -1,15 +1,18 @@
-use super::types::{AcpEvent, StopReason};
+use super::{
+   AcpConnection,
+   types::{AcpEvent, StopReason},
+};
 use crate::runtime::AthasAppHandle as AppHandle;
-use acp::Agent;
-use agent_client_protocol as acp;
+use agent_client_protocol::schema as acp;
 use anyhow::{Context, Result, bail};
 use std::sync::Arc;
 use tauri::Emitter;
 
-const ACP_PROMPT_TIMEOUT_SECONDS: u64 = 90;
+const ACP_PROMPT_AUTH_TIMEOUT_SECONDS: u64 = 90;
+const ACP_PROMPT_TURN_TIMEOUT_SECONDS: u64 = 30 * 60;
 
 pub(super) async fn run_prompt(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    session_id: acp::SessionId,
    app_handle: AppHandle,
    prompt: Vec<serde_json::Value>,
@@ -38,7 +41,7 @@ pub(super) async fn run_prompt(
 }
 
 async fn send_prompt_with_auth_retry(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    prompt_request: acp::PromptRequest,
    auth_method_id: Option<String>,
 ) -> Result<acp::PromptResponse> {
@@ -53,8 +56,8 @@ async fn send_prompt_with_auth_retry(
 
       let auth_request = acp::AuthenticateRequest::new(auth_method_id);
       match tokio::time::timeout(
-         std::time::Duration::from_secs(ACP_PROMPT_TIMEOUT_SECONDS),
-         connection.authenticate(auth_request),
+         std::time::Duration::from_secs(ACP_PROMPT_AUTH_TIMEOUT_SECONDS),
+         connection.send_request(auth_request).block_task(),
       )
       .await
       {
@@ -73,17 +76,20 @@ async fn send_prompt_with_auth_retry(
          bail!("Authentication required before sending prompt")
       }
       Ok(Err(err)) => Err(err).context("Failed to send prompt"),
-      Err(_) => bail!("The ACP adapter did not acknowledge the prompt in time"),
+      Err(_) => bail!(
+         "The ACP adapter did not complete the prompt turn within {} seconds",
+         ACP_PROMPT_TURN_TIMEOUT_SECONDS
+      ),
    }
 }
 
 async fn send_prompt(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    prompt_request: acp::PromptRequest,
 ) -> Result<Result<acp::PromptResponse, acp::Error>, tokio::time::error::Elapsed> {
    tokio::time::timeout(
-      std::time::Duration::from_secs(ACP_PROMPT_TIMEOUT_SECONDS),
-      connection.prompt(prompt_request),
+      std::time::Duration::from_secs(ACP_PROMPT_TURN_TIMEOUT_SECONDS),
+      connection.send_request(prompt_request).block_task(),
    )
    .await
 }

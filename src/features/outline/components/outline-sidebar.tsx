@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   ArrowSquareOutIcon as ArrowSquareOut,
   BracketsCurlyIcon as Braces,
@@ -11,20 +10,15 @@ import {
   FunctionIcon,
   MagnifyingGlassIcon as Search,
   SquaresFourIcon as SquaresFour,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import type { MenuItem } from "@/ui/dropdown";
+import { writeClipboardText } from "@/utils/clipboard";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import {
-  SidebarEmptyActionState,
-  SidebarEmptyState,
-  SidebarHeader,
-  SidebarHeaderIconButton,
-  SidebarHeaderSearch,
-} from "@/ui/sidebar";
+import { SidebarEmptyActionState, SidebarEmptyState, SidebarSearchFilterRow } from "@/ui/sidebar";
 import { useDocumentOutline } from "../hooks/use-document-outline";
 import type { OutlineSymbol } from "../types/outline-symbol.types";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
@@ -69,13 +63,12 @@ export function OutlineSidebar() {
     () => new Set(OUTLINE_FILTER_OPTIONS.map((option) => option.id)),
   );
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const symbolContextMenu = useContextMenu<OutlineSymbol>();
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
-  const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline(true);
+  const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline({ isActive: true });
   const openBuffer = useBufferStore.use.actions().openBuffer;
   const filteredSymbols = useMemo(
     () => symbols.filter((symbol) => matchesOutlineFilter(symbol.kind, selectedFilters)),
@@ -271,7 +264,7 @@ export function OutlineSidebar() {
   };
 
   const copyText = (text: string) => {
-    void writeText(text);
+    void writeClipboardText(text);
   };
 
   const symbolContextMenuItems = useMemo<ContextMenuItem[]>(() => {
@@ -333,32 +326,30 @@ export function OutlineSidebar() {
       className="flex h-full min-h-0 flex-col bg-primary-bg"
       onKeyDownCapture={handleSidebarKeyDown}
     >
-      <SidebarHeader>
-        <SidebarHeaderSearch
-          ref={searchInputRef}
-          value={query}
-          onChange={setQuery}
-          leftIcon={Search}
-          placeholder="Search"
-          aria-label="Search outline"
-          onKeyDown={(event) => {
+      <SidebarSearchFilterRow
+        value={query}
+        onChange={setQuery}
+        searchIcon={Search}
+        placeholder="Search"
+        searchAriaLabel="Search outline"
+        searchInputRef={searchInputRef}
+        searchInputProps={{
+          onKeyDown: (event) => {
             if (event.key === "ArrowDown" && visibleSymbols.length > 0) {
               event.preventDefault();
               focusSymbolAtIndex(0);
             }
-          }}
-        />
-        <SidebarHeaderIconButton
-          ref={filterButtonRef}
-          active={!areAllFiltersSelected}
-          className="shrink-0"
-          tooltip="Filter Outline"
-          tooltipSide="bottom"
-          onClick={() => setIsFilterMenuOpen(true)}
-        >
-          <Funnel />
-        </SidebarHeaderIconButton>
-      </SidebarHeader>
+          },
+        }}
+        filterOpen={isFilterMenuOpen}
+        onFilterOpenChange={setIsFilterMenuOpen}
+        filterItems={outlineFilterMenuItems}
+        filterActive={!areAllFiltersSelected}
+        filterTooltip="Filter Outline"
+        filterAriaLabel="Filter outline"
+        filterCloseOnSelect={false}
+        filterMenuClassName="w-fit min-w-fit"
+      />
 
       <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
         {!isSupported ? (
@@ -404,16 +395,6 @@ export function OutlineSidebar() {
           ))
         )}
       </div>
-      <Dropdown
-        isOpen={isFilterMenuOpen}
-        anchorRef={filterButtonRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        items={outlineFilterMenuItems}
-        onClose={() => setIsFilterMenuOpen(false)}
-        closeOnSelect={false}
-        className="w-fit min-w-fit"
-      />
       <ContextMenu
         isOpen={symbolContextMenu.isOpen}
         position={symbolContextMenu.position}

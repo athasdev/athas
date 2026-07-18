@@ -10,11 +10,20 @@ import {
   getModelById,
   getProviderById,
 } from "@/features/ai/types/providers.types";
-import { getProvider } from "@/features/ai/services/providers/ai-provider-registry";
+import {
+  buildProviderSystemPromptContext,
+  getProvider,
+  shouldUseTauriFetchForProvider,
+} from "@/features/ai/services/providers/ai-provider-registry";
 import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provider";
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
+import {
+  getCustomProviderApiToken,
+  resolveCustomProviderBaseUrl,
+  resolveCustomProviderModelId,
+} from "@/features/ai/lib/custom-provider-config";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { getAuthToken } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -22,6 +31,7 @@ import { getApiBase } from "@/utils/api-base";
 import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "../lib/claude-code";
+import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
@@ -68,7 +78,10 @@ function resolveProviderModelPair(providerId: string, modelId: string) {
   }
 
   if (requestedProvider?.id === "custom") {
-    const customModelId = useSettingsStore.getState().settings.aiCustomModelId || modelId;
+    const customModelId = resolveCustomProviderModelId(
+      useSettingsStore.getState().settings,
+      modelId,
+    );
     if (customModelId.trim().length > 0) {
       return {
         providerId,
@@ -173,22 +186,31 @@ export const getChatCompletionStream = async (
     const model = resolved.model;
 
     if (providerId === "custom" && !model) {
-      throw new Error("Custom provider model is required. Add one in Settings → AI.");
+      throw new Error("Custom provider model is required. Add one in Settings -> Agent.");
     }
 
     if (!provider || !model) {
       throw new Error(`Provider or model not found: ${providerId}/${modelId}`);
     }
 
-    const apiKey = await getProviderApiToken(providerId);
+    const settings = useSettingsStore.getState().settings;
+    const customProviderBaseUrl =
+      providerId === "custom" ? resolveCustomProviderBaseUrl(settings) : "";
+    const apiKey =
+      providerId === "custom"
+        ? await getCustomProviderApiToken()
+        : await getProviderApiToken(providerId);
     const subscription = useAuthStore.getState().subscription;
     const useHostedOpenRouter = !apiKey && canUseHostedProvider(providerId, subscription);
     if (!apiKey && provider.requiresApiKey && !useHostedOpenRouter) {
       throw new Error(`${provider.name} API key not found`);
     }
 
-    if (providerId === "custom" && !useSettingsStore.getState().settings.aiCustomBaseUrl) {
-      throw new Error("Custom provider base URL is required. Add one in Settings → AI.");
+    if (providerId === "custom" && !customProviderBaseUrl) {
+      throw new Error("Custom provider base URL is required. Add one in Settings -> Agent.");
+    }
+    if (providerId === "custom") {
+      setCustomProviderBaseUrl(customProviderBaseUrl);
     }
 
     // Ollama Cloud requires auth even though the provider config marks the
@@ -196,13 +218,18 @@ export const getChatCompletionStream = async (
     if (providerId === "ollama" && !apiKey) {
       const ollamaBaseUrl = useSettingsStore.getState().settings.ollamaBaseUrl;
       if (ollamaBaseUrl && isOllamaCloudUrl(ollamaBaseUrl)) {
-        throw new Error("Ollama Cloud requires an API key. Add one in Settings → AI → Ollama.");
+        throw new Error(
+          "Ollama Cloud requires an API key. Add one in Settings -> Agent -> Ollama.",
+        );
       }
     }
 
     const contextPrompt = buildContextPrompt(context);
-    const systemPrompt =
-      systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
+    let systemPrompt = systemPromptOverride || buildSystemPrompt(contextPrompt, mode, outputStyle);
+    const providerSystemPromptContext = buildProviderSystemPromptContext(providerId, settings);
+    if (providerSystemPromptContext) {
+      systemPrompt = `${systemPrompt}\n\n${providerSystemPromptContext}`;
+    }
 
     // Build messages array with conversation history
     const messages: AIMessage[] = [
@@ -272,8 +299,7 @@ export const getChatCompletionStream = async (
     console.log(`Making ${provider.name} streaming chat request with model ${model.name}...`);
 
     // Use Tauri's fetch for providers that don't support browser CORS
-    const needsTauriFetch =
-      providerId === "gemini" || providerId === "ollama" || providerId === "anthropic";
+    const needsTauriFetch = shouldUseTauriFetchForProvider(providerId);
     const fetchFn = needsTauriFetch ? tauriFetch : fetch;
     const response = await fetchFn(url, {
       method: "POST",
@@ -307,7 +333,7 @@ export const getQuickQuestionCompletionStream = async (
   onError: (error: string, canReconnect?: boolean) => void,
 ): Promise<void> => {
   const contextPrompt = buildContextPrompt(context);
-  const systemPrompt = `You are a lightweight AI question-answering assistant inside Athas.
+  const systemPrompt = `You are a lightweight question-answering agent inside Athas.
 
 This is a quick question flow, not an agent session.
 - Answer the user's question directly and concisely.

@@ -38,6 +38,7 @@ import {
 } from "../utils/line-operations";
 import { resolveCursorPositionsAtLineEndsForSelection } from "../utils/multi-cursor";
 import { getLineSlice } from "../utils/large-file";
+import { getBufferById } from "../utils/buffer-index";
 import type {
   EditorAPI,
   EditorEvent,
@@ -53,6 +54,9 @@ interface ActiveEditorAdapter {
   deleteRange: (range: Range) => void;
   replaceRange: (range: Range, text: string) => void;
   selectAll: () => void;
+  addSelectionToNextFindMatch?: () => void;
+  addSelectionToPreviousFindMatch?: () => void;
+  selectAllFindMatches?: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -130,7 +134,9 @@ class EditorAPIImpl implements EditorAPI {
     const newContent = before + text + after;
 
     const newOffset = pos.offset + text.length;
-    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState);
+    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState, {
+      skipUndoGrouping: true,
+    });
   }
 
   deleteRange(range: Range): void {
@@ -146,7 +152,9 @@ class EditorAPIImpl implements EditorAPI {
     const newContent = before + after;
 
     const newOffset = range.start.offset;
-    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState);
+    this.applyContentEdit(content, newContent, newOffset, newOffset, editorState, {
+      skipUndoGrouping: true,
+    });
   }
 
   replaceRange(range: Range, text: string): void {
@@ -161,7 +169,9 @@ class EditorAPIImpl implements EditorAPI {
     const after = content.substring(range.end.offset);
     const newOffset = range.start.offset + text.length;
 
-    this.applyContentEdit(content, before + text + after, newOffset, newOffset, editorState);
+    this.applyContentEdit(content, before + text + after, newOffset, newOffset, editorState, {
+      skipUndoGrouping: true,
+    });
   }
 
   // Selection operations
@@ -225,6 +235,27 @@ class EditorAPIImpl implements EditorAPI {
     }
 
     this.syncSelectionFromOffsets(content, 0, content.length);
+  }
+
+  addSelectionToNextFindMatch(): boolean {
+    if (!this.activeEditorAdapter?.addSelectionToNextFindMatch) return false;
+
+    this.activeEditorAdapter.addSelectionToNextFindMatch();
+    return true;
+  }
+
+  addSelectionToPreviousFindMatch(): boolean {
+    if (!this.activeEditorAdapter?.addSelectionToPreviousFindMatch) return false;
+
+    this.activeEditorAdapter.addSelectionToPreviousFindMatch();
+    return true;
+  }
+
+  selectAllFindMatches(): boolean {
+    if (!this.activeEditorAdapter?.selectAllFindMatches) return false;
+
+    this.activeEditorAdapter.selectAllFindMatches();
+    return true;
   }
 
   // Internal method to update cursor and selection from external changes
@@ -331,6 +362,7 @@ class EditorAPIImpl implements EditorAPI {
       result.selectionStart,
       result.selectionEnd,
       editorState,
+      { skipUndoGrouping: true },
     );
   }
 
@@ -370,6 +402,7 @@ class EditorAPIImpl implements EditorAPI {
       result.cursorOffset,
       result.cursorOffset,
       editorState,
+      { skipUndoGrouping: true },
     );
   }
 
@@ -525,7 +558,7 @@ class EditorAPIImpl implements EditorAPI {
       return;
     }
 
-    const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
     const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
@@ -580,7 +613,7 @@ class EditorAPIImpl implements EditorAPI {
       return;
     }
 
-    const activeBuffer = bufferStore.buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeBuffer = getBufferById(bufferStore.buffers, activeBufferId);
     if (!activeBuffer || !isEditorContent(activeBuffer)) return;
     const textareaOwningPreviousContent = this.getTextareaOwningContent(activeBuffer.content);
 
@@ -752,7 +785,7 @@ class EditorAPIImpl implements EditorAPI {
 
   private getActiveLineCommentToken(): string {
     const { activeBufferId, buffers } = useBufferStore.getState();
-    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+    const activeBuffer = getBufferById(buffers, activeBufferId);
     const languageId =
       activeBuffer && "language" in activeBuffer && typeof activeBuffer.language === "string"
         ? activeBuffer.language
@@ -785,6 +818,7 @@ class EditorAPIImpl implements EditorAPI {
     selectionStart: number,
     selectionEnd: number,
     editorState = useEditorStateStore.getState(),
+    options: { skipUndoGrouping?: boolean } = {},
   ): void {
     if (nextContent === previousContent) {
       this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
@@ -799,8 +833,18 @@ class EditorAPIImpl implements EditorAPI {
       textarea.selectionStart = selectionStart;
       textarea.selectionEnd = selectionEnd;
 
-      const inputEvent = new Event("input", { bubbles: true });
-      textarea.dispatchEvent(inputEvent);
+      if (options.skipUndoGrouping) {
+        void editorState.onChange(
+          nextContent,
+          previousContent,
+          editorState.cursorPosition,
+          editorState.selection,
+          { skipUndoGrouping: true },
+        );
+      } else {
+        const inputEvent = new Event("input", { bubbles: true });
+        textarea.dispatchEvent(inputEvent);
+      }
       this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
       return;
     }
@@ -810,6 +854,7 @@ class EditorAPIImpl implements EditorAPI {
       previousContent,
       editorState.cursorPosition,
       editorState.selection,
+      options.skipUndoGrouping ? { skipUndoGrouping: true } : undefined,
     );
     this.syncSelectionFromOffsets(nextContent, selectionStart, selectionEnd);
   }
@@ -837,6 +882,7 @@ class EditorAPIImpl implements EditorAPI {
       result.selectionStart,
       result.selectionEnd,
       editorState,
+      { skipUndoGrouping: true },
     );
   }
 

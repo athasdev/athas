@@ -1,10 +1,11 @@
-import { MagnifyingGlassIcon as Search, XIcon as X } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search, XIcon as X } from "@/ui/icons";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenizer } from "@/features/editor/hooks/use-tokenizer";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
+import { databaseCardClassName } from "./database-surface";
 import type { ColumnInfo, TableInfo } from "../types/common.types";
 import {
   applySqlCompletion,
@@ -88,7 +89,7 @@ function SqlEditor({
 
   return (
     <div className="mb-1">
-      <div className="relative h-20 overflow-hidden rounded-lg border border-border/70 bg-secondary-bg/60">
+      <div className={databaseCardClassName("relative h-20 overflow-hidden bg-secondary-bg/60")}>
         <pre
           ref={highlightRef}
           aria-hidden="true"
@@ -158,14 +159,14 @@ function SqlEditor({
               key={`${item.detail}-${item.value}`}
               type="button"
               variant="ghost"
-              compact
-              className="h-6 rounded-md border border-border/60 px-2 text-text-lighter"
+              size="xs"
+              className="h-6 border border-border/60 px-2 text-text-lighter"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => applyCompletion(index)}
               aria-label={`Insert SQL ${item.detail} ${item.label}`}
               tooltip={item.detail}
             >
-              <span className="ui-font ui-text-xs">{item.label}</span>
+              <span className="font-sans ui-text-sm">{item.label}</span>
             </Button>
           ))}
         </div>
@@ -271,7 +272,7 @@ export default function QueryBar({
           tableMeta={tableMeta}
         />
         <div className="flex items-center justify-between gap-2">
-          <div className="ui-font ui-text-xs text-text-lighter">
+          <div className="font-sans ui-text-sm text-text-lighter">
             {selectedQuery
               ? "Selection will run"
               : lastQueryExecutionMs !== null && lastQueryExecutionMs !== undefined
@@ -279,11 +280,11 @@ export default function QueryBar({
                 : "Cmd/Ctrl+Enter to run"}
           </div>
           <div className="flex justify-end gap-2">
-            <Button onClick={() => setIsCustomQuery(false)} variant="ghost" compact>
+            <Button onClick={() => setIsCustomQuery(false)} variant="ghost" size="xs">
               Cancel
             </Button>
             {isCustomQueryLoading && (
-              <Button onClick={cancelCustomQuery} variant="ghost" compact>
+              <Button onClick={cancelCustomQuery} variant="ghost" size="xs">
                 Stop
               </Button>
             )}
@@ -291,7 +292,7 @@ export default function QueryBar({
               onClick={runQuery}
               variant="default"
               disabled={isLoading || !(selectedQuery || customQuery).trim()}
-              compact
+              size="xs"
             >
               {selectedQuery ? "Run Selection" : "Execute"}
             </Button>
@@ -322,6 +323,7 @@ export default function QueryBar({
               className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
               aria-label="Clear search"
               tooltip="Clear search"
+              size="icon"
             >
               <X />
             </Button>

@@ -1,15 +1,26 @@
-import { CaretRightIcon as CaretRight, type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import {
+  CaretDownIcon as CaretDown,
+  CaretRightIcon as CaretRight,
+  FunnelIcon as Funnel,
+  MagnifyingGlassIcon as Search,
+  type Icon as AppIcon,
+} from "@/ui/icons";
 import { animate, motion, useMotionValue } from "framer-motion";
 import {
   forwardRef,
   useEffect,
+  useLayoutEffect,
   useState,
   type ComponentProps,
+  type Ref,
   type ReactNode,
   useRef,
+  useMemo,
 } from "react";
+import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
-import Input from "@/ui/input";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { SearchField } from "@/ui/search";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -26,7 +37,7 @@ export function SidebarPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col bg-primary-bg",
-        framed && "rounded-lg border border-border/70",
+        framed && "rounded-xl border border-border/70",
         className,
       )}
       {...props}
@@ -55,7 +66,7 @@ export const SidebarFooter = forwardRef<
         surface &&
           cn(
             "mx-2 mb-2 border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-            attached ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
+            attached ? "rounded-t-lg rounded-b-xl" : "rounded-xl",
           ),
         className,
       )}
@@ -99,7 +110,7 @@ export function SidebarComposer({
     <div
       className={cn(
         "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-        attached ? "rounded-t-xl rounded-b-2xl" : "rounded-2xl",
+        attached ? "rounded-t-lg rounded-b-xl" : "rounded-xl",
         className,
       )}
       {...props}
@@ -131,20 +142,20 @@ export function SidebarComposerBody({
 
 export const SidebarHeaderSearch = forwardRef<
   HTMLInputElement,
-  Omit<ComponentProps<typeof Input>, "onChange" | "value" | "size" | "variant"> & {
+  Omit<ComponentProps<typeof SearchField>, "onChange" | "value" | "size" | "variant"> & {
     value: string;
     onChange: (value: string) => void;
-    leftIcon: PhosphorIcon;
+    leftIcon: AppIcon;
   }
 >(function SidebarHeaderSearch(
   { value, onChange, leftIcon, placeholder = "Search", className, containerClassName, ...props },
   ref,
 ) {
   return (
-    <Input
+    <SearchField
       ref={ref}
       value={value}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={onChange}
       leftIcon={leftIcon}
       variant="ghost"
       size="xs"
@@ -158,42 +169,154 @@ export const SidebarHeaderSearch = forwardRef<
 
 export const SidebarHeaderIconButton = forwardRef<
   HTMLButtonElement,
-  Omit<ButtonProps, "variant" | "compact">
+  Omit<ButtonProps, "variant" | "size">
 >(function SidebarHeaderIconButton({ className, ...props }, ref) {
   return (
     <Button
       ref={ref}
       type="button"
       variant="ghost"
-      compact
-      className={cn("size-6 rounded-md p-0", className)}
+      size="icon-xs"
+      className={cn("rounded-md", className)}
       {...props}
     />
   );
 });
 
+export function SidebarSearchFilterRow({
+  value,
+  onChange,
+  searchIcon = Search,
+  placeholder = "Search",
+  searchAriaLabel,
+  searchClassName,
+  searchContainerClassName,
+  searchInputRef,
+  searchInputProps,
+  leading,
+  actions,
+  filterOpen = false,
+  onFilterOpenChange,
+  filterItems = [],
+  filterActive = false,
+  filterTooltip = "Filter",
+  filterAriaLabel = "Filter",
+  filterDisabled = false,
+  filterCloseOnSelect = true,
+  filterMenuClassName,
+  filterButtonClassName,
+  className,
+  ...props
+}: Omit<ComponentProps<"div">, "onChange"> & {
+  value: string;
+  onChange: (value: string) => void;
+  searchIcon?: AppIcon;
+  placeholder?: string;
+  searchAriaLabel?: string;
+  searchClassName?: string;
+  searchContainerClassName?: string;
+  searchInputRef?: Ref<HTMLInputElement>;
+  searchInputProps?: Omit<
+    ComponentProps<typeof SidebarHeaderSearch>,
+    | "value"
+    | "onChange"
+    | "leftIcon"
+    | "placeholder"
+    | "aria-label"
+    | "className"
+    | "containerClassName"
+  >;
+  leading?: ReactNode;
+  actions?: ReactNode;
+  filterOpen?: boolean;
+  onFilterOpenChange?: (open: boolean) => void;
+  filterItems?: MenuItem[];
+  filterActive?: boolean;
+  filterTooltip?: string;
+  filterAriaLabel?: string;
+  filterDisabled?: boolean;
+  filterCloseOnSelect?: boolean;
+  filterMenuClassName?: string;
+  filterButtonClassName?: string;
+}) {
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const hasFilter = filterItems.length > 0;
+
+  return (
+    <>
+      <SidebarHeader className={cn("min-w-0 px-0", className)} {...props}>
+        {leading}
+        <SidebarHeaderSearch
+          ref={searchInputRef}
+          value={value}
+          onChange={onChange}
+          leftIcon={searchIcon}
+          placeholder={placeholder}
+          aria-label={searchAriaLabel ?? placeholder}
+          className={searchClassName}
+          containerClassName={searchContainerClassName}
+          {...searchInputProps}
+        />
+        {actions}
+        {hasFilter ? (
+          <SidebarHeaderIconButton
+            ref={filterTriggerRef}
+            active={filterActive}
+            className={cn("shrink-0", filterButtonClassName)}
+            disabled={filterDisabled}
+            tooltip={filterTooltip}
+            tooltipSide="bottom"
+            aria-label={filterAriaLabel}
+            onClick={() => onFilterOpenChange?.(true)}
+          >
+            <Funnel />
+          </SidebarHeaderIconButton>
+        ) : null}
+      </SidebarHeader>
+
+      {hasFilter ? (
+        <Dropdown
+          isOpen={filterOpen}
+          anchorRef={filterTriggerRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          items={filterItems}
+          onClose={() => onFilterOpenChange?.(false)}
+          closeOnSelect={filterCloseOnSelect}
+          className={filterMenuClassName}
+        />
+      ) : null}
+    </>
+  );
+}
+
 export function SidebarListItem({
   children,
   active = false,
+  description,
   leading,
   trailing,
+  iconOnly = false,
   className,
   contentClassName,
   ...props
 }: ComponentProps<"button"> & {
   children: ReactNode;
   active?: boolean;
+  description?: ReactNode;
   leading?: ReactNode;
   trailing?: ReactNode;
+  iconOnly?: boolean;
   contentClassName?: string;
 }) {
   return (
     <button
       type="button"
       className={cn(
-        "ui-font flex min-h-7 w-full min-w-0 cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
+        "font-sans flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
         "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
         active && "bg-hover/80 text-text",
+        iconOnly && "justify-center gap-0 px-0",
         className,
       )}
       {...props}
@@ -201,8 +324,25 @@ export function SidebarListItem({
       {leading ? (
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
-      <span className={cn("min-w-0 flex-1", contentClassName)}>{children}</span>
-      {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
+      <span
+        aria-hidden={iconOnly ? true : undefined}
+        className={cn(
+          "min-w-0 flex-1 overflow-hidden transition-opacity duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+          iconOnly && "w-0 flex-none opacity-0",
+          description && "flex flex-col",
+          contentClassName,
+        )}
+      >
+        <span className="block max-w-full truncate">{children}</span>
+        {description ? (
+          <span className="block max-w-full truncate text-text-lighter">{description}</span>
+        ) : null}
+      </span>
+      {trailing && !iconOnly ? (
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
+          {trailing}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -224,7 +364,7 @@ export function SidebarSectionHeader({
     <button
       type="button"
       className={cn(
-        "ui-font ui-text-xs flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
+        "font-sans ui-text-sm flex h-6 w-full select-none items-center gap-1 rounded-md px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none",
         className,
       )}
       aria-expanded={expanded}
@@ -236,9 +376,39 @@ export function SidebarSectionHeader({
       />
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {count !== undefined ? (
-        <span className="ui-text-xs shrink-0 rounded bg-hover/70 px-1.5 py-0.5">{count}</span>
+        <Badge variant="muted" size="compact" className="shrink-0">
+          {count}
+        </Badge>
       ) : null}
     </button>
+  );
+}
+
+export function SidebarSectionLabel({
+  children,
+  leading,
+  trailing,
+  className,
+  ...props
+}: ComponentProps<"div"> & {
+  children: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "font-sans ui-text-sm flex h-6 min-w-0 select-none items-center gap-1.5 px-2 text-text-lighter",
+        className,
+      )}
+      {...props}
+    >
+      {leading ? (
+        <span className="flex shrink-0 items-center justify-center">{leading}</span>
+      ) : null}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
+    </div>
   );
 }
 
@@ -338,55 +508,145 @@ export function SidebarSectionSwitcher({
   items,
   value,
   onChange,
-  className,
-  itemClassName,
 }: {
   items: SidebarSectionSwitcherItem[];
   value: string;
   onChange: (value: string) => void;
-  className?: string;
-  itemClassName?: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLDivElement>(null);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
+  const activeItem = items.find((item) => item.id === value) ?? items[0];
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const measurement = measurementRef.current;
+    if (!container || !measurement) return;
+
+    const updateCompactState = () => {
+      setIsCompact(measurement.scrollWidth > container.clientWidth);
+    };
+
+    updateCompactState();
+    const resizeObserver = new ResizeObserver(updateCompactState);
+    resizeObserver.observe(container);
+    resizeObserver.observe(measurement);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isCompact) setIsDropdownOpen(false);
+  }, [isCompact]);
+
+  const dropdownItems = useMemo<MenuItem[]>(
+    () =>
+      items.map((item) => ({
+        id: item.id,
+        label: item.label,
+        icon: item.icon,
+        disabled: item.disabled,
+        onClick: () => {
+          onChange(item.id);
+          setIsDropdownOpen(false);
+        },
+        className: cn(
+          "h-7 justify-start gap-2 rounded-lg px-2 py-0",
+          item.id === value && "bg-hover text-text",
+        ),
+      })),
+    [items, onChange, value],
+  );
+
   return (
-    <div
-      role="tablist"
-      className={cn(
-        "mx-auto flex h-7 w-fit max-w-full shrink-0 select-none items-center justify-center gap-1 rounded-full bg-secondary-bg/45 p-0.5",
-        className,
-      )}
-    >
-      {items.map((item) => {
-        const selected = item.id === value;
-        const button = (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            aria-label={item.label}
-            disabled={item.disabled}
-            className={cn(
-              "ui-font ui-text-xs flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
-              selected
-                ? "max-w-32 bg-hover px-2 text-text"
-                : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
-              item.disabled && "cursor-not-allowed opacity-50",
-              itemClassName,
-            )}
-            onClick={() => onChange(item.id)}
+    <div ref={containerRef} className="relative mx-auto w-full min-w-0 max-w-full shrink-0">
+      <div
+        ref={measurementRef}
+        aria-hidden
+        className="pointer-events-none invisible absolute flex h-7 w-max items-center gap-1 p-0.5"
+      >
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="font-sans ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-full px-2"
           >
             {item.icon ? (
               <span className="flex size-4 shrink-0 items-center justify-center">{item.icon}</span>
             ) : null}
-            <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
-          </button>
-        );
+            <span className="whitespace-nowrap">{item.label}</span>
+          </div>
+        ))}
+      </div>
 
-        return (
-          <Tooltip key={item.id} content={item.label} side="bottom">
-            {button}
-          </Tooltip>
-        );
-      })}
+      {isCompact && activeItem ? (
+        <>
+          <button
+            ref={dropdownTriggerRef}
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={isDropdownOpen}
+            className="font-sans ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
+            onClick={() => setIsDropdownOpen((open) => !open)}
+          >
+            {activeItem.icon ? (
+              <span className="flex size-4 shrink-0 items-center justify-center">
+                {activeItem.icon}
+              </span>
+            ) : null}
+            <span className="min-w-0 truncate whitespace-nowrap">{activeItem.label}</span>
+            <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+          </button>
+          <Dropdown
+            isOpen={isDropdownOpen}
+            anchorRef={dropdownTriggerRef}
+            anchorSide="bottom"
+            anchorAlign="start"
+            items={dropdownItems}
+            className="!min-w-0 w-max max-w-[min(220px,calc(100vw-16px))] rounded-xl p-1"
+            onClose={() => setIsDropdownOpen(false)}
+          />
+        </>
+      ) : (
+        <div
+          role="tablist"
+          className="mx-auto flex h-7 w-fit max-w-full select-none items-center justify-center gap-1 rounded-full bg-secondary-bg/45 p-0.5"
+        >
+          {items.map((item) => {
+            const selected = item.id === value;
+            const button = (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-label={item.label}
+                disabled={item.disabled}
+                className={cn(
+                  "font-sans ui-text-sm flex h-6 min-w-0 items-center justify-center gap-1.5 rounded-full outline-none transition-[background-color,color,width,padding]",
+                  selected
+                    ? "max-w-32 bg-hover px-2 text-text"
+                    : "max-w-32 px-2 text-text-lighter hover:bg-hover/70 hover:text-text",
+                  item.disabled && "cursor-not-allowed opacity-50",
+                )}
+                onClick={() => onChange(item.id)}
+              >
+                {item.icon ? (
+                  <span className="flex size-4 shrink-0 items-center justify-center">
+                    {item.icon}
+                  </span>
+                ) : null}
+                <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
+              </button>
+            );
+
+            return (
+              <Tooltip key={item.id} content={item.label} side="bottom">
+                {button}
+              </Tooltip>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -401,7 +661,7 @@ export function SidebarEmptyState({
   return (
     <div
       className={cn(
-        "ui-font ui-text-sm flex min-h-24 select-none items-center justify-center px-3 py-6 text-center text-text-lighter",
+        "font-sans ui-text-sm flex min-h-24 select-none items-center justify-center px-3 py-6 text-center text-text-lighter",
         className,
       )}
       {...props}
@@ -436,7 +696,7 @@ export function SidebarEmptyActionState({
   return (
     <div
       className={cn(
-        "ui-font flex min-h-24 select-none flex-col items-center justify-center gap-1.5 px-3 py-6 text-center text-text-lighter",
+        "font-sans flex min-h-24 select-none flex-col items-center justify-center gap-1.5 px-3 py-6 text-center text-text-lighter",
         className,
       )}
       {...props}
@@ -462,7 +722,7 @@ export function SidebarEmptyActionState({
         {message}
       </div>
       {description ? (
-        <div className="ui-text-xs max-w-[24ch] leading-[1.35] text-text-lighter">
+        <div className="ui-text-sm max-w-[24ch] leading-[1.35] text-text-lighter">
           {description}
         </div>
       ) : null}
@@ -470,8 +730,8 @@ export function SidebarEmptyActionState({
         <Button
           type="button"
           variant="ghost"
-          compact
-          className={cn("ui-text-xs h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
+          size="xs"
+          className={cn("ui-text-sm h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
           disabled={actionDisabled}
           onClick={onAction}
         >

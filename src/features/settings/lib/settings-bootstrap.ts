@@ -2,23 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { applySettingsSideEffects } from "@/features/settings/lib/settings-effects";
 import { normalizeSettings } from "@/features/settings/lib/settings-normalization";
+import { getSystemThemePreference } from "@/features/settings/lib/theme-resolution";
 import {
   loadSettingsFromStore,
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
 import type { Settings } from "@/features/settings/types/settings.types";
-
-function getSystemThemePreference(): "light" | "dark" {
-  if (typeof window !== "undefined" && window.matchMedia) {
-    try {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    } catch (error) {
-      console.warn("matchMedia not available:", error);
-    }
-  }
-
-  return "dark";
-}
 
 async function detectInitialTheme() {
   let detectedTheme = getSystemThemePreference() === "dark" ? "athas-dark" : "athas-light";

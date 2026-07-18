@@ -1,5 +1,5 @@
-use agent_client_protocol as acp;
-use tauri::EventId;
+use agent_client_protocol::schema as acp;
+use athas_terminal::TerminalEvent;
 use tokio::sync::oneshot;
 
 /// Tracks state for an ACP terminal session
@@ -10,7 +10,7 @@ pub(super) struct AcpTerminalState {
    pub truncated: bool,
    pub exit_status: Option<acp::TerminalExitStatus>,
    pub exit_waiters: Vec<oneshot::Sender<acp::TerminalExitStatus>>,
-   pub listener_ids: Vec<EventId>,
+   pending_utf8: Vec<u8>,
 }
 
 impl AcpTerminalState {
@@ -22,13 +22,73 @@ impl AcpTerminalState {
          truncated: false,
          exit_status: None,
          exit_waiters: Vec::new(),
-         listener_ids: Vec::new(),
+         pending_utf8: Vec::new(),
       }
    }
 
    pub fn append_output(&mut self, data: &str) {
       self.output_buffer.push_str(data);
       self.truncate_from_beginning_to_limit();
+   }
+
+   pub fn append_output_bytes(&mut self, data: &[u8]) {
+      self.pending_utf8.extend_from_slice(data);
+
+      loop {
+         match std::str::from_utf8(&self.pending_utf8) {
+            Ok(text) => {
+               let text = text.to_string();
+               self.pending_utf8.clear();
+               self.append_output(&text);
+               break;
+            }
+            Err(error) => {
+               let valid_up_to = error.valid_up_to();
+               if valid_up_to > 0 {
+                  let text = String::from_utf8_lossy(&self.pending_utf8[..valid_up_to]).to_string();
+                  self.pending_utf8.drain(..valid_up_to);
+                  self.append_output(&text);
+               }
+
+               let Some(invalid_length) = error.error_len() else {
+                  break;
+               };
+
+               self.pending_utf8.drain(..invalid_length);
+               self.append_output("\u{fffd}");
+            }
+         }
+      }
+   }
+
+   pub fn handle_event(&mut self, event: TerminalEvent) {
+      match event {
+         TerminalEvent::Output { data } => self.append_output_bytes(&data),
+         TerminalEvent::Error { .. } => {
+            self.flush_pending_utf8();
+            self.set_exit_status(Some(1), Some("pty_error".to_string()));
+         }
+         TerminalEvent::Exit { exit_code, signal } => {
+            self.flush_pending_utf8();
+            self.set_exit_status(exit_code, signal);
+         }
+         TerminalEvent::Closed => {
+            self.flush_pending_utf8();
+            if self.exit_status.is_none() {
+               self.set_exit_status(Some(0), None);
+            }
+         }
+      }
+   }
+
+   fn flush_pending_utf8(&mut self) {
+      if self.pending_utf8.is_empty() {
+         return;
+      }
+
+      let text = String::from_utf8_lossy(&self.pending_utf8).to_string();
+      self.pending_utf8.clear();
+      self.append_output(&text);
    }
 
    fn truncate_from_beginning_to_limit(&mut self) {
@@ -109,5 +169,17 @@ mod tests {
       let status = state.exit_status.expect("exit status should be set");
       assert_eq!(status.exit_code, None);
       assert_eq!(status.signal.as_deref(), Some("SIGTERM"));
+   }
+
+   #[test]
+   fn append_output_bytes_preserves_split_utf8_sequences() {
+      let mut state = AcpTerminalState::new("terminal-4".to_string(), None);
+      let emoji = "🙂".as_bytes();
+
+      state.append_output_bytes(&emoji[..2]);
+      assert_eq!(state.output_buffer, "");
+
+      state.append_output_bytes(&emoji[2..]);
+      assert_eq!(state.output_buffer, "🙂");
    }
 }

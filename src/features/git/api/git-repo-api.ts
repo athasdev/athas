@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { readDirectory } from "@/features/file-system/controllers/platform";
 
 const repoDiscoveryCache = new Map<string, string | null>();
 const workspaceRepoDiscoveryCache = new Map<string, { discoveredAt: number; repos: string[] }>();
@@ -39,13 +39,27 @@ const REPO_SCAN_SKIP_DIRS = new Set([
 ]);
 
 function normalizePath(path: string): string {
+  if (path.startsWith("wsl://") || path.startsWith("remote://")) {
+    const [scheme, rest] = path.split("://");
+    const collapsedRest = (rest ?? "").replace(/\/{2,}/g, "/");
+    const normalized = `${scheme}://${collapsedRest}`;
+    return normalized.length > `${scheme}://`.length + 1
+      ? normalized.replace(/\/+$/, "")
+      : normalized;
+  }
+
   const unixPath = path.replace(/\\/g, "/");
   const collapsed = unixPath.replace(/\/{2,}/g, "/");
   return collapsed.length > 1 ? collapsed.replace(/\/+$/, "") : collapsed;
 }
 
 function isAbsolutePath(path: string): boolean {
-  return path.startsWith("/") || /^[A-Za-z]:\//.test(path.replace(/\\/g, "/"));
+  return (
+    path.startsWith("/") ||
+    path.startsWith("wsl://") ||
+    path.startsWith("remote://") ||
+    /^[A-Za-z]:\//.test(path.replace(/\\/g, "/"))
+  );
 }
 
 function joinPath(basePath: string, childPath: string): string {
@@ -135,6 +149,14 @@ export async function resolveRepositoryPath(repoPath: string): Promise<string | 
   return discoverRepo(repoPath);
 }
 
+export async function resolveRepositoryPathOrThrow(repoPath: string): Promise<string> {
+  const resolvedRepoPath = await resolveRepositoryPath(repoPath);
+  if (!resolvedRepoPath) {
+    throw new Error("Not a Git repository");
+  }
+  return resolvedRepoPath;
+}
+
 export async function resolveRepositoryForFile(
   repoPath: string,
   filePath: string,
@@ -177,53 +199,74 @@ export async function discoverWorkspaceRepositories(
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
   const queue: string[] = [normalizedWorkspacePath];
+  let queueCursor = 0;
+  const containingRepoPath = await discoverRepo(normalizedWorkspacePath);
 
-  while (queue.length > 0) {
-    const currentPath = queue.shift();
-    if (!currentPath) break;
+  if (containingRepoPath) {
+    discoveredRepos.add(containingRepoPath);
+  }
 
-    const directoryPath = normalizePath(currentPath);
-    if (visitedDirectories.has(directoryPath)) {
-      continue;
-    }
-    visitedDirectories.add(directoryPath);
+  while (queueCursor < queue.length) {
+    const batchEnd = Math.min(queueCursor + 8, queue.length);
+    const batch = queue.slice(queueCursor, batchEnd);
+    queueCursor = batchEnd;
+    const directoryResults = await Promise.all(
+      batch.map(async (currentPath) => {
+        const directoryPath = normalizePath(currentPath);
+        if (visitedDirectories.has(directoryPath)) {
+          return null;
+        }
+        visitedDirectories.add(directoryPath);
 
-    let entries: Awaited<ReturnType<typeof readDir>>;
-    try {
-      entries = await readDir(directoryPath);
-    } catch {
-      continue;
-    }
+        try {
+          return { directoryPath, entries: await readDirectory(directoryPath) };
+        } catch {
+          return null;
+        }
+      }),
+    );
 
-    const hasGitMetadata = entries.some((entry) => entry?.name === ".git");
-    if (hasGitMetadata) {
-      discoveredRepos.add(directoryPath);
-    }
-
-    for (const entry of entries) {
-      if (!entry?.isDirectory || !entry.name) {
+    for (const result of directoryResults) {
+      if (!result) {
         continue;
       }
 
-      const directoryName = entry.name.toLowerCase();
-      if (REPO_SCAN_SKIP_DIRS.has(directoryName)) {
-        continue;
+      const hasGitMetadata = result.entries.some((entry) => entry?.name === ".git");
+      if (hasGitMetadata) {
+        discoveredRepos.add(result.directoryPath);
       }
 
-      const childPath = normalizePath(`${directoryPath}/${entry.name}`);
+      for (const entry of result.entries) {
+        const isDirectory = entry?.isDirectory ?? entry?.is_dir;
+        if (!isDirectory || !entry.name) {
+          continue;
+        }
 
-      if (visitedDirectories.has(childPath)) {
-        continue;
+        const directoryName = entry.name.toLowerCase();
+        if (REPO_SCAN_SKIP_DIRS.has(directoryName)) {
+          continue;
+        }
+
+        const childPath = normalizePath(`${result.directoryPath}/${entry.name}`);
+
+        if (!visitedDirectories.has(childPath)) {
+          queue.push(childPath);
+        }
       }
-
-      queue.push(childPath);
     }
   }
 
-  const repositories = sortWorkspaceRepositories(
+  let repositories = sortWorkspaceRepositories(
     Array.from(discoveredRepos),
     normalizedWorkspacePath,
   );
+
+  if (containingRepoPath) {
+    repositories = [
+      containingRepoPath,
+      ...repositories.filter((repoPath) => repoPath !== containingRepoPath),
+    ];
+  }
 
   workspaceRepoDiscoveryCache.set(normalizedWorkspacePath, {
     discoveredAt: Date.now(),

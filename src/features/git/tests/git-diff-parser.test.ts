@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { isDiffFile, parseRawDiffContent } from "../utils/git-diff-parser";
-import { getDiffLineVisualState } from "../utils/git-diff-helpers";
+import { getDiffLineVisualState, getSkippedUnchangedLineCount } from "../utils/git-diff-helpers";
 
 function isMultiFileDiff(value: GitDiff | MultiFileDiff): value is MultiFileDiff {
   return "files" in value;
@@ -104,20 +104,42 @@ describe("git diff parser", () => {
   });
 
   test("maps diff line types to shared visual state", () => {
-    expect(getDiffLineVisualState("added")).toEqual({
-      lineBackground: "bg-git-added/15",
-      gutterBackground: "bg-git-added/25",
-      contentColor: "text-git-added",
-    });
-    expect(getDiffLineVisualState("removed")).toEqual({
-      lineBackground: "bg-git-deleted/15",
-      gutterBackground: "bg-git-deleted/25",
-      contentColor: "text-git-deleted",
-    });
-    expect(getDiffLineVisualState("header")).toEqual({
-      lineBackground: "",
-      gutterBackground: "bg-primary-bg",
+    expect(getDiffLineVisualState("added")).toMatchObject({
+      lineBackground: "bg-git-added/14",
+      gutterBackground: "bg-git-added/18",
+      railClassName: "shadow-[inset_2px_0_0_var(--color-git-added)]",
+      gutterTextColor: "text-git-added",
       contentColor: "text-text",
     });
+    expect(getDiffLineVisualState("removed")).toMatchObject({
+      lineBackground: "bg-git-deleted/14",
+      gutterBackground: "bg-git-deleted/18",
+      railClassName: "shadow-[inset_2px_0_0_var(--color-git-deleted)]",
+      gutterTextColor: "text-git-deleted",
+      contentColor: "text-text",
+    });
+    expect(getDiffLineVisualState("header")).toMatchObject({
+      lineBackground: "",
+      gutterBackground: "bg-primary-bg",
+      railClassName: "",
+      gutterTextColor: "text-text-lighter",
+      contentColor: "text-text",
+    });
+  });
+
+  test("derives skipped unchanged lines between hunks", () => {
+    const firstHunk = {
+      id: 0,
+      header: { line_type: "header" as const, content: "@@ -67,7 +67,8 @@" },
+      lines: [],
+    };
+    const secondHunk = {
+      id: 1,
+      header: { line_type: "header" as const, content: "@@ -113,9 +114,11 @@" },
+      lines: [],
+    };
+
+    expect(getSkippedUnchangedLineCount(undefined, firstHunk)).toBe(66);
+    expect(getSkippedUnchangedLineCount(firstHunk, secondHunk)).toBe(39);
   });
 });

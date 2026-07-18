@@ -8,15 +8,17 @@ import type { Settings } from "@/features/settings/types/settings.types";
 let storeInstance: Store;
 
 async function initializeStoreDefaults(store: Store) {
-  for (const [key, value] of Object.entries(defaultSettings)) {
-    const current = await store.get(key);
-    if (current === null || current === undefined) {
-      await store.set(key, value);
-    } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-      const merged = { ...value, ...current };
-      await store.set(key, merged);
-    }
-  }
+  await Promise.all(
+    Object.entries(defaultSettings).map(async ([key, value]) => {
+      const current = await store.get(key);
+      if (current === null || current === undefined) {
+        await store.set(key, value);
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+        const merged = { ...value, ...current };
+        await store.set(key, merged);
+      }
+    }),
+  );
   await store.save();
 }
 
@@ -35,8 +37,14 @@ export async function loadSettingsFromStore(): Promise<Settings> {
   const store = await getSettingsStore();
   const loadedSettings = getDefaultSettingsSnapshot();
 
-  for (const key of Object.keys(defaultSettings) as Array<keyof Settings>) {
-    const value = await store.get(key);
+  const entries = await Promise.all(
+    (Object.keys(defaultSettings) as Array<keyof Settings>).map(async (key) => {
+      const value = await store.get(key);
+      return [key, value] as const;
+    }),
+  );
+
+  for (const [key, value] of entries) {
     if (value !== null && value !== undefined) {
       (loadedSettings as Record<keyof Settings, Settings[keyof Settings]>)[key] =
         value as Settings[typeof key];
@@ -50,9 +58,7 @@ export async function saveSettingsToStore(settings: Partial<Settings>) {
   try {
     const store = await getSettingsStore();
 
-    for (const [key, value] of Object.entries(settings)) {
-      await store.set(key, value);
-    }
+    await Promise.all(Object.entries(settings).map(([key, value]) => store.set(key, value)));
 
     await store.save();
   } catch (error) {

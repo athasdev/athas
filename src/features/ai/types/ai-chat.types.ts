@@ -61,7 +61,7 @@ export const AGENT_OPTIONS: AgentInfo[] = [
   {
     id: "custom",
     name: "Athas Agent",
-    description: "Use Athas chat settings and provider configuration",
+    description: "Use Athas Agent settings and provider configuration",
     isAcp: false,
   },
 ];
@@ -120,6 +120,7 @@ export interface AIChatInputBarProps {
   buffers: PaneContent[];
   allProjectFiles: FileEntry[];
   isActiveSurface?: boolean;
+  presentation?: "default" | "initial";
   onSendMessage: (message: string) => Promise<void>;
   onStopStreaming: () => void;
 }

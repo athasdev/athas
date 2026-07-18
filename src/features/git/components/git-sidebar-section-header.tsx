@@ -1,16 +1,8 @@
-import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
-import {
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
-} from "@phosphor-icons/react";
+import { type Icon as AppIcon } from "@/ui/icons";
+import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
-import {
-  PaneGroup,
-  paneHeaderClassName,
-  paneIconButtonClassName,
-  paneTitleClassName,
-} from "@/features/panes/components/pane-chrome";
+import { SidebarSectionLabel } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 interface GitSidebarSectionHeaderProps {
@@ -19,7 +11,7 @@ interface GitSidebarSectionHeaderProps {
   collapsible?: boolean;
   isCollapsed?: boolean;
   onToggle?: () => void;
-  icon?: PhosphorIcon;
+  icon?: AppIcon;
   className?: string;
 }
 
@@ -34,17 +26,23 @@ const GitSidebarSectionHeader = ({
 }: GitSidebarSectionHeaderProps) => {
   const content = (
     <>
-      <PaneGroup className="min-w-0 flex-1">
-        {collapsible &&
-          (isCollapsed ? (
-            <ChevronRight className="size-3.5 shrink-0 text-text-lighter" />
-          ) : (
-            <ChevronDown className="size-3.5 shrink-0 text-text-lighter" />
-          ))}
-        {Icon ? <Icon className="size-3.5 shrink-0 text-text-lighter" /> : null}
-        <span className={paneTitleClassName()}>{title}</span>
-      </PaneGroup>
-      {actions ? <PaneGroup className="shrink-0">{actions}</PaneGroup> : null}
+      <SidebarSectionLabel
+        className="h-auto flex-1 px-0 ui-text-sm font-medium text-text"
+        leading={
+          <>
+            {collapsible &&
+              (isCollapsed ? (
+                <ChevronRight className="size-3.5 shrink-0 text-text-lighter" />
+              ) : (
+                <ChevronDown className="size-3.5 shrink-0 text-text-lighter" />
+              ))}
+            {Icon ? <Icon className="size-3.5 shrink-0 text-text-lighter" /> : null}
+          </>
+        }
+      >
+        {title}
+      </SidebarSectionLabel>
+      {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
     </>
   );
 
@@ -55,10 +53,10 @@ const GitSidebarSectionHeader = ({
         variant="ghost"
         onClick={onToggle}
         className={cn(
-          paneHeaderClassName("w-full shrink-0 justify-between rounded-none px-2.5 hover:bg-hover"),
+          "flex min-h-7 w-full shrink-0 items-center justify-between gap-1.5 rounded-none bg-primary-bg px-2.5 py-1 hover:bg-hover",
           className,
         )}
-        compact
+        size="xs"
       >
         {content}
       </Button>
@@ -67,14 +65,14 @@ const GitSidebarSectionHeader = ({
 
   return (
     <div
-      className={cn(paneHeaderClassName("shrink-0 justify-between rounded-none px-2.5"), className)}
+      className={cn(
+        "flex min-h-7 shrink-0 items-center justify-between gap-1.5 bg-primary-bg px-2.5 py-1",
+        className,
+      )}
     >
       {content}
     </div>
   );
 };
-
-export const gitSidebarSectionActionButtonClassName = (className?: string) =>
-  cn(paneIconButtonClassName("size-6"), className);
 
 export default GitSidebarSectionHeader;

@@ -1,10 +1,11 @@
 import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 
 export function canUseHostedProvider(
   providerId: string,
   subscription: SubscriptionInfo | null,
 ): boolean {
-  return providerId === "openrouter" && subscription?.status === "pro";
+  return providerId === "openrouter" && hasProductCapability(subscription, "hostedAi");
 }
 
 export function canUseProviderWithoutApiKey(params: {

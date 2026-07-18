@@ -1,4 +1,5 @@
 import type { CoreFeaturesState } from "./feature.types";
+import type { V0DesignSystemProfile } from "@/extensions/v0/types/v0-design-system.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type {
   FooterLeadingItemId,
@@ -9,18 +10,14 @@ import type {
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
-export type EditorEngine = "monaco" | "athas" | "nvim" | "helix" | "vim" | "custom";
 export type SettingsSection =
   | "account"
   | "general"
   | "editor"
   | "git"
   | "appearance"
-  | "databases"
-  | "extensions"
   | "ai"
   | "keyboard"
-  | "features"
   | "collaboration"
   | "enterprise"
   | "advanced"
@@ -30,11 +27,9 @@ export type SettingsSection =
 export interface Settings {
   // General
   autoSave: boolean;
-  sidebarPosition: "left" | "right";
   quickOpenPreview: boolean;
   // Editor
   fontFamily: string;
-  editorEngine: EditorEngine;
   fontSize: number;
   editorLineHeight: number;
   tabSize: number;
@@ -44,6 +39,10 @@ export interface Settings {
   renderIndentGuides: boolean;
   highlightOccurrences: boolean;
   showMinimap: boolean;
+  inlayHints: boolean;
+  codeLens: boolean;
+  semanticTokens: boolean;
+  breadcrumbShowSymbols: boolean;
   // Terminal
   terminalFontFamily: string;
   terminalFontSize: number;
@@ -67,8 +66,6 @@ export interface Settings {
   nativeMenuBar: boolean;
   compactMenuBar: boolean;
   windowTransparency: boolean;
-  sidebarTabsPosition: "top" | "left";
-  titleBarProjectMode: "tabs" | "window";
   headerTrailingItemsOrder: HeaderTrailingItemId[];
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
   footerLeadingItemsOrder: FooterLeadingItemId[];
@@ -88,8 +85,11 @@ export interface Settings {
   aiAutocompleteCustomModelId: string;
   aiDefaultSessionMode: string;
   aiSkills: AIChatSkill[];
+  v0DesignSystems: V0DesignSystemProfile[];
+  activeV0DesignSystemId: string;
   ollamaBaseUrl: string;
   // Layout
+  activityRailWidth: number;
   sidebarWidth: number;
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
@@ -133,6 +133,7 @@ export interface Settings {
     | "icon-theme"
     | "snippet"
     | "database"
+    | "ai"
     | "skill"
     | "agent";
   maxOpenTabs: number;
@@ -140,7 +141,7 @@ export interface Settings {
   //// File tree
   fileTreeIndentSize: number;
   compactFoldersInFileTree: boolean;
-  fileTreeDensity: "compact" | "default" | "comfortable";
+  hideRootFolderInFileTree: boolean;
   showHiddenFilesInFileTree: boolean;
   showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];

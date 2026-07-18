@@ -15,7 +15,7 @@ export interface FileTreeProps {
   onUpdateFiles?: (files: FileEntry[]) => void;
   onRenamePath?: (path: string, newName?: string) => void;
   onDuplicatePath?: (path: string) => void;
-  onRefreshDirectory?: (path: string) => void;
+  onRefreshDirectory?: (path: string, options?: { force?: boolean }) => void;
   onRevealInFinder?: (path: string) => void;
   onUploadFile?: (directoryPath: string) => void;
   onFileMove?: (oldPath: string, newPath: string) => void;
@@ -27,7 +27,6 @@ export interface FileTreeItemProps {
   activePath?: string;
   dragOverPath: string | null;
   isDragging: boolean;
-  deepestStickyFolder: string | null;
   editingValue: string;
   onEditingValueChange: (value: string) => void;
   onMouseDown: (e: React.MouseEvent, file: FileEntry) => void;

@@ -8,7 +8,7 @@ import {
   PushPinIcon as PushPin,
   RocketLaunchIcon as RocketLaunch,
   WrenchIcon as Wrench,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { EmojiPicker } from "./emoji-picker";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -72,7 +72,7 @@ export function ChannelIconPicker({
             key={tab}
             type="button"
             className={cn(
-              "ui-text-xs h-7 rounded-md capitalize text-text-lighter hover:bg-hover hover:text-text",
+              "ui-text-sm h-7 rounded-md capitalize text-text-lighter hover:bg-hover hover:text-text",
               activeTab === tab && "bg-hover text-text",
             )}
             onClick={() => onTabChange(tab)}
@@ -112,7 +112,7 @@ export function ChannelIconPicker({
       {activeTab === "icon" ? (
         <button
           type="button"
-          className="ui-text-xs mt-2 h-7 w-full rounded-md text-center text-text-lighter hover:bg-hover hover:text-text"
+          className="ui-text-sm mt-2 h-7 w-full rounded-md text-center text-text-lighter hover:bg-hover hover:text-text"
           onClick={onClear}
         >
           Reset to default

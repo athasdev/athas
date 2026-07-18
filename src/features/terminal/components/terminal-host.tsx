@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useReducer, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useTerminalSlotsStore } from "../stores/terminal-slots.store";
-import { useTerminalStore } from "../stores/terminal.store";
+import { type TerminalStore, useTerminalStore } from "../stores/terminal.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { XtermTerminal } from "./terminal";
 
 // Renders all live xterm instances at app root. Each session owns a stable
@@ -11,9 +12,18 @@ import { XtermTerminal } from "./terminal";
 // wrapper — only the wrapper's DOM parent changes. Pane moves never unmount
 // xterm; PTY listeners + scrollback survive.
 export function TerminalHost() {
+  const [, refreshWorkspaceSessions] = useReducer((version) => version + 1, 0);
   const slotIds = useTerminalSlotsStore(useShallow((state) => Array.from(state.slots.keys())));
-  const sessionStoreIds = useTerminalStore(
+  const activeSessionStoreIds = useTerminalStore(
     useShallow((state) => Array.from(state.sessions.keys())),
+  );
+  const sessionStoreIds = workspaceRuntimeRegistry
+    .getExistingStores<TerminalStore>("terminal")
+    .flatMap((store) => [...store.getState().sessions.keys()]);
+
+  useEffect(
+    () => workspaceRuntimeRegistry.subscribeToStoreKey("terminal", refreshWorkspaceSessions),
+    [activeSessionStoreIds],
   );
 
   const knownRef = useRef<{ all: Set<string>; everInStore: Set<string> }>({
@@ -64,6 +74,7 @@ function XtermPortal({ sessionId }: { sessionId: string }) {
     wrapper.style.height = "100%";
     wrapper.style.width = "100%";
     wrapper.style.minHeight = "0";
+    wrapper.style.minWidth = "0";
     wrapper.setAttribute("data-terminal-wrapper", sessionId);
     wrapperRef.current = wrapper;
   }

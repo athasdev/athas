@@ -91,20 +91,20 @@ function isExternalFileDrag(event: DragEvent): boolean {
 
 function getExternalFileDropRouteAtPosition(
   position: { x: number; y: number } | undefined,
-  treatLocalDropAsGlobal: boolean,
+  treatPaneDropAsGlobal: boolean,
 ) {
   if (!position) return "global";
-  return getExternalFileDropRoute(resolveClientPoint(position).element, treatLocalDropAsGlobal);
+  return getExternalFileDropRoute(resolveClientPoint(position).element, treatPaneDropAsGlobal);
 }
 
 function isGlobalExternalFileDropEventTarget(
   event: DragEvent,
-  treatLocalDropAsGlobal: boolean,
+  treatPaneDropAsGlobal: boolean,
 ): boolean {
   return (
     getExternalFileDropRoute(
       event.target instanceof Element ? event.target : null,
-      treatLocalDropAsGlobal,
+      treatPaneDropAsGlobal,
     ) === "global"
   );
 }
@@ -112,12 +112,12 @@ function isGlobalExternalFileDropEventTarget(
 /**
  * Hook to handle drag-and-drop from OS into the application
  * @param onDrop - Callback when files/folders are dropped (array of paths)
- * @param treatLocalDropAsGlobal - Whether local pane surfaces should fall through to onDrop
+ * @param treatPaneDropAsGlobal - Whether editor pane surfaces should fall through to onDrop
  * @returns isDraggingOver - Boolean indicating if a drag is over the window
  */
 export const useFileSystemFolderDrop = (
   onDrop: (paths: string[]) => void | Promise<void>,
-  treatLocalDropAsGlobal = false,
+  treatPaneDropAsGlobal = false,
 ) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
@@ -154,7 +154,7 @@ export const useFileSystemFolderDrop = (
           return;
         }
         const position = "position" in event.payload ? event.payload.position : undefined;
-        if (getExternalFileDropRouteAtPosition(position, treatLocalDropAsGlobal) !== "global") {
+        if (getExternalFileDropRouteAtPosition(position, treatPaneDropAsGlobal) !== "global") {
           setIsDraggingOver(false);
           return;
         }
@@ -178,7 +178,7 @@ export const useFileSystemFolderDrop = (
           return;
         }
         const position = "position" in event.payload ? event.payload.position : undefined;
-        if (getExternalFileDropRouteAtPosition(position, treatLocalDropAsGlobal) !== "global") {
+        if (getExternalFileDropRouteAtPosition(position, treatPaneDropAsGlobal) !== "global") {
           setIsDraggingOver(false);
           return;
         }
@@ -188,7 +188,7 @@ export const useFileSystemFolderDrop = (
       const onDomDragOver = (event: DragEvent) => {
         if (getInternalTabDragData()) return;
         if (!isExternalFileDrag(event)) return;
-        if (!isGlobalExternalFileDropEventTarget(event, treatLocalDropAsGlobal)) {
+        if (!isGlobalExternalFileDropEventTarget(event, treatPaneDropAsGlobal)) {
           setIsDraggingOver(false);
           return;
         }
@@ -200,7 +200,7 @@ export const useFileSystemFolderDrop = (
           return;
         }
         if (!isExternalFileDrag(event)) return;
-        if (!isGlobalExternalFileDropEventTarget(event, treatLocalDropAsGlobal)) {
+        if (!isGlobalExternalFileDropEventTarget(event, treatPaneDropAsGlobal)) {
           setIsDraggingOver(false);
           return;
         }
@@ -210,7 +210,7 @@ export const useFileSystemFolderDrop = (
       const onDomEnter = (event: DragEvent) => {
         if (getInternalTabDragData()) return;
         if (!isExternalFileDrag(event)) return;
-        if (!isGlobalExternalFileDropEventTarget(event, treatLocalDropAsGlobal)) {
+        if (!isGlobalExternalFileDropEventTarget(event, treatPaneDropAsGlobal)) {
           setIsDraggingOver(false);
           return;
         }
@@ -247,7 +247,7 @@ export const useFileSystemFolderDrop = (
       if (unlistenWebview) unlistenWebview();
       if (domTeardown) domTeardown();
     };
-  }, [onDrop, treatLocalDropAsGlobal]);
+  }, [onDrop, treatPaneDropAsGlobal]);
 
   return { isDraggingOver };
 };

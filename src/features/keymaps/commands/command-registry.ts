@@ -17,6 +17,7 @@ import {
 import {
   closeActiveTab,
   closeAllTabs,
+  closeCurrentWindow,
   closeOtherTabs,
   closeSavedTabs,
   closeTabsToLeft,
@@ -80,6 +81,7 @@ import {
   openOutlineSidebar,
   promptGoToLine,
 } from "./navigation-command-actions";
+import { restartAllLanguageServers, stopAllLanguageServers } from "./lsp-command-actions";
 import {
   openCommandPalette,
   openDiagnosticsBuffer,
@@ -94,12 +96,12 @@ import {
   toggleAgentLauncher,
   toggleAIChat,
   toggleFilesSidebar,
+  toggleDockerSidebar,
   toggleGitHubSidebar,
   toggleLineNumbers,
   toggleMinimap,
   toggleRenderWhitespace,
   toggleSidebar,
-  toggleSidebarPosition,
   toggleSourceControlSidebar,
   toggleTerminalPane,
   toggleWordWrap,
@@ -161,6 +163,13 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+w",
     execute: closeActiveTab,
+  },
+  {
+    id: "workbench.closeWindow",
+    title: "Close Window",
+    category: "Workbench",
+    keybinding: "cmd+shift+w",
+    execute: closeCurrentWindow,
   },
   {
     id: "file.closeAll",
@@ -253,6 +262,27 @@ const terminalCommands: Command[] = [
     keybinding: "cmd+d",
     execute: () => {
       window.dispatchEvent(new CustomEvent("terminal-split"));
+    },
+  },
+];
+
+const lspCommands: Command[] = [
+  {
+    id: "lsp.restartAllServers",
+    title: "Language Server: Restart All Servers",
+    category: "Language Server",
+    description: "Restart every active language server",
+    execute: () => {
+      void restartAllLanguageServers();
+    },
+  },
+  {
+    id: "lsp.stopAllServers",
+    title: "Language Server: Stop All Servers",
+    category: "Language Server",
+    description: "Stop every active language server",
+    execute: () => {
+      void stopAllLanguageServers();
     },
   },
 ];
@@ -468,7 +498,7 @@ const editCommands: Command[] = [
   },
   {
     id: "editor.inlineEdit",
-    title: "AI Inline Edit",
+    title: "Agent Inline Edit",
     category: "Edit",
     keybinding: "cmd+i",
     execute: showInlineEditToolbar,
@@ -520,7 +550,7 @@ const viewCommands: Command[] = [
   {
     id: "workbench.agentLauncher",
     title: "New Agent",
-    category: "AI",
+    category: "Agent",
     keybinding: "cmd+shift+space",
     execute: toggleAgentLauncher,
   },
@@ -573,6 +603,12 @@ const viewCommands: Command[] = [
     execute: toggleGitHubSidebar,
   },
   {
+    id: "workbench.showDocker",
+    title: "Show Docker",
+    category: "View",
+    execute: toggleDockerSidebar,
+  },
+  {
     id: "workbench.showDebugger",
     title: "Show Run and Debug",
     category: "View",
@@ -601,13 +637,6 @@ const viewCommands: Command[] = [
     execute: toggleActiveBreakpoint,
   },
   {
-    id: "workbench.toggleSidebarPosition",
-    title: "Toggle Sidebar Position",
-    category: "View",
-    keybinding: "cmd+shift+b",
-    execute: toggleSidebarPosition,
-  },
-  {
     id: "workbench.showThemeSelector",
     title: "Theme Selector",
     category: "View",
@@ -622,7 +651,7 @@ const viewCommands: Command[] = [
   },
   {
     id: "workbench.toggleAIChat",
-    title: "Toggle AI Chat",
+    title: "Toggle Agent",
     category: "View",
     keybinding: "cmd+r",
     execute: toggleAIChat,
@@ -936,9 +965,7 @@ const databaseCommands: Command[] = [
     title: "Show Databases",
     category: "Database",
     execute: () => {
-      const state = useUIState.getState();
-      state.setActiveRightSidebarView("databases");
-      state.setIsRightSidebarVisible(true);
+      useUIState.getState().openCommandPaletteView("databases");
     },
   },
 ];
@@ -1005,6 +1032,7 @@ const allCommands: Command[] = [
   ...fileCommands,
   ...editCommands,
   ...terminalCommands,
+  ...lspCommands,
   ...viewCommands,
   ...navigationCommands,
   ...paneCommands,

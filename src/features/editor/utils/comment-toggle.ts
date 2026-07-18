@@ -33,6 +33,8 @@ const LINE_COMMENT_TOKENS: Partial<Record<string, string>> = {
   lua: "--",
   php: "//",
   python: "#",
+  r: "#",
+  rmarkdown: "#",
   ruby: "#",
   rust: "//",
   scala: "//",

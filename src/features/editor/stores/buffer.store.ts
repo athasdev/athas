@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import isEqual from "fast-deep-equal";
 import { immer } from "zustand/middleware/immer";
-import { createWithEqualityFn } from "zustand/traditional";
+import { createStore } from "zustand/vanilla";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
@@ -24,7 +24,13 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
+import {
+  getBufferById,
+  getBufferByPath,
+  getBufferIndexById,
+} from "@/features/editor/utils/buffer-index";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
 import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -36,6 +42,7 @@ import type {
   TerminalContent,
   TokenEntry,
 } from "@/features/panes/types/pane-content.types";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import {
   isEditorContent,
   isEditableContent,
@@ -54,11 +61,40 @@ interface PendingClose {
   keepBufferId?: string;
 }
 
-interface ClosedBuffer {
+type ClosedBufferType =
+  | "editor"
+  | "image"
+  | "pdf"
+  | "binary"
+  | "diff"
+  | "markdownPreview"
+  | "htmlPreview"
+  | "csvPreview";
+
+interface ClosedBufferBase {
+  type: ClosedBufferType;
   path: string;
   name: string;
   isPinned: boolean;
 }
+
+interface ClosedEditorLikeBuffer extends ClosedBufferBase {
+  type: "editor" | "image" | "pdf" | "binary";
+}
+
+interface ClosedDiffBuffer extends ClosedBufferBase {
+  type: "diff";
+  content: string;
+  diffData?: GitDiff | MultiFileDiff;
+}
+
+interface ClosedPreviewBuffer extends ClosedBufferBase {
+  type: "markdownPreview" | "htmlPreview" | "csvPreview";
+  content: string;
+  sourceFilePath: string;
+}
+
+type ClosedBuffer = ClosedEditorLikeBuffer | ClosedDiffBuffer | ClosedPreviewBuffer;
 
 interface BufferState {
   buffers: PaneContent[];
@@ -100,7 +136,13 @@ interface BufferActions {
   openWebViewerBuffer: (url: string) => string;
   openPRBuffer: (
     prNumber: number,
-    metadata?: { title?: string; authorAvatarUrl?: string; selectedFilePath?: string },
+    metadata?: {
+      title?: string;
+      repoPath?: string;
+      authorAvatarUrl?: string;
+      selectedFilePath?: string;
+      initialView?: "activity" | "files";
+    },
   ) => string;
   openGitHubIssueBuffer: (options: {
     issueNumber: number;
@@ -126,6 +168,7 @@ interface BufferActions {
   openGlobalSearchBuffer: () => string;
   openDiagnosticsBuffer: () => string;
   openReferencesBuffer: () => string;
+  openExtensionsBuffer: () => string;
   openOnboardingBuffer: (
     context: import("@/features/onboarding/lib/onboarding-state").OnboardingContext,
   ) => string;
@@ -202,16 +245,132 @@ const getPaneReplacementBufferId = (
 
   if (!sourcePane) return null;
 
-  const openBufferIds = new Set(
-    buffers.filter((buffer) => !closingBufferIdSet.has(buffer.id)).map((buffer) => buffer.id),
-  );
-  const candidates = [
-    ...(sourcePane.mruBufferIds ?? []),
-    ...sourcePane.bufferIds,
-    ...buffers.map((buffer) => buffer.id),
-  ];
+  const openBufferIds = new Set<string>();
+  for (const buffer of buffers) {
+    if (!closingBufferIdSet.has(buffer.id)) {
+      openBufferIds.add(buffer.id);
+    }
+  }
 
-  return candidates.find((bufferId) => openBufferIds.has(bufferId)) ?? null;
+  for (const bufferId of sourcePane.mruBufferIds ?? []) {
+    if (openBufferIds.has(bufferId)) {
+      return bufferId;
+    }
+  }
+
+  for (const bufferId of sourcePane.bufferIds) {
+    if (openBufferIds.has(bufferId)) {
+      return bufferId;
+    }
+  }
+
+  for (const buffer of buffers) {
+    if (openBufferIds.has(buffer.id)) {
+      return buffer.id;
+    }
+  }
+
+  return null;
+};
+
+const getExistingPaneBufferIds = (paneBufferIds: string[], buffers: PaneContent[]): string[] => {
+  const openBufferIds = new Set<string>();
+  for (const buffer of buffers) {
+    openBufferIds.add(buffer.id);
+  }
+
+  const existingBufferIds: string[] = [];
+  for (const bufferId of paneBufferIds) {
+    if (openBufferIds.has(bufferId)) {
+      existingBufferIds.push(bufferId);
+    }
+  }
+
+  return existingBufferIds;
+};
+
+const withActiveBufferState = (
+  buffers: PaneContent[],
+  activeBufferId: string | null,
+): PaneContent[] => {
+  return buffers.map((buffer) => {
+    const isActive = buffer.id === activeBufferId;
+    return buffer.isActive === isActive ? buffer : { ...buffer, isActive };
+  });
+};
+
+const deactivateBuffers = (buffers: PaneContent[]): PaneContent[] =>
+  withActiveBufferState(buffers, null);
+
+const activateBufferInState = (state: BufferState, bufferId: string | null): PaneContent | null => {
+  state.activeBufferId = bufferId;
+
+  let activeBuffer: PaneContent | null = null;
+  for (const buffer of state.buffers) {
+    const isActive = buffer.id === bufferId;
+    if (isActive) {
+      activeBuffer = buffer;
+    }
+    if (buffer.isActive !== isActive) {
+      buffer.isActive = isActive;
+    }
+  }
+
+  return activeBuffer;
+};
+
+const isReopenableBuffer = (
+  buffer: PaneContent,
+): buffer is Extract<PaneContent, { type: ClosedBufferType }> => {
+  return (
+    (buffer.type === "editor" && !buffer.isVirtual) ||
+    buffer.type === "image" ||
+    buffer.type === "pdf" ||
+    buffer.type === "binary" ||
+    buffer.type === "diff" ||
+    buffer.type === "markdownPreview" ||
+    buffer.type === "htmlPreview" ||
+    buffer.type === "csvPreview"
+  );
+};
+
+const getClosedBufferHistoryKey = (buffer: ClosedBuffer) => `${buffer.type}:${buffer.path}`;
+
+const buildClosedBufferHistoryEntry = (buffer: PaneContent): ClosedBuffer | null => {
+  if (!isReopenableBuffer(buffer) || !buffer.path) return null;
+
+  switch (buffer.type) {
+    case "editor":
+    case "image":
+    case "pdf":
+    case "binary":
+      return {
+        type: buffer.type,
+        path: buffer.path,
+        name: buffer.name,
+        isPinned: buffer.isPinned,
+      };
+    case "diff":
+      return {
+        type: "diff",
+        path: buffer.path,
+        name: buffer.name,
+        isPinned: buffer.isPinned,
+        content: buffer.content,
+        diffData: buffer.diffData,
+      };
+    case "markdownPreview":
+    case "htmlPreview":
+    case "csvPreview":
+      return {
+        type: buffer.type,
+        path: buffer.path,
+        name: buffer.name,
+        isPinned: buffer.isPinned,
+        content: buffer.content,
+        sourceFilePath: buffer.sourceFilePath,
+      };
+  }
 };
 
 /**
@@ -278,8 +437,8 @@ const checkExtensionSupport = (path: string) => {
     });
 };
 
-export const useBufferStore = createSelectors(
-  createWithEqualityFn<BufferState>()(
+const createBufferStore = () =>
+  createStore<BufferState>()(
     immer((set, get) => ({
       buffers: [],
       activeBufferId: null,
@@ -296,15 +455,13 @@ export const useBufferStore = createSelectors(
               const shouldBePreview = spec.isPreview ?? false;
 
               // Check if already open
-              const existing = buffers.find((b) => b.path === spec.path);
+              const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                    isPreview: b.id === existing.id && !shouldBePreview ? false : b.isPreview,
-                  }));
+                  const activeBuffer = activateBufferInState(state, existing.id);
+                  if (activeBuffer && !shouldBePreview) {
+                    activeBuffer.isPreview = false;
+                  }
                 });
                 syncBufferToPane(existing.id);
                 syncPanePreviewForBuffer(existing.id, shouldBePreview);
@@ -316,11 +473,9 @@ export const useBufferStore = createSelectors(
 
               if (shouldBePreview) {
                 const existingPreview = previewTargetPane?.previewBufferId
-                  ? newBuffers.find(
-                      (b) => b.id === previewTargetPane.previewBufferId && b.isPreview,
-                    )
+                  ? getBufferById(newBuffers, previewTargetPane.previewBufferId)
                   : null;
-                if (existingPreview) {
+                if (existingPreview?.isPreview) {
                   cleanupBufferHistoryTracking(existingPreview.id);
                   removeBufferFromPanes(existingPreview.id, true);
                   newBuffers = newBuffers.filter((b) => b.id !== existingPreview.id);
@@ -335,7 +490,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec) as EditorContent;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -364,11 +519,7 @@ export const useBufferStore = createSelectors(
               );
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -388,7 +539,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -407,11 +558,7 @@ export const useBufferStore = createSelectors(
                 );
                 if (existing) {
                   set((state) => {
-                    state.activeBufferId = existing.id;
-                    state.buffers = state.buffers.map((b) => ({
-                      ...b,
-                      isActive: b.id === existing.id,
-                    }));
+                    activateBufferInState(state, existing.id);
                   });
                   syncAndFocusBufferInPane(existing.id);
                   return existing.id;
@@ -435,7 +582,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -461,11 +608,7 @@ export const useBufferStore = createSelectors(
               const existing = buffers.find((b) => b.type === "webViewer" && b.url === spec.url);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -480,7 +623,7 @@ export const useBufferStore = createSelectors(
               newBuffer.name = displayName;
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -494,10 +637,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [
-                  ...cleanedBuffers.map((b) => ({ ...b, isActive: false })),
-                  newBuffer,
-                ];
+                state.buffers = [...deactivateBuffers(cleanedBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
               syncBufferToPane(newBuffer.id);
@@ -508,9 +648,14 @@ export const useBufferStore = createSelectors(
             case "pullRequest": {
               const path = spec.selectedFilePath
                 ? `pr://${spec.prNumber}?file=${encodeURIComponent(spec.selectedFilePath)}`
-                : `pr://${spec.prNumber}`;
+                : spec.initialView === "files"
+                  ? `pr://${spec.prNumber}?view=files`
+                  : `pr://${spec.prNumber}`;
               const existing = buffers.find(
-                (b) => b.type === "pullRequest" && b.prNumber === spec.prNumber,
+                (b) =>
+                  b.type === "pullRequest" &&
+                  b.prNumber === spec.prNumber &&
+                  (!spec.repoPath || !b.repoPath || b.repoPath === spec.repoPath),
               );
               if (existing) {
                 set((state) => {
@@ -521,6 +666,7 @@ export const useBufferStore = createSelectors(
                           ...b,
                           path,
                           name: spec.name ?? b.name,
+                          repoPath: spec.repoPath ?? b.repoPath,
                           authorAvatarUrl: spec.authorAvatarUrl ?? b.authorAvatarUrl,
                           isActive: true,
                         }
@@ -541,7 +687,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -585,7 +731,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -628,7 +774,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -637,14 +783,10 @@ export const useBufferStore = createSelectors(
             }
 
             case "externalEditor": {
-              const existing = buffers.find((b) => b.path === spec.path);
+              const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -669,7 +811,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -680,15 +822,12 @@ export const useBufferStore = createSelectors(
 
             case "globalSearch":
             case "diagnostics":
-            case "references": {
+            case "references":
+            case "extensions": {
               const existing = buffers.find((b) => b.type === spec.type);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncAndFocusBufferInPane(existing.id);
                 return existing.id;
@@ -697,17 +836,11 @@ export const useBufferStore = createSelectors(
               let newBuffers = closeNewTabInActivePane([...buffers]);
               newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
 
-              const path =
-                spec.type === "globalSearch"
-                  ? "search://global"
-                  : spec.type === "diagnostics"
-                    ? "diagnostics://problems"
-                    : "references://results";
-              const id = generateBufferId(path);
+              const id = generateBufferId(SINGLETON_TOOL_BUFFER_METADATA[spec.type].path);
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -717,14 +850,10 @@ export const useBufferStore = createSelectors(
 
             case "onboarding": {
               const path = `onboarding://${spec.context.mode}/${spec.context.currentVersion}`;
-              const existing = buffers.find((b) => b.path === path);
+              const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => ({
-                    ...b,
-                    isActive: b.id === existing.id,
-                  }));
+                  activateBufferInState(state, existing.id);
                 });
                 syncAndFocusBufferInPane(existing.id);
                 return existing.id;
@@ -737,7 +866,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -754,34 +883,16 @@ export const useBufferStore = createSelectors(
             case "htmlPreview":
             case "csvPreview": {
               const path = spec.path;
-              const existing = buffers.find((b) => b.path === path);
+              const existing = getBufferByPath(buffers, path);
               if (existing) {
                 set((state) => {
-                  state.activeBufferId = existing.id;
-                  state.buffers = state.buffers.map((b) => {
-                    if (b.id !== existing.id) {
-                      return {
-                        ...b,
-                        isActive: false,
-                      };
-                    }
-
-                    if (spec.type === "diff" && b.type === "diff") {
-                      return {
-                        ...b,
-                        isActive: true,
-                        name: spec.name,
-                        content: spec.content,
-                        savedContent: spec.content,
-                        diffData: spec.diffData,
-                      };
-                    }
-
-                    return {
-                      ...b,
-                      isActive: true,
-                    };
-                  });
+                  const activeBuffer = activateBufferInState(state, existing.id);
+                  if (spec.type === "diff" && activeBuffer?.type === "diff") {
+                    activeBuffer.name = spec.name;
+                    activeBuffer.content = spec.content;
+                    activeBuffer.savedContent = spec.content;
+                    activeBuffer.diffData = spec.diffData;
+                  }
                 });
                 syncBufferToPane(existing.id);
                 return existing.id;
@@ -796,7 +907,7 @@ export const useBufferStore = createSelectors(
               const newBuffer = createPaneContent(id, spec);
 
               set((state) => {
-                state.buffers = [...newBuffers.map((b) => ({ ...b, isActive: false })), newBuffer];
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
                 state.activeBufferId = newBuffer.id;
               });
 
@@ -919,14 +1030,22 @@ export const useBufferStore = createSelectors(
 
         openPRBuffer: (
           prNumber: number,
-          metadata?: { title?: string; authorAvatarUrl?: string; selectedFilePath?: string },
+          metadata?: {
+            title?: string;
+            repoPath?: string;
+            authorAvatarUrl?: string;
+            selectedFilePath?: string;
+            initialView?: "activity" | "files";
+          },
         ): string => {
           return get().actions.openContent({
             type: "pullRequest",
             prNumber,
             name: metadata?.title,
+            repoPath: metadata?.repoPath,
             authorAvatarUrl: metadata?.authorAvatarUrl,
             selectedFilePath: metadata?.selectedFilePath,
+            initialView: metadata?.initialView,
           });
         },
 
@@ -984,12 +1103,16 @@ export const useBufferStore = createSelectors(
           return get().actions.openContent({ type: "references" });
         },
 
+        openExtensionsBuffer: (): string => {
+          return get().actions.openContent({ type: "extensions" });
+        },
+
         openOnboardingBuffer: (context): string => {
           return get().actions.openContent({ type: "onboarding", context });
         },
 
         closeBuffer: (bufferId: string) => {
-          const buffer = get().buffers.find((b) => b.id === bufferId);
+          const buffer = getBufferById(get().buffers, bufferId);
 
           if (!buffer) return;
 
@@ -1009,7 +1132,7 @@ export const useBufferStore = createSelectors(
 
         closeBufferForce: (bufferId: string) => {
           const { buffers, activeBufferId, closedBuffersHistory } = get();
-          const bufferIndex = buffers.findIndex((b) => b.id === bufferId);
+          const bufferIndex = getBufferIndexById(buffers, bufferId);
 
           if (bufferIndex === -1) return;
 
@@ -1057,18 +1180,17 @@ export const useBufferStore = createSelectors(
               .catch((error) => {
                 logger.error("BufferStore", "Failed to stop LSP:", error);
               });
+          }
 
-            // Add to closed history
-            const closedBufferInfo: ClosedBuffer = {
-              path: closedBuffer.path,
-              name: closedBuffer.name,
-              isPinned: closedBuffer.isPinned,
-            };
-
-            const updatedHistory = [closedBufferInfo, ...closedBuffersHistory].slice(
-              0,
-              EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY,
-            );
+          const closedBufferInfo = buildClosedBufferHistoryEntry(closedBuffer);
+          if (closedBufferInfo) {
+            const updatedHistory = [
+              closedBufferInfo,
+              ...closedBuffersHistory.filter(
+                (entry) =>
+                  getClosedBufferHistoryKey(entry) !== getClosedBufferHistoryKey(closedBufferInfo),
+              ),
+            ].slice(0, EDITOR_CONSTANTS.MAX_CLOSED_BUFFERS_HISTORY);
 
             set((state) => {
               state.closedBuffersHistory = updatedHistory;
@@ -1090,10 +1212,7 @@ export const useBufferStore = createSelectors(
           }
 
           set((state) => {
-            state.buffers = newBuffers.map((b) => ({
-              ...b,
-              isActive: b.id === newActiveId,
-            }));
+            state.buffers = withActiveBufferState(newBuffers, newActiveId);
             state.activeBufferId = newActiveId;
           });
 
@@ -1108,30 +1227,23 @@ export const useBufferStore = createSelectors(
           if (bufferIds.length === 0) return;
 
           const { buffers, activeBufferId } = get();
+          const closingBufferIds = new Set(bufferIds);
           const replacementBufferId =
-            activeBufferId && bufferIds.includes(activeBufferId)
+            activeBufferId && closingBufferIds.has(activeBufferId)
               ? getPaneReplacementBufferId(bufferIds, buffers)
               : null;
 
           bufferIds.forEach((id) => removeBufferFromPanes(id));
 
           set((state) => {
-            state.buffers = state.buffers.filter((b) => !bufferIds.includes(b.id));
+            state.buffers = state.buffers.filter((b) => !closingBufferIds.has(b.id));
 
-            if (bufferIds.includes(state.activeBufferId || "")) {
+            if (state.activeBufferId && closingBufferIds.has(state.activeBufferId)) {
               if (replacementBufferId) {
-                state.activeBufferId = replacementBufferId;
-                state.buffers = state.buffers.map((buffer) => ({
-                  ...buffer,
-                  isActive: buffer.id === replacementBufferId,
-                }));
+                activateBufferInState(state, replacementBufferId);
               } else if (state.buffers.length > 0) {
                 const nextBufferId = state.buffers[0].id;
-                state.activeBufferId = nextBufferId;
-                state.buffers = state.buffers.map((buffer) => ({
-                  ...buffer,
-                  isActive: buffer.id === nextBufferId,
-                }));
+                activateBufferInState(state, nextBufferId);
               } else {
                 state.activeBufferId = null;
               }
@@ -1148,13 +1260,14 @@ export const useBufferStore = createSelectors(
         },
 
         setActiveBuffer: (bufferId: string) => {
+          if (get().activeBufferId === bufferId) {
+            syncAndFocusBufferInPane(bufferId);
+            return;
+          }
+
           syncAndFocusBufferInPane(bufferId);
           set((state) => {
-            state.activeBufferId = bufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === bufferId,
-            }));
+            activateBufferInState(state, bufferId);
           });
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
@@ -1169,7 +1282,7 @@ export const useBufferStore = createSelectors(
           markDirty = true,
           diffData?: GitDiff | MultiFileDiff,
         ) => {
-          const buffer = get().buffers.find((b) => b.id === bufferId);
+          const buffer = getBufferById(get().buffers, bufferId);
           if (!buffer) return;
 
           // Only content types with text content can be updated
@@ -1419,9 +1532,7 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          const cyclableIds = paneBufferIds.filter((id) =>
-            buffers.some((buffer) => buffer.id === id),
-          );
+          const cyclableIds = getExistingPaneBufferIds(paneBufferIds, buffers);
 
           if (cyclableIds.length <= 1) return;
 
@@ -1433,11 +1544,7 @@ export const useBufferStore = createSelectors(
             ensureBufferInPane(activePane.id, nextBufferId, true);
           }
           set((state) => {
-            state.activeBufferId = nextBufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === nextBufferId,
-            }));
+            activateBufferInState(state, nextBufferId);
           });
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
@@ -1448,9 +1555,7 @@ export const useBufferStore = createSelectors(
           const activePane = paneStore.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
-          const cyclableIds = paneBufferIds.filter((id) =>
-            buffers.some((buffer) => buffer.id === id),
-          );
+          const cyclableIds = getExistingPaneBufferIds(paneBufferIds, buffers);
 
           if (cyclableIds.length <= 1) return;
 
@@ -1462,18 +1567,14 @@ export const useBufferStore = createSelectors(
             ensureBufferInPane(activePane.id, prevBufferId, true);
           }
           set((state) => {
-            state.activeBufferId = prevBufferId;
-            state.buffers = state.buffers.map((b) => ({
-              ...b,
-              isActive: b.id === prevBufferId,
-            }));
+            activateBufferInState(state, prevBufferId);
           });
           saveSessionToStore(get().buffers, get().activeBufferId);
         },
 
         getActiveBuffer: (): PaneContent | null => {
           const { buffers, activeBufferId } = get();
-          return buffers.find((b) => b.id === activeBufferId) || null;
+          return getBufferById(buffers, activeBufferId);
         },
 
         setMaxOpenTabs: (max: number) => {
@@ -1483,7 +1584,7 @@ export const useBufferStore = createSelectors(
         },
 
         reloadBufferFromDisk: async (bufferId: string): Promise<void> => {
-          const buffer = get().buffers.find((b) => b.id === bufferId);
+          const buffer = getBufferById(get().buffers, bufferId);
           if (!buffer) return;
 
           // Only reload real editor files from disk
@@ -1568,38 +1669,84 @@ export const useBufferStore = createSelectors(
         },
 
         reopenClosedTab: async () => {
-          const { closedBuffersHistory } = get();
+          const { closedBuffersHistory, buffers } = get();
 
           if (closedBuffersHistory.length === 0) {
+            const { toast } = await import("@/ui/toast");
+            toast.info("No recently closed tabs");
             return;
           }
 
-          const [closedBuffer, ...remainingHistory] = closedBuffersHistory;
+          // Pop the most recently closed entry. Skip any entry that's already open
+          // (re-add to head would be a no-op) — pull the next one instead.
+          let closedBuffer: ClosedBuffer | undefined;
+          let remainingHistory = closedBuffersHistory;
+          while (remainingHistory.length > 0) {
+            const [head, ...rest] = remainingHistory;
+            remainingHistory = rest;
+            if (!buffers.some((b) => b.path === head.path)) {
+              closedBuffer = head;
+              break;
+            }
+          }
 
           set((state) => {
             state.closedBuffersHistory = remainingHistory;
           });
 
-          try {
-            const content = await readFileContent(closedBuffer.path);
-            const bufferId = get().actions.openContent({
-              type: "editor",
-              path: closedBuffer.path,
-              name: closedBuffer.name,
-              content,
-            });
+          if (!closedBuffer) {
+            const { toast } = await import("@/ui/toast");
+            toast.info("No recently closed tabs");
+            return;
+          }
 
-            if (closedBuffer.isPinned) {
-              get().actions.handleTabPin(bufferId);
+          try {
+            let reopenedBufferId: string | null = null;
+
+            if (
+              closedBuffer.type === "markdownPreview" ||
+              closedBuffer.type === "htmlPreview" ||
+              closedBuffer.type === "csvPreview"
+            ) {
+              reopenedBufferId = get().actions.openContent({
+                type: closedBuffer.type,
+                path: closedBuffer.path,
+                name: closedBuffer.name,
+                content: closedBuffer.content,
+                sourceFilePath: closedBuffer.sourceFilePath,
+              });
+            } else if (closedBuffer.type === "diff") {
+              reopenedBufferId = get().actions.openContent({
+                type: "diff",
+                path: closedBuffer.path,
+                name: closedBuffer.name,
+                content: closedBuffer.content,
+                diffData: closedBuffer.diffData,
+              });
+            } else {
+              // Delegate file-backed types to handleFileSelect so reopen stays aligned
+              // with the main file-open routing.
+              const { useFileSystemStore } =
+                await import("@/features/file-system/stores/file-system.store");
+              await useFileSystemStore.getState().handleFileSelect(closedBuffer.path, false);
+              reopenedBufferId = getBufferByPath(get().buffers, closedBuffer.path)?.id ?? null;
+            }
+
+            if (closedBuffer.isPinned && reopenedBufferId) {
+              get().actions.handleTabPin(reopenedBufferId);
             }
           } catch (error) {
             logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
+            const { toast } = await import("@/ui/toast");
+            toast.error(`Couldn't reopen ${closedBuffer.name}`);
           }
         },
       },
     })),
-    isEqual,
-  ),
+  );
+
+export const useBufferStore = createSelectors(
+  createWorkspaceScopedStore("editor-buffer", createBufferStore, isEqual),
 );
 
 export { clearQueuedWorkspaceSessionSave };

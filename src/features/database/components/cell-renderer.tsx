@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 import type { ForeignKeyInfo } from "../types/common.types";
@@ -28,12 +29,9 @@ export default function CellRenderer({
 
   if (value === null || value === undefined) {
     return (
-      <span
-        className="rounded bg-hover px-1 py-0.5 ui-font ui-text-xs text-text-lighter"
-        onContextMenu={handleContextMenu}
-      >
+      <Badge variant="muted" size="compact" onContextMenu={handleContextMenu}>
         NULL
-      </span>
+      </Badge>
     );
   }
 
@@ -44,14 +42,14 @@ export default function CellRenderer({
         <Button
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
-          compact
-          className="block h-auto max-w-[280px] truncate p-0 text-left ui-font font-normal text-accent"
+          size="xs"
+          className="block h-auto max-w-[280px] truncate p-0 text-left font-sans font-normal text-accent"
           tooltip="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
         </Button>
         {expanded && (
-          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg p-2 ui-font ui-text-sm text-text">
+          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg p-2 font-sans ui-text-sm text-text">
             {formatJson(value)}
           </pre>
         )}
@@ -84,7 +82,7 @@ export default function CellRenderer({
       <Button
         onClick={() => onFkClick(columnName, value)}
         variant="ghost"
-        compact
+        size="xs"
         className="block h-auto truncate p-0 text-left font-normal text-accent underline decoration-accent/40"
         tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
@@ -111,7 +109,7 @@ export default function CellRenderer({
         <Button
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
-          compact
+          size="xs"
           className={cn(
             "block h-auto max-w-[280px] p-0 text-left font-normal",
             expanded ? "whitespace-pre-wrap" : "truncate",

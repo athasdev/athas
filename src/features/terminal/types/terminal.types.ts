@@ -24,6 +24,8 @@ export interface Shell {
   name: string;
   exec_unix?: string; // search for common paths like /bin/shell_name
   exec_win?: string; // search for paths in %PATH% matching *.exe
+  kind?: "windows" | "unix" | "wsl";
+  wsl_distribution?: string;
 }
 
 export interface TerminalProfile {
@@ -41,6 +43,21 @@ export interface TerminalState {
   terminals: Terminal[];
   activeTerminalId: string | null;
 }
+
+export interface TerminalSize {
+  rows: number;
+  cols: number;
+  pixelWidth: number;
+  pixelHeight: number;
+}
+
+export type TerminalInput = { kind: "text"; data: string } | { kind: "binary"; data: number[] };
+
+export type TerminalEvent =
+  | { event: "output"; data: number[] }
+  | { event: "error"; message: string }
+  | { event: "exit"; exitCode?: number | null; signal?: string | null }
+  | { event: "closed" };
 
 export interface PersistedTerminal {
   id: string;

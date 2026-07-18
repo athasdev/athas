@@ -1,4 +1,4 @@
-import type { IconThemeDefinition, IconThemeSource } from "./types";
+import type { IconThemeDefinition, IconThemeSource } from "./icon-theme.types";
 
 class IconThemeRegistry {
   private themes: Map<string, IconThemeDefinition> = new Map();

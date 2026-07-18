@@ -1,21 +1,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import {
-  BookOpenIcon as BookOpen,
-  CreditCardIcon as CreditCard,
-  CurrencyDollarIcon as CurrencyDollar,
-  SignInIcon as SignIn,
-  SignOutIcon as SignOut,
-  UserCircleIcon as UserCircle,
-  GearSixIcon as GearSix,
-  ArrowSquareOutIcon as ArrowSquareOut,
-  UsersThreeIcon as UsersThree,
-} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import { getServiceUrls } from "@/config/services";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import {
-  chromeControl,
-  chromeControlGroup,
-} from "@/features/layout/components/chrome-control-styles";
 import {
   extractAutocompleteUsage,
   formatUsageDate,
@@ -29,10 +15,19 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
-import { TabsList } from "@/ui/tabs";
+import {
+  BookOpenIcon,
+  CreditCardIcon,
+  MoneyIcon,
+  OpenExternalIcon,
+  GearSixIcon,
+  SignInIcon,
+  SignOutIcon,
+  UserIcon,
+  UsersThreeIcon,
+} from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
-import { getApiBase } from "@/utils/api-base";
 import { cn } from "@/utils/cn";
 
 interface AccountMenuProps {
@@ -40,6 +35,7 @@ interface AccountMenuProps {
 }
 
 export const AccountMenu = ({ className }: AccountMenuProps) => {
+  const services = getServiceUrls();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
@@ -78,16 +74,15 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   };
 
   const handleManageAccount = async () => {
-    await openUrl(new URL("/dashboard", getApiBase()).toString());
+    await openUrl(services.dashboardUrl);
   };
 
   const handleOpenBillingDashboard = async () => {
-    const apiBase = getApiBase();
-    await openUrl(new URL("/dashboard/billing", apiBase).toString());
+    await openUrl(services.dashboardBillingUrl);
   };
 
   const handleOpenDocs = async () => {
-    await openUrl("https://athas.dev/docs");
+    await openUrl(services.docsUrl);
   };
 
   const handleOpenSettings = () => {
@@ -111,13 +106,13 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "settings",
       label: "Settings",
-      icon: <GearSix weight="duotone" />,
+      icon: <GearSixIcon />,
       onClick: handleOpenSettings,
     },
     {
       id: "docs",
       label: "Docs",
-      icon: <BookOpen weight="duotone" />,
+      icon: <BookOpenIcon />,
       onClick: handleOpenDocs,
     },
     {
@@ -129,7 +124,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "sign-in",
       label: isSigningIn ? "Signing In..." : "Sign In",
-      icon: <SignIn weight="duotone" />,
+      icon: <SignInIcon />,
       onClick: handleSignIn,
       disabled: isSigningIn,
     },
@@ -142,7 +137,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       icon: user?.avatar_url ? (
         <img src={user.avatar_url} alt="" className="size-3 rounded-full" />
       ) : (
-        <UserCircle weight="duotone" />
+        <UserIcon />
       ),
       onClick: () => {},
       disabled: true,
@@ -156,7 +151,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "subscription",
       label: `Plan: ${planLabel}`,
-      icon: <CreditCard weight="duotone" />,
+      icon: <CreditCardIcon />,
       onClick: handleOpenBillingDashboard,
     },
     ...(isTeams
@@ -164,7 +159,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
           {
             id: "collaboration",
             label: "Collaboration",
-            icon: <UsersThree weight="duotone" />,
+            icon: <UsersThreeIcon />,
             onClick: handleOpenCollaboration,
           },
         ]
@@ -172,19 +167,19 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "manage-account",
       label: "Manage Account",
-      icon: <ArrowSquareOut weight="duotone" />,
+      icon: <OpenExternalIcon />,
       onClick: handleManageAccount,
     },
     {
       id: "settings",
       label: "Settings",
-      icon: <GearSix weight="duotone" />,
+      icon: <GearSixIcon />,
       onClick: handleOpenSettings,
     },
     {
       id: "docs",
       label: "Docs",
-      icon: <BookOpen weight="duotone" />,
+      icon: <BookOpenIcon />,
       onClick: handleOpenDocs,
     },
     {
@@ -196,7 +191,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
     {
       id: "sign-out",
       label: "Sign Out",
-      icon: <SignOut weight="duotone" />,
+      icon: <SignOutIcon />,
       onClick: handleSignOut,
     },
   ];
@@ -220,26 +215,25 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   return (
     <>
       <Tooltip content={tooltipLabel} side="bottom">
-        <TabsList variant="segmented" className={cn(chromeControlGroup(), className)}>
-          <Button
-            ref={buttonRef}
-            onClick={() => setIsOpen((open) => !open)}
-            type="button"
-            variant="ghost"
-            compact
-            active={isOpen}
-            className={chromeControl()}
-            aria-expanded={isOpen}
-            aria-haspopup="menu"
-            aria-label="Account"
-          >
-            {isAuthenticated && user?.avatar_url ? (
-              <img src={user.avatar_url} alt="" className="size-4 rounded-full object-cover" />
-            ) : (
-              <UserCircle className="size-4" weight="duotone" />
-            )}
-          </Button>
-        </TabsList>
+        <Button
+          ref={buttonRef}
+          onClick={() => setIsOpen((open) => !open)}
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          chrome="icon"
+          active={isOpen}
+          className={className}
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+          aria-label="Account"
+        >
+          {isAuthenticated && user?.avatar_url ? (
+            <img src={user.avatar_url} alt="" className="size-4 rounded-full object-cover" />
+          ) : (
+            <UserIcon className="size-4" />
+          )}
+        </Button>
       </Tooltip>
       <Dropdown
         isOpen={isOpen}
@@ -250,13 +244,14 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
       >
         <div className="p-1">
           {isAuthenticated ? (
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setIsOpen(false);
                 void handleOpenBillingDashboard();
               }}
-              className="ui-font block w-full rounded-lg p-2.5 text-left transition-colors hover:bg-hover/50"
+              variant="ghost"
+              className="h-auto w-full justify-start p-2.5 text-left hover:bg-hover/50"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -273,40 +268,40 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                     {planLabel}
                   </Badge>
                 </div>
-                <span className="ui-text-xs text-text-lighter">{modeLabel}</span>
+                <span className="ui-text-sm text-text-lighter">{modeLabel}</span>
               </div>
               {autocompleteUsage ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-xs text-text-lighter">Hosted AI</span>
-                    <span className="ui-text-xs font-medium text-text">
+                    <span className="ui-text-sm text-text-lighter">Hosted AI</span>
+                    <span className="ui-text-sm font-medium text-text">
                       {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                       {formatUsdFromCents(autocompleteUsage.budgetCents)}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
                     <div
-                      className="h-full rounded-full bg-accent transition-[width] duration-200"
+                      className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
                       style={{ width: `${usageProgress}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-xs text-text-lighter/70">
+                    <span className="ui-text-sm text-text-lighter/70">
                       {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                       {formatUsageDate(autocompleteUsage.periodEnd)}
                     </span>
-                    <span className="ui-text-xs text-text-lighter/70">
+                    <span className="ui-text-sm text-text-lighter/70">
                       Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-text-lighter ui-text-xs">
-                  <CurrencyDollar weight="duotone" />
+                <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
+                  <MoneyIcon />
                   <span>Usage unavailable</span>
                 </div>
               )}
-            </button>
+            </Button>
           ) : null}
 
           {isAuthenticated ? <div className="my-0.5 border-border/70 border-t" /> : null}

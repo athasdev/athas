@@ -40,6 +40,20 @@ interface CheckForUpdatesOptions {
   ignoreSuppression?: boolean;
 }
 
+function readRawUpdateText(update: Update, key: string): string | undefined {
+  const value = update.rawJson?.[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function toUpdateInfo(update: Update): UpdateInfo {
+  return {
+    version: update.version,
+    currentVersion: update.currentVersion,
+    body: update.body || readRawUpdateText(update, "notes"),
+    date: update.date || readRawUpdateText(update, "pub_date"),
+  };
+}
+
 export const useUpdater = (checkOnMount = true) => {
   const [state, setState] = useState<UpdateState>({
     available: false,
@@ -63,12 +77,7 @@ export const useUpdater = (checkOnMount = true) => {
       const currentVersion = update?.currentVersion ?? "";
 
       if (update?.available) {
-        const updateInfo = {
-          version: update.version,
-          currentVersion: update.currentVersion,
-          body: update.body,
-          date: update.date,
-        };
+        const updateInfo = toUpdateInfo(update);
 
         clearUpdatePreferencesForNewVersion(updateInfo);
 
@@ -145,12 +154,7 @@ export const useUpdater = (checkOnMount = true) => {
           throw new Error("No update available");
         }
         updateRef.current = newUpdate;
-        updateInfoRef.current = {
-          version: newUpdate.version,
-          currentVersion: newUpdate.currentVersion,
-          body: newUpdate.body,
-          date: newUpdate.date,
-        };
+        updateInfoRef.current = toUpdateInfo(newUpdate);
       }
 
       const canRestart = await prepareProjectTransitionWithUnsavedBuffers(
@@ -265,7 +269,7 @@ export const useUpdater = (checkOnMount = true) => {
       return;
     }
 
-    useWhatsNewStore.getState().openInfo({
+    void useWhatsNewStore.getState().openInfo({
       version: updateInfo.version,
       previousVersion: updateInfo.currentVersion,
       body: updateInfo.body,

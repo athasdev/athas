@@ -1,7 +1,7 @@
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
+import { getServiceUrls } from "@/config/services";
 
-const SKILLS_REGISTRY_URL =
-  import.meta.env.VITE_SKILLS_REGISTRY_URL || "https://athas.dev/skills/index.json";
+const SKILLS_REGISTRY_URL = getServiceUrls().skillsRegistryUrl;
 
 type SkillRegistryEntry = Record<string, unknown>;
 
@@ -44,7 +44,7 @@ function normalizeMarketplaceSkill(entry: SkillRegistryEntry): MarketplaceSkill 
     description:
       asString(entry.description) ||
       content.replace(/\s+/g, " ").trim().slice(0, 160) ||
-      "Reusable AI chat instructions.",
+      "Reusable Agent instructions.",
     content,
     author: asString(entry.author) || asString(entry.publisher),
     version: asString(entry.version),

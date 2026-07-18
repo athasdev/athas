@@ -1,4 +1,5 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { CUSTOM_AUTOCOMPLETE_PROVIDER_ID } from "@/features/ai/lib/custom-provider-config";
 import { providerFetch } from "@/features/ai/services/providers/provider-fetch";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { getAuthToken } from "@/features/window/services/auth-api";
@@ -6,7 +7,6 @@ import { getApiBase } from "@/utils/api-base";
 
 const API_BASE = getApiBase();
 const OPENROUTER_PROVIDER_ID = "openrouter";
-const CUSTOM_AUTOCOMPLETE_PROVIDER_ID = "autocomplete-custom";
 const BYOK_HEADER = "X-OpenRouter-Api-Key";
 
 export interface AutocompleteRequest {

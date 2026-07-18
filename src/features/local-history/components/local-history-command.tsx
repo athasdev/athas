@@ -7,7 +7,7 @@ import {
   PencilSimpleIcon as PencilSimple,
   PlusIcon as Plus,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFile, writeFile } from "@/features/file-system/controllers/platform";
@@ -22,11 +22,17 @@ import {
 import { useLocalHistoryStore } from "@/features/local-history/stores/local-history.store";
 import { createLocalHistoryDiff } from "@/features/local-history/utils/local-history-diff";
 import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandList,
+} from "@/ui/command";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
-import { formatRelativeDate } from "@/utils/date";
+import { formatRelativeDate, formatShortDateTime } from "@/utils/date";
 import { getBaseName } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -44,12 +50,7 @@ function formatSnapshotSize(bytes: number): string {
 }
 
 function formatSnapshotDate(timestamp: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(timestamp));
+  return formatShortDateTime(timestamp);
 }
 
 function getEntryTitle(entry: LocalHistoryEntry): string {
@@ -378,24 +379,21 @@ export function LocalHistoryCommandContent({
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Button aria-label="Back" onClick={onBack} variant="ghost" className="rounded" compact>
-          <ArrowLeft className="text-text-lighter" />
-        </Button>
+        <CommandHeaderAction aria-label="Back" onClick={onBack}>
+          <ArrowLeft />
+        </CommandHeaderAction>
         <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
         <div className="min-w-0 flex-1">
-          <div className="truncate ui-font ui-text-sm text-text">Local History: {fileName}</div>
-          <div className="truncate ui-font ui-text-xs text-text-lighter">{targetPath}</div>
+          <div className="truncate font-sans ui-text-base text-text">Local History: {fileName}</div>
+          <div className="truncate font-sans ui-text-base text-text-lighter">{targetPath}</div>
         </div>
-        <Button
+        <CommandHeaderAction
           aria-label="Create local history entry"
           onClick={() => void createSnapshot()}
-          variant="ghost"
-          compact
-          className="rounded"
           tooltip="Create entry"
         >
-          <Plus className="text-text-lighter" />
-        </Button>
+          <Plus />
+        </CommandHeaderAction>
       </CommandHeader>
 
       <div className="border-border border-b px-4 py-2">
@@ -429,8 +427,10 @@ export function LocalHistoryCommandContent({
             >
               <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
               <div className="min-w-0 flex-1">
-                <div className="truncate ui-font ui-text-sm text-text">{getEntryTitle(entry)}</div>
-                <div className="truncate ui-font ui-text-xs text-text-lighter">
+                <div className="truncate font-sans ui-text-base text-text">
+                  {getEntryTitle(entry)}
+                </div>
+                <div className="truncate font-sans ui-text-base text-text-lighter">
                   {formatRelativeDate(new Date(entry.created_at))} ·{" "}
                   {formatSnapshotSize(entry.size)}
                   {entry.reason ? ` · ${entry.reason}` : ""}
@@ -445,6 +445,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void openSnapshot(entry);
                   }}
+                  size="icon"
                 >
                   <Eye />
                 </Button>
@@ -456,6 +457,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void compareWithCurrent(entry);
                   }}
+                  size="icon"
                 >
                   <ArrowsLeftRight />
                 </Button>
@@ -467,6 +469,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void compareWithPrevious(entry);
                   }}
+                  size="icon"
                 >
                   <ClockCounterClockwise />
                 </Button>
@@ -478,6 +481,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void restoreSnapshot(entry);
                   }}
+                  size="icon"
                 >
                   <ArrowCounterClockwise />
                 </Button>
@@ -489,6 +493,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void renameSnapshot(entry);
                   }}
+                  size="icon"
                 >
                   <PencilSimple />
                 </Button>
@@ -500,6 +505,7 @@ export function LocalHistoryCommandContent({
                     event.stopPropagation();
                     void deleteSnapshot(entry);
                   }}
+                  size="icon"
                 >
                   <Trash />
                 </Button>

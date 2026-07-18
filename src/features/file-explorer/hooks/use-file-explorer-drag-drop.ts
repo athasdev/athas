@@ -82,11 +82,11 @@ export function useFileExplorerDragDrop(
         padding: 6px 12px;
         background-color: var(--color-primary-bg);
         border: 2px solid var(--color-accent);
-        border-radius: 6px;
+        border-radius: var(--radius-lg);
         font-size: var(--ui-text-sm);
         font-family: var(--app-font-family);
         color: var(--color-text);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--shadow-popover);
       `;
       preview.textContent = dragState.draggedItem?.name || "";
       document.body.appendChild(preview);

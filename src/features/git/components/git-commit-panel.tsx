@@ -5,16 +5,17 @@ import {
   CaretDownIcon as ChevronDown,
   WarningCircleIcon as AlertCircle,
   SparkleIcon as Sparkles,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { SidebarComposerBody } from "@/ui/sidebar";
+import { SplitActionButton } from "@/ui/split-action-button";
 import Textarea from "@/ui/textarea";
-import Tooltip from "@/ui/tooltip";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import {
@@ -68,21 +69,23 @@ const formatDiffExcerpt = (file: GitFile, diff: GitDiff | null): string => {
   if (!diff) return `### ${file.path}\n(no staged text diff available)`;
   if (diff.is_binary || diff.is_image) return `### ${file.path}\n(binary or image change)`;
 
-  const changedLines = diff.lines
-    .filter((line) => line.line_type === "added" || line.line_type === "removed")
-    .slice(0, MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT)
-    .map((line) => `${line.line_type === "added" ? "+" : "-"}${line.content}`)
-    .join("\n");
+  const changedLines: string[] = [];
+  let changedLineCount = 0;
 
-  const omittedCount = Math.max(
-    diff.lines.filter((line) => line.line_type === "added" || line.line_type === "removed").length -
-      MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT,
-    0,
-  );
+  for (const line of diff.lines) {
+    if (line.line_type !== "added" && line.line_type !== "removed") continue;
+
+    changedLineCount++;
+    if (changedLines.length < MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT) {
+      changedLines.push(`${line.line_type === "added" ? "+" : "-"}${line.content}`);
+    }
+  }
+
+  const omittedCount = Math.max(changedLineCount - MAX_DIFF_LINES_PER_FILE_FOR_AI_CONTEXT, 0);
 
   return [
     `### ${file.path}`,
-    changedLines || "(metadata-only change)",
+    changedLines.join("\n") || "(metadata-only change)",
     omittedCount > 0 ? `... ${omittedCount} more changed lines omitted` : "",
   ]
     .filter(Boolean)
@@ -221,10 +224,9 @@ const GitCommitPanel = ({
       return;
     }
 
-    const subscriptionStatus = subscription?.status ?? "free";
     const enterprisePolicy = subscription?.enterprise?.policy;
     const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-    const isPro = subscriptionStatus === "pro";
+    const isPro = hasProductCapability(subscription, "hostedAi");
 
     if (managedPolicy && !managedPolicy.aiCompletionEnabled) {
       setError("AI commit message generation is disabled by your organization policy.");
@@ -358,7 +360,7 @@ const GitCommitPanel = ({
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
   const composerButtonClassName =
-    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
+    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
   const generateModeItems: MenuItem[] = [
     {
       id: "title",
@@ -380,8 +382,8 @@ const GitCommitPanel = ({
         {error && (
           <div
             className={cn(
-              "mx-2 mt-2 flex items-center gap-2 rounded border border-error/30",
-              "bg-error/20 px-2 py-1 ui-text-xs text-error",
+              "mx-2 mt-2 flex items-center gap-2 rounded-md border border-error/30",
+              "bg-error/20 px-2 py-1 ui-text-sm text-error",
             )}
           >
             <AlertCircle />
@@ -398,7 +400,7 @@ const GitCommitPanel = ({
           variant="ghost"
           className={cn(
             "max-h-32 min-h-16 w-full resize-none overflow-x-hidden bg-transparent",
-            "ui-font ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
+            "font-sans ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
             "focus:outline-none",
           )}
           rows={2}
@@ -408,7 +410,7 @@ const GitCommitPanel = ({
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <span className="px-1 ui-text-xs text-text-lighter">
+          <span className="px-1 ui-text-sm text-text-lighter">
             {stagedFilesCount > 0
               ? `${stagedFilesCount} file${stagedFilesCount !== 1 ? "s" : ""} staged`
               : "No files staged"}
@@ -422,7 +424,7 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("push", () => pushChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={cn(composerButtonClassName, "text-git-added hover:text-git-added")}
                   tooltip={`Push ${ahead} commit${ahead !== 1 ? "s" : ""}`}
                 >
@@ -437,7 +439,7 @@ const GitCommitPanel = ({
                   onClick={() => void handleRemoteAction("pull", () => pullChanges(repoPath!))}
                   disabled={!repoPath || isRemoteActionLoading}
                   variant="ghost"
-                  compact
+                  size="xs"
                   className={cn(composerButtonClassName, "text-git-deleted hover:text-git-deleted")}
                   tooltip={`Pull ${behind} commit${behind !== 1 ? "s" : ""}`}
                 >
@@ -450,42 +452,21 @@ const GitCommitPanel = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <div
+          <SplitActionButton
             ref={generateMenuAnchorRef}
-            className={cn(
-              "flex h-6 overflow-hidden rounded-md border border-border/60 bg-transparent text-text-lighter shadow-none transition-colors",
-              isGenerateDisabled
-                ? "cursor-not-allowed opacity-50"
-                : "hover:border-border/80 hover:bg-hover/70",
-              isGenerateModeMenuOpen && "border-border/80 bg-hover/70 text-text",
-            )}
-          >
-            <Tooltip content="Generate commit message with AI" side="top">
-              <button
-                type="button"
-                onClick={() => void handleGenerateCommitMessage()}
-                disabled={isGenerateDisabled}
-                className="flex size-6 items-center justify-center transition-colors hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 focus-visible:outline-none disabled:pointer-events-none [&_svg]:size-3"
-                aria-label="Generate commit message with AI"
-              >
-                <Sparkles />
-              </button>
-            </Tooltip>
-            <div className="my-1 w-px bg-border/70" />
-            <Tooltip content="Commit message format" side="top">
-              <button
-                type="button"
-                onClick={() => setIsGenerateModeMenuOpen((open) => !open)}
-                disabled={isGenerating || isCommitting}
-                className="flex h-full w-5 items-center justify-center transition-colors hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 focus-visible:outline-none disabled:pointer-events-none [&_svg]:size-3"
-                aria-haspopup="menu"
-                aria-expanded={isGenerateModeMenuOpen}
-                aria-label="Commit message format"
-              >
-                <ChevronDown />
-              </button>
-            </Tooltip>
-          </div>
+            label={<Sparkles />}
+            actionAriaLabel="Generate commit message with AI"
+            menuAriaLabel="Commit message format"
+            menuIcon={<ChevronDown />}
+            onAction={() => void handleGenerateCommitMessage()}
+            onMenu={() => setIsGenerateModeMenuOpen((open) => !open)}
+            disabled={isGenerateDisabled}
+            menuDisabled={isGenerating || isCommitting}
+            expanded={isGenerateModeMenuOpen}
+            active={isGenerateModeMenuOpen}
+            actionTooltip="Generate commit message with AI"
+            menuTooltip="Commit message format"
+          />
           <Dropdown
             isOpen={isGenerateModeMenuOpen}
             anchorRef={generateMenuAnchorRef}
@@ -500,7 +481,7 @@ const GitCommitPanel = ({
             onClick={() => void handleCommit()}
             disabled={isCommitDisabled}
             variant="ghost"
-            compact
+            size="xs"
             className={cn(
               composerButtonClassName,
               isCommitDisabled

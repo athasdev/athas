@@ -43,6 +43,11 @@ export const defaultKeymaps: Keybinding[] = [
     source: "default",
     when: "!terminalFocus",
   },
+  {
+    key: "cmd+shift+w",
+    command: "workbench.closeWindow",
+    source: "default",
+  },
   { key: "cmd+shift+t", command: "file.reopenClosed", source: "default" },
   {
     key: "cmd+n",
@@ -327,11 +332,6 @@ export const defaultKeymaps: Keybinding[] = [
   { key: "F5", command: "debug.start", source: "default" },
   { key: "shift+F5", command: "debug.stop", source: "default" },
   { key: "F9", command: "debug.toggleBreakpoint", source: "default" },
-  {
-    key: "cmd+shift+b",
-    command: "workbench.toggleSidebarPosition",
-    source: "default",
-  },
   {
     key: "cmd+shift+space",
     command: "workbench.agentLauncher",

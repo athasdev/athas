@@ -1,18 +1,23 @@
 use super::{
+   AcpConnection,
    client::{AthasAcpClient, PermissionResponse},
    process::{force_kill_process_group, stop_child_tree_mut, terminate_process_group},
    types::{
       AcpAgentCapabilities, AcpEvent, AgentConfig, SessionConfigOption, SessionMode,
       SessionModeState,
    },
+   workspace_path::{path_to_string, resolve_workspace_path},
 };
 use crate::runtime::AthasAppHandle as AppHandle;
-use acp::Agent;
-use agent_client_protocol as acp;
+use agent_client_protocol::{self as acp_sdk, schema as acp};
 use anyhow::{Result, bail};
 use athas_terminal::TerminalManager;
 use serde_json::json;
-use std::{path::PathBuf, process::Stdio, sync::Arc};
+use std::{
+   path::{Path, PathBuf},
+   process::Stdio,
+   sync::Arc,
+};
 use tauri::Emitter;
 use tokio::{
    process::{Child, Command},
@@ -21,7 +26,7 @@ use tokio::{
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 pub(super) struct InitializedAcpWorker {
-   pub connection: Arc<acp::ClientSideConnection>,
+   pub connection: Arc<AcpConnection>,
    pub session_id: Option<acp::SessionId>,
    pub auth_method_id: Option<String>,
    pub agent_capabilities: AcpAgentCapabilities,
@@ -30,6 +35,7 @@ pub(super) struct InitializedAcpWorker {
    pub io_handle: tokio::task::JoinHandle<()>,
    pub client: Arc<AthasAcpClient>,
    pub permission_sender: mpsc::Sender<PermissionResponse>,
+   pub workspace_path: Option<PathBuf>,
 }
 
 pub(super) async fn initialize_worker(
@@ -40,6 +46,7 @@ pub(super) async fn initialize_worker(
    requested_session_id: Option<String>,
    map_config_options: impl Fn(Vec<acp::SessionConfigOption>) -> Vec<SessionConfigOption>,
 ) -> Result<InitializedAcpWorker> {
+   let workspace_path = resolve_workspace_path(workspace_path)?;
    let (mut child, uses_npx_codex_adapter) =
       spawn_agent_process(config, workspace_path.as_deref())?;
    let process_group_id = child.id();
@@ -60,20 +67,49 @@ pub(super) async fn initialize_worker(
    ));
    let permission_sender = client.permission_sender();
 
-   let (connection, io) = acp::ClientSideConnection::new(
-      client.clone(),
-      stdin.compat_write(),
-      stdout.compat(),
-      |fut| {
-         tokio::task::spawn_local(fut);
-      },
-   );
-   let connection = Arc::new(connection);
+   let (connection_tx, connection_rx) = tokio::sync::oneshot::channel();
+   let request_client = client.clone();
+   let notification_client = client.clone();
    let io_handle = tokio::task::spawn_local(async move {
-      if let Err(e) = io.await {
+      let transport = acp_sdk::ByteStreams::new(stdin.compat_write(), stdout.compat());
+      let result = acp_sdk::Client
+         .builder()
+         .on_receive_request(
+            async move |request: acp::AgentRequest, responder, _connection| {
+               responder.respond_with_result(
+                  request_client
+                     .handle_agent_request(request)
+                     .await
+                     .and_then(|response| {
+                        serde_json::to_value(response).map_err(acp_sdk::Error::into_internal_error)
+                     }),
+               )
+            },
+            acp_sdk::on_receive_request!(),
+         )
+         .on_receive_notification(
+            async move |notification: acp::AgentNotification, connection| {
+               notification_client
+                  .handle_agent_notification(notification, connection)
+                  .await
+            },
+            acp_sdk::on_receive_notification!(),
+         )
+         .connect_with(transport, async move |connection: AcpConnection| {
+            let _ = connection_tx.send(connection);
+            std::future::pending::<acp_sdk::Result<()>>().await
+         })
+         .await;
+
+      if let Err(e) = result {
          log::error!("ACP I/O error: {}", e);
       }
    });
+   let connection = Arc::new(
+      connection_rx
+         .await
+         .map_err(|_| anyhow::anyhow!("Failed to establish ACP connection"))?,
+   );
 
    let init_response = initialize_connection(
       connection.clone(),
@@ -83,7 +119,7 @@ pub(super) async fn initialize_worker(
    )
    .await?;
    let auth_methods = init_response.auth_methods.clone();
-   let auth_method_id = auth_methods.first().map(|method| method.id.to_string());
+   let auth_method_id = auth_methods.first().map(|method| method.id().to_string());
    let supports_session_resume = init_response
       .agent_capabilities
       .session_capabilities
@@ -93,8 +129,11 @@ pub(super) async fn initialize_worker(
 
    let cwd = workspace_path
       .clone()
-      .map(PathBuf::from)
       .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+   log::info!(
+      "ACP workspace path resolved to {}",
+      path_to_string(cwd.as_path())
+   );
 
    let session_bootstrap = bootstrap_session(
       connection.clone(),
@@ -128,6 +167,7 @@ pub(super) async fn initialize_worker(
       io_handle,
       client,
       permission_sender,
+      workspace_path,
    })
 }
 
@@ -163,7 +203,7 @@ fn configure_background_agent_command(command: &mut Command) {
 
 fn spawn_agent_process(
    config: &AgentConfig,
-   workspace_path: Option<&str>,
+   workspace_path: Option<&Path>,
 ) -> Result<(Child, bool)> {
    let binary = config.binary_path.as_deref().unwrap_or(&config.binary_name);
    log::info!(
@@ -217,7 +257,7 @@ fn spawn_stderr_logger(child: &mut Child, agent_name: String) {
 }
 
 async fn initialize_connection(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    uses_npx_codex_adapter: bool,
    child: &mut Child,
    io_handle: &tokio::task::JoinHandle<()>,
@@ -237,7 +277,7 @@ async fn initialize_connection(
 
    let client_capabilities = acp::ClientCapabilities::new()
       .fs(
-         acp::FileSystemCapability::new()
+         acp::FileSystemCapabilities::new()
             .read_text_file(true)
             .write_text_file(true),
       )
@@ -256,7 +296,7 @@ async fn initialize_connection(
 
    match tokio::time::timeout(
       std::time::Duration::from_secs(initialize_timeout_secs),
-      connection.initialize(init_request),
+      connection.send_request(init_request).block_task(),
    )
    .await
    {
@@ -283,7 +323,7 @@ async fn initialize_connection(
 }
 
 async fn bootstrap_session(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    client: Arc<AthasAcpClient>,
    cwd: PathBuf,
    requested_session_id: Option<String>,
@@ -294,18 +334,18 @@ async fn bootstrap_session(
 ) -> Result<SessionBootstrap> {
    log::info!("Creating ACP session in {:?}...", cwd);
 
-   let authenticate = |connection: Arc<acp::ClientSideConnection>| {
+   let authenticate = |connection: Arc<AcpConnection>| {
       let auth_methods = ctx.auth_methods.clone();
       async move {
          if let Some(method) = auth_methods.first() {
             log::info!(
                "Agent requires authentication, attempting ACP authenticate with method: {}",
-               method.id
+               method.id()
             );
-            let auth_request = acp::AuthenticateRequest::new(method.id.clone());
+            let auth_request = acp::AuthenticateRequest::new(method.id().clone());
             match tokio::time::timeout(
                std::time::Duration::from_secs(30),
-               connection.authenticate(auth_request),
+               connection.send_request(auth_request).block_task(),
             )
             .await
             {
@@ -488,39 +528,39 @@ async fn bootstrap_session(
 }
 
 async fn create_session(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    cwd: PathBuf,
 ) -> Result<Result<acp::NewSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
    let session_request = acp::NewSessionRequest::new(cwd);
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
-      connection.new_session(session_request),
+      connection.send_request(session_request).block_task(),
    )
    .await
 }
 
 async fn load_session(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    cwd: PathBuf,
    existing_session_id: String,
 ) -> Result<Result<acp::LoadSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
    let request = acp::LoadSessionRequest::new(existing_session_id, cwd);
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
-      connection.load_session(request),
+      connection.send_request(request).block_task(),
    )
    .await
 }
 
 async fn resume_session(
-   connection: Arc<acp::ClientSideConnection>,
+   connection: Arc<AcpConnection>,
    cwd: PathBuf,
    existing_session_id: String,
 ) -> Result<Result<acp::ResumeSessionResponse, acp::Error>, tokio::time::error::Elapsed> {
    let request = acp::ResumeSessionRequest::new(existing_session_id, cwd);
    tokio::time::timeout(
       std::time::Duration::from_secs(30),
-      connection.resume_session(request),
+      connection.send_request(request).block_task(),
    )
    .await
 }

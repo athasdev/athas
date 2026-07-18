@@ -9,9 +9,10 @@ import {
   PlusCircleIcon as PlusCircle,
   RadioButtonIcon as RadioButton,
   TrashIcon as Trash,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { databaseChipClassName } from "./database-surface";
 import { formatQueryResultSummary } from "../lib/query-result-summary";
 import type {
   DatabaseInfo,
@@ -96,22 +97,22 @@ export default function TableToolbar({
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 items-center gap-1.5">
             <Database className="text-text-lighter" />
-            <span className="ui-font ui-text-sm min-w-0 truncate text-text">{fileName}</span>
+            <span className="font-sans ui-text-sm min-w-0 truncate text-text">{fileName}</span>
             {dbInfo && (
-              <span className="ui-font ui-text-xs shrink-0 text-text-lighter">
+              <span className="font-sans ui-text-sm shrink-0 text-text-lighter">
                 {dbInfo.tables}t {dbInfo.indexes}i
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 rounded-md border border-border/60 bg-secondary-bg/60 p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary-bg/60 p-0.5">
             {VIEW_TABS.map(({ mode, label }) => (
               <Button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 variant={viewMode === mode ? "default" : "ghost"}
-                compact
+                size="xs"
                 className={cn(
-                  "rounded px-2.5 ui-text-xs text-text-lighter",
+                  "px-2.5 ui-text-sm text-text-lighter",
                   viewMode === mode ? "text-text" : "text-text-lighter",
                 )}
                 aria-label={`Switch to ${label} view`}
@@ -127,8 +128,8 @@ export default function TableToolbar({
             <Button
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
-              compact
-              className="rounded-md px-2 text-text-lighter"
+              size="icon-xs"
+              className="text-text-lighter"
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
             >
@@ -136,14 +137,16 @@ export default function TableToolbar({
             </Button>
           )}
           {resultSummary && (
-            <span className="px-2 ui-font ui-text-xs text-text-lighter">{resultSummary}</span>
+            <span className={databaseChipClassName("px-2 font-sans ui-text-sm text-text-lighter")}>
+              {resultSummary}
+            </span>
           )}
           {viewMode === "data" && (
             <Button
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
-              compact
-              className="rounded-md px-2 text-text-lighter"
+              size="icon-xs"
+              className="text-text-lighter"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
               tooltip="Open SQL editor"
@@ -155,10 +158,10 @@ export default function TableToolbar({
             <Button
               onClick={onCreateSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label="Create subscription"
               tooltip="Create subscription"
-              compact
+              size="icon-xs"
             >
               <RadioButton />
             </Button>
@@ -167,10 +170,10 @@ export default function TableToolbar({
             <Button
               onClick={onToggleSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
-              compact
+              size="icon-xs"
             >
               {subscriptionInfo.enabled ? <MinusCircle /> : <PlusCircle />}
             </Button>
@@ -179,10 +182,10 @@ export default function TableToolbar({
             <Button
               onClick={onRefreshSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label="Refresh subscription"
               tooltip="Refresh subscription"
-              compact
+              size="icon-xs"
             >
               <ArrowClockwise />
             </Button>
@@ -191,10 +194,10 @@ export default function TableToolbar({
             <Button
               onClick={onDropSubscription}
               variant="ghost"
-              className="rounded-md px-2 text-text-lighter"
+              className="text-text-lighter"
               aria-label="Drop subscription"
               tooltip="Drop subscription"
-              compact
+              size="icon-xs"
             >
               <Trash />
             </Button>
@@ -204,20 +207,20 @@ export default function TableToolbar({
               <Button
                 onClick={exportAsCSV}
                 variant="ghost"
-                className="rounded-md px-2 text-text-lighter"
+                className="text-text-lighter"
                 aria-label={exportLabel}
                 tooltip={exportTooltip}
-                compact
+                size="icon-xs"
               >
-                <Download />
+                <Download weight="fill" />
               </Button>
               <Button
                 onClick={copyAsJSON}
                 variant="ghost"
-                className="rounded-md px-2 text-text-lighter"
+                className="text-text-lighter"
                 aria-label={jsonLabel}
                 tooltip={jsonTooltip}
-                compact
+                size="icon-xs"
               >
                 <ClipboardText />
               </Button>

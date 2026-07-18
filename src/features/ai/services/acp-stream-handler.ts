@@ -11,7 +11,9 @@ import type {
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { getAcpPathBaseName, toAcpFileUri } from "@/features/ai/lib/acp-file-uri";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
+import { normalizeAcpWorkspacePath } from "@/features/ai/lib/acp-workspace-path";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 import { buildContextPrompt } from "../utils/ai-context-builder";
 
@@ -33,17 +35,19 @@ interface AcpListeners {
   event?: () => void;
 }
 
+function hasSessionId(event: AcpEvent): event is AcpEvent & { sessionId: string } {
+  return "sessionId" in event && typeof event.sessionId === "string";
+}
+
 export class AcpStreamHandler {
   private static activeHandler: AcpStreamHandler | null = null;
   private listeners: AcpListeners = {};
-  private timeout?: NodeJS.Timeout;
-  private lastActivityTime = Date.now();
   private activeTools = new Map<string, string>();
   private sessionComplete = false;
   private pendingNewMessage = false;
   private cancelled = false;
   private wasRunning = false;
-  private receivedResponseSignal = false;
+  private activeSessionId: string | null = null;
 
   constructor(
     private agentId: string,
@@ -67,11 +71,9 @@ export class AcpStreamHandler {
   async start(userMessage: string, context: ContextInfo): Promise<void> {
     try {
       AcpStreamHandler.activeHandler = this;
-      this.receivedResponseSignal = false;
       await this.setupListeners();
       await this.ensureAgentRunning();
       await invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) });
-      this.setupTimeout();
     } catch (error) {
       console.error("ACP agent error:", error);
       this.cleanup();
@@ -85,20 +87,30 @@ export class AcpStreamHandler {
       const targetChat = this.getTargetChat();
       const desiredSessionId =
         targetChat?.agentId === this.agentId ? (targetChat.acpSessionId ?? null) : null;
+      const workspacePath = this.getWorkspacePath();
+      const statusWorkspacePath = normalizeAcpWorkspacePath(status.workspacePath);
+      const desiredWorkspacePath = normalizeAcpWorkspacePath(workspacePath);
       const shouldRestartForSession =
         status.running &&
         status.agentId === this.agentId &&
         (status.sessionId ?? null) !== desiredSessionId;
+      const shouldRestartForWorkspace =
+        status.running &&
+        status.agentId === this.agentId &&
+        statusWorkspacePath !== desiredWorkspacePath;
 
       if (status.running) {
         useAIChatStore.getState().setAcpStatus(status);
+        this.activeSessionId = status.sessionId ?? null;
       }
 
-      if (!status.running || status.agentId !== this.agentId || shouldRestartForSession) {
+      if (
+        !status.running ||
+        status.agentId !== this.agentId ||
+        shouldRestartForSession ||
+        shouldRestartForWorkspace
+      ) {
         console.log(`Starting agent ${this.agentId}...`);
-
-        // Get current workspace path if available
-        const workspacePath = this.getWorkspacePath();
 
         let startStatus: AcpAgentStatus;
         try {
@@ -127,6 +139,7 @@ export class AcpStreamHandler {
         }
 
         useAIChatStore.getState().setAcpStatus(startStatus);
+        this.activeSessionId = startStatus.sessionId ?? null;
 
         if (startStatus.sessionId) {
           if (targetChat) {
@@ -139,6 +152,7 @@ export class AcpStreamHandler {
         // Wait for initialization
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } else {
+        this.activeSessionId = status.sessionId ?? null;
         this.wasRunning = true;
       }
     } catch (error) {
@@ -199,7 +213,7 @@ export class AcpStreamHandler {
         blocks.push({
           type: "resource",
           resource: {
-            uri: `file://${file.path}`,
+            uri: toAcpFileUri(file.path),
             text: file.content,
             mimeType: "text/plain",
           },
@@ -207,8 +221,8 @@ export class AcpStreamHandler {
       } else {
         blocks.push({
           type: "resource_link",
-          uri: `file://${file.path}`,
-          name: file.path.split("/").pop() || file.path,
+          uri: toAcpFileUri(file.path),
+          name: getAcpPathBaseName(file.path),
           mimeType: "text/plain",
         });
       }
@@ -225,8 +239,8 @@ export class AcpStreamHandler {
       resourceLinks.add(filePath);
       blocks.push({
         type: "resource_link",
-        uri: `file://${filePath}`,
-        name: filePath.split("/").pop() || filePath,
+        uri: toAcpFileUri(filePath),
+        name: getAcpPathBaseName(filePath),
         mimeType: "text/plain",
       });
     }
@@ -242,11 +256,12 @@ export class AcpStreamHandler {
 
   private handleAcpEvent(event: AcpEvent): void {
     if (this.cancelled) return;
+    if (hasSessionId(event) && this.activeSessionId && event.sessionId !== this.activeSessionId) {
+      return;
+    }
     if (this.handlers.onEvent) {
       this.handlers.onEvent(event);
     }
-
-    this.lastActivityTime = Date.now();
 
     switch (event.type) {
       case "user_message_chunk":
@@ -310,6 +325,9 @@ export class AcpStreamHandler {
         // Plan updates are surfaced through generic ACP event stream UI for now
         break;
 
+      case "usage_update":
+        break;
+
       case "session_info_update":
         break;
 
@@ -352,6 +370,9 @@ export class AcpStreamHandler {
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
     useAIChatStore.getState().setAcpStatus(event.status);
+    if (event.status.agentId === this.agentId) {
+      this.activeSessionId = event.status.sessionId ?? this.activeSessionId;
+    }
 
     if (event.status.running && event.status.sessionId) {
       const targetChat = this.getTargetChat();
@@ -401,7 +422,6 @@ export class AcpStreamHandler {
   }
 
   private handleContentChunk(event: Extract<AcpEvent, { type: "content_chunk" }>): void {
-    this.receivedResponseSignal = true;
     if (this.pendingNewMessage && this.handlers.onNewMessage) {
       this.handlers.onNewMessage();
     }
@@ -426,7 +446,6 @@ export class AcpStreamHandler {
   }
 
   private handleToolStart(event: Extract<AcpEvent, { type: "tool_start" }>): void {
-    this.receivedResponseSignal = true;
     this.activeTools.set(event.toolId, event.toolName);
     if (this.handlers.onToolUse) {
       this.handlers.onToolUse(event);
@@ -434,7 +453,6 @@ export class AcpStreamHandler {
   }
 
   private handleToolUpdate(event: Extract<AcpEvent, { type: "tool_update" }>): void {
-    this.receivedResponseSignal = true;
     if (event.toolName) {
       this.activeTools.set(event.toolId, event.toolName);
     }
@@ -452,12 +470,15 @@ export class AcpStreamHandler {
     this.pendingNewMessage = true;
 
     if (!event.success) {
-      console.warn("Tool call failed:", event.toolId);
+      console.debug("Tool call failed:", {
+        toolId: event.toolId,
+        toolName,
+        error: event.error,
+      });
     }
   }
 
   private handlePermissionRequest(event: Extract<AcpEvent, { type: "permission_request" }>): void {
-    this.receivedResponseSignal = true;
     if (this.handlers.onPermissionRequest) {
       this.handlers.onPermissionRequest(event);
     } else {
@@ -471,6 +492,7 @@ export class AcpStreamHandler {
   }
 
   private handleSessionComplete(): void {
+    if (this.sessionComplete) return;
     console.log("Session complete");
     this.sessionComplete = true;
     this.pendingNewMessage = false;
@@ -479,58 +501,15 @@ export class AcpStreamHandler {
   }
 
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {
+    if (this.sessionComplete || this.cancelled) return;
     console.error("ACP error:", event.error);
     this.pendingNewMessage = false;
     this.cleanup();
     this.handlers.onError(event.error);
   }
 
-  private setupTimeout(): void {
-    const checkInactivity = () => {
-      const now = Date.now();
-      const inactiveTime = now - this.lastActivityTime;
-
-      // If session is already complete, don't check timeout
-      if (this.sessionComplete) {
-        return;
-      }
-
-      // If no activity for 10 seconds and no active tool, consider complete
-      if (inactiveTime > 10000 && this.activeTools.size === 0) {
-        if (!this.receivedResponseSignal) {
-          console.log("No ACP response received before inactivity timeout");
-          this.cleanup();
-          this.handlers.onError(`${this.agentId} did not return any response.`, true);
-          return;
-        }
-        console.log("No activity for 10 seconds, conversation appears complete");
-        this.cleanup();
-        this.handlers.onComplete();
-        return;
-      }
-
-      // If still processing tool but no activity for 60 seconds, timeout
-      if (inactiveTime > 60000) {
-        console.log("Timeout: No activity for 60 seconds");
-        this.cleanup();
-        this.handlers.onError("Request timed out - no activity");
-        return;
-      }
-
-      // Continue checking
-      this.timeout = setTimeout(checkInactivity, 1000);
-    };
-
-    this.timeout = setTimeout(checkInactivity, 1000);
-  }
-
   private cleanup(): void {
     console.log("Cleaning up ACP listeners...");
-
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-      this.timeout = undefined;
-    }
     this.pendingNewMessage = false;
     this.activeTools.clear();
 
@@ -588,6 +567,16 @@ export class AcpStreamHandler {
         cursor: args.cursor ?? undefined,
       },
     });
+  }
+
+  static async deleteSession(sessionId: string): Promise<void> {
+    await invoke("delete_acp_session", {
+      args: { sessionId },
+    });
+  }
+
+  static async logoutAgent(): Promise<void> {
+    await invoke("logout_acp_agent");
   }
 
   // Static method to stop the current agent

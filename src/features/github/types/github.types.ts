@@ -9,6 +9,7 @@ export interface StatusCheck {
   status: string | null;
   conclusion: string | null;
   workflowName: string | null;
+  detailsUrl?: string | null;
 }
 
 export interface LinkedIssue {

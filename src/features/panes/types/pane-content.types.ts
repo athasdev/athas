@@ -34,6 +34,7 @@ export type PaneContentType =
   | "globalSearch"
   | "diagnostics"
   | "references"
+  | "extensions"
   | "onboarding";
 
 // ── Base fields shared by every content type ────────────────────────
@@ -56,6 +57,7 @@ export interface EditorContent extends PaneContentBase {
   savedContent: string;
   isDirty: boolean;
   isVirtual: boolean;
+  readOnly?: boolean;
   language?: string;
   languageOverride?: string;
   tokens: TokenEntry[];
@@ -116,6 +118,7 @@ export interface DatabaseContent extends PaneContentBase {
 
 export interface PullRequestContent extends PaneContentBase {
   type: "pullRequest";
+  repoPath?: string;
   prNumber: number;
   authorAvatarUrl?: string;
 }
@@ -170,6 +173,10 @@ export interface ReferencesContent extends PaneContentBase {
   type: "references";
 }
 
+export interface ExtensionsContent extends PaneContentBase {
+  type: "extensions";
+}
+
 export interface OnboardingContent extends PaneContentBase {
   type: "onboarding";
   mode: import("@/features/onboarding/lib/onboarding-state").OnboardingMode;
@@ -200,6 +207,7 @@ export type PaneContent =
   | GlobalSearchContent
   | DiagnosticsContent
   | ReferencesContent
+  | ExtensionsContent
   | OnboardingContent;
 
 // ── Type guards ─────────────────────────────────────────────────────
@@ -267,6 +275,7 @@ const VIRTUAL_TYPES: ReadonlySet<PaneContentType> = new Set([
   "globalSearch",
   "diagnostics",
   "references",
+  "extensions",
   "onboarding",
 ]);
 
@@ -314,6 +323,7 @@ export type OpenContentSpec =
       content: string;
       isVirtual?: boolean;
       isPreview?: boolean;
+      readOnly?: boolean;
       language?: string;
     }
   | {
@@ -355,9 +365,11 @@ export type OpenContentSpec =
   | {
       type: "pullRequest";
       prNumber: number;
+      repoPath?: string;
       authorAvatarUrl?: string;
       name?: string;
       selectedFilePath?: string;
+      initialView?: "activity" | "files";
     }
   | {
       type: "githubIssue";
@@ -409,6 +421,9 @@ export type OpenContentSpec =
     }
   | {
       type: "references";
+    }
+  | {
+      type: "extensions";
     }
   | {
       type: "onboarding";

@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { ClipboardAddon } from "@xterm/addon-clipboard";
+import { ClipboardAddon, type ClipboardSelectionType } from "@xterm/addon-clipboard";
 import { FitAddon } from "@xterm/addon-fit";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -10,8 +9,23 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useTerminalTheme } from "@/features/terminal/hooks/use-terminal-theme";
+import { loadWebglRenderer } from "@/features/terminal/hooks/use-terminal-addons";
+import { useTerminalWriteBuffer } from "@/features/terminal/hooks/use-terminal-write-buffer";
+import type { TerminalSize } from "@/features/terminal/types/terminal.types";
+import { buildTerminalFontFamily } from "@/features/terminal/utils/resolve-font";
+import { getTerminalKeyAction } from "@/features/terminal/utils/terminal-keyboard";
+import { getTerminalCompatibilityOptions } from "@/features/terminal/utils/terminal-options";
+import {
+  getTerminalOutputFlowAction,
+  getTerminalSize,
+  releaseTerminalEventChannel,
+  subscribeToTerminalEvents,
+  terminalSizesEqual,
+} from "@/features/terminal/utils/terminal-protocol";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
+import { currentPlatform } from "@/utils/platform";
 import "@xterm/xterm/css/xterm.css";
 import "@/features/terminal/styles/terminal.css";
 
@@ -49,14 +63,48 @@ export const ExternalEditorTerminal = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const isInitializingRef = useRef(false);
   const hasExecutedCommandRef = useRef(false);
-  const initFitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const themeRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const resizeRafRef = useRef<number | null>(null);
+  const lastSizeRef = useRef<TerminalSize | null>(null);
+  const queuedOutputBytesRef = useRef(0);
+  const outputPausedRef = useRef(false);
 
   const { fontSize: editorFontSize, fontFamily: editorFontFamily } = useEditorSettingsStore();
-  const { rootFolderPath } = useProjectStore();
-  const { settings } = useSettingsStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const externalEditor = useSettingsStore((state) => state.settings.externalEditor);
+  const customEditorCommand = useSettingsStore((state) => state.settings.customEditorCommand);
+  const theme = useSettingsStore((state) => state.settings.theme);
   const { getTerminalTheme } = useTerminalTheme();
+  const { write, writeBinary, flush } = useTerminalWriteBuffer({
+    getConnectionId: () => terminalConnectionId,
+    writeChunk: async (connectionId, input) => {
+      await invoke("terminal_write", { id: connectionId, input });
+    },
+  });
+
+  const scheduleFit = useCallback(() => {
+    if (resizeRafRef.current !== null) cancelAnimationFrame(resizeRafRef.current);
+
+    resizeRafRef.current = requestAnimationFrame(() => {
+      resizeRafRef.current = null;
+      const terminal = xtermRef.current;
+      const fitAddon = fitAddonRef.current;
+      const container = terminalRef.current;
+      if (!terminal || !fitAddon || !container || container.offsetParent === null) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      fitAddon.fit();
+      const size = getTerminalSize(terminal);
+      if (terminalSizesEqual(lastSizeRef.current, size)) return;
+      lastSizeRef.current = size;
+      void invoke("terminal_resize", { id: terminalConnectionId, size }).catch((error) => {
+        lastSizeRef.current = null;
+        console.error("Failed to resize terminal:", error);
+      });
+      terminal.refresh(0, terminal.rows - 1);
+    });
+  }, [terminalConnectionId]);
 
   const updateExternalEditorBufferTitle = useCallback(
     (title: string) => {
@@ -83,7 +131,7 @@ export const ExternalEditorTerminal = ({
     (path: string): string => {
       const relativePath = rootFolderPath ? path.replace(rootFolderPath, ".") : path;
 
-      switch (settings.editorEngine) {
+      switch (externalEditor) {
         case "nvim":
           return `nvim "${relativePath}"`;
         case "helix":
@@ -91,12 +139,12 @@ export const ExternalEditorTerminal = ({
         case "vim":
           return `vim "${relativePath}"`;
         case "custom":
-          return settings.customEditorCommand.replace("$FILE", `"${relativePath}"`);
+          return customEditorCommand.replace("$FILE", `"${relativePath}"`);
         default:
           return `nvim "${relativePath}"`;
       }
     },
-    [settings.editorEngine, settings.customEditorCommand, rootFolderPath],
+    [externalEditor, customEditorCommand, rootFolderPath],
   );
 
   const initializeTerminal = useCallback(() => {
@@ -109,18 +157,25 @@ export const ExternalEditorTerminal = ({
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: editorFontSize,
-      fontFamily: `${editorFontFamily}, Menlo, Monaco, "Courier New", monospace`,
+      fontFamily: buildTerminalFontFamily(editorFontFamily),
       theme: getTerminalTheme(),
       allowProposedApi: true,
-      smoothScrollDuration: 100,
       scrollback: 10000,
-      convertEol: true,
+      convertEol: false,
+      macOptionIsMeta: false,
+      rightClickSelectsWord: false,
+      ...getTerminalCompatibilityOptions(),
     });
 
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
     const unicodeAddon = new Unicode11Addon();
-    const clipboardAddon = new ClipboardAddon();
+    const clipboardAddon = new ClipboardAddon(undefined, {
+      readText: async () => "",
+      writeText: async (selection: ClipboardSelectionType, text: string) => {
+        if (selection === "c") await writeClipboardText(text);
+      },
+    });
 
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(webLinksAddon);
@@ -130,24 +185,15 @@ export const ExternalEditorTerminal = ({
     terminal.unicode.activeVersion = "11";
 
     terminal.open(terminalRef.current);
-
-    if (initFitTimeoutRef.current) {
-      clearTimeout(initFitTimeoutRef.current);
-    }
-    initFitTimeoutRef.current = setTimeout(() => {
-      if (fitAddon && terminalRef.current) {
-        fitAddon.fit();
-      }
-      initFitTimeoutRef.current = null;
-    }, 150);
+    loadWebglRenderer(terminal, scheduleFit);
 
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
+    scheduleFit();
 
-    terminal.onData((data) => {
-      invoke("terminal_write", { id: terminalConnectionId, data }).catch((e) => {
-        console.error("Failed to write to external editor terminal:", e);
-      });
+    terminal.onData(write);
+    terminal.onBinary((data) => {
+      writeBinary(Array.from(data, (character) => character.charCodeAt(0) & 0xff));
     });
 
     terminal.onTitleChange((rawTitle) => {
@@ -157,74 +203,86 @@ export const ExternalEditorTerminal = ({
       updateExternalEditorBufferTitle(title);
     });
 
-    terminal.onKey(({ domEvent }) => {
-      const e = domEvent;
-
-      if ((e.metaKey && e.key === "Backspace") || (e.ctrlKey && e.key === "u")) {
-        e.preventDefault();
-        invoke("terminal_write", { id: terminalConnectionId, data: "\u0015" }).catch((e) => {
-          console.error("Failed to write to terminal:", e);
-        });
-        return;
+    terminal.attachCustomKeyEventHandler((event) => {
+      const action = getTerminalKeyAction(event, currentPlatform);
+      if (action.type === "write") {
+        event.preventDefault();
+        write(action.data);
+        return false;
       }
-
-      if (e.metaKey && e.key === "k") {
-        e.preventDefault();
-        invoke("terminal_write", { id: terminalConnectionId, data: "\u000c" }).catch((e) => {
-          console.error("Failed to write to terminal:", e);
-        });
-        return;
+      if (action.type === "switchTab") {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("terminal-switch-tab", { detail: action.direction }));
+        return false;
       }
-
-      if (e.altKey && e.key === "Backspace") {
-        e.preventDefault();
-        invoke("terminal_write", { id: terminalConnectionId, data: "\u0017" }).catch((e) => {
-          console.error("Failed to write to terminal:", e);
-        });
-        return;
+      if (action.type === "copy") {
+        event.preventDefault();
+        const selection = terminal.getSelection();
+        if (selection) {
+          void writeClipboardText(selection).catch((error) =>
+            console.error("Failed to copy terminal selection:", error),
+          );
+        }
+        return false;
       }
+      if (action.type === "paste") {
+        event.preventDefault();
+        void readClipboardText()
+          .then((text) => terminal.paste(text))
+          .catch((error) => console.error("Failed to paste into terminal:", error));
+        return false;
+      }
+      return action.type === "passthrough";
     });
 
-    terminal.attachCustomKeyEventHandler((e) => {
-      if (e.metaKey && ["Backspace", "k", "a", "e", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-        return true;
-      }
-      return true;
-    });
-
-    // Set up event listeners asynchronously
-    const setupListeners = async () => {
-      try {
-        const outputEventName = `pty-output-${terminalConnectionId}`;
-        const closedEventName = `pty-closed-${terminalConnectionId}`;
-        const errorEventName = `pty-error-${terminalConnectionId}`;
-
-        const unlisten = await listen<{ data: string }>(outputEventName, (event) => {
-          terminal.write(event.payload.data);
-        });
-
-        const closedUnlisten = await listen(closedEventName, () => {
-          if (onEditorExit) {
-            onEditorExit();
-          }
-        });
-
-        const errorUnlisten = await listen<{ error: string }>(errorEventName, (event) => {
-          console.error("Terminal error:", event.payload.error);
-        });
-
-        // Store cleanup functions
-        (terminal as unknown as { _cleanupListeners: () => void })._cleanupListeners = () => {
-          unlisten();
-          closedUnlisten();
-          errorUnlisten();
-        };
-      } catch (error) {
-        console.error("Failed to set up terminal event listeners:", error);
-      }
+    const setOutputPaused = (paused: boolean) => {
+      if (outputPausedRef.current === paused) return;
+      outputPausedRef.current = paused;
+      void invoke("terminal_set_paused", { id: terminalConnectionId, paused }).catch(() => {
+        outputPausedRef.current = !paused;
+      });
     };
 
-    setupListeners();
+    const unsubscribeEvents = subscribeToTerminalEvents(terminalConnectionId, (event) => {
+      if (event.event === "output") {
+        const bytes = Uint8Array.from(event.data);
+        queuedOutputBytesRef.current += bytes.byteLength;
+        if (
+          getTerminalOutputFlowAction(queuedOutputBytesRef.current, outputPausedRef.current) ===
+          "pause"
+        ) {
+          setOutputPaused(true);
+        }
+        terminal.write(bytes, () => {
+          queuedOutputBytesRef.current = Math.max(
+            0,
+            queuedOutputBytesRef.current - bytes.byteLength,
+          );
+          if (
+            getTerminalOutputFlowAction(queuedOutputBytesRef.current, outputPausedRef.current) ===
+            "resume"
+          ) {
+            setOutputPaused(false);
+          }
+        });
+        return;
+      }
+
+      if (event.event === "error") {
+        console.error("Terminal error:", event.message);
+        return;
+      }
+
+      if (event.event === "closed") {
+        releaseTerminalEventChannel(terminalConnectionId);
+        onEditorExit?.();
+      }
+    });
+
+    (terminal as unknown as { _cleanupListeners: () => void })._cleanupListeners = () => {
+      if (outputPausedRef.current) setOutputPaused(false);
+      unsubscribeEvents();
+    };
 
     isInitializingRef.current = false;
 
@@ -234,9 +292,7 @@ export const ExternalEditorTerminal = ({
       hasExecutedCommandRef.current = true;
       const command = getEditorCommand(filePath);
       setTimeout(() => {
-        invoke("terminal_write", { id: terminalConnectionId, data: `${command}\n` }).catch((e) => {
-          console.error("Failed to execute editor command:", e);
-        });
+        write(`${command}\n`);
       }, 200);
     }
   }, [
@@ -248,19 +304,17 @@ export const ExternalEditorTerminal = ({
     fileName,
     getEditorCommand,
     onEditorExit,
+    scheduleFit,
     updateExternalEditorBufferTitle,
+    write,
+    writeBinary,
   ]);
 
   useEffect(() => {
     initializeTerminal();
 
     return () => {
-      if (initFitTimeoutRef.current) {
-        clearTimeout(initFitTimeoutRef.current);
-      }
-      if (themeRefreshTimeoutRef.current) {
-        clearTimeout(themeRefreshTimeoutRef.current);
-      }
+      void flush();
       if (resizeRafRef.current) {
         cancelAnimationFrame(resizeRafRef.current);
       }
@@ -276,83 +330,51 @@ export const ExternalEditorTerminal = ({
         xtermRef.current = null;
       }
     };
-  }, [initializeTerminal]);
+  }, [flush, initializeTerminal]);
 
   useEffect(() => {
     if (xtermRef.current) {
       xtermRef.current.options.fontSize = editorFontSize;
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
+      scheduleFit();
     }
-  }, [editorFontSize]);
+  }, [editorFontSize, scheduleFit]);
 
   useEffect(() => {
     if (xtermRef.current) {
-      xtermRef.current.options.fontFamily = `${editorFontFamily}, Menlo, Monaco, "Courier New", monospace`;
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
+      xtermRef.current.options.fontFamily = buildTerminalFontFamily(editorFontFamily);
+      scheduleFit();
     }
-  }, [editorFontFamily]);
+  }, [editorFontFamily, scheduleFit]);
 
   useEffect(() => {
     if (xtermRef.current) {
-      if (themeRefreshTimeoutRef.current) {
-        clearTimeout(themeRefreshTimeoutRef.current);
-      }
-
-      themeRefreshTimeoutRef.current = setTimeout(() => {
-        if (xtermRef.current) {
-          xtermRef.current.options.theme = getTerminalTheme();
-        }
-        themeRefreshTimeoutRef.current = null;
-      }, 50);
+      xtermRef.current.options.theme = getTerminalTheme();
+      scheduleFit();
     }
-  }, [settings.theme, getTerminalTheme]);
+  }, [theme, getTerminalTheme, scheduleFit]);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (resizeRafRef.current) {
-        cancelAnimationFrame(resizeRafRef.current);
-      }
-
-      resizeRafRef.current = requestAnimationFrame(() => {
-        if (fitAddonRef.current && terminalRef.current) {
-          fitAddonRef.current.fit();
-
-          if (xtermRef.current) {
-            const rows = xtermRef.current.rows;
-            const cols = xtermRef.current.cols;
-
-            invoke("terminal_resize", {
-              id: terminalConnectionId,
-              rows,
-              cols,
-            }).catch((e) => {
-              console.error("Failed to resize terminal:", e);
-            });
-          }
-        }
-        resizeRafRef.current = null;
-      });
-    };
-
-    const resizeObserver = new ResizeObserver(handleResize);
+    const resizeObserver = new ResizeObserver(scheduleFit);
     if (terminalRef.current) {
       resizeObserver.observe(terminalRef.current);
     }
 
-    window.addEventListener("resize", handleResize);
+    const visualViewport = window.visualViewport;
+    window.addEventListener("resize", scheduleFit);
+    visualViewport?.addEventListener("resize", scheduleFit);
+    document.fonts.addEventListener("loadingdone", scheduleFit);
+    void document.fonts.ready.then(scheduleFit);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", scheduleFit);
+      visualViewport?.removeEventListener("resize", scheduleFit);
+      document.fonts.removeEventListener("loadingdone", scheduleFit);
       if (resizeRafRef.current) {
         cancelAnimationFrame(resizeRafRef.current);
       }
     };
-  }, [terminalConnectionId]);
+  }, [scheduleFit]);
 
   return (
     <div className="flex size-full flex-col bg-primary-bg">

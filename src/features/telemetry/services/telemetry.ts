@@ -1,6 +1,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { arch, platform } from "@tauri-apps/plugin-os";
+import { load, type Store } from "@tauri-apps/plugin-store";
 import { getSettingsStore } from "@/features/settings/lib/settings-persistence";
 import { getApiBase } from "@/utils/api-base";
 
@@ -19,6 +20,16 @@ const STORE_KEY_LOG = "telemetry_log_v1";
 const STORE_KEY_INSTALL_DATE = "telemetry_install_date";
 const STORE_KEY_LAUNCH_COUNT = "telemetry_launch_count";
 const STORE_KEY_LAST_APP_VERSION = "telemetry_last_app_version";
+const TELEMETRY_STORE_NAME = "telemetry.json";
+const TELEMETRY_STORE_KEYS = [
+  STORE_KEY_DEVICE_ID,
+  STORE_KEY_LAST_HEARTBEAT,
+  STORE_KEY_QUEUE,
+  STORE_KEY_LOG,
+  STORE_KEY_INSTALL_DATE,
+  STORE_KEY_LAUNCH_COUNT,
+  STORE_KEY_LAST_APP_VERSION,
+] as const;
 
 type TelemetryEventType =
   | "heartbeat"
@@ -67,10 +78,58 @@ let flushInFlight: Promise<boolean> | null = null;
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let listenersRegistered = false;
+let telemetryStoreInstance: Store | null = null;
+let telemetryStoreInitPromise: Promise<Store> | null = null;
 const logSubscribers = new Set<TelemetryLogSubscriber>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function migrateLegacyTelemetrySettingsStore(telemetryStore: Store) {
+  const settingsStore = await getSettingsStore();
+  let settingsChanged = false;
+  let telemetryChanged = false;
+
+  await Promise.all(
+    TELEMETRY_STORE_KEYS.map(async (key) => {
+      const legacyValue = await settingsStore.get(key);
+      if (legacyValue === null || legacyValue === undefined) return;
+
+      const existingValue = await telemetryStore.get(key);
+      if (existingValue === null || existingValue === undefined) {
+        await telemetryStore.set(key, legacyValue);
+        telemetryChanged = true;
+      }
+
+      await settingsStore.delete(key);
+      settingsChanged = true;
+    }),
+  );
+
+  await Promise.all([
+    settingsChanged ? settingsStore.save() : Promise.resolve(),
+    telemetryChanged ? telemetryStore.save() : Promise.resolve(),
+  ]);
+}
+
+async function getTelemetryStore() {
+  if (telemetryStoreInstance) {
+    return telemetryStoreInstance;
+  }
+
+  if (!telemetryStoreInitPromise) {
+    telemetryStoreInitPromise = (async () => {
+      const store = await load(TELEMETRY_STORE_NAME, {
+        autoSave: true,
+      } as Parameters<typeof load>[1]);
+      await migrateLegacyTelemetrySettingsStore(store);
+      telemetryStoreInstance = store;
+      return store;
+    })();
+  }
+
+  return telemetryStoreInitPromise;
 }
 
 function serializeError(error: unknown): { message: string; stack?: string } {
@@ -137,7 +196,7 @@ function sanitizePayload(value: unknown): unknown {
 }
 
 async function getOrCreateDeviceId() {
-  const store = await getSettingsStore();
+  const store = await getTelemetryStore();
   const existing = await store.get<string>(STORE_KEY_DEVICE_ID);
   if (existing) return existing;
 
@@ -148,9 +207,9 @@ async function getOrCreateDeviceId() {
 }
 
 async function loadQueue(
-  storeArg?: Awaited<ReturnType<typeof getSettingsStore>>,
+  storeArg?: Awaited<ReturnType<typeof getTelemetryStore>>,
 ): Promise<QueuedTelemetryEvent[]> {
-  const store = storeArg ?? (await getSettingsStore());
+  const store = storeArg ?? (await getTelemetryStore());
   const queue = await store.get<unknown>(STORE_KEY_QUEUE);
   if (!Array.isArray(queue)) return [];
 
@@ -167,17 +226,17 @@ async function loadQueue(
 
 async function saveQueue(
   queue: QueuedTelemetryEvent[],
-  storeArg?: Awaited<ReturnType<typeof getSettingsStore>>,
+  storeArg?: Awaited<ReturnType<typeof getTelemetryStore>>,
 ) {
-  const store = storeArg ?? (await getSettingsStore());
+  const store = storeArg ?? (await getTelemetryStore());
   await store.set(STORE_KEY_QUEUE, queue);
   await store.save();
 }
 
 async function loadLogEntries(
-  storeArg?: Awaited<ReturnType<typeof getSettingsStore>>,
+  storeArg?: Awaited<ReturnType<typeof getTelemetryStore>>,
 ): Promise<TelemetryLogEntry[]> {
-  const store = storeArg ?? (await getSettingsStore());
+  const store = storeArg ?? (await getTelemetryStore());
   const log = await store.get<unknown>(STORE_KEY_LOG);
   if (!Array.isArray(log)) return [];
 
@@ -195,9 +254,9 @@ async function loadLogEntries(
 
 async function persistLogEntries(
   entries: TelemetryLogEntry[],
-  storeArg?: Awaited<ReturnType<typeof getSettingsStore>>,
+  storeArg?: Awaited<ReturnType<typeof getTelemetryStore>>,
 ) {
-  const store = storeArg ?? (await getSettingsStore());
+  const store = storeArg ?? (await getTelemetryStore());
   const limitedEntries = entries.slice(-MAX_LOG_ENTRIES);
   await store.set(STORE_KEY_LOG, limitedEntries);
   await store.save();
@@ -212,9 +271,9 @@ function notifyLogSubscribers(entries: TelemetryLogEntry[]) {
 
 async function appendLogEntry(
   entry: Omit<TelemetryLogEntry, "id" | "timestamp">,
-  storeArg?: Awaited<ReturnType<typeof getSettingsStore>>,
+  storeArg?: Awaited<ReturnType<typeof getTelemetryStore>>,
 ) {
-  const store = storeArg ?? (await getSettingsStore());
+  const store = storeArg ?? (await getTelemetryStore());
   const entries = await loadLogEntries(store);
   entries.push({
     id: crypto.randomUUID(),
@@ -228,7 +287,7 @@ async function ensureClientContext(): Promise<TelemetryClientContext> {
   if (clientContextPromise) return clientContextPromise;
 
   clientContextPromise = (async () => {
-    const store = await getSettingsStore();
+    const store = await getTelemetryStore();
     const [deviceId, appVersion] = await Promise.all([getOrCreateDeviceId(), getVersion()]);
 
     const nowIso = new Date().toISOString();
@@ -267,14 +326,14 @@ async function isUsageTelemetryEnabled(): Promise<boolean> {
 }
 
 async function shouldQueueHeartbeat(): Promise<boolean> {
-  const store = await getSettingsStore();
+  const store = await getTelemetryStore();
   const lastHeartbeat = await store.get<number>(STORE_KEY_LAST_HEARTBEAT);
   if (!lastHeartbeat) return true;
   return Date.now() - lastHeartbeat >= HEARTBEAT_INTERVAL_MS;
 }
 
 async function markHeartbeatQueued() {
-  const store = await getSettingsStore();
+  const store = await getTelemetryStore();
   await store.set(STORE_KEY_LAST_HEARTBEAT, Date.now());
   await store.save();
 }
@@ -296,7 +355,7 @@ async function enqueueTelemetryEvent(
   const mode = options?.mode ?? "optional";
   if (mode === "optional" && !(await isUsageTelemetryEnabled())) return false;
 
-  const store = await getSettingsStore();
+  const store = await getTelemetryStore();
   const context = await ensureClientContext();
   const queue = await loadQueue(store);
 
@@ -314,19 +373,26 @@ async function enqueueTelemetryEvent(
 
   queue.push(event);
 
+  const droppedEvents: QueuedTelemetryEvent[] = [];
   while (queue.length > MAX_QUEUE_LENGTH) {
     const dropped = queue.shift();
     if (dropped) {
-      await appendLogEntry(
+      droppedEvents.push(dropped);
+    }
+  }
+
+  await Promise.all(
+    droppedEvents.map((dropped) =>
+      appendLogEntry(
         {
           status: "dropped",
           eventType: dropped.type,
           summary: `Dropped ${dropped.type} from local queue to stay under ${MAX_QUEUE_LENGTH} events`,
         },
         store,
-      );
-    }
-  }
+      ),
+    ),
+  );
 
   await saveQueue(queue, store);
   await appendLogEntry(
@@ -351,36 +417,42 @@ export async function flushTelemetryQueue(): Promise<boolean> {
   }
 
   flushInFlight = (async () => {
-    const store = await getSettingsStore();
+    const store = await getTelemetryStore();
     const queue = await loadQueue(store);
     if (queue.length === 0) return true;
 
     const context = await ensureClientContext();
 
     try {
+      const chunks: QueuedTelemetryEvent[][] = [];
       for (let index = 0; index < queue.length; index += QUEUE_FLUSH_THRESHOLD) {
-        const chunk = queue.slice(index, index + QUEUE_FLUSH_THRESHOLD);
-        const response = await tauriFetch(`${API_BASE}/api/telemetry/events`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            device_id: context.deviceId,
-            app_version: context.appVersion,
-            platform: context.platform,
-            arch: context.arch,
-            events: chunk.map((event) => ({
-              id: event.id,
-              type: event.type,
-              occurred_at: event.occurredAt,
-              payload: event.payload,
-            })),
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Telemetry upload failed (${response.status})`);
-        }
+        chunks.push(queue.slice(index, index + QUEUE_FLUSH_THRESHOLD));
       }
+
+      await Promise.all(
+        chunks.map(async (chunk) => {
+          const response = await tauriFetch(`${API_BASE}/api/telemetry/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              device_id: context.deviceId,
+              app_version: context.appVersion,
+              platform: context.platform,
+              arch: context.arch,
+              events: chunk.map((event) => ({
+                id: event.id,
+                type: event.type,
+                occurred_at: event.occurredAt,
+                payload: event.payload,
+              })),
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Telemetry upload failed (${response.status})`);
+          }
+        }),
+      );
 
       await saveQueue([], store);
       await appendLogEntry(
@@ -535,7 +607,7 @@ export async function getTelemetryLogEntries(): Promise<TelemetryLogEntry[]> {
 }
 
 export async function clearTelemetryLogEntries() {
-  const store = await getSettingsStore();
+  const store = await getTelemetryStore();
   await persistLogEntries([], store);
   await appendLogEntry(
     {
@@ -559,30 +631,31 @@ export function subscribeToTelemetryLog(subscriber: TelemetryLogSubscriber) {
 export function initializeTelemetry(): Promise<void> {
   if (initializationPromise) return initializationPromise;
 
-  initializationPromise = new Promise((resolve) => {
-    setTimeout(() => {
-      registerCrashListeners();
-      void ensureClientContext()
-        .then(() => queueHeartbeat())
-        .catch((error) => {
-          console.error("Telemetry initialization failed:", error);
-        });
-
-      if (!flushTimer) {
-        flushTimer = setInterval(() => {
-          void flushTelemetryQueue();
-        }, FLUSH_INTERVAL_MS);
-      }
-
-      if (!heartbeatTimer) {
-        heartbeatTimer = setInterval(() => {
-          void queueHeartbeat();
-        }, HEARTBEAT_INTERVAL_MS);
-      }
-
-      resolve();
-    }, STARTUP_DELAY_MS);
+  registerCrashListeners();
+  void getTelemetryStore().catch((error) => {
+    console.error("Telemetry store initialization failed:", error);
   });
+  setTimeout(() => {
+    void ensureClientContext()
+      .then(() => queueHeartbeat())
+      .catch((error) => {
+        console.error("Telemetry initialization failed:", error);
+      });
+
+    if (!flushTimer) {
+      flushTimer = setInterval(() => {
+        void flushTelemetryQueue();
+      }, FLUSH_INTERVAL_MS);
+    }
+
+    if (!heartbeatTimer) {
+      heartbeatTimer = setInterval(() => {
+        void queueHeartbeat();
+      }, HEARTBEAT_INTERVAL_MS);
+    }
+  }, STARTUP_DELAY_MS);
+
+  initializationPromise = Promise.resolve();
 
   return initializationPromise;
 }

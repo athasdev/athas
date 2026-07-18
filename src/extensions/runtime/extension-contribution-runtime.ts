@@ -2,11 +2,17 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { IconThemeContribution, ThemeContribution } from "../types/extension-manifest";
 import { iconThemeRegistry } from "../icon-themes/icon-theme-registry";
-import type { IconResult, IconThemeDefinition } from "../icon-themes/types";
+import type { IconResult, IconThemeDefinition } from "../icon-themes/icon-theme.types";
 import { themeRegistry } from "../themes/theme-registry";
-import type { ThemeDefinition } from "../themes/types";
+import { toThemeDefinition as convertThemeToDefinition } from "../themes/theme-file";
+import type { ThemeDefinition } from "../themes/theme.types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
+import { isRetiredExtensionId } from "../registry/retired-extensions";
+import {
+  activateBundledContributionModule,
+  deactivateBundledContributionModule,
+} from "../bundled/bundled-contribution-modules";
 
 function getThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {
   return [...(manifest.themes ?? []), ...(manifest.contributes?.themes ?? [])];
@@ -16,48 +22,8 @@ function getIconThemeContributions(manifest: ExtensionManifest): IconThemeContri
   return getManifestIconContributions(manifest);
 }
 
-function toCssVariables(colors: Record<string, string>): Record<string, string> {
-  const variables: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(colors)) {
-    const normalizedKey = key.startsWith("--") ? key : `--${key}`;
-    variables[normalizedKey] = value;
-
-    if (!normalizedKey.startsWith("--color-")) {
-      variables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
-  }
-
-  return variables;
-}
-
-function toSyntaxVariables(syntax: Record<string, string> | undefined): Record<string, string> {
-  const variables: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(syntax ?? {})) {
-    const normalizedKey = key.startsWith("--") ? key : `--syntax-${key}`;
-    variables[normalizedKey] = value;
-
-    if (!normalizedKey.startsWith("--color-")) {
-      variables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
-  }
-
-  return variables;
-}
-
 function toThemeDefinition(contribution: ThemeContribution): ThemeDefinition {
-  const isDark = contribution.appearance === "dark";
-
-  return {
-    id: contribution.id,
-    name: contribution.name,
-    description: contribution.description || "",
-    category: isDark ? "Dark" : "Light",
-    cssVariables: toCssVariables(contribution.colors),
-    syntaxTokens: toSyntaxVariables(contribution.syntax),
-    isDark,
-  };
+  return convertThemeToDefinition(contribution);
 }
 
 function normalizeLookupMap(map: Record<string, string> | undefined, withDot = false) {
@@ -104,6 +70,18 @@ function resolveIcon(
   return {};
 }
 
+function getIconDefinitionsForAppearance(contribution: IconThemeContribution) {
+  const currentThemeId =
+    themeRegistry.getCurrentTheme() || useSettingsStore.getState().settings.theme;
+  const currentTheme = themeRegistry.getTheme(currentThemeId);
+
+  if (currentTheme && !currentTheme.isDark) {
+    return contribution.lightIconDefinitions ?? contribution.iconDefinitions;
+  }
+
+  return contribution.iconDefinitions;
+}
+
 function getFileExtensionCandidates(fileName: string): string[] {
   const parts = fileName.toLowerCase().split(".");
   if (parts.length < 2 || parts[0] === "") {
@@ -127,6 +105,7 @@ function toIconThemeDefinition(
     name: contribution.name,
     description: contribution.description || "",
     getFileIcon: (fileName, isDir, isExpanded = false) => {
+      const iconDefinitions = getIconDefinitionsForAppearance(contribution);
       const normalizedName = fileName.split(/[\\/]/).pop()?.toLowerCase() || fileName.toLowerCase();
 
       if (isDir) {
@@ -136,7 +115,7 @@ function toIconThemeDefinition(
           (isExpanded ? contribution.defaultFolderOpen : undefined) ||
           contribution.defaultFolder;
 
-        return resolveIcon(contribution.iconDefinitions, folderIcon, extensionPath);
+        return resolveIcon(iconDefinitions, folderIcon, extensionPath);
       }
 
       const icon =
@@ -146,14 +125,16 @@ function toIconThemeDefinition(
           .find(Boolean) ||
         contribution.defaultFile;
 
-      return resolveIcon(contribution.iconDefinitions, icon, extensionPath);
+      return resolveIcon(iconDefinitions, icon, extensionPath);
     },
   };
 }
 
 function iconThemeUsesRelativePaths(iconThemes: IconThemeContribution[]): boolean {
   return iconThemes.some((theme) =>
-    Object.values(theme.iconDefinitions).some((definition) => definition.startsWith("./")),
+    [theme.iconDefinitions, theme.lightIconDefinitions].some((definitions) =>
+      Object.values(definitions ?? {}).some((definition) => definition.startsWith("./")),
+    ),
   );
 }
 
@@ -200,6 +181,10 @@ export async function activateExtensionContributions(
   manifest: ExtensionManifest,
   extensionPath?: string,
 ): Promise<void> {
+  if (isRetiredExtensionId(extensionId)) {
+    return;
+  }
+
   const iconThemes = getIconThemeContributions(manifest);
   const resolvedExtensionPath = await resolveContributionExtensionPath(
     extensionId,
@@ -216,12 +201,15 @@ export async function activateExtensionContributions(
       extensionId,
     });
   }
+
+  await activateBundledContributionModule(extensionId, manifest);
 }
 
 export async function deactivateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
+  await deactivateBundledContributionModule(extensionId, manifest);
   fallbackThemeIfNeeded(getThemeContributions(manifest));
   fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));
   themeRegistry.unregisterThemesByExtension(extensionId);

@@ -8,6 +8,7 @@ use std::{
    collections::HashMap,
    env,
    ffi::{OsStr, OsString},
+   fs,
    io::{BufRead, BufReader, Read, Write},
    path::{Path, PathBuf},
    process::{Child, Command, Stdio},
@@ -68,6 +69,33 @@ fn workspace_cwd(workspace_path: Option<&Path>) -> Option<PathBuf> {
    }
 }
 
+fn has_javascript_extension(server_path: &Path) -> bool {
+   server_path
+      .extension()
+      .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
+      .unwrap_or(false)
+}
+
+fn has_node_shebang(server_path: &Path) -> bool {
+   let Ok(mut file) = fs::File::open(server_path) else {
+      return false;
+   };
+
+   let mut buffer = [0_u8; 128];
+   let Ok(bytes_read) = file.read(&mut buffer) else {
+      return false;
+   };
+
+   let contents = String::from_utf8_lossy(&buffer[..bytes_read]);
+   let first_line = contents.lines().next().unwrap_or_default().trim();
+
+   first_line.starts_with("#!") && first_line.contains("node")
+}
+
+fn is_node_script_server(server_path: &Path) -> bool {
+   has_javascript_extension(server_path) || has_node_shebang(server_path)
+}
+
 #[derive(Clone)]
 pub struct LspClient {
    request_counter: Arc<AtomicU64>,
@@ -86,11 +114,10 @@ impl LspClient {
       workspace_path: Option<PathBuf>,
       mut env_overrides: LspServerEnv,
    ) -> Result<(Self, Child)> {
-      // Check if this is a JavaScript-based language server
-      let is_js_server = server_path
-         .extension()
-         .map(|ext| ext == OsStr::new("js") || ext == OsStr::new("mjs") || ext == OsStr::new("cjs"))
-         .unwrap_or(false);
+      // Check if this is a JavaScript-based language server. Some npm package
+      // bins are extensionless shebang scripts, which cannot be spawned
+      // directly on Windows and should still run through managed Node.
+      let is_js_server = is_node_script_server(&server_path);
 
       let (command_path, final_args) = if is_js_server {
          // JS-based server requires Node.js runtime
@@ -459,6 +486,10 @@ impl LspClient {
                   dynamic_registration: Some(true),
                }),
                workspace_folders: Some(true),
+               symbol: Some(WorkspaceSymbolClientCapabilities {
+                  dynamic_registration: Some(false),
+                  ..Default::default()
+               }),
                ..Default::default()
             }),
             ..Default::default()
@@ -784,6 +815,29 @@ impl LspClient {
          .await
    }
 
+   pub fn semantic_token_type_names(&self) -> Vec<String> {
+      let capabilities = self.capabilities.lock().unwrap();
+      let Some(provider) = capabilities
+         .as_ref()
+         .and_then(|capabilities| capabilities.semantic_tokens_provider.as_ref())
+      else {
+         return Vec::new();
+      };
+
+      let legend = match provider {
+         SemanticTokensServerCapabilities::SemanticTokensOptions(options) => &options.legend,
+         SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(options) => {
+            &options.semantic_tokens_options.legend
+         }
+      };
+
+      legend
+         .token_types
+         .iter()
+         .map(|token_type| token_type.as_str().to_string())
+         .collect()
+   }
+
    pub async fn text_document_inlay_hint(
       &self,
       params: InlayHintParams,
@@ -796,6 +850,15 @@ impl LspClient {
       params: DocumentSymbolParams,
    ) -> Result<Option<DocumentSymbolResponse>> {
       self.request::<request::DocumentSymbolRequest>(params).await
+   }
+
+   pub async fn workspace_symbol(
+      &self,
+      params: WorkspaceSymbolParams,
+   ) -> Result<Option<WorkspaceSymbolResponse>> {
+      self
+         .request::<request::WorkspaceSymbolRequest>(params)
+         .await
    }
 
    pub async fn text_document_signature_help(
@@ -906,6 +969,28 @@ mod tests {
 
       let path = env_overrides.get("PATH").unwrap();
       assert_eq!(env::split_paths(OsStr::new(path)).next().unwrap(), bin_dir);
+   }
+
+   #[test]
+   fn treats_extensionless_node_shebang_as_node_script_server() {
+      let temp = tempfile::tempdir().unwrap();
+      let server_path = temp.path().join("vscode-css-language-server");
+      fs::write(
+         &server_path,
+         "#!/usr/bin/env node\nrequire('../cssServerMain')\n",
+      )
+      .unwrap();
+
+      assert!(is_node_script_server(&server_path));
+   }
+
+   #[test]
+   fn does_not_treat_plain_extensionless_binary_as_node_script_server() {
+      let temp = tempfile::tempdir().unwrap();
+      let server_path = temp.path().join("native-language-server");
+      fs::write(&server_path, "not a shebang script").unwrap();
+
+      assert!(!is_node_script_server(&server_path));
    }
 
    #[test]

@@ -3,7 +3,7 @@ import {
   ArrowRightIcon as ArrowRight,
   ArrowCounterClockwiseIcon as RotateCcw,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { Action } from "@/features/command-palette/types/action.types";
 
 interface TabActionsParams {

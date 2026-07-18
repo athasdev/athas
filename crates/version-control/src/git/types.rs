@@ -71,6 +71,8 @@ pub struct GitDiff {
    pub additions: Option<usize>,
    #[serde(skip_serializing_if = "Option::is_none")]
    pub deletions: Option<usize>,
+   #[serde(skip_serializing_if = "Option::is_none")]
+   pub is_truncated: Option<bool>,
 }
 
 #[derive(Serialize)]

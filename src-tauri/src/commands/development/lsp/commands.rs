@@ -1,12 +1,12 @@
 use super::{
    convert::{
       convert_diagnostic_context_to_lsp, flatten_document_symbols, flatten_inlay_hint,
-      symbol_kind_label,
+      flatten_workspace_symbol_response, symbol_kind_label,
    },
    types::{
       FlatCodeLens, FlatInlayHint, FlatSemanticToken, FlatSymbol, FlatTextEdit,
-      FlatTextEditPosition, FlatTextEditRange, LspApplyCodeActionResult, LspCodeActionItem,
-      LspDiagnosticContext,
+      FlatTextEditPosition, FlatTextEditRange, FlatWorkspaceSymbol, LspApplyCodeActionResult,
+      LspCodeActionItem, LspDiagnosticContext,
    },
 };
 use crate::app_runtime::AppHandle;
@@ -346,6 +346,7 @@ pub async fn lsp_get_semantic_tokens(
       Some(SemanticTokensResult::Partial(partial)) => partial.data,
       None => return Ok(vec![]),
    };
+   let token_type_names = lsp_manager.get_semantic_token_type_names(&file_path);
 
    let mut result = Vec::with_capacity(data.len());
    let mut current_line: u32 = 0;
@@ -364,6 +365,7 @@ pub async fn lsp_get_semantic_tokens(
          start_char: current_char,
          length: token.length,
          token_type: token.token_type,
+         token_type_name: token_type_names.get(token.token_type as usize).cloned(),
          token_modifiers: token.token_modifiers_bitset,
       });
    }
@@ -524,6 +526,23 @@ pub async fn lsp_get_document_symbols(
    };
 
    Ok(symbols)
+}
+
+#[tauri::command]
+pub async fn lsp_get_workspace_symbols(
+   lsp_manager: State<'_, LspManager>,
+   workspace_path: String,
+   query: String,
+) -> LspResult<Vec<FlatWorkspaceSymbol>> {
+   let responses = lsp_manager
+      .get_workspace_symbols(std::path::Path::new(&workspace_path), &query)
+      .await
+      .map_err(|e| {
+         log::error!("Failed to get workspace symbols: {}", e);
+         LspError::from(e)
+      })?;
+
+   Ok(flatten_workspace_symbol_response(responses))
 }
 
 #[tauri::command]

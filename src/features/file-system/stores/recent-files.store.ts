@@ -1,11 +1,35 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { calculateFrecencyScore } from "@/utils/frecency";
 import type { RecentFile, RecentFilesStore } from "../types/recent-files.types";
 
 const MAX_RECENT_FILES = 50;
 const PRUNE_THRESHOLD_SCORE = 5; // Remove files with frecency score below this
+const createMemoryStorage = (): StateStorage => {
+  const storage = new Map<string, string>();
+
+  return {
+    getItem: (name) => storage.get(name) ?? null,
+    setItem: (name, value) => {
+      storage.set(name, value);
+    },
+    removeItem: (name) => {
+      storage.delete(name);
+    },
+  };
+};
+
+const recentFilesStorage = createJSONStorage(() => {
+  try {
+    if ("localStorage" in globalThis && globalThis.localStorage) {
+      return globalThis.localStorage;
+    }
+  } catch {
+    // Fall through to the in-memory store for non-browser runtimes.
+  }
+  return createMemoryStorage();
+});
 
 export const useRecentFilesStore = create<RecentFilesStore>()(
   immer(
@@ -89,6 +113,7 @@ export const useRecentFilesStore = create<RecentFilesStore>()(
       {
         name: "athas-recent-files",
         version: 1,
+        storage: recentFilesStorage,
       },
     ),
   ),

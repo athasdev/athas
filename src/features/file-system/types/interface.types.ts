@@ -30,6 +30,7 @@ export interface FsActions {
   addFolderToWorkspace: (path?: string) => Promise<boolean>;
   removeFolderFromWorkspace: (path: string) => Promise<boolean>;
   handleOpenRemoteProject: (connectionId: string, connectionName: string) => Promise<boolean>;
+  handleOpenWslProject: (distro: string, linuxPath: string) => Promise<boolean>;
   closeFolder: () => Promise<boolean>;
   resetWorkspace: () => Promise<void>;
   switchToProject: (projectId: string) => Promise<boolean>;
@@ -57,7 +58,7 @@ export interface FsActions {
     folderName?: string,
   ) => Promise<string | undefined>;
   handleDeletePath: (targetPath: string, isDirectory: boolean) => Promise<void>;
-  refreshDirectory: (directoryPath: string) => Promise<void>;
+  refreshDirectory: (directoryPath: string, options?: { force?: boolean }) => Promise<void>;
   handleCollapseAllFolders: () => Promise<void>;
   handleFileMove: (oldPath: string, newPath: string) => Promise<void>;
   handleRevealInFolder: (path: string) => Promise<void>;

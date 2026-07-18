@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { CheckIcon as Check } from "@phosphor-icons/react";
+import { CheckIcon as Check } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
 interface CheckboxProps {
@@ -13,7 +13,7 @@ interface CheckboxProps {
 
 const checkboxVariants = cva(
   [
-    "flex items-center justify-center rounded-[5px] border border-border bg-secondary-bg text-transparent transition-colors",
+    "flex items-center justify-center rounded-md border border-border bg-secondary-bg text-transparent transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] peer-active:scale-[var(--app-press-scale)]",
     "peer-focus:ring-1 peer-focus:ring-accent/50",
     "peer-checked:border-accent peer-checked:bg-accent peer-checked:text-white",
   ],

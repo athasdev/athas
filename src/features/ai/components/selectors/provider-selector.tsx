@@ -1,7 +1,10 @@
-import { CheckIcon as Check } from "@phosphor-icons/react";
+import { CheckIcon as Check } from "@/ui/icons";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
+import {
+  useAvailableProviders,
+  useProviderById,
+} from "@/features/ai/hooks/use-available-providers";
 import { Button, buttonVariants } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
@@ -9,6 +12,7 @@ import { matchesSearchQuery } from "@/utils/search-match";
 import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
+  chatSettingsSelectorTriggerClassName,
 } from "../input/chat-composer-control-styles";
 
 interface ProviderSelectorProps {
@@ -43,8 +47,8 @@ export function ProviderSelector({
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const providers = useMemo(() => getAvailableProviders(), []);
-  const currentProvider = getProviderById(providerId);
+  const providers = useAvailableProviders();
+  const currentProvider = useProviderById(providerId);
   const isComposer = appearance === "composer";
 
   const setOpen = (nextOpen: boolean) => {
@@ -80,8 +84,8 @@ export function ProviderSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[128px]")
-      : "ui-font w-[220px] max-w-full justify-start gap-2 rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
+      ? chatComposerControlClassName("max-w-[128px]")
+      : chatSettingsSelectorTriggerClassName("w-[220px] gap-2"),
     triggerClassName,
   );
 
@@ -134,10 +138,10 @@ export function ProviderSelector({
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
-              compact: true,
+              size: "xs",
             }),
             triggerClass,
-            "cursor-text",
+            "relative cursor-text",
           )}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={() => triggerInputRef.current?.focus()}
@@ -147,6 +151,7 @@ export function ProviderSelector({
             size={isComposer ? 12 : 14}
             className="shrink-0 text-text-lighter"
           />
+          <span className="invisible block min-w-0 truncate text-text">{currentProviderName}</span>
           <input
             ref={triggerInputRef}
             type="text"
@@ -156,7 +161,7 @@ export function ProviderSelector({
             aria-label="Search AI providers"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleTriggerInputKeyDown}
-            className="ui-font min-w-0 flex-1 bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+            className="font-sans absolute top-1/2 right-1.5 left-6 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
           />
         </div>
       ) : (
@@ -166,7 +171,7 @@ export function ProviderSelector({
           }}
           type="button"
           variant={isComposer ? "ghost" : "default"}
-          compact
+          size="xs"
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"
@@ -180,7 +185,7 @@ export function ProviderSelector({
             size={isComposer ? 12 : 14}
             className="shrink-0 text-text-lighter"
           />
-          <span className="min-w-0 truncate text-text">{currentProviderName}</span>
+          <span className="block min-w-0 truncate text-text">{currentProviderName}</span>
         </Button>
       )}
 
@@ -227,7 +232,7 @@ export function ProviderSelector({
                 onPointerMove={() => setActiveIndex(filteredProviders.indexOf(provider))}
                 className={cn(
                   dropdownItemClassName(),
-                  "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
+                  "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
                   isActive && "bg-hover",
                   isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                 )}

@@ -10,6 +10,8 @@ import {
   applySettingSideEffect,
   applySettingsSideEffects,
 } from "@/features/settings/lib/settings-effects";
+import { getAIModelSelectionPatch } from "@/features/settings/lib/ai-model-selection";
+import { getSystemSyncThemePreferencePatch } from "@/features/settings/lib/theme-resolution";
 import { initializeSettingsState } from "@/features/settings/lib/settings-bootstrap";
 import { normalizeSettingValue } from "@/features/settings/lib/settings-normalization";
 import {
@@ -17,7 +19,7 @@ import {
   saveSettingsToStore,
 } from "@/features/settings/lib/settings-persistence";
 import { parseSettingsImportJson } from "@/features/settings/lib/settings-import-export";
-import { scoreSearchQuery } from "@/utils/search-match";
+import { scoreSettingSearchRecord } from "@/features/settings/lib/settings-search";
 import { settingsSearchIndex } from "../config/search-index";
 import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
@@ -111,18 +113,29 @@ export const useSettingsStore = create(
 
         updateSetting: async <K extends keyof Settings>(key: K, value: Settings[K]) => {
           const normalizedValue = normalizeSettingValue(key, value);
+          const savePatch: Partial<Settings> = { [key]: normalizedValue };
 
           set((state) => {
             state.settings[key] = normalizedValue;
+            if (key === "syncSystemTheme" && normalizedValue === true) {
+              const syncThemePatch = getSystemSyncThemePreferencePatch(state.settings);
+              Object.assign(state.settings, syncThemePatch);
+              Object.assign(savePatch, syncThemePatch);
+            }
+
+            const aiModelPatch = getAIModelSelectionPatch(state.settings, key);
+            Object.assign(state.settings, aiModelPatch);
+            Object.assign(savePatch, aiModelPatch);
           });
 
           applySettingSideEffect(key, normalizedValue, () => useSettingsStore.getState().settings);
-          debouncedSaveSettingsToStore({ [key]: normalizedValue });
+          debouncedSaveSettingsToStore(savePatch);
         },
 
         setSearchQuery: (query: string) => {
           set((state) => {
             state.search.query = query;
+            state.search.selectedResultId = null;
           });
           useSettingsStore.getState().runSearch();
         },
@@ -144,17 +157,10 @@ export const useSettingsStore = create(
 
           const results: SearchResult[] = settingsSearchIndex
             .map((record) => {
-              const score = scoreSearchQuery(query, [
-                { value: record.label, weight: 11 },
-                { value: record.description, weight: 1 },
-                { value: record.section, weight: 1 },
-                ...(record.keywords || []).map((keyword) => ({ value: keyword, weight: 6 })),
-              ]);
-
-              return { ...record, score };
+              return { ...record, score: scoreSettingSearchRecord(query, record) };
             })
             .filter((result) => result.score > 0)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label));
 
           set((state) => {
             state.search.results = results;

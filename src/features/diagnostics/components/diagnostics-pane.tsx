@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   WarningCircleIcon as AlertCircle,
   WarningIcon as AlertTriangle,
@@ -16,17 +15,20 @@ import {
   MagnifyingGlassIcon as Search,
   MagicWandIcon as WandSparkles,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
+  type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { writeClipboardText } from "@/utils/clipboard";
 import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -37,6 +39,7 @@ import {
 } from "@/features/panes/components/pane-chrome";
 import { SearchPopover } from "@/ui/search";
 import { cn } from "@/utils/cn";
+import { getBaseName, getRelativePath, normalizePath } from "@/utils/path-helpers";
 import type { Diagnostic, DiagnosticCodeAction } from "../types/diagnostics.types";
 
 interface DiagnosticsPaneProps {
@@ -59,6 +62,7 @@ interface PanePreferences {
   sortBy: SortBy;
   onlyCurrentFile: boolean;
   wrapMessages: boolean;
+  fileNavigatorViewMode: FileNavigatorViewMode;
 }
 
 interface DiagnosticGroup {
@@ -75,6 +79,7 @@ const DEFAULT_PREFERENCES: PanePreferences = {
   sortBy: "severity",
   onlyCurrentFile: false,
   wrapMessages: true,
+  fileNavigatorViewMode: "flat",
 };
 
 const GROUP_OPTIONS: Array<{ value: GroupBy; label: string }> = [
@@ -108,7 +113,7 @@ const SEVERITY_TEXT_CLASS: Record<Diagnostic["severity"], string> = {
 };
 
 const CONTROL_PILL_BASE =
-  "ui-font ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "font-sans ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
@@ -126,6 +131,17 @@ const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
 const getFileName = (filePath: string) => {
   const parts = filePath.split(/[\\/]/);
   return parts[parts.length - 1] || filePath;
+};
+
+const isAbsolutePath = (filePath: string) => {
+  return filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath);
+};
+
+const getDiagnosticNavigatorPath = (filePath: string, rootFolderPath: string | undefined) => {
+  const relativePath = getRelativePath(filePath, rootFolderPath);
+  if (relativePath && relativePath !== filePath) return relativePath;
+  if (isAbsolutePath(filePath)) return getBaseName(filePath, filePath);
+  return normalizePath(filePath);
 };
 
 const getHighestSeverity = (
@@ -189,11 +205,7 @@ const loadPreferences = (): PanePreferences => {
 };
 
 const copyToClipboard = async (text: string) => {
-  try {
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
-  }
+  await writeClipboardText(text);
 };
 
 const DiagnosticsPane = ({
@@ -209,16 +221,16 @@ const DiagnosticsPane = ({
   const lspClient = useMemo(() => LspClient.getInstance(), []);
   const widthMode = useTerminalStore((state) => state.widthMode);
   const setWidthMode = useTerminalStore((state) => state.setWidthMode);
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
   const diagnosticContextMenu = useContextMenu<Diagnostic>();
   const filterContextMenu = useContextMenu<FilterMenuType>();
   const headerContextMenu = useContextMenu<"header">();
 
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const buffers = useBufferStore.use.buffers();
-
-  const activeFilePath = useMemo(() => {
-    const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId);
+  const activeFilePath = useBufferStore((state) => {
+    const activeBuffer = state.activeBufferId
+      ? state.buffers.find((buffer) => buffer.id === state.activeBufferId)
+      : null;
     if (!activeBuffer) return null;
 
     if (activeBuffer.type !== "editor" || activeBuffer.isVirtual) {
@@ -226,7 +238,7 @@ const DiagnosticsPane = ({
     }
 
     return activeBuffer.path;
-  }, [activeBufferId, buffers]);
+  });
 
   const [preferences, setPreferences] = useState<PanePreferences>(() => loadPreferences());
   const [searchQuery, setSearchQuery] = useState("");
@@ -447,10 +459,12 @@ const DiagnosticsPane = ({
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([filePath, summary]) => {
         const severity = getHighestSeverity(summary.counts);
+        const navigatorPath = getDiagnosticNavigatorPath(filePath, rootFolderPath);
 
         return {
           key: filePath,
-          path: filePath,
+          path: navigatorPath,
+          label: navigatorPath,
           iconPath: filePath,
           iconClassName: SEVERITY_TEXT_CLASS[severity],
           metadata: [
@@ -461,7 +475,7 @@ const DiagnosticsPane = ({
           ],
         };
       });
-  }, [filteredDiagnostics]);
+  }, [filteredDiagnostics, rootFolderPath]);
 
   const selectedFileNavigatorKey = useMemo(() => {
     if (
@@ -500,7 +514,10 @@ const DiagnosticsPane = ({
       warning: true,
       info: true,
     });
-    setPreferences(DEFAULT_PREFERENCES);
+    setPreferences((prev) => ({
+      ...DEFAULT_PREFERENCES,
+      fileNavigatorViewMode: prev.fileNavigatorViewMode,
+    }));
   }, []);
 
   const toggleGroupCollapse = useCallback((groupId: string) => {
@@ -868,7 +885,7 @@ const DiagnosticsPane = ({
         }}
       >
         <div className="relative flex min-h-7 w-full items-center gap-1.5">
-          <span className={cn("ui-font ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
+          <span className={cn("font-sans ui-text-sm", problemSummaryTone)}>{problemSummary}</span>
 
           <div className="ml-auto flex items-center gap-1">
             {hasDiagnosticFiles && (
@@ -913,7 +930,8 @@ const DiagnosticsPane = ({
               {activeFilterCount > 0 && (
                 <Badge
                   variant="accent"
-                  className="ui-text-sm -top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1"
+                  size="compact"
+                  className="ui-text-sm -top-1 -right-1 absolute min-w-4"
                 >
                   {activeFilterCount}
                 </Badge>
@@ -975,7 +993,8 @@ const DiagnosticsPane = ({
                     {activeFilterCount > 0 && (
                       <Badge
                         variant="accent"
-                        className="ui-text-sm -top-1 -right-1 absolute min-w-4 border-accent/30 bg-accent/15 px-1"
+                        size="compact"
+                        className="ui-text-sm -top-1 -right-1 absolute min-w-4"
                       >
                         {activeFilterCount}
                       </Badge>
@@ -995,6 +1014,13 @@ const DiagnosticsPane = ({
             selectedKey={selectedFileNavigatorKey}
             onSelect={selectDiagnosticFile}
             ariaLabel="Diagnostic files"
+            viewMode={preferences.fileNavigatorViewMode}
+            onViewModeChange={(fileNavigatorViewMode) =>
+              setPreferences((prev) => ({
+                ...prev,
+                fileNavigatorViewMode,
+              }))
+            }
           />
         ) : null}
 
@@ -1012,7 +1038,7 @@ const DiagnosticsPane = ({
                   onClick={resetFilters}
                   variant="ghost"
                   className={CONTROL_PILL_BASE}
-                  compact
+                  size="xs"
                 >
                   Reset filters
                 </Button>
@@ -1048,7 +1074,7 @@ const DiagnosticsPane = ({
                           <Info className="text-text-lighter" />
                         )}
 
-                        <span className="ui-font ui-text-sm flex-1 truncate font-medium text-text">
+                        <span className="font-sans ui-text-sm flex-1 truncate font-medium text-text">
                           {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
                         </span>
 
@@ -1088,7 +1114,7 @@ const DiagnosticsPane = ({
 
                                 <span
                                   className={cn(
-                                    "ui-font ui-text-sm min-w-0 flex-1",
+                                    "font-sans ui-text-sm min-w-0 flex-1",
                                     preferences.wrapMessages
                                       ? "whitespace-pre-wrap break-words leading-snug"
                                       : "truncate",

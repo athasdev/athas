@@ -6,6 +6,7 @@ import { createAppWindow } from "@/features/window/utils/create-app-window";
 import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders.types";
 import {
   toggleRecentFolderPinned,
+  uniqueRecentFolderImports,
   updateRecentFolderMetadata,
   upsertRecentFolder,
 } from "../utils/recent-folders";
@@ -43,10 +44,7 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
         },
 
         importRecentFolders: (folders: RecentFolderImport[]) => {
-          const uniqueFolders = folders.filter(
-            (folder, index) =>
-              folders.findIndex((candidate) => candidate.path === folder.path) === index,
-          );
+          const uniqueFolders = uniqueRecentFolderImports(folders);
           const existingPaths = new Set(get().recentFolders.map((folder) => folder.path));
           const importedFolders = uniqueFolders.filter((folder) => !existingPaths.has(folder.path));
 
@@ -96,11 +94,7 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
               return;
             }
 
-            if (
-              settings.openFoldersInNewWindow &&
-              settings.titleBarProjectMode === "window" &&
-              hasOpenWorkspace
-            ) {
+            if (settings.openFoldersInNewWindow && hasOpenWorkspace) {
               await createAppWindow({
                 path: folderPath,
                 isDirectory: true,

@@ -1,0 +1,59 @@
+@keyframes athasProjectCarouselExitForward {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes athasProjectCarouselExitBack {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes athasProjectCarouselEnterForward {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes athasProjectCarouselEnterBack {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.athas-project-carousel-exit-forward {
+  animation: athasProjectCarouselExitForward 120ms var(--app-ease-in-out) both;
+}
+
+.athas-project-carousel-exit-back {
+  animation: athasProjectCarouselExitBack 120ms var(--app-ease-in-out) both;
+}
+
+.athas-project-carousel-enter-forward {
+  animation: athasProjectCarouselEnterForward 180ms var(--app-ease-out) both;
+}
+
+.athas-project-carousel-enter-back {
+  animation: athasProjectCarouselEnterBack 180ms var(--app-ease-out) both;
+}

@@ -11,7 +11,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-lg);
   background-color: transparent;
   content: "";
   pointer-events: none;

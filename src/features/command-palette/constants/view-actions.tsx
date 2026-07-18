@@ -1,6 +1,5 @@
 import {
   WarningCircleIcon as AlertCircle,
-  ArrowsLeftRightIcon as ArrowLeftRight,
   GlobeHemisphereWestIcon as Globe,
   ListIcon as Menu,
   ChatCircleTextIcon as MessageSquare,
@@ -11,12 +10,12 @@ import {
   TerminalWindowIcon as Terminal,
   MagnifyingGlassPlusIcon as ZoomIn,
   MagnifyingGlassMinusIcon as ZoomOut,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
-import { IS_MAC, IS_WINDOWS } from "@/utils/platform";
+import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../types/action.types";
 
 interface ViewActionsParams {
@@ -30,7 +29,6 @@ interface ViewActionsParams {
   setIsFindVisible: (v: boolean) => void;
   settings: {
     isAIChatVisible: boolean;
-    sidebarPosition: "left" | "right";
     nativeMenuBar: boolean;
     compactMenuBar: boolean;
     webViewerEnabled: boolean;
@@ -143,22 +141,7 @@ export const createViewActions = (params: ViewActionsParams): Action[] => {
         onClose();
       },
     },
-    {
-      id: "toggle-sidebar-position",
-      label: "View: Switch Sidebar Position",
-      description:
-        settings.sidebarPosition === "left"
-          ? "Move sidebar to right side"
-          : "Move sidebar to left side",
-      icon: <ArrowLeftRight />,
-      category: "View",
-      commandId: "workbench.toggleSidebarPosition",
-      action: () => {
-        updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
-        onClose();
-      },
-    },
-    ...(!IS_MAC && !IS_WINDOWS
+    ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
       ? [
           {
             id: "toggle-native-menu-bar",

@@ -1,16 +1,5 @@
-import {
-  PencilSimpleIcon as PencilSimple,
-  PlayIcon as Play,
-  PlusIcon as Plus,
-  TrashIcon as Trash,
-} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import {
-  chromeControl,
-  chromeControlGroup,
-  chromeIcon,
-} from "@/features/layout/components/chrome-control-styles";
 import { useCustomActionsStore } from "@/features/terminal/stores/custom-actions.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -18,7 +7,7 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { TabsList } from "@/ui/tabs";
+import { PenIcon, PlayIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
 
 type ActionDraft = {
@@ -112,23 +101,21 @@ export default function RunActionsButton() {
   return (
     <>
       <div ref={triggerRef} className="pointer-events-auto">
-        <TabsList variant="segmented" data-active={isMenuOpen} className={chromeControlGroup()}>
-          <Tooltip content="Run actions" side="bottom">
-            <Button
-              type="button"
-              onClick={() => setIsMenuOpen((open) => !open)}
-              variant="ghost"
-              active={isMenuOpen}
-              className={chromeControl()}
-              aria-expanded={isMenuOpen}
-              aria-haspopup="menu"
-              aria-label="Run actions"
-              compact
-            >
-              <Play className={chromeIcon()} weight="duotone" />
-            </Button>
-          </Tooltip>
-        </TabsList>
+        <Tooltip content="Run actions" side="bottom">
+          <Button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            variant="ghost"
+            active={isMenuOpen}
+            chrome="icon"
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            aria-label="Run actions"
+            size="icon-xs"
+          >
+            <PlayIcon />
+          </Button>
+        </Tooltip>
       </div>
 
       <Dropdown
@@ -151,10 +138,9 @@ export default function RunActionsButton() {
                   type="button"
                   variant="ghost"
                   onClick={() => runAction(action.command, action.name)}
-                  className="h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent p-0 text-text hover:bg-transparent"
-                  style={{ fontSize: "var(--ui-text-sm)" }}
+                  className="ui-text-sm h-auto min-w-0 flex-1 justify-start gap-2 border-0 bg-transparent p-0 text-text hover:bg-transparent"
                 >
-                  <Play className="shrink-0 text-text-lighter" weight="duotone" />
+                  <PlayIcon className="shrink-0 text-text-lighter" />
                   <span className="ui-text-sm truncate text-text">{action.name}</span>
                 </Button>
 
@@ -169,21 +155,21 @@ export default function RunActionsButton() {
                       })
                     }
                     variant="ghost"
-                    compact
-                    className="rounded-md text-text-lighter"
+                    size="icon-xs"
+                    className="text-text-lighter"
                     aria-label={`Edit ${action.name}`}
                   >
-                    <PencilSimple weight="duotone" />
+                    <PenIcon />
                   </Button>
                   <Button
                     type="button"
                     onClick={() => deleteAction(action.id)}
                     variant="ghost"
-                    compact
-                    className="rounded-md text-text-lighter hover:text-error"
+                    size="icon-xs"
+                    className="text-text-lighter hover:text-error"
                     aria-label={`Delete ${action.name}`}
                   >
-                    <Trash weight="duotone" />
+                    <TrashIcon />
                   </Button>
                 </div>
               </div>
@@ -203,7 +189,7 @@ export default function RunActionsButton() {
           onClick={() => openDialog()}
           className={dropdownItemClassName()}
         >
-          <Plus className="text-text-lighter" weight="bold" />
+          <PlusIcon className="text-text-lighter" />
           <span>Add Action</span>
         </Button>
       </Dropdown>
@@ -221,7 +207,7 @@ export default function RunActionsButton() {
               <Button
                 onClick={handleSave}
                 disabled={!draft.name.trim() || !draft.command.trim()}
-                compact
+                size="xs"
               >
                 {draft.id ? "Save" : "Add Action"}
               </Button>

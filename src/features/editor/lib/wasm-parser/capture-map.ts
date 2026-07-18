@@ -4,7 +4,7 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   keyword: "token-keyword",
   "keyword.control": "token-keyword",
   "keyword.function": "token-keyword",
-  "keyword.operator": "token-keyword",
+  "keyword.operator": "token-operator",
   "keyword.return": "token-keyword",
   "keyword.import": "token-keyword",
   "keyword.conditional": "token-keyword",
@@ -15,6 +15,7 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "keyword.exception": "token-keyword",
   "keyword.modifier": "token-keyword",
   "keyword.directive": "token-keyword",
+  preproc: "token-keyword",
   conditional: "token-keyword",
   repeat: "token-keyword",
   include: "token-keyword",
@@ -24,10 +25,13 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "storage.type": "token-type",
   function: "token-function",
   local: "token-function",
+  "local.function": "token-function",
   "function.call": "token-function",
   "function.method": "token-function",
   "function.method.call": "token-function",
   "function.builtin": "token-function",
+  "function.macro": "token-function",
+  "function.special": "token-function",
   method: "token-function",
   "method.call": "token-function",
   constructor: "token-function",
@@ -41,16 +45,22 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "constant.numeric": "token-number",
   number: "token-number",
   float: "token-number",
-  boolean: "token-constant",
+  boolean: "token-boolean",
   string: "token-string",
   "string.special": "token-string",
   "string.special.key": "token-property",
   "string.special.url": "token-string",
+  "string.special.path": "token-string",
+  "string.special.uri": "token-string",
+  "string.special.regex": "token-regex",
   "string.escape": "token-string",
-  "string.regexp": "token-string",
+  "string.regexp": "token-regex",
+  "string.regex": "token-regex",
   character: "token-string",
   char: "token-string",
-  "character.special": "token-string",
+  escape: "token-string",
+  "character.escape": "token-string",
+  "character.special": "token-regex",
   comment: "token-comment",
   "comment.line": "token-comment",
   "comment.block": "token-comment",
@@ -74,8 +84,11 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "operator.arithmetic": "token-operator",
   "operator.logical": "token-operator",
   punctuation: "token-punctuation",
+  delimiter: "token-punctuation",
   "punctuation.delimiter": "token-punctuation",
   "punctuation.bracket": "token-punctuation",
+  "punctuation.section": "token-punctuation",
+  "punctuation.separator": "token-punctuation",
   "punctuation.special": "token-punctuation",
   "markup.heading": "token-keyword",
   "markup.heading.1": "token-keyword",
@@ -87,6 +100,7 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   "markup.strong": "token-constant",
   "markup.italic": "token-variable",
   "markup.strikethrough": "token-comment",
+  "markup.strike": "token-comment",
   "markup.underline": "token-string",
   "markup.raw": "token-string",
   "markup.link.label": "token-string",
@@ -95,6 +109,7 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
   namespace: "token-type",
   module: "token-type",
   "module.builtin": "token-type",
+  "type.qualifier": "token-type",
   decorator: "token-attribute",
   annotation: "token-attribute",
   macro: "token-function",
@@ -108,7 +123,12 @@ export const CAPTURE_TO_CLASS: Record<string, string> = {
 };
 
 export function isIgnoredCapture(captureName: string): boolean {
-  return captureName === "none" || captureName === "spell" || captureName.startsWith("_");
+  return (
+    captureName === "none" ||
+    captureName === "spell" ||
+    captureName === "embedded" ||
+    captureName.startsWith("_")
+  );
 }
 
 export function mapCaptureToClass(captureName: string): string {

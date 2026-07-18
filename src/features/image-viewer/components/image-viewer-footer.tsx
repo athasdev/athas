@@ -11,7 +11,7 @@ export function ImageViewerFooter({ zoom, fileType, additionalInfo }: ImageViewe
     <div
       className={cn(
         "flex h-9 items-center gap-4 border-border border-t",
-        "bg-secondary-bg px-4 py-2 text-text-lighter ui-text-xs",
+        "bg-secondary-bg px-4 py-2 text-text-lighter ui-text-sm",
       )}
     >
       <span>Zoom: {Math.round(zoom * 100)}%</span>

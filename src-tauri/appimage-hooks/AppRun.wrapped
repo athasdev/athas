@@ -1,7 +1,18 @@
 #!/bin/bash
-# Simple wrapper that preserves LD_LIBRARY_PATH from hooks
 cd "$(dirname "$0")"
+
+athas_args=()
+case "${ATHAS_ENABLE_LINUX_GPU:-}" in
+  1|[Tt][Rr][Uu][Ee])
+    ;;
+  *)
+    export WEBKIT_DISABLE_DMABUF_RENDERER="${WEBKIT_DISABLE_DMABUF_RENDERER:-1}"
+    export LIBGL_ALWAYS_SOFTWARE="${LIBGL_ALWAYS_SOFTWARE:-1}"
+    athas_args+=(--disable-gpu --disable-gpu-compositing)
+    ;;
+esac
+
 if [ -x ./usr/bin/athas ]; then
-  exec ./usr/bin/athas "$@"
+  exec ./usr/bin/athas "${athas_args[@]}" "$@"
 fi
-exec ./usr/bin/athas-code "$@"
+exec ./usr/bin/athas-code "${athas_args[@]}" "$@"

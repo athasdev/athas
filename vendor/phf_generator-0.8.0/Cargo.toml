@@ -1,0 +1,12 @@
+[package]
+name = "phf_generator"
+authors = ["Steven Fackler <sfackler@gmail.com>"]
+version = "0.8.0"
+license = "MIT"
+description = "PHF generation logic"
+repository = "https://github.com/sfackler/rust-phf"
+edition = "2018"
+
+[dependencies]
+phf_shared = "0.8.0"
+rand = { version = "0.8.6", features = ["small_rng"] }

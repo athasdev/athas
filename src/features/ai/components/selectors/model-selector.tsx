@@ -2,10 +2,11 @@ import {
   CheckIcon as Check,
   LockIcon as Lock,
   WarningCircleIcon as WarningCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProBadge } from "@/extensions/ui/components/pro-badge";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
+import { useProviderById } from "@/features/ai/hooks/use-available-providers";
 import { getCustomModelOptions } from "@/features/ai/lib/custom-model-options";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
@@ -21,6 +22,7 @@ import { matchesSearchQuery } from "@/utils/search-match";
 import {
   chatComposerControlClassName,
   chatComposerDropdownClassName,
+  chatSettingsSelectorTriggerClassName,
 } from "../input/chat-composer-control-styles";
 
 type SelectorModel = {
@@ -65,7 +67,7 @@ export function ModelSelector({
   const triggerInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { isPro } = useProFeature();
+  const { hasHostedAi } = useProFeature();
   const subscription = useAuthStore((state) => state.subscription);
   const { dynamicModels, setDynamicModels } = useAIChatStore();
   const customModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
@@ -73,12 +75,16 @@ export function ModelSelector({
     (state) => state.settings.aiAutocompleteCustomModelId,
   );
 
-  const provider = getProviderById(providerId);
+  const provider = useProviderById(providerId);
   const isComposer = appearance === "composer";
   const isCustomProvider = providerId === "custom";
 
   const setOpen = (nextOpen: boolean) => {
     if (disabled && nextOpen) return;
+    if (!nextOpen) {
+      setQuery("");
+      setActiveIndex(0);
+    }
     if (open === undefined) {
       setUncontrolledOpen(nextOpen);
     }
@@ -174,11 +180,9 @@ export function ModelSelector({
   }, [availableModels, modelId, onChange]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setQuery("");
-      return;
-    }
-    requestAnimationFrame(() => triggerInputRef.current?.focus());
+    if (!isOpen) return;
+    const frame = requestAnimationFrame(() => triggerInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
   const currentModelName = useMemo(() => {
@@ -204,14 +208,14 @@ export function ModelSelector({
 
   const selectableModelIndexes = useMemo(() => {
     const indexes = filteredModels.reduce<number[]>((modelIndexes, model, index) => {
-      if (!(model.proOnly && !isPro)) modelIndexes.push(index);
+      if (!(model.proOnly && !hasHostedAi)) modelIndexes.push(index);
       return modelIndexes;
     }, []);
     if (canUseCustomQueryModel) {
       indexes.push(filteredModels.length);
     }
     return indexes;
-  }, [canUseCustomQueryModel, filteredModels, isPro]);
+  }, [canUseCustomQueryModel, filteredModels, hasHostedAi]);
   useEffect(() => {
     if (!isOpen) return;
     const currentIndex = filteredModels.findIndex((model) => model.id === modelId);
@@ -229,8 +233,8 @@ export function ModelSelector({
 
   const triggerClass = cn(
     isComposer
-      ? chatComposerControlClassName("w-fit max-w-[176px]")
-      : "ui-font w-[260px] max-w-full justify-start rounded-lg border border-border/70 bg-secondary-bg px-2.5 ui-text-xs",
+      ? chatComposerControlClassName("max-w-[176px]")
+      : chatSettingsSelectorTriggerClassName("w-[260px]"),
     triggerClassName,
   );
 
@@ -279,7 +283,7 @@ export function ModelSelector({
         }
         const selectedModel =
           filteredModels[activeIndex] ?? filteredModels[selectableModelIndexes[0] ?? 0];
-        if (!selectedModel || (selectedModel.proOnly && !isPro)) return;
+        if (!selectedModel || (selectedModel.proOnly && !hasHostedAi)) return;
         onChange(selectedModel.id);
         setOpen(false);
         break;
@@ -290,30 +294,36 @@ export function ModelSelector({
   return (
     <div className={className}>
       {isOpen ? (
-        <input
+        <div
           ref={(node) => {
-            triggerInputRef.current = node;
             triggerRef.current = node;
           }}
-          type="text"
-          value={query}
-          disabled={disabled}
-          placeholder={currentModelName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
-          aria-label="Search AI models"
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={handleTriggerInputKeyDown}
           onMouseDown={(event) => event.stopPropagation()}
+          onClick={() => triggerInputRef.current?.focus()}
           className={cn(
             buttonVariants({
               variant: isComposer ? "ghost" : "default",
-              compact: true,
+              size: "xs",
             }),
             triggerClass,
-            "cursor-text text-left outline-none placeholder:text-text",
+            "relative cursor-text",
           )}
-        />
+        >
+          <span className="invisible block min-w-0 truncate text-text">{currentModelName}</span>
+          <input
+            ref={triggerInputRef}
+            type="text"
+            value={query}
+            disabled={disabled}
+            placeholder={currentModelName}
+            aria-label="Search AI models"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleTriggerInputKeyDown}
+            className="font-sans absolute top-1/2 inset-x-1.5 min-w-0 -translate-y-1/2 truncate bg-transparent p-0 text-left text-text outline-none placeholder:text-text disabled:pointer-events-none"
+          />
+        </div>
       ) : (
         <Button
           ref={(node) => {
@@ -321,7 +331,7 @@ export function ModelSelector({
           }}
           type="button"
           variant={isComposer ? "ghost" : "default"}
-          compact
+          size="xs"
           disabled={disabled}
           tooltip={tooltip}
           aria-haspopup="menu"
@@ -330,7 +340,7 @@ export function ModelSelector({
           onClick={() => setOpen(!isOpen)}
           className={triggerClass}
         >
-          <span className="min-w-0 truncate text-text">{currentModelName}</span>
+          <span className="block min-w-0 truncate text-text">{currentModelName}</span>
         </Button>
       )}
 
@@ -355,21 +365,21 @@ export function ModelSelector({
           onWheel={(event) => event.stopPropagation()}
         >
           {modelFetchError && (
-            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-xs">
+            <div className="mb-1.5 flex items-center gap-1.5 rounded-lg bg-warning/10 px-2 py-1.5 text-text-lighter ui-text-sm">
               <WarningCircle className="shrink-0 text-warning" />
               <span>{modelFetchError}</span>
             </div>
           )}
 
           {filteredModels.length === 0 && !canUseCustomQueryModel ? (
-            <div className="p-4 text-center text-text-lighter ui-text-xs">
+            <div className="p-4 text-center text-text-lighter ui-text-sm">
               {isCustomProvider ? "Type a model name and press Enter" : "No models found"}
             </div>
           ) : (
             <>
               {filteredModels.map((model) => {
                 const isCurrent = model.id === modelId;
-                const isLocked = Boolean(model.proOnly && !isPro);
+                const isLocked = Boolean(model.proOnly && !hasHostedAi);
                 const index = filteredModels.indexOf(model);
                 const isActive = activeIndex === index;
 
@@ -396,7 +406,7 @@ export function ModelSelector({
                     disabled={isLocked}
                     className={cn(
                       dropdownItemClassName(),
-                      "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
+                      "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
                       isActive && "bg-hover",
                       isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     )}
@@ -425,7 +435,7 @@ export function ModelSelector({
                   onPointerMove={() => setActiveIndex(filteredModels.length)}
                   className={cn(
                     dropdownItemClassName(),
-                    "mb-1 min-h-8 gap-2 py-2 ui-text-xs last:mb-0",
+                    "mb-1 min-h-8 gap-2 py-2 ui-text-sm last:mb-0",
                     activeIndex === filteredModels.length && "bg-hover",
                   )}
                 >

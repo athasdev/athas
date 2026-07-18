@@ -17,6 +17,39 @@ export function syncBufferHistoryContent(bufferId: string, content: string): voi
   undoGroupTracker.sync(bufferId, content);
 }
 
+export function trackImmediateBufferHistoryChange({
+  bufferId,
+  currentContent,
+  nextContent,
+  previousCursorPosition,
+  previousSelection,
+}: {
+  bufferId: string;
+  currentContent: string;
+  nextContent: string;
+  previousCursorPosition?: Position;
+  previousSelection?: Range;
+}): void {
+  if (currentContent === nextContent) {
+    undoGroupTracker.sync(bufferId, nextContent);
+    return;
+  }
+
+  flushPendingBufferHistory(bufferId, currentContent);
+  useHistoryStore.getState().actions.pushHistory(bufferId, {
+    content: currentContent,
+    cursorPosition: previousCursorPosition ? { ...previousCursorPosition } : undefined,
+    selection: previousSelection
+      ? {
+          start: { ...previousSelection.start },
+          end: { ...previousSelection.end },
+        }
+      : undefined,
+    timestamp: Date.now(),
+  });
+  undoGroupTracker.sync(bufferId, nextContent);
+}
+
 export function trackBufferHistoryChange({
   bufferId,
   currentContent,
@@ -35,17 +68,12 @@ export function trackBufferHistoryChange({
   skipUndoGrouping?: boolean;
 }): void {
   if (skipUndoGrouping) {
-    undoGroupTracker.sync(bufferId, nextContent);
-    useHistoryStore.getState().actions.pushHistory(bufferId, {
-      content: previousContent ?? currentContent,
-      cursorPosition: previousCursorPosition ? { ...previousCursorPosition } : undefined,
-      selection: previousSelection
-        ? {
-            start: { ...previousSelection.start },
-            end: { ...previousSelection.end },
-          }
-        : undefined,
-      timestamp: Date.now(),
+    trackImmediateBufferHistoryChange({
+      bufferId,
+      currentContent: previousContent ?? currentContent,
+      nextContent,
+      previousCursorPosition,
+      previousSelection,
     });
     return;
   }

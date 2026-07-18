@@ -59,6 +59,22 @@
   margin: 0.9em 0;
 }
 
+.github-markdown.github-markdown-pr img,
+.github-markdown.github-markdown-pr video {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(70vh, 48rem);
+  object-fit: contain;
+  background: var(--color-secondary-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.github-markdown.github-markdown-pr video {
+  margin: 0.75em 0;
+}
+
 .github-markdown.github-markdown-pr .github-markdown-pr-content > :first-child {
   margin-top: 0;
 }

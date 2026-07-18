@@ -16,6 +16,9 @@ interface FileOpenBenchmarkMeta {
   contentLength?: number;
   fileType?: string;
   largeContentMode?: boolean;
+  languageId?: string;
+  themeId?: string;
+  tokenTypes?: string[];
 }
 
 const sessions = new Map<string, FileOpenBenchmarkSession>();
@@ -135,7 +138,7 @@ export const fileOpenBenchmark = {
     const fileType = meta.fileType ?? getFileType(path);
     logger.info("FileOpenBenchmark", summary.text);
     console.info(
-      `[athas:file-open] file=${shortPath(path)} type=${fileType} lines=${meta.lineCount ?? "unknown"} seconds=${seconds.toFixed(3)} chars=${meta.contentLength ?? "unknown"} large=${meta.largeContentMode ?? "unknown"}`,
+      `[athas:file-open] file=${shortPath(path)} type=${fileType} lines=${meta.lineCount ?? "unknown"} totalMs=${summary.total.toFixed(1)} seconds=${seconds.toFixed(3)} chars=${meta.contentLength ?? "unknown"} large=${meta.largeContentMode ?? "unknown"}`,
     );
     frontendTrace(level, "bench:file-open", shortPath(path), {
       totalMs: Math.round(summary.total * 100) / 100,
@@ -144,6 +147,9 @@ export const fileOpenBenchmark = {
       contentLength: meta.contentLength ?? null,
       fileType,
       largeContentMode: meta.largeContentMode ?? null,
+      languageId: meta.languageId ?? null,
+      themeId: meta.themeId ?? null,
+      tokenTypes: meta.tokenTypes ?? null,
       phases: summary.phases.map((phase) => ({
         label: phase.label,
         durationMs: Math.round(phase.duration * 100) / 100,
@@ -166,5 +172,9 @@ export const fileOpenBenchmark = {
 
   has(path: string): boolean {
     return sessions.has(path);
+  },
+
+  hasMark(path: string, label: string): boolean {
+    return sessions.get(path)?.marks.some((mark) => mark.label === label) ?? false;
   },
 };

@@ -1,4 +1,5 @@
 import type { Settings } from "@/features/settings/stores/settings.store";
+import { getWslShellId, parseWslPath } from "@/features/wsl/utils/wsl-path";
 import type { Shell, TerminalProfile } from "../types/terminal.types";
 
 export const SYSTEM_DEFAULT_PROFILE_ID = "system-default";
@@ -63,9 +64,10 @@ export const resolveTerminalLaunch = ({
     settings.terminalDefaultShellId !== DEFAULT_SHELL_OPTION_VALUE
       ? settings.terminalDefaultShellId
       : undefined;
-  const shell = profile?.shell || fallbackShell;
   const initialCommand = profile?.startupCommands?.filter(Boolean).join("\n") || undefined;
   const workingDirectory = profile?.startupDirectory?.trim() || currentDirectory;
+  const wslInfo = parseWslPath(workingDirectory);
+  const shell = wslInfo ? getWslShellId(wslInfo.distro) : profile?.shell || fallbackShell;
 
   return {
     shell,

@@ -1,23 +1,19 @@
 import {
   ArrowSquareUpIcon as ArrowSquareUp,
   CodeBlockIcon as CodeBlock,
-  DatabaseIcon as Database,
   GearIcon as Gear,
   GearSixIcon as GearSix,
   GitBranchIcon as GitBranch,
   KeyboardIcon as Keyboard,
   PaintBrushIcon as PaintBrush,
-  PuzzlePieceIcon as PuzzlePiece,
   ShieldCheckIcon as ShieldCheck,
-  SlidersHorizontalIcon as SlidersHorizontal,
   SparkleIcon as Sparkle,
   TerminalWindowIcon as TerminalWindow,
   TreeStructureIcon as TreeStructure,
   UserCircleIcon as UserCircle,
   UsersThreeIcon as UsersThree,
-} from "@phosphor-icons/react";
-import { useCallback, useEffect, useRef, type ComponentType, type WheelEvent } from "react";
-import { useSettingsStore } from "@/features/settings/stores/settings.store";
+} from "@/ui/icons";
+import { useCallback, useRef, type ComponentType, type WheelEvent } from "react";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
@@ -60,11 +56,6 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     icon: PaintBrush,
   },
   {
-    id: "features",
-    label: "Features",
-    icon: SlidersHorizontal,
-  },
-  {
     id: "editor",
     label: "Editor",
     icon: CodeBlock,
@@ -90,18 +81,8 @@ export const SETTINGS_TAB_ITEMS: SettingsTabItem[] = [
     icon: Keyboard,
   },
   {
-    id: "extensions",
-    label: "Extensions",
-    icon: PuzzlePiece,
-  },
-  {
-    id: "databases",
-    label: "Database",
-    icon: Database,
-  },
-  {
     id: "ai",
-    label: "AI",
+    label: "Agent",
     icon: Sparkle,
   },
   {
@@ -126,30 +107,17 @@ export const SettingsVerticalTabs = ({
   onTabChange,
   panelIdForTab = (tab) => `settings-panel-${tab}`,
 }: SettingsVerticalTabsProps) => {
-  const searchQuery = useSettingsStore((state) => state.search.query);
-  const searchResults = useSettingsStore((state) => state.search.results);
   const subscription = useAuthStore((state) => state.subscription);
-  const { isPro } = useProFeature();
+  const { hasSettingsSync } = useProFeature();
   const { promptUpgrade } = useUpgradeToPro();
   const settingsAccess = resolveSettingsAccess(subscription);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
-
   const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
     ...settingsAccess,
-    matchingTabs,
+    matchingTabs: null,
   });
-
-  useEffect(() => {
-    if (searchQuery && visibleTabs.length > 0) {
-      const firstVisibleTab = visibleTabs[0].id;
-      if (firstVisibleTab !== activeTab) {
-        onTabChange(firstVisibleTab);
-      }
-    }
-  }, [searchQuery, visibleTabs, activeTab, onTabChange]);
 
   const handleSidebarWheel = (event: WheelEvent<HTMLDivElement>) => {
     const container = scrollContainerRef.current;
@@ -198,7 +166,7 @@ export const SettingsVerticalTabs = ({
                 }}
                 type="button"
                 variant="ghost"
-                compact
+                size="xs"
                 onClick={() => onTabChange(item.id)}
                 onKeyDown={(event) => {
                   switch (event.key) {
@@ -230,7 +198,7 @@ export const SettingsVerticalTabs = ({
                 aria-controls={panelIdForTab(item.id)}
                 tabIndex={isActive ? 0 : -1}
                 className={cn(
-                  "ui-text-sm h-auto w-full justify-start gap-2.5 rounded-xl px-2.5 py-1.5 text-left",
+                  "ui-text-base h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-1.5 text-left",
                   isActive ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                 )}
               >
@@ -240,20 +208,20 @@ export const SettingsVerticalTabs = ({
             );
           })
         ) : (
-          <div className="ui-font ui-text-sm p-2 text-center text-text-lighter">
+          <div className="font-sans ui-text-base p-2 text-center text-text-lighter">
             No matching settings
           </div>
         )}
       </div>
 
-      {!isPro ? (
+      {!hasSettingsSync ? (
         <div className="p-2">
           <Button
             type="button"
             variant="default"
             onClick={promptUpgrade}
             className="w-full justify-center border border-border/70"
-            compact
+            size="xs"
           >
             <ArrowSquareUp className="size-4" weight="duotone" />
             Upgrade to Pro

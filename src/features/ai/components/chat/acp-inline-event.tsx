@@ -5,7 +5,7 @@ import {
   KeyIcon as KeyRound,
   SparkleIcon as Sparkles,
   WrenchIcon as Wrench,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import { cn } from "@/utils/cn";
 import { ChatActivityLine } from "./chat-activity-line";

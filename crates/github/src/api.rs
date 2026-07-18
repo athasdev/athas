@@ -171,6 +171,7 @@ struct RestCheckRun {
    name: Option<String>,
    status: Option<String>,
    conclusion: Option<String>,
+   html_url: Option<String>,
    check_suite: Option<RestCheckSuite>,
 }
 
@@ -310,6 +311,24 @@ impl GitHubApi {
             .json(body),
       )?;
       Ok(())
+   }
+
+   fn put_json<T, B>(&self, path: &str, body: &B) -> Result<T, String>
+   where
+      T: for<'de> Deserialize<'de>,
+      B: Serialize + ?Sized,
+   {
+      let response = send_github_request(
+         self
+            .apply_headers(
+               self.client.put(format!("{GITHUB_API_BASE}{path}")),
+               GITHUB_JSON_ACCEPT,
+            )
+            .json(body),
+      )?;
+      response
+         .json::<T>()
+         .map_err(|e| format!("Failed to parse GitHub API response: {e}"))
    }
 
    fn patch_json<T, B>(&self, path: &str, body: &B) -> Result<T, String>
@@ -600,7 +619,6 @@ fn pr_from_rest(pr: RestPullRequest) -> PullRequest {
 fn pr_details_from_rest(
    pr: RestPullRequest,
    commits: Vec<serde_json::Value>,
-   files: Vec<PullRequestFile>,
    review_requests: Vec<ReviewRequest>,
    status_checks: Vec<StatusCheck>,
 ) -> PullRequestDetails {
@@ -619,9 +637,7 @@ fn pr_details_from_rest(
       base_ref: pr.base.and_then(|base| base.ref_name).unwrap_or_default(),
       additions: pr.additions.unwrap_or_default(),
       deletions: pr.deletions.unwrap_or_default(),
-      changed_files: pr
-         .changed_files
-         .unwrap_or_else(|| i64::try_from(files.len()).unwrap_or_default()),
+      changed_files: pr.changed_files.unwrap_or_default(),
       commits,
       status_checks,
       linked_issues: Vec::new(),
@@ -761,6 +777,30 @@ fn get_current_user(api: &GitHubApi) -> Result<String, String> {
    Ok(user.login)
 }
 
+fn pr_details_from_current_rest(
+   api: &GitHubApi,
+   slug: &RepoSlug,
+   pr_number: i64,
+   pr: RestPullRequest,
+) -> Result<PullRequestDetails, String> {
+   let head_sha = pr.head.as_ref().and_then(|head| head.sha.clone());
+   let commits: Vec<serde_json::Value> =
+      api.get_json(&repo_path(slug, &format!("pulls/{pr_number}/commits")))?;
+   let commits = commits.into_iter().map(commit_value_from_rest).collect();
+   let review_requests = get_review_requests(api, slug, pr_number).unwrap_or_default();
+   let status_checks = head_sha
+      .as_deref()
+      .map(|sha| get_status_checks(api, slug, sha).unwrap_or_default())
+      .unwrap_or_default();
+
+   Ok(pr_details_from_rest(
+      pr,
+      commits,
+      review_requests,
+      status_checks,
+   ))
+}
+
 pub fn github_check_auth(github_token: Option<String>) -> Result<GitHubAuthStatus, String> {
    if github_token
       .as_deref()
@@ -772,8 +812,16 @@ pub fn github_check_auth(github_token: Option<String>) -> Result<GitHubAuthStatu
    let api = GitHubApi::new_authenticated(github_token)?;
    match get_current_user(&api) {
       Ok(_) => Ok(GitHubAuthStatus::Authenticated),
-      Err(_) => Ok(GitHubAuthStatus::NotAuthenticated),
+      Err(error) if is_github_authentication_error(&error) => {
+         log::warn!("GitHub authentication check failed: {error}");
+         Ok(GitHubAuthStatus::NotAuthenticated)
+      }
+      Err(error) => Err(error),
    }
+}
+
+fn is_github_authentication_error(error: &str) -> bool {
+   error.starts_with("GitHub authentication failed.")
 }
 
 pub fn github_list_prs(
@@ -982,6 +1030,38 @@ pub fn github_create_issue(
    Ok(issue_from_rest(issue))
 }
 
+pub fn github_update_issue(
+   repo_path_value: String,
+   issue_number: i64,
+   title: String,
+   body: String,
+   github_token: Option<String>,
+) -> Result<IssueDetails, String> {
+   let title = title.trim();
+   if title.is_empty() {
+      return Err("Issue title is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let issue: RestIssue = api.patch_json(
+      &repo_path(&slug, &format!("issues/{issue_number}")),
+      &serde_json::json!({
+         "title": title,
+         "body": body.trim(),
+      }),
+   )?;
+   let comments: Vec<RestComment> = api.get_json_with_query(
+      &repo_path(&slug, &format!("issues/{issue_number}/comments")),
+      &[("per_page", "100".to_string())],
+   )?;
+
+   Ok(issue_details_from_rest(
+      issue,
+      comments.into_iter().map(issue_comment_from_rest).collect(),
+   ))
+}
+
 pub fn github_create_pull_request(
    repo_path_value: String,
    title: String,
@@ -1033,6 +1113,124 @@ pub fn github_create_pull_request(
    }
 
    Ok(pr_from_rest(pr))
+}
+
+pub fn github_update_pull_request(
+   repo_path_value: String,
+   pr_number: i64,
+   title: String,
+   body: String,
+   github_token: Option<String>,
+) -> Result<PullRequestDetails, String> {
+   let title = title.trim();
+   if title.is_empty() {
+      return Err("Pull request title is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let pr: RestPullRequest = api.patch_json(
+      &repo_path(&slug, &format!("pulls/{pr_number}")),
+      &serde_json::json!({
+         "title": title,
+         "body": body.trim(),
+      }),
+   )?;
+
+   pr_details_from_current_rest(&api, &slug, pr_number, pr)
+}
+
+pub fn github_add_pr_comment(
+   repo_path_value: String,
+   pr_number: i64,
+   body: String,
+   github_token: Option<String>,
+) -> Result<PullRequestComment, String> {
+   let body = body.trim();
+   if body.is_empty() {
+      return Err("Comment body is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let comment: RestComment = api.post_json(
+      &repo_path(&slug, &format!("issues/{pr_number}/comments")),
+      &serde_json::json!({ "body": body }),
+   )?;
+
+   Ok(pr_comment_from_rest(comment))
+}
+
+pub fn github_submit_pr_review(
+   repo_path_value: String,
+   pr_number: i64,
+   event: String,
+   body: String,
+   github_token: Option<String>,
+) -> Result<(), String> {
+   let event = match event.as_str() {
+      "APPROVE" => "APPROVE",
+      "REQUEST_CHANGES" => "REQUEST_CHANGES",
+      "COMMENT" => "COMMENT",
+      _ => return Err("Unsupported pull request review event.".to_string()),
+   };
+   let body = body.trim();
+   if (event == "REQUEST_CHANGES" || event == "COMMENT") && body.is_empty() {
+      return Err("Review body is required.".to_string());
+   }
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let payload = if body.is_empty() {
+      serde_json::json!({ "event": event })
+   } else {
+      serde_json::json!({ "event": event, "body": body })
+   };
+   let _: serde_json::Value = api.post_json(
+      &repo_path(&slug, &format!("pulls/{pr_number}/reviews")),
+      &payload,
+   )?;
+
+   Ok(())
+}
+
+pub fn github_merge_pull_request(
+   repo_path_value: String,
+   pr_number: i64,
+   method: String,
+   github_token: Option<String>,
+) -> Result<PullRequestDetails, String> {
+   let method = match method.as_str() {
+      "merge" => "merge",
+      "squash" => "squash",
+      "rebase" => "rebase",
+      _ => "squash",
+   };
+
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let _: serde_json::Value = api.put_json(
+      &repo_path(&slug, &format!("pulls/{pr_number}/merge")),
+      &serde_json::json!({ "merge_method": method }),
+   )?;
+   let pr: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
+
+   pr_details_from_current_rest(&api, &slug, pr_number, pr)
+}
+
+pub fn github_close_pull_request(
+   repo_path_value: String,
+   pr_number: i64,
+   github_token: Option<String>,
+) -> Result<PullRequestDetails, String> {
+   let slug = resolve_repo_slug(&repo_path_value)?;
+   let api = GitHubApi::new_authenticated(github_token)?;
+   let pr: RestPullRequest = api.patch_json(
+      &repo_path(&slug, &format!("pulls/{pr_number}")),
+      &serde_json::json!({ "state": "closed" }),
+   )?;
+
+   pr_details_from_current_rest(&api, &slug, pr_number, pr)
 }
 
 pub fn github_dispatch_workflow(
@@ -1118,7 +1316,6 @@ pub fn github_get_pr_details(
    let commits: Vec<serde_json::Value> =
       api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}/commits")))?;
    let commits = commits.into_iter().map(commit_value_from_rest).collect();
-   let files = github_get_pr_files(repo_path_value.clone(), pr_number, api.github_token.clone())?;
    let review_requests = get_review_requests(&api, &slug, pr_number).unwrap_or_default();
    let status_checks = head_sha
       .as_deref()
@@ -1128,7 +1325,6 @@ pub fn github_get_pr_details(
    Ok(pr_details_from_rest(
       pr,
       commits,
-      files,
       review_requests,
       status_checks,
    ))
@@ -1191,6 +1387,7 @@ fn get_status_checks(
             .check_suite
             .and_then(|suite| suite.app)
             .and_then(|app| app.name),
+         details_url: check.html_url,
       })
       .collect())
 }
@@ -1347,6 +1544,19 @@ mod api_tests {
          super::parse_github_error_message(body).as_deref(),
          Some(super::WORKFLOW_JOB_LOGS_UNAVAILABLE_MESSAGE)
       );
+   }
+
+   #[test]
+   fn only_treats_explicit_github_authentication_failures_as_invalid_tokens() {
+      assert!(super::is_github_authentication_error(
+         "GitHub authentication failed. Connect GitHub in Athas and try again."
+      ));
+      assert!(!super::is_github_authentication_error(
+         "GitHub API request failed (503 Service Unavailable): unavailable"
+      ));
+      assert!(!super::is_github_authentication_error(
+         "Failed to call GitHub API: connection timed out"
+      ));
    }
 
    #[test]

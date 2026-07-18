@@ -1,6 +1,6 @@
-import type { KeyboardEventHandler, ReactNode } from "react";
+import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
 import { useEffect, useRef } from "react";
-import Command, { CommandHeader, CommandInput } from "@/ui/command";
+import Command, { CommandHeader, CommandHeaderBadge, CommandInput } from "@/ui/command";
 
 interface GitCommandSurfaceProps {
   isOpen: boolean;
@@ -10,7 +10,8 @@ interface GitCommandSurfaceProps {
   onInputKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   placeholder: string;
   meta?: ReactNode;
-  placement?: "top" | "bottom";
+  headerAddon?: ReactNode;
+  inputRef?: RefObject<HTMLInputElement | null>;
   children: ReactNode;
 }
 
@@ -22,35 +23,38 @@ const GitCommandSurface = ({
   onInputKeyDown,
   placeholder,
   meta,
-  placement = "top",
+  headerAddon,
+  inputRef,
   children,
 }: GitCommandSurfaceProps) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fallbackInputRef = useRef<HTMLInputElement>(null);
+  const resolvedInputRef = inputRef ?? fallbackInputRef;
 
   useEffect(() => {
     if (!isOpen) return;
 
     const frame = requestAnimationFrame(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      resolvedInputRef.current?.focus();
+      resolvedInputRef.current?.select();
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [isOpen]);
+  }, [isOpen, resolvedInputRef]);
 
   return (
-    <Command isVisible={isOpen} onClose={onClose} placement={placement}>
+    <Command isVisible={isOpen} onClose={onClose}>
       <CommandHeader onClose={onClose}>
         <CommandInput
-          ref={inputRef}
+          ref={resolvedInputRef}
           value={query}
           onChange={onQueryChange}
           onKeyDown={onInputKeyDown}
           placeholder={placeholder}
-          className="ui-font"
+          className="font-sans"
         />
-        {meta ? <div className="ui-font ui-text-xs shrink-0 text-text-lighter">{meta}</div> : null}
+        {meta ? <CommandHeaderBadge>{meta}</CommandHeaderBadge> : null}
       </CommandHeader>
+      {headerAddon}
       {children}
     </Command>
   );

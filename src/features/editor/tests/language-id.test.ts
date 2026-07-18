@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import {
-  getLanguageDisplayName as getAthasEditorLanguageDisplayName,
-  getLanguageIdFromPath as getAthasEditorLanguageIdFromPath,
-} from "@/features/athas-editor/utils/language-id";
 import { detectLanguageFromFileName } from "../utils/language-detection";
 import { getLanguageDisplayName, getLanguageIdFromPath } from "../utils/language-id";
+import { isMarkdownFile as isEditorMarkdownFile } from "../utils/lines";
 import {
   hasLineBasedSyntaxFallback,
   hasLineBasedSyntaxHighlighter,
@@ -14,7 +11,8 @@ import {
   MONACO_HIGHLIGHT_LANGUAGE_IDS,
   MONACO_LANGUAGE_BY_ATHAS_ID,
   toMonacoLanguageId,
-} from "../monaco/language";
+} from "../engines/monaco/language";
+import { getLanguageOverlayTokens } from "../lib/wasm-parser/language-overlays";
 
 describe("getLanguageIdFromPath", () => {
   it("detects scm files as scheme", () => {
@@ -43,6 +41,11 @@ describe("getLanguageIdFromPath", () => {
 
   it("detects extension-backed highlight languages without registry data", () => {
     expect(getLanguageIdFromPath("/tmp/component.tsx")).toBe("typescriptreact");
+    expect(getLanguageIdFromPath("/tmp/analysis.R")).toBe("r");
+    expect(getLanguageIdFromPath("/tmp/.Rprofile")).toBe("r");
+    expect(getLanguageIdFromPath("/tmp/exploration.ipy")).toBe("python");
+    expect(getLanguageIdFromPath("/tmp/report.Rmd")).toBe("rmarkdown");
+    expect(getLanguageIdFromPath("/tmp/notebook.ipynb")).toBe("jupyter-notebook");
     expect(getLanguageIdFromPath("/tmp/styles.scss")).toBe("scss");
     expect(getLanguageIdFromPath("/tmp/Dockerfile")).toBe("dockerfile");
     expect(getLanguageIdFromPath("/tmp/.gitignore")).toBe("gitignore");
@@ -61,6 +64,7 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageIdFromPath("/tmp/message.proto")).toBe("protobuf");
     expect(getLanguageIdFromPath("/tmp/query.ql")).toBe("ql");
     expect(getLanguageIdFromPath("/tmp/main.tf")).toBe("terraform");
+    expect(getLanguageIdFromPath("/tmp/page.astro")).toBe("astro");
     expect(getLanguageIdFromPath("/tmp/icon.svg")).toBe("xml");
     expect(getLanguageIdFromPath("/tmp/project.csproj")).toBe("xml");
     expect(getLanguageDisplayName("diff")).toBe("Diff");
@@ -68,14 +72,23 @@ describe("getLanguageIdFromPath", () => {
     expect(getLanguageDisplayName("gitattributes")).toBe("Git Attributes");
     expect(getLanguageDisplayName("elisp")).toBe("Emacs Lisp");
     expect(getLanguageDisplayName("lockfile")).toBe("Lockfile");
+    expect(getLanguageDisplayName("r")).toBe("R");
+    expect(getLanguageDisplayName("rmarkdown")).toBe("R Markdown");
+    expect(getLanguageDisplayName("jupyter-notebook")).toBe("Jupyter Notebook");
+    expect(getLanguageDisplayName("astro")).toBe("Astro");
   });
 
   it("maps Monaco-highlighted extensions to registered Monaco language ids", () => {
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/component.tsx"))).toBe("typescript");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/exploration.ipy"))).toBe("python");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/analysis.R"))).toBe("r");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/report.Rmd"))).toBe("markdown");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/notebook.ipynb"))).toBe("json");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitignore"))).toBe("gitignore");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.dockerignore"))).toBe("gitignore");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/.gitattributes"))).toBe("gitattributes");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/bun.lock"))).toBe("lockfile");
+    expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/flake.nix"))).toBe("nix");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/main.zig"))).toBe("zig");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/Main.elm"))).toBe("elm");
     expect(toMonacoLanguageId(getLanguageIdFromPath("/tmp/init.el"))).toBe("elisp");
@@ -95,25 +108,51 @@ describe("toMonacoLanguageId", () => {
   });
 });
 
-describe("Athas editor language detection", () => {
-  it("keeps dotfile syntax mappings aligned with the shared editor surface", () => {
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.gitignore")).toBe("gitignore");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.dockerignore")).toBe("gitignore");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.gitattributes")).toBe("gitattributes");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.git/info/exclude")).toBe("gitignore");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/.git/info/attributes")).toBe("gitattributes");
-    expect(getAthasEditorLanguageIdFromPath("/tmp/bun.lock")).toBe("lockfile");
-    expect(getAthasEditorLanguageDisplayName("gitattributes")).toBe("Git Attributes");
-    expect(getAthasEditorLanguageDisplayName("lockfile")).toBe("Lockfile");
+describe("Markdown preview file detection", () => {
+  it("treats R Markdown as a Markdown-previewable source file", () => {
+    expect(isEditorMarkdownFile("/tmp/README.md")).toBe(true);
+    expect(isEditorMarkdownFile("/tmp/report.Rmd")).toBe(true);
+    expect(isEditorMarkdownFile("/tmp/analysis.R")).toBe(false);
+  });
+});
+
+describe("R Markdown overlays", () => {
+  it("highlights YAML front matter tokens", () => {
+    const tokens = getLanguageOverlayTokens(
+      "rmarkdown",
+      "---\ntitle: Research Report\noutput: html_document\n---\n\n```{r}\nsummary(cars)\n```",
+    );
+
+    expect(tokens).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "token-punctuation" }),
+        expect.objectContaining({ type: "token-property" }),
+        expect.objectContaining({ type: "token-string" }),
+      ]),
+    );
   });
 });
 
 describe("line-based syntax highlighting", () => {
-  it("highlights ignore, attributes, and lockfile syntaxes without a Tree-sitter parser", () => {
+  it("highlights diff, ignore, attributes, and lockfile syntaxes without a Tree-sitter parser", () => {
+    expect(hasLineBasedSyntaxHighlighter("diff")).toBe(true);
     expect(hasLineBasedSyntaxHighlighter("gitignore")).toBe(true);
     expect(hasLineBasedSyntaxHighlighter("gitattributes")).toBe(true);
     expect(hasLineBasedSyntaxHighlighter("lockfile")).toBe(true);
 
+    expect(
+      tokenizeLineBasedSyntax(
+        "diff --git a/src/file.ts b/src/file.ts\n@@ -1 +1 @@\n-old\n+new",
+        "diff",
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-attribute" }),
+        expect.objectContaining({ class_name: "token-variable" }),
+        expect.objectContaining({ class_name: "token-string" }),
+      ]),
+    );
     expect(tokenizeLineBasedSyntax("# comment\n!important/*.log", "gitignore")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ class_name: "token-comment" }),
@@ -138,11 +177,23 @@ describe("line-based syntax highlighting", () => {
   });
 
   it("provides fallback tokens for reported parser-backed languages", () => {
-    for (const languageId of ["typescriptreact", "zig", "elm", "elisp"]) {
+    for (const languageId of ["typescript", "typescriptreact", "zig", "elm", "elisp"]) {
       expect(hasLineBasedSyntaxHighlighter(languageId)).toBe(false);
       expect(hasLineBasedSyntaxFallback(languageId)).toBe(true);
     }
 
+    expect(
+      tokenizeLineBasedSyntax(
+        'import type { View } from "./view";\nconst count: number = 1;',
+        "typescript",
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ class_name: "token-keyword" }),
+        expect.objectContaining({ class_name: "token-type" }),
+        expect.objectContaining({ class_name: "token-string" }),
+      ]),
+    );
     expect(
       tokenizeLineBasedSyntax(
         'export const View = () => <div className="root" />',
@@ -182,6 +233,11 @@ describe("line-based syntax highlighting", () => {
 describe("detectLanguageFromFileName", () => {
   it("keeps buffer metadata aligned for Monaco-highlighted extensions", () => {
     expect(detectLanguageFromFileName("component.tsx")).toBe("typescriptreact");
+    expect(detectLanguageFromFileName("exploration.ipy")).toBe("python");
+    expect(detectLanguageFromFileName("analysis.R")).toBe("r");
+    expect(detectLanguageFromFileName(".Rprofile")).toBe("r");
+    expect(detectLanguageFromFileName("report.Rmd")).toBe("rmarkdown");
+    expect(detectLanguageFromFileName("notebook.ipynb")).toBe("jupyter-notebook");
     expect(detectLanguageFromFileName(".gitignore")).toBe("gitignore");
     expect(detectLanguageFromFileName(".dockerignore")).toBe("gitignore");
     expect(detectLanguageFromFileName(".gitattributes")).toBe("gitattributes");

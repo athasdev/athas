@@ -168,9 +168,18 @@ async function readEditableSource(
 
 async function writeEditableSource(filePath: string, bufferId: string | null, content: string) {
   const { useBufferStore } = await import("../stores/buffer.store");
+  const { trackImmediateBufferHistoryChange } = await import("../stores/buffer-history-tracking");
   const { writeFile } = await import("@/features/file-system/controllers/platform");
 
   if (bufferId) {
+    const buffer = useBufferStore.getState().buffers.find((candidate) => candidate.id === bufferId);
+    if (buffer?.type === "editor") {
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: buffer.content,
+        nextContent: content,
+      });
+    }
     useBufferStore.getState().actions.updateBufferContent(bufferId, content, true);
     return;
   }
@@ -181,11 +190,13 @@ async function writeEditableSource(filePath: string, bufferId: string | null, co
 export async function applyWorkspaceEdit(edit: WorkspaceEdit): Promise<WorkspaceEditApplyResult> {
   const editsByFile = collectWorkspaceTextEdits(edit);
 
-  for (const [filePath, edits] of editsByFile) {
-    const source = await readEditableSource(filePath);
-    const nextContent = applyTextEditsToContent(source.content, edits);
-    await writeEditableSource(filePath, source.bufferId, nextContent);
-  }
+  await Promise.all(
+    Array.from(editsByFile, async ([filePath, edits]) => {
+      const source = await readEditableSource(filePath);
+      const nextContent = applyTextEditsToContent(source.content, edits);
+      await writeEditableSource(filePath, source.bufferId, nextContent);
+    }),
+  );
 
   return { editedFiles: editsByFile.size };
 }

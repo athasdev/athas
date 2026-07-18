@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { extensionManager } from "@/features/editor/extensions/manager";
 import type { EditorAPI } from "@/features/editor/types/editor-extension.types";
+import { loadCustomThemes } from "./custom-theme-store";
+import { toThemeDefinition } from "./theme-file";
 import { themeLoader } from "./theme-loader";
 import { themeRegistry } from "./theme-registry";
 
@@ -73,6 +75,9 @@ export const initializeThemeSystem = async () => {
       redo: () => {},
       canUndo: () => false,
       canRedo: () => false,
+      addSelectionToNextFindMatch: () => false,
+      addSelectionToPreviousFindMatch: () => false,
+      selectAllFindMatches: () => false,
       getSettings: () => ({
         fontSize: 14,
         lineHeight: 1.4,
@@ -96,6 +101,25 @@ export const initializeThemeSystem = async () => {
       await extensionManager.loadExtension(themeLoader);
     } catch (error) {
       console.error("initializeThemeSystem: Failed to load themes:", error);
+    }
+
+    try {
+      const customThemes = await loadCustomThemes();
+      for (const theme of customThemes) {
+        const definition = toThemeDefinition(theme);
+        if (themeRegistry.getTheme(definition.id)) {
+          console.warn(
+            `initializeThemeSystem: Skipped custom theme "${definition.id}" because that ID is already registered`,
+          );
+          continue;
+        }
+        themeRegistry.registerTheme(definition, {
+          extensionId: `custom-theme.${definition.id}`,
+          kind: "custom",
+        });
+      }
+    } catch (error) {
+      console.error("initializeThemeSystem: Failed to load custom themes:", error);
     }
 
     // Mark theme registry as ready

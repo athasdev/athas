@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { useEffect } from "react";
 import { editorAPI } from "@/features/editor/extensions/api";
@@ -16,10 +17,14 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
+import { requestWindowClose } from "@/features/window/utils/request-window-close";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import { writeClipboardText } from "@/utils/clipboard";
+import { getServiceUrls } from "@/config/services";
 import { useMenuEvents } from "./use-menu-events";
 
 interface EmbeddedWebviewShortcutEvent {
+  parentWindowLabel: string;
   webviewLabel: string;
   shortcut: string;
 }
@@ -59,12 +64,10 @@ function handleEmbeddedWebviewGlobalShortcut(shortcut: string) {
 }
 
 export function useMenuEventsWrapper() {
-  const uiState = useUIState();
-  const fileSystemStore = useFileSystemStore();
+  const handleCreateNewFile = useFileSystemStore.use.handleCreateNewFile();
+  const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
+  const closeFolder = useFileSystemStore.use.closeFolder();
   const updateSetting = useSettingsStore((state) => state.updateSetting);
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
   const { closeBuffer } = useBufferStore.use.actions();
   const { handleSave } = useEditorAppStore.use.actions();
   const openWhatsNew = useWhatsNewStore((state) => state.open);
@@ -94,18 +97,20 @@ export function useMenuEventsWrapper() {
       return false;
     }
 
-    return activeBuffer?.type === "editor";
+    return useBufferStore.getState().actions.getActiveBuffer()?.type === "editor";
   };
 
   useEffect(() => {
     let disposed = false;
     let unlisten: (() => void) | undefined;
+    const currentWindowLabel = getCurrentWebviewWindow().label;
 
     const setupListener = async () => {
       unlisten = await listen<EmbeddedWebviewShortcutEvent>(
         "embedded-webview-shortcut",
         (event) => {
           if (disposed) return;
+          if (event.payload.parentWindowLabel !== currentWindowLabel) return;
           handleEmbeddedWebviewGlobalShortcut(event.payload.shortcut);
         },
       );
@@ -128,12 +133,13 @@ export function useMenuEventsWrapper() {
         window.dispatchEvent(new CustomEvent("terminal-new"));
         return;
       }
-      void fileSystemStore.handleCreateNewFile();
+      void handleCreateNewFile();
     },
-    onOpenFolder: fileSystemStore.handleOpenFolder,
-    onCloseFolder: fileSystemStore.closeFolder,
+    onOpenFolder: handleOpenFolder,
+    onCloseFolder: closeFolder,
     onSave: handleSave,
     onSaveAs: async () => {
+      const activeBuffer = useBufferStore.getState().actions.getActiveBuffer();
       if (!activeBuffer) return;
 
       try {
@@ -185,11 +191,15 @@ export function useMenuEventsWrapper() {
       // Use the active pane's active buffer instead of global activeBuffer
       const paneStore = usePaneStore.getState();
       const activePane = paneStore.actions.getActivePane();
-      const bufferIdToClose = activePane?.activeBufferId || activeBuffer?.id;
+      const bufferIdToClose =
+        activePane?.activeBufferId || useBufferStore.getState().actions.getActiveBuffer()?.id;
 
       if (bufferIdToClose) {
         closeBuffer(bufferIdToClose);
+        return;
       }
+
+      requestWindowClose();
     },
     onUndo: () => {
       if (shouldRouteEditMenuToEditor()) {
@@ -221,7 +231,7 @@ export function useMenuEventsWrapper() {
         return;
       }
 
-      uiState.setIsFindVisible(true);
+      useUIState.getState().setIsFindVisible(true);
     },
     onFindReplace: () => {
       void keymapRegistry.executeCommand("workbench.showFindReplace");
@@ -229,9 +239,13 @@ export function useMenuEventsWrapper() {
     onToggleComment: () => {
       void keymapRegistry.executeCommand("editor.toggleComment");
     },
-    onCommandPalette: () => uiState.setIsCommandPaletteVisible(true),
-    onToggleSidebar: () => uiState.setIsSidebarVisible(!uiState.isSidebarVisible),
+    onCommandPalette: () => useUIState.getState().setIsCommandPaletteVisible(true),
+    onToggleSidebar: () => {
+      const { isSidebarVisible, setIsSidebarVisible } = useUIState.getState();
+      setIsSidebarVisible(!isSidebarVisible);
+    },
     onToggleTerminal: () => {
+      const uiState = useUIState.getState();
       const showingTerminal =
         !uiState.isBottomPaneVisible || uiState.bottomPaneActiveTab !== "terminal";
       uiState.setBottomPaneActiveTab("terminal");
@@ -259,7 +273,7 @@ export function useMenuEventsWrapper() {
       );
       // In a full implementation, this would toggle vim keybinding mode in the editor
     },
-    onQuickOpen: () => uiState.setIsQuickOpenVisible(true),
+    onQuickOpen: () => useUIState.getState().setIsQuickOpenVisible(true),
     onGoToLine: () => {
       void keymapRegistry.executeCommand("editor.goToLine");
     },
@@ -269,13 +283,21 @@ export function useMenuEventsWrapper() {
     onPrevTab: () => {
       void keymapRegistry.executeCommand("workbench.previousTab");
     },
-    onThemeChange: (theme: string) => updateSetting("theme", theme),
+    onThemeChange: (theme: string) => {
+      const { settings } = useSettingsStore.getState();
+      if (settings.syncSystemTheme) {
+        void updateSetting("syncSystemTheme", false).then(() => updateSetting("theme", theme));
+        return;
+      }
+
+      updateSetting("theme", theme);
+    },
     onExecuteCommand: (commandId: string) => {
       void keymapRegistry.executeCommand(commandId);
     },
     onDocumentation: async () => {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
-      await openUrl("https://athas.dev/docs");
+      await openUrl(getServiceUrls().docsUrl);
     },
     onChangelog: async () => {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
@@ -299,13 +321,7 @@ export function useMenuEventsWrapper() {
         }
 
         const text = `Environment\n\n- App: Athas ${version}\n- OS: ${osSummary}\n\nProblem\n\nDescribe the issue here. Steps to reproduce, expected vs actual.\n`;
-        try {
-          const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-          await writeText(text);
-        } catch {
-          // Fallback to browser clipboard
-          await navigator.clipboard.writeText(text);
-        }
+        await writeClipboardText(text);
 
         const { openUrl } = await import("@tauri-apps/plugin-opener");
         await openUrl("https://github.com/athasdev/athas/issues/new?template=01-bug.yml");
@@ -324,10 +340,10 @@ export function useMenuEventsWrapper() {
       }
     },
     onOpenSettings: () => {
-      uiState.openSettingsDialog("general");
+      useUIState.getState().openSettingsDialog("general");
     },
     onOpenExtensions: () => {
-      uiState.openSettingsDialog("extensions");
+      useBufferStore.getState().actions.openExtensionsBuffer();
     },
     onToggleMenuBar: async () => {
       try {

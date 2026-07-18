@@ -60,19 +60,20 @@ export type ExternalFileDropRoute = "global" | "local" | "terminal";
 const TERMINAL_DROP_TARGET_SELECTOR = "[data-terminal-drop-target]";
 const LOCAL_DROP_TARGET_SELECTOR = [
   "[data-external-file-drop-scope]",
-  "[data-pane-container]",
   "[data-bottom-pane-drop-target]",
   "[data-ai-context-drop-target]",
 ].join(",");
+const PANE_DROP_TARGET_SELECTOR = "[data-pane-container]";
 
 export function getExternalFileDropRoute(
   target: Pick<Element, "closest"> | null | undefined,
-  treatLocalDropAsGlobal = false,
+  treatPaneDropAsGlobal = false,
 ): ExternalFileDropRoute {
   if (!target) return "global";
   if (target.closest(TERMINAL_DROP_TARGET_SELECTOR)) return "terminal";
-  if (target.closest(LOCAL_DROP_TARGET_SELECTOR)) {
-    return treatLocalDropAsGlobal ? "global" : "local";
+  if (target.closest(LOCAL_DROP_TARGET_SELECTOR)) return "local";
+  if (target.closest(PANE_DROP_TARGET_SELECTOR)) {
+    return treatPaneDropAsGlobal ? "global" : "local";
   }
   return "global";
 }

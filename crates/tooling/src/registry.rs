@@ -7,6 +7,7 @@ use std::collections::HashMap;
 const CLANGD_VERSION: &str = "22.1.0";
 const ELIXIR_LS_VERSION: &str = "v0.30.0";
 const TERRAFORM_LS_VERSION: &str = "0.38.6";
+const ZIG_VERSION: &str = "0.16.0";
 
 /// Tool configurations resolved from extension manifests.
 pub struct ToolRegistry;
@@ -70,7 +71,9 @@ impl ToolRegistry {
          "jdtls" => Some(Self::jdtls_download_url()),
          "kotlin-language-server" => Some(Self::kotlin_language_server_download_url()),
          "omnisharp" => Some(Self::omnisharp_download_url()),
+         "stylua" => Some(Self::stylua_download_url()),
          "terraform-ls" => Some(Self::terraform_ls_download_url()),
+         "zig" => Some(Self::zig_download_url()),
          "zls" => Some(Self::zls_download_url()),
          _ => None,
       }
@@ -216,6 +219,58 @@ impl ToolRegistry {
       format!(
          "https://releases.hashicorp.com/terraform-ls/{}/terraform-ls_{}_{}_{}.zip",
          TERRAFORM_LS_VERSION, TERRAFORM_LS_VERSION, os, arch
+      )
+   }
+
+   fn stylua_download_url() -> String {
+      let arch = match std::env::consts::ARCH {
+         "aarch64" => "aarch64",
+         _ => "x86_64",
+      };
+
+      let asset = match std::env::consts::OS {
+         "macos" => format!("stylua-macos-{}.zip", arch),
+         "windows" => "stylua-windows-x86_64.zip".to_string(),
+         "linux" => {
+            let libc_suffix = if arch == "x86_64"
+               && matches!(platform::detect_linux_libc(), platform::LinuxLibc::Musl)
+            {
+               "-musl"
+            } else {
+               ""
+            };
+            format!("stylua-linux-{}{}.zip", arch, libc_suffix)
+         }
+         _ => format!("stylua-linux-{}.zip", arch),
+      };
+
+      format!(
+         "https://github.com/JohnnyMorganz/StyLua/releases/latest/download/{}",
+         asset
+      )
+   }
+
+   fn zig_download_url() -> String {
+      let os = match std::env::consts::OS {
+         "macos" => "macos",
+         "windows" => "windows",
+         _ => "linux",
+      };
+
+      let arch = match std::env::consts::ARCH {
+         "aarch64" => "aarch64",
+         _ => "x86_64",
+      };
+
+      let archive_ext = if std::env::consts::OS == "windows" {
+         "zip"
+      } else {
+         "tar.xz"
+      };
+
+      format!(
+         "https://ziglang.org/download/{}/zig-{}-{}-{}.{}",
+         ZIG_VERSION, arch, os, ZIG_VERSION, archive_ext
       )
    }
 
@@ -500,7 +555,9 @@ mod tests {
          "clangd",
          "jdtls",
          "kotlin-language-server",
+         "stylua",
          "terraform-ls",
+         "zig",
          "zls",
       ] {
          let config = ToolConfig {
@@ -529,5 +586,58 @@ mod tests {
                .is_some_and(|url| url.starts_with("https://"))
          );
       }
+   }
+
+   #[test]
+   fn supplies_known_download_urls_for_formatter_binaries() {
+      for name in ["stylua", "zig"] {
+         let config = ToolConfig {
+            name: name.to_string(),
+            command: None,
+            runtime: crate::ToolRuntime::Binary,
+            package: None,
+            packages: Vec::new(),
+            download_url: None,
+            args: Vec::new(),
+            env: std::collections::HashMap::new(),
+         };
+
+         let language_tools = LanguageToolConfigSet {
+            lsp: None,
+            formatter: Some(config),
+            linter: None,
+         };
+
+         let tools = ToolRegistry::get_tools(name, Some(language_tools)).unwrap();
+         let resolved = tools.get(&ToolType::Formatter).unwrap();
+         let url = resolved.download_url.as_ref().unwrap();
+         assert!(url.starts_with("https://"));
+         assert!(!url.contains("${"));
+      }
+   }
+
+   #[test]
+   fn preserves_system_toolchain_tools_without_download_url() {
+      let config = ToolConfig {
+         name: "sourcekit-lsp".to_string(),
+         command: None,
+         runtime: crate::ToolRuntime::System,
+         package: None,
+         packages: Vec::new(),
+         download_url: None,
+         args: Vec::new(),
+         env: std::collections::HashMap::new(),
+      };
+
+      let language_tools = LanguageToolConfigSet {
+         lsp: Some(config),
+         formatter: None,
+         linter: None,
+      };
+
+      let tools = ToolRegistry::get_tools("swift", Some(language_tools)).unwrap();
+      let resolved = tools.get(&ToolType::Lsp).unwrap();
+      assert_eq!(resolved.runtime, crate::ToolRuntime::System);
+      assert!(resolved.download_url.is_none());
    }
 }

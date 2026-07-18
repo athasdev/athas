@@ -57,6 +57,9 @@ function createDummyEditorAPI(): EditorAPI {
     canUndo: () => false,
     canRedo: () => false,
     selectAll: () => {},
+    addSelectionToNextFindMatch: () => false,
+    addSelectionToPreviousFindMatch: () => false,
+    selectAllFindMatches: () => false,
     getSettings: () => ({
       fontSize: 14,
       lineHeight: 1.4,

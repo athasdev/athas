@@ -52,8 +52,6 @@ const TerminalContainer = ({
     switchToNextTerminal,
     switchToPrevTerminal,
     setTerminalSplitMode,
-    getPersistedTerminals,
-    restoreTerminalsFromPersisted,
   } = useTerminalTabs();
   const terminalDefaultProfileId = useSettingsStore(
     (state) => state.settings.terminalDefaultProfileId,
@@ -88,18 +86,27 @@ const TerminalContainer = ({
 
   const hasInitializedRef = useRef(false);
   const wasVisibleRef = useRef(false);
+  const workspaceDirectoryRef = useRef(currentDirectory);
   const terminalSessionRefs = useRef<Map<string, { focus: () => void; showSearch: () => void }>>(
     new Map(),
   );
   const tabFocusTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const {
-    registerTerminalFocus,
-    clearTerminalFocus,
-    setIsBottomPaneVisible,
-    setBottomPaneActiveTab,
-    isBottomPaneVisible,
-    bottomPaneActiveTab,
-  } = useUIState();
+
+  useEffect(() => {
+    if (workspaceDirectoryRef.current === currentDirectory) {
+      return;
+    }
+
+    workspaceDirectoryRef.current = currentDirectory;
+    hasInitializedRef.current = terminals.length > 0;
+    wasVisibleRef.current = false;
+  }, [currentDirectory, terminals.length]);
+  const registerTerminalFocus = useUIState((state) => state.registerTerminalFocus);
+  const clearTerminalFocus = useUIState((state) => state.clearTerminalFocus);
+  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
+  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
   const isTerminalPaneVisible = isBottomPaneVisible && bottomPaneActiveTab === "terminal";
 
   useEffect(() => {
@@ -173,17 +180,6 @@ const TerminalContainer = ({
     },
     [createTerminal, focusNewTerminal, getDisplayNameFromDirectory],
   );
-
-  // Restore persisted terminals on mount. Fresh terminal creation is deferred until pane is visible.
-  useEffect(() => {
-    if (!hasInitializedRef.current && terminals.length === 0) {
-      const persistedTerminals = getPersistedTerminals();
-      if (persistedTerminals.length > 0) {
-        hasInitializedRef.current = true;
-        restoreTerminalsFromPersisted(persistedTerminals);
-      }
-    }
-  }, [terminals.length, getPersistedTerminals, restoreTerminalsFromPersisted]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -470,7 +466,7 @@ const TerminalContainer = ({
         setTimeout(() => {
           invoke("terminal_write", {
             id: connectionId,
-            data: pendingCommand,
+            input: { kind: "text", data: pendingCommand },
           }).catch(() => {});
           pendingCommandsRef.current.delete(terminalId);
         }, 300);
@@ -559,24 +555,6 @@ const TerminalContainer = ({
     setActiveTerminal,
     handleSplitView,
     closeTerminal,
-  ]);
-
-  // Auto-create first terminal when the pane becomes visible
-  useEffect(() => {
-    if (terminals.length === 0 && !hasInitializedRef.current) {
-      const persistedTerminals = getPersistedTerminals();
-      if (persistedTerminals.length > 0) {
-        hasInitializedRef.current = true;
-        restoreTerminalsFromPersisted(persistedTerminals);
-      }
-    }
-  }, [
-    terminals.length,
-    currentDirectory,
-    createTerminal,
-    getDisplayNameFromDirectory,
-    getPersistedTerminals,
-    restoreTerminalsFromPersisted,
   ]);
 
   // Create terminal when pane becomes visible with no terminals

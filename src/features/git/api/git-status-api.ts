@@ -1,26 +1,53 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitHunk, GitStatus } from "../types/git.types";
-import { isNotGitRepositoryError, resolveRepositoryPath } from "./git-repo-api";
+import {
+  isNotGitRepositoryError,
+  resolveRepositoryPath,
+  resolveRepositoryPathOrThrow,
+} from "./git-repo-api";
+
+const inFlightGitStatusRequests = new Map<string, Promise<GitStatus | null>>();
 
 export const getGitStatus = async (repoPath: string): Promise<GitStatus | null> => {
+  let resolvedRepoPath: string | null;
+
   try {
-    const resolvedRepoPath = await resolveRepositoryPath(repoPath);
-    if (!resolvedRepoPath) {
-      return null;
-    }
-    const status = await tauriInvoke<GitStatus>("git_status", { repoPath: resolvedRepoPath });
-    return status;
+    resolvedRepoPath = await resolveRepositoryPath(repoPath);
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get git status:", error);
     }
     return null;
   }
+
+  if (!resolvedRepoPath) {
+    return null;
+  }
+
+  const existingRequest = inFlightGitStatusRequests.get(resolvedRepoPath);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = tauriInvoke<GitStatus>("git_status", { repoPath: resolvedRepoPath })
+    .catch((error) => {
+      if (!isNotGitRepositoryError(error)) {
+        console.error("Failed to get git status:", error);
+      }
+      return null;
+    })
+    .finally(() => {
+      inFlightGitStatusRequests.delete(resolvedRepoPath);
+    });
+
+  inFlightGitStatusRequests.set(resolvedRepoPath, request);
+  return request;
 };
 
 export const stageFile = async (repoPath: string, filePath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_add", { repoPath, filePath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_add", { repoPath: resolvedRepoPath, filePath });
     return true;
   } catch (error) {
     console.error("Failed to stage file:", error);
@@ -30,7 +57,8 @@ export const stageFile = async (repoPath: string, filePath: string): Promise<boo
 
 export const unstageFile = async (repoPath: string, filePath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_reset", { repoPath, filePath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_reset", { repoPath: resolvedRepoPath, filePath });
     return true;
   } catch (error) {
     console.error("Failed to unstage file:", error);
@@ -40,7 +68,8 @@ export const unstageFile = async (repoPath: string, filePath: string): Promise<b
 
 export const stageAllFiles = async (repoPath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_add_all", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_add_all", { repoPath: resolvedRepoPath });
     return true;
   } catch (error) {
     console.error("Failed to stage all files:", error);
@@ -50,7 +79,8 @@ export const stageAllFiles = async (repoPath: string): Promise<boolean> => {
 
 export const unstageAllFiles = async (repoPath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_reset_all", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_reset_all", { repoPath: resolvedRepoPath });
     return true;
   } catch (error) {
     console.error("Failed to unstage all files:", error);
@@ -60,7 +90,8 @@ export const unstageAllFiles = async (repoPath: string): Promise<boolean> => {
 
 export const stageHunk = async (repoPath: string, hunk: GitHunk): Promise<boolean> => {
   try {
-    await tauriInvoke("git_stage_hunk", { repoPath, hunk });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_stage_hunk", { repoPath: resolvedRepoPath, hunk });
     return true;
   } catch (error) {
     console.error("Failed to stage hunk:", error);
@@ -70,7 +101,8 @@ export const stageHunk = async (repoPath: string, hunk: GitHunk): Promise<boolea
 
 export const unstageHunk = async (repoPath: string, hunk: GitHunk): Promise<boolean> => {
   try {
-    await tauriInvoke("git_unstage_hunk", { repoPath, hunk });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_unstage_hunk", { repoPath: resolvedRepoPath, hunk });
     return true;
   } catch (error) {
     console.error("Failed to unstage hunk:", error);
@@ -80,7 +112,8 @@ export const unstageHunk = async (repoPath: string, hunk: GitHunk): Promise<bool
 
 export const discardAllChanges = async (repoPath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_discard_all_changes", { repoPath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_discard_all_changes", { repoPath: resolvedRepoPath });
     return true;
   } catch (error) {
     console.error("Failed to discard all changes:", error);
@@ -90,7 +123,8 @@ export const discardAllChanges = async (repoPath: string): Promise<boolean> => {
 
 export const discardFileChanges = async (repoPath: string, filePath: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_discard_file_changes", { repoPath, filePath });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_discard_file_changes", { repoPath: resolvedRepoPath, filePath });
     return true;
   } catch (error) {
     console.error("Failed to discard file changes:", error);

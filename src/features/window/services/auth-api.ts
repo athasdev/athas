@@ -30,8 +30,13 @@ export interface AuthUser {
   created_at: string;
 }
 
+export type ProductCapability = "hostedAi" | "settingsSync" | "collaboration" | "enterprisePolicy";
+
+export type ProductCapabilities = Record<ProductCapability, boolean>;
+
 export interface SubscriptionInfo {
   status: "free" | "pro";
+  capabilities?: ProductCapabilities;
   subscription: {
     plan: "free" | "pro" | "teams" | "enterprise" | string;
     renews_at: string | null;
@@ -310,10 +315,29 @@ function parseSubscriptionInfoResponse(payload: unknown): SubscriptionInfo | nul
   const subscription = parseSubscriptionPlanSnapshot(payload.subscription);
   const enterprise = asRecord(payload.enterprise);
   const collaboration = parseCollaborationSnapshot(payload.collaboration);
+  const capabilities = asRecord(payload.capabilities);
 
   return {
     ...(payload as unknown as SubscriptionInfo),
     status: payload.status,
+    capabilities: {
+      hostedAi:
+        typeof capabilities.hostedAi === "boolean"
+          ? capabilities.hostedAi
+          : payload.status === "pro",
+      settingsSync:
+        typeof capabilities.settingsSync === "boolean"
+          ? capabilities.settingsSync
+          : payload.status === "pro",
+      collaboration:
+        typeof capabilities.collaboration === "boolean"
+          ? capabilities.collaboration
+          : collaboration?.enabled === true,
+      enterprisePolicy:
+        typeof capabilities.enterprisePolicy === "boolean"
+          ? capabilities.enterprisePolicy
+          : enterprise.has_access === true,
+    },
     subscription,
     collaboration,
     enterprise: {
@@ -503,6 +527,12 @@ function shouldFallbackFromAuthApiBase(apiBase: string): boolean {
   );
 }
 
+function shouldTryNextAuthApiBase(apiBase: string, status: number): boolean {
+  return (
+    shouldFallbackFromAuthApiBase(apiBase) && (status === 401 || status === 403 || status === 404)
+  );
+}
+
 // Secure token storage via Rust backend
 export const getAuthToken = async (): Promise<string | null> => {
   if (authTokenCache !== undefined) {
@@ -552,8 +582,11 @@ async function authenticatedFetch(
   for (const apiBase of getAuthApiBaseCandidates()) {
     try {
       const response = await tauriFetch(`${apiBase}${path}`, requestOptions);
-      if (response.status === 404 && shouldFallbackFromAuthApiBase(apiBase)) {
-        fallbackError = new Error(`Auth endpoint not found at ${apiBase}`);
+      if (shouldTryNextAuthApiBase(apiBase, response.status)) {
+        fallbackError = new AuthApiError(
+          `Auth request was rejected at ${apiBase}: ${response.status}`,
+          response.status,
+        );
         continue;
       }
 
@@ -1313,4 +1346,5 @@ export const __test__ = {
   parseCollaborationSseBlock,
   getApiBaseUnavailableMessage,
   getAuthApiBaseCandidates,
+  shouldTryNextAuthApiBase,
 };

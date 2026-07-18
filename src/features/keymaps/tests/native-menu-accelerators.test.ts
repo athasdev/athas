@@ -48,4 +48,20 @@ describe("native menu accelerators", () => {
       ),
     ).toBe(true);
   });
+
+  it("identifies native edit menu accelerators", () => {
+    const editAccelerators: Array<Partial<KeyboardEvent>> = [
+      { code: "KeyA", key: "a", metaKey: true },
+      { code: "KeyZ", key: "z", metaKey: true },
+      { code: "KeyZ", key: "Z", metaKey: true, shiftKey: true },
+      { code: "KeyY", key: "y", metaKey: true },
+      { code: "KeyC", key: "c", metaKey: true },
+      { code: "KeyX", key: "x", metaKey: true },
+      { code: "KeyV", key: "v", metaKey: true },
+    ];
+
+    for (const accelerator of editAccelerators) {
+      expect(isNativeMenuAccelerator(keyboardEvent(accelerator))).toBe(true);
+    }
+  });
 });

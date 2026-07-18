@@ -5,7 +5,7 @@ import {
   LockIcon as Lock,
   RowsIcon as Rows,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   closeActiveEditorGroup,
   closeOtherEditorGroups,

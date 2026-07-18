@@ -6,6 +6,8 @@ import {
   buildWhatsNewMarkdown,
   hydrateWhatsNew,
   queuePendingWhatsNew,
+  resolveWhatsNewInfo,
+  storeCurrentWhatsNew,
   type WhatsNewInfo,
 } from "../lib/whats-new";
 
@@ -14,7 +16,7 @@ interface WhatsNewState {
   info: WhatsNewInfo | null;
   initialize: () => Promise<void>;
   open: () => Promise<void>;
-  openInfo: (info: WhatsNewInfo) => void;
+  openInfo: (info: WhatsNewInfo) => Promise<void>;
   queuePendingUpdate: (updateInfo: UpdateInfo) => void;
 }
 
@@ -39,14 +41,16 @@ export const useWhatsNewStore = create<WhatsNewState>()((set, get) => ({
 
     const currentVersion = await getVersion();
     const { info, shouldAutoOpen } = hydrateWhatsNew(currentVersion);
+    const resolvedInfo = await resolveWhatsNewInfo(info);
+    storeCurrentWhatsNew(resolvedInfo);
 
     set({
       initialized: true,
-      info,
+      info: resolvedInfo,
     });
 
     if (shouldAutoOpen) {
-      openWhatsNewBuffer(info);
+      openWhatsNewBuffer(resolvedInfo);
     }
   },
 
@@ -60,11 +64,15 @@ export const useWhatsNewStore = create<WhatsNewState>()((set, get) => ({
       return;
     }
 
-    openWhatsNewBuffer(info);
+    const resolvedInfo = await resolveWhatsNewInfo(info);
+    storeCurrentWhatsNew(resolvedInfo);
+    set({ info: resolvedInfo });
+    openWhatsNewBuffer(resolvedInfo);
   },
 
-  openInfo: (info) => {
-    openWhatsNewBuffer(info);
+  openInfo: async (info) => {
+    const resolvedInfo = await resolveWhatsNewInfo(info);
+    openWhatsNewBuffer(resolvedInfo);
   },
 
   queuePendingUpdate: (updateInfo) => {

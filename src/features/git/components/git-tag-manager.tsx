@@ -1,4 +1,3 @@
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   CalendarIcon as Calendar,
   CaretDownIcon as CaretDown,
@@ -12,16 +11,24 @@ import {
   TrashIcon as Trash2,
   UploadIcon as Upload,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { CommandEmpty, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandForm,
+  CommandFormField,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import Input from "@/ui/input";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import Select from "@/ui/select";
 import { toast } from "@/ui/toast";
+import { writeClipboardText } from "@/utils/clipboard";
 import { formatShortDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getRemotes } from "../api/git-remotes-api";
@@ -66,12 +73,24 @@ const GitTagManager = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setQuery("");
-    setIsCreateOpen(false);
-    setExpandedTagName(null);
     void loadTags();
     void loadRemotes();
   }, [isOpen, repoPath]);
+
+  const resetTransientState = () => {
+    setQuery("");
+    setIsCreateOpen(false);
+    setNewTagName("");
+    setNewTagMessage("");
+    setNewTagCommit("");
+    setNewTagSigned(false);
+    setExpandedTagName(null);
+  };
+
+  const handleClose = () => {
+    resetTransientState();
+    onClose();
+  };
 
   const filteredTags = useMemo(() => {
     if (!query.trim()) return tags;
@@ -175,7 +194,7 @@ const GitTagManager = ({
       if (result.success) {
         toast.success(result.message);
         onRefresh?.();
-        onClose();
+        handleClose();
       } else {
         toast.error(result.message);
       }
@@ -208,7 +227,7 @@ const GitTagManager = ({
 
   const handleCopy = async (value: string, label: string) => {
     try {
-      await writeText(value);
+      await writeClipboardText(value);
       toast.success(`${label} copied`);
     } catch (error) {
       console.error(`Failed to copy ${label.toLowerCase()}:`, error);
@@ -219,94 +238,75 @@ const GitTagManager = ({
   return (
     <GitCommandSurface
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       query={query}
       onQueryChange={setQuery}
       placeholder="Search tags..."
       meta={`${tags.length} tag${tags.length === 1 ? "" : "s"}`}
     >
-      <div className="border-border/70 border-b px-3 py-2">
-        {!isCreateOpen ? (
+      {!isCreateOpen ? (
+        <div className="flex shrink-0 items-center justify-end px-2 pt-2">
           <div className="flex items-center justify-end gap-2">
-            <Button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              compact
-              variant="default"
-              className="gap-1.5"
-            >
+            <Button type="button" onClick={() => setIsCreateOpen(true)} size="xs" variant="accent">
               <Plus />
-              Add
+              Add tag
             </Button>
           </div>
-        ) : (
-          <div className="flex items-start gap-2">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-secondary-bg text-text-lighter">
-              <Plus className="size-4" />
-            </div>
-            <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
-              <Input
-                type="text"
-                placeholder="Tag name"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                size="xs"
-                className="w-full"
-              />
-              <Input
-                type="text"
-                placeholder="Commit SHA or ref"
-                value={newTagCommit}
-                onChange={(e) => setNewTagCommit(e.target.value)}
-                size="xs"
-                className="w-full"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void handleCreateTag();
-                  }
-                }}
-              />
-              <Input
-                type="text"
-                placeholder="Message"
-                value={newTagMessage}
-                onChange={(e) => setNewTagMessage(e.target.value)}
-                size="xs"
-                className="col-span-2 w-full"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void handleCreateTag();
-                  }
-                }}
-              />
-              <label className="ui-text-xs col-span-2 inline-flex items-center gap-2 text-text-lighter">
-                <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
-                Sign tag
-              </label>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() => void handleCreateTag()}
-                disabled={isLoading || !newTagName.trim()}
-                compact
-                variant="default"
-              >
-                {isLoading ? "Creating..." : "Create"}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setIsCreateOpen(false)}
-                compact
-                variant="ghost"
-                tooltip="Cancel"
-                aria-label="Cancel create tag"
-              >
-                <X />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : null}
+      {isCreateOpen ? (
+        <CommandForm
+          title="Create tag"
+          icon={<Plus className="size-4" />}
+          columns={2}
+          submitLabel="Create"
+          pendingLabel="Creating..."
+          isPending={isLoading}
+          submitDisabled={!newTagName.trim()}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCreateTag();
+          }}
+          onCancel={() => setIsCreateOpen(false)}
+        >
+          <CommandFormField label="Name" htmlFor="git-tag-name">
+            <Input
+              id="git-tag-name"
+              type="text"
+              placeholder="v1.0.0"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              size="sm"
+            />
+          </CommandFormField>
+          <CommandFormField label="Target" htmlFor="git-tag-target">
+            <Input
+              id="git-tag-target"
+              type="text"
+              placeholder="Commit SHA or ref"
+              value={newTagCommit}
+              onChange={(e) => setNewTagCommit(e.target.value)}
+              size="sm"
+            />
+          </CommandFormField>
+          <CommandFormField label="Message" htmlFor="git-tag-message" span="full">
+            <Input
+              id="git-tag-message"
+              type="text"
+              placeholder="Optional annotation"
+              value={newTagMessage}
+              onChange={(e) => setNewTagMessage(e.target.value)}
+              size="sm"
+            />
+          </CommandFormField>
+          <CommandFormField span="full">
+            <label className="inline-flex items-center gap-2 text-text-lighter ui-text-sm">
+              <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
+              Sign tag
+            </label>
+          </CommandFormField>
+        </CommandForm>
+      ) : null}
 
       <CommandList>
         {isLoading && tags.length === 0 ? (
@@ -327,213 +327,195 @@ const GitTagManager = ({
               setExpandedTagName((current) => (current === tag.name ? null : tag.name));
 
             return (
-              <div
-                key={tag.name}
-                className="group/tag ui-font relative mb-1 rounded-lg text-left transition-colors hover:bg-hover focus-within:bg-hover"
-              >
-                <div
-                  role="button"
-                  tabIndex={0}
+              <div key={tag.name} className="group/tag">
+                <CommandItemRow
+                  as="div"
                   onClick={toggleTagDetails}
-                  onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget) return;
-                    if (event.key !== "Enter" && event.key !== " ") return;
-                    event.preventDefault();
-                    toggleTagDetails();
-                  }}
-                  className="flex min-h-12 w-full cursor-pointer items-center gap-2 px-2.5 py-2 outline-none"
                   aria-expanded={isExpanded}
-                >
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-secondary-bg/70 text-text-lighter">
-                    <Tag className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1 pr-48">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <div className="ui-text-sm truncate text-text" title={tag.name}>
-                        {tag.name}
-                      </div>
+                  icon={<Tag className="size-4 text-text-lighter" />}
+                  iconVariant="framed"
+                  title={tag.name}
+                  description={tag.message}
+                  contentLayout={tag.message ? "stacked" : "inline"}
+                  className="min-h-11"
+                  accessory={
+                    <>
                       {isExpanded ? (
                         <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
                       ) : (
                         <CaretRight className="size-3.5 shrink-0 text-text-lighter" />
                       )}
-                    </div>
-                    {tag.message ? (
-                      <div
-                        className="ui-text-xs mt-1 truncate text-text-lighter"
-                        title={tag.message}
-                      >
-                        {tag.message}
-                      </div>
-                    ) : null}
-                    <div className="ui-text-xs mt-1 flex min-w-0 flex-wrap items-center gap-3 text-text-lighter/80">
-                      <span className="inline-flex items-center gap-1">
+                      <CommandItemBadge>
                         <GitCommit className="size-3.5" />
-                        <span className="ui-font">{shortCommit}</span>
-                      </span>
+                        {shortCommit}
+                      </CommandItemBadge>
                       {tag.date ? (
-                        <span className="inline-flex items-center gap-1">
+                        <CommandItemBadge>
                           <Calendar className="size-3.5" />
                           {formatShortDate(tag.date)}
-                        </span>
+                        </CommandItemBadge>
                       ) : null}
+                    </>
+                  }
+                  action={
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover/tag:opacity-100 sm:group-focus-within/tag:opacity-100">
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleCopy(tag.name, "Tag name");
+                        }}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter"
+                        tooltip="Copy tag name"
+                        aria-label={`Copy ${tag.name}`}
+                      >
+                        <Copy />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleCopy(tag.commit, "Commit SHA");
+                        }}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter"
+                        tooltip="Copy commit SHA"
+                        aria-label={`Copy commit ${shortCommit}`}
+                      >
+                        <GitCommit />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!previousTag) return;
+                          onViewTagComparison?.(
+                            previousTag.name,
+                            tag.name,
+                            `${previousTag.name}..${tag.name}`,
+                          );
+                          handleClose();
+                        }}
+                        disabled={!previousTag}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter disabled:opacity-50"
+                        tooltip="Compare with previous tag"
+                        aria-label={`Compare ${tag.name} with previous tag`}
+                      >
+                        <ClockCounterClockwise />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onViewTagComparison?.("HEAD", tag.name, `HEAD..${tag.name}`);
+                          handleClose();
+                        }}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter"
+                        tooltip="Compare with HEAD"
+                        aria-label={`Compare ${tag.name} with HEAD`}
+                      >
+                        <GitBranch />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleCheckoutTag(tag.name);
+                        }}
+                        disabled={actionLoading.has(`checkout:${tag.name}`)}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter disabled:opacity-50"
+                        tooltip="Checkout tag"
+                        aria-label={`Checkout ${tag.name}`}
+                      >
+                        <Tag />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!repoPath || !selectedRemoteName) return;
+                          void handleTagRemoteAction(tag.name, "Push tag", () =>
+                            pushTag(repoPath, tag.name, selectedRemoteName),
+                          );
+                        }}
+                        disabled={!selectedRemoteName || actionLoading.has(`Push tag:${tag.name}`)}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-text-lighter disabled:opacity-50"
+                        tooltip={
+                          selectedRemoteName ? `Push tag to ${selectedRemoteName}` : "No remote"
+                        }
+                        aria-label={`Push ${tag.name}`}
+                      >
+                        <Upload />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (!repoPath || !selectedRemoteName) return;
+                          void showConfirmDialog(`Delete ${tag.name} from ${selectedRemoteName}?`, {
+                            title: "Delete Remote Tag",
+                            confirmLabel: "Delete",
+                          }).then((confirmed) => {
+                            if (!confirmed) return;
+                            void handleTagRemoteAction(tag.name, "Delete remote tag", () =>
+                              deleteRemoteTag(repoPath, tag.name, selectedRemoteName),
+                            );
+                          });
+                        }}
+                        disabled={
+                          !selectedRemoteName || actionLoading.has(`Delete remote tag:${tag.name}`)
+                        }
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        tooltip={
+                          selectedRemoteName ? `Delete tag from ${selectedRemoteName}` : "No remote"
+                        }
+                        aria-label={`Delete ${tag.name} from remote`}
+                      >
+                        <X />
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDeleteTag(tag.name);
+                        }}
+                        disabled={isActionLoading}
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        tooltip="Delete tag"
+                        aria-label={`Delete ${tag.name}`}
+                      >
+                        <Trash2 />
+                      </Button>
                     </div>
-                  </div>
-                </div>
-                <div className="pointer-events-none absolute top-6 right-2 flex -translate-y-1/2 translate-x-1 items-center gap-0.5 rounded-md border border-border/60 bg-secondary-bg p-0.5 opacity-0 transition-all group-hover/tag:pointer-events-auto group-hover/tag:translate-x-0 group-hover/tag:opacity-100 group-focus-within/tag:pointer-events-auto group-focus-within/tag:translate-x-0 group-focus-within/tag:opacity-100">
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleCopy(tag.name, "Tag name");
-                    }}
-                    variant="ghost"
-                    compact
-                    className="text-text-lighter"
-                    tooltip="Copy tag name"
-                    aria-label={`Copy ${tag.name}`}
-                  >
-                    <Copy />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleCopy(tag.commit, "Commit SHA");
-                    }}
-                    variant="ghost"
-                    compact
-                    className="text-text-lighter"
-                    tooltip="Copy commit SHA"
-                    aria-label={`Copy commit ${shortCommit}`}
-                  >
-                    <GitCommit />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (!previousTag) return;
-                      onViewTagComparison?.(
-                        previousTag.name,
-                        tag.name,
-                        `${previousTag.name}..${tag.name}`,
-                      );
-                      onClose();
-                    }}
-                    disabled={!previousTag}
-                    variant="ghost"
-                    compact
-                    className="text-text-lighter disabled:opacity-50"
-                    tooltip="Compare with previous tag"
-                    aria-label={`Compare ${tag.name} with previous tag`}
-                  >
-                    <ClockCounterClockwise />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onViewTagComparison?.("HEAD", tag.name, `HEAD..${tag.name}`);
-                      onClose();
-                    }}
-                    variant="ghost"
-                    compact
-                    className="text-text-lighter"
-                    tooltip="Compare with HEAD"
-                    aria-label={`Compare ${tag.name} with HEAD`}
-                  >
-                    <GitBranch />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleCheckoutTag(tag.name);
-                    }}
-                    disabled={actionLoading.has(`checkout:${tag.name}`)}
-                    variant="ghost"
-                    compact
-                    className="text-text-lighter disabled:opacity-50"
-                    tooltip="Checkout tag"
-                    aria-label={`Checkout ${tag.name}`}
-                  >
-                    <Tag />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (!repoPath || !selectedRemoteName) return;
-                      void handleTagRemoteAction(tag.name, "Push tag", () =>
-                        pushTag(repoPath, tag.name, selectedRemoteName),
-                      );
-                    }}
-                    disabled={!selectedRemoteName || actionLoading.has(`Push tag:${tag.name}`)}
-                    variant="ghost"
-                    compact
-                    className="text-text-lighter disabled:opacity-50"
-                    tooltip={selectedRemoteName ? `Push tag to ${selectedRemoteName}` : "No remote"}
-                    aria-label={`Push ${tag.name}`}
-                  >
-                    <Upload />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (!repoPath || !selectedRemoteName) return;
-                      void showConfirmDialog(`Delete ${tag.name} from ${selectedRemoteName}?`, {
-                        title: "Delete Remote Tag",
-                        confirmLabel: "Delete",
-                      }).then((confirmed) => {
-                        if (!confirmed) return;
-                        void handleTagRemoteAction(tag.name, "Delete remote tag", () =>
-                          deleteRemoteTag(repoPath, tag.name, selectedRemoteName),
-                        );
-                      });
-                    }}
-                    disabled={
-                      !selectedRemoteName || actionLoading.has(`Delete remote tag:${tag.name}`)
-                    }
-                    variant="ghost"
-                    compact
-                    className="text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-                    tooltip={
-                      selectedRemoteName ? `Delete tag from ${selectedRemoteName}` : "No remote"
-                    }
-                    aria-label={`Delete ${tag.name} from remote`}
-                  >
-                    <X />
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleDeleteTag(tag.name);
-                    }}
-                    disabled={isActionLoading}
-                    variant="ghost"
-                    compact
-                    className="text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-                    tooltip="Delete tag"
-                    aria-label={`Delete ${tag.name}`}
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
+                  }
+                />
                 {isExpanded ? (
                   <div className="border-border/50 border-t px-2.5 py-2">
                     <div className="grid gap-1.5 pl-9">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Commit</span>
+                        <span className="ui-text-base w-14 shrink-0 text-text-lighter">Commit</span>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             void handleCopy(tag.commit, "Commit SHA");
                           }}
-                          className="ui-font ui-text-xs min-w-0 truncate text-text hover:text-accent"
+                          className="font-sans ui-text-base min-w-0 truncate text-text hover:text-accent"
                           title={tag.commit}
                         >
                           {tag.commit}
@@ -541,24 +523,24 @@ const GitTagManager = ({
                       </div>
                       {tag.date ? (
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Date</span>
-                          <span className="ui-text-xs truncate text-text">
+                          <span className="ui-text-base w-14 shrink-0 text-text-lighter">Date</span>
+                          <span className="ui-text-base truncate text-text">
                             {formatShortDate(tag.date)}
                           </span>
                         </div>
                       ) : null}
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="ui-text-xs w-14 shrink-0 text-text-lighter">Type</span>
-                        <Badge variant="muted" size="compact" className="ui-text-xs">
+                        <span className="ui-text-base w-14 shrink-0 text-text-lighter">Type</span>
+                        <Badge variant="muted" size="compact" className="ui-text-base">
                           {tag.is_annotated ? "Annotated" : "Lightweight"}
                         </Badge>
                       </div>
                       {tag.message ? (
                         <div className="flex min-w-0 items-start gap-2">
-                          <span className="ui-text-xs w-14 shrink-0 text-text-lighter">
+                          <span className="ui-text-base w-14 shrink-0 text-text-lighter">
                             Message
                           </span>
-                          <span className="ui-text-xs min-w-0 break-words text-text">
+                          <span className="ui-text-base min-w-0 break-words text-text">
                             {tag.message}
                           </span>
                         </div>

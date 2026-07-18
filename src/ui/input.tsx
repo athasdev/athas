@@ -1,4 +1,4 @@
-import { type Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { type Icon as AppIcon } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef } from "react";
@@ -12,8 +12,8 @@ import { cn } from "@/utils/cn";
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost";
-  leftIcon?: PhosphorIcon;
-  rightIcon?: PhosphorIcon;
+  leftIcon?: AppIcon;
+  rightIcon?: AppIcon;
   containerClassName?: string;
 }
 

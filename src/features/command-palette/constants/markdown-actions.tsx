@@ -1,4 +1,4 @@
-import { EyeIcon as Eye } from "@phosphor-icons/react";
+import { EyeIcon as Eye } from "@/ui/icons";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { Action } from "../types/action.types";
 

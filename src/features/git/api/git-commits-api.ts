@@ -1,10 +1,15 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitCommit } from "../types/git.types";
-import { isNotGitRepositoryError, resolveRepositoryPath } from "./git-repo-api";
+import {
+  isNotGitRepositoryError,
+  resolveRepositoryPath,
+  resolveRepositoryPathOrThrow,
+} from "./git-repo-api";
 
 export const commitChanges = async (repoPath: string, message: string): Promise<boolean> => {
   try {
-    await tauriInvoke("git_commit", { repoPath, message });
+    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
+    await tauriInvoke("git_commit", { repoPath: resolvedRepoPath, message });
     return true;
   } catch (error) {
     console.error("Failed to commit changes:", error);

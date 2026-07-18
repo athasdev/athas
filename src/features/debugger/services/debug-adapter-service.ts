@@ -107,15 +107,17 @@ export async function syncDebugBreakpoints(
     breakpointsByFile.set(breakpoint.filePath, fileBreakpoints);
   }
 
-  for (const filePath of filePaths) {
-    const fileBreakpoints = breakpointsByFile.get(filePath) ?? [];
-    await sendDebugAdapterRequest(sessionId, "setBreakpoints", {
-      source: { path: filePath },
-      breakpoints: fileBreakpoints.map((breakpoint) => ({
-        line: breakpoint.line + 1,
-      })),
-    });
-  }
+  await Promise.all(
+    Array.from(filePaths, (filePath) => {
+      const fileBreakpoints = breakpointsByFile.get(filePath) ?? [];
+      return sendDebugAdapterRequest(sessionId, "setBreakpoints", {
+        source: { path: filePath },
+        breakpoints: fileBreakpoints.map((breakpoint) => ({
+          line: breakpoint.line + 1,
+        })),
+      });
+    }),
+  );
 }
 
 export async function subscribeDebuggerEvents(

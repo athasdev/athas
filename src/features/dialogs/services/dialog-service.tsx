@@ -1,8 +1,4 @@
-import {
-  InfoIcon as Info,
-  QuestionIcon as Question,
-  WarningIcon as Warning,
-} from "@phosphor-icons/react";
+import { InfoIcon as Info, QuestionIcon as Question, WarningIcon as Warning } from "@/ui/icons";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, type ButtonVariant } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -197,7 +193,7 @@ function PrimitiveDialogHost({
           </Button>
         }
       >
-        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -220,7 +216,7 @@ function PrimitiveDialogHost({
           </>
         }
       >
-        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -246,7 +242,7 @@ function PrimitiveDialogHost({
           </>
         }
       >
-        <div className="whitespace-pre-wrap ui-text-xs text-text">{dialog.message}</div>
+        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
       </Dialog>
     );
   }
@@ -275,7 +271,7 @@ function PrimitiveDialogHost({
         }}
         className="flex flex-col gap-2"
       >
-        <label className="flex flex-col gap-2 ui-font ui-text-sm text-text">
+        <label className="flex flex-col gap-2 font-sans ui-text-sm text-text">
           {dialog.message}
           <Input
             autoFocus

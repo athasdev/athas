@@ -8,7 +8,7 @@ import {
   ListBulletsIcon as ListBullets,
   PackageIcon as Package,
   MagnifyingGlassIcon as Search,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type {
@@ -37,7 +37,6 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     setBottomPaneActiveTab,
     setIsQuickOpenVisible,
     openCommandPaletteView,
-    openSettingsDialog,
     coreFeatures,
     onClose,
   } = params;
@@ -127,12 +126,12 @@ export const createNavigationActions = (params: NavigationActionsParams): Action
     {
       id: "view-show-extensions",
       label: "View: Show Extensions",
-      description: "Open extensions in settings",
+      description: "Open the extensions tab",
       icon: <Package />,
       category: "Navigation",
       action: () => {
         onClose();
-        openSettingsDialog("extensions");
+        useBufferStore.getState().actions.openExtensionsBuffer();
       },
     },
     {

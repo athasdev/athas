@@ -1,4 +1,4 @@
-import { ArrowCounterClockwiseIcon as RotateCcw } from "@phosphor-icons/react";
+import { ArrowCounterClockwiseIcon as RotateCcw } from "@/ui/icons";
 import {
   useCallback,
   useId,
@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
+import { getSettingSearchTargetKey } from "../lib/settings-search";
 
 interface SectionProps {
   title: string;
@@ -33,10 +34,11 @@ export default function Section({ title, description, children, className }: Sec
     <section
       className={cn("px-1 py-0.5 first:[&>.settings-section-header]:hidden", className)}
       data-settings-section={title}
+      data-settings-section-key={getSettingSearchTargetKey(title)}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
-        <h4 className="ui-font ui-text-base text-text">{title}</h4>
-        {description && <p className="ui-font ui-text-sm text-text-lighter">{description}</p>}
+        <h4 className="font-sans ui-text-base text-text">{title}</h4>
+        {description && <p className="font-sans ui-text-base text-text-lighter">{description}</p>}
       </div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -52,6 +54,7 @@ interface SettingRowProps {
   onReset?: () => void;
   canReset?: boolean;
   resetLabel?: string;
+  activateOnClick?: boolean;
 }
 
 export function SettingRow({
@@ -63,6 +66,7 @@ export function SettingRow({
   onReset,
   canReset = !!onReset,
   resetLabel,
+  activateOnClick = true,
 }: SettingRowProps) {
   const controlRef = useRef<HTMLDivElement>(null);
   const rowId = useId();
@@ -164,15 +168,18 @@ export function SettingRow({
       role="group"
       aria-labelledby={labelId}
       aria-describedby={description ? descriptionId : undefined}
+      data-setting-row-key={getSettingSearchTargetKey(label)}
+      data-setting-row-label={label}
+      tabIndex={-1}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
+        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-colors hover:bg-hover/40 focus-within:bg-hover/40 focus:outline-none data-[settings-search-active=true]:bg-accent/10 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-accent/35 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
         className,
       )}
-      onClick={handleRowClick}
+      onClick={activateOnClick ? handleRowClick : undefined}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div id={labelId} className="ui-font ui-text-sm cursor-default text-text">
+          <div id={labelId} className="font-sans ui-text-base cursor-default text-text">
             {label}
           </div>
           {labelAccessory}
@@ -186,7 +193,7 @@ export function SettingRow({
                 aria-label={resetLabel || `Reset ${label}`}
                 tooltip={canReset ? resetLabel || `Reset ${label}` : undefined}
                 className={cn(!canReset && "pointer-events-none invisible")}
-                compact
+                size="icon-xs"
               >
                 <RotateCcw />
               </Button>
@@ -194,14 +201,17 @@ export function SettingRow({
           ) : null}
         </div>
         {description && (
-          <div id={descriptionId} className="ui-font ui-text-sm cursor-default text-text-lighter">
+          <div
+            id={descriptionId}
+            className="font-sans ui-text-base cursor-default text-text-lighter"
+          >
             {description}
           </div>
         )}
       </div>
       <div
         ref={controlRef}
-        className="ui-font ui-text-sm shrink-0 select-auto [--app-ui-badge-height:1.5rem] [--app-ui-button-compact-height:1.5rem] [--app-ui-button-compact-min-width:1.5rem] [--app-ui-button-height:1.5rem] [--app-ui-button-min-width:1.5rem] [--app-ui-control-font-size:var(--ui-text-sm)] max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
+        className="font-sans ui-text-base shrink-0 select-auto max-[640px]:w-full max-[640px]:shrink max-[640px]:[&>input]:w-full max-[640px]:[&>textarea]:w-full"
       >
         {children}
       </div>

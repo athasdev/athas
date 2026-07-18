@@ -4,7 +4,7 @@ import {
   ArrowUpIcon as ArrowUp,
   FileIcon,
   XIcon as X,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -45,7 +45,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [originalSize, setOriginalSize] = useState(0);
   const [currentSize, setCurrentSize] = useState(0);
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const { markBufferDirty } = useBufferStore.use.actions();
 
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -240,7 +240,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
       >
         <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
           <FileIcon className="shrink-0 text-text" />
-          <span className="ui-font truncate text-text ui-text-xs" title={fileName}>
+          <span className="font-sans truncate text-text ui-text-sm" title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
         </div>
@@ -273,7 +273,12 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             onResetZoom={handleManualReset}
           />
           {onClose && (
-            <Button onClick={handleClose} variant="ghost" tooltip="Close image viewer" compact>
+            <Button
+              onClick={handleClose}
+              variant="ghost"
+              tooltip="Close image viewer"
+              size="icon-xs"
+            >
               <X />
             </Button>
           )}

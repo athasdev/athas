@@ -1,7 +1,9 @@
+import { ArrowsInLineVerticalIcon as ArrowsInLineVertical } from "@/ui/icons";
 import { memo } from "react";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
+import { getDiffLineVisualState } from "@/features/git/utils/diff-viewer-visuals";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { cn } from "@/utils/cn";
 import { renderTokenizedContent } from "../utils/github-pr-viewer-utils";
@@ -20,20 +22,18 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = editorFontSize * zoomLevel;
   const lineHeight = calculateLineHeight(fontSize, editorLineHeight);
-  let bgClass = "";
-  let textClass = "text-text";
+  let visualState = getDiffLineVisualState("context");
+  let textClass = visualState.contentColor;
   let content = line;
+  const isHunkHeader = line.startsWith("@@");
 
-  if (line.startsWith("@@")) {
-    bgClass = "bg-blue-500/10";
-    textClass = "text-blue-400";
-  } else if (line.startsWith("+")) {
-    bgClass = "bg-git-added/10";
-    textClass = tokens && tokens.length > 0 ? "text-text" : "text-git-added";
+  if (line.startsWith("+")) {
+    visualState = getDiffLineVisualState("added");
+    textClass = visualState.contentColor;
     content = line.slice(1);
   } else if (line.startsWith("-")) {
-    bgClass = "bg-git-deleted/10";
-    textClass = tokens && tokens.length > 0 ? "text-text" : "text-git-deleted";
+    visualState = getDiffLineVisualState("removed");
+    textClass = visualState.contentColor;
     content = line.slice(1);
   }
 
@@ -44,9 +44,37 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
     return content || " ";
   };
 
+  if (isHunkHeader) {
+    return (
+      <div
+        className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center border-border/70 border-b bg-primary-bg text-text-lighter"
+        style={{
+          fontSize: `${fontSize}px`,
+          fontFamily: editorFontFamily,
+          lineHeight: `${lineHeight}px`,
+          tabSize: editorTabSize,
+        }}
+      >
+        <div className="flex min-h-8 items-center justify-center">
+          <ArrowsInLineVertical size={18} />
+        </div>
+        <div className="flex min-w-0 items-center gap-3 pr-3">
+          <div className="h-px w-16 shrink-0 bg-border/70" />
+          <span className="min-w-0 truncate ui-text-sm text-text-lighter">{line}</span>
+          <div className="h-px min-w-8 flex-1 bg-border/70" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={cn("px-3 editor-font", bgClass, textClass)}
+      className={cn(
+        "flex min-w-full font-mono",
+        visualState.lineBackground,
+        visualState.railClassName,
+        textClass,
+      )}
       style={{
         fontSize: `${fontSize}px`,
         fontFamily: editorFontFamily,
@@ -54,10 +82,18 @@ export const DiffLineDisplay = memo(({ line, index, tokens }: DiffLineDisplayPro
         tabSize: editorTabSize,
       }}
     >
-      <span className="mr-3 inline-block w-10 select-none text-right text-text-lighter/50">
+      <span
+        className={cn(
+          "w-11 shrink-0 select-none border-border border-r px-2 py-0.5 text-right tabular-nums",
+          visualState.gutterBackground,
+          visualState.gutterTextColor,
+        )}
+      >
         {index + 1}
       </span>
-      <span className="whitespace-pre">{renderContent()}</span>
+      <span className="min-w-0 flex-1 whitespace-pre px-2.5 py-0.5 antialiased">
+        {renderContent()}
+      </span>
     </div>
   );
 });

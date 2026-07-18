@@ -14,6 +14,59 @@ describe("language injections", () => {
     ]);
   });
 
+  it("injects fenced code blocks for Markdown and R Markdown", () => {
+    expect(getInjectionRules("markdown")).toEqual([
+      { parentType: "*", contentType: "html_block", language: "html" },
+      { parentType: "fenced_code_block", contentType: "code_fence_content", language: "text" },
+    ]);
+    expect(getInjectionRules("rmarkdown")).toEqual([
+      { parentType: "*", contentType: "html_block", language: "html" },
+      { parentType: "fenced_code_block", contentType: "code_fence_content", language: "r" },
+    ]);
+  });
+
+  it("resolves R Markdown chunk language from the code fence info string", () => {
+    const source = "```{r cars}\nsummary(cars)\n```";
+    const parentNode = nodeRange(0, source.length);
+    const contentNode = nodeRange("```{r cars}\n".length, source.indexOf("\n```"));
+    const fenceRule = getInjectionRules("rmarkdown")?.find(
+      (rule) => rule.contentType === "code_fence_content",
+    );
+
+    expect(fenceRule).toBeDefined();
+    expect(resolveInjectedLanguage(source, "rmarkdown", fenceRule!, contentNode, parentNode)).toBe(
+      "r",
+    );
+  });
+
+  it("resolves Python chunks in notebook-style Markdown fences", () => {
+    const source = "```python\nimport pandas as pd\n```";
+    const parentNode = nodeRange(0, source.length);
+    const contentNode = nodeRange("```python\n".length, source.indexOf("\n```"));
+    const fenceRule = getInjectionRules("markdown")?.find(
+      (rule) => rule.contentType === "code_fence_content",
+    );
+
+    expect(fenceRule).toBeDefined();
+    expect(resolveInjectedLanguage(source, "markdown", fenceRule!, contentNode, parentNode)).toBe(
+      "python",
+    );
+  });
+
+  it("marks untyped Markdown fences as plain text", () => {
+    const source = "```\nplain text\n```";
+    const parentNode = nodeRange(0, source.length);
+    const contentNode = nodeRange("```\n".length, source.indexOf("\n```"));
+    const fenceRule = getInjectionRules("markdown")?.find(
+      (rule) => rule.contentType === "code_fence_content",
+    );
+
+    expect(fenceRule).toBeDefined();
+    expect(resolveInjectedLanguage(source, "markdown", fenceRule!, contentNode, parentNode)).toBe(
+      "text",
+    );
+  });
+
   it("resolves script lang aliases for embedded content", () => {
     const source = '<script lang="ts">const value = 1;</script>';
     const parentNode = nodeRange(0, source.length);

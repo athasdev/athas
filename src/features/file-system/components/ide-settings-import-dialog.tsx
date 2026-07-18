@@ -1,14 +1,17 @@
 import { invoke } from "@tauri-apps/api/core";
-import { CheckIcon as Check } from "@phosphor-icons/react";
+import { ArrowLeftIcon as ArrowLeft, CheckIcon as Check } from "@/ui/icons";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
 import Command, {
   CommandEmpty,
+  CommandFooter,
   CommandHeader,
+  CommandHeaderAction,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -22,6 +25,11 @@ interface ImportableIdeProject {
 
 interface IdeSettingsImportDialogProps {
   onClose: () => void;
+}
+
+interface IdeSettingsImportContentProps {
+  onClose: () => void;
+  onBack?: () => void;
 }
 
 interface IdeImportSource {
@@ -74,7 +82,7 @@ const IDE_IMPORT_SOURCES: IdeImportSource[] = [
   },
 ];
 
-export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProps) {
+export function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentProps) {
   const [projects, setProjects] = useState<ImportableIdeProject[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -243,14 +251,16 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
     }
   };
 
+  const leadingAction: ReactNode = onBack ? (
+    <CommandHeaderAction type="button" aria-label="Back to projects" onClick={onBack}>
+      <ArrowLeft />
+    </CommandHeaderAction>
+  ) : null;
+
   return (
-    <Command
-      isVisible
-      onClose={onClose}
-      title={selectedSource ? `Import from ${selectedSource.name}` : "Import Settings"}
-      className="w-[520px]"
-    >
+    <>
       <CommandHeader onClose={onClose}>
+        {leadingAction}
         <CommandInput
           ref={inputRef}
           value={query}
@@ -270,49 +280,55 @@ export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProp
             <CommandEmpty>No import option matches "{query}".</CommandEmpty>
           ) : (
             filteredCapabilities.map((capability, index) => (
-              <CommandItem
+              <CommandItemRow
                 key={capability.id}
                 isSelected={index === selectedIndex}
                 onMouseEnter={() => setSelectedIndex(index)}
                 onClick={() => handleToggleCapability(capability)}
-                className="h-8 items-center justify-between px-3"
-              >
-                <span className="ui-font ui-text-sm truncate text-text">{capability.label}</span>
-                <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-accent">
-                  {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
-                </span>
-              </CommandItem>
+                title={capability.label}
+                accessory={
+                  <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-accent">
+                    {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
+                  </span>
+                }
+              />
             ))
           )
         ) : filteredSources.length === 0 ? (
           <CommandEmpty>No import source matches "{query}".</CommandEmpty>
         ) : (
           filteredSources.map((source, index) => (
-            <CommandItem
+            <CommandItemRow
               key={source.id}
               isSelected={index === selectedIndex}
               onMouseEnter={() => setSelectedIndex(index)}
               onClick={() => handleSelectSource(source)}
-              className="h-8 items-center px-3"
-            >
-              <span className="ui-font ui-text-sm truncate text-text">{source.name}</span>
-            </CommandItem>
+              title={source.name}
+            />
           ))
         )}
       </CommandList>
 
       {selectedSource ? (
-        <div className="flex justify-end border-border border-t p-2">
+        <CommandFooter>
           <Button
             variant="accent"
-            compact
+            size="xs"
             disabled={selectedCapabilityIds.length === 0}
             onClick={handleImport}
           >
             Import
           </Button>
-        </div>
+        </CommandFooter>
       ) : null}
+    </>
+  );
+}
+
+export function IdeSettingsImportDialog({ onClose }: IdeSettingsImportDialogProps) {
+  return (
+    <Command isVisible onClose={onClose} title="Import Settings">
+      <IdeSettingsImportContent onClose={onClose} />
     </Command>
   );
 }

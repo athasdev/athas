@@ -1,16 +1,21 @@
-import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   resolveSettingsAccess,
   resolveVisibleSettingsSection,
 } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
+import {
+  getSettingSearchTargetKey,
+  SETTINGS_SEARCH_TAB_LABELS,
+} from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import type { SearchResult } from "../types/search.types";
 import { SETTINGS_TAB_ITEMS, SettingsVerticalTabs } from "./settings-vertical-tabs";
 
 import { AdvancedSettings } from "./tabs/advanced-settings";
@@ -18,11 +23,8 @@ import { AccountSettings } from "./tabs/account-settings";
 import { AISettings } from "./tabs/ai-settings";
 import { AppearanceSettings } from "./tabs/appearance-settings";
 import { CollaborationSettings } from "./tabs/collaboration-settings";
-import { DatabaseSettings } from "./tabs/database-settings";
 import { EditorSettings } from "./tabs/editor-settings";
 import { EnterpriseSettings } from "./tabs/enterprise-settings";
-import { ExtensionsSettings } from "./tabs/extensions-settings";
-import { FeaturesSettings } from "./tabs/features-settings";
 import { GeneralSettings } from "./tabs/general-settings";
 import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
@@ -46,23 +48,36 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   const clearSearch = useSettingsStore((state) => state.clearSearch);
   const searchQuery = useSettingsStore((state) => state.search.query);
   const searchResults = useSettingsStore((state) => state.search.results);
+  const selectedResultId = useSettingsStore((state) => state.search.selectedResultId);
+  const selectSearchResult = useSettingsStore((state) => state.selectSearchResult);
   const setSearchQuery = useSettingsStore((state) => state.setSearchQuery);
   const contentRef = useRef<HTMLDivElement>(null);
+  const searchInputAnchorRef = useRef<HTMLDivElement>(null);
   const tabDropdownRef = useRef<HTMLButtonElement>(null);
   const [isTabDropdownOpen, setIsTabDropdownOpen] = useState(false);
-  const matchingTabs = searchQuery ? new Set(searchResults.map((result) => result.tab)) : null;
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const resolveVisibleTab = useCallback(
+    (tab: SettingsTab) =>
+      resolveVisibleSettingsSection(tab, {
+        canShowCollaborationSettings,
+        canShowEnterpriseSettings,
+      }),
+    [canShowCollaborationSettings, canShowEnterpriseSettings],
+  );
+  const visibleSearchResults = useMemo(
+    () => searchResults.filter((result) => resolveVisibleTab(result.tab) === result.tab),
+    [resolveVisibleTab, searchResults],
+  );
+  const visibleSearchDropdownResults = visibleSearchResults.slice(0, 12);
   const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
     ...settingsAccess,
-    matchingTabs,
+    matchingTabs: null,
   });
   const activeTabItem =
     visibleTabs.find((tab) => tab.id === activeTab) ??
     SETTINGS_TAB_ITEMS.find((tab) => tab.id === activeTab) ??
     SETTINGS_TAB_ITEMS[0];
   const ActiveTabIcon = activeTabItem.icon;
-  const resolveVisibleTab = (tab: SettingsTab) =>
-    resolveVisibleSettingsSection(tab, settingsAccess);
-
   // Sync active tab with explicit requests, or fall back to the persisted last section.
   useEffect(() => {
     if (isOpen) {
@@ -86,6 +101,18 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
     setSettingsInitialTab(nextTab);
     void updateSetting("lastSettingsTab", nextTab);
   };
+
+  const navigateToSearchResult = useCallback(
+    (result: SearchResult) => {
+      const nextTab = resolveVisibleTab(result.tab);
+      if (nextTab !== result.tab) return;
+
+      setActiveTab(nextTab);
+      selectSearchResult(result.id);
+      setIsSearchDropdownOpen(false);
+    },
+    [resolveVisibleTab, selectSearchResult],
+  );
   const tabMenuItems: MenuItem[] = visibleTabs.map((tab) => {
     const Icon = tab.icon;
     return {
@@ -101,8 +128,44 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   useEffect(() => {
     if (!isOpen) {
       clearSearch();
+      setIsSearchDropdownOpen(false);
     }
   }, [isOpen, clearSearch]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedResultId) return;
+
+    const result = visibleSearchResults.find((item) => item.id === selectedResultId);
+    if (!result || result.tab !== activeTab) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const content = contentRef.current;
+      if (!content) return;
+
+      const sectionKey = getSettingSearchTargetKey(result.section);
+      const rowKey = getSettingSearchTargetKey(result.label);
+      const section = content.querySelector<HTMLElement>(
+        `[data-settings-section-key="${sectionKey}"]`,
+      );
+      const target =
+        section?.querySelector<HTMLElement>(`[data-setting-row-key="${rowKey}"]`) ?? section;
+
+      if (!target) return;
+
+      content
+        .querySelectorAll<HTMLElement>("[data-settings-search-active='true']")
+        .forEach((element) => element.removeAttribute("data-settings-search-active"));
+      target.setAttribute("data-settings-search-active", "true");
+      target.scrollIntoView({ block: "center" });
+      target.focus({ preventScroll: true });
+
+      window.setTimeout(() => {
+        target.removeAttribute("data-settings-search-active");
+      }, 1600);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -116,16 +179,10 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <GitSettings />;
       case "appearance":
         return <AppearanceSettings />;
-      case "databases":
-        return <DatabaseSettings />;
-      case "extensions":
-        return <ExtensionsSettings />;
       case "ai":
         return <AISettings />;
       case "keyboard":
         return <KeyboardSettings />;
-      case "features":
-        return <FeaturesSettings />;
       case "collaboration":
         return canShowCollaborationSettings ? <CollaborationSettings /> : <GeneralSettings />;
       case "enterprise":
@@ -166,15 +223,35 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           </>
         }
         headerActions={
-          <Input
-            type="text"
-            placeholder="Search settings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            leftIcon={Search}
-            size="sm"
-            className="w-64 max-[720px]:w-44 max-[520px]:w-32"
-          />
+          <div ref={searchInputAnchorRef} className="w-64 max-[720px]:w-44 max-[520px]:w-32">
+            <Input
+              type="text"
+              placeholder="Search settings..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setIsSearchDropdownOpen(e.target.value.trim().length > 0);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim()) setIsSearchDropdownOpen(true);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setIsSearchDropdownOpen(false);
+                  return;
+                }
+
+                if (event.key !== "Enter") return;
+                const firstResult = visibleSearchResults[0];
+                if (!firstResult) return;
+                event.preventDefault();
+                navigateToSearchResult(firstResult);
+              }}
+              leftIcon={Search}
+              size="md"
+              className="w-full"
+            />
+          </div>
         }
         classNames={{
           modal:
@@ -201,7 +278,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             aria-labelledby={activeTabId}
             data-settings-content=""
             tabIndex={-1}
-            className="min-w-0 flex-1 overflow-y-auto p-3 [--app-ui-control-font-size:var(--ui-text-sm)] [overscroll-behavior:contain] max-[720px]:p-2"
+            className="min-w-0 flex-1 overflow-y-auto p-3 [overscroll-behavior:contain] max-[720px]:p-2"
           >
             {renderTabContent()}
           </div>
@@ -216,6 +293,45 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         onClose={() => setIsTabDropdownOpen(false)}
         className="w-fit min-w-44"
       />
+      <Dropdown
+        isOpen={isSearchDropdownOpen && searchQuery.trim().length > 0}
+        anchorRef={searchInputAnchorRef}
+        anchorSide="bottom"
+        anchorAlign="end"
+        onClose={() => setIsSearchDropdownOpen(false)}
+        matchAnchorWidth
+        anchorMinWidth={260}
+        className="min-w-64"
+      >
+        <div className="max-h-80 overflow-y-auto p-1">
+          {visibleSearchDropdownResults.length > 0 ? (
+            visibleSearchDropdownResults.map((result) => {
+              const isSelected = selectedResultId === result.id;
+
+              return (
+                <button
+                  key={result.id}
+                  type="button"
+                  onClick={() => navigateToSearchResult(result)}
+                  className={[
+                    "font-sans flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
+                    isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
+                  ].join(" ")}
+                >
+                  <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
+                  <span className="ui-text-base w-full truncate text-text-lighter">
+                    {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
+                  </span>
+                </button>
+              );
+            })
+          ) : (
+            <div className="font-sans ui-text-base px-3 py-2 text-text-lighter">
+              No matching settings
+            </div>
+          )}
+        </div>
+      </Dropdown>
     </>
   );
 };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiff } from "../api/git-diff-api";
 import type { MultiFileDiff } from "../types/git-diff.types";
@@ -18,11 +19,12 @@ interface UseDiffDataReturn {
 }
 
 export const useDiffData = (): UseDiffDataReturn => {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
-  const activeBuffer = buffers.find((b) => b.id === activeBufferId) || null;
+  const activeBuffer = useBufferStore((state) => {
+    if (!state.activeBufferId) return null;
+    return getBufferById(state.buffers, state.activeBufferId);
+  });
   const { updateBufferContent, closeBuffer } = useBufferStore.use.actions();
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

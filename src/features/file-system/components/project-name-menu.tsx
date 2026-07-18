@@ -3,7 +3,7 @@ import {
   FolderPlusIcon as FolderPlus,
   FolderOpenIcon as FolderOpen,
   SidebarSimpleIcon as PanelTopClose,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useMemo } from "react";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -13,9 +13,13 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
 
 export const ProjectNameMenu = () => {
-  const { projectNameMenu, setProjectNameMenu } = useUIState();
-  const { addFolderToWorkspace, handleOpenFolder, handleCollapseAllFolders } = useFileSystemStore();
-  const { recentFolders, openRecentFolder } = useRecentFoldersStore();
+  const projectNameMenu = useUIState((state) => state.projectNameMenu);
+  const setProjectNameMenu = useUIState((state) => state.setProjectNameMenu);
+  const addFolderToWorkspace = useFileSystemStore((state) => state.addFolderToWorkspace);
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
+  const handleCollapseAllFolders = useFileSystemStore((state) => state.handleCollapseAllFolders);
+  const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
+  const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
 
   const items = useMemo<ContextMenuItem[]>(() => {
     const baseItems: ContextMenuItem[] = [

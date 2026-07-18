@@ -6,15 +6,23 @@ import {
   GearSixIcon as Settings,
   SunIcon as Sun,
   UploadIcon as Upload,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
+import { chooseThemeFile, uploadTheme } from "@/features/settings/utils/theme-upload";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
+import { toast } from "@/ui/toast";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
@@ -124,7 +132,7 @@ export const ThemeSelectorContent = ({
   }, [applyPreviewTheme]);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!filteredThemes.length) return;
 
       let nextIndex = selectedIndex;
@@ -134,6 +142,12 @@ export const ThemeSelectorContent = ({
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = filteredThemes.length - 1;
       } else if (e.key === "Enter") {
         e.preventDefault();
         const selectedTheme = filteredThemes[selectedIndex];
@@ -161,14 +175,6 @@ export const ThemeSelectorContent = ({
     },
     [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme, applyPreviewTheme],
   );
-
-  // Reset state when visibility changes
-  useEffect(() => {
-    if (isActive) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isActive, handleKeyDown]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -201,74 +207,56 @@ export const ThemeSelectorContent = ({
     onBack();
   }, [initialTheme, onBack, applyPreviewTheme]);
 
-  const handleUploadTheme = async () => {
-    // Create file input element
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
-        const result = await uploadTheme(file);
-        if (result.success) {
-          console.log("Theme uploaded successfully:", result.theme?.name);
-          // Optionally switch to the newly uploaded theme
-          if (result.theme) {
-            didCommitRef.current = true;
-            onThemeChange(result.theme.id);
-            onClose();
-          }
-        } else {
-          console.error("Theme upload failed:", result.error);
+  const handleUploadTheme = () => {
+    chooseThemeFile((file) => {
+      void uploadTheme(file).then((result) => {
+        if (!result.success || !result.theme) {
+          toast.error(
+            result.error ?? "Failed to import theme",
+            result.details?.slice(0, 4).join("\n"),
+          );
+          return;
         }
-      }
-    };
-    input.click();
+
+        toast.success(
+          result.themes?.length === 1
+            ? `Imported ${result.theme.name}`
+            : `Imported ${result.themes?.length ?? 0} theme variants`,
+        );
+        didCommitRef.current = true;
+        onThemeChange(result.theme.id);
+        onClose();
+      });
+    });
   };
 
   return (
     <>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded"
-            onClick={handleBack}
-            aria-label="Back to commands"
-            compact
-          >
-            <CaretLeft className="text-text-lighter" />
-          </Button>
+          <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
+            <CaretLeft />
+          </CommandHeaderAction>
           <CommandInput
             ref={inputRef}
             value={query}
             onChange={setQuery}
+            onKeyDown={handleKeyDown}
             placeholder="Search themes..."
             className="flex-1"
           />
-          <Button
-            onClick={handleUploadTheme}
-            variant="ghost"
-            className="shrink-0 gap-1 px-2"
-            aria-label="Upload theme"
-            compact
-          >
+          <CommandHeaderAction onClick={handleUploadTheme} aria-label="Upload theme">
             <Upload />
-          </Button>
-          <Button
+          </CommandHeaderAction>
+          <CommandHeaderAction
             onClick={() => {
               onClose();
               useUIState.getState().openSettingsDialog("appearance");
             }}
-            variant="ghost"
-            compact
-            className="shrink-0 gap-1 px-2"
             aria-label="Open appearance settings"
           >
             <Settings />
-          </Button>
+          </CommandHeaderAction>
         </div>
       </CommandHeader>
 
@@ -281,7 +269,7 @@ export const ThemeSelectorContent = ({
             const isCurrent = theme.id === initialTheme;
 
             return (
-              <CommandItem
+              <CommandItemRow
                 key={theme.id}
                 data-index={index}
                 onClick={() => {
@@ -293,20 +281,10 @@ export const ThemeSelectorContent = ({
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}
-                className="gap-3 px-2 py-1.5"
-              >
-                <div className="shrink-0 text-text-lighter">{theme.icon || <Moon />}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 truncate ui-text-xs">
-                    <span className="truncate">{theme.name}</span>
-                    {isCurrent && (
-                      <Badge variant="accent" size="compact">
-                        Current
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CommandItem>
+                icon={<span className="text-text-lighter">{theme.icon || <Moon />}</span>}
+                title={theme.name}
+                accessory={isCurrent ? <CommandItemBadge>Current</CommandItemBadge> : undefined}
+              />
             );
           })
         )}

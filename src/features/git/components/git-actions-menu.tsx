@@ -1,6 +1,7 @@
 import {
   ArchiveIcon as Archive,
   DownloadIcon as Download,
+  GitBranchIcon as GitBranch,
   FolderOpenIcon as FolderOpen,
   GitPullRequestIcon as GitPullRequest,
   ArrowClockwiseIcon as RefreshCw,
@@ -9,7 +10,7 @@ import {
   GearSixIcon as Settings,
   TagIcon as Tag,
   UploadIcon as Upload,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
@@ -33,6 +34,8 @@ interface GitActionsMenuProps {
   hasGitRepo: boolean;
   repoPath?: string;
   onRefresh?: () => void;
+  onOpenBranchManager?: () => void;
+  onShowBranchDiff?: () => void;
   onOpenRemoteManager?: () => void;
   onOpenTagManager?: () => void;
   onViewStashes?: () => void;
@@ -49,6 +52,8 @@ const GitActionsMenu = ({
   hasGitRepo,
   repoPath,
   onRefresh,
+  onOpenBranchManager,
+  onShowBranchDiff,
   onOpenRemoteManager,
   onOpenTagManager,
   onViewStashes,
@@ -58,7 +63,7 @@ const GitActionsMenu = ({
   isInitializingRepository,
 }: GitActionsMenuProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { isRefreshing } = useGitStore();
+  const isRefreshing = useGitStore((state) => state.isRefreshing);
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
 
   const handleAction = async (
@@ -165,6 +170,16 @@ const GitActionsMenu = ({
     onClose();
   };
 
+  const handleBranchManager = () => {
+    onOpenBranchManager?.();
+    onClose();
+  };
+
+  const handleShowBranchDiff = () => {
+    onShowBranchDiff?.();
+    onClose();
+  };
+
   const handleTagManager = () => {
     onOpenTagManager?.();
     onClose();
@@ -195,6 +210,19 @@ const GitActionsMenu = ({
         },
         { id: "sep-1", label: "", separator: true, onClick: () => {} },
         {
+          id: "manage-branches",
+          label: "Manage Branches",
+          icon: <GitBranch />,
+          onClick: handleBranchManager,
+        },
+        {
+          id: "show-branch-diff",
+          label: "Show Branch Diff",
+          icon: <GitPullRequest />,
+          onClick: handleShowBranchDiff,
+        },
+        { id: "sep-branches", label: "", separator: true, onClick: () => {} },
+        {
           id: "push",
           label: "Push Changes",
           icon: <Upload />,
@@ -205,7 +233,7 @@ const GitActionsMenu = ({
         {
           id: "pull",
           label: "Pull Changes",
-          icon: <Download />,
+          icon: <Download weight="fill" />,
           disabled: isLoading,
           onClick: handlePull,
         },
@@ -253,7 +281,7 @@ const GitActionsMenu = ({
           label: "Discard All Changes",
           icon: <RotateCcw />,
           disabled: isLoading,
-          className: "text-red-400",
+          className: "text-error",
           onClick: () => void handleDiscardAllChanges(),
         },
       ]

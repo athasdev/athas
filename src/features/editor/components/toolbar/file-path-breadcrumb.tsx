@@ -1,9 +1,10 @@
 import type React from "react";
-import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react";
+import { CaretLeftIcon as ChevronLeft } from "@/ui/icons";
 import { useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { logger } from "@/features/editor/utils/logger";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
@@ -30,7 +31,8 @@ export function FilePathBreadcrumb({
   interactive = true,
   className,
 }: FilePathBreadcrumbProps) {
-  const { rootFolderPath, handleFileSelect } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const [dropdown, setDropdown] = useState<{
     segmentIndex: number;
@@ -176,7 +178,6 @@ export function FilePathBreadcrumb({
     <>
       <PathBreadcrumb
         segments={segments}
-        fullPath={filePath}
         interactive={interactive}
         onSegmentClick={interactive ? handleSegmentClick : undefined}
         setSegmentRef={
@@ -202,17 +203,19 @@ export function FilePathBreadcrumb({
           }}
         >
           {dropdown.navigationStack.length > 0 && (
-            <Button
-              onClick={handleGoBack}
-              variant="ghost"
-              className={dropdownItemClassName(
-                "justify-start border-border/70 border-b text-text-lighter hover:text-text",
-              )}
-              compact
-            >
-              <ArrowLeft className="shrink-0" weight="duotone" />
-              <span>Go back</span>
-            </Button>
+            <div className="border-border/70 border-b pb-0.5">
+              <Button
+                onClick={handleGoBack}
+                variant="ghost"
+                className={dropdownItemClassName("justify-start gap-2 font-normal")}
+                size="xs"
+              >
+                <ChevronLeft className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+                <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
+                  Go back
+                </span>
+              </Button>
+            </div>
           )}
 
           {dropdown.items.map((item) => (
@@ -241,14 +244,18 @@ export function FilePathBreadcrumb({
                 }
               }}
               variant="ghost"
-              compact
-              className={dropdownItemClassName("justify-start")}
+              size="xs"
+              className={dropdownItemClassName("justify-start gap-2 font-normal")}
             >
-              <PathBreadcrumb
-                segments={[item.name]}
-                fullPath={item.path}
-                className="overflow-hidden"
+              <ThemedFileIcon
+                fileName={item.name}
+                isDir={item.isDir}
+                isExpanded={false}
+                className="shrink-0 text-text-lighter"
               />
+              <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
+                {item.name}
+              </span>
             </Button>
           ))}
         </Dropdown>

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
@@ -8,7 +9,35 @@ import Switch from "@/ui/switch";
 import { FontSelector } from "../font-selector";
 
 export const EditorSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      autoCompletion: state.settings.autoCompletion,
+      autoDetectLanguage: state.settings.autoDetectLanguage,
+      autoSave: state.settings.autoSave,
+      breadcrumbShowSymbols: state.settings.breadcrumbShowSymbols,
+      defaultLanguage: state.settings.defaultLanguage,
+      editorLineHeight: state.settings.editorLineHeight,
+      fontFamily: state.settings.fontFamily,
+      fontSize: state.settings.fontSize,
+      formatOnSave: state.settings.formatOnSave,
+      highlightOccurrences: state.settings.highlightOccurrences,
+      horizontalTabScroll: state.settings.horizontalTabScroll,
+      codeLens: state.settings.codeLens,
+      inlayHints: state.settings.inlayHints,
+      lineNumbers: state.settings.lineNumbers,
+      lintOnSave: state.settings.lintOnSave,
+      maxOpenTabs: state.settings.maxOpenTabs,
+      parameterHints: state.settings.parameterHints,
+      renderIndentGuides: state.settings.renderIndentGuides,
+      renderWhitespace: state.settings.renderWhitespace,
+      semanticTokens: state.settings.semanticTokens,
+      showMinimap: state.settings.showMinimap,
+      tabSize: state.settings.tabSize,
+      vimRelativeLineNumbers: state.settings.vimRelativeLineNumbers,
+      wordWrap: state.settings.wordWrap,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const languageOptions = useMemo(
     () => [
       { value: "auto", label: "Auto Detect" },
@@ -25,11 +54,6 @@ export const EditorSettings = () => {
     { value: "trailing", label: "Trailing" },
     { value: "all", label: "All" },
   ];
-  const editorEngineOptions = [
-    { value: "monaco", label: "Monaco" },
-    { value: "athas", label: "Athas" },
-  ];
-
   return (
     <div className="space-y-4">
       <Section title="Editor">
@@ -48,26 +72,6 @@ export const EditorSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Editor Engine"
-          description="Choose the editor rendering engine"
-          onReset={() => updateSetting("editorEngine", getDefaultSetting("editorEngine"))}
-          canReset={settings.editorEngine !== getDefaultSetting("editorEngine")}
-        >
-          <Select
-            value={settings.editorEngine}
-            options={editorEngineOptions}
-            onChange={(value) =>
-              updateSetting("editorEngine", value as typeof settings.editorEngine)
-            }
-            className={SETTINGS_CONTROL_WIDTHS.text}
-            size="xs"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
-        <SettingRow
           label="Font Size"
           description="Editor font size in pixels"
           onReset={() => updateSetting("fontSize", getDefaultSetting("fontSize"))}
@@ -79,7 +83,7 @@ export const EditorSettings = () => {
             value={settings.fontSize}
             onChange={(val) => updateSetting("fontSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -96,7 +100,7 @@ export const EditorSettings = () => {
             value={settings.editorLineHeight}
             onChange={(val) => updateSetting("editorLineHeight", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -112,7 +116,7 @@ export const EditorSettings = () => {
             value={settings.tabSize}
             onChange={(val) => updateSetting("tabSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
         <SettingRow
@@ -154,7 +158,7 @@ export const EditorSettings = () => {
               updateSetting("renderWhitespace", value as typeof settings.renderWhitespace)
             }
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
           />
         </SettingRow>
@@ -229,7 +233,7 @@ export const EditorSettings = () => {
             value={settings.maxOpenTabs}
             onChange={(val) => updateSetting("maxOpenTabs", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
-            size="xs"
+            size="md"
           />
         </SettingRow>
 
@@ -270,7 +274,7 @@ export const EditorSettings = () => {
             options={languageOptions}
             onChange={(value) => updateSetting("defaultLanguage", value)}
             className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -340,6 +344,60 @@ export const EditorSettings = () => {
           <Switch
             checked={settings.parameterHints}
             onChange={(checked) => updateSetting("parameterHints", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Inlay Hints"
+          description="Show inline type and parameter hints from language servers"
+          onReset={() => updateSetting("inlayHints", getDefaultSetting("inlayHints"))}
+          canReset={settings.inlayHints !== getDefaultSetting("inlayHints")}
+        >
+          <Switch
+            checked={settings.inlayHints}
+            onChange={(checked) => updateSetting("inlayHints", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Code Lens"
+          description="Show inline code actions above symbols"
+          onReset={() => updateSetting("codeLens", getDefaultSetting("codeLens"))}
+          canReset={settings.codeLens !== getDefaultSetting("codeLens")}
+        >
+          <Switch
+            checked={settings.codeLens}
+            onChange={(checked) => updateSetting("codeLens", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Semantic Tokens"
+          description="Use language server semantic highlighting"
+          onReset={() => updateSetting("semanticTokens", getDefaultSetting("semanticTokens"))}
+          canReset={settings.semanticTokens !== getDefaultSetting("semanticTokens")}
+        >
+          <Switch
+            checked={settings.semanticTokens}
+            onChange={(checked) => updateSetting("semanticTokens", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Symbol in Breadcrumb"
+          description="Show the containing function/class for the cursor position in the breadcrumb bar"
+          onReset={() =>
+            updateSetting("breadcrumbShowSymbols", getDefaultSetting("breadcrumbShowSymbols"))
+          }
+          canReset={settings.breadcrumbShowSymbols !== getDefaultSetting("breadcrumbShowSymbols")}
+        >
+          <Switch
+            checked={settings.breadcrumbShowSymbols}
+            onChange={(checked) => updateSetting("breadcrumbShowSymbols", checked)}
             size="sm"
           />
         </SettingRow>
