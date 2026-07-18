@@ -1,6 +1,6 @@
 import { PencilSimpleIcon as EditIcon, PlusIcon, TrashIcon } from "@/ui/icons";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import type { DatabaseRow } from "../types/common.types";
 
 export const SqlTableMenu = ({
@@ -23,7 +23,7 @@ export const SqlTableMenu = ({
         : objectKind === "index"
           ? "Delete Index"
           : "Delete Table";
-  const items: ContextMenuItem[] = databaseTableMenu
+  const items: MenuItem[] = databaseTableMenu
     ? [
         ...(canCreateRow
           ? [
@@ -46,9 +46,9 @@ export const SqlTableMenu = ({
     : [];
 
   return (
-    <ContextMenu
+    <Dropdown
       isOpen={!!databaseTableMenu}
-      position={
+      point={
         databaseTableMenu ? { x: databaseTableMenu.x, y: databaseTableMenu.y } : { x: 0, y: 0 }
       }
       items={items}
@@ -67,7 +67,7 @@ export const SqlRowMenu = ({
   const { databaseRowMenu, setDatabaseRowMenu } = useUIState();
 
   const onCloseMenu = () => setDatabaseRowMenu(null);
-  const items: ContextMenuItem[] = databaseRowMenu
+  const items: MenuItem[] = databaseRowMenu
     ? [
         {
           id: "edit-row",
@@ -85,9 +85,9 @@ export const SqlRowMenu = ({
     : [];
 
   return (
-    <ContextMenu
+    <Dropdown
       isOpen={!!databaseRowMenu}
-      position={databaseRowMenu ? { x: databaseRowMenu.x, y: databaseRowMenu.y } : { x: 0, y: 0 }}
+      point={databaseRowMenu ? { x: databaseRowMenu.x, y: databaseRowMenu.y } : { x: 0, y: 0 }}
       items={items}
       onClose={onCloseMenu}
     />

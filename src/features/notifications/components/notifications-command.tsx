@@ -29,8 +29,7 @@ import Command, {
   CommandItemBadge,
   CommandList,
 } from "@/ui/command";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { ItemGroup } from "@/ui/item";
 import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
@@ -47,8 +46,8 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
   const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
   const removeNotification = useToastStore((state) => state.actions.removeNotification);
   const clearNotifications = useToastStore((state) => state.actions.clearNotifications);
-  const notificationContextMenu = useContextMenu<NotificationEntry>();
-  const panelContextMenu = useContextMenu();
+  const notificationContextMenu = useDropdownMenu<NotificationEntry>();
+  const panelContextMenu = useDropdownMenu();
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const notificationRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -97,7 +96,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
     }, 1000);
   };
 
-  const notificationContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+  const notificationContextMenuItems = useMemo<MenuItem[]>(() => {
     const notification = notificationContextMenu.data;
     if (!notification) return [];
 
@@ -140,7 +139,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
     ];
   }, [clearNotifications, notificationContextMenu.data, removeNotification]);
 
-  const panelContextMenuItems = useMemo<ContextMenuItem[]>(
+  const panelContextMenuItems = useMemo<MenuItem[]>(
     () => [
       {
         id: "copy-all",
@@ -431,16 +430,16 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
           )}
         </div>
       </Command>
-      <ContextMenu
+      <Dropdown
         isOpen={notificationContextMenu.isOpen}
-        position={notificationContextMenu.position}
+        point={notificationContextMenu.position}
         items={notificationContextMenuItems}
         onClose={notificationContextMenu.close}
         className="w-fit min-w-fit"
       />
-      <ContextMenu
+      <Dropdown
         isOpen={panelContextMenu.isOpen}
-        position={panelContextMenu.position}
+        point={panelContextMenu.position}
         items={panelContextMenuItems}
         onClose={panelContextMenu.close}
         className="w-fit min-w-fit"

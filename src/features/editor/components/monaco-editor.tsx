@@ -17,6 +17,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type CSSProperties,
   type RefObject,
   type MouseEventHandler,
@@ -33,7 +34,6 @@ import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useVimStore } from "@/features/vim/stores/vim.store";
-import { useContextMenu } from "@/ui/context-menu";
 import { formatRelativeTime } from "@/utils/date";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
@@ -172,7 +172,10 @@ export function MonacoEditor({
     useEditorStateStore.use.actions();
   const searchMatches = useEditorUIStore.use.searchMatches();
   const currentSearchMatchIndex = useEditorUIStore.use.currentMatchIndex();
-  const { getBlameForLine } = useGitBlame(inlineGitBlameEnabled && filePath ? filePath : undefined);
+  const { getBlameForLine } = useGitBlame(
+    inlineGitBlameEnabled && filePath ? filePath : undefined,
+    content,
+  );
   const diagnosticsForFile = useDiagnosticsStore((state) =>
     filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
   );
@@ -336,7 +339,10 @@ export function MonacoEditor({
     setCursorPosition,
     setSelection,
   });
-  const contextMenu = useContextMenu();
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const executeEditorCommand = useCallback((commandId: string) => {
     void keymapRegistry.executeCommand(commandId);
@@ -641,7 +647,7 @@ export function MonacoEditor({
         }
 
         editor.focus();
-        contextMenu.openAt({ x: event.event.posx, y: event.event.posy });
+        setContextMenuPosition({ x: event.event.posx, y: event.event.posy });
       }),
       editor.onKeyDown((event) => {
         const browserEvent = event.browserEvent;
@@ -739,7 +745,7 @@ export function MonacoEditor({
   }, [
     activeBufferId,
     autoCompletion,
-    contextMenu.openAt,
+    setContextMenuPosition,
     filePath,
     fontFamily,
     fontSize,
@@ -1201,7 +1207,9 @@ export function MonacoEditor({
         range: new MonacoRange(lineNumber, column, lineNumber, column),
         options: {
           after: {
-            content: `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`,
+            content: blameLine.is_uncommitted
+              ? "  Uncommitted changes"
+              : `  ${blameLine.author}, ${formatRelativeTime(blameLine.time)}`,
             inlineClassName: "monaco-inline-git-blame",
             cursorStops: monacoEditor.InjectedTextCursorStops.None,
           },
@@ -1326,12 +1334,12 @@ export function MonacoEditor({
         />
         <InlineEditPopover state={inlineEditState} selection={selection} />
       </div>
-      {contextMenu.isOpen &&
+      {contextMenuPosition &&
         createPortal(
           <EditorContextMenu
-            isOpen={contextMenu.isOpen}
-            position={contextMenu.position}
-            onClose={contextMenu.close}
+            isOpen
+            position={contextMenuPosition}
+            onClose={() => setContextMenuPosition(null)}
             onCopy={() => executeEditorCommand("editor.copy")}
             onCut={canEdit ? () => executeEditorCommand("editor.cut") : undefined}
             onPaste={canEdit ? () => executeEditorCommand("editor.paste") : undefined}

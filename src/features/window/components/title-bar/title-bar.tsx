@@ -13,7 +13,13 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import {
   FilesIcon,
   FolderOpenIcon,
@@ -75,7 +81,6 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<any>(null);
-  const titleBarContextMenu = useContextMenu();
 
   const isMacOS = IS_MAC;
   const isWindows = IS_WINDOWS;
@@ -138,10 +143,9 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     );
 
     if (interactiveTarget) {
+      e.preventDefault();
       return;
     }
-
-    titleBarContextMenu.open(e);
   };
 
   const handleTitleBarMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -181,60 +185,34 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     setMenuBarActiveMenu((activeMenu) => (activeMenu ? null : "File"));
   }, []);
 
-  const titleBarContextMenuItems: ContextMenuItem[] = [
-    {
-      id: "new-window",
-      label: "New Window",
-      icon: <WindowExpandIcon />,
-      onClick: () => {
-        void createAppWindow();
-      },
-    },
-    {
-      id: "add-project",
-      label: "Add Project",
-      icon: <FilesIcon />,
-      onClick: () => setIsProjectPickerVisible(true),
-    },
-    {
-      id: "open-project",
-      label: "Open Folder",
-      icon: <FolderOpenIcon />,
-      onClick: () => {
-        void handleOpenFolder();
-      },
-    },
-    {
-      id: "open-project-new-window",
-      label: "Open Folder in New Window",
-      icon: <WindowExpandIcon />,
-      onClick: () => {
-        void handleOpenFolderInNewWindow();
-      },
-    },
-    ...(projectTabs.length > 0
-      ? [
-          { id: "sep-projects", label: "", separator: true, onClick: () => {} },
-          {
-            id: "close-all-projects",
-            label: "Close All Projects",
-            icon: <TrashIcon />,
-            onClick: () => {
-              void handleCloseAllProjects();
-            },
-          },
-        ]
-      : []),
-  ];
-
-  const titleBarContextMenuPortal = createPortal(
-    <ContextMenu
-      isOpen={titleBarContextMenu.isOpen}
-      position={titleBarContextMenu.position}
-      items={titleBarContextMenuItems}
-      onClose={titleBarContextMenu.close}
-    />,
-    document.body,
+  const titleBarContextMenuContent = (
+    <ContextMenuContent>
+      <ContextMenuItem onClick={() => void createAppWindow()}>
+        <WindowExpandIcon />
+        New Window
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => setIsProjectPickerVisible(true)}>
+        <FilesIcon />
+        Add Project
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => void handleOpenFolder()}>
+        <FolderOpenIcon />
+        Open Folder
+      </ContextMenuItem>
+      <ContextMenuItem onClick={() => void handleOpenFolderInNewWindow()}>
+        <WindowExpandIcon />
+        Open Folder in New Window
+      </ContextMenuItem>
+      {projectTabs.length > 0 && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => void handleCloseAllProjects()}>
+            <TrashIcon />
+            Close All Projects
+          </ContextMenuItem>
+        </>
+      )}
+    </ContextMenuContent>
   );
 
   const menuItem =
@@ -336,26 +314,62 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
 
   if (isMacOS) {
     return (
-      <div
+      <ContextMenu>
+        <ContextMenuTrigger
+          onContextMenu={handleTitleBarContextMenu}
+          className={cn(
+            "athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between bg-transparent pr-2",
+            isFullscreen ? "pl-2" : "pl-[94px]",
+          )}
+          data-tauri-drag-region
+          onMouseDown={handleTitleBarMouseDown}
+        >
+          <div
+            className={cn(
+              "pointer-events-auto flex h-full min-w-0 items-center",
+              macTitleBarControlAlignment,
+            )}
+          >
+            {menuItem}
+            {sidebarToggle}
+          </div>
+
+          <div className={cn("flex h-full items-center", macTitleBarControlAlignment)}>
+            <div className="flex items-center gap-1">
+              {placeHeaderItemsBeforeAccount(
+                orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
+              ).map((item) =>
+                item.content ? (
+                  <div key={item.id} className="flex min-h-6 items-center">
+                    {item.content}
+                  </div>
+                ) : null,
+              )}
+            </div>
+          </div>
+        </ContextMenuTrigger>
+        {titleBarContextMenuContent}
+      </ContextMenu>
+    );
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
-        className={cn(
-          "athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent pr-2",
-          isFullscreen ? "pl-2" : "pl-[94px]",
-        )}
+        className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between bg-transparent px-2"
       >
-        <div
-          className={cn(
-            "pointer-events-auto flex h-full min-w-0 items-center",
-            macTitleBarControlAlignment,
-          )}
-        >
-          {menuItem}
-          {sidebarToggle}
+        <div data-tauri-drag-region className="flex flex-1 items-center">
+          <div className="pointer-events-auto">
+            <div className="flex items-center gap-1">
+              {menuItem}
+              {sidebarToggle}
+            </div>
+          </div>
         </div>
-
-        <div className={cn("flex h-full items-center", macTitleBarControlAlignment)}>
+        <div className="z-20 flex items-center">
           <div className="flex items-center gap-1">
             {placeHeaderItemsBeforeAccount(
               orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
@@ -367,50 +381,18 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
               ) : null,
             )}
           </div>
-        </div>
-        {titleBarContextMenuPortal}
-      </div>
-    );
-  }
 
-  return (
-    <div
-      data-tauri-drag-region
-      onMouseDown={handleTitleBarMouseDown}
-      onContextMenu={handleTitleBarContextMenu}
-      className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent px-2"
-    >
-      <div data-tauri-drag-region className="flex flex-1 items-center">
-        <div className="pointer-events-auto">
-          <div className="flex items-center gap-1">
-            {menuItem}
-            {sidebarToggle}
-          </div>
-        </div>
-      </div>
-      <div className="z-20 flex items-center">
-        <div className="flex items-center gap-1">
-          {placeHeaderItemsBeforeAccount(
-            orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
-          ).map((item) =>
-            item.content ? (
-              <div key={item.id} className="flex min-h-6 items-center">
-                {item.content}
-              </div>
-            ) : null,
+          {showAppWindowControls && (
+            <WindowControls
+              currentWindow={currentWindow}
+              isMaximized={isMaximized}
+              onMaximizedChange={setIsMaximized}
+            />
           )}
         </div>
-
-        {showAppWindowControls && (
-          <WindowControls
-            currentWindow={currentWindow}
-            isMaximized={isMaximized}
-            onMaximizedChange={setIsMaximized}
-          />
-        )}
-      </div>
-      {titleBarContextMenuPortal}
-    </div>
+      </ContextMenuTrigger>
+      {titleBarContextMenuContent}
+    </ContextMenu>
   );
 };
 

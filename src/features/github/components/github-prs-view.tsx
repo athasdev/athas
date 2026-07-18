@@ -32,8 +32,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import type { MenuItem } from "@/ui/dropdown";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import {
   SidebarEmptyActionState,
@@ -243,8 +242,8 @@ const GitHubPRsView = memo(() => {
   const [actionFilter, setActionFilter] = useState<WorkflowRunFilter>("all");
   const [createKind, setCreateKind] = useState<GitHubCreateKind | null>(null);
   const [currentBranch, setCurrentBranch] = useState("");
-  const prContextMenu = useContextMenu<PullRequest>();
-  const sectionContextMenu = useContextMenu<null>();
+  const prContextMenu = useDropdownMenu<PullRequest>();
+  const sectionContextMenu = useDropdownMenu<null>();
 
   const isRepoError = !!error && isNotGitRepositoryError(error);
   const activePRNumber = useBufferStore((state) => {
@@ -533,7 +532,7 @@ const GitHubPRsView = memo(() => {
 
   const selectedPR = prContextMenu.data;
 
-  const prContextMenuItems: ContextMenuItem[] = selectedPR
+  const prContextMenuItems: MenuItem[] = selectedPR
     ? [
         {
           id: "open-pr",
@@ -573,7 +572,7 @@ const GitHubPRsView = memo(() => {
         },
       ]
     : [];
-  const sectionContextMenuItems: ContextMenuItem[] = [
+  const sectionContextMenuItems: MenuItem[] = [
     {
       id: "refresh",
       label:
@@ -917,15 +916,15 @@ const GitHubPRsView = memo(() => {
             />
           </>
         )}
-        <ContextMenu
+        <Dropdown
           isOpen={prContextMenu.isOpen}
-          position={prContextMenu.position}
+          point={prContextMenu.position}
           items={prContextMenuItems}
           onClose={prContextMenu.close}
         />
-        <ContextMenu
+        <Dropdown
           isOpen={sectionContextMenu.isOpen}
-          position={sectionContextMenu.position}
+          point={sectionContextMenu.position}
           items={sectionContextMenuItems}
           onClose={sectionContextMenu.close}
         />

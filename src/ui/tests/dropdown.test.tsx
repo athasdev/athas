@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { MenuItemsList } from "../dropdown";
 
 describe("MenuItemsList", () => {
-  it("supports compact icon-free context menu presentation", () => {
+  it("supports compact icon-free presentation", () => {
     const markup = renderToStaticMarkup(
       <MenuItemsList
         density="compact"

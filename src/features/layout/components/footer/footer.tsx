@@ -8,7 +8,14 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
+import type { MenuItem } from "@/ui/dropdown";
 import {
   FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
@@ -79,7 +86,6 @@ const Footer = () => {
     );
   });
   const branchItem = useFooterGitBranchItem();
-  const debuggerContextMenu = useContextMenu<"debugger">();
 
   const debuggerBreakpointsCount = useDebuggerStore((state) => state.breakpoints.length);
   const debuggerWatchExpressionsCount = useDebuggerStore((state) => state.watchExpressions.length);
@@ -133,7 +139,7 @@ const Footer = () => {
   const resetFooterOrder = useCallback(() => {
     void updateSetting("footerLeadingItemsOrder", [...FOOTER_LEADING_ITEM_IDS]);
   }, [updateSetting]);
-  const debuggerContextMenuItems = useMemo<ContextMenuItem[]>(
+  const debuggerContextMenuItems = useMemo<MenuItem[]>(
     () => [
       {
         id: "toggle-debugger",
@@ -243,15 +249,30 @@ const Footer = () => {
           id: "debugger",
           label: "Run and Debug",
           content: (
-            <FooterTabControl
-              tooltip="Toggle Run and Debug"
-              active={isBottomPaneVisible && bottomPaneActiveTab === "debugger"}
-              commandId="workbench.showDebugger"
-              onClick={toggleDebuggerPane}
-              onContextMenu={(event) => debuggerContextMenu.open(event, "debugger")}
-            >
-              <BugIcon />
-            </FooterTabControl>
+            <ContextMenu>
+              <ContextMenuTrigger className="contents">
+                <FooterTabControl
+                  tooltip="Toggle Run and Debug"
+                  active={isBottomPaneVisible && bottomPaneActiveTab === "debugger"}
+                  commandId="workbench.showDebugger"
+                  onClick={toggleDebuggerPane}
+                >
+                  <BugIcon />
+                </FooterTabControl>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                {debuggerContextMenuItems.map((item) =>
+                  item.separator ? (
+                    <ContextMenuSeparator key={item.id} />
+                  ) : (
+                    <ContextMenuItem key={item.id} disabled={item.disabled} onClick={item.onClick}>
+                      {item.icon}
+                      {item.label}
+                    </ContextMenuItem>
+                  ),
+                )}
+              </ContextMenuContent>
+            </ContextMenu>
           ),
         }
       : null,
@@ -393,12 +414,6 @@ const Footer = () => {
           ))}
         </div>
       </div>
-      <ContextMenu
-        isOpen={debuggerContextMenu.isOpen}
-        position={debuggerContextMenu.position}
-        items={debuggerContextMenuItems}
-        onClose={debuggerContextMenu.close}
-      />
     </>
   );
 };

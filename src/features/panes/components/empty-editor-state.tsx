@@ -7,7 +7,6 @@ import {
   TerminalWindowIcon as Terminal,
 } from "@/ui/icons";
 import { useCallback } from "react";
-import { createPortal } from "react-dom";
 import { AgentLaunchInput } from "@/features/ai/components/agent-launcher";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -15,7 +14,13 @@ import { openFile } from "@/features/file-system/controllers/platform";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 
 interface ActionItem {
   id: string;
@@ -37,8 +42,6 @@ export function EmptyEditorState() {
     useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
-
-  const contextMenu = useContextMenu();
 
   const handleOpenTerminal = useCallback(() => {
     openTerminalBuffer();
@@ -69,60 +72,6 @@ export function EmptyEditorState() {
       console.error("Failed to open file:", error);
     }
   }, [openBuffer]);
-
-  const getContextMenuItems = useCallback((): ContextMenuItem[] => {
-    return [
-      {
-        id: "new-file",
-        label: "New File",
-        icon: <Plus />,
-        onClick: handleNewFile,
-      },
-      {
-        id: "open-folder",
-        label: "Open Folder",
-        icon: <FolderOpen />,
-        onClick: handleOpenFolder,
-      },
-      {
-        id: "open-file",
-        label: "Open File",
-        icon: <FileText />,
-        onClick: handleOpenFile,
-      },
-      { id: "sep-1", label: "", separator: true, onClick: () => {} },
-      {
-        id: "new-terminal",
-        label: "New Terminal",
-        icon: <Terminal />,
-        onClick: handleOpenTerminal,
-      },
-      {
-        id: "new-agent",
-        label: "New Agent",
-        icon: <Sparkles />,
-        onClick: handleOpenAgent,
-      },
-      ...(webViewerEnabled
-        ? [
-            {
-              id: "open-url",
-              label: "Open URL",
-              icon: <Globe />,
-              onClick: handleOpenWebViewer,
-            },
-          ]
-        : []),
-    ];
-  }, [
-    handleNewFile,
-    handleOpenFolder,
-    handleOpenFile,
-    handleOpenTerminal,
-    handleOpenAgent,
-    handleOpenWebViewer,
-    webViewerEnabled,
-  ]);
 
   const quickActions: ActionItem[] = [
     {
@@ -157,48 +106,69 @@ export function EmptyEditorState() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 w-full overflow-auto" onContextMenu={contextMenu.open}>
-      <div className="m-auto flex w-[min(680px,calc(100%-56px))] min-w-0 flex-col items-center gap-4 px-6 py-8">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <span className="flex size-8 items-center justify-center text-text">
-            <Sparkles className="size-5" weight="duotone" />
-          </span>
-          <h1 className="font-medium text-text ui-text-lg">Where should we begin?</h1>
-        </div>
+    <ContextMenu>
+      <ContextMenuTrigger className="flex h-full min-h-0 w-full overflow-auto">
+        <div className="m-auto flex w-[min(680px,calc(100%-56px))] min-w-0 flex-col items-center gap-4 px-6 py-8">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <span className="flex size-8 items-center justify-center text-text">
+              <Sparkles className="size-5" weight="duotone" />
+            </span>
+            <h1 className="font-medium text-text ui-text-lg">Where should we begin?</h1>
+          </div>
 
-        <div className="w-full rounded-xl border border-border/70 bg-secondary-bg/16 p-3">
-          <AgentLaunchInput active autoFocus variant="hero" />
-        </div>
+          <div className="w-full rounded-xl border border-border/70 bg-secondary-bg/16 p-3">
+            <AgentLaunchInput active autoFocus variant="hero" />
+          </div>
 
-        <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
-          {quickActions.map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              onClick={item.action}
-              variant="ghost"
-              disabled={item.disabled}
-              className={`group ${quickActionCardClassName}`}
-            >
-              <span className={quickActionIconClassName}>{item.icon}</span>
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-medium text-text ui-text-sm">{item.label}</span>
-                <span className="text-text-lighter ui-text-sm">{item.description}</span>
-              </span>
-            </Button>
-          ))}
+          <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
+            {quickActions.map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                onClick={item.action}
+                variant="ghost"
+                disabled={item.disabled}
+                className={`group ${quickActionCardClassName}`}
+              >
+                <span className={quickActionIconClassName}>{item.icon}</span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="font-medium text-text ui-text-sm">{item.label}</span>
+                  <span className="text-text-lighter ui-text-sm">{item.description}</span>
+                </span>
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {createPortal(
-        <ContextMenu
-          isOpen={contextMenu.isOpen}
-          position={contextMenu.position}
-          items={getContextMenuItems()}
-          onClose={contextMenu.close}
-        />,
-        document.body,
-      )}
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={handleNewFile}>
+          <Plus />
+          New File
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleOpenFolder}>
+          <FolderOpen />
+          Open Folder
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => void handleOpenFile()}>
+          <FileText />
+          Open File
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={handleOpenTerminal}>
+          <Terminal />
+          New Terminal
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleOpenAgent}>
+          <Sparkles />
+          New Agent
+        </ContextMenuItem>
+        {webViewerEnabled && (
+          <ContextMenuItem onClick={handleOpenWebViewer}>
+            <Globe />
+            Open URL
+          </ContextMenuItem>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

@@ -16,7 +16,13 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+} from "@/ui/context-menu";
+import type { MenuItem } from "@/ui/dropdown";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
@@ -24,11 +30,8 @@ import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
 interface TabContextMenuProps {
-  isOpen: boolean;
-  position: { x: number; y: number };
-  buffer: PaneContent | null;
+  buffer: PaneContent;
   paneId?: string;
-  onClose: () => void;
   onPin: (bufferId: string) => void;
   onCloseTab: (bufferId: string) => void;
   onCloseOthers: (bufferId: string) => void;
@@ -45,11 +48,8 @@ interface TabContextMenuProps {
 }
 
 const TabContextMenu = ({
-  isOpen,
-  position,
   buffer,
   paneId,
-  onClose,
   onPin,
   onCloseTab,
   onCloseOthers,
@@ -64,10 +64,8 @@ const TabContextMenu = ({
   isPaneLocked = false,
   onTogglePaneLocked,
 }: TabContextMenuProps) => {
-  if (!isOpen || !buffer) return null;
-
   const closeKeys = [IS_MAC ? "Cmd" : "Ctrl", "W"];
-  const items: ContextMenuItem[] = [
+  const items: MenuItem[] = [
     {
       id: "pin",
       label: buffer.isPinned ? "Unpin Tab" : "Pin Tab",
@@ -218,7 +216,21 @@ const TabContextMenu = ({
     },
   ];
 
-  return <ContextMenu isOpen={isOpen} position={position} items={items} onClose={onClose} />;
+  return (
+    <ContextMenuContent>
+      {items.map((item) =>
+        item.separator ? (
+          <ContextMenuSeparator key={item.id} />
+        ) : (
+          <ContextMenuItem key={item.id} disabled={item.disabled} onClick={item.onClick}>
+            {item.icon}
+            {item.label}
+            {item.keybinding && <ContextMenuShortcut>{item.keybinding}</ContextMenuShortcut>}
+          </ContextMenuItem>
+        ),
+      )}
+    </ContextMenuContent>
+  );
 };
 
 export default TabContextMenu;

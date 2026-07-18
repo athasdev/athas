@@ -35,7 +35,7 @@ import { useFileClipboardStore } from "@/features/file-explorer/stores/file-expl
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Dialog from "@/ui/dialog";
 import { toast } from "@/ui/toast";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
@@ -193,10 +193,10 @@ export function useFileExplorerContextMenu({
     setContextMenu({ x, y, path: filePath, isDir });
   }, []);
 
-  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
+  const contextMenuItems = useMemo<MenuItem[]>(() => {
     if (!contextMenu) return [];
 
-    const items: ContextMenuItem[] = [];
+    const items: MenuItem[] = [];
 
     if (contextMenu.isDir) {
       items.push(
@@ -483,12 +483,11 @@ export function useFileExplorerContextMenu({
     contextMenu || hasDialog ? (
       <>
         {contextMenu && (
-          <ContextMenu
+          <Dropdown
             isOpen
-            position={{ x: contextMenu.x, y: contextMenu.y }}
+            point={{ x: contextMenu.x, y: contextMenu.y }}
             items={contextMenuItems}
             onClose={() => setContextMenu(null)}
-            className="file-tree-context-menu min-w-[220px]"
           />
         )}
 

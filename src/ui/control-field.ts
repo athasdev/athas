@@ -12,6 +12,8 @@ export const controlFieldSurfaceVariants = cva(
         outline:
           "rounded-lg border border-border/70 bg-transparent focus:border-border-strong focus:ring-1 focus:ring-border-strong/25",
         ghost: "border-none bg-transparent focus:ring-0",
+        inline:
+          "rounded-none border-0 border-text border-b bg-transparent focus:border-text-lighter focus:ring-0",
       },
     },
     defaultVariants: {

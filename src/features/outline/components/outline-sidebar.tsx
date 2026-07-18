@@ -12,7 +12,13 @@ import {
   SquaresFourIcon as SquaresFour,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import type { MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
@@ -20,7 +26,6 @@ import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { SidebarEmptyActionState, SidebarEmptyState, SidebarSearchFilterRow } from "@/ui/sidebar";
 import { useDocumentOutline } from "../hooks/use-document-outline";
-import type { OutlineSymbol } from "../types/outline-symbol.types";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 
@@ -65,7 +70,6 @@ export function OutlineSidebar() {
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const symbolContextMenu = useContextMenu<OutlineSymbol>();
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const { activeBuffer, symbols, isLoading, isSupported } = useDocumentOutline({ isActive: true });
@@ -204,13 +208,6 @@ export function OutlineSidebar() {
     event: React.KeyboardEvent<HTMLButtonElement>,
     symbol: (typeof visibleSymbols)[number],
   ) => {
-    if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
-      event.preventDefault();
-      const rect = event.currentTarget.getBoundingClientRect();
-      symbolContextMenu.openAt({ x: rect.left + 16, y: rect.bottom }, symbol);
-      return;
-    }
-
     const currentIndex = visibleSymbols.findIndex(
       (visibleSymbol) => visibleSymbol.id === symbol.id,
     );
@@ -267,60 +264,6 @@ export function OutlineSidebar() {
     void writeClipboardText(text);
   };
 
-  const symbolContextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const symbol = symbolContextMenu.data;
-    if (!symbol) return [];
-
-    const location = `${symbol.filePath}:${symbol.line + 1}:${symbol.character + 1}`;
-    const isCollapsed = collapsedIds.has(symbol.id);
-
-    return [
-      {
-        id: "go-to-symbol",
-        label: "Go to Symbol",
-        icon: <ArrowSquareOut />,
-        onClick: () => {
-          setFocusedSymbolId(symbol.id);
-          openOutlineSymbol(symbol);
-        },
-      },
-      {
-        id: "copy-name",
-        label: "Copy Name",
-        icon: <Copy />,
-        onClick: () => copyText(symbol.name),
-      },
-      {
-        id: "copy-location",
-        label: "Copy Location",
-        icon: <Copy />,
-        onClick: () => copyText(location),
-      },
-      { id: "sep-outline-actions", label: "", separator: true, onClick: () => {} },
-      {
-        id: "toggle-collapse",
-        label: isCollapsed ? "Expand" : "Collapse",
-        icon: isCollapsed ? <CaretDown /> : <CaretRight />,
-        disabled: symbol.childCount === 0,
-        onClick: () => toggleSymbol(symbol),
-      },
-      {
-        id: "collapse-all",
-        label: "Collapse All",
-        icon: <CaretRight />,
-        disabled: symbolsWithChildren.length === 0,
-        onClick: collapseAllSymbols,
-      },
-      {
-        id: "expand-all",
-        label: "Expand All",
-        icon: <CaretDown />,
-        disabled: collapsedIds.size === 0,
-        onClick: expandAllSymbols,
-      },
-    ];
-  }, [collapsedIds, symbolContextMenu.data, symbolsWithChildren]);
-
   return (
     <div
       className="flex h-full min-h-0 flex-col bg-primary-bg"
@@ -364,43 +307,78 @@ export function OutlineSidebar() {
           <SidebarEmptyState>No symbols found.</SidebarEmptyState>
         ) : (
           visibleSymbols.map((symbol) => (
-            <OutlineSymbolRow
-              key={symbol.id}
-              ref={(node) => {
-                if (node) {
-                  rowRefs.current.set(symbol.id, node);
-                } else {
-                  rowRefs.current.delete(symbol.id);
-                }
-              }}
-              symbol={symbol}
-              compact
-              selected={symbol.id === focusedSymbolId}
-              collapsed={collapsedIds.has(symbol.id)}
-              onClick={handleSymbolClick}
-              onToggle={toggleSymbol}
-              onMouseEnter={() => setFocusedSymbolId(symbol.id)}
-              onContextMenu={(event) => {
-                setFocusedSymbolId(symbol.id);
-                symbolContextMenu.open(event, symbol);
-              }}
-              onKeyDown={(event) => handleSymbolKeyDown(event, symbol)}
-              tabIndex={
-                symbol.id === focusedSymbolId ||
-                (focusedSymbolIndex === -1 && symbol === visibleSymbols[0])
-                  ? 0
-                  : -1
-              }
-            />
+            <ContextMenu key={symbol.id}>
+              <ContextMenuTrigger onContextMenu={() => setFocusedSymbolId(symbol.id)}>
+                <OutlineSymbolRow
+                  ref={(node) => {
+                    if (node) {
+                      rowRefs.current.set(symbol.id, node);
+                    } else {
+                      rowRefs.current.delete(symbol.id);
+                    }
+                  }}
+                  symbol={symbol}
+                  compact
+                  selected={symbol.id === focusedSymbolId}
+                  collapsed={collapsedIds.has(symbol.id)}
+                  onClick={handleSymbolClick}
+                  onToggle={toggleSymbol}
+                  onMouseEnter={() => setFocusedSymbolId(symbol.id)}
+                  onKeyDown={(event) => handleSymbolKeyDown(event, symbol)}
+                  tabIndex={
+                    symbol.id === focusedSymbolId ||
+                    (focusedSymbolIndex === -1 && symbol === visibleSymbols[0])
+                      ? 0
+                      : -1
+                  }
+                />
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem
+                  onClick={() => {
+                    setFocusedSymbolId(symbol.id);
+                    openOutlineSymbol(symbol);
+                  }}
+                >
+                  <ArrowSquareOut />
+                  Go to Symbol
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => copyText(symbol.name)}>
+                  <Copy />
+                  Copy Name
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() =>
+                    copyText(`${symbol.filePath}:${symbol.line + 1}:${symbol.character + 1}`)
+                  }
+                >
+                  <Copy />
+                  Copy Location
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  disabled={symbol.childCount === 0}
+                  onClick={() => toggleSymbol(symbol)}
+                >
+                  {collapsedIds.has(symbol.id) ? <CaretDown /> : <CaretRight />}
+                  {collapsedIds.has(symbol.id) ? "Expand" : "Collapse"}
+                </ContextMenuItem>
+                <ContextMenuItem
+                  disabled={symbolsWithChildren.length === 0}
+                  onClick={collapseAllSymbols}
+                >
+                  <CaretRight />
+                  Collapse All
+                </ContextMenuItem>
+                <ContextMenuItem disabled={collapsedIds.size === 0} onClick={expandAllSymbols}>
+                  <CaretDown />
+                  Expand All
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           ))
         )}
       </div>
-      <ContextMenu
-        isOpen={symbolContextMenu.isOpen}
-        position={symbolContextMenu.position}
-        items={symbolContextMenuItems}
-        onClose={symbolContextMenu.close}
-      />
     </div>
   );
 }

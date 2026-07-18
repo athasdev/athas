@@ -35,7 +35,7 @@ interface TabBarItemProps {
   onClick?: () => void;
   onMouseDown?: (e: React.MouseEvent) => void;
   onDoubleClick: (e: React.MouseEvent) => void;
-  onContextMenu: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   handleTabClose: (id: string) => void;
   handleTabPin: (id: string) => void;

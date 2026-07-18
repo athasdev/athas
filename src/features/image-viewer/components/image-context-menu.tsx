@@ -14,7 +14,7 @@ import { useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
 import type { ImageFormat } from "@/features/image-editor/types/image-operation.types";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 
 interface ImageContextMenuProps {
@@ -87,7 +87,7 @@ export function ImageContextMenu({
     }
   };
 
-  const items: ContextMenuItem[] = [
+  const items: MenuItem[] = [
     {
       id: "rotate-cw",
       label: "Rotate 90deg CW",
@@ -197,7 +197,7 @@ export function ImageContextMenu({
 
   return (
     <>
-      <ContextMenu isOpen position={{ x, y }} items={items} onClose={onClose} />
+      <Dropdown isOpen point={{ x, y }} items={items} onClose={onClose} />
 
       {formatDialogState.format && (
         <ImageFormatDialog

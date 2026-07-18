@@ -33,6 +33,7 @@ import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-vi
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
+import { ContextMenu, ContextMenuTrigger } from "@/ui/context-menu";
 import { SortableTab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-drag";
 import { TabBarSurface } from "@/ui/tabs";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -127,12 +128,6 @@ const TabBar = ({
   const isBottomPane = paneId === BOTTOM_PANE_ID;
 
   const [draggedBufferId, setDraggedBufferId] = useState<string | null>(null);
-
-  const [contextMenu, setContextMenu] = useState<{
-    isOpen: boolean;
-    position: { x: number; y: number };
-    buffer: PaneContent | null;
-  }>({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
 
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
@@ -380,26 +375,6 @@ const TabBar = ({
     [sortedBuffers, convertPreviewToDefinite],
   );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, buffer: PaneContent) => {
-    e.preventDefault();
-
-    // Get the tab element that was right-clicked
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-
-    // Position the menu relative to the tab element
-    // This approach is zoom-independent because getBoundingClientRect()
-    // already accounts for zoom scaling
-    const x = rect.left + rect.width * 0.5; // Center horizontally on the tab
-    const y = rect.bottom + 4; // Position just below the tab with small offset
-
-    setContextMenu({
-      isOpen: true,
-      position: { x, y },
-      buffer,
-    });
-  }, []);
-
   const handleCopyPath = useCallback(async (path: string) => {
     await writeClipboardText(path);
   }, []);
@@ -416,10 +391,6 @@ const TabBar = ({
     },
     [rootFolderPath],
   );
-
-  const closeContextMenu = () => {
-    setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, buffer: null });
-  };
 
   const handleSaveAndClose = useCallback(async () => {
     if (!pendingClose) return;
@@ -675,8 +646,6 @@ const TabBar = ({
     [sortedBuffers, handleTabClick, updateActivePath, closeTab],
   );
 
-  const MemoizedTabContextMenu = useMemo(() => TabContextMenu, []);
-
   return (
     <>
       <TabDndContext
@@ -735,19 +704,82 @@ const TabBar = ({
                   onClickCapture={getClickCapture(buffer.id)}
                 >
                   {({ isDragging }) => (
-                    <TabBarItem
-                      buffer={buffer}
-                      displayName={getBufferDisplayName(buffer)}
-                      index={index}
-                      isActive={buffer.id === activeBufferId}
-                      isDraggedTab={isDragging}
-                      onClick={() => handleTabSelect(buffer)}
-                      onDoubleClick={(e) => handleDoubleClick(e, index)}
-                      onContextMenu={(e) => handleContextMenu(e, buffer)}
-                      onKeyDown={(e) => handleKeyDown(e, index)}
-                      handleTabClose={closeTab}
-                      handleTabPin={handleTabPin}
-                    />
+                    <ContextMenu>
+                      <ContextMenuTrigger className="contents">
+                        <TabBarItem
+                          buffer={buffer}
+                          displayName={getBufferDisplayName(buffer)}
+                          index={index}
+                          isActive={buffer.id === activeBufferId}
+                          isDraggedTab={isDragging}
+                          onClick={() => handleTabSelect(buffer)}
+                          onDoubleClick={(e) => handleDoubleClick(e, index)}
+                          onKeyDown={(e) => handleKeyDown(e, index)}
+                          handleTabClose={closeTab}
+                          handleTabPin={handleTabPin}
+                        />
+                      </ContextMenuTrigger>
+                      <TabContextMenu
+                        buffer={buffer}
+                        paneId={paneId}
+                        onPin={handleTabPin}
+                        onCloseTab={(bufferId) => {
+                          const targetBuffer = bufferById.get(bufferId);
+                          if (targetBuffer) closeTab(bufferId);
+                        }}
+                        onCloseOthers={handleCloseOtherTabs}
+                        onCloseAll={handleCloseAllTabs}
+                        onCloseToRight={handleCloseTabsToRight}
+                        isPaneLocked={isPaneLocked}
+                        onTogglePaneLocked={
+                          paneId && !disablePaneActions && !isBottomPane
+                            ? handleTogglePaneLocked
+                            : undefined
+                        }
+                        onCopyPath={handleCopyPath}
+                        onCopyRelativePath={handleCopyRelativePath}
+                        onReload={(bufferId) => {
+                          const targetBuffer = bufferById.get(bufferId);
+                          if (targetBuffer && targetBuffer.path !== "extensions://marketplace") {
+                            const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
+                            closeBuffer(bufferId);
+                            setTimeout(async () => {
+                              try {
+                                const content =
+                                  targetBuffer.type === "editor" || targetBuffer.type === "diff"
+                                    ? targetBuffer.content
+                                    : "";
+                                openBuffer(
+                                  targetBuffer.path,
+                                  targetBuffer.name,
+                                  content,
+                                  targetBuffer.type === "image",
+                                  undefined,
+                                  targetBuffer.type === "diff",
+                                );
+                              } catch (error) {
+                                console.error("Failed to reload buffer:", error);
+                              }
+                            }, 100);
+                          }
+                        }}
+                        onRevealInFinder={handleRevealInFolder}
+                        onSplitRight={
+                          paneId
+                            ? (targetPaneId, bufferId) => {
+                                splitEditorGroup(targetPaneId, "horizontal", bufferId);
+                              }
+                            : undefined
+                        }
+                        onSplitDown={
+                          paneId
+                            ? (targetPaneId, bufferId) => {
+                                splitEditorGroup(targetPaneId, "vertical", bufferId);
+                              }
+                            : undefined
+                        }
+                      />
+                    </ContextMenu>
                   )}
                 </SortableTab>
               ))}
@@ -797,68 +829,6 @@ const TabBar = ({
           </div>
         </TabBarSurface>
       </TabDndContext>
-
-      <MemoizedTabContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        buffer={contextMenu.buffer}
-        paneId={paneId}
-        onClose={closeContextMenu}
-        onPin={handleTabPin}
-        onCloseTab={(bufferId) => {
-          const buffer = bufferById.get(bufferId);
-          if (buffer) {
-            closeTab(bufferId);
-          }
-        }}
-        onCloseOthers={handleCloseOtherTabs}
-        onCloseAll={handleCloseAllTabs}
-        onCloseToRight={handleCloseTabsToRight}
-        isPaneLocked={isPaneLocked}
-        onTogglePaneLocked={
-          paneId && !disablePaneActions && !isBottomPane ? handleTogglePaneLocked : undefined
-        }
-        onCopyPath={handleCopyPath}
-        onCopyRelativePath={handleCopyRelativePath}
-        onReload={(bufferId: string) => {
-          const buffer = bufferById.get(bufferId);
-          if (buffer && buffer.path !== "extensions://marketplace") {
-            const { closeBuffer, openBuffer } = useBufferStore.getState().actions;
-            closeBuffer(bufferId);
-            setTimeout(async () => {
-              try {
-                const content =
-                  buffer.type === "editor" || buffer.type === "diff" ? buffer.content : "";
-                openBuffer(
-                  buffer.path,
-                  buffer.name,
-                  content,
-                  buffer.type === "image",
-                  undefined, // databaseType
-                  buffer.type === "diff",
-                );
-              } catch (error) {
-                console.error("Failed to reload buffer:", error);
-              }
-            }, 100);
-          }
-        }}
-        onRevealInFinder={handleRevealInFolder}
-        onSplitRight={
-          paneId
-            ? (targetPaneId, bufferId) => {
-                splitEditorGroup(targetPaneId, "horizontal", bufferId);
-              }
-            : undefined
-        }
-        onSplitDown={
-          paneId
-            ? (targetPaneId, bufferId) => {
-                splitEditorGroup(targetPaneId, "vertical", bufferId);
-              }
-            : undefined
-        }
-      />
 
       {pendingClose && (
         <UnsavedChangesDialog

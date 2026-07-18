@@ -31,7 +31,7 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import {
   PaneChip,
   PaneIconButton,
@@ -223,9 +223,9 @@ const DiagnosticsPane = ({
   const setWidthMode = useTerminalStore((state) => state.setWidthMode);
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
 
-  const diagnosticContextMenu = useContextMenu<Diagnostic>();
-  const filterContextMenu = useContextMenu<FilterMenuType>();
-  const headerContextMenu = useContextMenu<"header">();
+  const diagnosticContextMenu = useDropdownMenu<Diagnostic>();
+  const filterContextMenu = useDropdownMenu<FilterMenuType>();
+  const headerContextMenu = useDropdownMenu<"header">();
 
   const activeFilePath = useBufferStore((state) => {
     const activeBuffer = state.activeBufferId
@@ -598,7 +598,7 @@ const DiagnosticsPane = ({
     [showToast],
   );
 
-  const diagnosticContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+  const diagnosticContextMenuItems = useMemo<MenuItem[]>(() => {
     const diagnostic = diagnosticContextMenu.data;
     if (!diagnostic) return [];
 
@@ -606,7 +606,7 @@ const DiagnosticsPane = ({
     const codeActions = codeActionsByDiagnostic[key] || [];
     const isLoading = loadingActionsKey === key;
 
-    const items: ContextMenuItem[] = [];
+    const items: MenuItem[] = [];
 
     if (isLoading) {
       items.push({
@@ -753,10 +753,10 @@ const DiagnosticsPane = ({
           ? "text-info"
           : "text-text-lighter";
 
-  const filterContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+  const filterContextMenuItems = useMemo<MenuItem[]>(() => {
     if (!filterContextMenu.data) return [];
 
-    const items: ContextMenuItem[] = [];
+    const items: MenuItem[] = [];
 
     items.push(
       ...GROUP_OPTIONS.map((option) => ({
@@ -842,7 +842,7 @@ const DiagnosticsPane = ({
     visibleBySeverity,
   ]);
 
-  const headerContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+  const headerContextMenuItems = useMemo<MenuItem[]>(() => {
     if (!headerContextMenu.data) return [];
 
     const widthModes: { value: TerminalWidthMode; label: string; icon: ReactNode }[] = [
@@ -850,7 +850,7 @@ const DiagnosticsPane = ({
       { value: "editor", label: "Editor Width", icon: <AlignCenter /> },
     ];
 
-    const items: ContextMenuItem[] = widthModes.map((mode) => ({
+    const items: MenuItem[] = widthModes.map((mode) => ({
       id: `width-${mode.value}`,
       label: mode.label,
       icon: mode.icon,
@@ -1168,23 +1168,23 @@ const DiagnosticsPane = ({
         </div>
       </div>
 
-      <ContextMenu
+      <Dropdown
         isOpen={diagnosticContextMenu.isOpen}
-        position={diagnosticContextMenu.position}
+        point={diagnosticContextMenu.position}
         items={diagnosticContextMenuItems}
         onClose={diagnosticContextMenu.close}
       />
 
-      <ContextMenu
+      <Dropdown
         isOpen={filterContextMenu.isOpen}
-        position={filterContextMenu.position}
+        point={filterContextMenu.position}
         items={filterContextMenuItems}
         onClose={filterContextMenu.close}
       />
 
-      <ContextMenu
+      <Dropdown
         isOpen={headerContextMenu.isOpen}
-        position={headerContextMenu.position}
+        point={headerContextMenu.position}
         items={headerContextMenuItems}
         onClose={headerContextMenu.close}
       />

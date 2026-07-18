@@ -8,8 +8,7 @@ import {
   XIcon as X,
 } from "@/ui/icons";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
-import type { ContextMenuItem } from "@/ui/context-menu";
-import { ContextMenu } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 import { IS_MAC } from "@/utils/platform";
 
@@ -46,7 +45,7 @@ const TerminalTabContextMenu = ({
 }: TerminalTabContextMenuProps) => {
   const modKey = IS_MAC ? "Cmd" : "Ctrl";
 
-  const items: ContextMenuItem[] = terminal
+  const items: MenuItem[] = terminal
     ? [
         {
           id: "pin",
@@ -106,7 +105,7 @@ const TerminalTabContextMenu = ({
       ]
     : [];
 
-  return <ContextMenu isOpen={isOpen} position={position} items={items} onClose={onClose} />;
+  return <Dropdown isOpen={isOpen} point={position} items={items} onClose={onClose} />;
 };
 
 export default TerminalTabContextMenu;

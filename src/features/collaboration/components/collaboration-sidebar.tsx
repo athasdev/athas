@@ -44,8 +44,7 @@ import {
 } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import {
   SidebarEmptyActionState,
@@ -225,10 +224,10 @@ export function CollaborationSidebarView() {
   const lastMediaSignalIdRef = useRef(0);
   const localDeviceIdRef = useRef<string | null>(null);
   const [remoteShares, setRemoteShares] = useState<RemoteMediaShare[]>([]);
-  const channelContextMenu = useContextMenu<SidebarChannel>();
-  const channelsContextMenu = useContextMenu<SidebarChannel>();
-  const participantContextMenu = useContextMenu<SidebarParticipant>();
-  const notesContextMenu = useContextMenu<SidebarNoteItem>();
+  const channelContextMenu = useDropdownMenu<SidebarChannel>();
+  const channelsContextMenu = useDropdownMenu<SidebarChannel>();
+  const participantContextMenu = useDropdownMenu<SidebarParticipant>();
+  const notesContextMenu = useDropdownMenu<SidebarNoteItem>();
   const deferredChannelSearchQuery = useDeferredValue(channelSearchQuery);
   const deferredPeopleSearchQuery = useDeferredValue(peopleSearchQuery);
   const deferredNotesSearchQuery = useDeferredValue(notesSearchQuery);
@@ -951,7 +950,7 @@ export function CollaborationSidebarView() {
   };
 
   const channel = channelsContextMenu.data;
-  const channelMenuItems: ContextMenuItem[] = [
+  const channelMenuItems: MenuItem[] = [
     ...(channel
       ? [
           {
@@ -978,7 +977,7 @@ export function CollaborationSidebarView() {
   ];
 
   const participant = participantContextMenu.data;
-  const participantMenuItems: ContextMenuItem[] = participant
+  const participantMenuItems: MenuItem[] = participant
     ? [
         {
           id: "message",
@@ -1007,7 +1006,7 @@ export function CollaborationSidebarView() {
     : [];
 
   const item = notesContextMenu.data;
-  const noteMenuItems: ContextMenuItem[] = [
+  const noteMenuItems: MenuItem[] = [
     {
       id: "new-file",
       label: "New Markdown File",
@@ -1529,21 +1528,21 @@ export function CollaborationSidebarView() {
         onStopFollowing={() => collaborationActions.setFollowingUser(null)}
       />
 
-      <ContextMenu
+      <Dropdown
         isOpen={channelsContextMenu.isOpen}
-        position={channelsContextMenu.position}
+        point={channelsContextMenu.position}
         items={channelMenuItems}
         onClose={channelsContextMenu.close}
       />
-      <ContextMenu
+      <Dropdown
         isOpen={participantContextMenu.isOpen}
-        position={participantContextMenu.position}
+        point={participantContextMenu.position}
         items={participantMenuItems}
         onClose={participantContextMenu.close}
       />
-      <ContextMenu
+      <Dropdown
         isOpen={notesContextMenu.isOpen}
-        position={notesContextMenu.position}
+        point={notesContextMenu.position}
         items={noteMenuItems}
         onClose={notesContextMenu.close}
       />

@@ -14,7 +14,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
@@ -360,7 +360,7 @@ export default function DataGrid({
     }
   };
 
-  const cellMenuItems: ContextMenuItem[] = [
+  const cellMenuItems: MenuItem[] = [
     {
       id: "copy-value",
       label: cellMenu?.copyText ? "Copy selection" : "Copy value",
@@ -627,9 +627,9 @@ export default function DataGrid({
         </table>
       </div>
 
-      <ContextMenu
+      <Dropdown
         isOpen={!!cellMenu}
-        position={cellMenu?.position ?? { x: 0, y: 0 }}
+        point={cellMenu?.position ?? { x: 0, y: 0 }}
         items={cellMenuItems}
         onClose={closeCellMenu}
       />

@@ -7,9 +7,13 @@ import {
   WifiHighIcon as Wifi,
   WifiSlashIcon as WifiOff,
 } from "@/ui/icons";
-import type React from "react";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 import { LoadingIndicator } from "@/ui/loading";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection } from "../types/remote.types";
@@ -33,8 +37,6 @@ const ConnectionList = ({
   onAddNew,
   connectingMap = {},
 }: ConnectionListProps) => {
-  const contextMenu = useContextMenu<string>();
-
   const formatLastConnected = (dateString?: string): string => {
     if (!dateString) return "Never";
     const date = new Date(dateString);
@@ -47,37 +49,6 @@ const ConnectionList = ({
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
     return `${Math.floor(diffMinutes / 1440)}d ago`;
   };
-
-  const handleContextMenu = (e: React.MouseEvent, connectionId: string) => {
-    contextMenu.open(e, connectionId);
-  };
-
-  const contextMenuItems: ContextMenuItem[] = contextMenu.data
-    ? [
-        {
-          id: "edit",
-          label: "Edit",
-          icon: <Edit />,
-          onClick: () => {
-            const connection = connections.find((c) => c.id === contextMenu.data);
-            if (connection) {
-              onEdit(connection);
-            }
-          },
-        },
-        {
-          id: "delete",
-          label: "Delete",
-          icon: <Trash2 />,
-          className: "hover:text-error",
-          onClick: () => {
-            if (contextMenu.data) {
-              onDelete(contextMenu.data);
-            }
-          },
-        },
-      ]
-    : [];
 
   return (
     <div className="flex h-full select-none flex-col bg-secondary-bg">
@@ -117,120 +88,125 @@ const ConnectionList = ({
         ) : (
           <div className="flex flex-col">
             {connections.map((connection) => (
-              <Button
-                key={connection.id}
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  if (!connectingMap[connection.id]) {
-                    onConnect(connection.id);
-                  }
-                }}
-                onContextMenu={(e) => handleContextMenu(e, connection.id)}
-                className={cn(
-                  "h-auto w-full justify-start gap-2 px-2 py-1.5 text-left",
-                  "text-text hover:bg-hover focus:outline-none",
-                  connection.isConnected && "bg-selected",
-                  connectingMap[connection.id] && "cursor-not-allowed opacity-70",
-                )}
-                disabled={!!connectingMap[connection.id]}
-                aria-busy={!!connectingMap[connection.id]}
-              >
-                {/* Status Indicator */}
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 shrink-0 rounded-full",
-                    connection.isConnected ? "bg-success" : "bg-text-lighter/40",
-                  )}
-                />
-
-                {/* Connection Info */}
-                <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <span className="truncate">{connection.name}</span>
-                  <span className="ui-text-sm shrink-0 text-text-lighter">
-                    {connection.type.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Status Text */}
-                {(() => {
-                  const statusText = connectingMap[connection.id]
-                    ? "Connecting…"
-                    : connection.isConnected
-                      ? "Connected"
-                      : connection.lastConnected
-                        ? formatLastConnected(connection.lastConnected)
-                        : "";
-                  return (
-                    <span className="ui-text-sm shrink-0 text-text-lighter">{statusText}</span>
-                  );
-                })()}
-
-                {/* Action Buttons */}
-                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                  {connection.isConnected ? (
-                    <>
-                      <Button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onFileSelect?.(`remote://${connection.id}/`, true);
-                        }}
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="Browse Files"
-                      >
-                        <FolderOpen />
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onConnect(connection.id);
-                        }}
-                        variant="ghost"
-                        size="icon-xs"
-                        className="hover:text-error"
-                        aria-label="Disconnect"
-                      >
-                        <WifiOff />
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!connectingMap[connection.id]) onConnect(connection.id);
-                      }}
-                      variant="ghost"
-                      size="icon-xs"
+              <ContextMenu key={connection.id}>
+                <ContextMenuTrigger>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      if (!connectingMap[connection.id]) {
+                        onConnect(connection.id);
+                      }
+                    }}
+                    className={cn(
+                      "h-auto w-full justify-start gap-2 px-2 py-1.5 text-left",
+                      "text-text hover:bg-hover focus:outline-none",
+                      connection.isConnected && "bg-selected",
+                      connectingMap[connection.id] && "cursor-not-allowed opacity-70",
+                    )}
+                    disabled={!!connectingMap[connection.id]}
+                    aria-busy={!!connectingMap[connection.id]}
+                  >
+                    {/* Status Indicator */}
+                    <span
                       className={cn(
-                        connectingMap[connection.id] && "cursor-not-allowed opacity-70",
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        connection.isConnected ? "bg-success" : "bg-text-lighter/40",
                       )}
-                      disabled={!!connectingMap[connection.id]}
-                      aria-label="Connect"
-                    >
-                      {connectingMap[connection.id] ? (
-                        <LoadingIndicator label="Connecting" compact />
+                    />
+
+                    {/* Connection Info */}
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span className="truncate">{connection.name}</span>
+                      <span className="ui-text-sm shrink-0 text-text-lighter">
+                        {connection.type.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Status Text */}
+                    {(() => {
+                      const statusText = connectingMap[connection.id]
+                        ? "Connecting…"
+                        : connection.isConnected
+                          ? "Connected"
+                          : connection.lastConnected
+                            ? formatLastConnected(connection.lastConnected)
+                            : "";
+                      return (
+                        <span className="ui-text-sm shrink-0 text-text-lighter">{statusText}</span>
+                      );
+                    })()}
+
+                    {/* Action Buttons */}
+                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      {connection.isConnected ? (
+                        <>
+                          <Button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onFileSelect?.(`remote://${connection.id}/`, true);
+                            }}
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label="Browse Files"
+                          >
+                            <FolderOpen />
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onConnect(connection.id);
+                            }}
+                            variant="ghost"
+                            size="icon-xs"
+                            className="hover:text-error"
+                            aria-label="Disconnect"
+                          >
+                            <WifiOff />
+                          </Button>
+                        </>
                       ) : (
-                        <Wifi />
+                        <Button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!connectingMap[connection.id]) onConnect(connection.id);
+                          }}
+                          variant="ghost"
+                          size="icon-xs"
+                          className={cn(
+                            connectingMap[connection.id] && "cursor-not-allowed opacity-70",
+                          )}
+                          disabled={!!connectingMap[connection.id]}
+                          aria-label="Connect"
+                        >
+                          {connectingMap[connection.id] ? (
+                            <LoadingIndicator label="Connecting" compact />
+                          ) : (
+                            <Wifi />
+                          )}
+                        </Button>
                       )}
-                    </Button>
-                  )}
-                </div>
-              </Button>
+                    </div>
+                  </Button>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onClick={() => onEdit(connection)}>
+                    <Edit />
+                    Edit
+                  </ContextMenuItem>
+                  <ContextMenuItem variant="destructive" onClick={() => onDelete(connection.id)}>
+                    <Trash2 />
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         )}
       </div>
-
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
-        items={contextMenuItems}
-        onClose={contextMenu.close}
-      />
     </div>
   );
 };

@@ -17,7 +17,7 @@ import {
   TrashIcon as Trash2,
   TextTIcon as Type,
 } from "@/ui/icons";
-import type { ContextMenuItem } from "@/ui/context-menu";
+import type { MenuItem } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 
 export interface EditorContextMenuHandlers {
@@ -57,7 +57,7 @@ export interface EditorContextMenuItemOptions extends EditorContextMenuHandlers 
 
 const noop = () => {};
 
-function separator(id: string): ContextMenuItem {
+function separator(id: string): MenuItem {
   return { id, label: "", separator: true, onClick: noop };
 }
 
@@ -95,7 +95,7 @@ export function buildEditorContextMenuItems({
   onMoveLineUp,
   onMoveLineDown,
   onToggleBookmark,
-}: EditorContextMenuItemOptions): ContextMenuItem[] {
+}: EditorContextMenuItemOptions): MenuItem[] {
   return [
     {
       id: "copy",

@@ -8,7 +8,7 @@ import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import {
   CaretDownIcon,
   CopyIcon,
@@ -39,7 +39,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
-  const contextMenu = useContextMenu<ProjectTab>();
+  const contextMenu = useDropdownMenu<ProjectTab>();
 
   const handleTabClick = useCallback(
     async (tab: ProjectTab) => {
@@ -80,12 +80,12 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
 
   // Build context menu items based on the selected tab
   const getContextMenuItems = useCallback(
-    (tab: ProjectTab | null): ContextMenuItem[] => {
+    (tab: ProjectTab | null): MenuItem[] => {
       if (!tab) return [];
 
       const { handleRevealInFolder } = useFileSystemStore.getState();
 
-      const items: ContextMenuItem[] = [
+      const items: MenuItem[] = [
         {
           id: "copy-path",
           label: "Copy Path",
@@ -287,9 +287,9 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
       </div>
 
       {createPortal(
-        <ContextMenu
+        <Dropdown
           isOpen={contextMenu.isOpen}
-          position={contextMenu.position}
+          point={contextMenu.position}
           items={getContextMenuItems(contextMenu.data)}
           onClose={contextMenu.close}
         />,

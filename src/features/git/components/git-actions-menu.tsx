@@ -13,7 +13,7 @@ import {
 } from "@/ui/icons";
 import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { toast } from "@/ui/toast";
@@ -199,7 +199,7 @@ const GitActionsMenu = ({
     return null;
   }
 
-  const items: ContextMenuItem[] = hasGitRepo
+  const items: MenuItem[] = hasGitRepo
     ? [
         {
           id: "select-repository",
@@ -308,9 +308,9 @@ const GitActionsMenu = ({
       ];
 
   return (
-    <ContextMenu
+    <Dropdown
       isOpen={isOpen}
-      position={{
+      point={{
         x: anchorRect.right,
         y: anchorRect.bottom + 6,
       }}

@@ -55,7 +55,7 @@ import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
 import { SearchField } from "@/ui/search";
 import { SidebarEmptyState } from "@/ui/sidebar";
@@ -547,7 +547,7 @@ export const ExtensionsSidebar = () => {
   const [isSkillsCommandOpen, setIsSkillsCommandOpen] = useState(false);
   const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null);
   const { showToast } = useToast();
-  const extensionContextMenu = useContextMenu<UnifiedExtension>();
+  const extensionContextMenu = useDropdownMenu<UnifiedExtension>();
 
   const availableExtensions = useExtensionStore.use.availableExtensions();
   const extensionsWithUpdates = useExtensionStore.use.extensionsWithUpdates();
@@ -1346,11 +1346,11 @@ export const ExtensionsSidebar = () => {
     [extensionContextMenu],
   );
 
-  const extensionContextMenuItems = useMemo<ContextMenuItem[]>(() => {
+  const extensionContextMenuItems = useMemo<MenuItem[]>(() => {
     const extension = extensionContextMenu.data;
     if (!extension) return [];
 
-    const items: ContextMenuItem[] = [];
+    const items: MenuItem[] = [];
     const isInstalling = isExtensionInstalling(extension);
     const hasUpdate = hasExtensionUpdate(extension);
     const hasLocalOverride = extension.skill ? hasSkillLocalOverride(extension.skill) : false;
@@ -1869,9 +1869,9 @@ export const ExtensionsSidebar = () => {
         onSelectSkill={() => setIsSkillsCommandOpen(false)}
       />
 
-      <ContextMenu
+      <Dropdown
         isOpen={extensionContextMenu.isOpen}
-        position={extensionContextMenu.position}
+        point={extensionContextMenu.position}
         items={extensionContextMenuItems}
         onClose={extensionContextMenu.close}
       />

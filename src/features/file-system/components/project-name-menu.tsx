@@ -10,7 +10,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
 import { MAX_RECENT_PROJECTS } from "@/features/file-system/utils/recent-folders";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { ContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 
 export const ProjectNameMenu = () => {
   const projectNameMenu = useUIState((state) => state.projectNameMenu);
@@ -21,8 +21,8 @@ export const ProjectNameMenu = () => {
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
 
-  const items = useMemo<ContextMenuItem[]>(() => {
-    const baseItems: ContextMenuItem[] = [
+  const items = useMemo<MenuItem[]>(() => {
+    const baseItems: MenuItem[] = [
       {
         id: "open-folder",
         label: "Open Folder in New Tab",
@@ -49,7 +49,7 @@ export const ProjectNameMenu = () => {
       return baseItems;
     }
 
-    const recentItems: ContextMenuItem[] = recentFolders
+    const recentItems: MenuItem[] = recentFolders
       .slice(0, MAX_RECENT_PROJECTS)
       .map((folder: RecentFolder) => ({
         id: `recent-${folder.path}`,
@@ -74,12 +74,11 @@ export const ProjectNameMenu = () => {
   if (!projectNameMenu) return null;
 
   return (
-    <ContextMenu
+    <Dropdown
       isOpen
-      position={{ x: projectNameMenu.x, y: projectNameMenu.y }}
+      point={{ x: projectNameMenu.x, y: projectNameMenu.y }}
       items={items}
       onClose={() => setProjectNameMenu(null)}
-      className="min-w-[220px]"
     />
   );
 };

@@ -41,15 +41,24 @@ import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { ExtensionErrorBoundary } from "@/extensions/ui/components/extension-error-boundary";
 import {
   SidebarHeaderIconButton,
+  SidebarListEditor,
   SidebarListItem,
   SidebarPanel,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import Input from "@/ui/input";
 import {
   ChevronExpandYIcon,
   FolderIcon,
   OpenExternalIcon,
+  PencilSimpleLineIcon,
   PlusIcon,
   RemoteIcon,
   TrashIcon,
@@ -274,9 +283,15 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const switchToChat = useAIChatStore((state) => state.switchToChat);
   const deleteChat = useAIChatStore((state) => state.deleteChat);
+  const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-  const agentContextMenu = useContextMenu<Chat>();
-  const olderAgentsMenu = useContextMenu();
+  const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const [olderAgentsMenu, setOlderAgentsMenu] = useState({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+  });
   const workspacePath = useWorkspaceTabsStore((state) => {
     const activeProject = state.projectTabs.find((tab) => tab.isActive);
     return activeProject?.path ?? null;
@@ -302,35 +317,40 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
     [openAgentBuffer, switchToChat],
   );
 
-  const handleShowMoreAgents = useCallback(
-    (event: ReactMouseEvent<HTMLButtonElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      olderAgentsMenu.openAt({ x: rect.right + 6, y: rect.top });
-    },
-    [olderAgentsMenu.openAt],
-  );
+  const handleShowMoreAgents = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setOlderAgentsMenu({ isOpen: true, position: { x: rect.right + 6, y: rect.top } });
+  }, []);
 
-  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
-    const chat = agentContextMenu.data;
-    if (!chat) return [];
+  useEffect(() => {
+    if (!renamingChatId) return;
+    requestAnimationFrame(() => {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    });
+  }, [renamingChatId]);
 
-    return [
-      {
-        id: "open-agent-chat",
-        label: "Open",
-        icon: <OpenExternalIcon />,
-        onClick: () => handleOpenChat(chat.id),
-      },
-      {
-        id: "delete-agent-chat",
-        label: "Delete",
-        icon: <TrashIcon />,
-        className: "hover:text-error",
-        onClick: () => deleteChat(chat.id),
-      },
-    ];
-  }, [agentContextMenu.data, deleteChat, handleOpenChat]);
-  const olderAgentMenuItems = useMemo<ContextMenuItem[]>(
+  const startRenamingChat = useCallback((chat: Chat) => {
+    setRenamingChatId(chat.id);
+    setRenameValue(chat.title);
+  }, []);
+
+  const finishRenamingChat = useCallback(() => {
+    if (!renamingChatId) return;
+
+    const chat = chats.find((candidate) => candidate.id === renamingChatId);
+    const nextTitle = renameValue.trim();
+    if (chat && nextTitle && nextTitle !== chat.title) {
+      updateChatTitle(chat.id, nextTitle);
+    }
+    setRenamingChatId(null);
+  }, [chats, renameValue, renamingChatId, updateChatTitle]);
+
+  const cancelRenamingChat = useCallback(() => {
+    setRenamingChatId(null);
+    setRenameValue("");
+  }, []);
+  const olderAgentMenuItems = useMemo<MenuItem[]>(
     () =>
       olderChats.map((chat) => ({
         id: chat.id,
@@ -349,19 +369,64 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   return (
     <div className="mt-1 w-full">
       <SidebarSectionLabel trailing={<SidebarNewAgentButton />}>Agents</SidebarSectionLabel>
-      {visibleChats.map((chat) => (
-        <SidebarListItem
-          key={chat.id}
-          active={chat.id === currentChatId}
-          leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
-          trailing={getRelativeTime(chat.lastMessageAt)}
-          onClick={() => handleOpenChat(chat.id)}
-          onContextMenu={(event) => agentContextMenu.open(event, chat)}
-          className="ui-text-sm min-h-6 py-1"
-        >
-          {chat.title}
-        </SidebarListItem>
-      ))}
+      {visibleChats.map((chat) =>
+        renamingChatId === chat.id ? (
+          <SidebarListEditor
+            key={chat.id}
+            leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
+            trailing={getRelativeTime(chat.lastMessageAt)}
+            className="ui-text-sm min-h-6 py-1"
+          >
+            <Input
+              ref={renameInputRef}
+              value={renameValue}
+              onChange={(event) => setRenameValue(event.target.value)}
+              onBlur={finishRenamingChat}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  finishRenamingChat();
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  cancelRenamingChat();
+                }
+              }}
+              size="xs"
+              variant="inline"
+              className="px-0"
+              aria-label={`Rename ${chat.title}`}
+            />
+          </SidebarListEditor>
+        ) : (
+          <ContextMenu key={chat.id}>
+            <ContextMenuTrigger>
+              <SidebarListItem
+                active={chat.id === currentChatId}
+                leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
+                trailing={getRelativeTime(chat.lastMessageAt)}
+                onClick={() => handleOpenChat(chat.id)}
+                className="ui-text-sm min-h-6 py-1"
+              >
+                {chat.title}
+              </SidebarListItem>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItem onClick={() => handleOpenChat(chat.id)}>
+                <OpenExternalIcon />
+                Open
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => startRenamingChat(chat)}>
+                <PencilSimpleLineIcon />
+                Rename
+              </ContextMenuItem>
+              <ContextMenuItem variant="destructive" onClick={() => deleteChat(chat.id)}>
+                <TrashIcon />
+                Delete
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+        ),
+      )}
       {olderChats.length > 0 ? (
         <SidebarListItem
           leading={<span className="size-4" aria-hidden="true" />}
@@ -372,18 +437,12 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
         </SidebarListItem>
       ) : null}
       {visibleChats.length === 0 ? <SidebarSectionLabel>No history yet</SidebarSectionLabel> : null}
-      <ContextMenu
+      <Dropdown
         isOpen={olderAgentsMenu.isOpen}
-        position={olderAgentsMenu.position}
+        point={olderAgentsMenu.position}
         items={olderAgentMenuItems}
-        onClose={olderAgentsMenu.close}
+        onClose={() => setOlderAgentsMenu((current) => ({ ...current, isOpen: false }))}
         style={{ maxHeight: 320, width: 240 }}
-      />
-      <ContextMenu
-        isOpen={agentContextMenu.isOpen}
-        position={agentContextMenu.position}
-        items={contextMenuItems}
-        onClose={agentContextMenu.close}
       />
     </div>
   );

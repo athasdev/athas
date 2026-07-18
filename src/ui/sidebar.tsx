@@ -347,6 +347,38 @@ export function SidebarListItem({
   );
 }
 
+export function SidebarListEditor({
+  children,
+  leading,
+  trailing,
+  className,
+  ...props
+}: ComponentProps<"div"> & {
+  children: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "font-sans flex w-full min-w-0 items-center gap-2 rounded-lg bg-hover/80 px-2 py-1.5 text-text",
+        className,
+      )}
+      {...props}
+    >
+      {leading ? (
+        <span className="flex shrink-0 items-center justify-center">{leading}</span>
+      ) : null}
+      <span className="min-w-0 flex-1">{children}</span>
+      {trailing ? (
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
+          {trailing}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function SidebarSectionHeader({
   children,
   count,

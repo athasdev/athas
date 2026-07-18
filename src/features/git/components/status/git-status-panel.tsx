@@ -16,8 +16,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
-import { ContextMenu, useContextMenu } from "@/ui/context-menu";
-import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
 import { SidebarTreeRow } from "@/features/sidebar-tree/components/sidebar-tree";
@@ -164,7 +163,7 @@ const GitStatusPanel = ({
 }: GitStatusPanelProps) => {
   const gitChangesFolderView = useSettingsStore((state) => state.settings.gitChangesFolderView);
   const confirmBeforeDiscard = useSettingsStore((state) => state.settings.confirmBeforeDiscard);
-  const contextMenu = useContextMenu<ContextMenuState>();
+  const contextMenu = useDropdownMenu<ContextMenuState>();
   const diffMenuAnchorRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDiffMenuOpen, setIsDiffMenuOpen] = useState(false);
@@ -760,9 +759,9 @@ const GitStatusPanel = ({
         />
       )}
 
-      <ContextMenu
+      <Dropdown
         isOpen={contextMenu.isOpen}
-        position={contextMenu.position}
+        point={contextMenu.position}
         items={
           contextMenuData
             ? [

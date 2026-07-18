@@ -1,6 +1,6 @@
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
-import { ContextMenu } from "@/ui/context-menu";
+import { Dropdown } from "@/ui/dropdown";
 import { IS_MAC } from "@/utils/platform";
 import {
   buildEditorContextMenuItems,
@@ -32,9 +32,9 @@ const EditorContextMenu = ({ isOpen, position, onClose, ...handlers }: EditorCon
   });
 
   return (
-    <ContextMenu
+    <Dropdown
       isOpen={isOpen}
-      position={position}
+      point={position}
       items={items}
       onClose={onClose}
       style={{ zIndex: EDITOR_CONSTANTS.Z_INDEX.CONTEXT_MENU }}
