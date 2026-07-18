@@ -262,7 +262,6 @@ const TerminalTabBar = ({
   isFullScreen = false,
   orientation = "horizontal",
 }: TerminalTabBarProps) => {
-  const renameStartedAtRef = useRef<number>(0);
   const [editingTerminalId, setEditingTerminalId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [draggedTerminalId, setDraggedTerminalId] = useState<string | null>(null);
@@ -336,7 +335,6 @@ const TerminalTabBar = ({
 
     closeContextMenu();
     requestAnimationFrame(() => {
-      renameStartedAtRef.current = Date.now();
       onTabClick(terminalId);
       setEditingTerminalId(terminalId);
       setEditingName(getTerminalDisplayName(terminal));
@@ -348,10 +346,10 @@ const TerminalTabBar = ({
     setEditingName("");
   };
 
-  const commitRename = () => {
+  const commitRename = (nextName: string) => {
     if (!editingTerminalId) return;
 
-    const trimmedName = editingName.trim();
+    const trimmedName = nextName.trim();
     if (!trimmedName) {
       cancelRename();
       return;
@@ -359,13 +357,6 @@ const TerminalTabBar = ({
 
     onTabRename?.(editingTerminalId, trimmedName);
     cancelRename();
-  };
-
-  const handleRenameBlur = () => {
-    if (Date.now() - renameStartedAtRef.current < 150) {
-      return;
-    }
-    commitRename();
   };
 
   const closeContextMenu = () => {
@@ -760,7 +751,6 @@ const TerminalTabBar = ({
                             onEditingNameChange={setEditingName}
                             onRenameSubmit={commitRename}
                             onRenameCancel={cancelRename}
-                            onRenameBlur={handleRenameBlur}
                           />
                         )}
                       </SortableTab>
@@ -823,7 +813,6 @@ const TerminalTabBar = ({
                           onEditingNameChange={setEditingName}
                           onRenameSubmit={commitRename}
                           onRenameCancel={cancelRename}
-                          onRenameBlur={handleRenameBlur}
                         />
                       )}
                     </SortableTab>

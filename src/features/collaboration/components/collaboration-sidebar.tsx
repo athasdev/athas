@@ -45,10 +45,12 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import Input from "@/ui/input";
+import Input, { InlineRenameInput } from "@/ui/input";
+import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarEmptyActionState,
   SidebarHeader,
+  SidebarListEditor,
   SidebarListItem,
   SidebarPanel,
   SidebarSearchFilterRow,
@@ -213,6 +215,8 @@ export function CollaborationSidebarView() {
   const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
   const [selectedNoteFolderPath, setSelectedNoteFolderPath] = useState<string | null>(null);
   const [selectedNoteItemType, setSelectedNoteItemType] = useState<"file" | "folder">("file");
+  const [renamingNotePath, setRenamingNotePath] = useState<string | null>(null);
+  const [renameNoteValue, setRenameNoteValue] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [micState, setMicState] = useState<ShareState>("idle");
@@ -882,19 +886,26 @@ export function CollaborationSidebarView() {
     setSelectedNoteFolderPath(next.path);
   };
 
-  const renameNoteItem = async (item: SidebarNoteItem) => {
+  const renameNoteItem = async (item: SidebarNoteItem, nextPath: string) => {
     if (!selectedChannel || !model.canEditNotes) return;
-    const nextPath = window.prompt("Rename", item.path);
-    if (!nextPath?.trim() || nextPath.trim() === item.path) return;
+    if (nextPath === item.path) {
+      setRenamingNotePath(null);
+      setRenameNoteValue("");
+      return;
+    }
 
     const next = renameCollaborationNoteItem({
       contentMarkdown: selectedNoteContent,
       type: item.type,
       path: item.path,
-      nextPath: nextPath.trim(),
+      nextPath,
     });
     const saved = await updateNote(next.contentMarkdown, "Rename failed");
-    if (!saved) return;
+    if (!saved) {
+      setRenamingNotePath(null);
+      setRenameNoteValue("");
+      return;
+    }
     if (item.type === "file") {
       setSelectedNoteItemType("file");
       setSelectedNotePath(next.path);
@@ -902,6 +913,8 @@ export function CollaborationSidebarView() {
       setSelectedNoteItemType("folder");
       setSelectedNoteFolderPath(next.path);
     }
+    setRenamingNotePath(null);
+    setRenameNoteValue("");
   };
 
   const deleteNoteItem = async (item: SidebarNoteItem) => {
@@ -1028,7 +1041,10 @@ export function CollaborationSidebarView() {
             label: "Rename",
             icon: <FileText />,
             disabled: !model.canEditNotes,
-            onClick: () => void renameNoteItem(item),
+            onClick: () => {
+              setRenamingNotePath(item.path);
+              setRenameNoteValue(item.path);
+            },
           },
           {
             id: "delete",
@@ -1063,9 +1079,10 @@ export function CollaborationSidebarView() {
   const channelsContent = (
     <div className="h-full min-h-0 overflow-hidden">
       {openConversation === null ? (
-        <div
-          className="h-full select-none overflow-y-auto px-1 py-1"
-          onContextMenu={(event) => channelsContextMenu.open(event)}
+        <ScrollArea
+          className="h-full select-none"
+          contentClassName="px-1 py-1"
+          viewportProps={{ onContextMenu: (event) => channelsContextMenu.open(event) }}
         >
           <SidebarSearchFilterRow
             value={channelSearchQuery}
@@ -1186,7 +1203,7 @@ export function CollaborationSidebarView() {
               <SidebarEmptyActionState className="min-h-24" message="No matching channels." />
             ) : null}
           </div>
-        </div>
+        </ScrollArea>
       ) : null}
       {openConversation?.type === "channel" ? (
         <div className="flex h-full min-h-0 flex-col">
@@ -1221,7 +1238,7 @@ export function CollaborationSidebarView() {
               ))}
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
             <div className="space-y-1.5">
               {model.chatGroups.length > 0 ? (
                 model.chatGroups.slice(-10).map((group) => (
@@ -1257,7 +1274,7 @@ export function CollaborationSidebarView() {
                 <SidebarEmptyActionState className="min-h-24" message="No chats yet." />
               )}
             </div>
-          </div>
+          </ScrollArea>
 
           <CollaborationMessageComposer
             value={draft}
@@ -1301,7 +1318,7 @@ export function CollaborationSidebarView() {
               </>
             ) : null}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+          <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
             <div className="space-y-1.5">
               {privateChatEntries.length > 0 ? (
                 privateChatEntries.map((entry) => {
@@ -1325,7 +1342,7 @@ export function CollaborationSidebarView() {
                 <SidebarEmptyActionState className="min-h-24" message="No private messages yet." />
               )}
             </div>
-          </div>
+          </ScrollArea>
 
           <CollaborationMessageComposer
             value={draft}
@@ -1346,7 +1363,7 @@ export function CollaborationSidebarView() {
   );
 
   const peopleContent = (
-    <div className="h-full overflow-y-auto px-1 py-1">
+    <ScrollArea className="h-full" contentClassName="px-1 py-1">
       <SidebarSearchFilterRow
         value={peopleSearchQuery}
         onChange={setPeopleSearchQuery}
@@ -1415,13 +1432,14 @@ export function CollaborationSidebarView() {
           />
         )}
       </div>
-    </div>
+    </ScrollArea>
   );
 
   const notesContent = (
-    <div
-      className="h-full overflow-y-auto px-1 py-1"
-      onContextMenu={(event) => notesContextMenu.open(event)}
+    <ScrollArea
+      className="h-full"
+      contentClassName="px-1 py-1"
+      viewportProps={{ onContextMenu: (event) => notesContextMenu.open(event) }}
     >
       <SidebarSearchFilterRow
         value={notesSearchQuery}
@@ -1437,6 +1455,37 @@ export function CollaborationSidebarView() {
       />
       <div className="space-y-px">
         {filteredNoteItems.map((item) => {
+          if (renamingNotePath === item.path) {
+            return (
+              <SidebarListEditor
+                key={`${item.type}:${item.path}`}
+                className="min-h-7"
+                leading={
+                  item.type === "folder" ? (
+                    <Folder className="size-3.5" weight="duotone" />
+                  ) : (
+                    <FileText className="size-3.5" weight="duotone" />
+                  )
+                }
+              >
+                <div
+                  style={{ paddingLeft: `${Math.max(item.path.split("/").length - 1, 0) * 10}px` }}
+                >
+                  <InlineRenameInput
+                    value={renameNoteValue}
+                    onValueChange={setRenameNoteValue}
+                    onSubmit={(nextPath) => void renameNoteItem(item, nextPath)}
+                    onCancel={() => {
+                      setRenamingNotePath(null);
+                      setRenameNoteValue("");
+                    }}
+                    aria-label={`Rename ${item.path}`}
+                  />
+                </div>
+              </SidebarListEditor>
+            );
+          }
+
           return (
             <SidebarListItem
               key={`${item.type}:${item.path}`}
@@ -1492,7 +1541,7 @@ export function CollaborationSidebarView() {
           />
         ) : null}
       </div>
-    </div>
+    </ScrollArea>
   );
 
   return (

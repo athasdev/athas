@@ -15,7 +15,6 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { isVirtualContent } from "@/features/panes/types/pane-content.types";
-import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -23,7 +22,6 @@ import {
   ContextMenuShortcut,
 } from "@/ui/context-menu";
 import type { MenuItem } from "@/ui/dropdown";
-import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getBaseName, getDirName } from "@/utils/path-helpers";
 import Keybinding from "@/features/keymaps/components/keybinding";
@@ -33,6 +31,7 @@ interface TabContextMenuProps {
   buffer: PaneContent;
   paneId?: string;
   onPin: (bufferId: string) => void;
+  onRename?: (bufferId: string) => void;
   onCloseTab: (bufferId: string) => void;
   onCloseOthers: (bufferId: string) => void;
   onCloseAll: () => void;
@@ -51,6 +50,7 @@ const TabContextMenu = ({
   buffer,
   paneId,
   onPin,
+  onRename,
   onCloseTab,
   onCloseOthers,
   onCloseAll,
@@ -78,24 +78,7 @@ const TabContextMenu = ({
             id: "rename-terminal",
             label: "Rename",
             icon: <PencilSimpleLine />,
-            onClick: async () => {
-              const nextName = (
-                await showPromptDialog("Enter a terminal name:", {
-                  title: "Rename Terminal",
-                  defaultValue: buffer.name,
-                  placeholder: "Terminal name",
-                  confirmLabel: "Rename",
-                })
-              )?.trim();
-
-              if (!nextName) return;
-
-              useTerminalStore.getState().updateSession(buffer.sessionId, {
-                name: nextName,
-                customName: true,
-              });
-              useBufferStore.getState().actions.updateBuffer({ ...buffer, name: nextName });
-            },
+            onClick: () => onRename?.(buffer.id),
           },
         ]
       : []),

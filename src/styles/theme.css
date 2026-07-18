@@ -110,7 +110,7 @@
     --app-ease-out: cubic-bezier(0.17, 1, 0.32, 1);
     --app-ease-spring: cubic-bezier(0.35, 1.55, 0.65, 1);
     --app-ease-in-out: cubic-bezier(0.66, 0, 0.34, 1);
-    --app-press-scale: 0.98;
+    --app-press-scale: 1;
     --tab-bar-bg: color-mix(in srgb, var(--secondary-bg) 72%, var(--primary-bg));
     --tab-active-bg: var(--primary-bg);
     --tab-hover-bg: color-mix(in srgb, var(--hover) 72%, transparent);

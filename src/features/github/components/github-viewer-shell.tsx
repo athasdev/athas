@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 
 interface GitHubViewerShellProps {
@@ -16,10 +17,12 @@ export function GitHubViewerShell({
   contentClassName,
 }: GitHubViewerShellProps) {
   return (
-    <div className={cn("flex h-full flex-col overflow-y-auto bg-primary-bg", className)}>
-      {header}
-      <div className={cn("min-w-0 px-3 pb-4 sm:px-4", contentClassName)}>{children}</div>
-    </div>
+    <ScrollArea className={cn("h-full bg-primary-bg", className)}>
+      <div className="flex min-h-full flex-col">
+        {header}
+        <div className={cn("min-w-0 px-3 pb-4 sm:px-4", contentClassName)}>{children}</div>
+      </div>
+    </ScrollArea>
   );
 }
 

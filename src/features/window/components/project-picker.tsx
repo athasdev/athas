@@ -13,7 +13,7 @@ import { IdeSettingsImportContent } from "@/features/file-system/components/ide-
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
-import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { showPromptDialog } from "@/ui/dialog";
 import ConnectionForm from "@/features/remote/components/connection-form";
 import PasswordPromptDialog from "@/features/remote/components/password-prompt-dialog";
 import {
@@ -562,7 +562,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             ) : null}
           </CommandList>
         ) : (
-          <CommandList className="p-4">
+          <CommandList contentClassName="p-4">
             <ConnectionForm
               formId="project-picker-add-remote-form"
               idPrefix="project-picker-remote"

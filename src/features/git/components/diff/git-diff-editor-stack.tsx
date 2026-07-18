@@ -1,5 +1,6 @@
 import {
   ColumnsIcon as Columns2,
+  DotsThreeIcon as MoreHorizontal,
   ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
 } from "@/ui/icons";
@@ -25,8 +26,15 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { formatRelativeDate } from "@/utils/date";
 import { cn } from "@/utils/cn";
 import { joinPath } from "@/utils/path-helpers";
-import { ActionMenu } from "@/ui/action-menu";
 import { Avatar } from "@/ui/avatar";
+import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import Tooltip from "@/ui/tooltip";
 import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
@@ -712,25 +720,32 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <Columns2 weight="duotone" />
               </BreadcrumbActionButton>
             </div>
-            <ActionMenu
-              label="Diff actions"
-              items={[
-                ...(githubCommitUrl
-                  ? [
-                      {
-                        id: "github",
-                        label: "View on GitHub",
-                        onClick: () => void openUrl(githubCommitUrl),
-                      },
-                    ]
-                  : []),
-                {
-                  id: "whitespace",
-                  label: showWhitespace ? "Hide whitespace" : "Show whitespace",
-                  onClick: () => setShowWhitespace((current) => !current),
-                },
-              ]}
-            />
+            <DropdownMenu>
+              <Tooltip content="Diff actions" side="bottom">
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Diff actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+              </Tooltip>
+              <DropdownMenuContent>
+                {githubCommitUrl ? (
+                  <DropdownMenuItem onClick={() => void openUrl(githubCommitUrl)}>
+                    View on GitHub
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem onClick={() => setShowWhitespace((current) => !current)}>
+                  {showWhitespace ? "Hide whitespace" : "Show whitespace"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         }
       />

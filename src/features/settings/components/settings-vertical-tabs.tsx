@@ -21,6 +21,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
+import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 
 interface SettingsVerticalTabsProps {
@@ -145,13 +146,16 @@ export const SettingsVerticalTabs = ({
 
   return (
     <div className="flex h-full flex-col">
-      <div
-        ref={scrollContainerRef}
-        role="tablist"
-        aria-orientation="vertical"
-        aria-label="Settings sections"
-        className="flex-1 space-y-0.5 overflow-y-auto p-2"
-        onWheelCapture={handleSidebarWheel}
+      <ScrollArea
+        className="flex-1"
+        contentClassName="space-y-0.5 p-2"
+        viewportProps={{
+          ref: scrollContainerRef,
+          role: "tablist",
+          "aria-orientation": "vertical",
+          "aria-label": "Settings sections",
+          onWheelCapture: handleSidebarWheel,
+        }}
       >
         {visibleTabs.length > 0 ? (
           visibleTabs.map((item, index) => {
@@ -212,7 +216,7 @@ export const SettingsVerticalTabs = ({
             No matching settings
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       {!hasSettingsSync ? (
         <div className="p-2">

@@ -34,6 +34,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarEmptyActionState,
   SidebarHeader,
@@ -810,7 +811,7 @@ const GitHubPRsView = memo(() => {
                   id: "pull-requests",
                   content: (
                     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                      <div className="scrollbar-hidden min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
+                      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
                         {!effectiveRepoPath ? (
                           <GitHubSidebarState
                             icon={<GitBranch className="size-4" />}
@@ -886,7 +887,7 @@ const GitHubPRsView = memo(() => {
                             ))}
                           </div>
                         )}
-                      </div>
+                      </ScrollArea>
                     </div>
                   ),
                 },

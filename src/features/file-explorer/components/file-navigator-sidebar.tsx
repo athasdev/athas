@@ -22,6 +22,7 @@ import {
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
+import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import "../styles/file-explorer-tree.css";
@@ -463,7 +464,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         />
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto p-1">
+      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1" orientation="both">
         {hiddenItemCount > 0 ? (
           <SidebarSectionLabel>
             Showing {searchableItems.length.toLocaleString()} of {items.length.toLocaleString()}
@@ -493,7 +494,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             />
           ))
         )}
-      </div>
+      </ScrollArea>
       <div
         className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-accent/20"
         onPointerDown={handleResizeStart}

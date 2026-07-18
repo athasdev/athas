@@ -42,7 +42,7 @@ import { useTerminalTabsStore } from "@/features/terminal/stores/terminal-tabs.s
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { createTerminalEventChannel } from "@/features/terminal/utils/terminal-protocol";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
-import { showAlertDialog, showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import {

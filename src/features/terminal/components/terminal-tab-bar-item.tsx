@@ -1,8 +1,8 @@
 import { PushPinIcon as Pin, XIcon as X } from "@/ui/icons";
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, useCallback } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
-import Input from "@/ui/input";
+import { InlineRenameInput } from "@/ui/input";
 import { TabBarTab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
@@ -22,9 +22,8 @@ interface TerminalTabBarItemProps {
   isEditing: boolean;
   editingName: string;
   onEditingNameChange: (value: string) => void;
-  onRenameSubmit: () => void;
+  onRenameSubmit: (value: string) => void;
   onRenameCancel: () => void;
-  onRenameBlur: () => void;
 }
 
 const TerminalTabBarItem = memo(function TerminalTabBarItem({
@@ -45,22 +44,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
   onEditingNameChange,
   onRenameSubmit,
   onRenameCancel,
-  onRenameBlur,
 }: TerminalTabBarItemProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (!isEditing || !inputRef.current) return;
-
-    const frameId = requestAnimationFrame(() => {
-      if (!inputRef.current) return;
-      inputRef.current.focus();
-      inputRef.current.select();
-    });
-
-    return () => cancelAnimationFrame(frameId);
-  }, [isEditing]);
-
   const handleAuxClick = useCallback(
     (e: React.MouseEvent) => {
       // Only handle middle click here
@@ -134,36 +118,21 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         }
       >
         {isEditing ? (
-          <Input
-            ref={inputRef}
+          <InlineRenameInput
             type="text"
             value={editingName}
-            onChange={(e) => onEditingNameChange(e.target.value)}
+            onValueChange={onEditingNameChange}
+            onSubmit={onRenameSubmit}
+            onCancel={onRenameCancel}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onMouseUp={(e) => e.stopPropagation()}
             onDoubleClick={(e) => e.stopPropagation()}
-            onFocus={(e) => e.currentTarget.select()}
-            onBlur={onRenameBlur}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === "Enter") {
-                onRenameSubmit();
-              } else if (e.key === "Escape") {
-                onRenameCancel();
-              }
-            }}
-            variant="ghost"
-            className={cn(
-              "font-sans ui-text-sm h-5 min-w-0 px-0",
-              orientation === "vertical" ? "text-left" : "text-left",
-              isActive ? "text-text" : "text-text-lighter",
-            )}
-            style={{
-              width: `${Math.max(editingName.trim().length || terminal.name.length, 1)}ch`,
-              maxWidth: "100%",
-            }}
+            tone={isActive ? "default" : "muted"}
+            width="content"
+            className="min-w-0 max-w-full text-left"
             placeholder="Terminal name"
+            aria-label={`Rename ${displayName}`}
             spellCheck={false}
           />
         ) : (

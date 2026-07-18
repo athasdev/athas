@@ -18,7 +18,7 @@ import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { requestWindowClose } from "@/features/window/utils/request-window-close";
-import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import { showAlertDialog } from "@/ui/dialog";
 import { writeClipboardText } from "@/utils/clipboard";
 import { getServiceUrls } from "@/config/services";
 import { useMenuEvents } from "./use-menu-events";

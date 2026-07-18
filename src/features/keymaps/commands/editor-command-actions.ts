@@ -15,7 +15,7 @@ import {
   resolveSelectPreviousOccurrenceAction,
   type OccurrenceRange,
 } from "@/features/editor/utils/select-next-occurrence";
-import { showChoiceDialog } from "@/features/dialogs/services/dialog-service";
+import { showChoiceDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 

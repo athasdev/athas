@@ -11,6 +11,7 @@ import { useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
 import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger.types";
@@ -67,7 +68,13 @@ export function DebugSection({
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {isOpen ? (
-        <div className={cn("min-h-0 flex-1 overflow-auto", contentClassName)}>{children}</div>
+        <ScrollArea
+          className="min-h-0 flex-1"
+          contentClassName={contentClassName}
+          orientation="both"
+        >
+          {children}
+        </ScrollArea>
       ) : null}
     </section>
   );

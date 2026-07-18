@@ -18,7 +18,8 @@ import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import Checkbox from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { ScrollArea } from "@/ui/scroll-area";
+import { showConfirmDialog } from "@/ui/dialog";
 import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
 import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
@@ -742,7 +743,7 @@ const GitStatusPanel = ({
               )}
             </div>
           </div>
-          <div className="scrollbar-none min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1">
             {trackedFiles.length > 0 && (
               <>
                 {renderSectionHeader("tracked", SECTION_LABELS.tracked)}
@@ -761,7 +762,7 @@ const GitStatusPanel = ({
                     : renderFlatFileList(groupedUntrackedFiles))}
               </>
             )}
-          </div>
+          </ScrollArea>
         </>
       ) : (
         <SidebarEmptyActionState

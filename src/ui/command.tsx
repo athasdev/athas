@@ -9,6 +9,7 @@ import { useActionsStore } from "@/features/command-palette/stores/action-histor
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
 import { instantTransition, quickTransition } from "@/utils/motion-presets";
+import { ScrollArea } from "@/ui/scroll-area";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
@@ -211,17 +212,24 @@ export const CommandHeader = ({
 };
 
 type CommandListProps = React.ComponentProps<"div"> & {
+  contentClassName?: string;
   ref?: React.Ref<HTMLDivElement>;
 };
 
-export const CommandList = ({ children, ref, className, ...props }: CommandListProps) => (
-  <div
-    ref={ref}
-    className={cn("custom-scrollbar-thin flex-1 overflow-y-auto p-2", className)}
-    {...props}
+export const CommandList = ({
+  children,
+  ref,
+  className,
+  contentClassName,
+  ...props
+}: CommandListProps) => (
+  <ScrollArea
+    className={cn("flex-1", className)}
+    contentClassName={cn("p-2", contentClassName)}
+    viewportProps={{ ref, ...props }}
   >
     {children}
-  </div>
+  </ScrollArea>
 );
 
 CommandList.displayName = "CommandList";

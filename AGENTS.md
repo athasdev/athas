@@ -69,6 +69,7 @@
 ## UI Design System
 
 - Treat `src/ui` primitives and `src/styles/theme.css` as the source of truth for reusable visual behavior.
+- Do not create `src/ui/tests` or add tests for UI primitives that only assert rendering, class names, data slots, variants, or upstream Base UI/Shadcn behavior. Test product behavior in the owning feature instead unless the user explicitly requests a primitive-level regression test.
 - Before creating UI markup or a new component, search `src/ui` and at least two comparable feature surfaces for an existing primitive or composition.
 - Feature components may control placement, responsive layout, and domain content. They must not redefine a shared primitive's height, radius, border, background, typography, or interaction states with local utility classes.
 - When a primitive is missing a needed visual behavior, add a named semantic prop or CVA variant to the primitive and migrate every current consumer that represents the same pattern.

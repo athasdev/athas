@@ -9,6 +9,7 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import {
   PaneChip,
   PaneIconButton,
@@ -95,7 +96,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1">
         {isLoading ? (
           <div className="flex items-center gap-2 px-3 py-4 text-text-lighter">
             <Spinner label="Finding references" showLabel compact />
@@ -149,7 +150,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
             );
           })
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 };

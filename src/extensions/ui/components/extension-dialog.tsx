@@ -2,6 +2,7 @@ import { XIcon as X } from "@/ui/icons";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
 import { ExtensionErrorBoundary } from "./extension-error-boundary";
 import { Button } from "@/ui/button";
+import { ScrollArea } from "@/ui/scroll-area";
 
 export function ExtensionDialogs() {
   const activeDialogs = useUIExtensionStore.use.activeDialogs();
@@ -36,11 +37,11 @@ export function ExtensionDialogs() {
                 <X />
               </Button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <ScrollArea className="min-h-0 flex-1" contentClassName="p-4">
               <ExtensionErrorBoundary extensionId={dialog.extensionId} name={dialog.title}>
                 {dialog.render()}
               </ExtensionErrorBoundary>
-            </div>
+            </ScrollArea>
           </div>
         </div>
       ))}

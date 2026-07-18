@@ -29,7 +29,8 @@ import {
   CommandInput,
   CommandList,
 } from "@/ui/command";
-import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { showPromptDialog } from "@/ui/dialog";
+import { InlineRenameInput } from "@/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate, formatShortDateTime } from "@/utils/date";
@@ -70,6 +71,8 @@ export function LocalHistoryCommandContent({
   const [entries, setEntries] = useState<LocalHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [renamingEntryId, setRenamingEntryId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -319,16 +322,8 @@ export function LocalHistoryCommandContent({
   );
 
   const renameSnapshot = useCallback(
-    async (entry: LocalHistoryEntry) => {
+    async (entry: LocalHistoryEntry, label: string) => {
       if (!targetPath) return;
-
-      const label = await showPromptDialog("Name this local history entry:", {
-        title: "Rename Local History Entry",
-        defaultValue: entry.label ?? "",
-        placeholder: "Entry name",
-        confirmLabel: "Rename",
-      });
-      if (label === null) return;
 
       try {
         const updatedEntry = await renameLocalHistoryEntry(
@@ -342,6 +337,9 @@ export function LocalHistoryCommandContent({
       } catch (error) {
         console.error("Failed to rename local history snapshot:", error);
         toast.error("Failed to rename snapshot");
+      } finally {
+        setRenamingEntryId(null);
+        setRenameValue("");
       }
     },
     [targetPath],
@@ -427,9 +425,26 @@ export function LocalHistoryCommandContent({
             >
               <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
               <div className="min-w-0 flex-1">
-                <div className="truncate font-sans ui-text-base text-text">
-                  {getEntryTitle(entry)}
-                </div>
+                {renamingEntryId === entry.id ? (
+                  <InlineRenameInput
+                    value={renameValue}
+                    onValueChange={setRenameValue}
+                    onSubmit={(label) => void renameSnapshot(entry, label)}
+                    onCancel={() => {
+                      setRenamingEntryId(null);
+                      setRenameValue("");
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    allowEmpty
+                    aria-label={`Rename ${getEntryTitle(entry)}`}
+                    placeholder="Entry name"
+                  />
+                ) : (
+                  <div className="truncate font-sans ui-text-base text-text">
+                    {getEntryTitle(entry)}
+                  </div>
+                )}
                 <div className="truncate font-sans ui-text-base text-text-lighter">
                   {formatRelativeDate(new Date(entry.created_at))} ·{" "}
                   {formatSnapshotSize(entry.size)}
@@ -491,7 +506,8 @@ export function LocalHistoryCommandContent({
                   tooltip="Rename snapshot"
                   onClick={(event) => {
                     event.stopPropagation();
-                    void renameSnapshot(entry);
+                    setRenamingEntryId(entry.id);
+                    setRenameValue(entry.label ?? "");
                   }}
                   size="icon"
                 >

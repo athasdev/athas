@@ -15,6 +15,7 @@ import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { ScrollArea } from "@/ui/scroll-area";
 import type { SearchResult } from "../types/search.types";
 import { SETTINGS_TAB_ITEMS, SettingsVerticalTabs } from "./settings-vertical-tabs";
 
@@ -271,17 +272,20 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             />
           </div>
 
-          <div
-            ref={contentRef}
-            id={activePanelId}
-            role="tabpanel"
-            aria-labelledby={activeTabId}
-            data-settings-content=""
-            tabIndex={-1}
-            className="min-w-0 flex-1 overflow-y-auto p-3 [overscroll-behavior:contain] max-[720px]:p-2"
+          <ScrollArea
+            className="min-w-0 flex-1"
+            contentClassName="p-3 max-[720px]:p-2"
+            viewportProps={{
+              ref: contentRef,
+              id: activePanelId,
+              role: "tabpanel",
+              "aria-labelledby": activeTabId,
+              "data-settings-content": "",
+              tabIndex: -1,
+            }}
           >
             {renderTabContent()}
-          </div>
+          </ScrollArea>
         </div>
       </Dialog>
       <Dropdown

@@ -26,6 +26,7 @@ import {
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { writeClipboardText } from "@/utils/clipboard";
+import { ScrollArea } from "@/ui/scroll-area";
 import type { TerminalWidthMode } from "@/features/terminal/stores/terminal.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
@@ -1024,7 +1025,7 @@ const DiagnosticsPane = ({
           />
         ) : null}
 
-        <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="px-1.5 py-1.5">
           {diagnostics.length === 0 ? (
             <div className="ui-text-sm flex h-full items-center justify-center text-text-lighter">
               No problems detected
@@ -1165,7 +1166,7 @@ const DiagnosticsPane = ({
               })}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
 
       <Dropdown

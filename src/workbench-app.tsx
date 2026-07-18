@@ -13,7 +13,7 @@ import { ZoomIndicator } from "./features/window/components/zoom-indicator";
 import { Toaster } from "./ui/sonner";
 import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
-import { DialogServiceProvider } from "./features/dialogs/services/dialog-service";
+import { DialogServiceProvider } from "@/ui/dialog";
 
 const bootstrapStartedAt = performance.now();
 void initializeAppBootstrap()

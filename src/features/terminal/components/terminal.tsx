@@ -17,7 +17,7 @@ import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
-import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { showConfirmDialog } from "@/ui/dialog";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 import { currentPlatform } from "@/utils/platform";
 import {

@@ -8,6 +8,7 @@ import {
   TextTIcon as Type,
 } from "@/ui/icons";
 import { Button } from "@/ui/button";
+import { ScrollArea } from "@/ui/scroll-area";
 import {
   formatForeignKeyLabel,
   getColumnConstraintLabels,
@@ -56,7 +57,7 @@ export default function SchemaView({
   const fkMap = mapForeignKeysByColumn(foreignKeys);
 
   return (
-    <div className="flex-1 overflow-auto font-sans">
+    <ScrollArea className="flex-1 font-sans" orientation="both">
       <div className="px-3 py-3">
         <div className="ui-text-sm text-text">{tableName}</div>
         <div className="ui-text-sm text-text-lighter">{columns.length} columns</div>
@@ -101,6 +102,6 @@ export default function SchemaView({
           );
         })}
       </div>
-    </div>
+    </ScrollArea>
   );
 }

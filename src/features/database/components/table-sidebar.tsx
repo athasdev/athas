@@ -13,6 +13,7 @@ import {
   SidebarPanel,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
+import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
 import type { DatabaseObjectKind, TableInfo } from "../types/common.types";
@@ -72,7 +73,7 @@ export default function TableSidebar({
           <Plus />
         </SidebarHeaderIconButton>
       </SidebarHeader>
-      <div className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
+      <ScrollArea className="flex-1" contentClassName="space-y-1 p-2">
         {objectGroups.map((group, index) => {
           const Icon = groupIcon[group.kind];
           return (
@@ -99,7 +100,7 @@ export default function TableSidebar({
             </div>
           );
         })}
-      </div>
+      </ScrollArea>
       <SqlHistoryList
         queries={sqlHistory}
         compact

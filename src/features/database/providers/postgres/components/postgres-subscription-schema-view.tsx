@@ -1,4 +1,5 @@
 import { RadioButtonIcon as Radio } from "@/ui/icons";
+import { ScrollArea } from "@/ui/scroll-area";
 import type { PostgresSubscriptionInfo } from "../../../types/common.types";
 
 interface PostgresSubscriptionSchemaViewProps {
@@ -44,7 +45,7 @@ export default function PostgresSubscriptionSchemaView({
   ];
 
   return (
-    <div className="flex-1 overflow-auto">
+    <ScrollArea className="flex-1" orientation="both">
       <div className="flex items-center gap-2 px-3 py-3">
         <Radio className="text-text-lighter" />
         <div>
@@ -62,6 +63,6 @@ export default function PostgresSubscriptionSchemaView({
           </div>
         ))}
       </div>
-    </div>
+    </ScrollArea>
   );
 }

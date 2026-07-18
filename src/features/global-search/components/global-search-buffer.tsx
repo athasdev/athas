@@ -7,6 +7,7 @@ import type {
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { getBaseName, getRelativePath } from "@/utils/path-helpers";
+import { ScrollArea } from "@/ui/scroll-area";
 import {
   CONTENT_SEARCH_INITIAL_RENDER_LIMIT,
   CONTENT_SEARCH_RENDER_INCREMENT,
@@ -561,10 +562,7 @@ const GlobalSearchBuffer = () => {
             hasMoreResults={hasMoreResults}
           />
         ) : (
-          <div
-            ref={scrollContainerRef}
-            className="custom-scrollbar-thin h-full overflow-y-auto bg-primary-bg"
-          >
+          <ScrollArea className="h-full bg-primary-bg" viewportProps={{ ref: scrollContainerRef }}>
             <GlobalSearchState
               availability={availability}
               query={query}
@@ -575,7 +573,7 @@ const GlobalSearchBuffer = () => {
               hasFileFilters={Boolean(includeQuery || excludeQuery)}
               onRetry={() => void refreshSearch()}
             />
-          </div>
+          </ScrollArea>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { isEditorContent, type PaneContent } from "@/features/panes/types/pane-content.types";
-import { showChoiceDialog } from "@/features/dialogs/services/dialog-service";
+import { showChoiceDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 
 export type ProjectTransitionAction =

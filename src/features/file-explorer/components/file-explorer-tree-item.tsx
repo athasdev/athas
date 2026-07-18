@@ -3,7 +3,7 @@ import { memo } from "react";
 import { FILE_TREE_ROW_CLASS_NAME } from "@/features/file-explorer/lib/file-tree-row";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import Input from "@/ui/input";
+import { InlineRenameInput } from "@/ui/input";
 import { TreeRow } from "@/features/sidebar/components/tree-row";
 import { cn } from "@/utils/cn";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -52,8 +52,8 @@ interface FileExplorerTreeItemProps {
   isDragging: boolean;
   editingValue?: string;
   onEditingValueChange: (value: string) => void;
-  onKeyDown: (e: React.KeyboardEvent, file: FileEntry) => void;
-  onBlur: (file: FileEntry) => void;
+  onSubmit: (value: string, file: FileEntry) => void;
+  onCancel: (file: FileEntry) => void;
   getGitStatusDecoration: (file: FileEntry) => FileTreeGitStatusDecoration | null;
   searchQuery?: string;
   isSearchMatch?: boolean;
@@ -96,8 +96,8 @@ function FileExplorerTreeItemComponent({
   isDragging,
   editingValue,
   onEditingValueChange,
-  onKeyDown,
-  onBlur,
+  onSubmit,
+  onCancel,
   getGitStatusDecoration,
   searchQuery,
   isSearchMatch = false,
@@ -153,34 +153,31 @@ function FileExplorerTreeItemComponent({
             isExpanded={false}
             className="relative z-[1] shrink-0 text-text-lighter"
           />
-          <Input
-            ref={(el) => {
-              if (el) {
-                el.focus();
-                el.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                  inline: "nearest",
-                });
-              }
-            }}
+          <InlineRenameInput
             type="text"
             autoCapitalize="none"
             autoComplete="off"
             autoCorrect="off"
             spellCheck="false"
             value={editingValue ?? ""}
-            onFocus={() => {
+            onFocus={(event) => {
+              event.currentTarget.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest",
+              });
               if (file.isRenaming) {
                 onEditingValueChange(file.name);
               }
             }}
-            onChange={(e) => onEditingValueChange(e.target.value)}
-            onKeyDown={(e) => onKeyDown(e, file)}
-            onBlur={() => onBlur(file)}
-            variant="inline"
-            className="font-sans ui-text-sm relative z-1 flex-1 px-0"
+            onValueChange={onEditingValueChange}
+            onSubmit={(value) => onSubmit(value, file)}
+            onCancel={() => onCancel(file)}
+            className="relative z-1 flex-1"
             placeholder={file.isDir ? "folder name" : "file name"}
+            aria-label={
+              file.isRenaming ? `Rename ${file.name}` : `Name new ${file.isDir ? "folder" : "file"}`
+            }
           />
         </div>
       </div>
@@ -257,8 +254,8 @@ export const FileExplorerTreeItem = memo(
     prev.isDragging === next.isDragging &&
     prev.editingValue === next.editingValue &&
     prev.onEditingValueChange === next.onEditingValueChange &&
-    prev.onKeyDown === next.onKeyDown &&
-    prev.onBlur === next.onBlur &&
+    prev.onSubmit === next.onSubmit &&
+    prev.onCancel === next.onCancel &&
     prev.getGitStatusDecoration === next.getGitStatusDecoration &&
     prev.searchQuery === next.searchQuery &&
     prev.isSearchMatch === next.isSearchMatch &&

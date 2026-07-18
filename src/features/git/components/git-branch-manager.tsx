@@ -20,7 +20,7 @@ import {
   useCommandListNavigation,
 } from "@/ui/command";
 import { GitBranchIcon, FolderOpenIcon, NodesIcon } from "@/ui/icons";
-import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { showConfirmDialog } from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import { getFolderName, getRelativePath } from "@/utils/path-helpers";
 import { matchesSearchQuery } from "@/utils/search-match";

@@ -31,7 +31,7 @@ export function CollaborationMessageComposer({
   return (
     <SidebarFooter surface className="mx-0 mb-0">
       {error ? <div className="ui-text-sm mb-1.5 px-1 text-error">{error}</div> : null}
-      <SidebarComposerBody className="border-0">
+      <SidebarComposerBody surface={false}>
         <Textarea
           value={value}
           variant="ghost"

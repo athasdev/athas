@@ -14,7 +14,7 @@ import {
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
-import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { showPromptDialog } from "@/ui/dialog";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import type { Action } from "../types/action.types";
 

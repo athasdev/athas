@@ -1,4 +1,5 @@
 import { Button } from "@/ui/button";
+import { ScrollArea } from "@/ui/scroll-area";
 import { getDatabaseObjectOwner, groupDatabaseObjects } from "../lib/database-catalog";
 import type { ColumnFilter, DatabaseInfo, TableInfo } from "../types/common.types";
 import SqlHistoryList from "./sql-history-list";
@@ -33,7 +34,7 @@ export default function InfoView({
   const objectGroups = groupDatabaseObjects(tables);
 
   return (
-    <div className="flex-1 overflow-auto font-sans">
+    <ScrollArea className="flex-1 font-sans" orientation="both">
       <div className="divide-y divide-border">
         {/* Database stats */}
         <div className="p-3">
@@ -99,6 +100,6 @@ export default function InfoView({
           </div>
         )}
       </div>
-    </div>
+    </ScrollArea>
   );
 }

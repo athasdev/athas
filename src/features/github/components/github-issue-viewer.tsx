@@ -1,12 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ChatCircleTextIcon as MessageSquare } from "@/ui/icons";
+import { ChatCircleTextIcon as MessageSquare, DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
+import Tooltip from "@/ui/tooltip";
 import type { IssueDetails } from "../types/github.types";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,
@@ -252,19 +258,32 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               >
                 Edit
               </Button>
-              <ActionMenu
-                label="Issue actions"
-                items={[
-                  {
-                    id: "refresh",
-                    label: isLoading && details ? "Refreshing..." : "Refresh",
-                    disabled: isLoading && Boolean(details),
-                    onClick: () => void fetchIssue(true),
-                  },
-                  { id: "open-browser", label: "Open on GitHub", onClick: handleOpenInBrowser },
-                  { id: "copy-link", label: "Copy link", onClick: handleCopyIssueLink },
-                ]}
-              />
+              <DropdownMenu>
+                <Tooltip content="Issue actions" side="bottom">
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Issue actions"
+                      />
+                    }
+                  >
+                    <MoreHorizontal />
+                  </DropdownMenuTrigger>
+                </Tooltip>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    disabled={isLoading && Boolean(details)}
+                    onClick={() => void fetchIssue(true)}
+                  >
+                    {isLoading && details ? "Refreshing..." : "Refresh"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyIssueLink}>Copy link</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           }
         >

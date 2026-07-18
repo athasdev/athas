@@ -5,18 +5,26 @@ import {
   ClockIcon as Clock,
   PulseIcon as Activity,
   CopyIcon as Copy,
+  DotsThreeIcon as MoreHorizontal,
   MagnifyingGlassIcon as Search,
   ArrowClockwiseIcon as RefreshCw,
   XCircleIcon as XCircle,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { ActionMenu } from "@/ui/action-menu";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import { toast } from "sonner";
+import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { WorkflowRunDetails, WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";
@@ -575,19 +583,32 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             </>
           }
           actions={
-            <ActionMenu
-              label="Action run actions"
-              items={[
-                {
-                  id: "refresh",
-                  label: isLoading && details ? "Refreshing..." : "Refresh",
-                  disabled: isLoading && Boolean(details),
-                  onClick: () => void fetchWorkflowRun(true),
-                },
-                { id: "open-browser", label: "Open on GitHub", onClick: handleOpenInBrowser },
-                { id: "copy-link", label: "Copy link", onClick: handleCopyRunLink },
-              ]}
-            />
+            <DropdownMenu>
+              <Tooltip content="Action run actions" side="bottom">
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Action run actions"
+                    />
+                  }
+                >
+                  <MoreHorizontal />
+                </DropdownMenuTrigger>
+              </Tooltip>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  disabled={isLoading && Boolean(details)}
+                  onClick={() => void fetchWorkflowRun(true)}
+                >
+                  {isLoading && details ? "Refreshing..." : "Refresh"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyRunLink}>Copy link</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           }
         />
       }
@@ -682,7 +703,11 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
 
                   {isSelectedJob ? (
                     <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
-                      <div className="w-64 shrink-0 overflow-auto border-border/70 border-r bg-secondary-bg/20 p-1.5">
+                      <ScrollArea
+                        className="min-h-0 w-64 shrink-0 border-border/70 border-r bg-secondary-bg/20"
+                        contentClassName="p-1.5"
+                        orientation="both"
+                      >
                         {job.steps.length > 0 ? (
                           job.steps.map((step, index) => (
                             <Button
@@ -709,7 +734,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                             No steps reported.
                           </div>
                         )}
-                      </div>
+                      </ScrollArea>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2 border-border/70 border-b px-3 py-2">

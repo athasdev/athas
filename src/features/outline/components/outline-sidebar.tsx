@@ -25,6 +25,7 @@ import { readFileContent } from "@/features/file-system/controllers/file-operati
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { SidebarEmptyActionState, SidebarEmptyState, SidebarSearchFilterRow } from "@/ui/sidebar";
+import { ScrollArea } from "@/ui/scroll-area";
 import { useDocumentOutline } from "../hooks/use-document-outline";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
@@ -294,7 +295,7 @@ export function OutlineSidebar() {
         filterMenuClassName="w-fit min-w-fit"
       />
 
-      <div className="custom-scrollbar-thin min-h-0 flex-1 overflow-y-auto p-1">
+      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
         {!isSupported ? (
           <SidebarEmptyActionState
             message={activeBuffer ? "No outline for the active file." : "No active file."}
@@ -378,7 +379,7 @@ export function OutlineSidebar() {
             </ContextMenu>
           ))
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 }

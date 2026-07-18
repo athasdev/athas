@@ -11,7 +11,7 @@ import {
 import { useReferencesStore } from "@/features/references/stores/references.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { showPromptDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 
 type LspNavigationLocation = {

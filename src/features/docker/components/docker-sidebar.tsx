@@ -26,13 +26,13 @@ import type { ComponentProps, ReactNode } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Dialog from "@/ui/dialog";
+import Dialog, { showPromptDialog } from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
-import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
 import {
   SidebarEmptyState,
   SidebarHeaderIconButton,
@@ -1788,7 +1788,7 @@ export function DockerSidebar() {
           <SidebarEmptyState className="flex-1">Loading Docker resources...</SidebarEmptyState>
         ) : (
           <>
-            <div className="scrollbar-hidden min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto p-1">
+            <ScrollArea className="min-h-0 flex-1" contentClassName="space-y-2 p-1">
               {renderSection(
                 "containers",
                 filteredContainers.length > 0 ? (
@@ -2565,7 +2565,7 @@ export function DockerSidebar() {
                 ),
                 filteredNetworks.length,
               )}
-            </div>
+            </ScrollArea>
 
             {activeTab === "resources" && selectedContainer ? (
               <div className="max-h-72 shrink-0 border-t border-border/70 bg-secondary-bg/35">
@@ -2694,11 +2694,7 @@ export function DockerSidebar() {
                         disabled={isFilesLoading}
                         onClick={() => void loadContainerFiles()}
                       >
-                        {isFilesLoading ? (
-                          <Spinner compact />
-                        ) : (
-                          <Refresh className="size-3.5" />
-                        )}
+                        {isFilesLoading ? <Spinner compact /> : <Refresh className="size-3.5" />}
                       </Button>
                     </div>
                     {filesError ? (

@@ -25,7 +25,7 @@ import {
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
-import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { showConfirmDialog } from "@/ui/dialog";
 import Select from "@/ui/select";
 import { toast } from "sonner";
 import { writeClipboardText } from "@/utils/clipboard";

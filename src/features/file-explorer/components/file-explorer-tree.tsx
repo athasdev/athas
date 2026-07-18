@@ -992,29 +992,6 @@ function FileExplorerTreeComponent({
     [handleContextMenu, pathToFile, rootFolderPath],
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent, file: FileEntry) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        e.stopPropagation();
-        finishInlineEditing(file, editingValue);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        cancelInlineEditing(file);
-      }
-    },
-    [editingValue],
-  );
-
-  const handleBlur = useCallback(
-    (file: FileEntry) => {
-      if (editingValue.trim()) finishInlineEditing(file, editingValue);
-      else cancelInlineEditing(file);
-    },
-    [editingValue],
-  );
-
   const handleContainerMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
@@ -1369,8 +1346,8 @@ function FileExplorerTreeComponent({
                       isDragging={dragState.isDragging}
                       editingValue={isEditingRow ? editingValue : undefined}
                       onEditingValueChange={setEditingValue}
-                      onKeyDown={handleKeyDown}
-                      onBlur={handleBlur}
+                      onSubmit={(value, file) => finishInlineEditing(file, value)}
+                      onCancel={cancelInlineEditing}
                       getGitStatusDecoration={getGitStatusDecoration}
                       rowId={getFileTreeRowId(row.file.path)}
                       searchQuery={isTreeSearchActive ? treeSearchQuery : undefined}

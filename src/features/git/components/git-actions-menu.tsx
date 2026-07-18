@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
-import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { showConfirmDialog } from "@/ui/dialog";
 import { toast } from "sonner";
 import {
   fetchChanges,
@@ -265,11 +265,7 @@ const GitActionsMenu = ({
         {
           id: "refresh",
           label: "Refresh Status",
-          icon: isRefreshing ? (
-            <Spinner label="Refreshing status" compact />
-          ) : (
-            <RefreshCw />
-          ),
+          icon: isRefreshing ? <Spinner label="Refreshing status" compact /> : <RefreshCw />,
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },
@@ -295,11 +291,7 @@ const GitActionsMenu = ({
         {
           id: "refresh",
           label: "Refresh Status",
-          icon: isRefreshing ? (
-            <Spinner label="Refreshing status" compact />
-          ) : (
-            <RefreshCw />
-          ),
+          icon: isRefreshing ? <Spinner label="Refreshing status" compact /> : <RefreshCw />,
           disabled: isRefreshing,
           onClick: () => void handleRefresh(),
         },

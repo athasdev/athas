@@ -9,9 +9,9 @@ import {
   restartAllLanguageServers,
   stopAllLanguageServers,
 } from "@/features/keymaps/commands/lsp-command-actions";
-import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
+import { openAthasLogBuffer } from "@/features/settings/services/athas-log-service";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import { showAlertDialog } from "@/ui/dialog";
 import type { Action } from "../types/action.types";
 import type { CommandPaletteViewId } from "../types/view.types";
 

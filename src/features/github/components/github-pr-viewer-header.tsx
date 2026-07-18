@@ -1,7 +1,13 @@
-import { CheckCircleIcon as CheckCircle2 } from "@/ui/icons";
+import { CheckCircleIcon as CheckCircle2, DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
 import type { ReactNode } from "react";
-import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
+import Tooltip from "@/ui/tooltip";
 import type { PullRequestDetails } from "../types/github.types";
 import {
   AssigneesList,
@@ -99,48 +105,41 @@ export function GitHubPRViewerHeader({
           <Button onClick={onMerge} disabled={!canMerge} variant="default" size="xs">
             Merge
           </Button>
-          <ActionMenu
-            label="Pull request actions"
-            items={[
-              {
-                id: "refresh",
-                label: isRefreshingDetails ? "Refreshing..." : "Refresh",
-                disabled: isRefreshingDetails,
-                onClick: onRefresh,
-              },
-              { id: "checkout", label: "Checkout branch", onClick: onCheckout },
-              { id: "edit", label: "Edit pull request", onClick: onEdit },
-              {
-                id: "approve",
-                label: "Approve",
-                disabled: isClosed,
-                onClick: onApprove,
-              },
-              {
-                id: "request-changes",
-                label: "Request changes",
-                disabled: isClosed,
-                onClick: onRequestChanges,
-              },
-              {
-                id: "close",
-                label: "Close pull request",
-                disabled: isClosed,
-                onClick: onClosePR,
-              },
-              {
-                id: "open-browser",
-                label: "Open on GitHub",
-                onClick: onOpenInBrowser,
-              },
-              { id: "copy-link", label: "Copy link", onClick: onCopyPRLink },
-              {
-                id: "copy-branch",
-                label: "Copy branch name",
-                onClick: onCopyBranchName,
-              },
-            ]}
-          />
+          <DropdownMenu>
+            <Tooltip content="Pull request actions" side="bottom">
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Pull request actions"
+                  />
+                }
+              >
+                <MoreHorizontal />
+              </DropdownMenuTrigger>
+            </Tooltip>
+            <DropdownMenuContent>
+              <DropdownMenuItem disabled={isRefreshingDetails} onClick={onRefresh}>
+                {isRefreshingDetails ? "Refreshing..." : "Refresh"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onCheckout}>Checkout branch</DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>Edit pull request</DropdownMenuItem>
+              <DropdownMenuItem disabled={isClosed} onClick={onApprove}>
+                Approve
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isClosed} onClick={onRequestChanges}>
+                Request changes
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={isClosed} onClick={onClosePR}>
+                Close pull request
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+              <DropdownMenuItem onClick={onCopyPRLink}>Copy link</DropdownMenuItem>
+              <DropdownMenuItem onClick={onCopyBranchName}>Copy branch name</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       }
     >

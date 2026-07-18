@@ -11,6 +11,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import {
   databaseCardClassName,
@@ -106,11 +107,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               disabled={store.isScanningKeys}
               aria-label="Refresh keys"
             >
-              {store.isScanningKeys ? (
-                <Spinner label="Refreshing keys" compact />
-              ) : (
-                <RefreshCw />
-              )}
+              {store.isScanningKeys ? <Spinner label="Refreshing keys" compact /> : <RefreshCw />}
             </Button>
           </div>
         </div>
@@ -135,14 +132,14 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               aria-label="Search keys"
               size="icon-xs"
             >
-              {store.isScanningKeys ? (
-                <Spinner label="Scanning keys" compact />
-              ) : (
-                <Search />
-              )}
+              {store.isScanningKeys ? <Spinner label="Scanning keys" compact /> : <Search />}
             </Button>
           </div>
-          <div ref={keyListRef} className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+          <ScrollArea
+            className="flex-1"
+            contentClassName="space-y-0.5 p-1.5"
+            viewportProps={{ ref: keyListRef }}
+          >
             {store.keys.map((keyInfo) => (
               <Button
                 key={keyInfo.key}
@@ -184,7 +181,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
             {store.isScanningKeys && !store.hasMore && (
               <div className="px-2 py-1 text-text-lighter ui-text-sm">Loading keys...</div>
             )}
-          </div>
+          </ScrollArea>
         </div>
 
         <div className={databasePanelClassName("flex-1")}>

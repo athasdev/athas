@@ -10,7 +10,7 @@ import {
   ArrowClockwiseIcon as RefreshCw,
 } from "@/ui/icons";
 import type { GitRemoteActionResult } from "@/features/git/api/git-remotes-api";
-import { showConfirmDialog, showPromptDialog } from "@/features/dialogs/services/dialog-service";
+import { showConfirmDialog, showPromptDialog } from "@/ui/dialog";
 import type { Action } from "../types/action.types";
 
 interface GitActionsParams {

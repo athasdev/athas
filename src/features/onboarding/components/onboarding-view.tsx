@@ -15,6 +15,7 @@ import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-v
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
+import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { getServiceUrls } from "@/config/services";
@@ -122,7 +123,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full overflow-auto bg-primary-bg">
+    <ScrollArea className="h-full w-full bg-primary-bg">
       <div className="mx-auto flex w-full max-w-[820px] flex-col px-8 py-10">
         <div className="mb-7">
           <h1 className="font-sans ui-text-base font-semibold text-text">{viewModel.title}</h1>
@@ -207,6 +208,6 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
       {isImportDialogOpen && (
         <IdeSettingsImportDialog onClose={() => setIsImportDialogOpen(false)} />
       )}
-    </div>
+    </ScrollArea>
   );
 }

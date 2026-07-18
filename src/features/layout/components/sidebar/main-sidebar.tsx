@@ -53,7 +53,7 @@ import {
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import Input from "@/ui/input";
+import { InlineRenameInput } from "@/ui/input";
 import {
   ChevronExpandYIcon,
   FolderIcon,
@@ -287,8 +287,6 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const renameInputRef = useRef<HTMLInputElement>(null);
-  const renameCancelledRef = useRef(false);
   const [olderAgentsMenu, setOlderAgentsMenu] = useState({
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -323,39 +321,9 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
     setOlderAgentsMenu({ isOpen: true, position: { x: rect.right + 6, y: rect.top } });
   }, []);
 
-  useEffect(() => {
-    if (!renamingChatId) return;
-    requestAnimationFrame(() => {
-      renameInputRef.current?.focus();
-      renameInputRef.current?.select();
-    });
-  }, [renamingChatId]);
-
   const startRenamingChat = useCallback((chat: Chat) => {
-    renameCancelledRef.current = false;
     setRenamingChatId(chat.id);
     setRenameValue(chat.title);
-  }, []);
-
-  const finishRenamingChat = useCallback(() => {
-    if (renameCancelledRef.current) {
-      renameCancelledRef.current = false;
-      return;
-    }
-    if (!renamingChatId) return;
-
-    const chat = chats.find((candidate) => candidate.id === renamingChatId);
-    const nextTitle = renameValue.trim();
-    if (chat && nextTitle && nextTitle !== chat.title) {
-      updateChatTitle(chat.id, nextTitle);
-    }
-    setRenamingChatId(null);
-  }, [chats, renameValue, renamingChatId, updateChatTitle]);
-
-  const cancelRenamingChat = useCallback(() => {
-    renameCancelledRef.current = true;
-    setRenamingChatId(null);
-    setRenameValue("");
   }, []);
   const olderAgentMenuItems = useMemo<MenuItem[]>(
     () =>
@@ -384,23 +352,16 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
             trailing={getRelativeTime(chat.lastMessageAt)}
             className="ui-text-sm min-h-6 py-1"
           >
-            <Input
-              ref={renameInputRef}
+            <InlineRenameInput
               value={renameValue}
-              onChange={(event) => setRenameValue(event.target.value)}
-              onBlur={finishRenamingChat}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  finishRenamingChat();
-                } else if (event.key === "Escape") {
-                  event.preventDefault();
-                  cancelRenamingChat();
+              onValueChange={setRenameValue}
+              onSubmit={(nextTitle) => {
+                if (nextTitle !== chat.title) {
+                  updateChatTitle(chat.id, nextTitle);
                 }
+                setRenamingChatId(null);
               }}
-              size="xs"
-              variant="inline"
-              className="px-0"
+              onCancel={() => setRenamingChatId(null)}
               aria-label={`Rename ${chat.title}`}
             />
           </SidebarListEditor>

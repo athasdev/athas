@@ -39,7 +39,7 @@ function getStrokeWidthForWeight(weight: IconProps["weight"]) {
   }
 }
 
-function createIconComponent(Component: ComponentType<any>, displayName: string): Icon {
+function createIconComponent(IconComponent: ComponentType<any>, displayName: string): Icon {
   const Wrapped = forwardRef<SVGSVGElement, IconProps>(function AppIcon(props, ref) {
     const context = useContext(IconContext);
     const {
@@ -59,7 +59,7 @@ function createIconComponent(Component: ComponentType<any>, displayName: string)
         } as CSSProperties)
       : style;
 
-    return createElement(Component, {
+    return createElement(IconComponent, {
       ...iconProps,
       ref,
       size,
@@ -73,6 +73,7 @@ function createIconComponent(Component: ComponentType<any>, displayName: string)
 }
 
 export const Icon = createIconComponent(Nucleo.IconCircleQuestionOutline18, "Icon");
+export const AiLoadingIcon = createIconComponent(Nucleo.IconAiLoadingOutline18, "AiLoadingIcon");
 export const ArchiveIcon = createIconComponent(Nucleo.IconArchiveOutline18, "ArchiveIcon");
 export const ArrowBendDownLeftIcon = createIconComponent(
   Nucleo.IconArrowCornerBottomLeftOutline18,

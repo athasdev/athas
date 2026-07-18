@@ -14,6 +14,7 @@ import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
+import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
 import {
   databaseCardClassName,
@@ -92,7 +93,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
             <Layers className="text-text-lighter" />
             <span className="font-sans text-text-lighter ui-text-sm">Collections</span>
           </div>
-          <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+          <ScrollArea className="flex-1" contentClassName="space-y-0.5 p-1.5">
             {store.collections.map((col) => (
               <Button
                 key={col.name}
@@ -108,7 +109,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 {col.name}
               </Button>
             ))}
-          </div>
+          </ScrollArea>
         </div>
 
         <div className={databasePanelClassName("flex-1")}>

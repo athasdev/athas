@@ -19,7 +19,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
-import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
+import { showAlertDialog } from "@/ui/dialog";
 import {
   SidebarEmptyActionState,
   SidebarEmptyState,

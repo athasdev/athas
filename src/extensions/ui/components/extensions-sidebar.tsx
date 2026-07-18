@@ -58,6 +58,7 @@ import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { SearchField } from "@/ui/search";
+import { ScrollArea } from "@/ui/scroll-area";
 import { SidebarEmptyState } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { PLATFORM_ARCH } from "@/utils/platform";
@@ -1595,7 +1596,7 @@ export const ExtensionsSidebar = () => {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,1fr)_minmax(340px,440px)]">
-        <div className="custom-scrollbar-thin min-h-0 overflow-y-auto border-border/70 border-r p-5">
+        <ScrollArea className="min-h-0 border-border/70 border-r" contentClassName="p-5">
           {settings.extensionsActiveTab === "skill" && isLoadingSkills ? (
             <div className="mb-3">
               <Spinner label="Loading skills" showLabel compact />
@@ -1634,9 +1635,13 @@ export const ExtensionsSidebar = () => {
               })}
             </div>
           )}
-        </div>
+        </ScrollArea>
 
-        <aside className="custom-scrollbar-thin hidden min-h-0 overflow-y-auto bg-secondary-bg/25 p-5 lg:block">
+        <ScrollArea
+          className="hidden min-h-0 bg-secondary-bg/25 lg:block"
+          contentClassName="p-5"
+          render={<aside />}
+        >
           {selectedExtension ? (
             <div className="space-y-5">
               <div className="flex items-start gap-3">
@@ -1859,7 +1864,7 @@ export const ExtensionsSidebar = () => {
           ) : (
             <SidebarEmptyState>No extension selected.</SidebarEmptyState>
           )}
-        </aside>
+        </ScrollArea>
       </div>
 
       <SkillsCommand

@@ -4,6 +4,7 @@ import {
   type FileNavigatorItem,
   type FileNavigatorViewMode,
 } from "@/features/file-explorer/components/file-navigator-sidebar";
+import { ScrollArea } from "@/ui/scroll-area";
 import type { SearchExcerpt } from "../utils/search-excerpts";
 import { SearchExcerptResults } from "./search-excerpt-results";
 
@@ -65,10 +66,14 @@ export function GlobalSearchResults({
         searchResetKey={navigatorSearchResetKey}
         className="my-2 ml-2 h-auto self-stretch"
       />
-      <div
-        ref={scrollContainerRef}
-        className="custom-scrollbar-thin min-h-0 flex-1 overflow-auto bg-primary-bg px-2 pb-2"
-        style={{ overflowAnchor: "none" }}
+      <ScrollArea
+        className="min-h-0 flex-1 bg-primary-bg"
+        contentClassName="px-2 pb-2"
+        orientation="both"
+        viewportProps={{
+          ref: scrollContainerRef,
+          style: { overflowAnchor: "none" },
+        }}
       >
         <div className="min-w-0 max-w-full">
           <SearchExcerptResults
@@ -87,7 +92,7 @@ export function GlobalSearchResults({
               : `Showing ${displayedCount} of ${hasMoreResults ? `${totalMatches}+` : totalMatches} results`}
           </div>
         ) : null}
-      </div>
+      </ScrollArea>
     </div>
   );
 }

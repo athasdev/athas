@@ -29,6 +29,7 @@ import {
   githubIssueListCache,
 } from "../utils/github-data-cache";
 import { Spinner } from "@/ui/spinner";
+import { ScrollArea } from "@/ui/scroll-area";
 
 interface IssueListItemProps {
   issue: IssueListItem;
@@ -302,7 +303,7 @@ const GitHubIssuesView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
           {error ? (
             <GitHubSidebarState
               icon={<AlertCircle className="size-4" />}
@@ -361,7 +362,7 @@ const GitHubIssuesView = memo(
               ))}
             </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
     );
   },

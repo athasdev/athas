@@ -127,6 +127,8 @@ const TabBar = ({
   const isBottomPane = paneId === BOTTOM_PANE_ID;
 
   const [draggedBufferId, setDraggedBufferId] = useState<string | null>(null);
+  const [editingBufferId, setEditingBufferId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   const [srAnnouncement, setSrAnnouncement] = useState<string>("");
 
@@ -420,6 +422,30 @@ const TabBar = ({
     [clearPositionCache, handleTabClose],
   );
 
+  const cancelRename = useCallback(() => {
+    setEditingBufferId(null);
+    setEditingName("");
+  }, []);
+
+  const commitRename = useCallback(
+    (nextName: string) => {
+      if (!editingBufferId) return;
+      const buffer = bufferById.get(editingBufferId);
+      if (!buffer || buffer.type !== "terminal") {
+        cancelRename();
+        return;
+      }
+
+      useTerminalStore.getState().updateSession(buffer.sessionId, {
+        name: nextName,
+        customName: true,
+      });
+      useBufferStore.getState().actions.updateBuffer({ ...buffer, name: nextName });
+      cancelRename();
+    },
+    [bufferById, cancelRename, editingBufferId],
+  );
+
   const handleTabSelect = useCallback(
     (buffer: PaneContent) => {
       if (externalTabClick) {
@@ -433,6 +459,20 @@ const TabBar = ({
       );
     },
     [externalTabClick, handleTabClick, updateActivePath],
+  );
+
+  const startRename = useCallback(
+    (bufferId: string) => {
+      const buffer = bufferById.get(bufferId);
+      if (!buffer || buffer.type !== "terminal") return;
+
+      handleTabSelect(buffer);
+      requestAnimationFrame(() => {
+        setEditingBufferId(bufferId);
+        setEditingName(buffer.name);
+      });
+    },
+    [bufferById, handleTabSelect],
   );
 
   const getClientPoint = (event: Event) => {
@@ -700,6 +740,7 @@ const TabBar = ({
                   tabRef={(el) => {
                     tabRefs.current[index] = el;
                   }}
+                  disabled={editingBufferId === buffer.id}
                   onClickCapture={getClickCapture(buffer.id)}
                 >
                   {({ isDragging }) => (
@@ -716,12 +757,18 @@ const TabBar = ({
                           onKeyDown={(e) => handleKeyDown(e, index)}
                           handleTabClose={closeTab}
                           handleTabPin={handleTabPin}
+                          isEditing={editingBufferId === buffer.id}
+                          editingName={editingName}
+                          onEditingNameChange={setEditingName}
+                          onRenameSubmit={commitRename}
+                          onRenameCancel={cancelRename}
                         />
                       </ContextMenuTrigger>
                       <TabContextMenu
                         buffer={buffer}
                         paneId={paneId}
                         onPin={handleTabPin}
+                        onRename={startRename}
                         onCloseTab={(bufferId) => {
                           const targetBuffer = bufferById.get(bufferId);
                           if (targetBuffer) closeTab(bufferId);
