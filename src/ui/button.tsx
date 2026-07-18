@@ -1,8 +1,8 @@
 import * as React from "react";
+import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { chromeControlVariants, type ChromeControlVariant } from "@/ui/chrome-control";
-import { Slot } from "@/ui/slot";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -39,10 +39,9 @@ export const buttonVariants = cva(
 export type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
 export type ButtonSize = NonNullable<VariantProps<typeof buttonVariants>["size"]>;
 
-export type ButtonProps = React.ComponentProps<"button"> &
+export type ButtonProps = useRender.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     active?: boolean;
-    asChild?: boolean;
     tooltip?: string;
     shortcut?: string;
     commandId?: string;
@@ -55,7 +54,8 @@ export function Button({
   variant = "default",
   size = "default",
   active,
-  asChild = false,
+  render,
+  ref,
   tooltip,
   shortcut,
   commandId,
@@ -67,23 +67,24 @@ export function Button({
   const commandShortcut = useCommandShortcut(commandId);
   const effectiveShortcut = commandId ? commandShortcut : shortcut;
 
-  const Comp = asChild ? Slot : "button";
-
-  const element = (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      data-active={active}
-      className={cn(
+  const element = useRender({
+    defaultTagName: "button",
+    render,
+    ref,
+    props: {
+      "data-slot": "button",
+      "data-variant": variant,
+      "data-size": size,
+      "data-active": active,
+      className: cn(
         buttonVariants({ variant, size }),
         chromeControlVariants({ chrome }),
         className,
-      )}
-      aria-label={ariaLabel ?? (tooltip ? tooltip : undefined)}
-      {...props}
-    />
-  );
+      ),
+      "aria-label": ariaLabel ?? (tooltip ? tooltip : undefined),
+      ...props,
+    },
+  });
 
   if (!tooltip) {
     return element;

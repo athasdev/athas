@@ -1,6 +1,6 @@
+import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { Slot } from "@/ui/slot";
 import { cn } from "@/utils/cn";
 
 function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
@@ -50,27 +50,29 @@ const itemVariants = cva(
   },
 );
 
-type ItemProps = React.ComponentProps<"div"> &
-  VariantProps<typeof itemVariants> & {
-    asChild?: boolean;
-  };
+type ItemProps = useRender.ComponentProps<"div"> & VariantProps<typeof itemVariants>;
 
-const Item = React.forwardRef<HTMLDivElement, ItemProps>(function Item(
-  { className, variant = "default", size = "default", asChild = false, ...props },
+function Item({
+  className,
+  variant = "default",
+  size = "default",
+  render,
   ref,
-) {
-  const Comp = asChild ? Slot : "div";
-  return (
-    <Comp
-      ref={ref}
-      data-slot="item"
-      data-variant={variant}
-      data-size={size}
-      className={cn(itemVariants({ variant, size, className }))}
-      {...props}
-    />
-  );
-});
+  ...props
+}: ItemProps) {
+  return useRender({
+    defaultTagName: "div",
+    render,
+    ref,
+    props: {
+      "data-slot": "item",
+      "data-variant": variant,
+      "data-size": size,
+      className: cn(itemVariants({ variant, size, className })),
+      ...props,
+    },
+  });
+}
 
 const itemMediaVariants = cva(
   "flex shrink-0 items-center justify-center gap-2 group-has-data-[slot=item-description]/item:translate-y-0.5 group-has-data-[slot=item-description]/item:self-start [&_svg]:pointer-events-none",
