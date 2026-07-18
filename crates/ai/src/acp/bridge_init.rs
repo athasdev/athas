@@ -237,7 +237,9 @@ fn spawn_agent_process(
       cmd.env(key, value);
    }
 
-   if let Some(path) = workspace_path {
+   if uses_npx_codex_adapter {
+      cmd.current_dir(std::env::temp_dir());
+   } else if let Some(path) = workspace_path {
       cmd.current_dir(path);
    }
 
