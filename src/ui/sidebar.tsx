@@ -66,7 +66,7 @@ export const SidebarFooter = forwardRef<
         surface &&
           cn(
             "mx-2 mb-2 border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-            attached ? "rounded-t-lg rounded-b-xl" : "rounded-xl",
+            attached ? "rounded-t-none rounded-b-xl" : "rounded-xl",
           ),
         className,
       )}
@@ -97,20 +97,32 @@ export function SidebarHeader({
   );
 }
 
-export function SidebarComposer({
-  children,
-  className,
-  attached = false,
-  ...props
-}: ComponentProps<"div"> & {
-  children: ReactNode;
-  attached?: boolean;
-}) {
+export const SidebarComposer = forwardRef<
+  HTMLDivElement,
+  ComponentProps<"div"> & {
+    children: ReactNode;
+    attached?: boolean;
+    elevated?: boolean;
+    prominent?: boolean;
+  }
+>(function SidebarComposer(
+  { children, className, attached = false, elevated = false, prominent = false, ...props },
+  ref,
+) {
   return (
     <div
+      ref={ref}
       className={cn(
-        "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
-        attached ? "rounded-t-lg rounded-b-xl" : "rounded-xl",
+        "overflow-hidden border border-border/70 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] transition-[border-radius,background-color,border-color,box-shadow]",
+        prominent
+          ? attached
+            ? "rounded-t-none rounded-b-2xl"
+            : "rounded-2xl"
+          : attached
+            ? "rounded-t-none rounded-b-xl"
+            : "rounded-xl",
+        prominent && "border-0 bg-secondary-bg/55",
+        elevated && "shadow-[var(--shadow-card)]",
         className,
       )}
       {...props}
@@ -118,19 +130,31 @@ export function SidebarComposer({
       {children}
     </div>
   );
-}
+});
 
 export function SidebarComposerBody({
   children,
   className,
+  surface = true,
+  prominent = false,
+  attached = false,
   ...props
 }: ComponentProps<"div"> & {
   children: ReactNode;
+  surface?: boolean;
+  prominent?: boolean;
+  attached?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]",
+        "overflow-hidden",
+        surface &&
+          "rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]",
+        surface && attached && !prominent && "rounded-t-none rounded-b-xl",
+        surface &&
+          prominent &&
+          (attached ? "rounded-t-none rounded-b-2xl bg-primary-bg" : "rounded-2xl bg-primary-bg"),
         className,
       )}
       {...props}

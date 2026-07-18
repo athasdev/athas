@@ -1,4 +1,6 @@
+import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { Spinner } from "@/ui/spinner";
+import { cn } from "@/utils/cn";
 
 interface ChatLoadingIndicatorProps {
   label?: string;
@@ -9,11 +11,20 @@ interface ChatLoadingIndicatorProps {
 
 export function ChatLoadingIndicator({
   label = "loading",
-  showLabel = false,
+  showLabel = true,
   compact = false,
   className,
 }: ChatLoadingIndicatorProps) {
   return (
-    <Spinner label={label} showLabel={showLabel} compact={compact} className={className} />
+    <Marker
+      role="status"
+      aria-label={showLabel ? undefined : label}
+      className={cn(compact && "w-fit", className)}
+    >
+      <MarkerIcon className="text-accent">
+        <Spinner />
+      </MarkerIcon>
+      {showLabel ? <MarkerContent className="ui-text-shimmer">{label}</MarkerContent> : null}
+    </Marker>
   );
 }

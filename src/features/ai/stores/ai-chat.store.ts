@@ -275,14 +275,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             state.selectedFilesPaths = selectedFilesPaths;
           }),
-        autoSelectBuffer: (bufferId) =>
-          set((state) => {
-            if (!state.selectedBufferIds.has(bufferId)) {
-              state.selectedBufferIds = new Set(state.selectedBufferIds);
-              state.selectedBufferIds.add(bufferId);
-            }
-          }),
-
         // Chat actions
         createNewChat: (agentId?: AgentType) => {
           const state = get();
@@ -307,6 +299,9 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.isChatHistoryVisible = false;
             // Clear input and reset state when creating new chat
             state.input = "";
+            state.pastedImages = [];
+            state.selectedBufferIds = new Set<string>();
+            state.selectedFilesPaths = new Set<string>();
             state.isTyping = false;
             state.streamingMessageId = null;
             state.pendingAgentLaunchRequest = null;

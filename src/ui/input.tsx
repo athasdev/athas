@@ -1,7 +1,7 @@
 import { type Icon as AppIcon } from "@/ui/icons";
 import { cva } from "class-variance-authority";
 import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useRef } from "react";
 import {
   controlIconSizes,
   controlSizeVariants,
@@ -9,7 +9,7 @@ import {
 } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
-interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "xs" | "sm" | "md";
   variant?: "default" | "ghost" | "inline";
   leftIcon?: AppIcon;
@@ -63,6 +63,42 @@ const inputVariants = cva(
     },
   },
 );
+
+const inlineRenameInputVariants = cva("font-sans ui-text-sm", {
+  variants: {
+    appearance: {
+      inline: "px-0",
+      field: "",
+    },
+    tone: {
+      default: "text-text",
+      muted: "text-text-lighter focus:text-text",
+    },
+    width: {
+      full: "w-full",
+      content: "w-auto min-w-[1ch] max-w-full [field-sizing:content]",
+    },
+  },
+  defaultVariants: {
+    appearance: "inline",
+    tone: "default",
+    width: "full",
+  },
+});
+
+type InlineRenameInputProps = Omit<
+  InputProps,
+  "onBlur" | "onChange" | "onKeyDown" | "onSubmit" | "value" | "variant"
+> & {
+  value: string;
+  onValueChange: (value: string) => void;
+  onSubmit: (value: string) => void;
+  onCancel: () => void;
+  allowEmpty?: boolean;
+  appearance?: "inline" | "field";
+  tone?: "default" | "muted";
+  width?: "full" | "content";
+};
 
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
@@ -150,5 +186,73 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     </div>
   );
 });
+
+export function InlineRenameInput({
+  value,
+  onValueChange,
+  onSubmit,
+  onCancel,
+  allowEmpty = false,
+  appearance = "inline",
+  tone = "default",
+  width = "full",
+  className,
+  size = "xs",
+  ...props
+}: InlineRenameInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const finishedRef = useRef(false);
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  const submit = () => {
+    if (finishedRef.current) return;
+
+    const nextValue = value.trim();
+    if (!allowEmpty && !nextValue) {
+      finishedRef.current = true;
+      onCancel();
+      return;
+    }
+
+    finishedRef.current = true;
+    onSubmit(nextValue);
+  };
+
+  const cancel = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    onCancel();
+  };
+
+  return (
+    <Input
+      ref={inputRef}
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+      onBlur={submit}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submit();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          cancel();
+        }
+      }}
+      variant={appearance === "field" ? "default" : "inline"}
+      size={size}
+      className={cn(inlineRenameInputVariants({ appearance, tone, width }), className)}
+      {...props}
+    />
+  );
+}
 
 export default Input;

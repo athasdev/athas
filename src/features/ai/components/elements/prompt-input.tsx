@@ -1,23 +1,39 @@
-import { forwardRef, type ComponentProps, type ReactNode } from "react";
-import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
+import { forwardRef, type ComponentProps } from "react";
+import { SidebarComposer, SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 
 export const PromptInput = forwardRef<
   HTMLDivElement,
-  ComponentProps<typeof SidebarFooter> & {
+  Omit<ComponentProps<typeof SidebarFooter>, "surface"> & {
     dragActive?: boolean;
+    standalone?: boolean;
   }
->(function PromptInput({ className, dragActive, ...props }, ref) {
+>(function PromptInput({ className, dragActive, standalone = false, ...props }, ref) {
+  const rootClassName = cn(
+    "ai-chat-container relative z-20",
+    dragActive && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
+    className,
+  );
+
+  if (standalone) {
+    return (
+      <SidebarComposer
+        ref={ref}
+        elevated
+        prominent
+        data-ai-element="prompt-input"
+        className={rootClassName}
+        {...props}
+      />
+    );
+  }
+
   return (
     <SidebarFooter
       ref={ref}
       surface
       data-ai-element="prompt-input"
-      className={cn(
-        "ai-chat-container relative z-20",
-        dragActive && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
-        className,
-      )}
+      className={rootClassName}
       {...props}
     />
   );
@@ -78,41 +94,21 @@ export function PromptInputToolbar({ className, ...props }: ComponentProps<"div"
   );
 }
 
-export function PromptInputTools({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      data-ai-element="prompt-input-tools"
-      className={cn("flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5 pb-0.5", className)}
-      {...props}
-    />
-  );
-}
-
-export function PromptInputAttachments({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      data-ai-element="prompt-input-attachments"
-      className={cn("flex flex-wrap gap-2 px-3 pt-3", className)}
-      {...props}
-    />
-  );
-}
-
-export function PromptInputContextList({
+export function PromptInputTools({
   className,
+  connected = false,
   ...props
 }: ComponentProps<"div"> & {
-  children?: ReactNode;
+  connected?: boolean;
 }) {
   return (
     <div
-      data-ai-element="prompt-input-context-list"
+      data-ai-element="prompt-input-tools"
       className={cn(
-        "custom-scrollbar-thin flex max-h-12 min-w-0 flex-wrap items-center gap-1 overflow-y-auto overflow-x-hidden px-2 pb-2",
+        "flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5 pb-0.5",
+        connected && "px-2.5 py-1.5",
         className,
       )}
-      role="list"
-      aria-label="Selected context"
       {...props}
     />
   );

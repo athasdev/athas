@@ -12,7 +12,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
-import Input from "@/ui/input";
+import Input, { InlineRenameInput } from "@/ui/input";
 import {
   PaneChip,
   paneHeaderClassName,
@@ -33,7 +33,6 @@ function EditableChatTitle({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isEditing) {
@@ -41,17 +40,9 @@ function EditableChatTitle({
     }
   }, [title, isEditing]);
 
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const handleSave = () => {
-    const trimmedValue = editValue.trim();
-    if (trimmedValue && trimmedValue !== title) {
-      onUpdateTitle(trimmedValue);
+  const handleSave = (nextTitle: string) => {
+    if (nextTitle !== title) {
+      onUpdateTitle(nextTitle);
     }
     setIsEditing(false);
   };
@@ -61,26 +52,16 @@ function EditableChatTitle({
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      handleCancel();
-    }
-  };
-
   if (isEditing) {
     return (
-      <Input
-        ref={inputRef}
+      <InlineRenameInput
         value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={handleKeyDown}
-        className="h-6 border-border/80 bg-primary-bg px-2.5 py-1 ui-text-sm font-medium focus:border-accent/40 focus:bg-hover"
-        style={{ minWidth: "100px", maxWidth: "200px" }}
+        onValueChange={setEditValue}
+        onSubmit={handleSave}
+        onCancel={handleCancel}
+        width="content"
+        className="min-w-24 max-w-52"
+        aria-label={`Rename ${title}`}
       />
     );
   }

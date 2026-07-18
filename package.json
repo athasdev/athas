@@ -65,6 +65,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource/geist-mono": "^5.2.8",
     "@fontsource/geist-sans": "^5.2.5",
+    "@shadcn/react": "^0.2.1",
     "@tanstack/react-virtual": "^3.14.4",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-clipboard-manager": "~2.3.2",

@@ -4,6 +4,7 @@ import {
   CaretRightIcon as ChevronRight,
   CopyIcon as Copy,
   TerminalWindowIcon as Terminal,
+  WarningCircleIcon as AlertCircle,
 } from "@/ui/icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -23,6 +24,7 @@ import {
   normalizeLanguage,
 } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
+import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
@@ -375,79 +377,82 @@ function ErrorBlock({ errorData }: { errorData: string }) {
   };
 
   return (
-    <div className="my-1 rounded-lg border border-error/25 bg-error/8 px-2.5 py-2">
-      <div className="ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-medium text-error">Error</span>
-        <span className="text-text">{summary}</span>
-        {code ? <span className="text-text-lighter">({code})</span> : null}
-        {normalizedDetails && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="h-auto px-1 text-error/70 hover:bg-transparent hover:text-error"
-          >
-            {isExpanded ? <ChevronDown /> : <ChevronRight />}
-            {isExpanded ? "Hide details" : "Details"}
-          </Button>
-        )}
-      </div>
-      {isAuthRequired && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="default"
-            onClick={() => void handleRestartAgentSession()}
-            disabled={isRestartingSession}
-            className="h-auto gap-1.5"
-          >
-            <Terminal size={12} />
-            {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
-          </Button>
-          {suggestedCommand ? (
+    <Marker role="alert" tone="error" className="my-1 items-start">
+      <MarkerIcon>
+        <AlertCircle />
+      </MarkerIcon>
+      <MarkerContent className="flex min-w-0 flex-col gap-1">
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+          <span className="font-medium">{summary}</span>
+          {code ? <span className="text-error/70">({code})</span> : null}
+          {normalizedDetails ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-auto px-0 text-error/70 hover:bg-transparent hover:text-error"
+            >
+              {isExpanded ? <ChevronDown /> : <ChevronRight />}
+              {isExpanded ? "Hide details" : "Details"}
+            </Button>
+          ) : null}
+        </span>
+        {message && message !== summary ? <span className="text-error/80">{message}</span> : null}
+        {isAuthRequired && (
+          <span className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="default"
-              onClick={() =>
-                openTerminalBuffer({
-                  command: suggestedCommand,
-                  name: suggestedCommand,
-                })
-              }
+              onClick={() => void handleRestartAgentSession()}
+              disabled={isRestartingSession}
               className="h-auto gap-1.5"
             >
               <Terminal size={12} />
-              Open Login Terminal
+              {isRestartingSession ? "Restarting..." : "Restart Agent Session"}
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
-              className="h-auto gap-1.5"
-            >
-              <Terminal size={12} />
-              Open Terminal
-            </Button>
-          )}
-          <span className="ui-text-sm text-error/70">
-            Complete login in the agent CLI, then retry.
+            {suggestedCommand ? (
+              <Button
+                type="button"
+                variant="default"
+                onClick={() =>
+                  openTerminalBuffer({
+                    command: suggestedCommand,
+                    name: suggestedCommand,
+                  })
+                }
+                className="h-auto gap-1.5"
+              >
+                <Terminal size={12} />
+                Open Login Terminal
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => openTerminalBuffer({ name: "Agent authentication" })}
+                className="h-auto gap-1.5"
+              >
+                <Terminal size={12} />
+                Open Terminal
+              </Button>
+            )}
+            <span className="text-error/70">Complete login in the agent CLI, then retry.</span>
           </span>
-        </div>
-      )}
-      {normalizedDetails && isExpanded && (
-        <pre className="ui-text-sm font-mono mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
-          {(() => {
-            try {
-              const parsed = JSON.parse(normalizedDetails);
-              return JSON.stringify(parsed, null, 2);
-            } catch {
-              return normalizedDetails;
-            }
-          })()}
-        </pre>
-      )}
-    </div>
+        )}
+        {normalizedDetails && isExpanded && (
+          <pre className="max-w-full overflow-x-auto rounded-md bg-error/8 p-2 font-mono text-error/90 ui-text-sm">
+            {(() => {
+              try {
+                const parsed = JSON.parse(normalizedDetails);
+                return JSON.stringify(parsed, null, 2);
+              } catch {
+                return normalizedDetails;
+              }
+            })()}
+          </pre>
+        )}
+      </MarkerContent>
+    </Marker>
   );
 }
 

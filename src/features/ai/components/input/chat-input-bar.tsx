@@ -28,6 +28,15 @@ import {
   type SidebarDragResource,
 } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+} from "@/ui/attachment";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { toast } from "sonner";
@@ -35,9 +44,7 @@ import { cn } from "@/utils/cn";
 import { IS_LINUX, isMac } from "@/utils/platform";
 import {
   PromptInput,
-  PromptInputAttachments,
   PromptInputBody,
-  PromptInputContextList,
   PromptInputEditable,
   PromptInputToolbar,
   PromptInputTools,
@@ -218,6 +225,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
     if (mentionState.active) {
       hideMention();
     }
+    if (isSkillsOpen) {
+      setIsSkillsOpen(false);
+    }
   }, [
     slashCommandState.active,
     hideSlashCommands,
@@ -225,6 +235,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     setIsContextDropdownOpen,
     mentionState.active,
     hideMention,
+    isSkillsOpen,
   ]);
 
   const closeInlineMenus = useCallback(() => {
@@ -1296,7 +1307,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   // Get available slash commands
   const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const hasSlashCommands = availableSlashCommands.length > 0;
-  const hasAttachedComposerDropdown = mentionState.active || slashCommandState.active;
+  const hasAttachedComposerDropdown =
+    mentionState.active || slashCommandState.active || isContextDropdownOpen || isSkillsOpen;
   const isInitialPresentation = presentation === "initial";
   const inputPlaceholder = isInputEnabled
     ? isInitialPresentation
@@ -1309,47 +1321,41 @@ const AIChatInputBar = memo(function AIChatInputBar({
   return (
     <PromptInput
       ref={aiChatContainerRef}
+      standalone={isInitialPresentation}
       attached={hasAttachedComposerDropdown}
       data-ai-context-drop-target
       onDragOver={handleContextDragOver}
       onDragLeave={handleContextDragLeave}
       onDrop={handleContextDrop}
       dragActive={isContextDragOver}
-      className={cn(
-        isInitialPresentation &&
-          "!mx-0 !mb-0 !w-full !max-w-[720px] !pb-0 rounded-[22px] bg-transparent",
-      )}
+      className={cn(isInitialPresentation && "w-full")}
     >
       <PromptInputBody
-        className={cn(
-          isInitialPresentation &&
-            "rounded-[22px] border-border/70 bg-primary-bg/96 shadow-[var(--shadow-popover)]",
-        )}
+        surface
+        prominent={isInitialPresentation}
+        attached={hasAttachedComposerDropdown}
       >
         {pastedImages.length > 0 && (
-          <PromptInputAttachments className={cn(isInitialPresentation && "px-4 pt-4")}>
+          <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>
             {pastedImages.map((image) => (
-              <div
-                key={image.id}
-                className="group relative overflow-hidden rounded-lg border border-border bg-secondary-bg"
-              >
-                <img
-                  src={image.dataUrl}
-                  alt={image.name}
-                  className="h-16 w-auto max-w-[120px] object-cover"
-                />
-                <Button
-                  onClick={() => removePastedImage(image.id)}
-                  variant="ghost"
-                  size="icon-xs"
-                  className="absolute top-0.5 right-0.5 rounded-full bg-black/60 text-white opacity-0 hover:bg-black/80 group-hover:opacity-100"
-                  aria-label="Remove image"
-                >
-                  <X />
-                </Button>
-              </div>
+              <Attachment key={image.id} orientation="vertical" size="sm">
+                <AttachmentMedia variant="image">
+                  <img src={image.dataUrl} alt={image.name} />
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>{image.name}</AttachmentTitle>
+                </AttachmentContent>
+                <AttachmentActions>
+                  <AttachmentAction
+                    onClick={() => removePastedImage(image.id)}
+                    aria-label={`Remove ${image.name}`}
+                  >
+                    <X />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
             ))}
-          </PromptInputAttachments>
+          </AttachmentGroup>
         )}
 
         <PromptInputEditable
@@ -1365,8 +1371,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
           data-placeholder={inputPlaceholder}
           className={cn(
             hasAttachedComposerDropdown && "border-none",
-            isInitialPresentation &&
-              "!max-h-12 !min-h-12 !overflow-hidden !px-4 !py-3 ui-text-base",
+            isInitialPresentation && "max-h-48 min-h-28 overflow-y-auto px-4 py-4 ui-text-base",
           )}
           role="textbox"
           aria-multiline={!isInitialPresentation}
@@ -1382,7 +1387,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
               onToggleBuffer={toggleBufferSelection}
               onToggleFile={toggleFileSelection}
               isOpen={isContextDropdownOpen}
-              anchorRef={contextDropdownRef}
+              anchorRef={aiChatContainerRef}
               onToggleOpen={() => {
                 if (!isContextDropdownOpen) {
                   closeInlineMenus();
@@ -1453,11 +1458,15 @@ const AIChatInputBar = memo(function AIChatInputBar({
         </PromptInputToolbar>
 
         {selectedContextItems.length > 0 ? (
-          <PromptInputContextList className={cn(isInitialPresentation && "px-3 pb-3")}>
+          <AttachmentGroup
+            className={cn("px-2 pb-2", isInitialPresentation && "px-3 pb-3")}
+            role="list"
+            aria-label="Selected context"
+          >
             {selectedContextItems.map((item) => (
-              <div
+              <Attachment
                 key={`selected-${item.type}-${item.id}`}
-                className="group relative font-sans ui-text-sm flex h-6 min-w-0 max-w-[150px] shrink-0 select-none items-center gap-1.5 overflow-hidden rounded-md bg-hover/45 px-1.5 leading-[1.35] text-text-lighter transition-colors hover:bg-hover/70 focus:bg-hover/70 focus:outline-none focus:ring-1 focus:ring-border-strong/35"
+                size="xs"
                 data-context-chip
                 role="listitem"
                 tabIndex={0}
@@ -1509,55 +1518,49 @@ const AIChatInputBar = memo(function AIChatInputBar({
                   }
                 }}
               >
-                <span className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-hover/90 to-transparent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
-                {item.type === "buffer" ? (
-                  item.databaseType ? (
-                    <Database className="size-3 shrink-0 text-text-lighter/80" />
+                <AttachmentMedia>
+                  {item.type === "buffer" ? (
+                    item.databaseType ? (
+                      <Database />
+                    ) : (
+                      <FileText />
+                    )
                   ) : (
-                    <FileText className="size-3 shrink-0 text-text-lighter/80" />
-                  )
-                ) : (
-                  <FileText className="size-3 shrink-0 text-accent" />
-                )}
-                <span
-                  className={cn(
-                    "min-w-0 truncate leading-[1.35]",
-                    item.type === "buffer" ? "text-text/90" : "text-accent",
+                    <FileText />
                   )}
-                >
-                  {item.name}
-                </span>
-                {item.type === "buffer" && item.isDirty && (
-                  <span
-                    className="size-1.5 shrink-0 rounded-full bg-warning"
-                    title="Unsaved changes"
-                  />
-                )}
-                <Button
-                  onClick={() => {
-                    if (item.type === "buffer") {
-                      toggleBufferSelection(item.id);
-                    } else {
-                      toggleFileSelection(item.id);
-                    }
-                  }}
-                  variant="ghost"
-                  size="icon-xs"
-                  className="absolute right-0.5 rounded-md bg-hover/80 text-text opacity-0 shadow-[var(--shadow-card)] hover:bg-selected hover:text-text focus:opacity-100 group-hover:opacity-100"
-                  aria-label={`Remove ${item.name} from context`}
-                  tabIndex={0}
-                >
-                  <X size={11} weight="bold" />
-                </Button>
-              </div>
+                </AttachmentMedia>
+                <AttachmentContent>
+                  <AttachmentTitle>
+                    {item.name}
+                    {item.type === "buffer" && item.isDirty ? (
+                      <span className="ml-1 inline-block size-1.5 rounded-full bg-warning" />
+                    ) : null}
+                  </AttachmentTitle>
+                </AttachmentContent>
+                <AttachmentActions>
+                  <AttachmentAction
+                    onClick={() => {
+                      if (item.type === "buffer") {
+                        toggleBufferSelection(item.id);
+                      } else {
+                        toggleFileSelection(item.id);
+                      }
+                    }}
+                    aria-label={`Remove ${item.name} from context`}
+                    tabIndex={0}
+                  >
+                    <X weight="bold" />
+                  </AttachmentAction>
+                </AttachmentActions>
+              </Attachment>
             ))}
-          </PromptInputContextList>
+          </AttachmentGroup>
         ) : null}
       </PromptInputBody>
 
-      <PromptInputTools className={cn(isInitialPresentation && "px-3 pb-0.5 pt-2")}>
+      <PromptInputTools connected={isInitialPresentation}>
         {isAcpMetadataLoading ? (
-          <ChatLoadingIndicator label="loading session" compact />
+          <ChatLoadingIndicator label="Loading session…" compact />
         ) : (
           <>
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -1712,6 +1715,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       {(isActiveSurface || isComposerFocused) && mentionState.active && (
         <FileMentionDropdown
+          anchorRef={aiChatContainerRef}
           files={mentionableFiles}
           onSelect={handleFileMentionSelect}
           onVisibleFilesChange={(files) => {
@@ -1722,6 +1726,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       {slashCommandState.active && (
         <SlashCommandDropdown
+          anchorRef={aiChatContainerRef}
           onSelect={(command) => {
             setActiveInlineControl(null);
             handleSlashCommandSelect(command);
@@ -1731,6 +1736,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
       )}
 
       <SkillsCommand
+        anchorRef={aiChatContainerRef}
         isOpen={isSkillsOpen}
         onClose={() => setIsSkillsOpen(false)}
         onSelectSkill={insertSkillAtCursor}

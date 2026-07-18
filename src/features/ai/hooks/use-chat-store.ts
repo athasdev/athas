@@ -19,7 +19,6 @@ export function useChatState() {
 
 export function useChatActions() {
   return {
-    autoSelectBuffer: useAIChatStore((state) => state.autoSelectBuffer),
     checkApiKey: useAIChatStore((state) => state.checkApiKey),
     checkAllProviderApiKeys: useAIChatStore((state) => state.checkAllProviderApiKeys),
     setInput: useAIChatStore((state) => state.setInput),

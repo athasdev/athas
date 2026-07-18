@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 
@@ -72,6 +73,7 @@ function createHandler(
 describe("AcpStreamHandler", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.mocked(listen).mockResolvedValue(vi.fn());
   });
 
   afterEach(() => {
@@ -135,6 +137,134 @@ describe("AcpStreamHandler", () => {
     });
 
     expect(handlers.onComplete).not.toHaveBeenCalled();
+  });
+
+  it("serializes concurrent ACP startup requests", async () => {
+    let resolveStart: ((status: unknown) => void) | undefined;
+    const startResult = new Promise((resolve) => {
+      resolveStart = resolve;
+    });
+    const runningStatus = {
+      running: true,
+      initialized: true,
+      agentId: "codex",
+      sessionId: null,
+      workspacePath: "/workspace",
+    };
+
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "get_acp_status") {
+        const startCalls = vi
+          .mocked(invoke)
+          .mock.calls.filter(([name]) => name === "start_acp_agent");
+        return Promise.resolve(
+          startCalls.length > 0
+            ? runningStatus
+            : {
+                ...runningStatus,
+                running: false,
+                initialized: false,
+              },
+        );
+      }
+      if (command === "start_acp_agent") {
+        return startResult;
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const first = createHandler().handler as unknown as {
+      ensureAgentRunning: () => Promise<void>;
+    };
+    const second = createHandler().handler as unknown as {
+      ensureAgentRunning: () => Promise<void>;
+    };
+
+    const firstStartup = first.ensureAgentRunning();
+    const secondStartup = second.ensureAgentRunning();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(
+      vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
+    ).toHaveLength(1);
+
+    resolveStart?.(runningStatus);
+    await vi.advanceTimersByTimeAsync(1000);
+    await Promise.all([firstStartup, secondStartup]);
+
+    expect(
+      vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
+    ).toHaveLength(1);
+  });
+
+  it("releases the startup queue when agent startup stalls", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "get_acp_status") {
+        return Promise.resolve({
+          running: false,
+          initialized: false,
+          agentId: null,
+          sessionId: null,
+          workspacePath: null,
+        });
+      }
+      if (command === "start_acp_agent") {
+        return new Promise(() => {});
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const stalled = createHandler().handler as unknown as {
+      ensureAgentRunning: () => Promise<void>;
+    };
+    const startup = stalled.ensureAgentRunning();
+    const startupError = startup.catch((error) => error);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect((await startupError).message).toContain("startup timed out");
+
+    const next = createHandler().handler as unknown as {
+      ensureAgentRunning: () => Promise<void>;
+    };
+    const nextStartup = next.ensureAgentRunning();
+    const nextStartupError = nextStartup.catch((error) => error);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(
+      vi.mocked(invoke).mock.calls.filter(([name]) => name === "start_acp_agent"),
+    ).toHaveLength(2);
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect((await nextStartupError).message).toContain("startup timed out");
+  });
+
+  it("fails a prompt that produces no ACP activity", async () => {
+    vi.mocked(invoke).mockImplementation((command) => {
+      if (command === "get_acp_status") {
+        return Promise.resolve({
+          running: true,
+          initialized: true,
+          agentId: "codex",
+          sessionId: null,
+          workspacePath: "/workspace",
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const { handler, handlers } = createHandler();
+    await (handler as unknown as AcpStreamHandler).start("Hey", {
+      agentId: "codex",
+      projectRoot: "/workspace",
+    });
+
+    expect(handlers.onError).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    expect(handlers.onError).toHaveBeenCalledWith(
+      expect.stringContaining("did not return any activity"),
+      undefined,
+    );
   });
 
   it("invokes ACP session delete and logout commands", async () => {

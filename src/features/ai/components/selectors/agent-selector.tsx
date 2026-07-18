@@ -11,10 +11,12 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { ScrollArea } from "@/ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import {
@@ -59,6 +61,7 @@ export function AgentSelector({
   const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
   const createNewChat = useAIChatStore((state) => state.createNewChat);
   const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
+  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -197,6 +200,7 @@ export function AgentSelector({
 
       if (variant === "header") {
         const newChatId = createNewChat(agentId);
+        openAgentBuffer(newChatId);
         if (agentId !== "custom") {
           void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {
             console.error(`Failed to prepare ${agentId} session:`, error);
@@ -214,6 +218,7 @@ export function AgentSelector({
       setSelectedAgentId,
       changeCurrentChatAgent,
       createNewChat,
+      openAgentBuffer,
     ],
   );
 
@@ -232,10 +237,9 @@ export function AgentSelector({
         setInstalledAgents((current) => new Set(current).add(installedAgent.id));
         toast.success(`${agentName} installed`);
       } catch (error) {
-        toast.error(
-          `Failed to install ${agentName}`,
-          { description: error instanceof Error ? error.message : "Unknown error" },
-        );
+        toast.error(`Failed to install ${agentName}`, {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
       } finally {
         setInstallingAgentId(null);
         void loadInstalledAgents();
@@ -345,7 +349,7 @@ export function AgentSelector({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-1 [overscroll-behavior:contain]">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
           {filteredItems.length === 0 ? (
             <div className="p-4 text-center text-text-lighter ui-text-sm">No results found</div>
           ) : (
@@ -402,11 +406,7 @@ export function AgentSelector({
                         className="h-6 px-2 ui-text-sm"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
-                        {item.isInstalling ? (
-                          <Spinner label="Installing" compact />
-                        ) : (
-                          "Install"
-                        )}
+                        {item.isInstalling ? <Spinner label="Installing" compact /> : "Install"}
                       </Button>
                     ) : null}
                     {item.id === "custom" && onOpenSettings ? (
@@ -435,7 +435,7 @@ export function AgentSelector({
               );
             })
           )}
-        </div>
+        </ScrollArea>
       </Dropdown>
     </>
   );

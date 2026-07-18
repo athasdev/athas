@@ -13,15 +13,14 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Badge from "@/ui/badge";
 import { cn } from "@/utils/cn";
 import {
   chatComposerDropdownItemClassName,
-  chatComposerDropdownClassName,
   chatComposerIconButtonClassName,
 } from "../input/chat-composer-control-styles";
+import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 import { AIFileSelector } from "../mentions/ai-file-selector";
 
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
@@ -96,16 +95,12 @@ export function ContextSelector({
         </div>
       </div>
 
-      <Dropdown
-        isOpen={isOpen}
+      <ComposerAttachedPanel
+        open={isOpen}
         anchorRef={dropdownAnchorRef}
-        anchorSide="top"
         onClose={closeDropdown}
-        className={chatComposerDropdownClassName("min-w-0")}
-        menuClassName="flex min-h-0 flex-col overflow-hidden"
-        style={{ maxHeight: "320px" }}
-        matchAnchorWidth
-        anchorMinWidth={280}
+        ariaLabel="Add context"
+        maxHeight={320}
       >
         {isOpen ? (
           <ContextSelectorDropdownContent
@@ -115,7 +110,7 @@ export function ContextSelector({
             onToggleFile={onToggleFile}
           />
         ) : null}
-      </Dropdown>
+      </ComposerAttachedPanel>
     </div>
   );
 }

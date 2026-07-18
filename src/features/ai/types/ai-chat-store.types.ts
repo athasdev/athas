@@ -139,7 +139,6 @@ export interface AIChatActions {
   clearSelectedFiles: () => void;
   setSelectedBufferIds: (selectedBufferIds: Set<string>) => void;
   setSelectedFilesPaths: (selectedFilesPaths: Set<string>) => void;
-  autoSelectBuffer: (bufferId: string) => void;
 
   // Chat actions
   createNewChat: (agentId?: AgentType) => string;

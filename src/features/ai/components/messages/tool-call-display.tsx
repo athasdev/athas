@@ -18,6 +18,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { getFileDiff } from "@/features/git/api/git-diff-api";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { Button } from "@/ui/button";
 import { getBaseName, joinPath } from "@/utils/path-helpers";
 import { ChatActivityLine } from "../chat/chat-activity-line";
 
@@ -293,49 +294,53 @@ export default function ToolCallDisplay({
   const terminalItems = getTerminalItems(output);
   const hasTerminalOutput = terminalItems.length > 0;
   const toolPath = resolveToolPath(locations, input);
-  const actionButtons = (
+  const hasActions = Boolean(toolPath || hasTerminalOutput);
+  const actionButtons = hasActions ? (
     <span className="flex items-center gap-1">
       {toolPath && (kind === "edit" || kind === "delete" || kind === "move" || hasDiffOutput) ? (
-        <button
+        <Button
           type="button"
-          className="flex size-5 items-center justify-center rounded text-text-lighter/70 hover:bg-hover hover:text-text"
+          variant="ghost"
+          size="icon-xs"
+          tooltip="Open diff"
           onClick={(event) => {
             event.stopPropagation();
             void openToolDiff(toolPath, output);
           }}
-          title="Open diff"
         >
-          <GitDiff size={13} weight="duotone" />
-        </button>
+          <GitDiff weight="duotone" />
+        </Button>
       ) : null}
       {toolPath ? (
-        <button
+        <Button
           type="button"
-          className="flex size-5 items-center justify-center rounded text-text-lighter/70 hover:bg-hover hover:text-text"
+          variant="ghost"
+          size="icon-xs"
+          tooltip="Open file"
           onClick={(event) => {
             event.stopPropagation();
             void openToolPath(toolPath);
           }}
-          title="Open file"
         >
-          <FileText size={13} weight="duotone" />
-        </button>
+          <FileText weight="duotone" />
+        </Button>
       ) : null}
       {hasTerminalOutput ? (
-        <button
+        <Button
           type="button"
-          className="flex size-5 items-center justify-center rounded text-text-lighter/70 hover:bg-hover hover:text-text"
+          variant="ghost"
+          size="icon-xs"
+          tooltip="Open terminal"
           onClick={(event) => {
             event.stopPropagation();
             openAcpTerminalOutput(output);
           }}
-          title="Open terminal"
         >
-          <TerminalSquare size={13} weight="duotone" />
-        </button>
+          <TerminalSquare weight="duotone" />
+        </Button>
       ) : null}
     </span>
-  );
+  ) : null;
 
   return (
     <ChatActivityLine title={toolName} detail={detail} state={state} actions={actionButtons}>

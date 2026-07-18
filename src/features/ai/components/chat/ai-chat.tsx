@@ -31,10 +31,16 @@ import { hasProductCapability } from "@/features/window/lib/product-capabilities
 import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/ui/message-scroller";
 import { cn } from "@/utils/cn";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
-import { Conversation } from "../elements/conversation";
 import AIChatInputBar from "../input/chat-input-bar";
+import { AgentShortcuts } from "./agent-shortcuts";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
 
@@ -163,10 +169,7 @@ const AIChat = memo(function AIChat({
   const chatActions = useChatActions();
   const { showToast } = useToast();
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const shouldAutoScrollRef = useRef(true);
   const [permissionQueue, setPermissionQueue] = useState<
     Array<{
       requestId: string;
@@ -181,7 +184,10 @@ const AIChat = memo(function AIChat({
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
   const effectiveChatId =
-    chatId ?? (activeBuffer?.type === "agent" ? activeBuffer.sessionId : chatState.currentChatId);
+    chatId ??
+    (activeBuffer?.type === "agent"
+      ? (activeBuffer.sessionId ?? chatState.currentChatId)
+      : chatState.currentChatId);
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
     [chatState.chats, effectiveChatId],
@@ -209,12 +215,6 @@ const AIChat = memo(function AIChat({
     if (messageSearchMatches.length === 0) return;
     setActiveMessageSearchIndex((index) => (index + 1) % messageSearchMatches.length);
   }, [messageSearchMatches.length]);
-
-  useEffect(() => {
-    if (isActiveSurface && activeBuffer) {
-      chatActions.autoSelectBuffer(activeBuffer.id);
-    }
-  }, [activeBuffer, chatActions.autoSelectBuffer, isActiveSurface]);
 
   useEffect(() => {
     if (chatId) return;
@@ -390,37 +390,24 @@ const AIChat = memo(function AIChat({
     [chatActions],
   );
 
-  const scrollToBottom = useCallback((force = false) => {
-    if (!force && !shouldAutoScrollRef.current) {
-      return;
-    }
-
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
-  const handleMessagesScroll = useCallback(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    const distanceFromBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
-    shouldAutoScrollRef.current = distanceFromBottom < 48;
-  }, []);
-
   const buildContext = async (agentId: string, providerId: string): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter(
       (buffer) => buffer.type !== "agent" && chatState.selectedBufferIds.has(buffer.id),
     );
+    const selectedActiveBuffer =
+      activeBuffer &&
+      activeBuffer.type !== "agent" &&
+      chatState.selectedBufferIds.has(activeBuffer.id)
+        ? activeBuffer
+        : undefined;
 
-    // Build active buffer context, including web viewer content if applicable
     let activeBufferContext: (typeof activeBuffer & { webViewerContent?: string }) | undefined =
-      activeBuffer && activeBuffer.type !== "agent" ? activeBuffer : undefined;
-    if (activeBuffer?.type === "webViewer" && activeBuffer.url) {
-      // Fetch web page content for context
+      selectedActiveBuffer;
+    if (selectedActiveBuffer?.type === "webViewer" && selectedActiveBuffer.url) {
       const { fetchWebPageContent } = await import("@/features/ai/services/web-content-service");
-      const webContent = await fetchWebPageContent(activeBuffer.url);
+      const webContent = await fetchWebPageContent(selectedActiveBuffer.url);
       activeBufferContext = {
-        ...activeBuffer,
+        ...selectedActiveBuffer,
         webViewerContent: webContent,
       };
     }
@@ -435,8 +422,8 @@ const AIChat = memo(function AIChat({
       agentId,
     };
 
-    if (activeBuffer && activeBuffer.type !== "webViewer") {
-      const extension = activeBuffer.path.split(".").pop()?.toLowerCase() || "";
+    if (selectedActiveBuffer && selectedActiveBuffer.type !== "webViewer") {
+      const extension = selectedActiveBuffer.path.split(".").pop()?.toLowerCase() || "";
       const languageMap: Record<string, string> = {
         js: "JavaScript",
         jsx: "JavaScript (React)",
@@ -465,23 +452,8 @@ const AIChat = memo(function AIChat({
   };
 
   const stopStreaming = async () => {
-    // For ACP agents, send cancel notification
-    const currentAgentId = chatActions.getCurrentAgentId();
-    if (isAcpAgent(currentAgentId)) {
-      try {
-        await AcpStreamHandler.cancelPrompt();
-        if (permissionQueue.length > 0) {
-          await Promise.all(
-            permissionQueue.map((item) =>
-              AcpStreamHandler.respondToPermission(item.requestId, false, true),
-            ),
-          );
-          setPermissionQueue([]);
-        }
-      } catch (error) {
-        console.error("Failed to cancel ACP prompt:", error);
-      }
-    }
+    const pendingPermissions = permissionQueue;
+    setPermissionQueue([]);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -489,6 +461,22 @@ const AIChat = memo(function AIChat({
     }
     chatActions.setIsTyping(false);
     chatActions.setStreamingMessageId(null);
+
+    const currentAgentId = chatActions.getCurrentAgentId();
+    if (isAcpAgent(currentAgentId)) {
+      try {
+        await AcpStreamHandler.cancelPrompt();
+        if (pendingPermissions.length > 0) {
+          await Promise.all(
+            pendingPermissions.map((item) =>
+              AcpStreamHandler.respondToPermission(item.requestId, false, true),
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to cancel ACP prompt:", error);
+      }
+    }
   };
 
   const updateStreamingAssistantMessage = useCallback(
@@ -524,14 +512,6 @@ const AIChat = memo(function AIChat({
       targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId);
     }
 
-    const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
-      messageContent.trim(),
-      allProjectFiles,
-    );
-
-    const latestSettings = useSettingsStore.getState().settings;
-    const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
-    context.mentionedFiles = mentionedFiles;
     const conversationContext = buildConversationHistory(
       useAIChatStore.getState().getMessagesForChat(targetChatId),
     );
@@ -562,8 +542,6 @@ const AIChat = memo(function AIChat({
     chatActions.setIsTyping(true);
     chatActions.setStreamingMessageId(assistantMessageId);
 
-    requestAnimationFrame(() => scrollToBottom(true));
-
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
     let currentAssistantRawContent = "";
@@ -571,6 +549,14 @@ const AIChat = memo(function AIChat({
     let acpCommandResultLabel: string | null = null;
 
     try {
+      const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
+        messageContent.trim(),
+        allProjectFiles,
+      );
+      const latestSettings = useSettingsStore.getState().settings;
+      const context = await buildContext(currentAgentId, latestSettings.aiProviderId);
+      context.mentionedFiles = mentionedFiles;
+
       // Handle direct ACP UI intents locally so they are always reliable.
       if (isAcp) {
         const directAction = parseDirectAcpUiAction(messageContent);
@@ -629,7 +615,6 @@ const AIChat = memo(function AIChat({
             content: extracted.content,
             followUpActions: extracted.actions,
           }));
-          requestAnimationFrame(() => scrollToBottom());
         },
         () => {
           const currentMessage = chatActions
@@ -808,7 +793,6 @@ details: ${errorDetails || mainError}
           chatActions.addMessage(targetChatId, newAssistantMessage);
           currentAssistantMessageId = newMessageId;
           chatActions.setStreamingMessageId(newMessageId);
-          requestAnimationFrame(() => scrollToBottom(true));
         },
         (event) => {
           updateStreamingAssistantMessage(
@@ -980,7 +964,6 @@ details: ${errorDetails || mainError}
               images: [...(currentMessage?.images || []), { data, mediaType }],
             }),
           );
-          requestAnimationFrame(() => scrollToBottom());
         },
         (uri: string, name: string | null) => {
           updateStreamingAssistantMessage(
@@ -990,7 +973,6 @@ details: ${errorDetails || mainError}
               resources: [...(currentMessage?.resources || []), { uri, name }],
             }),
           );
-          requestAnimationFrame(() => scrollToBottom());
         },
         targetChatId,
       );
@@ -1144,28 +1126,35 @@ details: ${errorDetails || mainError}
         <>
           {useInitialComposer ? (
             <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
-              <AIChatInputBar
-                buffers={buffers}
-                allProjectFiles={allProjectFiles}
-                isActiveSurface={isActiveSurface}
-                presentation="initial"
-                onSendMessage={handleSendMessage}
-                onStopStreaming={stopStreaming}
-              />
+              <div className="flex w-full max-w-[720px] flex-col gap-4">
+                <AgentShortcuts />
+                <AIChatInputBar
+                  buffers={buffers}
+                  allProjectFiles={allProjectFiles}
+                  isActiveSurface={isActiveSurface}
+                  presentation="initial"
+                  onSendMessage={handleSendMessage}
+                  onStopStreaming={stopStreaming}
+                />
+              </div>
             </div>
           ) : (
-            <Conversation ref={messagesContainerRef} onScroll={handleMessagesScroll}>
-              <ChatMessages
-                ref={messagesEndRef}
-                chatId={effectiveChatId}
-                onApplyCode={onApplyCode}
-                onSendFollowUp={handleSendMessage}
-                acpEvents={acpEvents}
-                searchQuery={messageSearchQuery}
-                activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
-                activeSearchIndex={activeMessageSearchIndex}
-              />
-            </Conversation>
+            <MessageScrollerProvider autoScroll defaultScrollPosition="last-anchor">
+              <MessageScroller>
+                <MessageScrollerViewport>
+                  <ChatMessages
+                    chatId={effectiveChatId}
+                    onApplyCode={onApplyCode}
+                    onSendFollowUp={handleSendMessage}
+                    acpEvents={acpEvents}
+                    searchQuery={messageSearchQuery}
+                    activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
+                    activeSearchIndex={activeMessageSearchIndex}
+                  />
+                </MessageScrollerViewport>
+                <MessageScrollerButton />
+              </MessageScroller>
+            </MessageScrollerProvider>
           )}
 
           {currentPermission && (

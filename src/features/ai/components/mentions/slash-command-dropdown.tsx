@@ -1,23 +1,24 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, type RefObject } from "react";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import Command, {
+import {
   CommandEmpty,
-  CommandHeader,
-  CommandInput,
   CommandItemBadge,
   CommandItemMeta,
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 
 interface SlashCommandDropdownProps {
+  anchorRef: RefObject<HTMLElement | null>;
   onSelect: (command: SlashCommand) => void;
   onClose?: () => void;
 }
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
+  anchorRef,
   onSelect,
   onClose,
 }: SlashCommandDropdownProps) {
@@ -25,9 +26,6 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
 
   const slashCommandState = useAIChatStore((state) => state.slashCommandState);
   const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
-  const updateSlashCommandSearch = useAIChatStore((state) => state.updateSlashCommandSearch);
-  const selectNextSlashCommand = useAIChatStore((state) => state.selectNextSlashCommand);
-  const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
   const setSlashCommandSelectedIndex = useAIChatStore(
     (state) => state.setSlashCommandSelectedIndex,
   );
@@ -36,7 +34,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
 
-  const { search, selectedIndex } = slashCommandState;
+  const { selectedIndex } = slashCommandState;
   const filteredCommands = getFilteredSlashCommands();
 
   const closeSlashCommands = useCallback(() => {
@@ -82,63 +80,14 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
     };
   }, [closeSlashCommands, setIsCommandPaletteVisible, setIsQuickOpenVisible]);
 
-  const handleSearchChange = (value: string) => {
-    const nextSearch = value.startsWith("/") ? value.slice(1) : value;
-    updateSlashCommandSearch(nextSearch.replace(/\s+/g, ""));
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    const isCommandModifier = event.metaKey || event.ctrlKey;
-    if (isCommandModifier && event.key.toLowerCase() === "p") {
-      event.preventDefault();
-      event.stopPropagation();
-      closeSlashCommands();
-      if (event.shiftKey) {
-        setIsCommandPaletteVisible(true);
-      } else {
-        setIsQuickOpenVisible(true);
-      }
-      return;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      selectNextSlashCommand();
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      selectPreviousSlashCommand();
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === "Tab") {
-      event.preventDefault();
-      const command = filteredCommands[selectedIndex];
-      if (command) {
-        onSelect(command);
-      }
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeSlashCommands();
-    }
-  };
-
   return (
-    <Command isVisible onClose={closeSlashCommands} title="Slash command suggestions">
-      <CommandHeader onClose={closeSlashCommands}>
-        <CommandInput
-          value={`/${search}`}
-          onChange={handleSearchChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Search slash commands"
-        />
-      </CommandHeader>
-
+    <ComposerAttachedPanel
+      open={slashCommandState.active}
+      anchorRef={anchorRef}
+      onClose={closeSlashCommands}
+      ariaLabel="Slash command suggestions"
+      maxHeight={320}
+    >
       {filteredCommands.length > 0 ? (
         <CommandList ref={listRef} role="listbox" aria-label="Slash command suggestions">
           {filteredCommands.map((command, index) => (
@@ -173,6 +122,6 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
             : "No slash commands available yet"}
         </CommandEmpty>
       )}
-    </Command>
+    </ComposerAttachedPanel>
   );
 });

@@ -35,12 +35,27 @@ interface AcpListeners {
   event?: () => void;
 }
 
+const ACP_STATUS_TIMEOUT_MS = 5_000;
+const ACP_START_TIMEOUT_MS = 15_000;
+const ACP_PROMPT_TIMEOUT_MS = 10_000;
+const ACP_FIRST_RESPONSE_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function hasSessionId(event: AcpEvent): event is AcpEvent & { sessionId: string } {
   return "sessionId" in event && typeof event.sessionId === "string";
 }
 
 export class AcpStreamHandler {
   private static activeHandler: AcpStreamHandler | null = null;
+  private static startupQueue: Promise<void> = Promise.resolve();
   private listeners: AcpListeners = {};
   private activeTools = new Map<string, string>();
   private sessionComplete = false;
@@ -48,6 +63,8 @@ export class AcpStreamHandler {
   private cancelled = false;
   private wasRunning = false;
   private activeSessionId: string | null = null;
+  private awaitingFirstResponse = false;
+  private firstResponseTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private agentId: string,
@@ -73,17 +90,32 @@ export class AcpStreamHandler {
       AcpStreamHandler.activeHandler = this;
       await this.setupListeners();
       await this.ensureAgentRunning();
-      await invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) });
+      this.awaitingFirstResponse = true;
+      await withTimeout(
+        invoke("send_acp_prompt", { prompt: this.buildPrompt(userMessage, context) }),
+        ACP_PROMPT_TIMEOUT_MS,
+        `${this.agentId} did not accept the prompt in time`,
+      );
+      this.armFirstResponseTimeout();
     } catch (error) {
       console.error("ACP agent error:", error);
-      this.cleanup();
-      this.handlers.onError(this.formatStartupError(error));
+      this.fail(this.formatStartupError(error));
     }
   }
 
-  private async ensureAgentRunning(): Promise<void> {
+  private ensureAgentRunning(): Promise<void> {
+    const startup = AcpStreamHandler.startupQueue.then(() => this.ensureAgentRunningOnce());
+    AcpStreamHandler.startupQueue = startup.catch(() => undefined);
+    return startup;
+  }
+
+  private async ensureAgentRunningOnce(): Promise<void> {
     try {
-      const status = await invoke<AcpAgentStatus>("get_acp_status");
+      const status = await withTimeout(
+        invoke<AcpAgentStatus>("get_acp_status"),
+        ACP_STATUS_TIMEOUT_MS,
+        "Agent status check timed out",
+      );
       const targetChat = this.getTargetChat();
       const desiredSessionId =
         targetChat?.agentId === this.agentId ? (targetChat.acpSessionId ?? null) : null;
@@ -114,21 +146,32 @@ export class AcpStreamHandler {
 
         let startStatus: AcpAgentStatus;
         try {
-          startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
-            agentId: this.agentId,
-            workspacePath,
-            sessionId: desiredSessionId,
-          });
+          startStatus = await withTimeout(
+            invoke<AcpAgentStatus>("start_acp_agent", {
+              agentId: this.agentId,
+              workspacePath,
+              sessionId: desiredSessionId,
+            }),
+            ACP_START_TIMEOUT_MS,
+            `${this.agentId} startup timed out`,
+          );
         } catch (error) {
+          if (error instanceof Error && error.message.includes("startup timed out")) {
+            throw error;
+          }
           const availableAgents = await invoke<AgentConfig[]>("get_available_agents");
           const agent = availableAgents.find((item) => item.id === this.agentId);
           if (!agent?.installed && agent?.canInstall) {
             await invoke<AgentConfig>("install_acp_agent", { agentId: this.agentId });
-            startStatus = await invoke<AcpAgentStatus>("start_acp_agent", {
-              agentId: this.agentId,
-              workspacePath,
-              sessionId: desiredSessionId,
-            });
+            startStatus = await withTimeout(
+              invoke<AcpAgentStatus>("start_acp_agent", {
+                agentId: this.agentId,
+                workspacePath,
+                sessionId: desiredSessionId,
+              }),
+              ACP_START_TIMEOUT_MS,
+              `${this.agentId} startup timed out`,
+            );
           } else {
             throw error;
           }
@@ -185,6 +228,9 @@ export class AcpStreamHandler {
     }
     if (normalized.includes("auth")) {
       return `${this.agentId} requires authentication before it can answer prompts.`;
+    }
+    if (normalized.includes("timed out") || normalized.includes("in time")) {
+      return `${this.agentId} did not respond during startup. Restart the agent session and try again.`;
     }
 
     return `${this.agentId} is currently unavailable.`;
@@ -259,6 +305,7 @@ export class AcpStreamHandler {
     if (hasSessionId(event) && this.activeSessionId && event.sessionId !== this.activeSessionId) {
       return;
     }
+    this.markPromptActivity(event);
     if (this.handlers.onEvent) {
       this.handlers.onEvent(event);
     }
@@ -384,9 +431,7 @@ export class AcpStreamHandler {
     // Detect unexpected agent crash: was running but now stopped without user action
     if (this.wasRunning && !event.status.running && !this.sessionComplete && !this.cancelled) {
       console.warn("Agent crashed unexpectedly");
-      this.cleanup();
-      // Pass canReconnect=true to indicate the error is recoverable
-      this.handlers.onError("Agent disconnected unexpectedly. Click retry to restart.", true);
+      this.fail("Agent disconnected unexpectedly. Click retry to restart.", true);
     }
   }
 
@@ -503,13 +548,59 @@ export class AcpStreamHandler {
   private handleError(event: Extract<AcpEvent, { type: "error" }>): void {
     if (this.sessionComplete || this.cancelled) return;
     console.error("ACP error:", event.error);
+    this.fail(event.error);
+  }
+
+  private markPromptActivity(event: AcpEvent): void {
+    if (!this.awaitingFirstResponse) return;
+
+    switch (event.type) {
+      case "user_message_chunk":
+      case "content_chunk":
+      case "thought_chunk":
+      case "tool_start":
+      case "tool_update":
+      case "tool_complete":
+      case "permission_request":
+      case "session_complete":
+      case "error":
+      case "plan_update":
+      case "prompt_complete":
+      case "ui_action":
+        this.awaitingFirstResponse = false;
+        if (this.firstResponseTimeout) {
+          clearTimeout(this.firstResponseTimeout);
+          this.firstResponseTimeout = null;
+        }
+        break;
+    }
+  }
+
+  private armFirstResponseTimeout(): void {
+    if (!this.awaitingFirstResponse || this.sessionComplete || this.cancelled) return;
+
+    this.firstResponseTimeout = setTimeout(() => {
+      this.fail(
+        `${this.agentId} accepted the prompt but did not return any activity. Restart the agent session and try again.`,
+      );
+    }, ACP_FIRST_RESPONSE_TIMEOUT_MS);
+  }
+
+  private fail(error: string, canReconnect?: boolean): void {
+    if (this.sessionComplete || this.cancelled) return;
+    this.sessionComplete = true;
     this.pendingNewMessage = false;
     this.cleanup();
-    this.handlers.onError(event.error);
+    this.handlers.onError(error, canReconnect);
   }
 
   private cleanup(): void {
     console.log("Cleaning up ACP listeners...");
+    this.awaitingFirstResponse = false;
+    if (this.firstResponseTimeout) {
+      clearTimeout(this.firstResponseTimeout);
+      this.firstResponseTimeout = null;
+    }
     this.pendingNewMessage = false;
     this.activeTools.clear();
 
