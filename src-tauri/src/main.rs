@@ -315,9 +315,10 @@ fn main() {
          get_extension_path,
          // Fuzzy matching commands
          fuzzy_match,
-         fff_set_workspace,
+         fff_ensure_workspaces,
          fff_search_files,
          fff_scan_status,
+         fff_list_files,
          fff_track_access,
          // Search commands
          search_files_content,

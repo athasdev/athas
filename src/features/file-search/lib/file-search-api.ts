@@ -35,7 +35,7 @@ export interface SearchFilesResponse {
 }
 
 export interface SearchFilesRequest {
-  root_path: string;
+  root_paths: string[];
   query: string;
   case_sensitive?: boolean;
   whole_word?: boolean;
@@ -45,12 +45,6 @@ export interface SearchFilesRequest {
   context_lines?: number;
 }
 
-export async function searchFilesContent(
-  request: SearchFilesRequest,
-): Promise<SearchFilesResponse> {
-  return invoke<SearchFilesResponse>("search_files_content", { request });
-}
-
 export interface FffSearchHit {
   path: string;
   name: string;
@@ -58,8 +52,10 @@ export interface FffSearchHit {
   score: number;
 }
 
-export async function fffSetWorkspace(basePath: string): Promise<void> {
-  return invoke("fff_set_workspace", { basePath });
+export interface FffIndexedFile {
+  path: string;
+  name: string;
+  relative_path: string;
 }
 
 export interface FffScanStatus {
@@ -70,20 +66,30 @@ export interface FffScanStatus {
   is_warmup_complete: boolean;
 }
 
-export async function fffScanStatus(rootPath: string): Promise<FffScanStatus> {
-  return invoke<FffScanStatus>("fff_scan_status", { rootPath });
+export async function searchFilesContent(
+  request: SearchFilesRequest,
+): Promise<SearchFilesResponse> {
+  return invoke<SearchFilesResponse>("search_files_content", { request });
+}
+
+export async function fffEnsureWorkspaces(rootPaths: readonly string[]): Promise<void> {
+  return invoke("fff_ensure_workspaces", { rootPaths });
+}
+
+export async function fffScanStatus(rootPaths: readonly string[]): Promise<FffScanStatus> {
+  return invoke<FffScanStatus>("fff_scan_status", { rootPaths });
 }
 
 export async function fffSearchFiles(
   query: string,
+  rootPaths: readonly string[],
   limit = 100,
-  rootPath?: string | null,
 ): Promise<FffSearchHit[]> {
-  return invoke<FffSearchHit[]>("fff_search_files", {
-    query,
-    limit,
-    rootPath: rootPath || null,
-  });
+  return invoke<FffSearchHit[]>("fff_search_files", { query, limit, rootPaths });
+}
+
+export async function fffListFiles(rootPaths: readonly string[]): Promise<FffIndexedFile[]> {
+  return invoke<FffIndexedFile[]>("fff_list_files", { rootPaths });
 }
 
 export async function fffTrackAccess(path: string): Promise<void> {

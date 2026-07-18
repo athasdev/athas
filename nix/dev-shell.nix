@@ -1,4 +1,4 @@
-{ lib, pkgs, zig }:
+{ lib, pkgs }:
 
 let
   rustToolchain = pkgs.rust-bin.nightly.latest.default.override {
@@ -47,7 +47,6 @@ pkgs.mkShell (
         nodejs_22
         rustToolchain
         rust-analyzer
-        zig
       ]
       ++ lib.optionals stdenv.isLinux linuxPackages;
 

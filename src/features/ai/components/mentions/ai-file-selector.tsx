@@ -10,12 +10,16 @@ import {
   type RefObject,
 } from "react";
 import { useDebounce } from "use-debounce";
-import { useFffSearch } from "@/features/global-search/hooks/use-fff-search";
+import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
+import {
+  canUseNativeFileSearch,
+  getNativeWorkspaceRootPaths,
+} from "@/features/file-search/utils/file-search-paths";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
-import { canUseNativeFileSearch } from "@/features/global-search/utils/file-search-paths";
 import { FileListItem } from "@/features/global-search/components/file-list-item";
 import type { FileCategory, FileItem } from "@/features/global-search/types/global-search.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { CommandEmpty, CommandList } from "@/ui/command";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
@@ -88,9 +92,18 @@ export function AIFileSelector({
   const listboxId = useId();
   const lastEmittedResultsSignatureRef = useRef<string | null>(null);
   const [debouncedQuery] = useDebounce(query, 50);
+  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const nativeRootPaths = useMemo(
+    () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
+    [rootFolderPath, workspaceFolders],
+  );
   const isBackendSearchActive =
     useBackendSearch && debouncedQuery.trim().length > 0 && canUseNativeFileSearch(rootFolderPath);
-  const { hits: backendHits } = useFffSearch(debouncedQuery, isBackendSearchActive, rootFolderPath);
+  const { hits: backendHits } = useFffSearch(
+    debouncedQuery,
+    isBackendSearchActive,
+    nativeRootPaths,
+  );
   const fileItems = useMemo<FileItem[]>(() => {
     if (isBackendSearchActive) return [];
 

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
 import type { FileEntry } from "@/features/file-system/types/app.types";
-import type { FileSearchResult, SearchFilesResponse } from "../lib/rust-api/search";
-import { fffScanStatus, searchFilesContent } from "../lib/rust-api/search";
+import type {
+  FileSearchResult,
+  SearchFilesResponse,
+} from "@/features/file-search/lib/file-search-api";
+import { fffScanStatus, searchFilesContent } from "@/features/file-search/lib/file-search-api";
+import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
 import {
   loadProviderSearchFiles,
   searchProviderFilesContent,
@@ -82,6 +86,11 @@ interface ProviderSearchSession {
 
 export const useContentSearch = () => {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
+  const nativeRootPaths = useMemo(
+    () => getNativeWorkspaceRootPaths(rootFolderPath, workspaceFolders),
+    [rootFolderPath, workspaceFolders],
+  );
   const [query, setQuery] = useState("");
   const [debouncedQuery] = useDebounce(query, SEARCH_DEBOUNCE_DELAY);
   const [rawResults, setRawResults] = useState<FileSearchResult[]>([]);
@@ -113,7 +122,7 @@ export const useContentSearch = () => {
   const searchKey = useMemo(
     () =>
       [
-        rootFolderPath ?? "",
+        nativeRootPaths.join("\n") || rootFolderPath || "",
         debouncedQuery,
         debouncedIncludeQuery,
         debouncedExcludeQuery,
@@ -125,6 +134,7 @@ export const useContentSearch = () => {
       debouncedExcludeQuery,
       debouncedIncludeQuery,
       debouncedQuery,
+      nativeRootPaths,
       rootFolderPath,
       searchOptions.caseSensitive,
       searchOptions.useRegex,
@@ -196,7 +206,7 @@ export const useContentSearch = () => {
       }
 
       return searchFilesContent({
-        root_path: searchRootPath,
+        root_paths: nativeRootPaths,
         query: debouncedQuery,
         case_sensitive: searchOptions.caseSensitive,
         whole_word: searchOptions.wholeWord,
@@ -212,6 +222,7 @@ export const useContentSearch = () => {
       debouncedIncludeQuery,
       debouncedQuery,
       getProviderFiles,
+      nativeRootPaths,
       rootFolderPath,
       searchKey,
       searchOptions,
@@ -403,7 +414,7 @@ export const useContentSearch = () => {
 
     const pollScanStatus = async () => {
       try {
-        const status = await fffScanStatus(rootFolderPath);
+        const status = await fffScanStatus(nativeRootPaths);
         if (disposed || pollingRequestId !== requestIdRef.current) return;
 
         setIsIndexing(status.is_scanning);
@@ -437,7 +448,7 @@ export const useContentSearch = () => {
       disposed = true;
       if (timer) clearTimeout(timer);
     };
-  }, [debouncedQuery, isIndexing, performSearch, rootFolderPath, searchKey]);
+  }, [debouncedQuery, isIndexing, nativeRootPaths, performSearch, rootFolderPath, searchKey]);
 
   useEffect(() => {
     void performSearch();

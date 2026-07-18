@@ -8,10 +8,6 @@
       url = "github:oxalica/rust-overlay/146e7bf7569b8288f24d41d806b9f584f7cfd5b5";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    zig-overlay = {
-      url = "github:mitchellh/zig-overlay/22d713bdaec64681e56f5b69289789e3dd5430e0";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -19,7 +15,6 @@
       nixpkgs,
       flake-utils,
       rust-overlay,
-      zig-overlay,
       ...
     }:
     flake-utils.lib.eachSystem
@@ -39,9 +34,7 @@
           athas = pkgs.callPackage ./nix/package.nix { };
         in
         {
-          devShells.default = pkgs.callPackage ./nix/dev-shell.nix {
-            zig = zig-overlay.packages.${system}."0.16.0";
-          };
+          devShells.default = pkgs.callPackage ./nix/dev-shell.nix { };
 
           packages = {
             default = athas;

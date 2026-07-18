@@ -9,7 +9,7 @@ import {
   MAX_RESULTS,
 } from "../constants/limits";
 import type { CategorizedFiles, FileItem, SearchResult } from "../types/global-search.types";
-import type { FffSearchHit } from "../lib/rust-api/search";
+import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 function insertSortedLimited<T>(

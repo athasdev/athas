@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
-import { fffSearchFiles, type FffSearchHit } from "../lib/rust-api/search";
-import { MAX_RESULTS } from "../constants/limits";
-import { canUseNativeFileSearch } from "../utils/file-search-paths";
+import { fffSearchFiles, type FffSearchHit } from "../lib/file-search-api";
+import { getNativeWorkspaceRootPaths } from "../utils/file-search-paths";
 
 export const useFffSearch = (
   query: string,
   enabled: boolean,
-  rootPath: string | null | undefined,
-  limit = MAX_RESULTS,
+  rootPaths: readonly string[],
+  limit = 100,
 ) => {
   const trimmedQuery = query.trim();
-  const searchRootPath = canUseNativeFileSearch(rootPath) ? rootPath : null;
+  const searchRootPaths = getNativeWorkspaceRootPaths(rootPaths[0], rootPaths.slice(1));
   const searchKey =
-    enabled && trimmedQuery && searchRootPath
-      ? JSON.stringify([searchRootPath, trimmedQuery, limit])
+    enabled && trimmedQuery && searchRootPaths.length > 0
+      ? JSON.stringify([searchRootPaths, trimmedQuery, limit])
       : null;
   const [searchState, setSearchState] = useState<{
     key: string | null;
@@ -26,25 +25,26 @@ export const useFffSearch = (
   });
 
   useEffect(() => {
-    if (!searchKey || !searchRootPath) return;
+    if (!searchKey) return;
 
+    const [currentRootPaths] = JSON.parse(searchKey) as [string[], string, number];
     let cancelled = false;
 
-    fffSearchFiles(trimmedQuery, limit, searchRootPath)
+    fffSearchFiles(trimmedQuery, currentRootPaths, limit)
       .then((results) => {
         if (cancelled) return;
         setSearchState({ key: searchKey, hits: results, error: null });
       })
-      .catch((err) => {
+      .catch((error) => {
         if (cancelled) return;
-        console.error("[fff] search failed:", err);
-        setSearchState({ key: searchKey, hits: [], error: String(err) });
+        console.error("[fff] search failed:", error);
+        setSearchState({ key: searchKey, hits: [], error: String(error) });
       });
 
     return () => {
       cancelled = true;
     };
-  }, [searchKey, searchRootPath, trimmedQuery, limit]);
+  }, [searchKey, trimmedQuery, limit]);
 
   const hasCurrentResult = searchKey !== null && searchState.key === searchKey;
 
@@ -52,6 +52,6 @@ export const useFffSearch = (
     hits: hasCurrentResult ? searchState.hits : [],
     error: hasCurrentResult ? searchState.error : null,
     isSearching: searchKey !== null && searchState.key !== searchKey,
-    canSearch: searchRootPath !== null,
+    canSearch: searchRootPaths.length > 0,
   };
 };

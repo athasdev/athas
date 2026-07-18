@@ -1,4 +1,8 @@
-import type { FileSearchResult, SearchMatch, SearchMatchRange } from "../lib/rust-api/search";
+import type {
+  FileSearchResult,
+  SearchMatch,
+  SearchMatchRange,
+} from "@/features/file-search/lib/file-search-api";
 
 function findLineMatchRanges(line: string, regex: RegExp): SearchMatchRange[] {
   const ranges: SearchMatchRange[] = [];

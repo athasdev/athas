@@ -3,7 +3,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer-search-snapshot";
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { RecentFile } from "@/features/file-system/types/recent-files.types";
-import type { FffSearchHit } from "@/features/global-search/lib/rust-api/search";
+import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
 import { pathStartsWithRoot } from "@/utils/path-helpers";
 import {
   MAX_OPEN_BUFFERS_SHOWN,
