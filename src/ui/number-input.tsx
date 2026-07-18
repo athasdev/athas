@@ -6,7 +6,7 @@ import {
   controlIconSizes,
   controlSizeVariants,
   controlSurfaceVariants,
-} from "@/design-system/control-variants";
+} from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<

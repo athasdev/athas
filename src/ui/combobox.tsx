@@ -3,7 +3,7 @@ import type { Icon as AppIcon } from "@/ui/icons";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { forwardRef, useRef, type ButtonHTMLAttributes, type CSSProperties } from "react";
-import { controlIconSizes, controlSizeVariants } from "@/design-system/control-variants";
+import { controlIconSizes, controlSizeVariants } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 
 const Combobox = ComboboxPrimitive.Root;

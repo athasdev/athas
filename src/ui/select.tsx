@@ -14,7 +14,7 @@ import type {
 } from "react";
 import { forwardRef, useEffect, useId, useMemo, useRef, useState } from "react";
 import { buttonVariants } from "@/ui/button";
-import { controlIconSizes } from "@/design-system/control-variants";
+import { controlIconSizes } from "@/utils/control-variants";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
