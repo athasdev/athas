@@ -15,7 +15,7 @@ import { parseThemeFile, toThemeDefinition } from "./theme-file";
 import type { ThemeFile } from "./theme-schema";
 import tokyoNightThemes from "./builtin/tokyo-night.json";
 import vitesseThemes from "./builtin/vitesse.json";
-import type { ThemeDefinition } from "./types";
+import type { ThemeDefinition } from "./theme.types";
 
 export class ThemeLoader extends BaseThemeExtension {
   readonly name = "Theme Loader";

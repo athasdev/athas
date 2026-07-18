@@ -1,6 +1,6 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { themeRegistry } from "./theme-registry";
-import type { ThemeDefinition } from "./types";
+import type { ThemeDefinition } from "./theme.types";
 
 const subscribeToThemeRegistry = (callback: () => void) => themeRegistry.onRegistryChange(callback);
 

@@ -5,7 +5,7 @@ import {
   type AthasDefaultThemeType,
 } from "@/extensions/themes/default-theme";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import type { ThemeDefinition } from "@/extensions/themes/types";
+import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 
 function getThemeId(theme: string): string {
   return theme.includes("light") ? "vs" : "vs-dark";

@@ -1,6 +1,6 @@
 import type { EditorAPI } from "@/features/editor/types/editor-extension.types";
 import { themeRegistry } from "./theme-registry";
-import type { ThemeDefinition, ThemeExtension } from "./types";
+import type { ThemeDefinition, ThemeExtension } from "./theme.types";
 
 export abstract class BaseThemeExtension implements ThemeExtension {
   readonly extensionType = "theme" as const;

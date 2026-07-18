@@ -1,4 +1,4 @@
-import type { IconThemeDefinition } from "./types";
+import type { IconThemeDefinition } from "./icon-theme.types";
 
 export function isLegacyAthasIconTheme(theme: IconThemeDefinition) {
   return (

@@ -1,7 +1,7 @@
 import athasThemes from "./builtin/athas.json";
 import { toThemeDefinition } from "./theme-file";
 import type { ThemeFile } from "./theme-schema";
-import type { ThemeDefinition } from "./types";
+import type { ThemeDefinition } from "./theme.types";
 
 export type AthasDefaultThemeType = "dark" | "light";
 

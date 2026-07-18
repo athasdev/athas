@@ -8,7 +8,7 @@ import {
   ThemeFileValidationError,
 } from "@/extensions/themes/theme-file";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
-import type { ThemeDefinition } from "@/extensions/themes/types";
+import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 import { installThemeJson } from "@/features/settings/utils/theme-upload";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";

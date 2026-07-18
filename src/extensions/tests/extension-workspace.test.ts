@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { getReservedBuiltInThemeContribution } from "@/features/extensions/scripts/extension-workspace";
+import { getReservedBuiltInThemeContribution } from "@/extensions/tooling/extension-workspace";
 
 describe("extension workspace theme ownership", () => {
   it("reserves Athas default theme identities for built-in themes", () => {

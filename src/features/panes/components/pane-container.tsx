@@ -75,7 +75,7 @@ const DiagnosticsBuffer = lazy(
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
 const ExtensionsBuffer = lazy(() =>
-  import("@/features/extensions/components/extensions-sidebar").then((m) => ({
+  import("@/extensions/ui/components/extensions-sidebar").then((m) => ({
     default: m.ExtensionsSidebar,
   })),
 );

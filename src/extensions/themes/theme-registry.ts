@@ -1,4 +1,4 @@
-import type { ThemeDefinition, ThemeRegistryAPI, ThemeSource } from "./types";
+import type { ThemeDefinition, ThemeRegistryAPI, ThemeSource } from "./theme.types";
 
 class ThemeRegistry implements ThemeRegistryAPI {
   private themes = new Map<string, ThemeDefinition>();

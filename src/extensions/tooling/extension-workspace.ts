@@ -4,11 +4,11 @@ import { basename, join, relative, resolve } from "node:path";
 
 export type ExtensionManifestRecord = Record<string, unknown>;
 
-export const FEATURE_ROOT = resolve(import.meta.dirname, "..");
-export const ATHAS_ROOT = resolve(FEATURE_ROOT, "../../..");
+export const EXTENSION_DOMAIN_ROOT = resolve(import.meta.dirname, "..");
+export const ATHAS_ROOT = resolve(EXTENSION_DOMAIN_ROOT, "../..");
 export const EXTENSIONS_ROOT = join(ATHAS_ROOT, "extensions");
 export const GENERATED_CDN_DIR = join(EXTENSIONS_ROOT, "generated", "cdn");
-export const CATALOG_DIR = join(FEATURE_ROOT, "catalog");
+export const CATALOG_DIR = join(EXTENSION_DOMAIN_ROOT, "catalog");
 
 const CONTRIBUTION_ALIASES: Record<string, string[]> = {
   databases: ["databases", "databaseProviders"],

@@ -1,4 +1,4 @@
-import type { ThemeDefinition } from "@/extensions/themes/types";
+import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 import {
   getAthasDefaultCssVariables,
   getAthasDefaultSyntaxTokens,

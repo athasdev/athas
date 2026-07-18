@@ -1,6 +1,6 @@
 import { toSyntaxTokenVariables } from "./syntax-token-colors";
 import type { Theme, ThemeFile } from "./theme-schema";
-import type { ThemeDefinition } from "./types";
+import type { ThemeDefinition } from "./theme.types";
 
 export const REQUIRED_THEME_COLOR_KEYS = [
   "primary-bg",
