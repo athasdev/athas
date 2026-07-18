@@ -5,7 +5,7 @@ import {
   LightningIcon as Lightning,
   LinkIcon as Link,
   WarningCircleIcon as WarningCircle,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type { Settings } from "@/features/settings/types/settings.types";
 import { GITHUB_CONNECTION_URL } from "@/features/github/services/github-token-service";
 import type { Action } from "../types/action.types";

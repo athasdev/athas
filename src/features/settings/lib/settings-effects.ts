@@ -24,6 +24,7 @@ function applyFallbackTheme(theme: Theme) {
 
 let removeThemeSyncListener: (() => void) | null = null;
 let latestThemeSyncSettings: Settings | null = null;
+let cancelPendingThemeApplication: (() => void) | null = null;
 
 function applyWindowTransparency(enabled: boolean) {
   if (typeof document === "undefined") return;
@@ -65,24 +66,44 @@ export async function applyTheme(theme: Theme) {
   try {
     const { themeRegistry } = await import("@/extensions/themes/theme-registry");
 
+    const applyRegisteredTheme = () => {
+      themeRegistry.applyTheme(theme);
+      const appliedTheme = themeRegistry.getTheme(theme);
+      if (appliedTheme) {
+        cacheThemeForBootstrap(appliedTheme);
+        syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+      }
+    };
+
+    const waitForThemeRegistration = () => {
+      cancelPendingThemeApplication?.();
+      cancelPendingThemeApplication = themeRegistry.onRegistryChange(() => {
+        if (!themeRegistry.getTheme(theme)) return;
+        cancelPendingThemeApplication?.();
+        cancelPendingThemeApplication = null;
+        applyRegisteredTheme();
+      });
+    };
+
     if (!themeRegistry.isRegistryReady()) {
       themeRegistry.onReady(() => {
-        themeRegistry.applyTheme(theme);
-        const appliedTheme = themeRegistry.getTheme(theme);
-        if (appliedTheme) {
-          cacheThemeForBootstrap(appliedTheme);
-          syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+        if (themeRegistry.getTheme(theme)) {
+          applyRegisteredTheme();
+        } else {
+          waitForThemeRegistration();
         }
       });
       return;
     }
 
-    themeRegistry.applyTheme(theme);
-    const appliedTheme = themeRegistry.getTheme(theme);
-    if (appliedTheme) {
-      cacheThemeForBootstrap(appliedTheme);
-      syncMacOSWindowAppearance(appliedTheme.isDark ? "dark" : "light");
+    if (!themeRegistry.getTheme(theme)) {
+      waitForThemeRegistration();
+      return;
     }
+
+    cancelPendingThemeApplication?.();
+    cancelPendingThemeApplication = null;
+    applyRegisteredTheme();
   } catch (error) {
     console.error("Failed to apply theme via registry:", error);
     applyFallbackTheme(theme);

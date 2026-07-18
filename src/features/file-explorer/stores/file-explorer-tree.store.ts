@@ -1,7 +1,8 @@
-import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { createStore } from "zustand/vanilla";
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 
 interface FileTreeState {
   expandedFolders: Set<string>;
@@ -22,125 +23,128 @@ function isPathWithinFolder(path: string, folderPath: string): boolean {
   );
 }
 
-export const useFileTreeStore = create(
-  immer(
-    combine(
-      {
-        expandedFolders: new Set<string>(),
-        selectedFiles: new Set<string>(),
-        expandedPaths: new Set<string>(),
-      } as FileTreeState,
-      (set, get) => ({
-        toggleFolder: (path: string) => {
-          set((state) => {
-            if (state.expandedFolders.has(path)) {
-              state.expandedFolders.delete(path);
-              state.expandedPaths.delete(path);
-            } else {
-              state.expandedFolders.add(path);
-              state.expandedPaths.add(path);
-            }
-          });
-        },
-
-        selectFile: (path: string, multiSelect = false) => {
-          set((state) => {
-            if (multiSelect) {
-              if (state.selectedFiles.has(path)) {
-                state.selectedFiles.delete(path);
+const createFileTreeStore = () =>
+  createStore(
+    immer(
+      combine(
+        {
+          expandedFolders: new Set<string>(),
+          selectedFiles: new Set<string>(),
+          expandedPaths: new Set<string>(),
+        } as FileTreeState,
+        (set, get) => ({
+          toggleFolder: (path: string) => {
+            set((state) => {
+              if (state.expandedFolders.has(path)) {
+                state.expandedFolders.delete(path);
+                state.expandedPaths.delete(path);
               } else {
+                state.expandedFolders.add(path);
+                state.expandedPaths.add(path);
+              }
+            });
+          },
+
+          selectFile: (path: string, multiSelect = false) => {
+            set((state) => {
+              if (multiSelect) {
+                if (state.selectedFiles.has(path)) {
+                  state.selectedFiles.delete(path);
+                } else {
+                  state.selectedFiles.add(path);
+                }
+              } else {
+                state.selectedFiles.clear();
                 state.selectedFiles.add(path);
               }
-            } else {
+            });
+          },
+
+          clearSelection: () => {
+            set((state) => {
               state.selectedFiles.clear();
-              state.selectedFiles.add(path);
-            }
-          });
-        },
+            });
+          },
 
-        clearSelection: () => {
-          set((state) => {
-            state.selectedFiles.clear();
-          });
-        },
+          setExpandedPaths: (paths: Set<string>) => {
+            set((state) => {
+              state.expandedPaths = paths;
+              state.expandedFolders = new Set(paths);
+            });
+          },
 
-        setExpandedPaths: (paths: Set<string>) => {
-          set((state) => {
-            state.expandedPaths = paths;
-            state.expandedFolders = new Set(paths);
-          });
-        },
+          getExpandedPaths: () => {
+            return get().expandedPaths;
+          },
 
-        getExpandedPaths: () => {
-          return get().expandedPaths;
-        },
+          isExpanded: (path: string) => {
+            return get().expandedFolders.has(path);
+          },
 
-        isExpanded: (path: string) => {
-          return get().expandedFolders.has(path);
-        },
+          isSelected: (path: string) => {
+            return get().selectedFiles.has(path);
+          },
 
-        isSelected: (path: string) => {
-          return get().selectedFiles.has(path);
-        },
+          expandToPath: (targetPath: string) => {
+            set((state) => {
+              const pathParts = targetPath.split(/[/\\]/);
+              let currentPath = "";
 
-        expandToPath: (targetPath: string) => {
-          set((state) => {
-            const pathParts = targetPath.split(/[/\\]/);
-            let currentPath = "";
-
-            // Expand all parent folders leading to the target
-            for (let i = 0; i < pathParts.length - 1; i++) {
-              if (i === 0) {
-                currentPath = pathParts[0];
-              } else {
-                currentPath += (targetPath.includes("\\") ? "\\" : "/") + pathParts[i];
+              // Expand all parent folders leading to the target
+              for (let i = 0; i < pathParts.length - 1; i++) {
+                if (i === 0) {
+                  currentPath = pathParts[0];
+                } else {
+                  currentPath += (targetPath.includes("\\") ? "\\" : "/") + pathParts[i];
+                }
+                state.expandedFolders.add(currentPath);
+                state.expandedPaths.add(currentPath);
               }
-              state.expandedFolders.add(currentPath);
-              state.expandedPaths.add(currentPath);
-            }
-          });
-        },
+            });
+          },
 
-        collapseAll: () => {
-          set((state) => {
-            state.expandedFolders.clear();
-            state.expandedPaths.clear();
-          });
-        },
+          collapseAll: () => {
+            set((state) => {
+              state.expandedFolders.clear();
+              state.expandedPaths.clear();
+            });
+          },
 
-        collapsePath: (path: string) => {
-          set((state) => {
-            for (const expandedPath of Array.from(state.expandedFolders)) {
-              if (isPathWithinFolder(expandedPath, path)) {
-                state.expandedFolders.delete(expandedPath);
-              }
-            }
-
-            for (const expandedPath of Array.from(state.expandedPaths)) {
-              if (isPathWithinFolder(expandedPath, path)) {
-                state.expandedPaths.delete(expandedPath);
-              }
-            }
-          });
-        },
-
-        expandAll: (files: FileEntry[]) => {
-          set((state) => {
-            const collectFolders = (items: FileEntry[]) => {
-              for (const item of items) {
-                if (item.isDir) {
-                  state.expandedFolders.add(item.path);
-                  state.expandedPaths.add(item.path);
-                  if (item.children) {
-                    collectFolders(item.children);
-                  }
+          collapsePath: (path: string) => {
+            set((state) => {
+              for (const expandedPath of Array.from(state.expandedFolders)) {
+                if (isPathWithinFolder(expandedPath, path)) {
+                  state.expandedFolders.delete(expandedPath);
                 }
               }
-            };
-            collectFolders(files);
-          });
-        },
-      }),
+
+              for (const expandedPath of Array.from(state.expandedPaths)) {
+                if (isPathWithinFolder(expandedPath, path)) {
+                  state.expandedPaths.delete(expandedPath);
+                }
+              }
+            });
+          },
+
+          expandAll: (files: FileEntry[]) => {
+            set((state) => {
+              const collectFolders = (items: FileEntry[]) => {
+                for (const item of items) {
+                  if (item.isDir) {
+                    state.expandedFolders.add(item.path);
+                    state.expandedPaths.add(item.path);
+                    if (item.children) {
+                      collectFolders(item.children);
+                    }
+                  }
+                }
+              };
+              collectFolders(files);
+            });
+          },
+        }),
+      ),
     ),
-  ),
-);
+  );
+
+export const useFileTreeStore = createWorkspaceScopedStore("file-tree", createFileTreeStore);

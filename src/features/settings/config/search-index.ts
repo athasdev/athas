@@ -39,9 +39,9 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     id: "enterprise-ai-chat",
     tab: "enterprise",
     section: "Enterprise Controls",
-    label: "Enable AI Chat",
-    description: "Enable AI chat panel for enterprise users",
-    keywords: ["enterprise", "ai", "chat", "panel"],
+    label: "Enable Agent",
+    description: "Enable Agent panel for enterprise users",
+    keywords: ["enterprise", "ai", "agent", "chat", "panel"],
   },
   {
     id: "enterprise-extension-allowlist-entries",
@@ -198,14 +198,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "Hide Root Folder",
     description: "Show project files directly at the top level",
     keywords: ["root", "folder", "project", "workspace", "top level", "file explorer"],
-  },
-  {
-    id: "file-tree-density",
-    tab: "file-explorer",
-    section: "Display",
-    label: "Density",
-    description: "Choose file tree row spacing",
-    keywords: ["density", "spacing", "compact", "comfortable", "rows", "height"],
   },
   {
     id: "file-tree-respect-gitignore",
@@ -379,6 +371,14 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["icon", "theme", "file", "tree", "tabs"],
   },
   {
+    id: "appearance-custom-themes",
+    tab: "appearance",
+    section: "Theme",
+    label: "Custom Themes",
+    description: "Create, import, and remove custom Athas theme JSON files",
+    keywords: ["custom", "theme", "json", "create", "generator", "import", "upload"],
+  },
+  {
     id: "appearance-ui-font",
     tab: "appearance",
     section: "Typography",
@@ -393,22 +393,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     label: "UI Font Size",
     description: "Adjust UI text and icon scale in 0.5px steps",
     keywords: ["font", "size", "ui", "icon", "scale", "typography"],
-  },
-  {
-    id: "appearance-sidebar-position",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Position",
-    description: "Choose where to position the sidebar",
-    keywords: ["sidebar", "position", "left", "right", "layout"],
-  },
-  {
-    id: "appearance-sidebar-tabs-position",
-    tab: "appearance",
-    section: "Layout",
-    label: "Sidebar Tabs",
-    description: "Show sidebar activity tabs across the top or in a left rail",
-    keywords: ["sidebar", "tabs", "activity", "top", "left", "rail", "layout"],
   },
   ...(!IS_MAC && !IS_WINDOWS && !IS_LINUX
     ? [
@@ -443,14 +427,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     keywords: ["window", "transparency", "transparent", "translucent", "glass", "chrome"],
   },
   {
-    id: "appearance-title-bar-project-mode",
-    tab: "appearance",
-    section: "Layout",
-    label: "Title Bar Project Mode",
-    description: "Show project tabs or a single window-style title in the custom title bar",
-    keywords: ["title", "bar", "project", "tabs", "window", "mode"],
-  },
-  {
     id: "appearance-open-folders-new-window",
     tab: "appearance",
     section: "Layout",
@@ -458,43 +434,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description:
       "In window title mode, opening another folder uses a separate window when a project is already open",
     keywords: ["open", "folder", "project", "new", "window", "separate"],
-  },
-
-  // Database Settings
-  {
-    id: "databases-new-connection",
-    tab: "databases",
-    section: "Connections",
-    label: "New Connection",
-    description:
-      "Open workspace database connections for SQLite, DuckDB, PostgreSQL, MySQL, MongoDB, or Redis",
-    keywords: [
-      "database",
-      "connection",
-      "sqlite",
-      "postgres",
-      "mysql",
-      "mongodb",
-      "redis",
-      "connect",
-    ],
-  },
-  {
-    id: "databases-saved-connections",
-    tab: "databases",
-    section: "Connections",
-    label: "Saved Connections",
-    description: "Manage saved workspace database connections",
-    keywords: [
-      "database",
-      "saved",
-      "connections",
-      "postgres",
-      "mysql",
-      "mongodb",
-      "redis",
-      "remove",
-    ],
   },
 
   // AI Settings
@@ -557,10 +496,10 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   {
     id: "ai-clear-chats",
     tab: "ai",
-    section: "Chat History",
-    label: "Clear All Chats",
-    description: "Permanently delete all chat history",
-    keywords: ["ai", "chat", "clear", "delete", "history"],
+    section: "Agent History",
+    label: "Clear Agent History",
+    description: "Permanently delete all agent history",
+    keywords: ["ai", "agent", "chat", "clear", "delete", "history"],
   },
 
   // Keyboard Settings
@@ -726,6 +665,30 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show function parameter hints",
     keywords: ["parameter", "hints", "intellisense", "function"],
   },
+  {
+    id: "language-inlay-hints",
+    tab: "editor",
+    section: "IntelliSense",
+    label: "Inlay Hints",
+    description: "Show inline type and parameter hints from language servers",
+    keywords: ["inlay", "hints", "types", "parameters", "lsp"],
+  },
+  {
+    id: "language-code-lens",
+    tab: "editor",
+    section: "IntelliSense",
+    label: "Code Lens",
+    description: "Show inline code actions above symbols",
+    keywords: ["code", "lens", "actions", "lsp"],
+  },
+  {
+    id: "language-semantic-tokens",
+    tab: "editor",
+    section: "IntelliSense",
+    label: "Semantic Tokens",
+    description: "Use language server semantic highlighting",
+    keywords: ["semantic", "tokens", "highlighting", "lsp"],
+  },
 
   // Features Settings
   {
@@ -738,7 +701,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-remote",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Remote Development",
     description: "Connect to remote servers via SSH",
@@ -746,7 +709,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-terminal",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Integrated Terminal",
     description: "Built-in terminal for command line operations",
@@ -754,7 +717,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-search",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Global Search",
     description: "Search across files and folders in workspace",
@@ -762,7 +725,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-diagnostics",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Diagnostics & Problems",
     description: "Code diagnostics and error reporting",
@@ -770,7 +733,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-debugger",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Debugger",
     description: "Run and debug files with launch configurations and breakpoints",
@@ -778,7 +741,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-outline",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Outline",
     description: "Document symbols and quick navigation for the active file",
@@ -786,15 +749,15 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-ai-chat",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
-    label: "AI Assistant",
-    description: "AI-powered code assistance and chat",
-    keywords: ["ai", "assistant", "chat"],
+    label: "Agent",
+    description: "Agentic code assistance and workspace tasks",
+    keywords: ["ai", "agent", "assistant", "chat"],
   },
   {
     id: "features-breadcrumbs",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Breadcrumbs",
     description: "File path navigation breadcrumbs in editor",
@@ -802,7 +765,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-github",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "GitHub Integration",
     description: "Pull requests, issues, and GitHub features",
@@ -810,7 +773,7 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-persistent-commands",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Persistent Commands",
     description: "The last used commands appear at the top of the command palette",
@@ -818,21 +781,12 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
   },
   {
     id: "features-web-viewer",
-    tab: "features",
+    tab: "advanced",
     section: "Features",
     label: "Web Viewer",
     description: "Open URLs in embedded editor tabs",
     keywords: ["web", "viewer", "browser", "url", "embedded", "experimental"],
   },
-  {
-    id: "features-athas-editor-engine",
-    tab: "features",
-    section: "Features",
-    label: "Athas Editor Engine",
-    description: "Use the experimental Athas editor engine instead of Monaco",
-    keywords: ["athas", "editor", "engine", "monaco", "experimental"],
-  },
-
   // Terminal Settings
   {
     id: "terminal-default-shell",
@@ -923,16 +877,6 @@ export const settingsSearchIndex: SettingSearchRecord[] = [
     description: "Show open buffers as a horizontally scrollable carousel in the main view",
     keywords: ["tabs", "buffers", "carousel", "scroll", "horizontal", "trackpad", "main view"],
   },
-  // Extensions Settings
-  {
-    id: "extensions-browse",
-    tab: "extensions",
-    section: "Extensions",
-    label: "Browse Extensions",
-    description: "Browse and manage installed extensions",
-    keywords: ["extensions", "browse", "install", "manage", "language", "theme", "icon"],
-  },
-
   // Advanced Settings
   {
     id: "advanced-export-settings",

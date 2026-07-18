@@ -9,7 +9,7 @@ import {
   TextTIcon as Text,
   TrashIcon as Trash,
   WarningCircleIcon as Warning,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   closestCenter,
   DndContext,
@@ -34,6 +34,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
@@ -455,8 +456,8 @@ function NotebookCellView({
             {isCode ? (
               <Button
                 variant="ghost"
-                compact
-                className="h-6 min-w-6 text-text-lighter hover:text-text"
+                size="icon-xs"
+                className="text-text-lighter hover:text-text"
                 onClick={() => onRun(cellIndex)}
                 disabled={isRunning}
                 tooltip={isRunning ? "Running cell" : "Run cell"}
@@ -467,8 +468,8 @@ function NotebookCellView({
             ) : null}
             <Button
               variant="ghost"
-              compact
-              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              size="icon-xs"
+              className="text-text-lighter hover:text-text"
               onClick={() => onTypeChange(cellIndex, isCode ? "markdown" : "code")}
               tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
               tooltipSide="bottom"
@@ -477,8 +478,8 @@ function NotebookCellView({
             </Button>
             <Button
               variant="ghost"
-              compact
-              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              size="icon-xs"
+              className="text-text-lighter hover:text-text"
               onClick={() => onInsertBelow(cellIndex, isCode ? "code" : "markdown")}
               tooltip="Insert cell below"
               tooltipSide="bottom"
@@ -487,8 +488,8 @@ function NotebookCellView({
             </Button>
             <Button
               variant="ghost"
-              compact
-              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              size="icon-xs"
+              className="text-text-lighter hover:text-text"
               onClick={() => onDelete(cellIndex)}
               tooltip="Delete cell"
               tooltipSide="bottom"
@@ -497,8 +498,8 @@ function NotebookCellView({
             </Button>
             <Button
               variant="ghost"
-              compact
-              className="h-6 min-w-6 text-text-lighter hover:text-text"
+              size="icon-xs"
+              className="text-text-lighter hover:text-text"
               onClick={() => onEditToggle(cellIndex)}
               tooltip={isEditing ? "Preview cell" : "Edit cell"}
               tooltipSide="bottom"
@@ -551,9 +552,7 @@ export function NotebookEditor() {
   const cellRefs = useRef<Array<HTMLElement | null>>([]);
   const { bufferId, content, path } = useBufferStore(
     useShallow((state) => {
-      const buffer = state.activeBufferId
-        ? state.buffers.find((candidate) => candidate.id === state.activeBufferId)
-        : null;
+      const buffer = getBufferById(state.buffers, state.activeBufferId);
       return {
         bufferId: buffer?.id ?? null,
         content: buffer?.type === "editor" ? buffer.content : "",
@@ -793,7 +792,7 @@ export function NotebookEditor() {
         <div className="mb-3 flex items-center justify-end gap-1">
           <Button
             variant="ghost"
-            compact
+            size="xs"
             className="h-7 gap-1.5 text-text-lighter hover:text-text"
             onClick={() => handleAddCell("code")}
           >
@@ -802,7 +801,7 @@ export function NotebookEditor() {
           </Button>
           <Button
             variant="ghost"
-            compact
+            size="xs"
             className="h-7 gap-1.5 text-text-lighter hover:text-text"
             onClick={() => handleAddCell("markdown")}
           >

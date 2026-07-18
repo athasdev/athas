@@ -5,28 +5,29 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background-color: var(--primary-bg, var(--color-primary-bg));
 }
 
 /* Ensure xterm fills its container */
 .xterm-container .xterm {
+  box-sizing: border-box;
   flex: 1;
   min-height: 0;
   min-width: 0;
   width: 100%;
   height: 100%;
-}
-
-/* Override any xterm styles that might cause full-screen issues */
-.xterm-container .xterm-screen {
-  position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
+  background-color: var(--primary-bg, var(--color-primary-bg));
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0;
 }
 
 /* Style the terminal viewport for better appearance */
 .xterm-container .xterm-viewport {
   overflow-y: auto !important;
   overscroll-behavior: none;
+  background-color: var(--primary-bg, var(--color-primary-bg)) !important;
 }
 
 @supports not selector(::-webkit-scrollbar) {

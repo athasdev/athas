@@ -239,12 +239,6 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
     const newContent = newLines.join("\n");
     bufferState.actions.updateBufferContent(activeBufferId, newContent);
 
-    const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.value = newContent;
-      textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-
     return true;
   }
 

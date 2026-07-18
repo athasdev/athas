@@ -1,197 +1,144 @@
-import {
-  ClockCounterClockwiseIcon as ClockCounterClockwise,
-  FileTextIcon as FileText,
-  GitBranchIcon as GitBranch,
-  GitCommitIcon as CommitIcon,
-  WarningCircleIcon as WarningCircle,
-} from "@phosphor-icons/react";
+import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
+import type { MenuItem } from "@/ui/dropdown";
 import { LoadingIndicator } from "@/ui/loading";
-import { cn } from "@/utils/cn";
+import { Avatar } from "@/ui/avatar";
+import { SidebarSearchFilterRow } from "@/ui/sidebar";
+import { useAuthStore } from "@/features/window/stores/auth.store";
+import type { AuthUser } from "@/features/window/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
-import type { GitCommit, GitFile } from "../types/git.types";
+import { matchesSearchQuery } from "@/utils/search-match";
+import { cn } from "@/utils/cn";
+import type { GitCommit } from "../types/git.types";
 import { useGitStore } from "../stores/git.store";
+import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
 import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
 interface GitCommitHistoryProps {
   isCollapsed: boolean;
   onToggle: () => void;
   onViewCommitDiff?: (commitHash: string, filePath?: string) => void;
-  onViewWorkingTreeDiff?: () => void;
   repoPath?: string;
   showHeader?: boolean;
-  uncommittedFiles?: GitFile[];
-  currentBranch?: string;
+  ahead?: number;
+  behind?: number;
 }
 
 interface CommitItemProps {
   commit: GitCommit;
   onViewCommitDiff: (commitHash: string) => void;
   isSelected: boolean;
+  syncState: "local" | "pushed";
   repoPath?: string;
+  account: AuthUser | null;
 }
 
-interface WorkingTreeItemProps {
-  files: GitFile[];
-  branch?: string;
-  onViewWorkingTreeDiff?: () => void;
+type HistorySearchScope = "all" | "message" | "author" | "hash";
+
+const HISTORY_SEARCH_SCOPE_LABELS: Record<HistorySearchScope, string> = {
+  all: "All Fields",
+  message: "Message",
+  author: "Author",
+  hash: "Hash",
+};
+
+function getCommitSearchFields(commit: GitCommit, scope: HistorySearchScope) {
+  if (scope === "message") return [commit.message, commit.description ?? ""];
+  if (scope === "author") return [commit.author, commit.email ?? ""];
+  if (scope === "hash") return [commit.hash, commit.hash.substring(0, 7)];
+
+  return [
+    commit.message,
+    commit.description ?? "",
+    commit.author,
+    commit.email ?? "",
+    commit.hash,
+    commit.hash.substring(0, 7),
+  ];
 }
 
-const summarizeFiles = (files: GitFile[]) => {
-  const staged = files.filter((file) => file.staged).length;
-  const unstaged = files.length - staged;
-  const untracked = files.filter((file) => file.status === "untracked").length;
+const CommitItem = memo(
+  ({ commit, onViewCommitDiff, isSelected, syncState, repoPath, account }: CommitItemProps) => {
+    const handleCommitClick = useCallback(() => {
+      onViewCommitDiff(commit.hash);
+    }, [commit.hash, onViewCommitDiff]);
 
-  return { staged, unstaged, untracked };
-};
+    const shortHash = commit.hash.substring(0, 7);
+    const avatarUrl = getGitAuthorAvatarUrl(commit, account);
 
-const getCommitDetailDate = (date: string) => {
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return date;
-  return parsed.toLocaleString();
-};
-
-const WorkingTreeItem = memo(function WorkingTreeItem({
-  files,
-  branch,
-  onViewWorkingTreeDiff,
-}: WorkingTreeItemProps) {
-  const { staged, unstaged, untracked } = summarizeFiles(files);
-  const fileLabel = `${files.length} file${files.length === 1 ? "" : "s"}`;
-
-  return (
-    <div className="group/history-item relative mx-1 mb-1.5">
-      <button
-        type="button"
-        onClick={onViewWorkingTreeDiff}
-        className={cn(
-          "ui-text-sm flex w-full cursor-pointer items-start gap-2 rounded-lg border px-2.5 py-2.5 text-left outline-none transition-colors",
-          "border-git-modified/35 bg-git-modified/8 hover:bg-git-modified/12 focus-visible:border-accent focus-visible:bg-git-modified/12",
-        )}
-      >
-        <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-git-modified/12 text-git-modified">
-          <WarningCircle className="size-4" weight="duotone" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-medium text-text">Uncommitted Changes</span>
+    return (
+      <div className="mb-0.5">
+        <button
+          type="button"
+          onClick={handleCommitClick}
+          className={cn(
+            "ui-text-sm flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-hover/80 focus-visible:bg-hover/80",
+            isSelected && "bg-accent/10",
+          )}
+          draggable={!!repoPath}
+          onDragStart={(event) => {
+            if (!repoPath) return;
+            writeSidebarResourceDragData(event.dataTransfer, {
+              type: "git-commit",
+              repoPath,
+              commitHash: commit.hash,
+              message: commit.message,
+              author: commit.author,
+              date: commit.date,
+              name: `Commit ${shortHash}`,
+            });
+          }}
+        >
+          <Avatar name={commit.author} src={avatarUrl} className="mt-0.5 size-6" />
+          <span className="min-w-0 flex-1">
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  "truncate leading-tight",
+                  syncState === "local" ? "text-accent" : "text-text",
+                )}
+              >
+                {commit.message}
+              </span>
+              {syncState === "local" ? (
+                <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+              ) : null}
+            </span>
+            <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
+              <span className="truncate">{commit.author}</span>
+              <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
+              <span className="shrink-0 font-mono">{shortHash}</span>
+            </span>
           </span>
-          <span className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
-            <span className="truncate">{branch || "Current branch"}</span>
-            <span className="shrink-0">{fileLabel}</span>
-          </span>
-        </span>
-      </button>
-
-      <div className="pointer-events-none absolute inset-x-0 top-full z-30 mt-1 rounded-lg border border-border/70 bg-secondary-bg/95 p-2.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/history-item:opacity-100 group-focus-within/history-item:opacity-100">
-        <div className="flex items-center gap-2 text-text">
-          <WarningCircle className="size-4 text-git-modified" weight="duotone" />
-          <span className="ui-text-sm font-medium">Uncommitted working tree</span>
-        </div>
-        <div className="ui-text-xs mt-2 grid grid-cols-3 gap-1.5 text-text-lighter">
-          <span className="rounded-md border border-border/60 bg-primary-bg/70 px-1.5 py-1">
-            {staged} staged
-          </span>
-          <span className="rounded-md border border-border/60 bg-primary-bg/70 px-1.5 py-1">
-            {unstaged} unstaged
-          </span>
-          <span className="rounded-md border border-border/60 bg-primary-bg/70 px-1.5 py-1">
-            {untracked} untracked
-          </span>
-        </div>
+        </button>
       </div>
-    </div>
-  );
-});
-
-const CommitItem = memo(({ commit, onViewCommitDiff, isSelected, repoPath }: CommitItemProps) => {
-  const handleCommitClick = useCallback(() => {
-    onViewCommitDiff(commit.hash);
-  }, [commit.hash, onViewCommitDiff]);
-
-  const shortHash = commit.hash.substring(0, 7);
-  const details = [commit.author, commit.email].filter(Boolean).join(" · ");
-
-  return (
-    <div className="group/history-item relative mx-1 mb-1.5">
-      <button
-        type="button"
-        onClick={handleCommitClick}
-        className={cn(
-          "ui-text-sm flex w-full cursor-pointer items-start rounded-lg border border-transparent px-2.5 py-2 text-left outline-none transition-colors hover:border-border/55 hover:bg-hover/80 focus-visible:border-accent focus-visible:bg-hover/80",
-          isSelected && "border-accent/35 bg-accent/8",
-        )}
-        draggable={!!repoPath}
-        onDragStart={(event) => {
-          if (!repoPath) return;
-          writeSidebarResourceDragData(event.dataTransfer, {
-            type: "git-commit",
-            repoPath,
-            commitHash: commit.hash,
-            message: commit.message,
-            author: commit.author,
-            date: commit.date,
-            name: `Commit ${shortHash}`,
-          });
-        }}
-      >
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-text leading-tight">{commit.message}</span>
-          </span>
-          <span className="ui-text-xs mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
-            <span className="truncate">{commit.author}</span>
-            <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
-          </span>
-        </span>
-      </button>
-
-      <div className="pointer-events-none absolute inset-x-0 top-full z-30 mt-1 rounded-lg border border-border/70 bg-secondary-bg/95 p-2.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/history-item:opacity-100 group-focus-within/history-item:opacity-100">
-        <div className="flex min-w-0 items-center gap-2 text-text">
-          <CommitIcon className="size-4 shrink-0 text-accent" weight="duotone" />
-          <span className="ui-text-sm min-w-0 truncate font-medium">{commit.message}</span>
-        </div>
-        {commit.description && (
-          <div className="ui-text-xs mt-1.5 line-clamp-2 text-text-lighter">
-            {commit.description}
-          </div>
-        )}
-        <div className="ui-text-xs mt-2 space-y-1 text-text-lighter">
-          <div className="flex items-center gap-1.5">
-            <GitBranch className="size-3.5 shrink-0" />
-            <span className="truncate">{shortHash}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <FileText className="size-3.5 shrink-0" />
-            <span className="truncate">{details || commit.author}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <ClockCounterClockwise className="size-3.5 shrink-0" />
-            <span className="truncate">{getCommitDetailDate(commit.date)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 const GitCommitHistory = ({
   isCollapsed,
   onToggle,
   onViewCommitDiff,
-  onViewWorkingTreeDiff,
   repoPath,
   showHeader = true,
-  uncommittedFiles = [],
-  currentBranch,
+  ahead = 0,
+  behind = 0,
 }: GitCommitHistoryProps) => {
-  const { commits, hasMoreCommits, isLoadingMoreCommits, actions } = useGitStore();
+  const commits = useGitStore((state) => state.commits);
+  const hasMoreCommits = useGitStore((state) => state.hasMoreCommits);
+  const isLoadingMoreCommits = useGitStore((state) => state.isLoadingMoreCommits);
+  const actions = useGitStore((state) => state.actions);
+  const account = useAuthStore((state) => state.user);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
   const scrollSetupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSetupRafRef = useRef<number | null>(null);
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
+  const [historySearchQuery, setHistorySearchQuery] = useState("");
+  const [historySearchScope, setHistorySearchScope] = useState<HistorySearchScope>("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const handleViewCommitDiff = useCallback(
     (commitHash: string, filePath?: string) => {
@@ -200,9 +147,41 @@ const GitCommitHistory = ({
     },
     [onViewCommitDiff],
   );
-  const hasUncommittedChanges = uncommittedFiles.length > 0;
-  const hasHistoryRows = commits.length > 0 || hasUncommittedChanges;
-  const visibleUncommittedFiles = useMemo(() => uncommittedFiles, [uncommittedFiles]);
+
+  const filteredCommits = useMemo(() => {
+    const query = historySearchQuery.trim();
+    if (!query) return commits;
+
+    return commits.filter((commit) =>
+      matchesSearchQuery(query, getCommitSearchFields(commit, historySearchScope)),
+    );
+  }, [commits, historySearchQuery, historySearchScope]);
+
+  const commitSyncStateByHash = useMemo(() => {
+    const syncState = new Map<string, "local" | "pushed">();
+    commits.forEach((commit, index) => {
+      syncState.set(commit.hash, index < ahead ? "local" : "pushed");
+    });
+    return syncState;
+  }, [ahead, commits]);
+
+  const hasHistoryRows = commits.length > 0;
+  const hasHistoryFilter = historySearchScope !== "all";
+
+  const filterMenuItems = useMemo<MenuItem[]>(
+    () =>
+      (Object.keys(HISTORY_SEARCH_SCOPE_LABELS) as HistorySearchScope[]).map((scope) => ({
+        id: scope,
+        label: HISTORY_SEARCH_SCOPE_LABELS[scope],
+        keybinding:
+          historySearchScope === scope ? <Check className="size-3.5 text-accent" /> : null,
+        onClick: () => {
+          setHistorySearchScope(scope);
+          setIsFilterOpen(false);
+        },
+      })),
+    [historySearchScope],
+  );
 
   useEffect(() => {
     if (!repoPath) return;
@@ -294,66 +273,98 @@ const GitCommitHistory = ({
       <div
         className={cn(
           "flex min-h-0 flex-1 flex-col overflow-hidden",
-          showHeader && "rounded-lg border border-border/60 bg-primary-bg/55",
+          showHeader && "rounded-xl border border-border/60 bg-primary-bg/55",
         )}
       >
-        <div className="shrink-0 px-1 py-1">
-          {showHeader ? (
+        {showHeader ? (
+          <div className="shrink-0 py-1">
             <GitSidebarSectionHeader
               title="History"
               collapsible
               isCollapsed={isCollapsed}
               onToggle={onToggle}
             />
-          ) : (
-            <GitSidebarSectionHeader title="History" />
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {!isCollapsed && (
-          <div
-            className={cn(
-              "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll px-1 pb-1",
-              showHeader ? "bg-primary-bg/70" : "bg-transparent",
-            )}
-            ref={scrollContainerRef}
-          >
-            {!hasHistoryRows ? (
-              <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No commits</div>
-            ) : (
-              <>
-                {hasUncommittedChanges && (
-                  <WorkingTreeItem
-                    files={visibleUncommittedFiles}
-                    branch={currentBranch}
-                    onViewWorkingTreeDiff={onViewWorkingTreeDiff}
-                  />
-                )}
+          <>
+            <SidebarSearchFilterRow
+              value={historySearchQuery}
+              onChange={setHistorySearchQuery}
+              searchIcon={Search}
+              placeholder="Search history"
+              searchAriaLabel="Search history"
+              filterOpen={isFilterOpen}
+              onFilterOpenChange={setIsFilterOpen}
+              filterItems={filterMenuItems}
+              filterActive={hasHistoryFilter}
+              filterTooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[historySearchScope]}`}
+              filterAriaLabel="Filter history"
+              filterCloseOnSelect={false}
+              filterMenuClassName="w-fit min-w-fit"
+              className="px-1 pb-1 pt-0"
+            />
 
-                {commits.map((commit) => (
-                  <CommitItem
-                    key={commit.hash}
-                    commit={commit}
-                    onViewCommitDiff={handleViewCommitDiff}
-                    isSelected={commit.hash === selectedCommitHash}
-                    repoPath={repoPath}
-                  />
-                ))}
-
-                {isLoadingMoreCommits && (
-                  <div className="flex justify-center px-3 py-1.5 text-text-lighter">
-                    <LoadingIndicator label="Loading commits" showLabel compact />
+            {(ahead > 0 || behind > 0) && (
+              <div className="space-y-1 px-2 pb-1">
+                {ahead > 0 ? (
+                  <div className="ui-text-sm text-text-lighter">
+                    <span className="text-accent">{ahead}</span>{" "}
+                    {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
                   </div>
-                )}
-
-                {!hasMoreCommits && commits.length > 0 && (
-                  <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
-                    end of history
+                ) : null}
+                {behind > 0 ? (
+                  <div className="ui-text-sm text-text-lighter">
+                    <span className="text-accent">{behind}</span>{" "}
+                    {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
                   </div>
-                )}
-              </>
+                ) : null}
+              </div>
             )}
-          </div>
+
+            <div
+              className={cn(
+                "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll pb-1",
+                showHeader ? "bg-primary-bg/70" : "bg-transparent",
+              )}
+              ref={scrollContainerRef}
+            >
+              {!hasHistoryRows ? (
+                <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No commits</div>
+              ) : filteredCommits.length === 0 ? (
+                <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">
+                  No commits match the current filters
+                </div>
+              ) : (
+                <>
+                  {filteredCommits.map((commit) => (
+                    <CommitItem
+                      key={commit.hash}
+                      commit={commit}
+                      onViewCommitDiff={handleViewCommitDiff}
+                      isSelected={commit.hash === selectedCommitHash}
+                      syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
+                      repoPath={repoPath}
+                      account={account}
+                    />
+                  ))}
+
+                  {isLoadingMoreCommits && (
+                    <div className="flex justify-center px-3 py-1.5 text-text-lighter">
+                      <LoadingIndicator label="Loading commits" showLabel compact />
+                    </div>
+                  )}
+
+                  {!hasMoreCommits && commits.length > 0 && (
+                    <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
+                      end of history
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

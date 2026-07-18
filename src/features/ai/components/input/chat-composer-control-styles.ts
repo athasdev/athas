@@ -2,7 +2,8 @@ import { cn } from "@/utils/cn";
 
 export function chatComposerControlClassName(className?: string) {
   return cn(
-    "inline-flex h-7 w-fit min-w-0 justify-start gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-xs leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "inline-flex h-7 w-fit min-w-0 justify-start gap-1 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-[state=open]:bg-hover data-[state=open]:text-text",
@@ -12,7 +13,8 @@ export function chatComposerControlClassName(className?: string) {
 
 export function chatComposerIconButtonClassName(className?: string) {
   return cn(
-    "size-7 rounded-md border-transparent bg-transparent p-0 ui-text-xs leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "rounded-md border-transparent bg-transparent ui-text-sm leading-normal text-text-lighter shadow-none [&_svg]:size-3",
+    "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover/80 hover:text-text",
     "focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-[active=true]:bg-hover data-[active=true]:text-text data-[state=open]:bg-hover data-[state=open]:text-text",
@@ -20,9 +22,27 @@ export function chatComposerIconButtonClassName(className?: string) {
   );
 }
 
+export function chatMiniIconButtonClassName(className?: string) {
+  return cn(
+    "rounded-md border-transparent bg-transparent text-text-lighter shadow-none",
+    "transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
+    "hover:bg-hover/70 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35",
+    className,
+  );
+}
+
 export function chatComposerDropdownClassName(className?: string) {
   return cn(
-    "overflow-hidden rounded-xl border-border bg-secondary-bg/95 p-0 shadow-[0_14px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur-sm",
+    "overflow-hidden rounded-xl border-border bg-secondary-bg/95 p-0 shadow-[var(--shadow-popover)] backdrop-blur-sm",
+    className,
+  );
+}
+
+export function chatSettingsSelectorTriggerClassName(className?: string) {
+  return cn(
+    "font-sans h-8 max-w-full justify-start rounded-lg border border-border bg-secondary-bg px-2.5 ui-text-sm",
+    "transition-[transform,border-color,background-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
+    "hover:border-border-strong/70 hover:bg-hover/70 focus-visible:ring-1 focus-visible:ring-border-strong/35",
     className,
   );
 }
@@ -35,8 +55,17 @@ export const chatComposerDropdownListClassName =
 
 export function chatComposerDropdownItemClassName(className?: string) {
   return cn(
-    "ui-font min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-xs leading-[1.35] text-text",
+    "font-sans min-h-8 rounded-lg px-2.5 py-1.5 text-left ui-text-sm leading-[1.35] text-text",
+    "transition-[transform,background-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] active:scale-[var(--app-press-scale)]",
     "hover:bg-hover focus:outline-none focus:ring-1 focus:ring-border-strong/35",
+    className,
+  );
+}
+
+export function chatFollowUpActionClassName(className?: string) {
+  return cn(
+    "h-7 rounded-lg border border-border/70 bg-primary-bg/70 px-2 text-text-lighter",
+    "hover:border-border-strong hover:bg-hover/70 hover:text-text",
     className,
   );
 }

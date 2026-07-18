@@ -66,14 +66,14 @@ const RenameInput = forwardRef(
             left: `${left}px`,
           }}
         >
-          <div className="flex items-center gap-1 rounded-md border border-accent/60 bg-secondary-bg p-0.5 shadow-lg">
+          <div className="flex items-center gap-1 rounded-md border border-accent/60 bg-secondary-bg p-0.5 shadow-[var(--shadow-popover)]">
             <Input
               ref={inputRef}
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={onCancel}
-              className="ui-font h-6 min-w-[120px] rounded border-none bg-primary-bg px-1.5 text-text"
+              className="font-sans h-6 min-w-[120px] rounded border-none bg-primary-bg px-1.5 text-text"
               style={{
                 fontSize: `${fontSize}px`,
                 width: `${Math.max(value.length, symbol.length) * charWidth + 24}px`,

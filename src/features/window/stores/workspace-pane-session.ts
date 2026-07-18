@@ -126,10 +126,9 @@ const hydratePaneNode = (
     id: node.id,
     type: "group",
     bufferIds,
-    activeBufferId: activeBufferId && bufferIds.includes(activeBufferId) ? activeBufferId : null,
+    activeBufferId: activeBufferId && bufferIdSet.has(activeBufferId) ? activeBufferId : null,
     mruBufferIds,
-    previewBufferId:
-      previewBufferId && bufferIds.includes(previewBufferId) ? previewBufferId : null,
+    previewBufferId: previewBufferId && bufferIdSet.has(previewBufferId) ? previewBufferId : null,
     pinnedBufferIds,
     locked: node.locked,
   };
@@ -158,6 +157,7 @@ const addBuffersToPaneNode = (
   const nextBufferIds = unique([...node.bufferIds, ...bufferIds]);
   const shouldSetActive = setActiveWhenEmpty && !node.activeBufferId && node.bufferIds.length === 0;
   const activeBufferId = shouldSetActive ? (bufferIds[0] ?? null) : node.activeBufferId;
+  const nextBufferIdSet = new Set(nextBufferIds);
 
   return {
     ...node,
@@ -167,7 +167,7 @@ const addBuffersToPaneNode = (
       ...(activeBufferId ? [activeBufferId] : []),
       ...(node.mruBufferIds ?? []),
       ...nextBufferIds,
-    ]).filter((bufferId) => nextBufferIds.includes(bufferId)),
+    ]).filter((bufferId) => nextBufferIdSet.has(bufferId)),
   };
 };
 
@@ -191,8 +191,9 @@ const attachMissingBuffersToLayout = (
   }
 
   const activeBufferId = buffers.find((buffer) => buffer.isActive)?.id;
+  const missingBufferIdSet = new Set(missingBufferIds);
   const orderedMissingBufferIds =
-    activeBufferId && missingBufferIds.includes(activeBufferId)
+    activeBufferId && missingBufferIdSet.has(activeBufferId)
       ? [activeBufferId, ...missingBufferIds.filter((bufferId) => bufferId !== activeBufferId)]
       : missingBufferIds;
   const targetPaneId = findPaneGroup(layout.root, layout.activePaneId)

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 2 18 20" role="img" aria-label="Spreadsheet">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#59A471"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#C7EBCF" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="M7.1 16.8h9.8M8.2 16.3v-4.1M12 16.3V8M15.8 16.3v-6" stroke="#C7EBCF" stroke-width="1.45" stroke-linecap="round"/><text x="12" y="7.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="3.8" font-weight="700" fill="#C7EBCF">XLS</text>
+</svg>

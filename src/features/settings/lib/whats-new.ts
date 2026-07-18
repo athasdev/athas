@@ -1,8 +1,23 @@
+import { getServiceUrls } from "@/config/services";
+
 export interface WhatsNewInfo {
   version: string;
   previousVersion?: string;
   body?: string;
   date?: string;
+}
+
+type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+interface UpdateManifestResponse {
+  version?: unknown;
+  notes?: unknown;
+  pub_date?: unknown;
+}
+
+interface GitHubReleaseResponse {
+  body?: unknown;
+  published_at?: unknown;
 }
 
 interface WhatsNewStorageState {
@@ -13,6 +28,7 @@ interface WhatsNewStorageState {
 const STORAGE_KEY = "athas-whats-new";
 
 export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
+  const services = getServiceUrls();
   const lines = [`# What's New in Athas ${info.version}`, ""];
 
   if (info.previousVersion) {
@@ -34,11 +50,105 @@ export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
   }
 
   lines.push("---");
-  lines.push(
-    `[View release on GitHub](https://github.com/athasdev/athas/releases/tag/v${info.version})`,
-  );
+  lines.push(`[View release on GitHub](${services.githubReleasesBaseUrl}/tag/v${info.version})`);
 
   return lines.join("\n");
+}
+
+function releaseTag(version: string): string {
+  return `v${version}`;
+}
+
+function updateChannel(version: string): "stable" | "preview" {
+  return version.includes("-preview.") ? "preview" : "stable";
+}
+
+function readText(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function normalizeDate(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.slice(0, 10);
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  if (!response.ok) {
+    return null;
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchManifestInfo(info: WhatsNewInfo, fetchImpl: FetchLike): Promise<WhatsNewInfo> {
+  const services = getServiceUrls();
+  const updateUrl =
+    updateChannel(info.version) === "preview"
+      ? services.previewUpdateUrl
+      : services.stableUpdateUrl;
+  const response = await fetchImpl(updateUrl, {
+    cache: "no-store",
+  });
+  const manifest = (await readJson(response)) as UpdateManifestResponse | null;
+
+  if (manifest?.version !== info.version) {
+    return info;
+  }
+
+  return {
+    ...info,
+    body: info.body || readText(manifest.notes),
+    date: info.date || normalizeDate(readText(manifest.pub_date)),
+  };
+}
+
+async function fetchGitHubReleaseInfo(
+  info: WhatsNewInfo,
+  fetchImpl: FetchLike,
+): Promise<WhatsNewInfo> {
+  const services = getServiceUrls();
+  const response = await fetchImpl(
+    `${services.githubReleasesApiBaseUrl}/tags/${releaseTag(info.version)}`,
+    { cache: "no-store" },
+  );
+  const release = (await readJson(response)) as GitHubReleaseResponse | null;
+
+  return {
+    ...info,
+    body: info.body || readText(release?.body),
+    date: info.date || normalizeDate(readText(release?.published_at)),
+  };
+}
+
+export async function resolveWhatsNewInfo(
+  info: WhatsNewInfo,
+  fetchImpl: FetchLike = fetch,
+): Promise<WhatsNewInfo> {
+  if (info.body?.trim()) {
+    return info;
+  }
+
+  try {
+    const manifestInfo = await fetchManifestInfo(info, fetchImpl);
+    if (manifestInfo.body?.trim()) {
+      return manifestInfo;
+    }
+  } catch {
+    // Keep the local fallback available when release metadata cannot be fetched.
+  }
+
+  try {
+    return await fetchGitHubReleaseInfo(info, fetchImpl);
+  } catch {
+    return info;
+  }
 }
 
 function readState(): WhatsNewStorageState {
@@ -76,6 +186,14 @@ export function queuePendingWhatsNew(info: WhatsNewInfo) {
   writeState({
     ...state,
     pending: info,
+  });
+}
+
+export function storeCurrentWhatsNew(info: WhatsNewInfo) {
+  const state = readState();
+  writeState({
+    ...state,
+    current: info,
   });
 }
 

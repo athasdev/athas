@@ -107,6 +107,21 @@ pub async fn github_create_issue(
 }
 
 #[tauri::command]
+pub async fn github_update_issue(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   issue_number: i64,
+   title: String,
+   body: String,
+) -> Result<IssueDetails, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_update_issue(repo_path, issue_number, title, body, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
 pub async fn github_create_pull_request(
    app: crate::app_runtime::AppHandle,
    repo_path: String,
@@ -133,6 +148,75 @@ pub async fn github_create_pull_request(
       )
    })
    .await
+}
+
+#[tauri::command]
+pub async fn github_update_pull_request(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   pr_number: i64,
+   title: String,
+   body: String,
+) -> Result<PullRequestDetails, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_update_pull_request(repo_path, pr_number, title, body, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_add_pr_comment(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   pr_number: i64,
+   body: String,
+) -> Result<PullRequestComment, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_add_pr_comment(repo_path, pr_number, body, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_submit_pr_review(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   pr_number: i64,
+   event: String,
+   body: String,
+) -> Result<(), String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_submit_pr_review(repo_path, pr_number, event, body, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_merge_pull_request(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   pr_number: i64,
+   method: String,
+) -> Result<PullRequestDetails, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || {
+      athas_github::github_merge_pull_request(repo_path, pr_number, method, github_token)
+   })
+   .await
+}
+
+#[tauri::command]
+pub async fn github_close_pull_request(
+   app: crate::app_runtime::AppHandle,
+   repo_path: String,
+   pr_number: i64,
+) -> Result<PullRequestDetails, String> {
+   let github_token = get_stored_github_token(&app);
+   run_blocking(move || athas_github::github_close_pull_request(repo_path, pr_number, github_token))
+      .await
 }
 
 #[tauri::command]

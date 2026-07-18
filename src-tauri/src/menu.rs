@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::menu::{
-   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, PredefinedMenuItem, Submenu,
-   SubmenuBuilder, WINDOW_SUBMENU_ID,
+   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder,
+   WINDOW_SUBMENU_ID,
 };
 use tauri_plugin_store::StoreExt;
 
@@ -425,7 +425,6 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
          "command_toggle_render_whitespace",
          "Toggle Render Whitespace",
       )
-      .text("command_toggle_sidebar_position", "Toggle Sidebar Position")
       .separator()
       .text("command_zoom_in", "Zoom In")
       .text("command_zoom_out", "Zoom Out")
@@ -544,12 +543,12 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       )?)
       .build()?;
 
-   // AI menu
-   let ai_menu = SubmenuBuilder::new(app, "AI")
+   // Agent menu
+   let ai_menu = SubmenuBuilder::new(app, "Agent")
       .item(&MenuItem::with_id(
          app,
          "toggle_ai_chat",
-         "Toggle AI Chat",
+         "Toggle Agent",
          true,
          Some("CmdOrCtrl+R"),
       )?)
@@ -609,7 +608,13 @@ pub fn create_menu_with_themes<R: tauri::Runtime>(
       .maximize()
       .fullscreen()
       .separator()
-      .item(&PredefinedMenuItem::close_window(app, None)?)
+      .item(&MenuItem::with_id(
+         app,
+         "close_window",
+         "Close Window",
+         true,
+         Some("Cmd+Shift+W"),
+      )?)
       .build()?;
 
    #[cfg(not(target_os = "macos"))]

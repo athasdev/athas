@@ -1,4 +1,4 @@
-import { MicrophoneIcon as Mic, MonitorIcon as Monitor } from "@phosphor-icons/react";
+import { MicrophoneIcon as Mic, MonitorIcon as Monitor } from "@/ui/icons";
 import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
 import { SidebarFooter } from "@/ui/sidebar";
@@ -39,6 +39,7 @@ export function CollaborationMediaFooter({
           tooltip={micState === "active" ? "Stop Mic" : "Start Mic"}
           tooltipSide="top"
           onClick={onToggleMic}
+          size="icon-sm"
         >
           <Mic />
         </Button>
@@ -52,10 +53,11 @@ export function CollaborationMediaFooter({
           tooltip={screenState === "active" ? "Stop Screen Share" : "Share Screen"}
           tooltipSide="top"
           onClick={onToggleScreenShare}
+          size="icon-sm"
         >
           <Monitor />
         </Button>
-        <div className="ui-text-xs min-w-0 flex-1 truncate px-1">
+        <div className="ui-text-sm min-w-0 flex-1 truncate px-1">
           <span className="font-medium text-text">{workspaceName}</span>
           <span className="px-1 text-text-lighter">·</span>
           <span className="text-text-lighter">{onlineCount} online</span>
@@ -66,7 +68,7 @@ export function CollaborationMediaFooter({
           <Button
             type="button"
             variant="ghost"
-            className="ui-text-xs ml-auto h-6 px-2"
+            className="ui-text-sm ml-auto h-6 px-2"
             onClick={onStopFollowing}
           >
             Stop

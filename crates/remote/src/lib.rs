@@ -15,12 +15,13 @@ use crate::{
    terminal::{
       close_remote_terminal as close_remote_terminal_inner,
       create_remote_terminal as create_remote_terminal_inner, resize_remote_terminal,
-      write_remote_terminal,
+      set_remote_terminal_paused, write_remote_terminal,
    },
 };
+use athas_terminal::{TerminalEvent, TerminalInput, TerminalSize};
 pub use file_ops::RemoteFileEntry;
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use tauri::{Manager, ipc::Channel};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SshConnection {
@@ -218,36 +219,40 @@ pub async fn ssh_copy_path(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn create_remote_terminal(
-   app: AppHandle,
    host: String,
    port: u16,
    username: String,
    password: Option<String>,
    key_path: Option<String>,
    working_directory: Option<String>,
-   rows: u16,
-   cols: u16,
+   size: TerminalSize,
+   term_program_version: String,
+   on_event: Channel<TerminalEvent>,
 ) -> Result<String, String> {
    create_remote_terminal_inner(
-      app,
       host,
       port,
       username,
       password,
       key_path,
       working_directory,
-      rows,
-      cols,
+      size,
+      term_program_version,
+      on_event,
    )
    .await
 }
 
-pub async fn remote_terminal_write(id: String, data: String) -> Result<(), String> {
-   write_remote_terminal(id, data).await
+pub async fn remote_terminal_write(id: String, input: TerminalInput) -> Result<(), String> {
+   write_remote_terminal(id, input).await
 }
 
-pub async fn remote_terminal_resize(id: String, rows: u16, cols: u16) -> Result<(), String> {
-   resize_remote_terminal(id, rows, cols).await
+pub async fn remote_terminal_resize(id: String, size: TerminalSize) -> Result<(), String> {
+   resize_remote_terminal(id, size).await
+}
+
+pub async fn remote_terminal_set_paused(id: String, paused: bool) -> Result<(), String> {
+   set_remote_terminal_paused(id, paused).await
 }
 
 pub async fn close_remote_terminal(id: String) -> Result<(), String> {

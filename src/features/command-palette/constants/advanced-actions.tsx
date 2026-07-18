@@ -4,11 +4,12 @@ import {
   SparkleIcon as Sparkles,
   SquareIcon as Square,
   TerminalWindowIcon as Terminal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   restartAllLanguageServers,
   stopAllLanguageServers,
 } from "@/features/keymaps/commands/lsp-command-actions";
+import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import type { Action } from "../types/action.types";
@@ -97,6 +98,24 @@ export const createAdvancedActions = (params: AdvancedActionsParams): Action[] =
           `LSP Status: ${lspStatus.status}\nActive workspaces: ${lspStatus.activeWorkspaces.join(", ") || "None"}\nError: ${lspStatus.lastError || "None"}`,
           "LSP Status",
         );
+        onClose();
+      },
+    },
+    {
+      id: "developer-open-athas-log",
+      label: "Developer: Open Athas Log",
+      description: "Open the current Athas application log in a read-only editor tab",
+      icon: <Terminal />,
+      category: "Developer",
+      action: async () => {
+        try {
+          await openAthasLogBuffer();
+        } catch (error) {
+          showToast({
+            message: error instanceof Error ? error.message : "Failed to open Athas log",
+            type: "error",
+          });
+        }
         onClose();
       },
     },

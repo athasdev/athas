@@ -90,6 +90,7 @@ export function findExtensionForFile(
         return {
           manifest: bundled.manifest,
           isInstalled: true,
+          isEnabled: true,
           isInstalling: false,
         };
       }

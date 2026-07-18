@@ -42,6 +42,7 @@ export interface GitDiff {
   raw_patch?: string;
   additions?: number;
   deletions?: number;
+  is_truncated?: boolean;
 }
 
 export interface GitDiffStat {

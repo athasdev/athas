@@ -11,6 +11,12 @@ export interface UIExtensionGenerationResult {
   name: string;
   description: string;
   code: string;
+  preview?: {
+    title?: string;
+    summary?: string;
+    highlights?: string[];
+    primaryAction?: string;
+  };
 }
 
 export class UIExtensionGenerationError extends Error {

@@ -12,11 +12,12 @@ import {
   ShieldWarningIcon as ShieldAlert,
   XIcon as X,
   MagnifyingGlassPlusIcon as ZoomIn,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Input from "@/ui/input";
+import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 
 interface WebViewerToolbarProps {
   canOpenDevTools: boolean;
@@ -113,16 +114,14 @@ export function WebViewerToolbar({
     if (key === "c" && selectedText) {
       event.preventDefault();
       event.stopPropagation();
-      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-      await writeText(selectedText);
+      await writeClipboardText(selectedText);
       return;
     }
 
     if (key === "x" && selectedText) {
       event.preventDefault();
       event.stopPropagation();
-      const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-      await writeText(selectedText);
+      await writeClipboardText(selectedText);
       const nextValue = `${input.value.slice(0, selectionStart)}${input.value.slice(selectionEnd)}`;
       onInputUrlChange(nextValue);
       restoreSelection(input, selectionStart);
@@ -132,8 +131,7 @@ export function WebViewerToolbar({
     if (key === "v") {
       event.preventDefault();
       event.stopPropagation();
-      const { readText } = await import("@tauri-apps/plugin-clipboard-manager");
-      const pastedText = await readText();
+      const pastedText = await readClipboardText();
       const nextValue = `${input.value.slice(0, selectionStart)}${pastedText}${input.value.slice(
         selectionEnd,
       )}`;
@@ -170,7 +168,7 @@ export function WebViewerToolbar({
             onChange={(e) => onInputUrlChange(e.target.value)}
             onKeyDown={handleUrlInputKeyDown}
             placeholder="Enter URL..."
-            className={`ui-text-xs h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
+            className={`ui-text-sm h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
               hasUrlError
                 ? "border-error/60 bg-error/5 focus:border-error"
                 : "border-border bg-primary-bg focus:border-accent"
@@ -183,9 +181,9 @@ export function WebViewerToolbar({
               onClick={isLoading ? onStopLoading : onRefresh}
               className="text-text-lighter hover:text-text"
               tooltip={isLoading ? "Stop loading" : "Refresh"}
-              compact
+              size="icon-xs"
             >
-              {isLoading ? <X className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
             </Button>
             <Button
               type="button"
@@ -194,13 +192,9 @@ export function WebViewerToolbar({
               disabled={!canCopyUrl}
               className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
-              compact
+              size="icon-xs"
             >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-success" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
+              {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
             </Button>
           </div>
         </div>
@@ -214,7 +208,7 @@ export function WebViewerToolbar({
           variant="ghost"
           onClick={() => setShowZoomPopover((open) => !open)}
           tooltip="Zoom controls"
-          compact
+          size="icon-xs"
         >
           <ZoomIn />
         </Button>
@@ -224,7 +218,7 @@ export function WebViewerToolbar({
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setShowZoomPopover(false)}
-          className="w-[144px] overflow-hidden rounded-lg p-1.5"
+          className="w-36 overflow-hidden rounded-lg p-1.5"
         >
           <div className="space-y-1">
             <Button
@@ -263,7 +257,7 @@ export function WebViewerToolbar({
               className={dropdownItemClassName("justify-between")}
             >
               <span>Reset zoom</span>
-              <span className="text-text-lighter ui-text-xs">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-text-lighter ui-text-sm">{Math.round(zoomLevel * 100)}%</span>
             </Button>
           </div>
         </Dropdown>
@@ -272,7 +266,7 @@ export function WebViewerToolbar({
           onClick={onClearBrowsingData}
           disabled={!canClearBrowsingData}
           tooltip="Clear browsing data"
-          compact
+          size="icon-xs"
         >
           <Broom />
         </Button>
@@ -281,7 +275,7 @@ export function WebViewerToolbar({
           onClick={onOpenDevTools}
           disabled={!canOpenDevTools}
           tooltip={devToolsTooltip}
-          compact
+          size="icon-xs"
         >
           <Code2 />
         </Button>
@@ -290,7 +284,7 @@ export function WebViewerToolbar({
           onClick={onOpenExternal}
           disabled={!canOpenExternal}
           tooltip="Open in browser"
-          compact
+          size="icon-xs"
         >
           <ExternalLink />
         </Button>

@@ -1,16 +1,4 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import {
-  CopyIcon as Copy,
-  DotsThreeVerticalIcon as DotsThreeVertical,
-  FolderIcon as Folder,
-  FolderOpenIcon as FolderOpen,
-  HardDrivesIcon as HardDrives,
-  ImageIcon as Image,
-  PlusIcon as Plus,
-  XIcon as X,
-  ArrowSquareOutIcon as ArrowSquareOut,
-} from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { createPortal } from "react-dom";
@@ -21,9 +9,21 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
 import { ContextMenu, useContextMenu, type ContextMenuItem } from "@/ui/context-menu";
+import {
+  CaretDownIcon,
+  CopyIcon,
+  FolderIcon,
+  FolderOpenIcon,
+  ImageIcon,
+  PlusIcon,
+  RemoteIcon,
+  WindowExpandIcon,
+  XIcon,
+} from "@/ui/icons";
 import { Tabs } from "@/ui/tabs";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
-import ProjectIconPicker from "./project-icon-picker";
+import ProjectIconPicker from "../project-icon-picker";
 
 const isRemoteProjectTab = (tab: ProjectTab) => tab.path.startsWith("remote://");
 
@@ -34,9 +34,10 @@ interface ProjectTabsProps {
 const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const { reorderProjectTabs } = useWorkspaceTabsStore.getState();
-  const { switchToProject, closeProject } = useFileSystemStore();
+  const switchToProject = useFileSystemStore((state) => state.switchToProject);
+  const closeProject = useFileSystemStore((state) => state.closeProject);
   const isSwitchingProject = useFileSystemStore.use.isSwitchingProject();
-  const { setIsProjectPickerVisible } = useUIState();
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
   const contextMenu = useContextMenu<ProjectTab>();
 
@@ -88,15 +89,15 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "copy-path",
           label: "Copy Path",
-          icon: <Copy />,
+          icon: <CopyIcon />,
           onClick: async () => {
-            await writeText(tab.path);
+            await writeClipboardText(tab.path);
           },
         },
         {
           id: "reveal",
           label: "Reveal in Finder",
-          icon: <FolderOpen />,
+          icon: <FolderOpenIcon />,
           onClick: () => {
             if (handleRevealInFolder) {
               handleRevealInFolder(tab.path);
@@ -106,7 +107,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "select-icon",
           label: "Select Icon",
-          icon: <Image />,
+          icon: <ImageIcon />,
           onClick: () => {
             setIconPickerTab(tab);
           },
@@ -114,7 +115,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
         {
           id: "open-in-new-window",
           label: "Open in New Window",
-          icon: <ArrowSquareOut weight="duotone" />,
+          icon: <WindowExpandIcon />,
           onClick: () => {
             if (isRemoteProjectTab(tab)) {
               const match = tab.path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
@@ -144,7 +145,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
       items.push({
         id: "close-project",
         label: "Close Project",
-        icon: <X weight="bold" />,
+        icon: <XIcon />,
         onClick: () => {
           void closeProject(tab.id);
         },
@@ -205,25 +206,20 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             <img
               src={convertFileSrc(tab.customIcon)}
               alt=""
-              className="shrink-0 rounded-sm object-contain"
-              style={{
-                width: "var(--app-ui-font-size)",
-                height: "var(--app-ui-font-size)",
-              }}
+              className="size-(--app-ui-font-size) shrink-0 rounded-md object-contain"
             />
           ) : isRemote ? (
-            <HardDrives weight="duotone" />
+            <RemoteIcon />
           ) : (
-            <Folder weight="duotone" />
+            <FolderIcon />
           ),
           label: <span className="max-w-32 truncate">{tab.name}</span>,
           className: cn(
-            "border border-transparent px-6",
+            "ui-text-sm border border-transparent px-6",
             isRemote &&
-              (tab.isActive ? "bg-sky-500/15 text-sky-100" : "text-sky-200/85 hover:text-sky-100"),
+              (tab.isActive ? "bg-accent/15 text-accent" : "text-accent/85 hover:text-accent"),
             isSwitchingProject && "cursor-wait",
           ),
-          style: { fontSize: "var(--ui-text-sm)" },
           action: (
             <Button
               type="button"
@@ -236,8 +232,9 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
               )}
               tooltip="Project actions"
               aria-label="Project actions"
+              size="icon-xs"
             >
-              <DotsThreeVertical weight="bold" />
+              <CaretDownIcon />
             </Button>
           ),
         };
@@ -278,12 +275,13 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             type="button"
             variant="ghost"
             onClick={handleAddProject}
-            className="athas-title-project-add-button h-6 w-7 rounded-md border border-transparent px-0 text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
+            chrome="icon"
+            className="athas-title-project-add-button border border-transparent text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
             tooltip="Open folder"
             aria-label="Open folder"
-            compact
+            size="icon-xs"
           >
-            <Plus weight="bold" />
+            <PlusIcon />
           </Button>
         </div>
       </div>

@@ -32,6 +32,13 @@ export interface LintResult {
 export async function lintContent(options: LintOptions): Promise<LintResult> {
   const { filePath, languageId } = options;
 
+  if (filePath.startsWith("wsl://")) {
+    return {
+      success: true,
+      diagnostics: [],
+    };
+  }
+
   try {
     // Try to get linter by file path first, then by language ID
     let linterConfig = extensionRegistry.getLinterForFile(filePath);
@@ -114,6 +121,8 @@ export async function lintContent(options: LintOptions): Promise<LintResult> {
  * Check if linting is available for a file
  */
 export function isLintingAvailable(filePath: string, languageId?: string): boolean {
+  if (filePath.startsWith("wsl://")) return false;
+
   const linterConfig = extensionRegistry.getLinterForFile(filePath);
   if (linterConfig) return true;
 

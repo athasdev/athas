@@ -33,7 +33,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.2
 
       - name: Generate release metadata
         id: release_meta
@@ -159,21 +159,21 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.2
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Ensure Rust target is installed
-        if: matrix.target != ''
-        run: rustup target add ${{ matrix.target }}
-
       - name: Setup Zig
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
+
+      - name: Ensure Rust target is installed
+        if: matrix.target != ''
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -404,7 +404,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.2
 
       - name: Download release metadata
         uses: actions/download-artifact@v4
@@ -430,9 +430,9 @@ jobs:
             --notes-file release-metadata/release-body.md \
             --out prepared-release
 
-      - name: Create or update draft release
+      - name: Create or update release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
           RELEASE_NAME: ${{ needs.release-metadata.outputs.release_name }}
           IS_PRERELEASE: ${{ needs.release-metadata.outputs.is_prerelease }}
@@ -448,8 +448,9 @@ jobs:
           fi
 
           if gh release view "${TAG_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            is_draft="$(gh release view "${TAG_NAME}" --repo "${{ github.repository }}" --json isDraft --jq ".isDraft")"
-            if [[ "$is_draft" != "true" ]]; then
+            release_id="$(gh api "/repos/${{ github.repository }}/releases/tags/${TAG_NAME}" --jq ".id")"
+            is_draft="$(gh api "/repos/${{ github.repository }}/releases/${release_id}" --jq ".draft")"
+            if [[ "$is_draft" != "true" && "$IS_PRERELEASE" != "true" ]]; then
               echo "Release ${TAG_NAME} is already published; refusing to mutate it."
               exit 1
             fi
@@ -458,11 +459,18 @@ jobs:
               --repo "${{ github.repository }}" \
               --title "${RELEASE_NAME}" \
               --notes-file release-metadata/release-body.md
+
+            if [[ "$IS_PRERELEASE" == "true" ]]; then
+              gh api \
+                --method PATCH \
+                "/repos/${{ github.repository }}/releases/${release_id}" \
+                -f draft=false \
+                -f prerelease=true
+            fi
           else
             create_args=(
               release create "${TAG_NAME}"
               --repo "${{ github.repository }}"
-              --draft
               --target "${GITHUB_SHA}"
               --title "${RELEASE_NAME}"
               --notes-file release-metadata/release-body.md
@@ -470,6 +478,8 @@ jobs:
 
             if [[ "$IS_PRERELEASE" == "true" ]]; then
               create_args+=(--prerelease)
+            else
+              create_args+=(--draft)
             fi
 
             gh "${create_args[@]}"
@@ -477,7 +487,7 @@ jobs:
 
       - name: Upload release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           gh release upload "${TAG_NAME}" \
@@ -485,9 +495,9 @@ jobs:
             prepared-release/* \
             --clobber
 
-      - name: Validate draft release
+      - name: Validate release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ATHAS_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.release-metadata.outputs.tag_name }}
         run: |
           bun scripts/release/release-assets.mjs verify \

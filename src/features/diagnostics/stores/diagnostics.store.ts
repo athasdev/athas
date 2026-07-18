@@ -4,6 +4,10 @@ import type { Diagnostic as LintDiagnostic } from "@/features/editor/linter/lint
 import { createSelectors } from "@/utils/zustand-selectors";
 import type { Diagnostic } from "../types/diagnostics.types";
 
+function diagnosticMessageToString(message: LSPDiagnostic["message"]): string {
+  return typeof message === "string" ? message : message.value;
+}
+
 interface DiagnosticsState {
   // Map of file path to diagnostics
   diagnosticsByFile: Map<string, Diagnostic[]>;
@@ -45,7 +49,7 @@ export function convertLSPDiagnostic(filePath: string, lspDiag: LSPDiagnostic): 
     column: lspDiag.range.start.character,
     endLine: lspDiag.range.end.line,
     endColumn: lspDiag.range.end.character,
-    message: lspDiag.message,
+    message: diagnosticMessageToString(lspDiag.message),
     source: lspDiag.source,
     code: lspDiag.code?.toString(),
   };

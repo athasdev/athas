@@ -1,5 +1,5 @@
 import { readFile } from "@tauri-apps/plugin-fs";
-import { FileIcon } from "@phosphor-icons/react";
+import { FileIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
 import { LoadingIndicator } from "@/ui/loading";
@@ -218,19 +218,19 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
       {/* Header */}
       <div className="flex items-center gap-2 border-border border-b bg-secondary-bg px-4 py-2.5">
         <FileIcon className="shrink-0 text-text" />
-        <span className="ui-font ui-text-sm truncate text-text">
+        <span className="font-sans ui-text-sm truncate text-text">
           {fileName} {ext && <>&#8226; {ext}</>}
         </span>
-        <span className="ui-font ui-text-sm ml-auto text-text-lighter">{metadata.fileType}</span>
+        <span className="font-sans ui-text-sm ml-auto text-text-lighter">{metadata.fileType}</span>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-2xl space-y-4">
           {/* File Info Card */}
-          <div className="rounded-lg border border-border/60 bg-secondary-bg">
+          <div className="rounded-xl border border-border/60 bg-secondary-bg">
             <div className="border-border/40 border-b px-4 py-2.5">
-              <span className="ui-font ui-text-sm font-medium text-text">File Information</span>
+              <span className="font-sans ui-text-sm font-medium text-text">File Information</span>
             </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 p-4">
               <InfoRow label="Type" value={metadata.fileType} />
@@ -242,9 +242,11 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
 
           {/* WASM Metadata */}
           {metadata.wasmMetadata && (
-            <div className="rounded-lg border border-border/60 bg-secondary-bg">
+            <div className="rounded-xl border border-border/60 bg-secondary-bg">
               <div className="border-border/40 border-b px-4 py-2.5">
-                <span className="ui-font ui-text-sm font-medium text-text">WebAssembly Module</span>
+                <span className="font-sans ui-text-sm font-medium text-text">
+                  WebAssembly Module
+                </span>
               </div>
               <div className="p-4">
                 <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-2">
@@ -253,14 +255,14 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
                 </div>
 
                 {metadata.wasmMetadata.sections.length > 0 && (
-                  <div className="mt-3 overflow-hidden rounded border border-border/40">
+                  <div className="mt-3 overflow-hidden rounded-md border border-border/40">
                     <table className="w-full">
                       <thead>
                         <tr className="border-border/40 border-b bg-primary-bg/50">
-                          <th className="ui-font ui-text-sm px-3 py-1.5 text-left font-normal text-text-lighter">
+                          <th className="font-sans ui-text-sm px-3 py-1.5 text-left font-normal text-text-lighter">
                             Section
                           </th>
-                          <th className="ui-font ui-text-sm px-3 py-1.5 text-right font-normal text-text-lighter">
+                          <th className="font-sans ui-text-sm px-3 py-1.5 text-right font-normal text-text-lighter">
                             Size
                           </th>
                         </tr>
@@ -274,10 +276,10 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
                               i % 2 === 0 ? "bg-transparent" : "bg-primary-bg/30",
                             )}
                           >
-                            <td className="ui-font ui-text-sm px-3 py-1.5 text-text">
+                            <td className="font-sans ui-text-sm px-3 py-1.5 text-text">
                               {section.name}
                             </td>
-                            <td className="ui-font ui-text-sm px-3 py-1.5 text-right text-text-lighter tabular-nums">
+                            <td className="font-sans ui-text-sm px-3 py-1.5 text-right text-text-lighter tabular-nums">
                               {formatFileSize(section.size)}
                             </td>
                           </tr>
@@ -291,12 +293,12 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
           )}
 
           {/* Hex Preview */}
-          <div className="rounded-lg border border-border/60 bg-secondary-bg">
+          <div className="rounded-xl border border-border/60 bg-secondary-bg">
             <div className="border-border/40 border-b px-4 py-2.5">
-              <span className="ui-font ui-text-sm font-medium text-text">Hex Preview</span>
+              <span className="font-sans ui-text-sm font-medium text-text">Hex Preview</span>
             </div>
             <div className="overflow-auto p-4">
-              <pre className="ui-text-sm editor-font text-text-lighter leading-[18px]">
+              <pre className="ui-text-sm font-mono text-text-lighter leading-[18px]">
                 {metadata.hexPreview}
               </pre>
             </div>
@@ -306,13 +308,13 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
 
       {/* Footer */}
       <div className="flex items-center gap-3 border-border border-t bg-secondary-bg px-4 py-1.5">
-        <span className="ui-font ui-text-sm text-text-lighter">{metadata.fileType}</span>
+        <span className="font-sans ui-text-sm text-text-lighter">{metadata.fileType}</span>
         <span className="text-border">&#8226;</span>
-        <span className="ui-font ui-text-sm text-text-lighter">
+        <span className="font-sans ui-text-sm text-text-lighter">
           {formatFileSize(metadata.fileSize)}
         </span>
         <span className="text-border">&#8226;</span>
-        <span className="ui-font ui-text-sm text-text-lighter">{relativePath}</span>
+        <span className="font-sans ui-text-sm text-text-lighter">{relativePath}</span>
       </div>
     </div>
   );
@@ -321,8 +323,8 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="ui-font ui-text-sm shrink-0 text-text-lighter">{label}</span>
-      <span className="ui-font ui-text-sm min-w-0 truncate text-text">{value}</span>
+      <span className="font-sans ui-text-sm shrink-0 text-text-lighter">{label}</span>
+      <span className="font-sans ui-text-sm min-w-0 truncate text-text">{value}</span>
     </div>
   );
 }

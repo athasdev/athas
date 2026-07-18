@@ -1,12 +1,9 @@
-import type { ReactNode } from "react";
-import {
-  EyeIcon as Eye,
-  MagnifyingGlassIcon as Search,
-  SparkleIcon as Sparkles,
-} from "@phosphor-icons/react";
+import { type ReactNode, useRef, useState } from "react";
+import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
 import { useShallow } from "zustand/react/shallow";
 import { EditorStatusActions } from "@/features/editor/components/toolbar/editor-status-actions";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -15,8 +12,10 @@ import { ExtensionToolbarAction } from "@/extensions/ui/components/extension-too
 import { isMarkdownPreviewableFile } from "@/features/editor/markdown/previewable";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button, type ButtonProps } from "@/ui/button";
+import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { cn } from "@/utils/cn";
 import { FilePathBreadcrumb } from "./file-path-breadcrumb";
+import { SymbolBreadcrumb } from "./symbol-breadcrumb";
 
 export interface BreadcrumbProps {
   bufferId?: string;
@@ -29,13 +28,13 @@ export interface BreadcrumbProps {
   showPath?: boolean;
 }
 
-type BreadcrumbActionButtonProps = Omit<ButtonProps, "variant" | "compact">;
+type BreadcrumbActionButtonProps = Omit<ButtonProps, "variant" | "size">;
 
 export function BreadcrumbActionButton({ className, ...props }: BreadcrumbActionButtonProps) {
   return (
     <Button
       variant="ghost"
-      compact
+      size="icon-xs"
       className={cn("rounded text-text-lighter", className)}
       {...props}
     />
@@ -55,9 +54,7 @@ export default function Breadcrumb({
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
   const activeBuffer = useBufferStore(
     useShallow((state) => {
-      const buffer = resolvedBufferId
-        ? state.buffers.find((candidate) => candidate.id === resolvedBufferId)
-        : null;
+      const buffer = getBufferById(state.buffers, resolvedBufferId);
       return buffer
         ? {
             id: buffer.id,
@@ -77,6 +74,8 @@ export default function Breadcrumb({
   );
   const inlineEditActions = useInlineEditToolbarStore.use.actions();
   const extensionActions = useExtensionActions();
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const actionsButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleSearchClick = () => {
     setIsFindVisible(!isFindVisible);
@@ -146,40 +145,59 @@ export default function Breadcrumb({
   if (!filePath) return null;
   const isLocalHistorySnapshot = filePath.startsWith("local-history://");
 
+  const canPreview =
+    (isMarkdownFile() && activeBuffer?.type !== "markdownPreview") ||
+    (isHtmlFile() && activeBuffer?.type !== "htmlPreview") ||
+    (isCsvFile() && activeBuffer?.type !== "csvPreview");
+
+  const actionMenuItems: MenuItem[] = [
+    ...(canPreview
+      ? [
+          {
+            id: "preview",
+            label: "Preview",
+            onClick: handlePreviewClick,
+          },
+        ]
+      : []),
+    {
+      id: "inline-edit",
+      label: "AI inline edit",
+      onClick: handleInlineEditClick,
+    },
+    {
+      id: "find",
+      label: "Find in file",
+      onClick: onSearchClick,
+    },
+  ];
+
   const defaultActions =
     showDefaultActions && activeBuffer ? (
       <>
-        {((isMarkdownFile() && activeBuffer.type !== "markdownPreview") ||
-          (isHtmlFile() && activeBuffer.type !== "htmlPreview") ||
-          (isCsvFile() && activeBuffer.type !== "csvPreview")) && (
-          <BreadcrumbActionButton
-            onClick={handlePreviewClick}
-            tooltip="Preview"
-            tooltipSide="bottom"
-          >
-            <Eye weight="duotone" />
-          </BreadcrumbActionButton>
-        )}
-        <BreadcrumbActionButton
-          onClick={handleInlineEditClick}
-          tooltip="AI inline edit"
-          commandId="editor.inlineEdit"
-          tooltipSide="bottom"
-        >
-          <Sparkles weight="duotone" />
-        </BreadcrumbActionButton>
-        <BreadcrumbActionButton
-          onClick={onSearchClick}
-          tooltip="Find in file"
-          commandId="workbench.showFind"
-          tooltipSide="bottom"
-        >
-          <Search weight="duotone" />
-        </BreadcrumbActionButton>
-        <div className="mx-1 h-3.5 w-px bg-border/70" />
         <EditorStatusActions
           bufferId={resolvedBufferId ?? undefined}
           editorViewKey={editorViewKey}
+        />
+        <BreadcrumbActionButton
+          ref={actionsButtonRef}
+          onClick={() => setIsActionsMenuOpen((open) => !open)}
+          active={isActionsMenuOpen}
+          tooltip="Editor actions"
+          tooltipSide="bottom"
+        >
+          <MoreHorizontal />
+        </BreadcrumbActionButton>
+        <Dropdown
+          isOpen={isActionsMenuOpen}
+          anchorRef={actionsButtonRef}
+          anchorSide="bottom"
+          anchorAlign="end"
+          onClose={() => setIsActionsMenuOpen(false)}
+          items={actionMenuItems}
+          className="min-w-[180px] rounded-lg"
+          density="compact"
+          showIcons={false}
         />
       </>
     ) : null;
@@ -187,12 +205,20 @@ export default function Breadcrumb({
   return (
     <>
       <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
-        <div className="ui-font flex min-w-0 items-center gap-2 text-text-lighter ui-text-xs">
+        <div className="font-sans flex min-w-0 items-center gap-2 text-text-lighter ui-text-sm">
           {showPath && showBreadcrumbPath ? (
-            <FilePathBreadcrumb
-              filePath={filePath}
-              interactive={interactive && !isLocalHistorySnapshot}
-            />
+            <>
+              <FilePathBreadcrumb
+                filePath={filePath}
+                interactive={interactive && !isLocalHistorySnapshot}
+              />
+              <SymbolBreadcrumb
+                bufferId={resolvedBufferId ?? undefined}
+                editorViewKey={editorViewKey}
+                filePath={filePath}
+                interactive={interactive && !isLocalHistorySnapshot}
+              />
+            </>
           ) : null}
           {extensionActions.left.map((action) => (
             <ExtensionToolbarAction key={action.id} action={action} />

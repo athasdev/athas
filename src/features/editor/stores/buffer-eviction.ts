@@ -1,3 +1,4 @@
+import { isSingletonToolBuffer } from "@/features/panes/constants/tool-buffers";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 
 const AUTO_EVICTION_PROTECTED_TYPES = new Set<PaneContent["type"]>([
@@ -17,6 +18,7 @@ export function canAutoEvictBuffer(
 ): boolean {
   if (buffer.isPinned) return false;
   if (!includePreviews && buffer.isPreview) return false;
+  if (isSingletonToolBuffer(buffer)) return false;
   return !AUTO_EVICTION_PROTECTED_TYPES.has(buffer.type);
 }
 

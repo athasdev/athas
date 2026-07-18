@@ -2,8 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { wasmParserLoader } from "@/features/editor/lib/wasm-parser/loader";
 import { extensionInstaller } from "../installer/extension-installer";
+import { isBundledContributionExtension } from "../bundled/bundled-contribution-extensions";
+import { readInstalledBundledContributionExtensionIds } from "./bundled-contribution-install-state";
+import { readDisabledExtensionIds } from "./extension-enabled-state";
 import { initializeLanguagePackager } from "../languages/language-packager";
 import { extensionRegistry } from "./extension-registry";
+import { isRetiredExtensionId } from "./retired-extensions";
 import {
   buildRuntimeManifest,
   getExtensionManifestForLanguage,
@@ -28,6 +32,7 @@ export async function loadInstalledExtensionsSnapshot(
 ): Promise<{
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
+  bundledContributionInstalled: string[];
   runtimeIssues: Map<string, ExtensionRuntimeIssue[]>;
 }> {
   let backendInstalled: ExtensionInstallationMetadata[] = [];
@@ -42,6 +47,8 @@ export async function loadInstalledExtensionsSnapshot(
   }
 
   const indexedDBInstalled = await extensionInstaller.listInstalled();
+  const bundledContributionInstalled = Array.from(readInstalledBundledContributionExtensionIds());
+  const disabledExtensionIds = readDisabledExtensionIds();
 
   await Promise.all(
     indexedDBInstalled.map(async (installed) => {
@@ -55,6 +62,10 @@ export async function loadInstalledExtensionsSnapshot(
       const languageConfig = extension?.languages?.find((lang) => lang.id === languageId);
       const languageExtensions = languageConfig?.extensions || [`.${languageId}`];
       const aliases = languageConfig?.aliases;
+
+      if (disabledExtensionIds.has(extensionId)) {
+        return;
+      }
 
       if (extension) {
         const resolvedTools = await resolveToolPaths(languageId, extension, {
@@ -87,6 +98,7 @@ export async function loadInstalledExtensionsSnapshot(
   return {
     backendInstalled,
     indexedDBInstalled,
+    bundledContributionInstalled,
     runtimeIssues,
   };
 }
@@ -94,15 +106,52 @@ export async function loadInstalledExtensionsSnapshot(
 export function buildInstalledExtensionsMap(params: {
   backendInstalled: ExtensionInstallationMetadata[];
   indexedDBInstalled: IndexedDbInstalledExtension[];
+  bundledContributionInstalled: string[];
   availableExtensions: Map<string, AvailableExtension>;
 }): Map<string, ExtensionInstallationMetadata> {
-  const { backendInstalled, indexedDBInstalled, availableExtensions } = params;
+  const {
+    backendInstalled,
+    indexedDBInstalled,
+    bundledContributionInstalled,
+    availableExtensions,
+  } = params;
+  const disabledExtensionIds = readDisabledExtensionIds();
   const installedExtensions = new Map(
-    backendInstalled.map((extension) => [extension.id, extension]),
+    backendInstalled
+      .filter((extension) => !isRetiredExtensionId(extension.id))
+      .map((extension) => [
+        extension.id,
+        {
+          ...extension,
+          enabled: extension.enabled !== false && !disabledExtensionIds.has(extension.id),
+        },
+      ]),
   );
+
+  for (const extensionId of bundledContributionInstalled) {
+    if (isRetiredExtensionId(extensionId)) {
+      continue;
+    }
+
+    const extension = availableExtensions.get(extensionId);
+    if (!extension || !isBundledContributionExtension(extension.manifest)) {
+      continue;
+    }
+
+    installedExtensions.set(extensionId, {
+      id: extensionId,
+      name: extension.manifest.displayName,
+      version: extension.manifest.version,
+      installed_at: new Date().toISOString(),
+      enabled: !disabledExtensionIds.has(extensionId),
+    });
+  }
 
   for (const installed of indexedDBInstalled) {
     const extensionId = resolveInstalledExtensionId(installed, availableExtensions);
+    if (isRetiredExtensionId(extensionId)) {
+      continue;
+    }
 
     if (!installedExtensions.has(extensionId)) {
       const extension =
@@ -128,7 +177,7 @@ export function buildInstalledExtensionsMap(params: {
         name: extension?.manifest.displayName || installed.languageId,
         version: installed.version,
         installed_at: new Date().toISOString(),
-        enabled: true,
+        enabled: !disabledExtensionIds.has(extensionId),
       });
     }
   }

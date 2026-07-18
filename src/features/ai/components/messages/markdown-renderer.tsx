@@ -4,10 +4,14 @@ import {
   CaretRightIcon as ChevronRight,
   CopyIcon as Copy,
   TerminalWindowIcon as Terminal,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { MarkdownRendererProps } from "@/features/ai/types/ai-chat.types";
+import {
+  isExternalMarkdownLink,
+  resolveWorkspaceFileLink,
+} from "@/features/ai/lib/workspace-file-links";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -19,6 +23,8 @@ import {
   normalizeLanguage,
 } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
+import { writeClipboardText } from "@/utils/clipboard";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 
 const LANGUAGE_HINTS = new Set([
   "bash",
@@ -155,12 +161,34 @@ function inferCodeLanguage(code: string): string {
 }
 
 async function copyTextToClipboard(text: string) {
-  try {
-    const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
-    await writeText(text);
-  } catch {
-    await navigator.clipboard.writeText(text);
+  await writeClipboardText(text);
+}
+
+async function openMarkdownLink(href: string, label: string) {
+  if (isExternalMarkdownLink(href)) {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(href);
+    return;
   }
+
+  const fileSystem = useFileSystemStore.getState();
+  const files = await fileSystem.getAllProjectFiles();
+  const target = resolveWorkspaceFileLink(href, label, files, fileSystem.rootFolderPath);
+
+  if (target) {
+    await fileSystem.handleFileSelect(
+      target.path,
+      false,
+      target.line,
+      target.column,
+      undefined,
+      false,
+    );
+    return;
+  }
+
+  const { openUrl } = await import("@tauri-apps/plugin-opener");
+  await openUrl(href);
 }
 
 function renderHighlightedCode(code: string, segments: CodeHighlightSegment[]): React.ReactNode {
@@ -229,10 +257,10 @@ function CodeBlock({
 
   return (
     <div className="group relative my-2">
-      <pre className="editor-font max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+      <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
-            <div className="editor-font text-text-lighter ui-text-xs">{languageLabel}</div>
+            <div className="font-mono text-text-lighter ui-text-sm">{languageLabel}</div>
           )}
           {code.trim() && (
             <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -242,6 +270,7 @@ function CodeBlock({
                 className="rounded"
                 onClick={() => void copyTextToClipboard(code)}
                 tooltip="Copy code"
+                size="icon"
               >
                 <Copy className="text-text-lighter" size={12} />
               </Button>
@@ -250,7 +279,7 @@ function CodeBlock({
                   type="button"
                   variant="default"
                   onClick={() => onApplyCode(code)}
-                  className="h-5 px-1.5 ui-text-xs"
+                  className="h-5 px-1.5 ui-text-sm"
                   tooltip="Apply this code to current buffer"
                 >
                   Apply
@@ -259,7 +288,7 @@ function CodeBlock({
             </div>
           )}
         </div>
-        <code className="editor-font block whitespace-pre-wrap break-all text-text ui-text-xs">
+        <code className="font-mono block whitespace-pre-wrap break-all text-text ui-text-sm">
           {renderedCode}
         </code>
       </pre>
@@ -347,7 +376,7 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 
   return (
     <div className="my-1 rounded-lg border border-error/25 bg-error/8 px-2.5 py-2">
-      <div className="ui-text-xs flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="font-medium text-error">Error</span>
         <span className="text-text">{summary}</span>
         {code ? <span className="text-text-lighter">({code})</span> : null}
@@ -401,13 +430,13 @@ function ErrorBlock({ errorData }: { errorData: string }) {
               Open Terminal
             </Button>
           )}
-          <span className="ui-text-xs text-error/70">
+          <span className="ui-text-sm text-error/70">
             Complete login in the agent CLI, then retry.
           </span>
         </div>
       )}
       {normalizedDetails && isExpanded && (
-        <pre className="ui-text-xs editor-font mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
+        <pre className="ui-text-sm font-mono mt-2 overflow-x-auto rounded border border-error/20 bg-error/8 p-2 text-error/90">
           {(() => {
             try {
               const parsed = JSON.parse(normalizedDetails);
@@ -426,13 +455,13 @@ function ErrorBlock({ errorData }: { errorData: string }) {
 const headerClasses: Record<number, string> = {
   1: "mt-3 mb-1.5 font-semibold ui-text-sm text-text",
   2: "ui-text-sm mt-2.5 mb-1 font-semibold text-text",
-  3: "mt-2 mb-1 font-semibold text-text ui-text-xs",
-  4: "mt-2 mb-0.5 font-medium text-text ui-text-xs",
-  5: "mt-1.5 mb-0.5 font-medium text-text-light ui-text-xs",
-  6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-xs",
+  3: "mt-2 mb-1 font-semibold text-text ui-text-sm",
+  4: "mt-2 mb-0.5 font-medium text-text ui-text-sm",
+  5: "mt-1.5 mb-0.5 font-medium text-text-light ui-text-sm",
+  6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-sm",
 };
 
-function renderHeader(level: number, text: string, key: number): React.ReactNode {
+function renderHeader(level: number, text: string, key: string): React.ReactNode {
   const className = headerClasses[level] || headerClasses[6];
   const content = renderInlineFormatting(text);
 
@@ -485,7 +514,7 @@ type MarkdownTable = {
 };
 
 const INLINE_CODE_CLASS_NAME =
-  "editor-font inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
+  "font-mono inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
 const INLINE_LINK_CLASS_NAME =
   "inline cursor-pointer break-words font-[inherit] leading-[inherit] text-accent hover:underline";
 
@@ -586,10 +615,10 @@ function getTableAlignmentClass(alignment: TableAlignment): string {
   }
 }
 
-function renderTable(table: MarkdownTable, key: number): React.ReactNode {
+function renderTable(table: MarkdownTable, key: string): React.ReactNode {
   return (
     <div key={key} className="my-2 max-w-full overflow-x-auto">
-      <table className="w-full min-w-max border-collapse ui-text-xs">
+      <table className="w-full min-w-max border-collapse ui-text-sm">
         <thead>
           <tr className="border-border border-b">
             {table.headers.map((header, index) => (
@@ -625,14 +654,17 @@ function renderTable(table: MarkdownTable, key: number): React.ReactNode {
 function renderInlineFormatting(text: string): React.ReactNode {
   const elements: React.ReactNode[] = [];
   let remaining = text;
-  let key = 0;
+  const getInlineKey = (kind: string, value: string) => {
+    const offset = text.length - remaining.length;
+    return `${kind}-${offset}-${value.length}`;
+  };
 
   while (remaining.length > 0) {
     // Inline code
     const codeMatch = remaining.match(/^`([^`]+)`/);
     if (codeMatch) {
       elements.push(
-        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+        <code key={getInlineKey("code", codeMatch[0])} className={INLINE_CODE_CLASS_NAME}>
           {codeMatch[1]}
         </code>,
       );
@@ -643,7 +675,10 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const pendingCodeMatch = remaining.match(/^`([^`]*)$/);
     if (pendingCodeMatch) {
       elements.push(
-        <code key={key++} className={INLINE_CODE_CLASS_NAME}>
+        <code
+          key={getInlineKey("pending-code", pendingCodeMatch[0])}
+          className={INLINE_CODE_CLASS_NAME}
+        >
           {pendingCodeMatch[1]}
         </code>,
       );
@@ -654,7 +689,10 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const strikeMatch = remaining.match(/^~~([^~]+)~~/);
     if (strikeMatch) {
       elements.push(
-        <del key={key++} className="text-text-lighter line-through">
+        <del
+          key={getInlineKey("strike", strikeMatch[0])}
+          className="text-text-lighter line-through"
+        >
           {strikeMatch[1]}
         </del>,
       );
@@ -666,7 +704,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
     if (boldMatch) {
       elements.push(
-        <strong key={key++} className="font-semibold">
+        <strong key={getInlineKey("bold", boldMatch[0])} className="font-semibold">
           {boldMatch[1]}
         </strong>,
       );
@@ -678,7 +716,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const italicMatch = remaining.match(/^\*([^*]+)\*/);
     if (italicMatch) {
       elements.push(
-        <em key={key++} className="italic">
+        <em key={getInlineKey("italic", italicMatch[0])} className="italic">
           {italicMatch[1]}
         </em>,
       );
@@ -690,17 +728,18 @@ function renderInlineFormatting(text: string): React.ReactNode {
     const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
       const url = linkMatch[2];
+      const label = linkMatch[1];
       elements.push(
         <a
-          key={key++}
+          key={getInlineKey("link", linkMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
-            import("@tauri-apps/plugin-opener").then(({ openUrl }) => openUrl(url));
+            void openMarkdownLink(url, label);
           }}
           className={INLINE_LINK_CLASS_NAME}
         >
-          {linkMatch[1]}
+          {label}
         </a>,
       );
       remaining = remaining.slice(linkMatch[0].length);
@@ -713,7 +752,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       const url = urlMatch[1];
       elements.push(
         <a
-          key={key++}
+          key={getInlineKey("url", urlMatch[0])}
           href={url}
           onClick={(e) => {
             e.preventDefault();
@@ -731,15 +770,16 @@ function renderInlineFormatting(text: string): React.ReactNode {
     // Find next special character or consume all remaining text
     const nextSpecial = remaining.search(/[`~*[\]]|https?:\/\//);
     if (nextSpecial === -1) {
-      elements.push(<span key={key++}>{remaining}</span>);
+      elements.push(<span key={getInlineKey("text", remaining)}>{remaining}</span>);
       break;
     }
     if (nextSpecial === 0) {
       // Special char at start didn't match any pattern — treat as plain text
-      elements.push(<span key={key++}>{remaining[0]}</span>);
+      elements.push(<span key={getInlineKey("char", remaining[0])}>{remaining[0]}</span>);
       remaining = remaining.slice(1);
     } else {
-      elements.push(<span key={key++}>{remaining.slice(0, nextSpecial)}</span>);
+      const textChunk = remaining.slice(0, nextSpecial);
+      elements.push(<span key={getInlineKey("text", textChunk)}>{textChunk}</span>);
       remaining = remaining.slice(nextSpecial);
     }
   }
@@ -757,16 +797,18 @@ function renderContent(
   let inCodeBlock = false;
   let codeBlockLanguage = "";
   let codeBlockContent: string[] = [];
+  let codeBlockStartLine = 0;
   let currentList: { type: "ol" | "ul"; items: string[] } | null = null;
+  let currentListStartLine = 0;
   let currentParagraph: string[] = [];
-  let key = 0;
+  let currentParagraphStartLine = 0;
 
   const flushCodeBlock = () => {
     if (codeBlockContent.length > 0) {
       const code = codeBlockContent.join("\n");
       elements.push(
         <CodeBlock
-          key={key++}
+          key={`code-${codeBlockStartLine}-${code.length}`}
           code={code}
           languageHint={codeBlockLanguage}
           onApplyCode={onApplyCode}
@@ -781,7 +823,10 @@ function renderContent(
     if (currentList && currentList.items.length > 0) {
       if (currentList.type === "ol") {
         elements.push(
-          <ol key={key++} className="my-2 ml-5 list-decimal space-y-0.5">
+          <ol
+            key={`ol-${currentListStartLine}-${currentList.items.length}`}
+            className="my-2 ml-5 list-decimal space-y-0.5"
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx} className="pl-1 text-text">
                 {renderInlineFormatting(item)}
@@ -791,7 +836,10 @@ function renderContent(
         );
       } else {
         elements.push(
-          <ul key={key++} className="my-2 ml-5 list-disc space-y-0.5">
+          <ul
+            key={`ul-${currentListStartLine}-${currentList.items.length}`}
+            className="my-2 ml-5 list-disc space-y-0.5"
+          >
             {currentList.items.map((item, idx) => (
               <li key={idx} className="pl-1 text-text">
                 {renderInlineFormatting(item)}
@@ -809,7 +857,10 @@ function renderContent(
       const paragraphText = currentParagraph.join(" ").trim();
       if (paragraphText) {
         elements.push(
-          <p key={key++} className="my-1.5 leading-[1.6]">
+          <p
+            key={`p-${currentParagraphStartLine}-${paragraphText.length}`}
+            className="my-1.5 leading-[1.6]"
+          >
             {renderInlineFormatting(paragraphText)}
           </p>,
         );
@@ -829,6 +880,7 @@ function renderContent(
         flushList();
         flushParagraph();
         inCodeBlock = true;
+        codeBlockStartLine = i;
         codeBlockLanguage = line.trimStart().slice(3).trim();
       }
       continue;
@@ -846,7 +898,7 @@ function renderContent(
     if (parsedTable) {
       flushList();
       flushParagraph();
-      elements.push(renderTable(parsedTable.table, key++));
+      elements.push(renderTable(parsedTable.table, `table-${i}-${parsedTable.endIndex}`));
       i = parsedTable.endIndex - 1;
       continue;
     }
@@ -857,7 +909,7 @@ function renderContent(
       flushList();
       flushParagraph();
       const level = headerMatch[1].length;
-      elements.push(renderHeader(level, headerMatch[2], key++));
+      elements.push(renderHeader(level, headerMatch[2], `h${level}-${i}`));
       continue;
     }
 
@@ -865,7 +917,7 @@ function renderContent(
     if (trimmedLine.match(/^[-*_]{3,}$/) && trimmedLine.length >= 3) {
       flushList();
       flushParagraph();
-      elements.push(<hr key={key++} className="my-3 border-border" />);
+      elements.push(<hr key={`hr-${i}`} className="my-3 border-border" />);
       continue;
     }
 
@@ -876,7 +928,7 @@ function renderContent(
       const quoteContent = trimmedLine.startsWith("> ") ? trimmedLine.slice(2) : "";
       elements.push(
         <blockquote
-          key={key++}
+          key={`quote-${i}-${quoteContent.length}`}
           className="my-2 border-border border-l-2 pl-3 text-text-light italic"
         >
           {renderInlineFormatting(quoteContent)}
@@ -892,6 +944,7 @@ function renderContent(
       if (currentList?.type !== "ol") {
         flushList();
         currentList = { type: "ol", items: [] };
+        currentListStartLine = i;
       }
       currentList.items.push(numberedMatch[2]);
       continue;
@@ -904,6 +957,7 @@ function renderContent(
       if (currentList?.type !== "ul") {
         flushList();
         currentList = { type: "ul", items: [] };
+        currentListStartLine = i;
       }
       currentList.items.push(bulletMatch[1]);
       continue;
@@ -918,6 +972,9 @@ function renderContent(
 
     // Regular text — accumulate into paragraph
     flushList();
+    if (currentParagraph.length === 0) {
+      currentParagraphStartLine = i;
+    }
     currentParagraph.push(trimmedLine);
   }
 

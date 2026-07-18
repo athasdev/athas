@@ -1,4 +1,4 @@
-use crate::app_runtime::AppHandle;
+use crate::{app_runtime::AppHandle, service_urls};
 use athas_ai::{AcpAgentBridge, AcpAgentStatus, AcpSessionList, AgentConfig, AgentRuntime};
 use athas_runtime::{RuntimeManager, RuntimeType};
 use athas_tooling::{ToolConfig, ToolInstaller, ToolRuntime};
@@ -14,7 +14,6 @@ use tauri::{Manager, State};
 use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
-const EXTENSIONS_CDN_BASE_URL: &str = "https://athas.dev/extensions";
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 const TERMINAL_ONLY_AGENT_IDS: &[&str] = &["claude-code"];
 
@@ -166,7 +165,7 @@ struct MarketplaceExtensionManifest {
 
 fn extensions_manifest_url() -> String {
    let base_url = std::env::var("ATHAS_EXTENSIONS_CDN_URL")
-      .unwrap_or_else(|_| EXTENSIONS_CDN_BASE_URL.to_string());
+      .unwrap_or_else(|_| service_urls::extensions_cdn_base_url().to_string());
    format!("{}/manifests.json", base_url.trim_end_matches('/'))
 }
 
@@ -342,6 +341,12 @@ pub struct SessionListArgs {
    cursor: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct SessionDeleteArgs {
+   #[serde(alias = "sessionId")]
+   session_id: String,
+}
+
 #[tauri::command]
 pub async fn set_acp_session_config_option(
    bridge: State<'_, AcpBridgeState>,
@@ -364,6 +369,24 @@ pub async fn list_acp_sessions(
       .list_sessions(args.cwd, args.cursor)
       .await
       .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn delete_acp_session(
+   bridge: State<'_, AcpBridgeState>,
+   args: SessionDeleteArgs,
+) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge
+      .delete_session(&args.session_id)
+      .await
+      .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn logout_acp_agent(bridge: State<'_, AcpBridgeState>) -> Result<(), String> {
+   let bridge = { bridge.lock().await.clone() };
+   bridge.logout().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

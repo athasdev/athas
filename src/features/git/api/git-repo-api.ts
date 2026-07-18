@@ -1,5 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { readDirectory } from "@/features/file-system/controllers/platform";
 
 const repoDiscoveryCache = new Map<string, string | null>();
 const workspaceRepoDiscoveryCache = new Map<string, { discoveredAt: number; repos: string[] }>();
@@ -39,13 +39,27 @@ const REPO_SCAN_SKIP_DIRS = new Set([
 ]);
 
 function normalizePath(path: string): string {
+  if (path.startsWith("wsl://") || path.startsWith("remote://")) {
+    const [scheme, rest] = path.split("://");
+    const collapsedRest = (rest ?? "").replace(/\/{2,}/g, "/");
+    const normalized = `${scheme}://${collapsedRest}`;
+    return normalized.length > `${scheme}://`.length + 1
+      ? normalized.replace(/\/+$/, "")
+      : normalized;
+  }
+
   const unixPath = path.replace(/\\/g, "/");
   const collapsed = unixPath.replace(/\/{2,}/g, "/");
   return collapsed.length > 1 ? collapsed.replace(/\/+$/, "") : collapsed;
 }
 
 function isAbsolutePath(path: string): boolean {
-  return path.startsWith("/") || /^[A-Za-z]:\//.test(path.replace(/\\/g, "/"));
+  return (
+    path.startsWith("/") ||
+    path.startsWith("wsl://") ||
+    path.startsWith("remote://") ||
+    /^[A-Za-z]:\//.test(path.replace(/\\/g, "/"))
+  );
 }
 
 function joinPath(basePath: string, childPath: string): string {
@@ -185,14 +199,17 @@ export async function discoverWorkspaceRepositories(
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
   const queue: string[] = [normalizedWorkspacePath];
+  let queueCursor = 0;
   const containingRepoPath = await discoverRepo(normalizedWorkspacePath);
 
   if (containingRepoPath) {
     discoveredRepos.add(containingRepoPath);
   }
 
-  while (queue.length > 0) {
-    const batch = queue.splice(0, 8);
+  while (queueCursor < queue.length) {
+    const batchEnd = Math.min(queueCursor + 8, queue.length);
+    const batch = queue.slice(queueCursor, batchEnd);
+    queueCursor = batchEnd;
     const directoryResults = await Promise.all(
       batch.map(async (currentPath) => {
         const directoryPath = normalizePath(currentPath);
@@ -202,7 +219,7 @@ export async function discoverWorkspaceRepositories(
         visitedDirectories.add(directoryPath);
 
         try {
-          return { directoryPath, entries: await readDir(directoryPath) };
+          return { directoryPath, entries: await readDirectory(directoryPath) };
         } catch {
           return null;
         }
@@ -220,7 +237,8 @@ export async function discoverWorkspaceRepositories(
       }
 
       for (const entry of result.entries) {
-        if (!entry?.isDirectory || !entry.name) {
+        const isDirectory = entry?.isDirectory ?? entry?.is_dir;
+        if (!isDirectory || !entry.name) {
           continue;
         }
 

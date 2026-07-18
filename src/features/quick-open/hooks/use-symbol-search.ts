@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
@@ -34,7 +35,7 @@ export const useSymbolSearch = (query: string, isActive: boolean) => {
 
   const fetchSymbols = useCallback(async () => {
     const bufferStore = useBufferStore.getState();
-    const activeBuffer = bufferStore.buffers.find((b) => b.id === bufferStore.activeBufferId);
+    const activeBuffer = getBufferById(bufferStore.buffers, bufferStore.activeBufferId);
 
     if (!activeBuffer?.path || !extensionRegistry.isLspSupported(activeBuffer.path)) {
       setSymbols([]);

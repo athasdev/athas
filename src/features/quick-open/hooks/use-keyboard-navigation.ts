@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   KEY_ARROW_DOWN,
   KEY_ARROW_UP,
@@ -24,6 +25,16 @@ export const useKeyboardNavigation = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const selectedPathRef = useRef<string | null>(null);
+  const resultIndexByPath = useMemo(() => {
+    const indexByPath = new Map<string, number>();
+    for (let index = 0; index < allResults.length; index++) {
+      const result = allResults[index];
+      if (result) {
+        indexByPath.set(result.path, index);
+      }
+    }
+    return indexByPath;
+  }, [allResults]);
 
   useEffect(() => {
     selectedPathRef.current = allResults[selectedIndex]?.path || null;
@@ -39,7 +50,7 @@ export const useKeyboardNavigation = ({
 
       const selectedPath = selectedPathRef.current;
       if (selectedPath) {
-        const nextIndex = allResults.findIndex((item) => item.path === selectedPath);
+        const nextIndex = resultIndexByPath.get(selectedPath) ?? -1;
         if (nextIndex >= 0) {
           return nextIndex;
         }
@@ -47,7 +58,7 @@ export const useKeyboardNavigation = ({
 
       return Math.min(previousIndex, allResults.length - 1);
     });
-  }, [allResults]);
+  }, [allResults, resultIndexByPath]);
 
   useEffect(() => {
     if (isVisible) {
@@ -55,14 +66,10 @@ export const useKeyboardNavigation = ({
     }
   }, [isVisible]);
 
-  // Handle keyboard events
-  useEffect(() => {
-    if (!isVisible) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Handle Escape and Cmd+K/Ctrl+K to close
-      if (e.key === KEY_ESCAPE || (e.key === KEY_K && (e.metaKey || e.ctrlKey))) {
-        e.preventDefault();
+  const handleInputKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key === KEY_ESCAPE || (event.key === KEY_K && (event.metaKey || event.ctrlKey))) {
+        event.preventDefault();
         onClose();
         return;
       }
@@ -70,33 +77,28 @@ export const useKeyboardNavigation = ({
       const totalItems = allResults.length;
       if (totalItems === 0) return;
 
-      // Handle navigation
-      if (e.key === KEY_ARROW_DOWN) {
-        e.preventDefault();
-        setSelectedIndex((prev) => {
-          const next = (prev + 1) % totalItems;
-          return next;
-        });
-      } else if (e.key === KEY_ARROW_UP) {
-        e.preventDefault();
-        setSelectedIndex((prev) => {
-          const next = (prev - 1 + totalItems) % totalItems;
-          return next;
-        });
-      } else if (e.key === KEY_ENTER) {
-        e.preventDefault();
-        setSelectedIndex((current) => {
-          if (allResults[current]) {
-            onSelect(allResults[current].path);
-          }
-          return current;
-        });
+      if (event.key === KEY_ARROW_DOWN) {
+        event.preventDefault();
+        setSelectedIndex((previousIndex) => (previousIndex + 1) % totalItems);
+        return;
       }
-    };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, allResults, onClose, onSelect]);
+      if (event.key === KEY_ARROW_UP) {
+        event.preventDefault();
+        setSelectedIndex((previousIndex) => (previousIndex - 1 + totalItems) % totalItems);
+        return;
+      }
+
+      if (event.key === KEY_ENTER) {
+        event.preventDefault();
+        const selectedResult = allResults[selectedIndex] ?? allResults[0];
+        if (selectedResult) {
+          onSelect(selectedResult.path);
+        }
+      }
+    },
+    [allResults, onClose, onSelect, selectedIndex],
+  );
 
   // Auto-scroll selected item into view
   useEffect(() => {
@@ -114,5 +116,5 @@ export const useKeyboardNavigation = ({
     }
   }, [selectedIndex, isVisible]);
 
-  return { selectedIndex, setSelectedIndex, scrollContainerRef };
+  return { selectedIndex, setSelectedIndex, scrollContainerRef, handleInputKeyDown };
 };

@@ -1,4 +1,4 @@
-import { ImageIcon as Image } from "@phosphor-icons/react";
+import { ImageIcon as Image } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
@@ -63,10 +63,10 @@ export function ImageResizeDialog({
       classNames={{ content: "space-y-4 p-4" }}
       footer={
         <>
-          <Button type="button" variant="default" onClick={onClose} compact>
+          <Button type="button" variant="default" onClick={onClose} size="xs">
             Cancel
           </Button>
-          <Button type="button" variant="accent" onClick={handleSubmit} compact>
+          <Button type="button" variant="accent" onClick={handleSubmit} size="xs">
             Resize
           </Button>
         </>
@@ -74,7 +74,7 @@ export function ImageResizeDialog({
     >
       {/* Width Input */}
       <div>
-        <label htmlFor="width" className="mb-1 block text-text-lighter ui-text-xs">
+        <label htmlFor="width" className="mb-1 block text-text-lighter ui-text-sm">
           Width (px)
         </label>
         <Input
@@ -89,7 +89,7 @@ export function ImageResizeDialog({
 
       {/* Height Input */}
       <div>
-        <label htmlFor="height" className="mb-1 block text-text-lighter ui-text-xs">
+        <label htmlFor="height" className="mb-1 block text-text-lighter ui-text-sm">
           Height (px)
         </label>
         <Input
@@ -109,13 +109,13 @@ export function ImageResizeDialog({
           checked={maintainAspectRatio}
           onChange={setMaintainAspectRatio}
         />
-        <label htmlFor="maintainAspectRatio" className="cursor-pointer text-text ui-text-xs">
+        <label htmlFor="maintainAspectRatio" className="cursor-pointer text-text ui-text-sm">
           Maintain aspect ratio
         </label>
       </div>
 
       {/* Info */}
-      <div className="ui-text-xs text-text-lighter">
+      <div className="ui-text-sm text-text-lighter">
         Original: {currentWidth} × {currentHeight}px
       </div>
     </Dialog>

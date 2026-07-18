@@ -60,4 +60,16 @@ Body text`,
     expect(html).toContain('class="language-python"');
     expect(html).not.toContain("language-{r setup}");
   });
+
+  it("preserves underscores in linked image URLs", () => {
+    const source =
+      "https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=serde_with&package-manager=cargo";
+    const html = parseMarkdown(
+      `[![Dependabot compatibility score](${source})](https://docs.github.com/dependabot)`,
+    );
+
+    expect(html).toContain(`<img src="${source}" alt="Dependabot compatibility score" />`);
+    expect(html).toContain('<a href="https://docs.github.com/dependabot"');
+    expect(html).not.toContain("<em>score");
+  });
 });

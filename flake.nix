@@ -9,7 +9,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     zig-overlay = {
-      url = "github:mitchellh/zig-overlay";
+      url = "github:mitchellh/zig-overlay/22d713bdaec64681e56f5b69289789e3dd5430e0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

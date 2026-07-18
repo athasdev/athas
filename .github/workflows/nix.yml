@@ -2,7 +2,7 @@ name: Nix
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - ".github/workflows/nix.yml"
       - ".envrc"
@@ -31,6 +31,9 @@ jobs:
 
       - name: Validate flake
         run: nix flake check --no-write-lock-file
+
+      - name: Validate packaged editor
+        run: nix build --no-write-lock-file --no-link .#athas
 
       - name: Validate dev tools
         run: |

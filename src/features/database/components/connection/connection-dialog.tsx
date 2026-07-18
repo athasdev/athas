@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpenIcon as FolderOpen, PlugsConnectedIcon as PlugZap } from "@phosphor-icons/react";
+import { FolderOpenIcon as FolderOpen, PlugsConnectedIcon as PlugZap } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -230,7 +230,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               disabled={isTesting || isConnecting}
               className="gap-1.5"
               aria-label="Test connection"
-              compact
+              size="xs"
             >
               {isTesting ? <LoadingIndicator label="Testing" compact /> : <PlugZap />}
               Test
@@ -242,7 +242,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             disabled={installedDbTypes.length === 0 || isConnecting || validationError !== null}
             className="gap-1.5"
             aria-label={isFileBased ? "Open database" : "Connect"}
-            compact
+            size="xs"
           >
             {isConnecting && <LoadingIndicator label="Connecting" compact />}
             {isFileBased ? "Open Database" : "Connect"}
@@ -297,7 +297,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       {mode === "form" ? (
         <div className="space-y-3">
           <div className="space-y-1">
-            <label htmlFor="db-conn-name" className="ui-font block ui-text-sm text-text">
+            <label htmlFor="db-conn-name" className="font-sans block ui-text-sm text-text">
               Connection Name
             </label>
             <Input
@@ -311,7 +311,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
 
           {isFileBased ? (
             <div className="space-y-1">
-              <label htmlFor="db-conn-file" className="ui-font block ui-text-sm text-text">
+              <label htmlFor="db-conn-file" className="font-sans block ui-text-sm text-text">
                 Database File
               </label>
               <div className="flex gap-2">
@@ -327,7 +327,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   variant="ghost"
                   className="gap-1.5"
                   onClick={handleBrowseDatabaseFile}
-                  compact
+                  size="xs"
                 >
                   <FolderOpen />
                   Browse
@@ -338,7 +338,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             <>
               <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-host" className="ui-font block ui-text-sm text-text">
+                  <label htmlFor="db-conn-host" className="font-sans block ui-text-sm text-text">
                     Host
                   </label>
                   <Input
@@ -349,7 +349,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   />
                 </div>
                 <div className="w-24 space-y-1">
-                  <label htmlFor="db-conn-port" className="ui-font block ui-text-sm text-text">
+                  <label htmlFor="db-conn-port" className="font-sans block ui-text-sm text-text">
                     Port
                   </label>
                   <Input
@@ -363,7 +363,10 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               </div>
               {dbType !== "redis" && (
                 <div className="space-y-1">
-                  <label htmlFor="db-conn-database" className="ui-font block ui-text-sm text-text">
+                  <label
+                    htmlFor="db-conn-database"
+                    className="font-sans block ui-text-sm text-text"
+                  >
                     Database
                   </label>
                   <Input
@@ -376,7 +379,10 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               )}
               <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-username" className="ui-font block ui-text-sm text-text">
+                  <label
+                    htmlFor="db-conn-username"
+                    className="font-sans block ui-text-sm text-text"
+                  >
                     Username
                   </label>
                   <Input
@@ -387,7 +393,10 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-password" className="ui-font block ui-text-sm text-text">
+                  <label
+                    htmlFor="db-conn-password"
+                    className="font-sans block ui-text-sm text-text"
+                  >
                     Password
                   </label>
                   <Input
@@ -406,14 +415,16 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   onChange={(checked) => updateConnectionField(setSaveCredential, checked)}
                   ariaLabel="Save password securely"
                 />
-                <span className="ui-font text-text-lighter ui-text-xs">Save password securely</span>
+                <span className="font-sans text-text-lighter ui-text-sm">
+                  Save password securely
+                </span>
               </label>
             </>
           )}
         </div>
       ) : (
         <div className="space-y-1">
-          <label htmlFor="db-conn-string" className="ui-font block ui-text-sm text-text">
+          <label htmlFor="db-conn-string" className="font-sans block ui-text-sm text-text">
             Connection String
           </label>
           <Input
@@ -427,13 +438,13 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-400 ui-text-xs">
+        <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
           {error}
         </div>
       )}
 
       {testResult === true && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-green-400 ui-text-xs">
+        <div className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-success ui-text-sm">
           Connection test successful
         </div>
       )}

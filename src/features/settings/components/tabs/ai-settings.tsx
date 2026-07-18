@@ -7,22 +7,27 @@ import {
   GlobeHemisphereWestIcon as Globe,
   KeyIcon as Key,
   LaptopIcon as Laptop,
+  PaletteIcon as Palette,
+  SparkleIcon as Sparkles,
   ArrowClockwiseIcon as RefreshCw,
   ArrowCounterClockwiseIcon as RotateCcw,
   TrashIcon as Trash2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { ModelSelector } from "@/features/ai/components/selectors/model-selector";
 import { ProviderSelector } from "@/features/ai/components/selectors/provider-selector";
+import { useAvailableProviders } from "@/features/ai/hooks/use-available-providers";
+import { useAIProviderSettingsActions } from "@/features/ai/services/providers/ai-provider-settings-registry";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp.types";
-import { getAvailableProviders } from "@/features/ai/types/providers.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
 import { LoadingIndicator } from "@/ui/loading";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -62,7 +67,22 @@ function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: str
 }
 
 export const AISettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      aiAutocompleteCustomBaseUrl: state.settings.aiAutocompleteCustomBaseUrl,
+      aiAutocompleteCustomModelId: state.settings.aiAutocompleteCustomModelId,
+      aiAutocompleteModelId: state.settings.aiAutocompleteModelId,
+      aiAutocompleteProvider: state.settings.aiAutocompleteProvider,
+      aiCompletion: state.settings.aiCompletion,
+      aiCustomBaseUrl: state.settings.aiCustomBaseUrl,
+      aiCustomModelId: state.settings.aiCustomModelId,
+      aiModelId: state.settings.aiModelId,
+      aiProviderId: state.settings.aiProviderId,
+      ollamaBaseUrl: state.settings.ollamaBaseUrl,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
+  const openCommandPaletteView = useUIState((state) => state.openCommandPaletteView);
   const subscription = useAuthStore((state) => state.subscription);
   const { showToast } = useToast();
   const enterprisePolicy = subscription?.enterprise?.policy;
@@ -104,6 +124,8 @@ export const AISettings = () => {
 
   const isOllamaCloud = isOllamaCloudUrl(ollamaUrl);
   const needsApiKey = isOllamaCloud;
+  const providers = useAvailableProviders();
+  const providerSettingsActions = useAIProviderSettingsActions(settings.aiProviderId);
 
   useEffect(() => {
     const detectAgents = async () => {
@@ -207,8 +229,6 @@ export const AISettings = () => {
       showToast({ message: "Failed to remove Ollama API key", type: "error" });
     }
   };
-
-  const providers = getAvailableProviders();
 
   const handleProviderChange = (newProviderId: string) => {
     const provider = providers.find((p) => p.id === newProviderId);
@@ -345,9 +365,7 @@ export const AISettings = () => {
     updateSetting("aiAutocompleteCustomBaseUrl", customAutocompleteBaseUrlInput);
   };
 
-  const providersNeedingAuth = getAvailableProviders().filter(
-    (p) => p.requiresAuth && !p.requiresApiKey,
-  );
+  const providersNeedingAuth = providers.filter((p) => p.requiresAuth && !p.requiresApiKey);
 
   const isOllamaSelected = settings.aiProviderId === "ollama";
   const isCustomProviderSelected = settings.aiProviderId === CUSTOM_CHAT_PROVIDER_ID;
@@ -426,6 +444,28 @@ export const AISettings = () => {
             <span>Manage keys</span>
           </Button>
         </SettingRow>
+
+        {providerSettingsActions.map((action) => {
+          const Icon = action.icon === "sparkles" ? Sparkles : Palette;
+
+          return (
+            <SettingRow
+              key={action.id}
+              label={action.label}
+              description={action.getDescription?.() || "Configure provider extension"}
+            >
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => openCommandPaletteView(action.commandPaletteViewId)}
+                className="w-fit"
+              >
+                <Icon />
+                <span>{action.buttonLabel}</span>
+              </Button>
+            </SettingRow>
+          );
+        })}
       </Section>
 
       {showCustomProviderSettings && (
@@ -449,7 +489,7 @@ export const AISettings = () => {
                 }
               }}
               placeholder="http://localhost:11434/v1"
-              size="xs"
+              size="md"
               className={SETTINGS_CONTROL_WIDTHS.xwide}
               spellCheck={false}
               leftIcon={Globe}
@@ -469,7 +509,7 @@ export const AISettings = () => {
                 value={customChatApiKeyInput}
                 onChange={(event) => setCustomChatApiKeyInput(event.currentTarget.value)}
                 placeholder={hasCustomChatApiKey ? "Saved" : "API key"}
-                size="xs"
+                size="md"
                 className={SETTINGS_CONTROL_WIDTHS.wide}
                 spellCheck={false}
                 autoComplete="off"
@@ -480,7 +520,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveCustomChatApiKey}
                 disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
-                compact
+                size="xs"
               >
                 Save
               </Button>
@@ -490,7 +530,7 @@ export const AISettings = () => {
                   variant="default"
                   onClick={handleRemoveCustomChatApiKey}
                   disabled={isSavingCustomChatApiKey}
-                  compact
+                  size="xs"
                 >
                   Remove
                 </Button>
@@ -544,7 +584,7 @@ export const AISettings = () => {
                   onClick={handleResetOllamaUrl}
                   title="Reset to default"
                   aria-label="Reset Ollama URL to default"
-                  compact
+                  size="icon-xs"
                 >
                   <RotateCcw />
                 </Button>
@@ -575,7 +615,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveOllamaApiKey}
                 disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
-                compact
+                size="xs"
               >
                 {isSavingOllamaKey ? "Saving…" : "Save"}
               </Button>
@@ -587,7 +627,7 @@ export const AISettings = () => {
                   title="Remove saved API key"
                   aria-label="Remove Ollama API key"
                   className="text-error hover:bg-error/10"
-                  compact
+                  size="icon-xs"
                 >
                   <Trash2 />
                 </Button>
@@ -618,9 +658,7 @@ export const AISettings = () => {
                   : "Could not connect. Check that Ollama is running at this address."
               }
             >
-              <Badge variant="default" size="default">
-                Error
-              </Badge>
+              <Badge variant="default">Error</Badge>
             </SettingRow>
           )}
         </Section>
@@ -640,9 +678,7 @@ export const AISettings = () => {
               label={provider.name}
               description="Requires OAuth authentication"
             >
-              <Badge variant="default" size="default">
-                Coming Soon
-              </Badge>
+              <Badge variant="default">Coming Soon</Badge>
             </SettingRow>
           ))}
         </Section>
@@ -670,7 +706,7 @@ export const AISettings = () => {
                   onChange={(value) =>
                     useAIChatStore.getState().changeSessionConfigOption(option.id, value)
                   }
-                  size="xs"
+                  size="md"
                   variant="default"
                   searchable
                   searchableTrigger="input"
@@ -761,7 +797,7 @@ export const AISettings = () => {
                     }
                   }}
                   placeholder="qwen2.5-coder:7b"
-                  size="xs"
+                  size="md"
                   className={SETTINGS_CONTROL_WIDTHS.xwide}
                   disabled={!aiCompletionAllowedByPolicy}
                 />
@@ -772,7 +808,7 @@ export const AISettings = () => {
                     onClick={loadAutocompleteModels}
                     disabled={isLoadingAutocompleteModels || !aiCompletionAllowedByPolicy}
                     title="Refresh model list"
-                    compact
+                    size="icon-xs"
                   >
                     {isLoadingAutocompleteModels ? (
                       <LoadingIndicator label="Loading models" compact />
@@ -787,7 +823,7 @@ export const AISettings = () => {
                       label: model.name,
                     }))}
                     onChange={(value) => updateSetting("aiAutocompleteModelId", value)}
-                    size="xs"
+                    size="md"
                     variant="default"
                     searchable
                     searchableTrigger="input"
@@ -832,7 +868,7 @@ export const AISettings = () => {
                       }
                     }}
                     placeholder="http://localhost:11434/v1"
-                    size="xs"
+                    size="md"
                     className={SETTINGS_CONTROL_WIDTHS.xwide}
                     disabled={!aiCompletionAllowedByPolicy}
                   />
@@ -853,7 +889,7 @@ export const AISettings = () => {
                         setCustomAutocompleteApiKeyInput(event.currentTarget.value)
                       }
                       placeholder={hasCustomAutocompleteApiKey ? "Saved" : "API key"}
-                      size="xs"
+                      size="md"
                       className={SETTINGS_CONTROL_WIDTHS.wide}
                       disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
                     />
@@ -865,7 +901,7 @@ export const AISettings = () => {
                         !aiCompletionAllowedByPolicy ||
                         isSavingCustomAutocompleteApiKey
                       }
-                      compact
+                      size="xs"
                     >
                       Save
                     </Button>
@@ -874,7 +910,7 @@ export const AISettings = () => {
                         variant="default"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                        compact
+                        size="xs"
                       >
                         Remove
                       </Button>
@@ -885,9 +921,7 @@ export const AISettings = () => {
             )}
             {autocompleteModelError && (
               <SettingRow label="Model List" description={autocompleteModelError}>
-                <Badge variant="default" size="default">
-                  Error
-                </Badge>
+                <Badge variant="default">Error</Badge>
               </SettingRow>
             )}
           </>
@@ -897,15 +931,13 @@ export const AISettings = () => {
             label="Enterprise Policy"
             description={`${aiCompletionAllowedByPolicy ? "AI completion enabled." : "AI completion disabled."} ${byokAllowedByPolicy ? "BYOK allowed." : "BYOK blocked."}`}
           >
-            <Badge variant="default" size="default">
-              Managed
-            </Badge>
+            <Badge variant="default">Managed</Badge>
           </SettingRow>
         ) : null}
       </Section>
 
-      <Section title="Chat History">
-        <SettingRow label="Clear All Chats" description="Permanently delete all chat history">
+      <Section title="Agent History">
+        <SettingRow label="Clear Agent History" description="Permanently delete all agent history">
           <TypedConfirmAction
             actionLabel="Clear All"
             busyLabel="Clearing..."
@@ -914,7 +946,7 @@ export const AISettings = () => {
               setIsClearingChats(true);
               try {
                 await useAIChatStore.getState().clearAllChats();
-                showToast({ message: "All chats cleared", type: "success" });
+                showToast({ message: "Agent history cleared", type: "success" });
               } finally {
                 setIsClearingChats(false);
               }

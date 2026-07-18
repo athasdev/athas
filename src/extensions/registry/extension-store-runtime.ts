@@ -66,6 +66,19 @@ function extractFailedToolMessage(toolStatus: unknown): string | null {
   return null;
 }
 
+function formatToolResolutionError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function isExpectedMissingToolError(error: unknown): boolean {
+  const message = formatToolResolutionError(error);
+  return (
+    message.includes("system tool not found") ||
+    message.includes("not found in PATH") ||
+    message.includes("known toolchain locations")
+  );
+}
+
 function buildRuntimeIssues(
   toolConfig: BackendLanguageToolConfigSet | undefined,
   issues: ToolIssueMap,
@@ -450,7 +463,9 @@ async function getToolPath(
       tools: getLanguageToolConfigSet(manifest),
     });
   } catch (error) {
-    console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
+    if (!isExpectedMissingToolError(error)) {
+      console.warn(`Failed to resolve ${toolType} path for ${languageId}:`, error);
+    }
     return null;
   }
 }

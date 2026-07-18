@@ -2,15 +2,15 @@ name: Extensions
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - "extensions/**"
-      - "src/features/extensions/**"
+      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   pull_request:
     paths:
       - "extensions/**"
-      - "src/features/extensions/**"
+      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   workflow_dispatch:
 
@@ -33,13 +33,13 @@ jobs:
 
       - name: Check generated source changes
         run: |
-          git diff --exit-code extensions src/features/extensions package.json .gitignore || (
+          git diff --exit-code extensions src/extensions package.json .gitignore || (
             echo "Extension source or generated metadata changed. Run the extension scripts locally."
             exit 1
           )
 
   deploy:
-    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'athasdev/athas' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: validate
     runs-on: ubuntu-latest
     steps:

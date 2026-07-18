@@ -3,19 +3,20 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/utils/cn";
 
 const badgeVariants = cva(
-  "ui-font inline-flex h-[var(--app-ui-badge-height,1.5rem)] items-center justify-center rounded-md font-normal leading-none",
+  "font-sans ui-text-sm inline-flex h-6 items-center justify-center rounded-full border-0 font-normal leading-none",
   {
     variants: {
       variant: {
-        default: "border border-border/60 bg-primary-bg/70 text-text-lighter",
+        default: "bg-primary-bg/70 text-text-lighter",
+        muted: "bg-hover/55 text-text-lighter",
         accent: "bg-accent/10 text-accent",
-        muted: "text-text-lighter",
-        error: "border border-error/30 bg-error/5 text-error/90",
+        success: "bg-success/10 text-success",
+        warning: "bg-warning/10 text-warning",
+        error: "bg-error/8 text-error",
       },
       size: {
-        default: "ui-text-sm px-2 py-0.5",
-        sm: "ui-text-sm px-2 py-0.5",
-        compact: "ui-text-sm px-1.5 py-0.5",
+        default: "px-2 py-0.5",
+        compact: "px-1.5 py-0.5",
       },
     },
     defaultVariants: {

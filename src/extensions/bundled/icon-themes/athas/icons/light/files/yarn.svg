@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 2 18 20" role="img" aria-label="Yarn">
+  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="#68A3D0"/>
+  <path d="M14.6 2.8v4.9h4.9Z" fill="#AEC9E1" opacity=".82"/>
+  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  <path d="m12 6.4 5 2.6v6l-5 2.6-5-2.6V9z" fill="none" stroke="#AEC9E1" stroke-width="1.45" stroke-linejoin="round"/><path d="M7 9l5 2.6L17 9M12 11.6v6" stroke="#AEC9E1" stroke-width="1.25" stroke-linecap="round"/><text x="12" y="14.2" text-anchor="middle" font-family="Arial,sans-serif" font-size="4.5" font-weight="700" fill="#AEC9E1">Y</text>
+</svg>

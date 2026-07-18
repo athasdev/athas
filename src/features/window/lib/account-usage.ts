@@ -1,4 +1,5 @@
 import type { SubscriptionInfo } from "@/features/window/services/auth-api";
+import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 
 export type AutocompleteUsageSummary = {
   periodStart: string;
@@ -44,7 +45,7 @@ export function getAccountPlanLabel(
 ): string {
   const isEnterprise = subscription?.subscription?.plan === "enterprise";
   const isTeams = Boolean(subscription?.collaboration?.enabled);
-  const isPro = subscription?.status === "pro";
+  const isPro = hasProductCapability(subscription, "hostedAi");
 
   if (isEnterprise) return "Enterprise";
   if (isTeams) return "Teams";
@@ -60,7 +61,7 @@ export function getAiUsageModeLabel(params: {
   const { isAuthenticated, subscription, hasOpenRouterKey } = params;
   const enterprisePolicy = subscription?.enterprise?.policy;
   const managedPolicy = enterprisePolicy?.managedMode ? enterprisePolicy : null;
-  const isPro = subscription?.status === "pro";
+  const isPro = hasProductCapability(subscription, "hostedAi");
   const aiAllowedByPolicy = managedPolicy ? managedPolicy.aiCompletionEnabled : true;
   const byokAllowedByPolicy = managedPolicy ? managedPolicy.allowByok : true;
 
@@ -77,6 +78,8 @@ export function getUsageProgress(usage: AutocompleteUsageSummary | null): number
   return Math.min(100, Math.max(0, (usage.spendCents / usage.budgetCents) * 100));
 }
 
+import { formatShortDate } from "@/utils/date";
+
 export function formatUsdFromCents(cents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -87,12 +90,5 @@ export function formatUsdFromCents(cents: number): string {
 }
 
 export function formatUsageDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  return formatShortDate(value);
 }

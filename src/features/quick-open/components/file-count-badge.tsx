@@ -1,4 +1,4 @@
-import Badge from "@/ui/badge";
+import { CommandHeaderBadge } from "@/ui/command";
 
 interface FileCountBadgeProps {
   totalFiles: number;
@@ -19,9 +19,5 @@ export const FileCountBadge = ({
     ? `${resultCount} / ${totalFiles}`
     : `${totalFiles} ${totalFiles === 1 ? "file" : "files"}`;
 
-  return (
-    <Badge variant="default" className="shrink-0 border-0 bg-secondary-bg text-text-lighter">
-      {displayText}
-    </Badge>
-  );
+  return <CommandHeaderBadge>{displayText}</CommandHeaderBadge>;
 };

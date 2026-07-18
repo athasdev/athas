@@ -1,7 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useShallow } from "zustand/react/shallow";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
-import { FILE_TREE_DENSITY_CONFIG } from "@/features/file-explorer/lib/file-tree-density";
+import { FILE_TREE_ROW_HEIGHT } from "@/features/file-explorer/lib/file-tree-row";
 import {
   buildVisibleFileTreeRows,
   type VisibleFileTreeRow,
@@ -56,10 +57,13 @@ export function useFileExplorerVisibleRows({
   rootFolderPath,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
-  const compactFolders = useSettingsStore((state) => state.settings.compactFoldersInFileTree);
-  const hideRootFolder = useSettingsStore((state) => state.settings.hideRootFolderInFileTree);
-  const density = useSettingsStore((state) => state.settings.fileTreeDensity);
-  const rowHeight = FILE_TREE_DENSITY_CONFIG[density].rowHeight;
+  const { compactFolders, hideRootFolder } = useSettingsStore(
+    useShallow((state) => ({
+      compactFolders: state.settings.compactFoldersInFileTree,
+      hideRootFolder: state.settings.hideRootFolderInFileTree,
+    })),
+  );
+  const rowHeight = FILE_TREE_ROW_HEIGHT;
 
   const visibleRows = useMemo(() => {
     return buildVisibleFileTreeRows(files, expandedPathsOverride ?? expandedPaths, {
@@ -67,6 +71,16 @@ export function useFileExplorerVisibleRows({
       hiddenRootPath: hideRootFolder ? rootFolderPath : undefined,
     });
   }, [compactFolders, expandedPaths, expandedPathsOverride, files, hideRootFolder, rootFolderPath]);
+  const visibleRowIndexByPath = useMemo(() => {
+    const indexByPath = new Map<string, number>();
+    for (let index = 0; index < visibleRows.length; index++) {
+      const row = visibleRows[index];
+      if (row) {
+        indexByPath.set(row.file.path, index);
+      }
+    }
+    return indexByPath;
+  }, [visibleRows]);
 
   const rowVirtualizer = useVirtualizer({
     count: visibleRows.length,
@@ -87,7 +101,7 @@ export function useFileExplorerVisibleRows({
       fileOpenBenchmark.mark(activePath, "visible-rows-sync");
     }
 
-    const index = visibleRows.findIndex((row) => row.file.path === activePath);
+    const index = visibleRowIndexByPath.get(activePath) ?? -1;
     if (index < 0) return;
 
     if (fileOpenBenchmark.has(activePath)) {
@@ -119,9 +133,9 @@ export function useFileExplorerVisibleRows({
 
     rowVirtualizer.scrollToIndex(index, { align: "center" });
     revealedActivePathRef.current = { path: activePath, index, rowHeight };
-  }, [activePath, containerRef, rowHeight, rowVirtualizer, visibleRows]);
+  }, [activePath, containerRef, rowHeight, rowVirtualizer, visibleRowIndexByPath]);
 
-  return { visibleRows, rowVirtualizer };
+  return { visibleRows, visibleRowIndexByPath, rowVirtualizer };
 }
 
 export type VisibleRow = VisibleFileTreeRow;

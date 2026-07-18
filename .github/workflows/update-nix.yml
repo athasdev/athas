@@ -1,6 +1,6 @@
 name: Update Nix package
 
-# Keeps nix/package.nix pinned to the latest release. This repo publishes the
+# Keeps nix/package.nix pinned to the latest stable Linux release.
 on:
   workflow_dispatch:
   release:
@@ -12,11 +12,13 @@ permissions:
 
 jobs:
   update-nix:
-    # Only the canonical repo publishes the release tarballs; skip on forks.
-    if: github.repository == 'athasdev/athas'
+    # Preview archives use a different product name and are not the default package.
+    if: >-
+      github.repository == 'athasdev/athas' &&
+      (github.event_name != 'release' || github.event.release.prerelease == false)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve target version
         id: release
@@ -24,13 +26,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           # On a release event use that tag; otherwise take the latest published release of this repo
           if [ "$EVENT_NAME" = "release" ] && [ -n "${RELEASE_TAG:-}" ]; then
             version="$RELEASE_TAG"
           else
-            version="$(gh release view --json tagName -q .tagName)"
+            version="$(gh release view --repo "$REPO" --json tagName -q .tagName)"
           fi
 
           version="${version#v}"
@@ -112,7 +115,7 @@ jobs:
           git add nix/package.nix
           git commit \
             -m "Update the wrapped Athas Linux release" \
-            -m "Bumps the prebuilt Linux release pinned by the Nix flake to v${VERSION}, updating version and both per-arch SRI hashes in nix/package.nix."
+            -m "Bump the pinned Linux package to v${VERSION} and update both architecture hashes."
           git push origin "$branch"
 
           gh pr create \

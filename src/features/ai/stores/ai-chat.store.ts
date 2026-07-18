@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AgentType, Chat } from "@/features/ai/types/ai-chat.types";
 import { isChatInWorkspace } from "@/features/ai/lib/ai-workspace-scope";
+import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-actions";
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -14,7 +15,7 @@ import {
   storeProviderApiToken,
   validateProviderApiKey,
 } from "@/features/ai/services/ai-token-service";
-import { AI_PROVIDERS } from "@/features/ai/types/providers.types";
+import { getAvailableProviders, getProviderById } from "@/features/ai/types/providers.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import {
   deleteChatFromDb,
@@ -33,7 +34,7 @@ async function buildProviderApiKeyMap(
   subscription: ReturnType<typeof useAuthStore.getState>["subscription"],
 ) {
   const entries = await Promise.all(
-    AI_PROVIDERS.map(async (provider) => {
+    getAvailableProviders().map(async (provider) => {
       try {
         if (!provider.requiresApiKey) {
           return [provider.id, true] as const;
@@ -59,7 +60,7 @@ async function buildProviderApiKeyMap(
 }
 
 function getProviderAccessFromMap(providerId: string, providerApiKeys: Map<string, boolean>) {
-  const provider = AI_PROVIDERS.find((item) => item.id === providerId);
+  const provider = getProviderById(providerId);
   if (!provider) return false;
   if (!provider.requiresApiKey) return true;
   return providerApiKeys.get(providerId) || false;
@@ -288,7 +289,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
             id: Date.now().toString(),
-            title: "New Chat",
+            title: "New Session",
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
@@ -326,7 +327,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
             id: chatId,
-            title: "New Chat",
+            title: "New Session",
             messages: [],
             createdAt: new Date(),
             lastMessageAt: new Date(),
@@ -466,7 +467,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           set((state) => {
             const chat = state.chats.find((c) => c.id === chatId);
             if (chat) {
-              chat.messages.push(message);
+              chat.messages.push(normalizeMessageFollowUpActions(message));
               chat.lastMessageAt = new Date();
             }
           });
@@ -480,7 +481,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             if (chat) {
               const message = chat.messages.find((m) => m.id === messageId);
               if (message) {
-                Object.assign(message, updates);
+                Object.assign(message, normalizeMessageFollowUpActions({ ...message, ...updates }));
                 chat.lastMessageAt = new Date();
               }
             }
@@ -539,7 +540,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
         checkApiKey: async (providerId) => {
           try {
-            const provider = AI_PROVIDERS.find((p) => p.id === providerId);
+            const provider = getProviderById(providerId);
             const subscription = useAuthStore.getState().subscription;
 
             // If provider doesn't require an API key, set hasApiKey to true

@@ -2,6 +2,7 @@ use athas_remote::{
    RemoteFileEntry, SshConnection, close_remote_terminal as remote_close_terminal,
    create_remote_terminal as remote_create_terminal,
    remote_terminal_resize as remote_terminal_resize_impl,
+   remote_terminal_set_paused as remote_terminal_set_paused_impl,
    remote_terminal_write as remote_terminal_write_impl, ssh_connect as remote_ssh_connect,
    ssh_copy_path as remote_ssh_copy_path, ssh_create_directory as remote_ssh_create_directory,
    ssh_create_file as remote_ssh_create_file, ssh_delete_path as remote_ssh_delete_path,
@@ -10,7 +11,8 @@ use athas_remote::{
    ssh_read_directory as remote_ssh_read_directory, ssh_read_file as remote_ssh_read_file,
    ssh_rename_path as remote_ssh_rename_path, ssh_write_file as remote_ssh_write_file,
 };
-use tauri::Emitter;
+use athas_terminal::{TerminalEvent, TerminalInput, TerminalSize};
+use tauri::{Emitter, ipc::Channel};
 
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
@@ -153,38 +155,43 @@ pub async fn ssh_copy_path(
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn create_remote_terminal(
-   app: crate::app_runtime::AppHandle,
+   app_handle: crate::app_runtime::AppHandle,
    host: String,
    port: u16,
    username: String,
    password: Option<String>,
    key_path: Option<String>,
    working_directory: Option<String>,
-   rows: u16,
-   cols: u16,
+   size: TerminalSize,
+   on_event: Channel<TerminalEvent>,
 ) -> Result<String, String> {
    remote_create_terminal(
-      app,
       host,
       port,
       username,
       password,
       key_path,
       working_directory,
-      rows,
-      cols,
+      size,
+      app_handle.package_info().version.to_string(),
+      on_event,
    )
    .await
 }
 
 #[tauri::command]
-pub async fn remote_terminal_write(id: String, data: String) -> Result<(), String> {
-   remote_terminal_write_impl(id, data).await
+pub async fn remote_terminal_write(id: String, input: TerminalInput) -> Result<(), String> {
+   remote_terminal_write_impl(id, input).await
 }
 
 #[tauri::command]
-pub async fn remote_terminal_resize(id: String, rows: u16, cols: u16) -> Result<(), String> {
-   remote_terminal_resize_impl(id, rows, cols).await
+pub async fn remote_terminal_resize(id: String, size: TerminalSize) -> Result<(), String> {
+   remote_terminal_resize_impl(id, size).await
+}
+
+#[tauri::command]
+pub async fn remote_terminal_set_paused(id: String, paused: bool) -> Result<(), String> {
+   remote_terminal_set_paused_impl(id, paused).await
 }
 
 #[tauri::command]

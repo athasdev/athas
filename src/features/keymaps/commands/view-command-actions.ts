@@ -1,5 +1,6 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorUIStore } from "@/features/editor/stores/ui.store";
+import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -42,7 +43,7 @@ export function openCommandPalette(): void {
 }
 
 export function showNotifications(): void {
-  window.dispatchEvent(new CustomEvent("athas:notifications:show"));
+  window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_COMMAND_EVENT));
 }
 
 export function toggleAgentLauncher(): void {
@@ -105,9 +106,14 @@ export function toggleGitHubSidebar(): void {
   }
 }
 
-export function toggleSidebarPosition(): void {
-  const { settings, updateSetting } = useSettingsStore.getState();
-  updateSetting("sidebarPosition", settings.sidebarPosition === "left" ? "right" : "left");
+export function toggleDockerSidebar(): void {
+  const state = useUIState.getState();
+  if (state.isSidebarVisible && state.activeSidebarView === "docker") {
+    state.setIsSidebarVisible(false);
+  } else {
+    state.setActiveView("docker");
+    state.setIsSidebarVisible(true);
+  }
 }
 
 export function showThemeSelector(): void {

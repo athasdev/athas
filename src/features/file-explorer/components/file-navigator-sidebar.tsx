@@ -2,26 +2,39 @@ import {
   ListBulletsIcon as ListBullets,
   MagnifyingGlassIcon as Search,
   TreeStructureIcon as TreeStructure,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import {
   memo,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
+import { cva } from "class-variance-authority";
+import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
+import {
+  SidebarHeaderIconButton,
+  SidebarListItem,
+  SidebarSearchFilterRow,
+  SidebarSectionLabel,
+} from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
-import { FileExplorerIcon } from "./file-explorer-icon";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
+export type FileNavigatorSearchMode = "substring" | "fuzzy";
+export type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
 
 const DEFAULT_NAVIGATOR_WIDTH = 224;
 const MIN_NAVIGATOR_WIDTH = 176;
 const MAX_NAVIGATOR_WIDTH = 420;
 const RESIZE_STEP = 16;
+const MAX_NAVIGATOR_SYNC_ITEMS = 5_000;
 
 export interface FileNavigatorItem {
   key: string;
@@ -44,6 +57,10 @@ interface FileNavigatorNode {
   item?: FileNavigatorItem;
 }
 
+interface FileNavigatorBuildNode extends FileNavigatorNode {
+  childDirectories: Map<string, FileNavigatorBuildNode>;
+}
+
 interface FileNavigatorSidebarProps {
   items: FileNavigatorItem[];
   selectedKey: string | null;
@@ -52,7 +69,28 @@ interface FileNavigatorSidebarProps {
   ariaLabel?: string;
   viewMode?: FileNavigatorViewMode;
   onViewModeChange?: (viewMode: FileNavigatorViewMode) => void;
+  surface?: FileNavigatorSurface;
+  searchMode?: FileNavigatorSearchMode;
+  compactRows?: boolean;
+  searchResetKey?: string;
 }
+
+const fileNavigatorSurfaceVariants = cva(
+  "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden",
+  {
+    variants: {
+      surface: {
+        sidebar: "border-border/70 border-r bg-secondary-bg/20",
+        plain: "bg-transparent",
+        inset: "rounded-xl border border-border/70 bg-secondary-bg/20",
+        review: "border-border/60 border-r bg-secondary-bg/10",
+      },
+    },
+    defaultVariants: {
+      surface: "sidebar",
+    },
+  },
+);
 
 function createDirectoryNode(name: string, path: string): FileNavigatorNode {
   return {
@@ -72,6 +110,15 @@ function getItemSearchText(item: FileNavigatorItem) {
   return [item.label, item.path, item.key, item.iconPath].filter(Boolean).join(" ").toLowerCase();
 }
 
+function getFuzzyItemSearchScore(item: FileNavigatorItem, query: string) {
+  const { fileName, directoryPath } = getFlatItemParts(item);
+  const fields = [item.label, fileName, item.path, directoryPath, item.key, item.iconPath].filter(
+    (value): value is string => Boolean(value),
+  );
+
+  return Math.max(...fields.map((field) => fuzzyScore(field, query)));
+}
+
 function getFlatItemParts(item: FileNavigatorItem) {
   const path = normalizePath(item.label ?? item.path);
   const fileName = getBaseName(path, path);
@@ -85,31 +132,47 @@ function getFlatItemParts(item: FileNavigatorItem) {
 }
 
 function buildFileTree(items: FileNavigatorItem[]): FileNavigatorNode[] {
-  const root: FileNavigatorNode = createDirectoryNode("", "");
+  const createBuildDirectoryNode = (name: string, path: string): FileNavigatorBuildNode => ({
+    ...createDirectoryNode(name, path),
+    children: [],
+    childDirectories: new Map(),
+  });
+
+  const root = createBuildDirectoryNode("", "");
 
   for (const item of items) {
-    const segments = item.path.split(/[\\/]/).filter(Boolean);
-    if (segments.length === 0) continue;
+    const segments = item.path.split(/[\\/]/);
+    let fileNameIndex = -1;
+    for (let index = segments.length - 1; index >= 0; index--) {
+      if (segments[index]) {
+        fileNameIndex = index;
+        break;
+      }
+    }
+    if (fileNameIndex < 0) continue;
 
     let current = root;
     let currentPath = "";
 
-    for (const segment of segments.slice(0, -1)) {
+    for (let index = 0; index < fileNameIndex; index++) {
+      const segment = segments[index];
+      if (!segment) continue;
+
       currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      let child = current.children.find((node) => node.isDir && node.name === segment);
+      let child = current.childDirectories.get(segment);
 
       if (!child) {
-        child = createDirectoryNode(segment, currentPath);
+        child = createBuildDirectoryNode(segment, currentPath);
+        current.childDirectories.set(segment, child);
         current.children.push(child);
       }
 
       current = child;
     }
 
-    const fileName = segments[segments.length - 1] ?? item.path;
     current.children.push({
       id: `file:${item.key}`,
-      name: fileName,
+      name: segments[fileNameIndex],
       path: item.path,
       isDir: false,
       children: [],
@@ -151,41 +214,35 @@ const FileNavigatorFlatRow = memo(function FileNavigatorFlatRow({
   item,
   selectedKey,
   onSelect,
+  compactRows,
 }: {
   item: FileNavigatorItem;
   selectedKey: string | null;
   onSelect: (key: string) => void;
+  compactRows?: boolean;
 }) {
   const isSelected = selectedKey === item.key;
   const { fileName, directoryPath, title } = getFlatItemParts(item);
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "flex h-7 w-full min-w-0 items-center gap-1.5 rounded px-2 text-left ui-text-xs text-text-lighter hover:bg-hover/40 hover:text-text",
-        isSelected && "bg-selected text-text",
-      )}
+    <SidebarListItem
       onClick={() => onSelect(item.key)}
       aria-current={isSelected ? "true" : undefined}
       title={title}
+      active={isSelected}
+      leading={
+        <ThemedFileIcon
+          fileName={item.iconPath ?? item.path}
+          isDir={false}
+          className={cn("shrink-0", item.iconClassName)}
+        />
+      }
+      trailing={<FileNavigatorMetadata item={item} />}
+      description={compactRows ? undefined : directoryPath}
+      className={cn(compactRows && "py-1 ui-text-sm")}
     >
-      <FileExplorerIcon
-        fileName={item.iconPath ?? item.path}
-        isDir={false}
-        size={14}
-        className={cn("shrink-0", item.iconClassName)}
-      />
-      <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <span className="min-w-0 max-w-[58%] shrink-0 truncate font-medium text-text">
-          {fileName}
-        </span>
-        {directoryPath ? (
-          <span className="min-w-0 flex-1 truncate text-text-lighter">{directoryPath}</span>
-        ) : null}
-      </span>
-      <FileNavigatorMetadata item={item} />
-    </button>
+      {fileName}
+    </SidebarListItem>
   );
 });
 
@@ -194,27 +251,25 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   depth,
   selectedKey,
   onSelect,
+  compactRows,
 }: {
   node: FileNavigatorNode;
   depth: number;
   selectedKey: string | null;
   onSelect: (key: string) => void;
+  compactRows?: boolean;
 }) {
   if (node.isDir) {
     return (
       <div>
-        <div
-          className="flex h-6 min-w-0 items-center gap-1.5 px-2 ui-text-xs text-text-lighter"
+        <SidebarSectionLabel
           style={{ paddingLeft: 8 + depth * 12 }}
+          leading={
+            <ThemedFileIcon fileName={node.name} isDir className="shrink-0 text-text-lighter" />
+          }
         >
-          <FileExplorerIcon
-            fileName={node.name}
-            isDir
-            size={14}
-            className="shrink-0 text-text-lighter"
-          />
-          <span className="truncate">{node.name}</span>
-        </div>
+          {node.name}
+        </SidebarSectionLabel>
         {node.children.map((child) => (
           <FileNavigatorNodeRow
             key={child.id}
@@ -222,6 +277,7 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
             depth={depth + 1}
             selectedKey={selectedKey}
             onSelect={onSelect}
+            compactRows={compactRows}
           />
         ))}
       </div>
@@ -234,25 +290,24 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
   const isSelected = selectedKey === item.key;
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "flex h-7 w-full min-w-0 items-center gap-1.5 rounded px-2 text-left ui-text-xs text-text-lighter hover:bg-hover/40 hover:text-text",
-        isSelected && "bg-selected text-text",
-      )}
+    <SidebarListItem
       style={{ paddingLeft: 8 + depth * 12 }}
       onClick={() => onSelect(item.key)}
       aria-current={isSelected ? "true" : undefined}
+      active={isSelected}
+      title={item.path}
+      leading={
+        <ThemedFileIcon
+          fileName={item.iconPath ?? node.name}
+          isDir={false}
+          className={cn("shrink-0", item.iconClassName)}
+        />
+      }
+      trailing={<FileNavigatorMetadata item={item} />}
+      className={cn(compactRows && "py-1 ui-text-sm")}
     >
-      <FileExplorerIcon
-        fileName={item.iconPath ?? node.name}
-        isDir={false}
-        size={14}
-        className={cn("shrink-0", item.iconClassName)}
-      />
-      <span className="min-w-0 flex-1 truncate">{node.name}</span>
-      <FileNavigatorMetadata item={item} />
-    </button>
+      {node.name}
+    </SidebarListItem>
   );
 });
 
@@ -264,21 +319,55 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
   ariaLabel = "Files",
   viewMode = "tree",
   onViewModeChange,
+  surface = "sidebar",
+  searchMode = "substring",
+  compactRows = false,
+  searchResetKey,
 }: FileNavigatorSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [width, setWidth] = useState(DEFAULT_NAVIGATOR_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
-  const filteredItems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return items;
 
-    return items.filter((item) => getItemSearchText(item).includes(query));
-  }, [items, searchQuery]);
-  const tree = useMemo(() => buildFileTree(filteredItems), [filteredItems]);
-  const flatItems = useMemo(
-    () => [...filteredItems].sort((left, right) => left.path.localeCompare(right.path)),
-    [filteredItems],
+  useEffect(() => {
+    setSearchQuery("");
+  }, [searchResetKey]);
+
+  const searchableItems = useMemo(() => items.slice(0, MAX_NAVIGATOR_SYNC_ITEMS), [items]);
+  const hiddenItemCount = Math.max(0, items.length - searchableItems.length);
+  const filteredItems = useMemo(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return searchableItems;
+
+    if (searchMode === "fuzzy") {
+      const scoredItems: Array<{ item: FileNavigatorItem; score: number }> = [];
+      for (const item of searchableItems) {
+        const score = getFuzzyItemSearchScore(item, trimmedQuery);
+        if (score > 0) {
+          scoredItems.push({ item, score });
+        }
+      }
+
+      scoredItems.sort(
+        (left, right) => right.score - left.score || left.item.path.localeCompare(right.item.path),
+      );
+      return scoredItems.map(({ item }) => item);
+    }
+
+    const query = trimmedQuery.toLowerCase();
+    if (!query) return searchableItems;
+
+    return searchableItems.filter((item) => getItemSearchText(item).includes(query));
+  }, [searchableItems, searchMode, searchQuery]);
+  const tree = useMemo(
+    () => (viewMode === "tree" ? buildFileTree(filteredItems) : []),
+    [filteredItems, viewMode],
   );
+  const flatItems = useMemo(() => {
+    if (viewMode !== "flat") return [];
+    return searchMode === "fuzzy" && searchQuery.trim()
+      ? filteredItems
+      : [...filteredItems].sort((left, right) => left.path.localeCompare(right.path));
+  }, [filteredItems, searchMode, searchQuery, viewMode]);
 
   const resizeTo = useCallback((nextWidth: number) => {
     setWidth(clampNavigatorWidth(nextWidth));
@@ -323,59 +412,65 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
 
   return (
     <aside
-      className={cn(
-        "relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-border/70 bg-secondary-bg/20",
-        className,
-      )}
+      className={cn(fileNavigatorSurfaceVariants({ surface }), className)}
       style={{ width }}
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <div className="flex h-8 shrink-0 items-center gap-1 border-b border-border/60 px-1.5">
-          <div className="flex min-w-0 flex-1 items-center gap-1 text-text-lighter">
-            <Search size={13} className="shrink-0" />
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 ui-text-xs text-text outline-none placeholder:text-text-lighter"
-              placeholder="Search"
-              aria-label="Search files"
-            />
-          </div>
-          <div className="inline-flex shrink-0 rounded border border-border/70 bg-primary-bg p-0.5">
-            <button
-              type="button"
+        <SidebarSearchFilterRow
+          value={searchQuery}
+          onChange={setSearchQuery}
+          searchIcon={Search}
+          placeholder="Search"
+          searchAriaLabel="Search files"
+          searchContainerClassName="file-explorer-search-field"
+          className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}
+          actions={
+            <div
               className={cn(
-                "flex h-5 w-5 items-center justify-center rounded text-text-lighter hover:bg-hover hover:text-text",
-                viewMode === "flat" && "bg-selected text-text",
+                "inline-flex shrink-0 rounded p-0.5",
+                surface === "inset" ? "bg-primary-bg" : "bg-transparent",
               )}
-              onClick={() => onViewModeChange("flat")}
-              aria-label="Show flat file list"
-              aria-pressed={viewMode === "flat"}
-              title="Flat list"
             >
-              <ListBullets size={13} />
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "flex h-5 w-5 items-center justify-center rounded text-text-lighter hover:bg-hover hover:text-text",
-                viewMode === "tree" && "bg-selected text-text",
-              )}
-              onClick={() => onViewModeChange("tree")}
-              aria-label="Show file tree"
-              aria-pressed={viewMode === "tree"}
-              title="File tree"
-            >
-              <TreeStructure size={13} />
-            </button>
-          </div>
-        </div>
+              <SidebarHeaderIconButton
+                className={cn(
+                  "file-navigator-view-mode-button rounded",
+                  viewMode === "flat" && "bg-selected text-text",
+                )}
+                onClick={() => onViewModeChange("flat")}
+                aria-label="Show flat file list"
+                aria-pressed={viewMode === "flat"}
+                tooltip="Flat list"
+                tooltipSide="bottom"
+              >
+                <ListBullets />
+              </SidebarHeaderIconButton>
+              <SidebarHeaderIconButton
+                className={cn(
+                  "file-navigator-view-mode-button rounded",
+                  viewMode === "tree" && "bg-selected text-text",
+                )}
+                onClick={() => onViewModeChange("tree")}
+                aria-label="Show file tree"
+                aria-pressed={viewMode === "tree"}
+                tooltip="File tree"
+                tooltipSide="bottom"
+              >
+                <TreeStructure />
+              </SidebarHeaderIconButton>
+            </div>
+          }
+        />
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-auto p-1">
+        {hiddenItemCount > 0 ? (
+          <SidebarSectionLabel>
+            Showing {searchableItems.length.toLocaleString()} of {items.length.toLocaleString()}
+          </SidebarSectionLabel>
+        ) : null}
         {filteredItems.length === 0 ? (
-          <div className="px-2 py-2 ui-text-xs text-text-lighter">No files match</div>
+          <SidebarSectionLabel>No files match</SidebarSectionLabel>
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow
@@ -383,6 +478,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               item={item}
               selectedKey={selectedKey}
               onSelect={onSelect}
+              compactRows={compactRows}
             />
           ))
         ) : (
@@ -393,6 +489,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
               depth={0}
               selectedKey={selectedKey}
               onSelect={onSelect}
+              compactRows={compactRows}
             />
           ))
         )}

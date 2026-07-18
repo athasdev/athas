@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 import {
@@ -8,6 +8,8 @@ import {
 import CodeEditor from "@/features/editor/components/code-editor";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import type { Buffer } from "@/features/editor/stores/buffer.store";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { isEditorKeyboardTarget } from "@/features/keymaps/utils/editor-keyboard-target";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { stageHunk, unstageHunk } from "@/features/git/api/git-status-api";
 import type { GitHunk } from "@/features/git/types/git.types";
@@ -22,6 +24,7 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
+import Badge from "@/ui/badge";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -71,6 +74,11 @@ const DiagnosticsBuffer = lazy(
   () => import("@/features/diagnostics/components/diagnostics-buffer"),
 );
 const ReferencesBuffer = lazy(() => import("@/features/references/components/references-buffer"));
+const ExtensionsBuffer = lazy(() =>
+  import("@/extensions/ui/components/extensions-sidebar").then((m) => ({
+    default: m.ExtensionsSidebar,
+  })),
+);
 const OnboardingView = lazy(() => import("@/features/onboarding/components/onboarding-view"));
 const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
@@ -108,9 +116,50 @@ interface PaneContainerProps {
 const DEFAULT_CAROUSEL_CARD_WIDTH = 640;
 const MIN_CAROUSEL_CARD_WIDTH = 320;
 const CAROUSEL_OUTER_GAP_PX = 160;
+const MAX_MOUNTED_EDITOR_BUFFERS = 8;
 
-type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type">;
+type EditorBufferShell = Pick<EditorContent, "id" | "path" | "name" | "type" | "readOnly">;
 type PaneRenderBuffer = Exclude<Buffer, EditorContent | NewTabContent> | EditorBufferShell;
+type PaneRenderState = {
+  activeBuffer: PaneRenderBuffer | null;
+  paneBuffers: PaneRenderBuffer[];
+};
+
+const editorBufferShellCache = new Map<string, EditorBufferShell>();
+
+function getEditorBufferShell(buffer: EditorContent): EditorBufferShell {
+  const cached = editorBufferShellCache.get(buffer.id);
+  if (
+    cached &&
+    cached.path === buffer.path &&
+    cached.name === buffer.name &&
+    cached.readOnly === buffer.readOnly
+  ) {
+    return cached;
+  }
+
+  const shell = {
+    id: buffer.id,
+    path: buffer.path,
+    name: buffer.name,
+    type: buffer.type,
+    readOnly: buffer.readOnly,
+  } satisfies EditorBufferShell;
+  editorBufferShellCache.set(buffer.id, shell);
+  return shell;
+}
+
+function toPaneRenderBuffer(buffer: Buffer | undefined): PaneRenderBuffer | undefined {
+  if (!buffer) return undefined;
+  if (buffer.type === "newTab") return undefined;
+  if (buffer.type === "editor") return getEditorBufferShell(buffer);
+  return buffer;
+}
+
+const EMPTY_PANE_RENDER_STATE: PaneRenderState = {
+  activeBuffer: null,
+  paneBuffers: [],
+};
 
 function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const previewText =
@@ -154,23 +203,23 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-xs leading-5 text-text-lighter">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-sm leading-5 text-text-lighter">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-xs leading-5 text-text-lighter">
+          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-sm leading-5 text-text-lighter">
             {summary}
           </pre>
         </div>
       </div>
 
       <div className="border-t border-border/60 bg-secondary-bg/80 px-4 py-2">
-        <div className="truncate ui-text-xs font-medium text-text">
+        <div className="truncate ui-text-sm font-medium text-text">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
-        <div className="truncate ui-text-xs text-text-lighter">{buffer.path}</div>
+        <div className="truncate ui-text-sm text-text-lighter">{buffer.path}</div>
       </div>
     </div>
   );
@@ -189,15 +238,15 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
       <div className="shrink-0 bg-secondary-bg/60 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
-          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-green-500/80" />
+          <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border bg-primary-bg/70 px-1.5 py-0.5 editor-font ui-text-xs text-text-lighter">
+              <Badge size="compact" className="font-mono">
                 #{buffer.prNumber ?? "--"}
-              </span>
+              </Badge>
               <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-xs text-text-lighter">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-sm text-text-lighter">
               <span className="font-medium text-text-light">
                 {authorLogin ? `@${authorLogin}` : "Pull request"}
               </span>
@@ -205,16 +254,10 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <span>{commitCount ?? "--"} commits</span>
               <span>{commentCount ?? "--"} comments</span>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-xs">
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                Description
-              </span>
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                Files
-              </span>
-              <span className="rounded-md border border-border bg-primary-bg/70 px-2 py-1 text-text-lighter">
-                Comments
-              </span>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 ui-text-sm">
+              <Badge>Description</Badge>
+              <Badge>Files</Badge>
+              <Badge>Comments</Badge>
             </div>
           </div>
         </div>
@@ -227,7 +270,7 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-xs text-text-lighter">
+        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-sm text-text-lighter">
           {buffer.path}
         </div>
       </div>
@@ -240,7 +283,7 @@ function WebViewerDisabledState() {
     <div className="flex size-full items-center justify-center bg-primary-bg px-6">
       <div className="max-w-sm text-center">
         <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
-        <div className="mt-1 ui-text-xs text-text-lighter">
+        <div className="mt-1 ui-text-sm text-text-lighter">
           Enable it in Settings &gt; Features to open URLs in embedded editor tabs.
         </div>
       </div>
@@ -268,39 +311,64 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const [isCarouselResizing, setIsCarouselResizing] = useState(false);
   const [draggedCarouselBufferId, setDraggedCarouselBufferId] = useState<string | null>(null);
   const [carouselDropBufferId, setCarouselDropBufferId] = useState<string | null>(null);
+  const [recentEditorBufferIds, setRecentEditorBufferIds] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const carouselViewportRef = useRef<HTMLDivElement>(null);
   const lastCarouselBufferIdRef = useRef<string | null>(null);
   const suppressAutoCenterRef = useRef(false);
   const isActivePane = pane.id === activePaneId;
 
-  const paneBuffers = useBufferStore(
+  const { activeBuffer, paneBuffers } = useBufferStore(
     useShallow((state) => {
-      const buffersById = new Map(state.buffers.map((buffer) => [buffer.id, buffer]));
+      if (pane.bufferIds.length === 0) {
+        return EMPTY_PANE_RENDER_STATE;
+      }
 
-      return pane.bufferIds
-        .map((bufferId) => {
-          const buffer = buffersById.get(bufferId);
-          if (!buffer) return undefined;
-          if (buffer.type === "newTab") return undefined;
-          if (buffer.type === "editor") {
-            return {
-              id: buffer.id,
-              path: buffer.path,
-              name: buffer.name,
-              type: buffer.type,
-            } satisfies EditorBufferShell;
-          }
-          return buffer;
-        })
-        .filter((buffer): buffer is PaneRenderBuffer => buffer !== undefined);
+      const nextPaneBuffers: PaneRenderBuffer[] = [];
+      let nextActiveBuffer: PaneRenderBuffer | null = null;
+
+      for (const bufferId of pane.bufferIds) {
+        const buffer = toPaneRenderBuffer(getBufferById(state.buffers, bufferId) ?? undefined);
+        if (!buffer) continue;
+
+        nextPaneBuffers.push(buffer);
+        if (buffer.id === pane.activeBufferId) {
+          nextActiveBuffer = buffer;
+        }
+      }
+
+      return {
+        activeBuffer: nextActiveBuffer,
+        paneBuffers: nextPaneBuffers,
+      };
     }),
   );
 
-  const activeBuffer = useMemo(() => {
-    if (!pane.activeBufferId) return null;
-    return paneBuffers.find((b) => b.id === pane.activeBufferId) || null;
-  }, [paneBuffers, pane.activeBufferId]);
+  useEffect(() => {
+    const openEditorBufferIds = paneBuffers
+      .filter(isStandardEditorBuffer)
+      .map((buffer) => buffer.id);
+    const openEditorBufferIdSet = new Set(openEditorBufferIds);
+    const activeEditorBufferId =
+      activeBuffer && isStandardEditorBuffer(activeBuffer) ? activeBuffer.id : null;
+
+    setRecentEditorBufferIds((current) => {
+      const next = [
+        ...(activeEditorBufferId ? [activeEditorBufferId] : []),
+        ...current.filter(
+          (bufferId) => bufferId !== activeEditorBufferId && openEditorBufferIdSet.has(bufferId),
+        ),
+      ].slice(0, MAX_MOUNTED_EDITOR_BUFFERS);
+
+      if (
+        next.length === current.length &&
+        next.every((bufferId, index) => bufferId === current[index])
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [activeBuffer, paneBuffers]);
 
   const handlePaneClick = useCallback(() => {
     if (!isActivePane) {
@@ -311,10 +379,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const handlePaneMouseDownCapture = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
-      const isEditorTextarea = target.classList.contains("editor-textarea");
+      const isEditorTarget = isEditorKeyboardTarget(target);
       const isTerminalTextarea = target.classList.contains("xterm-helper-textarea");
       if (
-        !isEditorTextarea &&
+        !isEditorTarget &&
         !isTerminalTextarea &&
         target.closest("button, input, textarea, [role='button'], [role='menu']")
       ) {
@@ -810,6 +878,11 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   }, []);
 
   const shouldRenderCarousel = horizontalBufferCarousel && paneBuffers.length > 1;
+  const mountedEditorBuffers = paneBuffers.filter(
+    (buffer): buffer is EditorBufferShell =>
+      isStandardEditorBuffer(buffer) &&
+      (buffer.id === activeBuffer?.id || recentEditorBufferIds.includes(buffer.id)),
+  );
 
   const renderActiveBuffer = useCallback(
     (buffer: PaneRenderBuffer) => {
@@ -870,6 +943,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         case "references":
           return <ReferencesBuffer />;
 
+        case "extensions":
+          return <ExtensionsBuffer />;
+
         case "onboarding":
           return (
             <OnboardingView
@@ -929,7 +1005,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
         default:
           return (
-            <CodeEditor paneId={pane.id} bufferId={buffer.id} isActiveSurface={isActivePane} />
+            <CodeEditor
+              paneId={pane.id}
+              bufferId={buffer.id}
+              isActiveSurface={isActivePane}
+              readOnly={buffer.type === "editor" ? buffer.readOnly : undefined}
+            />
           );
       }
     },
@@ -993,7 +1074,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     key={buffer.id}
                     data-buffer-card-id={buffer.id}
                     className={cn(
-                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-200",
+                      "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
                       isActiveBuffer
                         ? "border-accent/50 bg-primary-bg shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
                         : "border-border/70 bg-primary-bg hover:border-border/90",
@@ -1040,6 +1121,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           paneId={pane.id}
                           bufferId={buffer.id}
                           isActiveSurface={isActivePane && isActiveBuffer}
+                          readOnly={buffer.readOnly}
                           showToolbar={false}
                           className={isActiveBuffer ? undefined : "pointer-events-none"}
                         />
@@ -1137,9 +1219,27 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     </div>
                   );
                 })}
+              {mountedEditorBuffers.map((buffer) => {
+                const isActive = buffer.id === activeBuffer?.id;
+                return (
+                  <div
+                    key={buffer.id}
+                    className="absolute inset-0"
+                    style={isActive ? undefined : { visibility: "hidden" }}
+                  >
+                    <CodeEditor
+                      paneId={pane.id}
+                      bufferId={buffer.id}
+                      isActiveSurface={isActive && isActivePane}
+                      readOnly={buffer.readOnly}
+                    />
+                  </div>
+                );
+              })}
               {activeBuffer &&
                 activeBuffer.type !== "terminal" &&
                 (activeBuffer.type !== "webViewer" || !webViewerEnabled) &&
+                !isStandardEditorBuffer(activeBuffer) &&
                 renderActiveBuffer(activeBuffer)}
             </>
           )}

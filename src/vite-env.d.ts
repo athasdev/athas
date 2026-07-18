@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+declare module "monaco-editor/esm/vs/basic-languages/*";
+declare module "monaco-editor/esm/vs/language/*";
+
 interface SpeechRecognitionAlternative {
   transcript: string;
   confidence: number;

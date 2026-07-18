@@ -1,4 +1,5 @@
 import { useExtensionStore } from "@/extensions/registry/extension-store";
+import { initializeGeneratedUIExtensions } from "./generated-ui-extension-installer";
 import { uiExtensionHost } from "./ui-extension-host";
 
 export async function initializeUIExtensions(): Promise<void> {
@@ -15,4 +16,5 @@ export async function initializeUIExtensions(): Promise<void> {
   );
 
   await Promise.allSettled(loadPromises);
+  initializeGeneratedUIExtensions();
 }

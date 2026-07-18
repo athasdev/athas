@@ -3,11 +3,9 @@ import {
   CornersOutIcon as CornersOut,
   MinusIcon as Minus,
   XIcon as X,
-} from "@phosphor-icons/react";
-import { chromeControl } from "@/features/layout/components/chrome-control-styles";
+} from "@/ui/icons";
 import { Button } from "@/ui/button";
 import Tooltip from "@/ui/tooltip";
-import { cn } from "@/utils/cn";
 
 interface WindowControlsProps {
   currentWindow: any;
@@ -52,8 +50,9 @@ export function WindowControls({
         <Button
           onClick={handleMinimize}
           variant="ghost"
-          className={cn("pointer-events-auto", chromeControl())}
-          compact
+          chrome="icon"
+          className="pointer-events-auto"
+          size="icon-xs"
         >
           <Minus weight="bold" />
         </Button>
@@ -62,8 +61,9 @@ export function WindowControls({
         <Button
           onClick={handleToggleMaximize}
           variant="ghost"
-          className={cn("pointer-events-auto", chromeControl())}
-          compact
+          chrome="icon"
+          className="pointer-events-auto"
+          size="icon-xs"
         >
           {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
         </Button>
@@ -72,8 +72,9 @@ export function WindowControls({
         <Button
           onClick={handleClose}
           variant="danger"
-          className={cn("pointer-events-auto group hover:text-white", chromeControl())}
-          compact
+          chrome="icon"
+          className="pointer-events-auto group hover:text-white"
+          size="icon-xs"
         >
           <X weight="bold" />
         </Button>

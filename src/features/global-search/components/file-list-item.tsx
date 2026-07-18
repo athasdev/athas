@@ -1,9 +1,8 @@
-import { ClockIcon } from "@phosphor-icons/react";
+import { ClockIcon } from "@/ui/icons";
 import { memo } from "react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { CommandItem } from "@/ui/command";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import { cn } from "@/utils/cn";
 import type { FileCategory, FileItem } from "../types/global-search.types";
 
 interface FileListItemProps {
@@ -33,7 +32,7 @@ export const FileListItem = memo(
     const directoryPath = getDirectoryPath(file.path, rootFolderPath);
 
     return (
-      <CommandItem
+      <CommandItemRow
         id={id}
         key={`${category}-${file.path}`}
         data-item-index={index}
@@ -43,59 +42,20 @@ export const FileListItem = memo(
         onClick={() => onClick(file.path)}
         onMouseEnter={onPreview ? () => onPreview(file.path) : undefined}
         isSelected={isSelected}
-        className={
-          compact
-            ? "ui-font !h-auto min-h-7 !min-w-0 gap-2 rounded-md px-2 py-1 leading-[1.35]"
-            : "ui-font leading-[1.35]"
+        className={compact ? "min-h-7 rounded-md px-2 py-1" : undefined}
+        icon={<ThemedFileIcon fileName={file.name} isDir={false} />}
+        title={file.name}
+        description={directoryPath}
+        accessory={
+          category === "open" ? (
+            <CommandItemBadge>open</CommandItemBadge>
+          ) : category === "recent" ? (
+            <CommandItemBadge>
+              <ClockIcon />
+            </CommandItemBadge>
+          ) : undefined
         }
-      >
-        <FileExplorerIcon
-          fileName={file.name}
-          isDir={false}
-          size={compact ? 10 : 12}
-          className="shrink-0"
-        />
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <div
-            className={cn(
-              "flex min-w-0 items-baseline truncate leading-[1.35]",
-              compact ? "ui-text-xs gap-2" : "ui-text-sm gap-1.5",
-            )}
-          >
-            <span className="min-w-0 max-w-[45%] shrink truncate text-text">{file.name}</span>
-            {directoryPath && (
-              <span
-                className={cn(
-                  "min-w-0 flex-1 truncate text-text-lighter leading-[1.35] opacity-60",
-                  compact ? "ui-text-xs" : "ui-text-sm",
-                )}
-              >
-                {directoryPath}
-              </span>
-            )}
-          </div>
-        </div>
-        {category === "open" && (
-          <span
-            className={cn(
-              "rounded bg-accent/20 px-1 font-medium leading-[1.35] text-accent",
-              compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
-            )}
-          >
-            open
-          </span>
-        )}
-        {category === "recent" && (
-          <span
-            className={cn(
-              "rounded px-1 font-medium leading-[1.35] text-text-lighter",
-              compact ? "ui-text-xs py-0" : "ui-text-sm py-0.5",
-            )}
-          >
-            <ClockIcon />
-          </span>
-        )}
-      </CommandItem>
+      />
     );
   },
 );

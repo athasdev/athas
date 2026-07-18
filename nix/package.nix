@@ -45,14 +45,14 @@
 
 let
   pname = "athas";
-  version = "0.7.2";
+  version = "0.9.0";
 
   # Keep the formatting of these lines stable
   # (one `"<system>" = "sha256-...";` per line) so the workflow's sed can find
   # them.
   hashes = {
-    "x86_64-linux" = "sha256-0E+N59njEy3n3QAnUTBTH3p5fELFEnt/caBAOshiT+Y=";
-    "aarch64-linux" = "sha256-kRGg6rWkB6xE+y8K8qn9xouAklixSHODOXc1bPdGcXE=";
+    "x86_64-linux" = "sha256-o8Z6fMHGlPzFRSYiYEEHlbWfW3L24vOZV1uyB4fInnc=";
+    "aarch64-linux" = "sha256-5jjGmh8XutNfncqrnamutxnLOUnkncCocZYAZNPZkyY=";
   };
 
   arches = {
@@ -127,8 +127,7 @@ stdenv.mkDerivation {
 
   dontWrapGApps = true;
 
-  # chrome-sandbox needs a setuid bit that the Nix store cannot provide; the
-  # launcher runs with --no-sandbox, so skip it during autoPatchelf too.
+  # The upstream Linux launcher disables Vulkan, so this library is optional.
   autoPatchelfIgnoreMissingDeps = [ "libvulkan.so.1" ];
 
   installPhase = ''
@@ -140,7 +139,7 @@ stdenv.mkDerivation {
     cp -r share/. $out/share/
 
     makeWrapper $out/libexec/athas $out/bin/athas \
-      --add-flags "--no-sandbox --ozone-platform=x11 --disable-vulkan --disable-features=Vulkan" \
+      --add-flags "--ozone-platform=x11 --disable-vulkan --disable-features=Vulkan" \
       --prefix LD_LIBRARY_PATH : "$out/libexec:${lib.makeLibraryPath runtimeLibs}" \
       "''${gappsWrapperArgs[@]}"
 

@@ -1,4 +1,4 @@
-import { WarningIcon as AlertTriangle } from "@phosphor-icons/react";
+import { WarningIcon as AlertTriangle } from "@/ui/icons";
 import { useEffect } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
@@ -31,19 +31,19 @@ const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) 
       size="sm"
       footer={
         <>
-          <Button onClick={onCancel} compact>
+          <Button onClick={onCancel} size="xs">
             Cancel
           </Button>
-          <Button onClick={onDiscard} compact>
+          <Button onClick={onDiscard} size="xs">
             Don't Save
           </Button>
-          <Button onClick={onSave} variant="accent" compact>
+          <Button onClick={onSave} variant="accent" size="xs">
             Save
           </Button>
         </>
       }
     >
-      <p className="text-text ui-text-xs">
+      <p className="text-text ui-text-sm">
         Do you want to save the changes you made to <strong>{fileName}</strong>?
       </p>
     </Dialog>

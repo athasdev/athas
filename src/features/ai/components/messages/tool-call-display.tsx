@@ -2,7 +2,7 @@ import {
   FileTextIcon as FileText,
   GitDiffIcon as GitDiff,
   TerminalWindowIcon as TerminalSquare,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { getAcpDiffOutputs, openAcpDiffOutput } from "@/features/ai/lib/acp-diff-output";
 import {
   getAcpTerminalOutputs,

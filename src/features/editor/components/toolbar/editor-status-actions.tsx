@@ -5,7 +5,7 @@ import {
   SquareIcon as Square,
   LightningIcon as Zap,
   LightningSlashIcon as ZapOff,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
@@ -14,6 +14,8 @@ import { setSyntaxHighlightingFilePath } from "@/features/editor/extensions/buil
 import { LspClient } from "@/features/editor/lsp/lsp-client";
 import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.store";
 import type { Position } from "@/features/editor/types/editor.types";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
+import { resolveEditorViewCursorPosition } from "@/features/editor/utils/editor-view-cursor-position";
 import { LoadingIndicator } from "@/ui/loading";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -24,7 +26,7 @@ import {
 } from "@/features/editor/utils/language-id";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Button, buttonVariants } from "@/ui/button";
+import { Button } from "@/ui/button";
 import {
   Combobox,
   ComboboxContent,
@@ -33,30 +35,24 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/ui/combobox";
-import { Dropdown } from "@/ui/dropdown";
+import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
 import Keybinding from "@/ui/keybinding";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
-const actionButtonClass = cn(
-  buttonVariants({ variant: "ghost", compact: true }),
-  "rounded text-text-lighter",
-);
-
 const statusChipClass =
-  "ui-font inline-flex h-5 items-center self-center rounded-md border border-transparent px-1.5 ui-text-xs leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "font-sans inline-flex h-5 items-center self-center rounded-full border-0 px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
 
-const menuTriggerClass = cn(
-  buttonVariants({ variant: "ghost", compact: true }),
-  "rounded text-text-lighter",
-);
+const editorMenuItemClass = dropdownItemClassName("min-h-7");
 
-const menuItemClass =
-  "ui-font flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left ui-text-xs text-text transition-colors hover:bg-hover";
+const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-text-lighter";
 
-const menuItemDisabledClass = "cursor-not-allowed opacity-50 hover:bg-transparent";
+const editorMenuRowClass =
+  "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-hover";
+
+const editorMenuMutedRowClass = "flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter";
 function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
   return getLanguageDisplayName(languageId);
@@ -83,12 +79,15 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
   const [draftPosition, setDraftPosition] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const displayedCursorPosition = useMemo<Position>(() => {
-    if (!editorViewKey || activeEditorViewKey === editorViewKey) {
-      return cursorPosition;
-    }
-
-    const cachedCursor = useEditorStateStore.getState().actions.getCachedPosition(editorViewKey);
-    return cachedCursor ?? { line: 0, column: 0, offset: 0 };
+    const cachedCursor = editorViewKey
+      ? useEditorStateStore.getState().actions.getCachedPosition(editorViewKey)
+      : undefined;
+    return resolveEditorViewCursorPosition(
+      editorViewKey,
+      activeEditorViewKey,
+      cursorPosition,
+      cachedCursor,
+    );
   }, [activeEditorViewKey, cursorPosition, editorViewKey]);
   const displayPosition = `${displayedCursorPosition.line + 1}:${displayedCursorPosition.column + 1}`;
 
@@ -159,9 +158,22 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
 }
 
 export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusActionsProps = {}) {
-  const { rootFolderPath } = useFileSystemStore();
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const resolvedBufferId = useBufferStore((state) => bufferId ?? state.activeBufferId);
-  const { settings, updateSetting } = useSettingsStore();
+  const breadcrumbsEnabled = useSettingsStore((state) => state.settings.coreFeatures.breadcrumbs);
+  const showMinimap = useSettingsStore((state) => state.settings.showMinimap);
+  const lineNumbers = useSettingsStore((state) => state.settings.lineNumbers);
+  const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
+  const wordWrap = useSettingsStore((state) => state.settings.wordWrap);
+  const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
+  const autoCompletion = useSettingsStore((state) => state.settings.autoCompletion);
+  const inlayHints = useSettingsStore((state) => state.settings.inlayHints);
+  const codeLens = useSettingsStore((state) => state.settings.codeLens);
+  const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
+  const vimMode = useSettingsStore((state) => state.settings.vimMode);
+  const enableGitGutter = useSettingsStore((state) => state.settings.enableGitGutter);
+  const enableInlineGitBlame = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const minimapShortcut = useCommandShortcut("workbench.toggleMinimap");
   const lspStatus = useLspStore.use.lspStatus();
   const [isLspOpen, setIsLspOpen] = useState(false);
@@ -178,19 +190,19 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       case "connected":
         return {
           icon: <Zap weight="duotone" />,
-          color: "text-green-400",
+          color: "text-success",
           title: "Language Servers Active",
         };
       case "connecting":
         return {
           icon: <LoadingIndicator label="Connecting" compact />,
-          color: "text-yellow-400",
+          color: "text-warning",
           title: "Connecting to Language Server...",
         };
       case "error":
         return {
           icon: <ZapOff weight="duotone" />,
-          color: "text-red-400",
+          color: "text-error",
           title: "Language server issue",
         };
       default:
@@ -208,9 +220,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const projectName = rootFolderPath ? getFilenameFromPath(rootFolderPath) : "No Project";
   const activeBuffer = useBufferStore(
     useShallow((state) => {
-      const buffer = resolvedBufferId
-        ? state.buffers.find((candidate) => candidate.id === resolvedBufferId)
-        : null;
+      const buffer = getBufferById(state.buffers, resolvedBufferId);
       return buffer
         ? {
             id: buffer.id,
@@ -376,83 +386,109 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
     {
       id: "breadcrumbs",
       label: "Breadcrumbs",
-      checked: settings.coreFeatures.breadcrumbs,
+      checked: breadcrumbsEnabled,
       shortcut: null,
-      onToggle: () =>
-        updateSetting("coreFeatures", {
-          ...settings.coreFeatures,
-          breadcrumbs: !settings.coreFeatures.breadcrumbs,
-        }),
+      onToggle: () => {
+        const { coreFeatures } = useSettingsStore.getState().settings;
+        void updateSetting("coreFeatures", {
+          ...coreFeatures,
+          breadcrumbs: !coreFeatures.breadcrumbs,
+        });
+      },
     },
     {
       id: "minimap",
       label: "Minimap",
-      checked: settings.showMinimap,
+      checked: showMinimap,
       shortcut: minimapShortcut,
-      onToggle: () => updateSetting("showMinimap", !settings.showMinimap),
+      onToggle: () => updateSetting("showMinimap", !showMinimap),
     },
     {
       id: "line-numbers",
       label: "Line Numbers",
-      checked: settings.lineNumbers,
+      checked: lineNumbers,
       shortcut: null,
-      onToggle: () => updateSetting("lineNumbers", !settings.lineNumbers),
+      onToggle: () => updateSetting("lineNumbers", !lineNumbers),
       disabled: false,
     },
     {
       id: "relative-line-numbers",
       label: "Relative Line Numbers",
-      checked: settings.vimRelativeLineNumbers,
+      checked: vimRelativeLineNumbers,
       shortcut: null,
-      onToggle: () => updateSetting("vimRelativeLineNumbers", !settings.vimRelativeLineNumbers),
-      disabled: !settings.lineNumbers,
+      onToggle: () => updateSetting("vimRelativeLineNumbers", !vimRelativeLineNumbers),
+      disabled: !lineNumbers,
     },
     {
       id: "word-wrap",
       label: "Word Wrap",
-      checked: settings.wordWrap,
+      checked: wordWrap,
       shortcut: null,
-      onToggle: () => updateSetting("wordWrap", !settings.wordWrap),
+      onToggle: () => updateSetting("wordWrap", !wordWrap),
       disabled: false,
     },
     {
       id: "parameter-hints",
       label: "Parameter Hints",
-      checked: settings.parameterHints,
+      checked: parameterHints,
       shortcut: null,
-      onToggle: () => updateSetting("parameterHints", !settings.parameterHints),
+      onToggle: () => updateSetting("parameterHints", !parameterHints),
       disabled: false,
     },
     {
       id: "auto-completion",
       label: "Auto Completion",
-      checked: settings.autoCompletion,
+      checked: autoCompletion,
       shortcut: null,
-      onToggle: () => updateSetting("autoCompletion", !settings.autoCompletion),
+      onToggle: () => updateSetting("autoCompletion", !autoCompletion),
+      disabled: false,
+    },
+    {
+      id: "inlay-hints",
+      label: "Inlay Hints",
+      checked: inlayHints,
+      shortcut: null,
+      onToggle: () => updateSetting("inlayHints", !inlayHints),
+      disabled: false,
+    },
+    {
+      id: "code-lens",
+      label: "Code Lens",
+      checked: codeLens,
+      shortcut: null,
+      onToggle: () => updateSetting("codeLens", !codeLens),
+      disabled: false,
+    },
+    {
+      id: "semantic-tokens",
+      label: "Semantic Tokens",
+      checked: semanticTokens,
+      shortcut: null,
+      onToggle: () => updateSetting("semanticTokens", !semanticTokens),
       disabled: false,
     },
     {
       id: "vim-mode",
       label: "Vim Mode",
-      checked: settings.vimMode,
+      checked: vimMode,
       shortcut: null,
-      onToggle: () => updateSetting("vimMode", !settings.vimMode),
+      onToggle: () => updateSetting("vimMode", !vimMode),
       disabled: false,
     },
     {
       id: "git-gutter",
       label: "Git Gutter",
-      checked: settings.enableGitGutter,
+      checked: enableGitGutter,
       shortcut: null,
-      onToggle: () => updateSetting("enableGitGutter", !settings.enableGitGutter),
+      onToggle: () => updateSetting("enableGitGutter", !enableGitGutter),
       disabled: false,
     },
     {
       id: "inline-git-blame",
       label: "Inline Git Blame",
-      checked: settings.enableInlineGitBlame,
+      checked: enableInlineGitBlame,
       shortcut: null,
-      onToggle: () => updateSetting("enableInlineGitBlame", !settings.enableInlineGitBlame),
+      onToggle: () => updateSetting("enableInlineGitBlame", !enableInlineGitBlame),
       disabled: false,
     },
   ];
@@ -483,27 +519,27 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               variant="ghost"
               showClear={false}
               showTrigger={false}
-              inputClassName="truncate ui-text-xs text-text-lighter group-hover/combobox-input:text-text"
+              inputClassName="truncate ui-text-sm text-text-lighter group-hover/combobox-input:text-text"
               className={cn(
                 statusChipClass,
-                "h-5 w-fit max-w-[240px] rounded-md bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
+                "h-5 w-fit max-w-[240px] bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
               )}
               inputStyle={{
                 width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
               }}
             />
-            <ComboboxContent align="end" className="w-[220px] min-w-[220px] rounded-lg">
+            <ComboboxContent align="end" className="w-[220px] min-w-[220px]">
               <ComboboxList className="max-h-[220px] p-1.5">
                 {allLanguages.map((lang) => (
                   <ComboboxItem
                     key={lang.id}
                     value={lang}
-                    className={cn("ui-text-xs", lang.id === currentFileLanguageId && "text-accent")}
+                    className={cn("ui-text-sm", lang.id === currentFileLanguageId && "text-accent")}
                   >
                     <span className="truncate">{lang.displayName}</span>
                   </ComboboxItem>
                 ))}
-                <ComboboxEmpty className="ui-text-xs">No languages found</ComboboxEmpty>
+                <ComboboxEmpty className="ui-text-sm">No languages found</ComboboxEmpty>
               </ComboboxList>
             </ComboboxContent>
           </Combobox>
@@ -518,8 +554,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           type="button"
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
-          compact
-          className={cn(actionButtonClass, config.color, isLspOpen && "bg-hover text-text")}
+          size="icon-xs"
+          chrome="icon"
+          className={cn("text-text-lighter", config.color, isLspOpen && "bg-hover text-text")}
           aria-label="Language server status"
           tooltip={config.title}
           tooltipSide="bottom"
@@ -532,11 +569,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsLspOpen(false)}
-          className="w-[260px] overflow-hidden rounded-lg p-2"
+          className="w-[260px] p-2"
         >
           <div className="space-y-2">
             <div className="px-1">
-              <span className="font-medium text-text ui-text-xs">{projectName}</span>
+              <span className="font-medium text-text ui-text-sm">{projectName}</span>
             </div>
             {hasActiveServers || isCurrentFileLspAvailable ? (
               <div className="space-y-1">
@@ -547,8 +584,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       onClick={() => void handleRestartAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      compact
-                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                      size="xs"
+                      className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "restart" ? "Restarting..." : "Restart all"}
                     </Button>
@@ -557,8 +594,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                       onClick={() => void handleStopAllServers()}
                       disabled={!canRunBulkLspAction}
                       variant="default"
-                      compact
-                      className="flex-1 rounded-md px-2 ui-text-xs text-text-lighter"
+                      size="xs"
+                      className={cn(editorMenuActionButtonClass, "flex-1")}
                     >
                       {bulkLspAction === "stop" ? "Stopping..." : "Stop all"}
                     </Button>
@@ -567,13 +604,10 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 {activeServerEntries.map((entry) => {
                   const isBusy = busyServerKey === entry.key;
                   return (
-                    <div
-                      key={entry.key}
-                      className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover"
-                    >
+                    <div key={entry.key} className={editorMenuRowClass}>
                       <div className="flex min-w-0 items-center gap-2">
-                        <Zap className="shrink-0 text-green-400" weight="duotone" />
-                        <span className="truncate text-text ui-text-xs">{entry.displayName}</span>
+                        <Zap className="shrink-0 text-success" weight="duotone" />
+                        <span className="truncate text-text ui-text-sm">{entry.displayName}</span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
@@ -581,8 +615,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           onClick={() => void handleRestartServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          compact
-                          className="rounded-md px-2 ui-text-xs text-text-lighter"
+                          size="xs"
+                          className={editorMenuActionButtonClass}
                         >
                           {isBusy ? "..." : "Restart"}
                         </Button>
@@ -591,8 +625,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                           onClick={() => void handleStopServer(entry.key)}
                           disabled={isBusy || isRestartingCurrent || isBulkLspBusy}
                           variant="default"
-                          compact
-                          className="rounded-md px-2 ui-text-xs text-text-lighter"
+                          size="icon-xs"
+                          className={editorMenuActionButtonClass}
                           aria-label={`Stop ${entry.displayName} language server`}
                         >
                           <Square weight="duotone" />
@@ -602,10 +636,10 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   );
                 })}
                 {!currentServerEntry && isCurrentFileLspAvailable && currentFileDisplayName && (
-                  <div className="group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-hover">
+                  <div className={editorMenuRowClass}>
                     <div className="flex min-w-0 items-center gap-2">
                       <ZapOff className="shrink-0 opacity-60" weight="duotone" />
-                      <span className="truncate text-text ui-text-xs">
+                      <span className="truncate text-text ui-text-sm">
                         {currentFileDisplayName}
                       </span>
                     </div>
@@ -615,8 +649,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                         onClick={() => void handleStartCurrent()}
                         disabled={isRestartingCurrent || isBulkLspBusy}
                         variant="default"
-                        compact
-                        className="rounded-md px-2 ui-text-xs text-text-lighter"
+                        size="xs"
+                        className={editorMenuActionButtonClass}
                       >
                         {isRestartingCurrent ? "Starting..." : "Start"}
                       </Button>
@@ -625,24 +659,24 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 )}
               </div>
             ) : lspStatus.status === "connecting" ? (
-              <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
+              <div className={editorMenuMutedRowClass}>
                 <LoadingIndicator label="Connecting" showLabel compact />
               </div>
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">
-                <div className="flex items-center gap-2 text-red-400">
+                <div className="flex items-center gap-2 text-error">
                   <ZapOff weight="duotone" />
-                  <span className="ui-text-xs">Language server issue</span>
+                  <span className="ui-text-sm">Language server issue</span>
                 </div>
-                <div className="px-0.5 ui-text-xs text-text-lighter">
+                <div className="px-0.5 ui-text-sm text-text-lighter">
                   Check notifications for the latest error. Reinstall the affected language tools
                   from Extensions if the server binary is missing or failed to launch.
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter">
+              <div className={editorMenuMutedRowClass}>
                 <ZapOff className="opacity-50" weight="duotone" />
-                <span className="ui-text-xs">No active language servers</span>
+                <span className="ui-text-sm">No active language servers</span>
               </div>
             )}
           </div>
@@ -655,9 +689,10 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           type="button"
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
-          compact
+          size="icon-xs"
+          chrome="icon"
           className={cn(
-            menuTriggerClass,
+            "text-text-lighter",
             isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
           )}
           tooltip="Editor preferences"
@@ -673,7 +708,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           anchorSide="bottom"
           anchorAlign="end"
           onClose={() => setIsViewMenuOpen(false)}
-          className="w-[220px] overflow-hidden rounded-lg p-1.5"
+          className="w-[220px] p-1.5"
         >
           <div className="space-y-0.5">
             {displayOptions.slice(0, 2).map((option) => (
@@ -682,8 +717,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                compact
-                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                size="xs"
+                className={editorMenuItemClass}
                 disabled={option.disabled}
               >
                 <span>{option.label}</span>
@@ -704,8 +739,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                compact
-                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                size="xs"
+                className={editorMenuItemClass}
                 disabled={option.disabled}
               >
                 <span>{option.label}</span>
@@ -721,8 +756,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 type="button"
                 onClick={() => !option.disabled && void option.onToggle()}
                 variant="ghost"
-                compact
-                className={cn(menuItemClass, option.disabled && menuItemDisabledClass)}
+                size="xs"
+                className={editorMenuItemClass}
                 disabled={option.disabled}
               >
                 <span>{option.label}</span>

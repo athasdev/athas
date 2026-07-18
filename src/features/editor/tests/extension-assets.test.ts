@@ -80,6 +80,12 @@ describe("extension-assets", () => {
       wasmPath: "/tree-sitter/parsers/elisp/parser.wasm",
       highlightQueryUrl: "/tree-sitter/parsers/elisp/highlights.scm",
     });
+    expect(getLanguageAssetConfig("astro")).toMatchObject({
+      parserLanguageId: "astro",
+      queryLanguageId: "astro",
+      wasmPath: "/tree-sitter/parsers/astro/parser.wasm",
+      highlightQueryUrl: "/tree-sitter/parsers/astro/highlights.scm",
+    });
   });
 
   it("prefers registered manifest asset URLs", () => {

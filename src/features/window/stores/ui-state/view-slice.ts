@@ -2,8 +2,8 @@ import type { StateCreator } from "zustand";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import type { BottomPaneTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { useSessionStore } from "@/features/window/stores/session.store";
-import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-session";
+import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
 
 export interface ViewState {
   isGitViewActive: boolean;
@@ -43,7 +43,7 @@ export const createViewSlice: StateCreator<ViewSlice, [], [], ViewSlice> = (set,
       bottomPaneActiveTab?: BottomPaneTab;
     };
 
-    useSessionStore.getState().saveUiState(projectPath, {
+    workspaceSessionRepository.saveUi(projectPath, {
       isSidebarVisible: state.isSidebarVisible ?? DEFAULT_PROJECT_UI_STATE.isSidebarVisible,
       isBottomPaneVisible:
         state.isBottomPaneVisible ?? DEFAULT_PROJECT_UI_STATE.isBottomPaneVisible,

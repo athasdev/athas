@@ -3,9 +3,20 @@ use athas_tooling::{
    LanguageToolConfigSet, LanguageToolStatus, ToolInstaller, ToolRegistry, ToolStatus, ToolType,
 };
 use serde_json::Value;
+#[cfg(debug_assertions)]
+use std::{
+   fs::OpenOptions,
+   io::Write,
+   time::{SystemTime, UNIX_EPOCH},
+};
 
 #[tauri::command]
 pub fn frontend_trace(level: String, scope: String, message: String, payload: Option<Value>) {
+   #[cfg(debug_assertions)]
+   if scope == "bench:file-open" {
+      append_file_open_benchmark(&level, &message, payload.as_ref());
+   }
+
    let payload_str = if scope.starts_with("bench:") {
       format_benchmark_payload(payload.as_ref())
    } else {
@@ -17,6 +28,25 @@ pub fn frontend_trace(level: String, scope: String, message: String, payload: Op
       "error" => log::error!("[frontend:{}] {}{}", scope, message, payload_str),
       _ => log::info!("[frontend:{}] {}{}", scope, message, payload_str),
    }
+}
+
+#[cfg(debug_assertions)]
+fn append_file_open_benchmark(level: &str, message: &str, payload: Option<&Value>) {
+   let path = std::env::temp_dir().join("athas-file-open-benchmark.jsonl");
+   let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) else {
+      return;
+   };
+   let timestamp_ms = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .map(|duration| duration.as_millis())
+      .unwrap_or_default();
+   let record = serde_json::json!({
+      "timestampMs": timestamp_ms,
+      "level": level,
+      "file": message,
+      "payload": payload,
+   });
+   let _ = writeln!(file, "{}", record);
 }
 
 fn format_payload(payload: Option<&Value>) -> String {

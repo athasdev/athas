@@ -1,5 +1,5 @@
 import type React from "react";
-import { MinusIcon as Minus, PlusIcon as Plus } from "@phosphor-icons/react";
+import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import {
@@ -134,7 +134,7 @@ export default function NumberInput({
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="icon-xs"
         onClick={() => handleStep(-1)}
         disabled={!canDecrement}
         aria-label="Decrease value"
@@ -165,7 +165,7 @@ export default function NumberInput({
       <Button
         type="button"
         variant="ghost"
-        compact
+        size="icon-xs"
         onClick={() => handleStep(1)}
         disabled={!canIncrement}
         aria-label="Increase value"

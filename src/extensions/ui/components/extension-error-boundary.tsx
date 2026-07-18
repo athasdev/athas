@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { WarningIcon as AlertTriangle } from "@phosphor-icons/react";
+import { WarningIcon as AlertTriangle } from "@/ui/icons";
 import { Button } from "@/ui/button";
 
 interface Props {
@@ -32,10 +32,10 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
-          <AlertTriangle className="size-8 text-yellow-500" />
+          <AlertTriangle className="size-8 text-warning" />
           <div>
             <p className="font-medium ui-text-sm text-text">{this.props.name} crashed</p>
-            <p className="mt-1 text-text-lighter ui-text-xs">
+            <p className="mt-1 text-text-lighter ui-text-sm">
               {this.state.error?.message || "An unexpected error occurred"}
             </p>
           </div>
@@ -43,7 +43,7 @@ export class ExtensionErrorBoundary extends Component<Props, State> {
             onClick={this.handleRetry}
             variant="default"
             aria-label={`Retry loading ${this.props.name}`}
-            compact
+            size="xs"
           >
             Retry
           </Button>

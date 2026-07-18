@@ -53,38 +53,15 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
-  it("normalizes unsupported file tree density values", () => {
-    expect(normalizeSettingValue("fileTreeDensity", "compact")).toBe("compact");
-    expect(normalizeSettingValue("fileTreeDensity", "dense" as "default")).toBe("default");
-  });
-
-  it("normalizes legacy custom editor engine settings", () => {
-    const normalized = normalizeSettings({
-      ...getDefaultSettingsSnapshot(),
-      editorEngine: "custom",
-      customEditorCommand: "",
-    });
-
-    expect(normalized.editorEngine).toBe("monaco");
-  });
-
-  it("normalizes unsupported editor engines", () => {
-    const normalized = normalizeSettings({
-      ...getDefaultSettingsSnapshot(),
-      editorEngine: "emacs" as never,
-    });
-
-    expect(normalized.editorEngine).toBe("monaco");
-  });
-
-  it("migrates legacy Athas editor engine selections to Monaco", () => {
+  it("drops legacy editor engine settings", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       editorEngine: "athas",
-    });
+      externalEditor: "helix",
+    } as never);
 
-    expect(normalized.editorEngine).toBe("monaco");
-    expect(normalizeSettingValue("editorEngine", "athas")).toBe("monaco");
+    expect("editorEngine" in normalized).toBe(false);
+    expect(normalized.externalEditor).toBe("helix");
   });
 
   it("normalizes unsupported remembered settings tabs", () => {
@@ -95,6 +72,8 @@ describe("settings normalization", () => {
 
     expect(normalized.lastSettingsTab).toBe("general");
     expect(normalizeSettingValue("lastSettingsTab", "appearance")).toBe("appearance");
+    expect(normalizeSettingValue("lastSettingsTab", "features" as never)).toBe("advanced");
+    expect(normalizeSettingValue("lastSettingsTab", "extensions" as never)).toBe("general");
   });
 
   it("fills missing core feature flags from defaults", () => {
@@ -117,10 +96,9 @@ describe("settings normalization", () => {
     });
 
     expect(normalized.coreFeatures.webViewer).toBe(false);
-    expect(normalized.coreFeatures.athasEditorEngine).toBe(false);
   });
 
-  it("migrates legacy icon theme aliases to Symbols", () => {
+  it("migrates legacy icon theme aliases", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       iconTheme: "colorful-material",
@@ -129,16 +107,21 @@ describe("settings normalization", () => {
     expect(normalized.iconTheme).toBe("symbols");
     expect(normalizeSettingValue("iconTheme", "colorful-material")).toBe("symbols");
     expect(normalizeSettingValue("iconTheme", "seti")).toBe("symbols");
+    expect(normalizeSettingValue("iconTheme", "athas-icons-dimmed")).toBe("athas-icons");
+    expect(normalizeSettingValue("iconTheme", "athas-icons-light")).toBe("athas-icons");
+    expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("athas-icons");
   });
 
-  it("does not migrate legacy external editor settings into editor engine", () => {
+  it("drops the legacy Athas editor feature flag", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
-      editorEngine: "monaco",
-      externalEditor: "helix",
-    });
+      coreFeatures: {
+        ...getDefaultSettingsSnapshot().coreFeatures,
+        athasEditorEngine: true,
+      },
+    } as never);
 
-    expect(normalized.editorEngine).toBe("monaco");
+    expect("athasEditorEngine" in normalized.coreFeatures).toBe(false);
   });
 
   it("removes legacy worktrees from git sidebar settings", () => {
@@ -196,6 +179,17 @@ describe("settings normalization", () => {
     ).toBe("grok-build-0.1");
   });
 
+  it("preserves unknown AI provider selections for extension providers loaded later", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      aiProviderId: "extension-provider",
+      aiModelId: "extension-model",
+    });
+
+    expect(normalized.aiProviderId).toBe("extension-provider");
+    expect(normalized.aiModelId).toBe("extension-model");
+  });
+
   it("preserves supported marketplace skill metadata", () => {
     const now = new Date().toISOString();
     const normalized = normalizeSettingValue("aiSkills", [
@@ -234,5 +228,56 @@ describe("settings normalization", () => {
       upstreamContent: "Marketplace content",
       upstreamUpdatedAt: "2026-04-01T00:00:00.000Z",
     });
+  });
+
+  it("normalizes v0 design system settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      activeV0DesignSystemId: "registry-one",
+      v0DesignSystems: [
+        {
+          id: " registry-one ",
+          name: " Registry One ",
+          registryUrl: " https://example.com/r/registry.json ",
+          description: " Shared UI ",
+        },
+        {
+          id: "registry-one",
+          name: "Duplicate",
+          registryUrl: "https://duplicate.test/r/registry.json",
+        },
+        {
+          id: "missing-url",
+          name: "Missing URL",
+          registryUrl: "",
+        },
+      ],
+    });
+
+    expect(normalized.activeV0DesignSystemId).toBe("registry-one");
+    expect(normalized.v0DesignSystems).toEqual([
+      {
+        id: "registry-one",
+        name: "Registry One",
+        registryUrl: "https://example.com/r/registry.json",
+        description: "Shared UI",
+      },
+    ]);
+  });
+
+  it("clears stale active v0 design system settings", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      activeV0DesignSystemId: "missing",
+      v0DesignSystems: [
+        {
+          id: "registry-one",
+          name: "Registry One",
+          registryUrl: "https://example.com/r/registry.json",
+        },
+      ],
+    });
+
+    expect(normalized.activeV0DesignSystemId).toBe("");
   });
 });

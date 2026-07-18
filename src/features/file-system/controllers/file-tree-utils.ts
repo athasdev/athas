@@ -30,32 +30,63 @@ export function updateFileInTree(
   targetPath: string,
   updater: (file: FileEntry) => FileEntry,
 ): FileEntry[] {
-  return files.map((file) => {
+  let changed = false;
+  const updatedFiles = files.map((file) => {
     if (file.path === targetPath) {
-      return updater(file);
+      const updatedFile = updater(file);
+      if (updatedFile !== file) changed = true;
+      return updatedFile;
     }
     if (file.children) {
-      return {
-        ...file,
-        children: updateFileInTree(file.children, targetPath, updater),
-      };
+      const updatedChildren = updateFileInTree(file.children, targetPath, updater);
+      if (updatedChildren !== file.children) {
+        changed = true;
+        return {
+          ...file,
+          children: updatedChildren,
+        };
+      }
     }
     return file;
   });
+  return changed ? updatedFiles : files;
 }
 
 export function removeFileFromTree(files: FileEntry[], targetPath: string): FileEntry[] {
-  return files
-    .filter((file) => file.path !== targetPath)
-    .map((file) => {
-      if (file.children) {
-        return {
+  let changed = false;
+  const nextFiles: FileEntry[] = [];
+
+  for (const file of files) {
+    if (file.path === targetPath) {
+      changed = true;
+      continue;
+    }
+
+    if (file.children) {
+      const updatedChildren = removeFileFromTree(file.children, targetPath);
+      if (updatedChildren !== file.children) {
+        changed = true;
+        nextFiles.push({
           ...file,
-          children: removeFileFromTree(file.children, targetPath),
-        };
+          children: updatedChildren,
+        });
+        continue;
       }
-      return file;
-    });
+    }
+
+    nextFiles.push(file);
+  }
+
+  return changed ? nextFiles : files;
+}
+
+function isDirectoryChildrenRoot(files: FileEntry[], parentPath: string): boolean {
+  if (files.length === 0 || !files[0].path) return false;
+  return parentPath === getDirName(files[0].path);
+}
+
+function appendSortedFile(files: FileEntry[], newFile: FileEntry): FileEntry[] {
+  return sortFileEntries([...files, newFile]);
 }
 
 export function addFileToTree(
@@ -65,35 +96,35 @@ export function addFileToTree(
 ): FileEntry[] {
   // If parentPath is empty or root, add to top level
   if (!parentPath || parentPath === "/" || parentPath === "\\") {
-    return sortFileEntries([...files, newFile]);
+    return appendSortedFile(files, newFile);
   }
 
   // Check if parentPath matches the root folder (when files are direct children of parentPath)
   // This happens when creating files in the root directory
-  if (files.length > 0 && files[0].path) {
-    const firstFilePath = files[0].path;
-    // Extract the parent directory of the first file
-    const rootDirFromFirstFile = getDirName(firstFilePath);
-    if (parentPath === rootDirFromFirstFile) {
-      // Add to top level since parentPath is the root directory
-      return sortFileEntries([...files, newFile]);
-    }
+  if (isDirectoryChildrenRoot(files, parentPath)) {
+    return appendSortedFile(files, newFile);
   }
 
+  let changed = false;
   const result = files.map((file) => {
     if (file.path === parentPath && file.isDir) {
-      const children = sortFileEntries([...(file.children || []), newFile]);
+      changed = true;
+      const children = appendSortedFile(file.children || [], newFile);
       return { ...file, children };
     }
     if (file.children) {
-      return {
-        ...file,
-        children: addFileToTree(file.children, parentPath, newFile),
-      };
+      const updatedChildren = addFileToTree(file.children, parentPath, newFile);
+      if (updatedChildren !== file.children) {
+        changed = true;
+        return {
+          ...file,
+          children: updatedChildren,
+        };
+      }
     }
     return file;
   });
-  return result;
+  return changed ? result : files;
 }
 
 export function collapseAllFolders(files: FileEntry[]): FileEntry[] {

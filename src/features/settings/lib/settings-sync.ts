@@ -17,10 +17,8 @@ const SETTINGS_SYNC_PUSH_DEBOUNCE_MS = 1500;
 
 type SyncableSettingsKey =
   | "autoSave"
-  | "sidebarPosition"
   | "quickOpenPreview"
   | "fontFamily"
-  | "editorEngine"
   | "fontSize"
   | "editorLineHeight"
   | "tabSize"
@@ -47,8 +45,6 @@ type SyncableSettingsKey =
   | "autoThemeDark"
   | "compactMenuBar"
   | "windowTransparency"
-  | "sidebarTabsPosition"
-  | "titleBarProjectMode"
   | "headerTrailingItemsOrder"
   | "sidebarActivityItemsOrder"
   | "footerLeadingItemsOrder"
@@ -67,7 +63,10 @@ type SyncableSettingsKey =
   | "aiAutocompleteCustomModelId"
   | "aiDefaultSessionMode"
   | "aiSkills"
+  | "v0DesignSystems"
+  | "activeV0DesignSystemId"
   | "ollamaBaseUrl"
+  | "activityRailWidth"
   | "sidebarWidth"
   | "showGitHubPullRequests"
   | "showGitHubIssues"
@@ -82,6 +81,7 @@ type SyncableSettingsKey =
   | "lintOnSave"
   | "autoCompletion"
   | "parameterHints"
+  | "externalEditor"
   | "customEditorCommand"
   | "coreFeatures"
   | "extensionsActiveTab"
@@ -109,10 +109,8 @@ type SyncableSettingsKey =
 
 const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoSave",
-  "sidebarPosition",
   "quickOpenPreview",
   "fontFamily",
-  "editorEngine",
   "fontSize",
   "editorLineHeight",
   "tabSize",
@@ -139,8 +137,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "autoThemeDark",
   "compactMenuBar",
   "windowTransparency",
-  "sidebarTabsPosition",
-  "titleBarProjectMode",
   "headerTrailingItemsOrder",
   "sidebarActivityItemsOrder",
   "footerLeadingItemsOrder",
@@ -159,7 +155,10 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "aiAutocompleteCustomModelId",
   "aiDefaultSessionMode",
   "aiSkills",
+  "v0DesignSystems",
+  "activeV0DesignSystemId",
   "ollamaBaseUrl",
+  "activityRailWidth",
   "sidebarWidth",
   "showGitHubPullRequests",
   "showGitHubIssues",
@@ -174,6 +173,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "lintOnSave",
   "autoCompletion",
   "parameterHints",
+  "externalEditor",
   "customEditorCommand",
   "coreFeatures",
   "extensionsActiveTab",

@@ -18,7 +18,7 @@ export function GitHubViewerShell({
   return (
     <div className={cn("flex h-full flex-col overflow-y-auto bg-primary-bg", className)}>
       {header}
-      <div className={cn("min-w-0 px-3 pb-4 sm:px-5", contentClassName)}>{children}</div>
+      <div className={cn("min-w-0 px-3 pb-4 sm:px-4", contentClassName)}>{children}</div>
     </div>
   );
 }
@@ -41,25 +41,23 @@ export function GitHubViewerHeader({
   className,
 }: GitHubViewerHeaderProps) {
   return (
-    <div className={cn("shrink-0 px-3 py-4 sm:px-5", className)}>
-      <div className="flex flex-col gap-4 pb-2">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+    <div className={cn("shrink-0 px-3 pt-3 pb-2 sm:px-4", className)}>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
             <div className="min-w-0 flex-1">
-              <h1 className="ui-font ui-text-base min-w-0 leading-tight font-semibold text-text">
+              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-text">
                 {title}
               </h1>
               {meta ? (
-                <div className="ui-font ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
                   {meta}
                 </div>
               ) : null}
             </div>
           </div>
-          {actions ? (
-            <div className="flex shrink-0 flex-wrap items-center gap-1">{actions}</div>
-          ) : null}
+          {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
         </div>
         {children}
       </div>

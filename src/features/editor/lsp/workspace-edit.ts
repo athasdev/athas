@@ -168,9 +168,18 @@ async function readEditableSource(
 
 async function writeEditableSource(filePath: string, bufferId: string | null, content: string) {
   const { useBufferStore } = await import("../stores/buffer.store");
+  const { trackImmediateBufferHistoryChange } = await import("../stores/buffer-history-tracking");
   const { writeFile } = await import("@/features/file-system/controllers/platform");
 
   if (bufferId) {
+    const buffer = useBufferStore.getState().buffers.find((candidate) => candidate.id === bufferId);
+    if (buffer?.type === "editor") {
+      trackImmediateBufferHistoryChange({
+        bufferId,
+        currentContent: buffer.content,
+        nextContent: content,
+      });
+    }
     useBufferStore.getState().actions.updateBufferContent(bufferId, content, true);
     return;
   }

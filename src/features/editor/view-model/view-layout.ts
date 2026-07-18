@@ -33,11 +33,6 @@ export interface EditorResolvedPosition extends ViewPosition {
   height: number;
 }
 
-export type EditorCoordinateResolver = (
-  clientX: number,
-  clientY: number,
-) => EditorResolvedPosition | null;
-
 export type EditorModelPositionResolver = (
   line: number,
   column: number,

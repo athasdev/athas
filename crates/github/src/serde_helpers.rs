@@ -80,6 +80,11 @@ where
             .and_then(|value| value.as_str())
             .map(ToOwned::to_owned),
          workflow_name,
+         details_url: context
+            .get("detailsUrl")
+            .or_else(|| context.get("targetUrl"))
+            .and_then(|value| value.as_str())
+            .map(ToOwned::to_owned),
       };
 
       if check.name.is_some() || check.status.is_some() || check.conclusion.is_some() {

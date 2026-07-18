@@ -1,10 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
-import { UploadIcon as Upload } from "@phosphor-icons/react";
+import { FilePlusIcon, TrashIcon, UploadIcon } from "@/ui/icons";
 import { iconThemeRegistry } from "@/extensions/icon-themes/icon-theme-registry";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
 import { themeRegistry } from "@/extensions/themes/theme-registry";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { getServiceUrls } from "@/config/services";
+import { CustomThemeCreatorDialog } from "@/features/settings/components/custom-theme-creator-dialog";
 import {
   formatUiFontSize,
   UI_FONT_SIZE_MAX,
@@ -20,24 +23,39 @@ import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
+import { toast } from "@/ui/toast";
+import {
+  chooseThemeFile,
+  deleteCustomTheme,
+  uploadTheme,
+} from "@/features/settings/utils/theme-upload";
 
 export const AppearanceSettings = () => {
-  const { settings, updateSetting } = useSettingsStore();
+  const settings = useSettingsStore(
+    useShallow((state) => ({
+      autoThemeDark: state.settings.autoThemeDark,
+      autoThemeLight: state.settings.autoThemeLight,
+      compactMenuBar: state.settings.compactMenuBar,
+      iconTheme: state.settings.iconTheme,
+      nativeMenuBar: state.settings.nativeMenuBar,
+      openFoldersInNewWindow: state.settings.openFoldersInNewWindow,
+      syncSystemTheme: state.settings.syncSystemTheme,
+      theme: state.settings.theme,
+      uiFontFamily: state.settings.uiFontFamily,
+      uiFontSize: state.settings.uiFontSize,
+      windowTransparency: state.settings.windowTransparency,
+    })),
+  );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const registeredThemes = useRegisteredThemes();
   const registeredIconThemes = useRegisteredIconThemes();
-
-  const sidebarOptions = [
-    { value: "left", label: "Left" },
-    { value: "right", label: "Right" },
-  ];
-  const titleBarProjectModeOptions = [
-    { value: "tabs", label: "Tabs" },
-    { value: "window", label: "Window" },
-  ];
-  const sidebarTabsPositionOptions = [
-    { value: "top", label: "Top" },
-    { value: "left", label: "Left" },
-  ];
+  const [isThemeCreatorOpen, setIsThemeCreatorOpen] = useState(false);
+  const themeDocsUrl = `${getServiceUrls().docsUrl}/themes`;
+  const customThemes = useMemo(
+    () =>
+      registeredThemes.filter((theme) => themeRegistry.getThemeSource(theme.id)?.kind === "custom"),
+    [registeredThemes],
+  );
 
   const themeOptions = useMemo(
     () =>
@@ -101,23 +119,60 @@ export const AppearanceSettings = () => {
     return [{ value: fallbackIconTheme.id, label: fallbackIconTheme.name }, ...iconThemeOptions];
   }, [iconThemeOptions, settings.iconTheme]);
 
-  const handleUploadTheme = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const { uploadTheme } = await import("@/features/settings/utils/theme-upload");
-        const result = await uploadTheme(file);
-        if (result.success) {
-          console.log("Theme uploaded successfully:", result.theme?.name);
-        } else {
-          console.error("Theme upload failed:", result.error);
+  const selectImportedTheme = (themeId: string) => {
+    const theme = themeRegistry.getTheme(themeId);
+    if (!theme) return;
+
+    if (!settings.syncSystemTheme) {
+      void updateSetting("theme", themeId);
+      return;
+    }
+
+    void updateSetting(theme.isDark ? "autoThemeDark" : "autoThemeLight", themeId);
+  };
+
+  const handleUploadTheme = () => {
+    chooseThemeFile((file) => {
+      void uploadTheme(file).then((result) => {
+        if (!result.success || !result.theme) {
+          toast.error(
+            result.error ?? "Failed to import theme",
+            result.details?.slice(0, 4).join("\n"),
+          );
+          return;
         }
+
+        toast.success(
+          result.themes?.length === 1
+            ? `Imported ${result.theme.name}`
+            : `Imported ${result.themes?.length ?? 0} theme variants`,
+        );
+        selectImportedTheme(result.theme.id);
+      });
+    });
+  };
+
+  const handleRemoveCustomTheme = async (themeId: string) => {
+    try {
+      const fallbackUpdates: Promise<void>[] = [];
+      if (settings.theme === themeId) {
+        fallbackUpdates.push(updateSetting("theme", getDefaultSetting("theme")));
       }
-    };
-    input.click();
+      if (settings.autoThemeLight === themeId) {
+        fallbackUpdates.push(updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight")));
+      }
+      if (settings.autoThemeDark === themeId) {
+        fallbackUpdates.push(updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark")));
+      }
+      await Promise.all(fallbackUpdates);
+      await deleteCustomTheme(themeId);
+      toast.success("Custom theme removed");
+    } catch (error) {
+      toast.error(
+        "Failed to remove custom theme",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   };
 
   const handleIconThemeChange = (themeId: string) => {
@@ -147,28 +202,16 @@ export const AppearanceSettings = () => {
             onReset={() => updateSetting("theme", getDefaultSetting("theme"))}
             canReset={settings.theme !== getDefaultSetting("theme")}
           >
-            <div className="flex items-center gap-2">
-              <Select
-                value={settings.theme}
-                options={normalizedThemeOptions}
-                onChange={(value) => updateSetting("theme", value)}
-                className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="xs"
-                variant="default"
-                searchable
-                searchableTrigger="input"
-              />
-              <Button
-                type="button"
-                onClick={handleUploadTheme}
-                variant="default"
-                tooltip="Upload theme"
-                aria-label="Upload theme"
-                compact
-              >
-                <Upload />
-              </Button>
-            </div>
+            <Select
+              value={settings.theme}
+              options={normalizedThemeOptions}
+              onChange={(value) => updateSetting("theme", value)}
+              className={SETTINGS_CONTROL_WIDTHS.wide}
+              size="md"
+              variant="default"
+              searchable
+              searchableTrigger="input"
+            />
           </SettingRow>
         ) : null}
 
@@ -180,28 +223,16 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeLight", getDefaultSetting("autoThemeLight"))}
               canReset={settings.autoThemeLight !== getDefaultSetting("autoThemeLight")}
             >
-              <div className="flex items-center gap-2">
-                <Select
-                  value={settings.autoThemeLight}
-                  options={lightThemeOptions}
-                  onChange={(value) => updateSetting("autoThemeLight", value)}
-                  className={SETTINGS_CONTROL_WIDTHS.wide}
-                  size="xs"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
-                />
-                <Button
-                  type="button"
-                  onClick={handleUploadTheme}
-                  variant="default"
-                  tooltip="Upload theme"
-                  aria-label="Upload theme"
-                  compact
-                >
-                  <Upload />
-                </Button>
-              </div>
+              <Select
+                value={settings.autoThemeLight}
+                options={lightThemeOptions}
+                onChange={(value) => updateSetting("autoThemeLight", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="md"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+              />
             </SettingRow>
 
             <SettingRow
@@ -210,28 +241,16 @@ export const AppearanceSettings = () => {
               onReset={() => updateSetting("autoThemeDark", getDefaultSetting("autoThemeDark"))}
               canReset={settings.autoThemeDark !== getDefaultSetting("autoThemeDark")}
             >
-              <div className="flex items-center gap-2">
-                <Select
-                  value={settings.autoThemeDark}
-                  options={darkThemeOptions}
-                  onChange={(value) => updateSetting("autoThemeDark", value)}
-                  className={SETTINGS_CONTROL_WIDTHS.wide}
-                  size="xs"
-                  variant="default"
-                  searchable
-                  searchableTrigger="input"
-                />
-                <Button
-                  type="button"
-                  onClick={handleUploadTheme}
-                  variant="default"
-                  tooltip="Upload theme"
-                  aria-label="Upload theme"
-                  compact
-                >
-                  <Upload />
-                </Button>
-              </div>
+              <Select
+                value={settings.autoThemeDark}
+                options={darkThemeOptions}
+                onChange={(value) => updateSetting("autoThemeDark", value)}
+                className={SETTINGS_CONTROL_WIDTHS.wide}
+                size="md"
+                variant="default"
+                searchable
+                searchableTrigger="input"
+              />
             </SettingRow>
           </>
         ) : null}
@@ -247,12 +266,58 @@ export const AppearanceSettings = () => {
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
             className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="xs"
+            size="md"
             variant="default"
             searchable
             searchableTrigger="input"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Custom Themes"
+          description={
+            <>
+              Import Athas theme JSON or create one from an installed theme.{" "}
+              <a
+                href={themeDocsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-link hover:underline"
+              >
+                Format guide
+              </a>
+            </>
+          }
+        >
+          <div className="flex items-center gap-2">
+            <Button type="button" size="xs" onClick={() => setIsThemeCreatorOpen(true)}>
+              <FilePlusIcon />
+              Create
+            </Button>
+            <Button type="button" size="xs" onClick={handleUploadTheme}>
+              <UploadIcon />
+              Import
+            </Button>
+          </div>
+        </SettingRow>
+
+        {customThemes.map((theme) => (
+          <SettingRow
+            key={theme.id}
+            label={theme.name}
+            description={`${theme.category} custom theme · ${theme.id}`}
+          >
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="danger"
+              tooltip={`Remove ${theme.name}`}
+              onClick={() => void handleRemoveCustomTheme(theme.id)}
+            >
+              <TrashIcon />
+            </Button>
+          </SettingRow>
+        ))}
       </Section>
 
       <Section title="Typography">
@@ -283,51 +348,13 @@ export const AppearanceSettings = () => {
             value={settings.uiFontSize}
             onChange={(value) => updateSetting("uiFontSize", value)}
             className={cn(SETTINGS_CONTROL_WIDTHS.number, "tabular-nums")}
-            size="xs"
+            size="md"
             aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
           />
         </SettingRow>
       </Section>
 
       <Section title="Layout">
-        <SettingRow
-          label="Sidebar Position"
-          description="Choose where to position the sidebar"
-          onReset={() => updateSetting("sidebarPosition", getDefaultSetting("sidebarPosition"))}
-          canReset={settings.sidebarPosition !== getDefaultSetting("sidebarPosition")}
-        >
-          <Select
-            value={settings.sidebarPosition}
-            options={sidebarOptions}
-            onChange={(value) => updateSetting("sidebarPosition", value as "left" | "right")}
-            className={SETTINGS_CONTROL_WIDTHS.compact}
-            size="xs"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Sidebar Tabs"
-          description="Show sidebar activity tabs across the top or in a left rail"
-          onReset={() =>
-            updateSetting("sidebarTabsPosition", getDefaultSetting("sidebarTabsPosition"))
-          }
-          canReset={settings.sidebarTabsPosition !== getDefaultSetting("sidebarTabsPosition")}
-        >
-          <Select
-            value={settings.sidebarTabsPosition}
-            options={sidebarTabsPositionOptions}
-            onChange={(value) => updateSetting("sidebarTabsPosition", value as "top" | "left")}
-            className={SETTINGS_CONTROL_WIDTHS.compact}
-            size="xs"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
         {!IS_MAC && !IS_WINDOWS && !IS_LINUX && (
           <SettingRow
             label="Native Menu Bar"
@@ -378,28 +405,8 @@ export const AppearanceSettings = () => {
         </SettingRow>
 
         <SettingRow
-          label="Title Bar Project Mode"
-          description="Show project tabs or a single window-style title in the custom title bar"
-          onReset={() =>
-            updateSetting("titleBarProjectMode", getDefaultSetting("titleBarProjectMode"))
-          }
-          canReset={settings.titleBarProjectMode !== getDefaultSetting("titleBarProjectMode")}
-        >
-          <Select
-            value={settings.titleBarProjectMode}
-            options={titleBarProjectModeOptions}
-            onChange={(value) => updateSetting("titleBarProjectMode", value as "tabs" | "window")}
-            className={SETTINGS_CONTROL_WIDTHS.default}
-            size="xs"
-            variant="default"
-            searchable
-            searchableTrigger="input"
-          />
-        </SettingRow>
-
-        <SettingRow
           label="Open Projects In New Window"
-          description="In window title mode, opening another folder uses a separate window when a project is already open"
+          description="Opening another folder uses a separate window when a project is already open"
           onReset={() =>
             updateSetting("openFoldersInNewWindow", getDefaultSetting("openFoldersInNewWindow"))
           }
@@ -412,6 +419,15 @@ export const AppearanceSettings = () => {
           />
         </SettingRow>
       </Section>
+
+      {isThemeCreatorOpen ? (
+        <CustomThemeCreatorDialog
+          baseThemeId={settings.theme}
+          themes={registeredThemes}
+          onClose={() => setIsThemeCreatorOpen(false)}
+          onInstalled={selectImportedTheme}
+        />
+      ) : null}
     </div>
   );
 };

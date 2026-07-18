@@ -11,23 +11,30 @@ import {
 } from "react";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
+import { motionDuration, motionEase } from "@/ui/motion";
 import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 
 export const DROPDOWN_TRIGGER_BASE = cn(
   buttonVariants({
     variant: "default",
-    compact: true,
+    size: "xs",
   }),
-  "min-w-0 gap-1 rounded-lg px-2 text-text-lighter",
+  "min-w-0 gap-1 rounded-md px-2 text-text-lighter",
 );
 
+export type DropdownDensity = "default" | "compact";
+
 const dropdownItemVariants = cva(
-  "ui-font ui-text-sm flex w-full items-center justify-between gap-3 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-text transition-colors",
+  "font-sans ui-text-sm flex w-full items-center justify-between whitespace-nowrap text-left text-text transition-colors",
   {
     variants: {
+      density: {
+        default: "gap-3 rounded-lg px-2.5 py-1.5",
+        compact: "gap-2 rounded-md px-2 py-1",
+      },
       disabled: {
         true: "cursor-not-allowed opacity-50",
         false: "cursor-pointer hover:bg-hover",
@@ -38,13 +45,24 @@ const dropdownItemVariants = cva(
       },
     },
     defaultVariants: {
+      density: "default",
       disabled: false,
       focused: false,
     },
   },
 );
 
-const dropdownSectionLabelVariants = cva("ui-font ui-text-sm px-2.5 py-1 text-text-lighter");
+const dropdownSectionLabelVariants = cva("font-sans ui-text-sm text-text-lighter", {
+  variants: {
+    density: {
+      default: "px-2.5 py-1",
+      compact: "px-2 py-0.5",
+    },
+  },
+  defaultVariants: {
+    density: "default",
+  },
+});
 
 export const DROPDOWN_ITEM_BASE = dropdownItemVariants();
 
@@ -73,6 +91,8 @@ interface MenuItemsListProps {
   className?: string;
   itemClassName?: string;
   focusIndex?: number;
+  density?: DropdownDensity;
+  showIcons?: boolean;
 }
 
 export function MenuItemsList({
@@ -81,6 +101,8 @@ export function MenuItemsList({
   className,
   itemClassName,
   focusIndex = -1,
+  density = "default",
+  showIcons = true,
 }: MenuItemsListProps) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -120,6 +142,7 @@ export function MenuItemsList({
             disabled={item.disabled}
             className={cn(
               dropdownItemVariants({
+                density,
                 disabled: item.disabled,
                 focused: isFocused,
               }),
@@ -127,10 +150,26 @@ export function MenuItemsList({
               item.className,
             )}
           >
-            {item.icon && <span className="size-3 shrink-0">{item.icon}</span>}
+            {showIcons && item.icon && (
+              <span
+                className={cn(
+                  "grid shrink-0 place-items-center [&>svg]:block",
+                  density === "compact"
+                    ? "size-4 [&>svg]:size-4"
+                    : "size-[1.125rem] [&>svg]:size-[1.125rem]",
+                )}
+              >
+                {item.icon}
+              </span>
+            )}
             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.label}</span>
             {item.keybinding && (
-              <span className="ui-text-sm ml-8 shrink-0 whitespace-nowrap text-text-lighter">
+              <span
+                className={cn(
+                  "ui-text-sm shrink-0 whitespace-nowrap text-text-lighter",
+                  density === "compact" ? "ml-5" : "ml-8",
+                )}
+              >
                 {item.keybinding}
               </span>
             )}
@@ -161,6 +200,8 @@ interface DropdownBaseProps {
   animated?: boolean;
   matchAnchorWidth?: boolean;
   anchorMinWidth?: number;
+  density?: DropdownDensity;
+  showIcons?: boolean;
 }
 
 interface AnchorPositioning {
@@ -250,6 +291,8 @@ export function Dropdown(props: DropdownProps) {
     animated = true,
     matchAnchorWidth = false,
     anchorMinWidth = 0,
+    density = "default",
+    showIcons = true,
   } = props;
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -561,10 +604,20 @@ export function Dropdown(props: DropdownProps) {
       className={className}
       style={{ transformOrigin, visibility: isPositioned ? "visible" : "hidden", ...style }}
       animated={animated}
-      initial={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98, y: resolvedSide === "top" ? 4 : -4 }}
-      transition={{ duration: 0.12, ease: "easeOut" }}
+      initial={{
+        opacity: 0,
+        scale: 0.98,
+        y: resolvedSide === "top" ? 4 : -4,
+        filter: "blur(2px)",
+      }}
+      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={{
+        opacity: 0,
+        scale: 0.98,
+        y: resolvedSide === "top" ? 4 : -4,
+        filter: "blur(2px)",
+      }}
+      transition={{ duration: motionDuration.fast, ease: motionEase.smooth }}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (
@@ -590,6 +643,8 @@ export function Dropdown(props: DropdownProps) {
             items={getFilteredItems()}
             focusIndex={focusIndex}
             onItemSelect={closeOnSelect ? onClose : undefined}
+            density={density}
+            showIcons={showIcons}
           />
         )}
         {hasSections &&
@@ -597,11 +652,13 @@ export function Dropdown(props: DropdownProps) {
             <div key={section.id}>
               {sectionIdx > 0 && <div className="my-0.5 border-border/70 border-t" />}
               {section.label && (
-                <div className={dropdownSectionLabelVariants()}>{section.label}</div>
+                <div className={dropdownSectionLabelVariants({ density })}>{section.label}</div>
               )}
               <MenuItemsList
                 items={section.items}
                 onItemSelect={closeOnSelect ? onClose : undefined}
+                density={density}
+                showIcons={showIcons}
               />
             </div>
           ))}

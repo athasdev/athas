@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -8,6 +8,7 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { instantTransition, motionDuration, motionEase } from "@/ui/motion";
 import { chatComposerDropdownClassName } from "../input/chat-composer-control-styles";
 import { AIFileSelector } from "./ai-file-selector";
 
@@ -30,9 +31,10 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [fallbackFiles, setFallbackFiles] = useState<FileEntry[]>([]);
   const [visibleResultCount, setVisibleResultCount] = useState(0);
+  const prefersReducedMotion = useReducedMotion();
 
-  const { rootFolderPath } = useProjectStore();
-  const { getAllProjectFiles } = useFileSystemStore();
+  const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
   const { mentionState, hideMention } = useAIChatStore();
   const setSelectedIndex = useAIChatStore((state) => state.setSelectedIndex);
   const { position, selectedIndex } = mentionState;
@@ -169,10 +171,20 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   return createPortal(
     <motion.div
       ref={dropdownRef}
-      initial={{ opacity: 0, scale: 0.95, y: -4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95, y: -4 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      initial={
+        prefersReducedMotion ? false : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
+      }
+      animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+      exit={
+        prefersReducedMotion
+          ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
+          : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
+      }
+      transition={
+        prefersReducedMotion
+          ? instantTransition
+          : { duration: motionDuration.fast, ease: motionEase.smooth }
+      }
       className={chatComposerDropdownClassName(
         "fixed z-[10040] flex select-none flex-col overflow-hidden",
       )}

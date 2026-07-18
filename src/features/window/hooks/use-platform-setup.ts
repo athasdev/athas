@@ -1,19 +1,20 @@
 import { useLayoutEffect } from "react";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
-import { isMac } from "@/utils/platform";
+import { isMac, isWindows } from "@/utils/platform";
 
 export function usePlatformSetup() {
   const { cleanup } = useEditorAppStore.use.actions();
 
   useLayoutEffect(() => {
-    if (isMac()) {
-      document.documentElement.classList.add("platform-macos");
-    } else {
-      document.documentElement.classList.add("platform-other");
-    }
+    const platformClass = isMac()
+      ? "platform-macos"
+      : isWindows()
+        ? "platform-windows"
+        : "platform-other";
+    document.documentElement.classList.add(platformClass);
 
     return () => {
-      document.documentElement.classList.remove("platform-macos", "platform-other");
+      document.documentElement.classList.remove(platformClass);
       cleanup();
     };
   }, [cleanup]);

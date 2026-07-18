@@ -1,10 +1,16 @@
-import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@phosphor-icons/react";
+import { CaretLeftIcon as CaretLeft, PaletteIcon as Palette } from "@/ui/icons";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRegisteredIconThemes } from "@/extensions/icon-themes/use-registered-icon-themes";
-import { Button } from "@/ui/button";
-import { CommandEmpty, CommandHeader, CommandInput, CommandItem, CommandList } from "@/ui/command";
-import Badge from "@/ui/badge";
+import {
+  CommandEmpty,
+  CommandHeader,
+  CommandHeaderAction,
+  CommandInput,
+  CommandItemBadge,
+  CommandItemRow,
+  CommandList,
+} from "@/ui/command";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface IconThemeInfo {
@@ -89,7 +95,7 @@ export const IconThemeSelectorContent = ({
   }, [onThemeChange]);
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!filteredThemes.length) return;
 
       let nextIndex = selectedIndex;
@@ -99,6 +105,12 @@ export const IconThemeSelectorContent = ({
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         nextIndex = (selectedIndex - 1 + filteredThemes.length) % filteredThemes.length;
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        nextIndex = filteredThemes.length - 1;
       } else if (e.key === "Enter") {
         e.preventDefault();
         didCommitRef.current = true;
@@ -126,14 +138,6 @@ export const IconThemeSelectorContent = ({
     },
     [selectedIndex, filteredThemes, onThemeChange, onClose, initialTheme],
   );
-
-  // Reset state when visibility changes
-  useEffect(() => {
-    if (isActive) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isActive, handleKeyDown]);
 
   // Update selected index when query changes
   useEffect(() => {
@@ -166,20 +170,14 @@ export const IconThemeSelectorContent = ({
     <>
       <CommandHeader onClose={handleClose}>
         <div className="flex w-full items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded"
-            onClick={handleBack}
-            aria-label="Back to commands"
-            compact
-          >
-            <CaretLeft className="text-text-lighter" />
-          </Button>
+          <CommandHeaderAction type="button" onClick={handleBack} aria-label="Back to commands">
+            <CaretLeft />
+          </CommandHeaderAction>
           <CommandInput
             ref={inputRef}
             value={query}
             onChange={setQuery}
+            onKeyDown={handleKeyDown}
             placeholder="Search icon themes..."
             className="flex-1"
           />
@@ -196,7 +194,7 @@ export const IconThemeSelectorContent = ({
             const isPreviewing = previewTheme !== null;
 
             return (
-              <CommandItem
+              <CommandItemRow
                 key={theme.id}
                 data-index={index}
                 onClick={() => {
@@ -218,20 +216,14 @@ export const IconThemeSelectorContent = ({
                   }
                 }}
                 isSelected={isSelected}
-                className="gap-3 px-2 py-1.5"
-              >
-                <div className="shrink-0 text-text-lighter">{theme.icon || <Palette />}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 truncate ui-text-xs">
-                    <span className="truncate">{theme.name}</span>
-                    {isCurrent && !isPreviewing && (
-                      <Badge variant="accent" className="px-1 py-0.5">
-                        current
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CommandItem>
+                icon={<span className="text-text-lighter">{theme.icon || <Palette />}</span>}
+                title={theme.name}
+                accessory={
+                  isCurrent && !isPreviewing ? (
+                    <CommandItemBadge>current</CommandItemBadge>
+                  ) : undefined
+                }
+              />
             );
           })
         )}

@@ -1,6 +1,5 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IdeSettingsImportDialog } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -11,9 +10,10 @@ import Command, {
   CommandEmpty,
   CommandHeader,
   CommandInput,
-  CommandItem,
+  CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { SettingRow } from "../settings-section";
 
@@ -118,7 +118,7 @@ export const GeneralSettings = () => {
   const handleCopyInstallCommand = async () => {
     try {
       const command = await invoke<string>("get_cli_install_command");
-      await writeText(command);
+      await writeClipboardText(command);
       showToast({ message: "Install command copied to clipboard", type: "success" });
     } catch (error) {
       showToast({ message: `Failed to copy command: ${error}`, type: "error" });
@@ -151,7 +151,7 @@ export const GeneralSettings = () => {
           `${channel.url}?subject=${encodeURIComponent("Athas bug report")}&body=${encodeURIComponent(report)}`,
         );
       } else {
-        await writeText(report);
+        await writeClipboardText(report);
         await openUrl(channel.url);
         showToast({ message: "Report template copied", type: "success" });
       }
@@ -175,7 +175,7 @@ export const GeneralSettings = () => {
               onClick={downloadAndInstall}
               disabled={downloading || installing}
               variant="default"
-              compact
+              size="xs"
             >
               {downloading
                 ? "Downloading..."
@@ -188,7 +188,7 @@ export const GeneralSettings = () => {
               onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="default"
-              compact
+              size="xs"
             >
               {checking ? "Checking..." : "Check"}
             </Button>
@@ -196,7 +196,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="ui-font ui-text-xs -mt-3 px-1 text-text-lighter/75">
+      <div className="font-sans ui-text-base -mt-3 px-1 text-text-lighter/75">
         {downloading
           ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
           : installing
@@ -212,14 +212,14 @@ export const GeneralSettings = () => {
         <div className="px-3">
           <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
             <div
-              className="h-full bg-accent transition-all duration-300"
+              className="h-full bg-accent transition-[width] duration-[var(--app-duration-slow)] ease-[var(--app-ease-smooth)]"
               style={{ width: `${downloadProgress.percentage}%` }}
             />
           </div>
         </div>
       )}
 
-      {error && <div className="ui-font ui-text-sm px-3 text-error">{error}</div>}
+      {error && <div className="font-sans ui-text-base px-3 text-error">{error}</div>}
 
       <SettingRow
         label="Terminal Command"
@@ -239,7 +239,7 @@ export const GeneralSettings = () => {
                 onClick={() => void handleInstallCli()}
                 disabled={cliInstalling || cliChecking}
                 variant="default"
-                compact
+                size="xs"
               >
                 {cliInstalling ? "Installing..." : "Install"}
               </Button>
@@ -248,7 +248,7 @@ export const GeneralSettings = () => {
                 disabled={cliChecking}
                 variant="default"
                 tooltip="Copy install command to clipboard"
-                compact
+                size="xs"
               >
                 Copy
               </Button>
@@ -257,7 +257,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="ui-font ui-text-xs -mt-3 px-1 text-text-lighter/75">
+      <div className="font-sans ui-text-base -mt-3 px-1 text-text-lighter/75">
         {cliChecking
           ? "Checking..."
           : cliInstalled
@@ -266,7 +266,7 @@ export const GeneralSettings = () => {
       </div>
 
       <SettingRow label="Import Settings" description="Import matching setup from another editor.">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" compact>
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" size="xs">
           Import
         </Button>
       </SettingRow>
@@ -275,7 +275,7 @@ export const GeneralSettings = () => {
         label="Report a Bug"
         description="Choose where to report an issue with environment details."
       >
-        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" compact>
+        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" size="xs">
           Open
         </Button>
       </SettingRow>
@@ -357,18 +357,14 @@ function ReportBugCommandDialog({
           <CommandEmpty>No report channel matches "{query}".</CommandEmpty>
         ) : (
           channels.map((channel, index) => (
-            <CommandItem
+            <CommandItemRow
               key={channel.id}
               isSelected={index === selectedIndex}
               onClick={() => onSelect(channel)}
               onMouseEnter={() => setSelectedIndex(index)}
-              className="h-8 items-center justify-between px-3"
-            >
-              <span className="ui-font ui-text-sm text-text">{channel.label}</span>
-              <span className="ui-font ui-text-sm shrink-0 text-text-lighter">
-                {channel.detail}
-              </span>
-            </CommandItem>
+              title={channel.label}
+              description={channel.detail}
+            />
           ))
         )}
       </CommandList>

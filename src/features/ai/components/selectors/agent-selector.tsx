@@ -4,7 +4,7 @@ import {
   PlusIcon as Plus,
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as Settings2,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
@@ -15,7 +15,6 @@ import { LoadingIndicator } from "@/ui/loading";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { PaneIconButton } from "@/features/panes/components/pane-chrome";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import {
@@ -27,7 +26,7 @@ import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
 const ATHAS_AGENT_OPTION = {
   id: "custom",
   name: "Athas Agent",
-  description: "Use Athas chat settings and provider configuration",
+  description: "Use Athas Agent settings and provider configuration",
   isAcp: false,
 };
 
@@ -39,7 +38,6 @@ interface AgentSelectorProps {
   portalContainer?: Element | DocumentFragment | null;
   triggerClassName?: string;
   triggerTooltip?: string;
-  openSignal?: number;
 }
 
 export function AgentSelector({
@@ -50,7 +48,6 @@ export function AgentSelector({
   portalContainer,
   triggerClassName,
   triggerTooltip,
-  openSignal,
 }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -65,7 +62,6 @@ export function AgentSelector({
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const previousOpenSignalRef = useRef(openSignal);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
   const currentAgent =
@@ -149,43 +145,46 @@ export function AgentSelector({
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (openSignal === undefined || openSignal === previousOpenSignalRef.current) return;
-    previousOpenSignalRef.current = openSignal;
-    setIsOpen(true);
-  }, [openSignal]);
-
-  useEffect(() => {
+  const resetSelection = useCallback(() => {
     setSelectedIndex(0);
-  }, [search]);
+  }, []);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSearch("");
-      setSelectedIndex(0);
+  const closeAgentSelector = useCallback(() => {
+    setSearch("");
+    setSelectedIndex(0);
+    setIsOpen(false);
+  }, []);
+
+  const toggleAgentSelector = useCallback(() => {
+    if (isOpen) {
+      closeAgentSelector();
+      return;
     }
-  }, [isOpen]);
+    setSearch("");
+    setSelectedIndex(0);
+    setIsOpen(true);
+  }, [closeAgentSelector, isOpen]);
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
       if (onSelectAgent) {
-        setIsOpen(false);
+        closeAgentSelector();
         onSelectAgent(agentId);
         return;
       }
 
       if (agentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
-        setIsOpen(false);
+        closeAgentSelector();
         openClaudeCodeTerminal();
         return;
       }
 
       if (variant !== "header" && agentId === currentAgentId) {
-        setIsOpen(false);
+        closeAgentSelector();
         return;
       }
 
-      setIsOpen(false);
+      closeAgentSelector();
       setSelectedAgentId(agentId);
 
       if (currentAgentId !== "custom") {
@@ -208,6 +207,7 @@ export function AgentSelector({
       }
     },
     [
+      closeAgentSelector,
       onSelectAgent,
       variant,
       currentAgentId,
@@ -270,11 +270,18 @@ export function AgentSelector({
           break;
         case "Escape":
           e.preventDefault();
-          setIsOpen(false);
+          closeAgentSelector();
           break;
       }
     },
-    [isOpen, selectableItems, selectedIndex, handleAgentChange, handleInstallAgent],
+    [
+      isOpen,
+      selectableItems,
+      selectedIndex,
+      handleAgentChange,
+      handleInstallAgent,
+      closeAgentSelector,
+    ],
   );
 
   let selectableIndex = -1;
@@ -282,23 +289,25 @@ export function AgentSelector({
   return (
     <>
       {variant === "header" ? (
-        <PaneIconButton
+        <Button
           ref={triggerRef}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleAgentSelector}
           type="button"
-          tooltip={triggerTooltip ?? "New chat"}
+          variant="ghost"
+          size="icon-xs"
+          tooltip={triggerTooltip ?? "New session"}
           className={triggerClassName}
         >
           <Plus />
-        </PaneIconButton>
+        </Button>
       ) : (
         <Button
           ref={triggerRef}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleAgentSelector}
           type="button"
           variant="ghost"
-          compact
-          className="ui-font flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-xs transition-colors hover:bg-hover"
+          size="xs"
+          className="font-sans flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
         >
           <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
           <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
@@ -313,7 +322,7 @@ export function AgentSelector({
         anchorRef={triggerRef}
         anchorSide="bottom"
         anchorAlign="end"
-        onClose={() => setIsOpen(false)}
+        onClose={closeAgentSelector}
         portalContainer={portalContainer}
         className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
         style={{ maxHeight: "240px" }}
@@ -323,7 +332,10 @@ export function AgentSelector({
             ref={inputRef}
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              resetSelection();
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Search agents..."
             variant="ghost"
@@ -335,7 +347,7 @@ export function AgentSelector({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-1 [overscroll-behavior:contain]">
           {filteredItems.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter ui-text-xs">No results found</div>
+            <div className="p-4 text-center text-text-lighter ui-text-sm">No results found</div>
           ) : (
             filteredItems.map((item) => {
               selectableIndex++;
@@ -358,7 +370,7 @@ export function AgentSelector({
                     }
                   }}
                   className={cn(
-                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-md px-2 py-1 ui-text-xs transition-colors",
+                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 ui-text-sm transition-colors",
                     isSelected ? "bg-hover/90" : "bg-transparent",
                     item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
                     !item.isInstalled && item.id !== "custom" && "text-text-lighter",
@@ -367,11 +379,11 @@ export function AgentSelector({
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-left text-text ui-text-xs leading-4">
+                      <div className="truncate text-left text-text ui-text-sm leading-4">
                         {item.name}
                       </div>
                       {!item.isInstalled && item.id !== "custom" ? (
-                        <div className="truncate text-left ui-text-xs text-text-lighter leading-3">
+                        <div className="truncate text-left ui-text-sm text-text-lighter leading-3">
                           {item.canInstall ? "Not installed" : item.description}
                         </div>
                       ) : null}
@@ -386,8 +398,8 @@ export function AgentSelector({
                           void handleInstallAgent(item.id as AgentType, item.name);
                         }}
                         variant="ghost"
-                        compact
-                        className="h-6 px-2 ui-text-xs"
+                        size="xs"
+                        className="h-6 px-2 ui-text-sm"
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
                         {item.isInstalling ? (
@@ -402,11 +414,11 @@ export function AgentSelector({
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
-                          setIsOpen(false);
+                          closeAgentSelector();
                           onOpenSettings();
                         }}
                         variant="ghost"
-                        compact
+                        size="icon-xs"
                         className={cn(
                           item.isCurrent
                             ? "bg-accent/15 text-accent"

@@ -13,8 +13,10 @@ import {
   UploadSimpleIcon as UploadSimple,
   WarningCircleIcon as WarningCircle,
   WrenchIcon as Wrench,
-} from "@phosphor-icons/react";
+} from "@/ui/icons";
 import { memo } from "react";
+import { MessageActions } from "@/features/ai/components/elements/message";
+import { chatFollowUpActionClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import { Button } from "@/ui/button";
 
@@ -47,11 +49,11 @@ export const ChatFollowUpActions = memo(function ChatFollowUpActions({
   if (actions.length === 0) return null;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+    <MessageActions className="opacity-100">
       {actions.map((action) => (
         <FollowUpButton key={action.id} action={action} onSelect={onSelect} />
       ))}
-    </div>
+    </MessageActions>
   );
 });
 
@@ -68,14 +70,14 @@ function FollowUpButton({
     <Button
       type="button"
       variant="ghost"
-      compact
+      size="xs"
       onClick={() => onSelect(action.prompt)}
-      className="h-7 rounded-md border border-border/70 bg-primary-bg/70 px-2 text-text-lighter hover:border-border-strong hover:bg-hover/70 hover:text-text"
+      className={chatFollowUpActionClassName()}
       tooltip={action.prompt}
       aria-label={action.label}
     >
       <Icon className="size-3.5" />
-      <span className="ui-text-xs">{action.label}</span>
+      <span className="ui-text-sm">{action.label}</span>
     </Button>
   );
 }

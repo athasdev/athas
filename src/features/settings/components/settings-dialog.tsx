@@ -1,4 +1,4 @@
-import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@phosphor-icons/react";
+import { CaretDownIcon as CaretDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
@@ -23,11 +23,8 @@ import { AccountSettings } from "./tabs/account-settings";
 import { AISettings } from "./tabs/ai-settings";
 import { AppearanceSettings } from "./tabs/appearance-settings";
 import { CollaborationSettings } from "./tabs/collaboration-settings";
-import { DatabaseSettings } from "./tabs/database-settings";
 import { EditorSettings } from "./tabs/editor-settings";
 import { EnterpriseSettings } from "./tabs/enterprise-settings";
-import { ExtensionsSettings } from "./tabs/extensions-settings";
-import { FeaturesSettings } from "./tabs/features-settings";
 import { GeneralSettings } from "./tabs/general-settings";
 import { GitSettings } from "./tabs/git-settings";
 import { KeyboardSettings } from "./tabs/keyboard-settings";
@@ -182,16 +179,10 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         return <GitSettings />;
       case "appearance":
         return <AppearanceSettings />;
-      case "databases":
-        return <DatabaseSettings />;
-      case "extensions":
-        return <ExtensionsSettings />;
       case "ai":
         return <AISettings />;
       case "keyboard":
         return <KeyboardSettings />;
-      case "features":
-        return <FeaturesSettings />;
       case "collaboration":
         return canShowCollaborationSettings ? <CollaborationSettings /> : <GeneralSettings />;
       case "enterprise":
@@ -257,7 +248,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                 navigateToSearchResult(firstResult);
               }}
               leftIcon={Search}
-              size="sm"
+              size="md"
               className="w-full"
             />
           </div>
@@ -287,7 +278,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             aria-labelledby={activeTabId}
             data-settings-content=""
             tabIndex={-1}
-            className="min-w-0 flex-1 overflow-y-auto p-3 [--app-ui-control-font-size:var(--ui-text-sm)] [overscroll-behavior:contain] max-[720px]:p-2"
+            className="min-w-0 flex-1 overflow-y-auto p-3 [overscroll-behavior:contain] max-[720px]:p-2"
           >
             {renderTabContent()}
           </div>
@@ -323,19 +314,19 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   type="button"
                   onClick={() => navigateToSearchResult(result)}
                   className={[
-                    "ui-font flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
+                    "font-sans flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
                     isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
                   ].join(" ")}
                 >
-                  <span className="ui-text-sm w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-xs w-full truncate text-text-lighter">
+                  <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
+                  <span className="ui-text-base w-full truncate text-text-lighter">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>
               );
             })
           ) : (
-            <div className="ui-font ui-text-sm px-3 py-2 text-text-lighter">
+            <div className="font-sans ui-text-base px-3 py-2 text-text-lighter">
               No matching settings
             </div>
           )}

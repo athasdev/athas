@@ -1,6 +1,7 @@
 import type { TokenEntry } from "@/features/panes/types/pane-content.types";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine } from "../types/git.types";
+import { DIFF_SERIALIZED_LINE_LIMIT } from "./diff-viewer-scale";
 
 const DIFF_ACCORDION_PREFIX = "\uE000ATHAS_DIFF_FILE ";
 
@@ -75,10 +76,18 @@ function serializeFileHeader(diff: GitDiff): string[] {
 
 export function serializeGitDiffForEditor(diff: GitDiff): string {
   if (diff.raw_patch) {
-    return diff.raw_patch;
+    const rawPatchLines = diff.raw_patch.split("\n");
+    if (rawPatchLines.length <= DIFF_SERIALIZED_LINE_LIMIT) return diff.raw_patch;
+
+    return [
+      ...rawPatchLines.slice(0, DIFF_SERIALIZED_LINE_LIMIT),
+      `# Athas truncated this diff after ${DIFF_SERIALIZED_LINE_LIMIT.toLocaleString()} lines to keep the editor responsive.`,
+    ].join("\n");
   }
 
-  const serializedLines = diff.lines.map(toDiffLineText);
+  const isTruncated = diff.lines.length > DIFF_SERIALIZED_LINE_LIMIT;
+  const visibleLines = isTruncated ? diff.lines.slice(0, DIFF_SERIALIZED_LINE_LIMIT) : diff.lines;
+  const serializedLines = visibleLines.map(toDiffLineText);
   const hasPatchHeader = serializedLines.some(
     (line) =>
       line.startsWith("diff --git ") ||
@@ -87,7 +96,15 @@ export function serializeGitDiffForEditor(diff: GitDiff): string {
       line.startsWith("index "),
   );
 
-  return [...(hasPatchHeader ? [] : serializeFileHeader(diff)), ...serializedLines].join("\n");
+  return [
+    ...(hasPatchHeader ? [] : serializeFileHeader(diff)),
+    ...serializedLines,
+    ...(isTruncated
+      ? [
+          `# Athas truncated this diff after ${DIFF_SERIALIZED_LINE_LIMIT.toLocaleString()} lines to keep the editor responsive.`,
+        ]
+      : []),
+  ].join("\n");
 }
 
 function pushLine(

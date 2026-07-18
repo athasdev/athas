@@ -1,8 +1,9 @@
-import { ClockIcon } from "@phosphor-icons/react";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
-import { CommandItem } from "@/ui/command";
+import { ClockIcon } from "@/ui/icons";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { CommandItemBadge, CommandItemRow } from "@/ui/command";
 import { getDirectoryPath } from "@/utils/path-helpers";
 import type { FileCategory, FileItem } from "../types/quick-open.types";
+import { SearchMatchHighlight } from "./search-match-highlight";
 
 interface FileListItemProps {
   file: FileItem;
@@ -12,6 +13,7 @@ interface FileListItemProps {
   onClick: (path: string) => void;
   onMouseEnter?: (index: number, path: string) => void;
   rootFolderPath: string | null | undefined;
+  searchQuery: string;
 }
 
 export const FileListItem = ({
@@ -22,37 +24,27 @@ export const FileListItem = ({
   onClick,
   onMouseEnter,
   rootFolderPath,
+  searchQuery,
 }: FileListItemProps) => {
   const directoryPath = getDirectoryPath(file.path, rootFolderPath);
 
   return (
-    <CommandItem
+    <CommandItemRow
       key={`${category}-${file.path}`}
       data-item-index={index}
       onClick={() => onClick(file.path)}
       onMouseEnter={() => onMouseEnter?.(index, file.path)}
       isSelected={isSelected}
-      className="ui-font"
-    >
-      <FileExplorerIcon fileName={file.name} isDir={false} size={14} className="shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="truncate ui-text-xs">
-          <span className="text-text">{file.name}</span>
-          {directoryPath && (
-            <span className="ml-1.5 ui-text-xs text-text-lighter opacity-60">{directoryPath}</span>
-          )}
-        </div>
-      </div>
-      {category === "open" && (
-        <span className="rounded bg-accent/20 px-1 py-0.5 font-medium ui-text-xs text-accent">
-          open
-        </span>
-      )}
-      {category === "recent" && (
-        <span className="rounded px-1 py-0.5 font-medium ui-text-xs text-text-lighter">
-          <ClockIcon />
-        </span>
-      )}
-    </CommandItem>
+      icon={<ThemedFileIcon fileName={file.name} isDir={false} />}
+      title={<SearchMatchHighlight text={file.name} query={searchQuery} />}
+      description={<SearchMatchHighlight text={directoryPath} query={searchQuery} />}
+      accessory={
+        category === "recent" ? (
+          <CommandItemBadge>
+            <ClockIcon />
+          </CommandItemBadge>
+        ) : undefined
+      }
+    />
   );
 };

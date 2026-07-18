@@ -24,7 +24,7 @@ export function PdfViewerFooter({
     <div
       className={cn(
         "flex items-center gap-4 border-border border-t",
-        "bg-secondary-bg px-4 py-2 text-text-lighter ui-text-xs",
+        "bg-secondary-bg px-4 py-2 text-text-lighter ui-text-sm",
         "h-9 shrink-0 overflow-hidden whitespace-nowrap",
       )}
     >

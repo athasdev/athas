@@ -76,6 +76,46 @@ fn parses_pull_request_details_with_sparse_fields() {
 }
 
 #[test]
+fn parses_pull_request_status_check_urls() {
+   let payload = json!({
+      "number": 568,
+      "title": "Example",
+      "state": "OPEN",
+      "statusCheckRollup": {
+         "contexts": {
+            "nodes": [
+               {
+                  "name": "test",
+                  "status": "COMPLETED",
+                  "conclusion": "SUCCESS",
+                  "workflowName": "CI",
+                  "detailsUrl": "https://github.com/athasdev/athas/actions/runs/1/job/2"
+               },
+               {
+                  "name": "terraform",
+                  "status": "COMPLETED",
+                  "conclusion": "SUCCESS",
+                  "targetUrl": "https://app.terraform.io/status"
+               }
+            ]
+         }
+      }
+   });
+
+   let details: PullRequestDetails =
+      serde_json::from_value(payload).expect("PR status checks should deserialize");
+
+   assert_eq!(
+      details.status_checks[0].details_url.as_deref(),
+      Some("https://github.com/athasdev/athas/actions/runs/1/job/2")
+   );
+   assert_eq!(
+      details.status_checks[1].details_url.as_deref(),
+      Some("https://app.terraform.io/status")
+   );
+}
+
+#[test]
 fn parses_pull_request_comments_with_missing_author_or_body() {
    let payload = json!({
       "author": null,

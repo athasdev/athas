@@ -1,30 +1,17 @@
 import {
-  CheckIcon as Check,
-  CaretDownIcon as ChevronDown,
-  CaretRightIcon as ChevronRight,
   ColumnsIcon as Columns2,
-  ArrowSquareOutIcon as ExternalLink,
   ListBulletsIcon as ListBullets,
   RowsIcon as Rows3,
-  TrashIcon as Trash2,
-} from "@phosphor-icons/react";
-import {
-  type MouseEvent,
-  type WheelEvent,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+} from "@/ui/icons";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeEditor from "@/features/editor/components/code-editor";
 import Breadcrumb, {
   BreadcrumbActionButton,
 } from "@/features/editor/components/toolbar/breadcrumb";
+import { MultibufferFileHeader } from "@/features/editor/components/multibuffer/multibuffer-file-header";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { FileExplorerIcon } from "@/features/file-explorer/components/file-explorer-icon";
+import { getBufferById } from "@/features/editor/utils/buffer-index";
 import {
   FileNavigatorSidebar,
   type FileNavigatorItem,
@@ -35,9 +22,11 @@ import { useEditorSettingsStore } from "@/features/editor/stores/settings.store"
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { cn } from "@/utils/cn";
 import { formatRelativeDate } from "@/utils/date";
+import { cn } from "@/utils/cn";
 import { joinPath } from "@/utils/path-helpers";
+import { ActionMenu } from "@/ui/action-menu";
+import { Avatar } from "@/ui/avatar";
 import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
@@ -46,6 +35,7 @@ import type { GitDiff } from "../../types/git.types";
 import { gitDiffCache } from "../../utils/git-diff-cache";
 import { getFileStatus } from "../../utils/git-diff-helpers";
 import {
+  DIFF_INLINE_RENDER_LINE_THRESHOLD,
   getInitialExpandedDiffFileKeys,
   shouldUseScrollableDiffEditor,
 } from "../../utils/diff-viewer-scale";
@@ -58,7 +48,6 @@ import {
 import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import ImageDiffViewer from "./git-diff-image";
 import TextDiffViewer from "./git-diff-text";
-import Badge from "@/ui/badge";
 
 function countStats(diff: GitDiff) {
   if (typeof diff.additions === "number" || typeof diff.deletions === "number") {
@@ -85,15 +74,6 @@ const statusTextClass: Record<string, string> = {
   modified: "text-git-modified",
   renamed: "text-git-renamed",
 };
-
-const statusBadgeClass: Record<string, string> = {
-  added: "bg-git-added/12 text-git-added",
-  deleted: "bg-git-deleted/12 text-git-deleted",
-  modified: "bg-git-modified/12 text-git-modified",
-  renamed: "bg-git-renamed/12 text-git-renamed",
-};
-
-const MAX_HUNK_ACTION_DIFF_LINES = 1200;
 
 function getDiffSectionKey(multiDiff: MultiFileDiff, diff: GitDiff, index: number): string {
   return multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
@@ -143,7 +123,7 @@ function LargeDiffSectionEditor({ diff, cacheKey }: { diff: GitDiff; cacheKey: s
 
   return (
     <div
-      className="relative overflow-hidden border-border border-t bg-primary-bg"
+      className="relative overflow-hidden bg-primary-bg"
       style={{ height: "min(72vh, 760px)", minHeight: "420px" }}
     >
       <CodeEditor
@@ -224,7 +204,13 @@ function EmbeddedDiffSectionEditor({
     [fontSize, editorLineHeight, zoomLevel],
   );
   const resolveAbsolutePath = useCallback(() => {
-    if (sourcePath.startsWith("/") || sourcePath.startsWith("remote://")) return sourcePath;
+    const isAbsoluteProviderPath =
+      sourcePath.startsWith("/") ||
+      sourcePath.startsWith("remote://") ||
+      sourcePath.startsWith("wsl://");
+    if (isAbsoluteProviderPath) {
+      return sourcePath;
+    }
     if (!rootFolderPath) return sourcePath;
     return `${rootFolderPath.replace(/\/$/, "")}/${sourcePath.replace(/^\//, "")}`;
   }, [rootFolderPath, sourcePath]);
@@ -251,10 +237,7 @@ function EmbeddedDiffSectionEditor({
 
   if (viewMode === "split") {
     return (
-      <div
-        className="grid grid-cols-2 border-border border-t bg-primary-bg"
-        style={{ height: `${height}px` }}
-      >
+      <div className="grid grid-cols-2 bg-primary-bg" style={{ height: `${height}px` }}>
         <div className="relative overflow-hidden border-border border-r bg-primary-bg">
           <DiffLineBackgroundLayer
             lineKinds={splitContent.left.lineKinds}
@@ -292,10 +275,7 @@ function EmbeddedDiffSectionEditor({
   }
 
   return (
-    <div
-      className="relative overflow-hidden border-border border-t bg-primary-bg"
-      style={{ height: `${height}px` }}
-    >
+    <div className="relative overflow-hidden bg-primary-bg" style={{ height: `${height}px` }}>
       <DiffLineBackgroundLayer lineKinds={unifiedContent.lineKinds} lineHeight={lineHeight} />
       <CodeEditor
         bufferId={unifiedBufferId}
@@ -374,11 +354,7 @@ const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
   }, [expanded]);
 
   return (
-    <div
-      ref={bodyRef}
-      className="border-border border-t"
-      style={{ contentVisibility: "auto", containIntrinsicSize: "960px" }}
-    >
+    <div ref={bodyRef} style={{ contentVisibility: "auto", containIntrinsicSize: "960px" }}>
       {shouldMount ? children : <div className="h-[320px] bg-primary-bg" />}
     </div>
   );
@@ -406,90 +382,49 @@ const DiffFileSection = memo(function DiffFileSection({
   const directoryPath = filePath.includes("/")
     ? filePath.slice(0, filePath.lastIndexOf("/") + 1)
     : "";
-  const status = getFileStatus(diff) as "added" | "deleted" | "modified" | "renamed";
   const { additions, deletions } = countStats(diff);
   const handleToggle = useCallback(() => {
     onToggle(sectionKey);
   }, [onToggle, sectionKey]);
-  const handleOpenFile = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
-      event.stopPropagation();
-      void onOpenFile(filePath);
-    },
-    [filePath, onOpenFile],
-  );
+  const handleOpenFile = useCallback(() => {
+    void onOpenFile(filePath);
+  }, [filePath, onOpenFile]);
   const shouldUseInlineTextDiff =
-    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= MAX_HUNK_ACTION_DIFF_LINES;
+    !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
 
   return (
-    <section className="relative isolate min-w-0 max-w-full rounded-md bg-primary-bg">
-      <div className="sticky top-0 z-50 min-w-0 max-w-full bg-primary-bg">
-        <div
-          className={cn(
-            "min-w-0 max-w-full overflow-hidden border border-border/70 bg-primary-bg shadow-[0_1px_0_rgba(0,0,0,0.04)]",
-            expanded ? "rounded-t-md" : "rounded-md",
-          )}
-        >
-          <div className="flex min-w-0 items-center">
-            <button
-              type="button"
-              onClick={handleToggle}
-              className="relative z-50 flex size-8 shrink-0 items-center justify-center text-text-lighter hover:bg-hover/30 hover:text-text"
-              aria-label={expanded ? "Collapse file diff" : "Expand file diff"}
-              aria-expanded={expanded}
-            >
-              {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenFile}
-              className="relative z-50 flex min-w-0 flex-1 items-center gap-2 overflow-hidden py-2 pr-3 text-left hover:bg-hover/30"
-              aria-label={`Open ${filePath}`}
-            >
-              <FileExplorerIcon
-                fileName={fileName}
-                isDir={false}
-                size={16}
-                className="shrink-0 text-text-lighter"
-              />
-              <span className="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden">
-                <span
-                  className={cn(
-                    "min-w-0 max-w-[45%] truncate ui-text-sm font-medium",
-                    statusTextClass[status],
-                  )}
-                >
-                  {fileName}
-                </span>
-                <span className="min-w-0 flex-1 truncate ui-text-sm editor-font text-text-lighter">
-                  {directoryPath}
-                </span>
-              </span>
-              <span className="ml-auto flex shrink-0 items-center gap-2 ui-text-xs">
-                {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
-                {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
-                <Badge
-                  size="compact"
-                  variant="muted"
-                  className={`rounded px-1.5 py-0.5 capitalize ${statusBadgeClass[status]}`}
-                >
-                  {status}
-                </Badge>
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+    <section
+      className={cn(
+        "relative isolate min-w-0 max-w-full bg-primary-bg",
+        expanded && "border-border/60 border-b",
+      )}
+    >
+      <MultibufferFileHeader
+        filePath={filePath}
+        fileName={fileName}
+        directoryPath={directoryPath}
+        expanded={expanded}
+        onToggle={handleToggle}
+        onOpen={handleOpenFile}
+        surface="section"
+        showFileIcon={false}
+        trailing={
+          <>
+            {additions > 0 ? <span className="text-git-added">+{additions}</span> : null}
+            {deletions > 0 ? <span className="text-git-deleted">-{deletions}</span> : null}
+          </>
+        }
+      />
 
       {expanded ? (
         diff.is_image ? (
-          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-md border-border/70 border-x border-b">
+          <div className="min-w-0 max-w-full overflow-hidden">
             <LazyDiffSectionBody expanded={expanded}>
               <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
             </LazyDiffSectionBody>
           </div>
         ) : (
-          <div className="-mt-px min-w-0 max-w-full overflow-hidden rounded-b-md border-border/70 border-x border-b">
+          <div className="min-w-0 max-w-full overflow-hidden">
             <LazyDiffSectionBody expanded={expanded}>
               {shouldUseInlineTextDiff ? (
                 <TextDiffViewer
@@ -519,8 +454,9 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 }: {
   multiDiff: MultiFileDiff;
 }) {
-  const buffers = useBufferStore.use.buffers();
-  const activeBufferId = useBufferStore.use.activeBufferId();
+  const activeBuffer = useBufferStore((state) => {
+    return getBufferById(state.buffers, state.activeBufferId);
+  });
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
@@ -529,7 +465,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
-  const activeBuffer = buffers.find((buffer) => buffer.id === activeBufferId) || null;
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
   const isRefreshingRef = useRef(false);
   const sectionElementsRef = useRef(new Map<string, HTMLDivElement>());
@@ -541,12 +476,15 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const handleOpenFile = useCallback(
     async (filePath: string) => {
       const repoPath = multiDiff.repoPath ?? rootFolderPath;
-      const targetPath =
-        filePath.startsWith("/") || filePath.startsWith("remote://")
-          ? filePath
-          : repoPath
-            ? joinPath(repoPath, filePath)
-            : filePath;
+      const isAbsoluteProviderPath =
+        filePath.startsWith("/") ||
+        filePath.startsWith("remote://") ||
+        filePath.startsWith("wsl://");
+      const targetPath = isAbsoluteProviderPath
+        ? filePath
+        : repoPath
+          ? joinPath(repoPath, filePath)
+          : filePath;
 
       await useFileSystemStore
         .getState()
@@ -558,6 +496,14 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(() =>
     getInitialExpandedFiles(multiDiff),
   );
+  const indexingProgress = multiDiff.indexingProgress;
+  const isIndexingDiffs = Boolean(multiDiff.isLoading);
+  const indexingLabel = indexingProgress
+    ? `${indexingProgress.label ?? "Indexing"} ${indexingProgress.processed.toLocaleString()}/${indexingProgress.total.toLocaleString()}`
+    : "Indexing changes";
+  const indexedFileLabel = indexingProgress
+    ? `${multiDiff.files.length.toLocaleString()} of ${indexingProgress.total.toLocaleString()} changed files`
+    : `${multiDiff.totalFiles.toLocaleString()} changed file${multiDiff.totalFiles !== 1 ? "s" : ""}`;
   const diffFileItems = useMemo<FileNavigatorItem[]>(
     () =>
       multiDiff.files.map((diff, index) => {
@@ -608,22 +554,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       });
     });
   }, []);
-  const handleStackWheelCapture = useCallback((event: WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-    const scrollContainer = event.currentTarget;
-    const canScroll =
-      (event.deltaY < 0 && scrollContainer.scrollTop > 0) ||
-      (event.deltaY > 0 &&
-        scrollContainer.scrollTop + scrollContainer.clientHeight < scrollContainer.scrollHeight);
-
-    if (!canScroll) return;
-
-    scrollContainer.scrollTop += event.deltaY;
-    event.preventDefault();
-    event.stopPropagation();
-  }, []);
-
   useEffect(() => {
     const nextKeys = new Set(
       multiDiff.files.map((diff, index) => getDiffSectionKey(multiDiff, diff, index)),
@@ -741,12 +671,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         showDefaultActions={true}
         extraLeftContent={
           <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
-            <span>
-              {multiDiff.totalFiles} changed file
-              {multiDiff.totalFiles !== 1 ? "s" : ""}
-            </span>
+            <span>{indexedFileLabel}</span>
             <span className="text-git-added">+{multiDiff.totalAdditions}</span>
             <span className="text-git-deleted">-{multiDiff.totalDeletions}</span>
+            {isIndexingDiffs ? <span>{indexingLabel}</span> : null}
           </div>
         }
         rightContent={
@@ -761,31 +689,6 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               aria-label={isFileTreeVisible ? "Hide changed files" : "Show changed files"}
             >
               <ListBullets weight="duotone" />
-            </BreadcrumbActionButton>
-            {githubCommitUrl ? (
-              <BreadcrumbActionButton
-                type="button"
-                onClick={() => void openUrl(githubCommitUrl)}
-                className="gap-1 ui-text-sm"
-                tooltip="View on GitHub"
-                tooltipSide="bottom"
-                aria-label="View on GitHub"
-              >
-                <ExternalLink weight="duotone" />
-                View on GitHub
-              </BreadcrumbActionButton>
-            ) : null}
-            <BreadcrumbActionButton
-              type="button"
-              active={showWhitespace}
-              onClick={() => setShowWhitespace((prev) => !prev)}
-              className="gap-1"
-              tooltip={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-              tooltipSide="bottom"
-              aria-label={showWhitespace ? "Hide whitespace" : "Show whitespace"}
-            >
-              <Trash2 weight="duotone" />
-              {showWhitespace ? <Check weight="duotone" /> : null}
             </BreadcrumbActionButton>
             <div className="flex items-center gap-0.5">
               <BreadcrumbActionButton
@@ -809,74 +712,111 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                 <Columns2 weight="duotone" />
               </BreadcrumbActionButton>
             </div>
+            <ActionMenu
+              label="Diff actions"
+              items={[
+                ...(githubCommitUrl
+                  ? [
+                      {
+                        id: "github",
+                        label: "View on GitHub",
+                        onClick: () => void openUrl(githubCommitUrl),
+                      },
+                    ]
+                  : []),
+                {
+                  id: "whitespace",
+                  label: showWhitespace ? "Hide whitespace" : "Show whitespace",
+                  onClick: () => setShowWhitespace((current) => !current),
+                },
+              ]}
+            />
           </div>
         }
       />
 
       {!isWorkingTree &&
       (multiDiff.commitMessage || multiDiff.commitAuthor || multiDiff.commitDate) ? (
-        <div className="bg-primary-bg px-2 py-2">
-          <div className="px-1 py-1.5">
+        <div className="border-border/60 border-b bg-primary-bg px-4 py-3">
+          <div className="max-w-4xl">
             {multiDiff.commitMessage ? (
-              <div className="ui-text-sm font-medium text-text">{multiDiff.commitMessage}</div>
+              <div className="ui-text-base font-medium leading-snug text-text">
+                {multiDiff.commitMessage}
+              </div>
             ) : null}
             {multiDiff.commitDescription ? (
-              <div className="ui-text-sm mt-2 whitespace-pre-wrap text-text-lighter">
+              <div className="ui-text-sm mt-1 whitespace-pre-wrap leading-relaxed text-text-lighter">
                 {multiDiff.commitDescription}
               </div>
             ) : null}
             <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
-              {multiDiff.commitAuthor ? <span>{multiDiff.commitAuthor}</span> : null}
+              {multiDiff.commitAuthor ? (
+                <span className="inline-flex items-center gap-1.5 text-text-light">
+                  <Avatar name={multiDiff.commitAuthor} className="size-5" />
+                  {multiDiff.commitAuthor}
+                </span>
+              ) : null}
               {multiDiff.commitDate ? (
                 <span>{formatRelativeDate(multiDiff.commitDate)}</span>
               ) : null}
-              <Badge size="compact" variant="muted">
-                {multiDiff.commitHash}
-              </Badge>
+              <code className="font-mono text-text-lighter" title={multiDiff.commitHash}>
+                {multiDiff.commitHash.slice(0, 7)}
+              </code>
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {isFileTreeVisible ? (
-          <FileNavigatorSidebar
-            items={diffFileItems}
-            selectedKey={selectedFileKey}
-            onSelect={handleSelectFileFromTree}
-            ariaLabel="Changed files"
-            viewMode={fileNavigatorViewMode}
-            onViewModeChange={setFileNavigatorViewMode}
-          />
-        ) : null}
+      {isIndexingDiffs && multiDiff.files.length === 0 ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-primary-bg">
+          <div className="ui-text-sm text-text-lighter">{indexingLabel}</div>
+        </div>
+      ) : null}
 
-        <div
-          className="min-h-0 flex-1 overflow-auto px-2 pb-2"
-          style={{ overflowAnchor: "none" }}
-          data-diff-stack-scroll-container
-          onWheelCapture={handleStackWheelCapture}
-        >
-          <div className="flex min-w-0 max-w-full flex-col gap-1.5 rounded-md">
-            {multiDiff.files.map((diff, index) => {
-              const sectionKey = getDiffSectionKey(multiDiff, diff, index);
+      {isIndexingDiffs && multiDiff.files.length === 0 ? null : (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {isFileTreeVisible ? (
+            <FileNavigatorSidebar
+              items={diffFileItems}
+              selectedKey={selectedFileKey}
+              onSelect={handleSelectFileFromTree}
+              ariaLabel="Changed files"
+              viewMode={fileNavigatorViewMode}
+              onViewModeChange={setFileNavigatorViewMode}
+              surface="review"
+              className="h-auto self-stretch"
+              searchMode="fuzzy"
+              compactRows
+            />
+          ) : null}
 
-              return (
-                <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
-                  <DiffFileSection
-                    diff={diff}
-                    sectionKey={sectionKey}
-                    expanded={expandedFiles.has(sectionKey)}
-                    viewMode={viewMode}
-                    showWhitespace={showWhitespace}
-                    onToggle={handleToggleSection}
-                    onOpenFile={handleOpenFile}
-                  />
-                </div>
-              );
-            })}
+          <div
+            className="min-h-0 flex-1 overflow-auto"
+            style={{ overflowAnchor: "none" }}
+            data-diff-stack-scroll-container
+          >
+            <div className="flex min-w-0 max-w-full flex-col">
+              {multiDiff.files.map((diff, index) => {
+                const sectionKey = getDiffSectionKey(multiDiff, diff, index);
+
+                return (
+                  <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
+                    <DiffFileSection
+                      diff={diff}
+                      sectionKey={sectionKey}
+                      expanded={expandedFiles.has(sectionKey)}
+                      viewMode={viewMode}
+                      showWhitespace={showWhitespace}
+                      onToggle={handleToggleSection}
+                      onOpenFile={handleOpenFile}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 });

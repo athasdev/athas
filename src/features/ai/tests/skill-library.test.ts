@@ -9,7 +9,7 @@ import {
 } from "@/features/ai/lib/skill-library";
 
 describe("skill library", () => {
-  it("creates installable AI chat skills from marketplace entries", () => {
+  it("creates installable Agent skills from marketplace entries", () => {
     const skill = createSkillFromMarketplace({
       id: "athas.review",
       title: "Review",

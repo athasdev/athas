@@ -21,6 +21,10 @@ export function PaneResizeHandle({
   const startPositionRef = useRef(0);
   const startSizesRef = useRef(initialSizes);
   const availableSizeRef = useRef(0);
+  const pendingSizesRef = useRef<[number, number] | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
+  const previousPaneRef = useRef<HTMLElement | null>(null);
+  const nextPaneRef = useRef<HTMLElement | null>(null);
 
   const isHorizontal = direction === "horizontal";
 
@@ -32,6 +36,8 @@ export function PaneResizeHandle({
       startSizesRef.current = initialSizes;
 
       const handle = containerRef.current;
+      previousPaneRef.current = handle?.previousElementSibling as HTMLElement | null;
+      nextPaneRef.current = handle?.nextElementSibling as HTMLElement | null;
       const splitContainer = handle?.closest<HTMLElement>("[data-pane-split-container='true']");
       const containerRect = splitContainer?.getBoundingClientRect();
       const containerSize = isHorizontal ? containerRect?.width : containerRect?.height;
@@ -47,6 +53,25 @@ export function PaneResizeHandle({
 
   useEffect(() => {
     if (!isDragging) return;
+
+    const applyPanePreview = (sizes: [number, number]) => {
+      const firstPane = previousPaneRef.current;
+      const secondPane = nextPaneRef.current;
+
+      if (firstPane) {
+        firstPane.style.flexGrow = String(sizes[0]);
+      }
+      if (secondPane) {
+        secondPane.style.flexGrow = String(sizes[1]);
+      }
+    };
+
+    const flushPreview = () => {
+      resizeFrameRef.current = null;
+      const sizes = pendingSizesRef.current;
+      if (!sizes) return;
+      applyPanePreview(sizes);
+    };
 
     const handleMouseMove = (e: MouseEvent) => {
       const currentPosition = isHorizontal ? e.clientX : e.clientY;
@@ -69,12 +94,27 @@ export function PaneResizeHandle({
         newFirstSize = pairTotal - minSize;
       }
 
-      onResize([newFirstSize, newSecondSize]);
+      pendingSizesRef.current = [newFirstSize, newSecondSize];
+      if (resizeFrameRef.current === null) {
+        resizeFrameRef.current = requestAnimationFrame(flushPreview);
+      }
     };
 
     const handleMouseUp = () => {
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+      if (pendingSizesRef.current) {
+        const sizes = pendingSizesRef.current;
+        pendingSizesRef.current = null;
+        applyPanePreview(sizes);
+        onResize(sizes);
+      }
       setIsDragging(false);
       availableSizeRef.current = 0;
+      previousPaneRef.current = null;
+      nextPaneRef.current = null;
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
@@ -85,6 +125,13 @@ export function PaneResizeHandle({
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+      pendingSizesRef.current = null;
+      previousPaneRef.current = null;
+      nextPaneRef.current = null;
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
@@ -94,7 +141,9 @@ export function PaneResizeHandle({
     <div
       ref={containerRef}
       className={`group relative flex shrink-0 items-center justify-center ${
-        isHorizontal ? "h-full w-1 cursor-col-resize" : "h-1 w-full cursor-row-resize"
+        isHorizontal
+          ? "h-full w-[var(--athas-workbench-gap)] cursor-col-resize"
+          : "h-[var(--athas-workbench-gap)] w-full cursor-row-resize"
       }`}
       onDoubleClick={onReset}
       onMouseDown={handleMouseDown}
@@ -107,13 +156,13 @@ export function PaneResizeHandle({
       tabIndex={0}
     >
       <div
-        className={`bg-border transition-colors ${
+        className={`bg-transparent transition-colors ${
           isDragging ? "bg-accent" : "group-hover:bg-accent"
         } ${isHorizontal ? "h-full w-px" : "h-px w-full"}`}
       />
       {isDragging && (
         <div
-          className={`pointer-events-none fixed inset-0 z-50 ${
+          className={`fixed inset-0 z-50 ${
             isHorizontal ? "cursor-col-resize" : "cursor-row-resize"
           }`}
         />

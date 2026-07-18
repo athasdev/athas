@@ -32,9 +32,10 @@ module.exports = {
     "scope-empty": [0],
     "scope-case": [0],
 
-    // Body rules (if present)
+    // Body rules
+    "body-empty": [2, "never"],
     "body-max-line-length": [1, "always", 100],
-    "body-leading-blank": [1, "always"],
+    "body-leading-blank": [2, "always"],
   },
 
   // Parser options to handle simple messages

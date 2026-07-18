@@ -10,6 +10,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { logger } from "@/features/editor/utils/logger";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
+import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
+import { isTerminalAltTextInput } from "@/features/terminal/utils/terminal-keyboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { IS_LINUX } from "@/utils/platform";
 import { useKeymapStore } from "../stores/keymaps.store";
@@ -26,9 +28,15 @@ import { keymapRegistry } from "../utils/registry";
 const CHORD_TIMEOUT = 1000; // 1 second to complete chord
 const CLOSE_TAB_CLOSE_REQUEST_WINDOW_MS = 1000;
 const closeTabShortcut = parseKeybinding("cmd+w").parts[0];
+const closeWindowShortcut = parseKeybinding("cmd+shift+w").parts[0];
+const INPUT_ALLOWED_COMMANDS = new Set(["file.quickOpen", "workbench.commandPalette"]);
 
 function isCloseTabShortcut(event: KeyboardEvent) {
   return keysMatch(eventToKey(event), closeTabShortcut);
+}
+
+function isCloseWindowShortcut(event: KeyboardEvent) {
+  return keysMatch(eventToKey(event), closeWindowShortcut);
 }
 
 export function useKeymaps() {
@@ -97,6 +105,13 @@ export function useKeymaps() {
         return;
       }
 
+      if (isCloseWindowShortcut(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        keymapRegistry.executeCommand("workbench.closeWindow");
+        return;
+      }
+
       if (isCloseTabShortcut(e)) {
         lastCloseTabShortcutAtRef.current = Date.now();
         e.preventDefault();
@@ -144,16 +159,6 @@ export function useKeymaps() {
         return;
       }
 
-      // Skip if target is an input (except our editor textarea or terminal)
-      const isEditorTextarea = isEditorTarget;
-      const isTerminalTextarea = target?.classList.contains("xterm-helper-textarea") ?? false;
-      if (
-        target?.tagName === "INPUT" ||
-        (target?.tagName === "TEXTAREA" && !isEditorTextarea && !isTerminalTextarea)
-      ) {
-        return;
-      }
-
       // Get keybindings from registry (defaults and extensions)
       const registryKeybindings = keymapRegistry.getAllKeybindings();
 
@@ -167,6 +172,34 @@ export function useKeymaps() {
 
       // Get current event key
       const eventKey = eventToKey(e);
+
+      // Skip if target is an input (except our editor textarea or terminal)
+      const isEditorTextarea = isEditorTarget;
+      const isTerminalTextarea = target?.classList.contains("xterm-helper-textarea") ?? false;
+      if (isTerminalTextarea && isTerminalAltTextInput(e)) {
+        return;
+      }
+
+      const isNativeTextInput = isNativeTextInputTarget(e.target, document.activeElement);
+      if (isNativeTextInput && !isEditorTextarea && !isTerminalTextarea) {
+        for (const keybinding of allKeybindings) {
+          if (!INPUT_ALLOWED_COMMANDS.has(keybinding.command)) continue;
+          if (!keybinding.enabled && keybinding.enabled !== undefined) continue;
+          if (keybinding.when && !evaluateWhenClause(keybinding.when, effectiveContexts)) continue;
+
+          if (matchKeybinding(e, keybinding.key, chordState).matched) {
+            e.preventDefault();
+            e.stopPropagation();
+            keymapRegistry.executeCommand(keybinding.command, keybinding.args);
+            logger.debug(
+              "Keymaps",
+              `Executed from input: ${keybinding.key} -> ${keybinding.command}`,
+            );
+            return;
+          }
+        }
+        return;
+      }
 
       // Try to match against registered keybindings
       for (const keybinding of allKeybindings) {

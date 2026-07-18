@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --ignore-scripts && bun scripts/postinstall.ts
 
       - name: Run frontend checks
         run: bash scripts/check/frontend.sh
@@ -52,6 +52,11 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -60,11 +65,6 @@ jobs:
         with:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           version: 1.0
-
-      - name: Setup Zig
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.16.0
 
       - name: Run Rust checks
         run: bash scripts/check/rust.sh

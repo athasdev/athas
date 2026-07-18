@@ -1,5 +1,13 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
+import {
+  bumpStableBase,
+  formatVersion,
+  getReleaseCommitMessage,
+  parseVersion,
+  sameStableBase,
+  type ParsedVersion,
+} from "./version";
 
 const colors = {
   reset: "\x1b[0m",
@@ -11,24 +19,12 @@ const colors = {
   cyan: "\x1b[36m",
 };
 
-type ReleaseChannel = "preview";
-type ReleaseBump = "patch" | "minor" | "major";
 const VERSIONED_FILES = [
   "package.json",
   "src-tauri/tauri.conf.json",
   "src-tauri/Cargo.toml",
   "Cargo.lock",
 ] as const;
-
-interface ParsedVersion {
-  major: number;
-  minor: number;
-  patch: number;
-  prerelease?: {
-    channel: ReleaseChannel;
-    number: number;
-  };
-}
 
 function log(message: string, color: keyof typeof colors = "reset") {
   console.log(`${colors[color]}${message}${colors.reset}`);
@@ -47,68 +43,31 @@ function info(message: string) {
   log(message, "cyan");
 }
 
-function parseVersion(version: string): ParsedVersion {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(preview)\.(\d+))?$/);
-  if (!match) {
-    error(`Invalid version format: ${version}`);
+async function getLatestPreviewNumber(baseVersion: ParsedVersion): Promise<number> {
+  const base = `${baseVersion.major}.${baseVersion.minor}.${baseVersion.patch}`;
+  const result = await $`git tag --list ${`v${base}-preview.*`}`.quiet().nothrow();
+
+  if (result.exitCode !== 0) {
+    return 0;
   }
 
-  return {
-    major: parseInt(match[1]),
-    minor: parseInt(match[2]),
-    patch: parseInt(match[3]),
-    prerelease:
-      match[4] && match[5]
-        ? {
-            channel: match[4] as ReleaseChannel,
-            number: parseInt(match[5]),
-          }
-        : undefined,
-  };
+  const tags = result.stdout
+    .toString()
+    .trim()
+    .split("\n")
+    .filter((line) => line.length > 0);
+
+  return tags.reduce((latest, tag) => {
+    const version = parseVersion(tag.replace(/^v/, ""));
+    if (version.prerelease?.channel !== "preview" || !sameStableBase(version, baseVersion)) {
+      return latest;
+    }
+
+    return Math.max(latest, version.prerelease.number);
+  }, 0);
 }
 
-function formatVersion(version: ParsedVersion): string {
-  const base = `${version.major}.${version.minor}.${version.patch}`;
-  if (!version.prerelease) {
-    return base;
-  }
-
-  return `${base}-${version.prerelease.channel}.${version.prerelease.number}`;
-}
-
-function getReleaseCommitMessage(version: ParsedVersion): string {
-  if (version.prerelease) {
-    return "Prepare preview release";
-  }
-
-  return "Prepare release";
-}
-
-function getStableBase(version: ParsedVersion): ParsedVersion {
-  return {
-    major: version.major,
-    minor: version.minor,
-    patch: version.patch,
-  };
-}
-
-function bumpStableBase(version: ParsedVersion, bump: ReleaseBump): ParsedVersion {
-  const stable = getStableBase(version);
-
-  switch (bump) {
-    case "major":
-      return { major: stable.major + 1, minor: 0, patch: 0 };
-    case "minor":
-      return { major: stable.major, minor: stable.minor + 1, patch: 0 };
-    case "patch":
-      if (version.prerelease) {
-        return stable;
-      }
-      return { major: stable.major, minor: stable.minor, patch: stable.patch + 1 };
-  }
-}
-
-function bumpVersion(currentVersion: string, args: string[]): string {
+async function bumpVersion(currentVersion: string, args: string[]): Promise<string> {
   const current = parseVersion(currentVersion);
   const [channel = "stable", bump = "patch"] = args;
 
@@ -123,18 +82,19 @@ function bumpVersion(currentVersion: string, args: string[]): string {
   }
 
   if (channel === "preview") {
-    const shouldIncrementExisting =
+    const currentPreviewNumber =
       current.prerelease?.channel === "preview" &&
       bump === "patch" &&
-      current.major === baseVersion.major &&
-      current.minor === baseVersion.minor &&
-      current.patch === baseVersion.patch;
+      sameStableBase(current, baseVersion)
+        ? current.prerelease.number
+        : 0;
+    const latestPreviewNumber = await getLatestPreviewNumber(baseVersion);
 
     return formatVersion({
       ...baseVersion,
       prerelease: {
         channel: "preview",
-        number: shouldIncrementExisting ? current.prerelease.number + 1 : 1,
+        number: Math.max(currentPreviewNumber, latestPreviewNumber) + 1,
       },
     });
   }
@@ -190,7 +150,7 @@ async function updateCargoToml(newVersion: string) {
   );
 
   if (updatedCargoToml === cargoToml) {
-    error("Could not update version in src-tauri/Cargo.toml");
+    throw new Error("Could not update version in src-tauri/Cargo.toml");
   }
 
   await Bun.write(cargoPath, updatedCargoToml);
@@ -198,10 +158,10 @@ async function updateCargoToml(newVersion: string) {
 }
 
 async function updateCargoLock() {
-  const result = await $`cargo check -p athas`.quiet().nothrow().cwd(process.cwd());
+  const result = await $`cargo check -p athas`.nothrow().cwd(process.cwd());
 
   if (result.exitCode !== 0) {
-    error("Could not refresh Cargo.lock");
+    throw new Error("Could not refresh Cargo.lock");
   }
 
   success("Updated Cargo.lock");
@@ -220,6 +180,7 @@ async function release() {
   const rawArgs = process.argv.slice(2);
   const isDryRun = rawArgs.includes("--dry-run");
   const releaseArgs = rawArgs.filter((arg) => arg !== "--dry-run");
+  const tagOnly = process.env.RELEASE_TAG_ONLY === "1";
 
   if (!process.env.RELEASE_SKIP_CHECKS) {
     log("Running release checks...\n", "magenta");
@@ -237,7 +198,7 @@ async function release() {
 
   info(`Current version: ${currentVersion}`);
 
-  const newVersion = bumpVersion(currentVersion, releaseArgs);
+  const newVersion = await bumpVersion(currentVersion, releaseArgs);
   const parsedNewVersion = parseVersion(newVersion);
   info(`New version: ${newVersion}`);
 
@@ -264,6 +225,10 @@ async function release() {
   if (isDryRun) {
     log("  2. Verify the working tree diff locally", "yellow");
     log("  3. Restore all touched files without commit, tag, or push\n", "yellow");
+  } else if (tagOnly) {
+    log("  2. Create a local commit with these changes", "yellow");
+    log(`  3. Create and push tag v${newVersion}`, "yellow");
+    log("  4. Let the tag push trigger GitHub Actions to build a draft release\n", "yellow");
   } else {
     log("  2. Create a commit with these changes", "yellow");
     log(`  3. Create and push tag v${newVersion}`, "yellow");
@@ -315,15 +280,19 @@ async function release() {
     success("Staged version changes");
 
     const commitMessage = getReleaseCommitMessage(parsedNewVersion);
-    await $`git commit -m ${commitMessage}`;
+    await $`git commit -m ${commitMessage} -m "Update version files for the release."`;
     success(`Created commit: ${commitMessage}`);
 
     await $`git tag v${newVersion}`;
     success(`Created tag: v${newVersion}`);
 
     log("\nPushing to remote...\n", "magenta");
-    await $`git push origin master`;
-    success("Pushed commits");
+    if (tagOnly) {
+      info("Skipping main push because RELEASE_TAG_ONLY is set");
+    } else {
+      await $`git push origin main`;
+      success("Pushed commits");
+    }
 
     await $`git push origin v${newVersion}`;
     success("Pushed tag");

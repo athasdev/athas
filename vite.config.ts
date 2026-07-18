@@ -38,8 +38,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-
   test: {
+    testTimeout: 10_000,
     // The runner's default exclude only covers node_modules/.git, so it would
     // otherwise discover stale duplicate suites inside generated or vendored
     // trees — notably the direnv-materialized copy of the source under

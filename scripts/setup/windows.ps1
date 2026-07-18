@@ -4,18 +4,14 @@ $ErrorActionPreference = "Stop"
 $MinimumNodeVersion = [version]"22.0.0"
 $MinimumBunVersion = [version]"1.3.2"
 $MinimumRustVersion = [version]"1.80.0"
-$MinimumZigVersion = [version]"0.16.0"
 $NodeWingetId = "OpenJS.NodeJS.22"
 $BunWingetId = "Oven-sh.Bun"
 $RustupWingetId = "Rustlang.Rustup"
-$ZigWingetId = "zig.zig"
 $PerlWingetId = "StrawberryPerl.StrawberryPerl"
 $LlvmWingetId = "LLVM.LLVM"
 $UserBinPaths = @(
     "$env:USERPROFILE\.cargo\bin",
     "$env:USERPROFILE\.bun\bin",
-    "$env:LOCALAPPDATA\Programs\Zig",
-    "$env:LOCALAPPDATA\Programs\Zig\0.16.0",
     "C:\Strawberry\perl\bin",
     "C:\Program Files\LLVM\bin"
 )
@@ -246,38 +242,6 @@ function Ensure-Rust {
     Write-Success "Rust is ready (v$rustVersion)"
 }
 
-function Get-ZigVersion {
-    if (-not (Command-Exists "zig")) {
-        return $null
-    }
-
-    return Parse-Version (zig version)
-}
-
-function Ensure-Zig {
-    $zigVersion = Get-ZigVersion
-    if (Test-MinimumVersion $zigVersion $MinimumZigVersion) {
-        Write-Success "Zig is already installed (v$zigVersion)"
-        return
-    }
-
-    Install-WithWinget -PackageId $ZigWingetId -DisplayName "Zig"
-    Refresh-ProcessPath
-
-    $zigInstallRoot = "$env:LOCALAPPDATA\Programs\Zig"
-    $zigExpectedPath = Join-Path $zigInstallRoot "0.16.0"
-    Ensure-UserPathEntry -PathEntry $zigInstallRoot
-    Ensure-UserPathEntry -PathEntry $zigExpectedPath
-    Refresh-ProcessPath
-
-    $zigVersion = Get-ZigVersion
-    if (-not (Test-MinimumVersion $zigVersion $MinimumZigVersion)) {
-        throw "Zig 0.16.0+ is required, but setup could not verify the installed version."
-    }
-
-    Write-Success "Zig is ready (v$zigVersion)"
-}
-
 function Ensure-Perl {
     if (Command-Exists "perl") {
         Write-Success "Perl is already installed."
@@ -381,7 +345,6 @@ function Show-Summary {
     Write-Host "  Node.js $(node --version)"
     Write-Host "  Bun v$(bun --version)"
     Write-Host "  Rust $(rustc --version)"
-    Write-Host "  Zig $(zig version)"
     Write-Host "  Perl $(perl -e 'print $^V')"
     Write-Host "  LIBCLANG_PATH=$env:LIBCLANG_PATH"
     Write-Host ""
@@ -403,7 +366,6 @@ function main {
     Ensure-Node
     Ensure-Bun
     Ensure-Rust
-    Ensure-Zig
     Ensure-Perl
     Ensure-Llvm
     Refresh-ProcessPath
