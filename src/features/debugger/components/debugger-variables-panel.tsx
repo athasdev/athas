@@ -1,6 +1,6 @@
 import { CaretRightIcon as CaretRight } from "@/ui/icons";
 import { useEffect, useState } from "react";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { sendDebugAdapterRequest } from "../services/debug-adapter-service";
 import { useDebuggerStore } from "../stores/debugger.store";
@@ -101,7 +101,7 @@ export function DebugVariablesPanel({
             </button>
             <span className="truncate font-mono text-text">
               {isLoading ? (
-                <LoadingIndicator label="Loading variable" compact />
+                <Spinner label="Loading variable" compact />
               ) : (
                 variable.value || variable.type || ""
               )}

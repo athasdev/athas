@@ -27,7 +27,7 @@ import {
   CommandList,
 } from "@/ui/command";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { normalizeDatabaseError } from "../lib/database-errors";
 import type { DatabaseType } from "../types/provider.types";
@@ -546,13 +546,13 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
           <CommandEmpty>Open a workspace to add databases.</CommandEmpty>
         ) : isLoadingSaved ? (
           <CommandEmpty>
-            <LoadingIndicator label="Loading databases" showLabel compact />
+            <Spinner label="Loading databases" showLabel compact />
           </CommandEmpty>
         ) : workspaceConnections.length === 0 &&
           detectedWorkspaceDatabases.length === 0 &&
           isScanningWorkspaceDatabases ? (
           <CommandEmpty>
-            <LoadingIndicator label="Loading databases" showLabel compact />
+            <Spinner label="Loading databases" showLabel compact />
           </CommandEmpty>
         ) : workspaceConnections.length === 0 && detectedWorkspaceDatabases.length === 0 ? (
           <CommandEmpty>

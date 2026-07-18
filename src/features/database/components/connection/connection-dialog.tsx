@@ -8,7 +8,7 @@ import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import { Tab, TabsList } from "@/ui/tabs";
 import { normalizeDatabaseError } from "../../lib/database-errors";
@@ -232,7 +232,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               aria-label="Test connection"
               size="xs"
             >
-              {isTesting ? <LoadingIndicator label="Testing" compact /> : <PlugZap />}
+              {isTesting ? <Spinner label="Testing" compact /> : <PlugZap />}
               Test
             </Button>
           )}
@@ -244,7 +244,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             aria-label={isFileBased ? "Open database" : "Connect"}
             size="xs"
           >
-            {isConnecting && <LoadingIndicator label="Connecting" compact />}
+            {isConnecting && <Spinner label="Connecting" compact />}
             {isFileBased ? "Open Database" : "Connect"}
           </Button>
         </>

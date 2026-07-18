@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import {
   databaseCardClassName,
@@ -107,7 +107,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               aria-label="Refresh keys"
             >
               {store.isScanningKeys ? (
-                <LoadingIndicator label="Refreshing keys" compact />
+                <Spinner label="Refreshing keys" compact />
               ) : (
                 <RefreshCw />
               )}
@@ -136,7 +136,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               size="icon-xs"
             >
               {store.isScanningKeys ? (
-                <LoadingIndicator label="Scanning keys" compact />
+                <Spinner label="Scanning keys" compact />
               ) : (
                 <Search />
               )}
@@ -196,7 +196,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <LoadingIndicator label="Loading" showLabel />
+              <Spinner label="Loading" showLabel />
             </div>
           )}
 

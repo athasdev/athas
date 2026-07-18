@@ -11,7 +11,7 @@ import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -403,7 +403,7 @@ export function AgentSelector({
                         disabled={!item.canInstall || Boolean(installingAgentId)}
                       >
                         {item.isInstalling ? (
-                          <LoadingIndicator label="Installing" compact />
+                          <Spinner label="Installing" compact />
                         ) : (
                           "Install"
                         )}

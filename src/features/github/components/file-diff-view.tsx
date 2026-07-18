@@ -1,7 +1,7 @@
 import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import { memo } from "react";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
 import type { FileDiff } from "../types/github-pr-viewer.types";
@@ -93,7 +93,7 @@ export const FileDiffView = memo(
             <div className="max-h-[540px] overflow-auto">
               {isLoadingPatch ? (
                 <div className="flex items-center justify-center py-6">
-                  <LoadingIndicator label="Loading file diff" showLabel compact />
+                  <Spinner label="Loading file diff" showLabel compact />
                 </div>
               ) : patchError ? (
                 <div className="ui-text-sm px-3 py-4 text-center text-error">{patchError}</div>

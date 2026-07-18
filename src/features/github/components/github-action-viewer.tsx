@@ -15,7 +15,7 @@ import { ActionMenu } from "@/ui/action-menu";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import type { WorkflowRunDetails, WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
@@ -96,7 +96,7 @@ function WorkflowStatusIcon({
   return (
     <span title={state.label} aria-label={state.label} className={cn(state.className, className)}>
       {state.animate || !Icon ? (
-        <LoadingIndicator label={state.label} compact />
+        <Spinner label={state.label} compact />
       ) : (
         <Icon className="size-4" weight="fill" />
       )}
@@ -754,7 +754,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 disabled={!areJobLogsDownloadable(job)}
                               >
                                 {loadingJobLogId === job.id ? (
-                                  <LoadingIndicator label="Loading job logs" compact />
+                                  <Spinner label="Loading job logs" compact />
                                 ) : (
                                   <RefreshCw />
                                 )}
@@ -780,7 +780,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                             </p>
                           ) : job.id && loadingJobLogId === job.id && !jobLogs[job.id] ? (
                             <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
-                              <LoadingIndicator label="Loading logs" showLabel compact />
+                              <Spinner label="Loading logs" showLabel compact />
                             </div>
                           ) : job.id && jobLogErrors[job.id] ? (
                             <div className="space-y-2">
@@ -834,7 +834,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
             })}
             {details.jobs.length > visibleJobs.length ? (
               <div className="px-1 py-2">
-                <LoadingIndicator
+                <Spinner
                   label={`Loading ${details.jobs.length - visibleJobs.length} more jobs`}
                   showLabel
                   compact

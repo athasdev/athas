@@ -2,7 +2,7 @@ import { HardDrivesIcon as Server } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { testRemoteConnection } from "../services/remote-connection-actions";
 import type { RemoteConnection, RemoteConnectionFormData } from "../types/remote.types";
 import ConnectionForm from "./connection-form";
@@ -164,7 +164,7 @@ const ConnectionDialog = ({
             size="xs"
             disabled={isTesting}
           >
-            {isTesting ? <LoadingIndicator label="Testing" showLabel compact /> : "Test Connection"}
+            {isTesting ? <Spinner label="Testing" showLabel compact /> : "Test Connection"}
           </Button>
           <Button onClick={handleSave} disabled={!isFormValid || isValidating} size="xs">
             {isValidating

@@ -8,7 +8,7 @@ import {
 } from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import {
   PaneChip,
   PaneIconButton,
@@ -98,7 +98,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center gap-2 px-3 py-4 text-text-lighter">
-            <LoadingIndicator label="Finding references" showLabel compact />
+            <Spinner label="Finding references" showLabel compact />
           </div>
         ) : references.length === 0 ? (
           <div className="px-3 py-4 text-text-lighter">

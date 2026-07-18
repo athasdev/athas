@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -1770,7 +1770,7 @@ export function DockerSidebar() {
               aria-label="Refresh Docker resources"
             >
               {isLoading || isComposeLoading || isProjectConfigLoading ? (
-                <LoadingIndicator compact />
+                <Spinner compact />
               ) : (
                 <Refresh />
               )}
@@ -1987,7 +1987,7 @@ export function DockerSidebar() {
                                 onClick={() => void handleOpenDevContainer(devContainer)}
                               >
                                 {busyDevContainerPath === devContainer.configPath ? (
-                                  <LoadingIndicator compact />
+                                  <Spinner compact />
                                 ) : (
                                   "Open"
                                 )}
@@ -2253,7 +2253,7 @@ export function DockerSidebar() {
                                   onClick={() => void handleRunComposePreset(preset)}
                                 >
                                   {busyComposeService === `preset:${preset.name}` ? (
-                                    <LoadingIndicator compact />
+                                    <Spinner compact />
                                   ) : (
                                     "Run"
                                   )}
@@ -2350,7 +2350,7 @@ export function DockerSidebar() {
                         disabled={isRegistryBusy || !registryQuery.trim()}
                         onClick={() => void handleRegistrySearch()}
                       >
-                        {isRegistryBusy ? <LoadingIndicator compact /> : "Search"}
+                        {isRegistryBusy ? <Spinner compact /> : "Search"}
                       </Button>
                     </div>
                     <div className="grid grid-cols-3 gap-1">
@@ -2535,7 +2535,7 @@ export function DockerSidebar() {
                       onClick={() => void handlePrune(target, target === "system")}
                     >
                       {busyPruneTarget === target ? (
-                        <LoadingIndicator compact />
+                        <Spinner compact />
                       ) : (
                         <Trash className="size-3.5" />
                       )}
@@ -2695,7 +2695,7 @@ export function DockerSidebar() {
                         onClick={() => void loadContainerFiles()}
                       >
                         {isFilesLoading ? (
-                          <LoadingIndicator compact />
+                          <Spinner compact />
                         ) : (
                           <Refresh className="size-3.5" />
                         )}

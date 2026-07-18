@@ -8,7 +8,7 @@ import {
   type WebViewerContent,
 } from "@/features/panes/types/pane-content.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
 import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation.store";
@@ -875,7 +875,7 @@ export function WebViewer({
 
             {isLoading && (
               <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
-                <LoadingIndicator label="Loading page" showLabel />
+                <Spinner label="Loading page" showLabel />
               </div>
             )}
           </div>

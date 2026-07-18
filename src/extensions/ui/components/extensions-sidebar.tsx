@@ -56,7 +56,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { SearchField } from "@/ui/search";
 import { SidebarEmptyState } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
@@ -441,7 +441,7 @@ const ExtensionRow = ({
     extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
   const actionContent = isInstalling ? (
     <span className="flex h-8 w-8 shrink-0 items-center justify-center text-accent">
-      <LoadingIndicator label="Installing" compact />
+      <Spinner label="Installing" compact />
     </span>
   ) : hasRuntimeIssue && onUpdate ? (
     <Button
@@ -1598,13 +1598,13 @@ export const ExtensionsSidebar = () => {
         <div className="custom-scrollbar-thin min-h-0 overflow-y-auto border-border/70 border-r p-5">
           {settings.extensionsActiveTab === "skill" && isLoadingSkills ? (
             <div className="mb-3">
-              <LoadingIndicator label="Loading skills" showLabel compact />
+              <Spinner label="Loading skills" showLabel compact />
             </div>
           ) : null}
 
           {settings.extensionsActiveTab === "agent" && isLoadingAgents ? (
             <div className="mb-3">
-              <LoadingIndicator label="Loading agents" showLabel compact />
+              <Spinner label="Loading agents" showLabel compact />
             </div>
           ) : null}
 

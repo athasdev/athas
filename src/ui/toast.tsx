@@ -8,7 +8,7 @@ import {
 } from "@/ui/icons";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
 import { openAthasLogBuffer } from "@/features/developer/services/athas-log-service";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export interface Toast {
@@ -291,7 +291,7 @@ export const ToastContainer = () => {
         info: <Info size={18} />,
         warning: <AlertTriangle size={18} />,
         error: <AlertTriangle size={18} />,
-        loading: <LoadingIndicator label="Loading" compact />,
+        loading: <Spinner label="Loading" compact />,
         close: <X size={14} />,
       }}
       toastOptions={{

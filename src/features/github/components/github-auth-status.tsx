@@ -3,7 +3,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/ui/button";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useAuthStore } from "@/features/window/stores/auth.store";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { GITHUB_ACCOUNT_API_BASE, GITHUB_CONNECTION_URL } from "../services/github-token-service";
 import { useGitHubStore } from "../stores/github.store";
 
@@ -29,7 +29,7 @@ export function GitHubAuthStatusMessage() {
   ) {
     return (
       <div className="flex flex-1 items-center justify-center p-4">
-        <LoadingIndicator label="Checking GitHub account" showLabel compact />
+        <Spinner label="Checking GitHub account" showLabel compact />
       </div>
     );
   }

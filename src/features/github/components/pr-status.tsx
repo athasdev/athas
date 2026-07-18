@@ -14,7 +14,7 @@ import { memo, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github.types";
 
@@ -60,7 +60,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (pendingCount > 0) {
       return {
-        icon: <LoadingIndicator label="Pending checks" compact />,
+        icon: <Spinner label="Pending checks" compact />,
         label: `${pendingCount} pending`,
         tone: "text-warning",
       };
@@ -121,7 +121,7 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
               ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
                 <XCircle className="text-error" />
               ) : (
-                <LoadingIndicator label="Pending check" compact />
+                <Spinner label="Pending check" compact />
               )}
               <div className="min-w-0 flex-1">
                 <p className="font-sans ui-text-sm truncate text-text">{check.name ?? "Check"}</p>

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { useAutoUpdate } from "@/features/settings/hooks/use-auto-update";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { CaretDownIcon, DownloadIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
@@ -100,7 +100,7 @@ export function AppUpdateControl() {
         )}
       >
         {updateBusy ? (
-          <LoadingIndicator label={downloading ? "Downloading" : "Installing"} compact />
+          <Spinner label={downloading ? "Downloading" : "Installing"} compact />
         ) : (
           <DownloadIcon />
         )}

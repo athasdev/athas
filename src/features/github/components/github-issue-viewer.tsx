@@ -5,7 +5,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toast";
 import type { IssueDetails } from "../types/github.types";
 import {
@@ -333,7 +333,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
             )}
             {details.comments.length > visibleComments.length ? (
               <div className="px-1 py-2">
-                <LoadingIndicator
+                <Spinner
                   label={`Loading ${details.comments.length - visibleComments.length} more comments`}
                   showLabel
                   compact

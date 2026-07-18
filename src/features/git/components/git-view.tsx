@@ -18,7 +18,7 @@ import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { CommandEmpty, CommandItemBadge, CommandItemRow, CommandList } from "@/ui/command";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { showAlertDialog } from "@/features/dialogs/services/dialog-service";
 import {
   SidebarEmptyActionState,
@@ -1393,7 +1393,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 aria-label="Refresh git status"
               >
                 {isLoadingGitData || isRefreshing ? (
-                  <LoadingIndicator label="Refreshing git status" compact />
+                  <Spinner label="Refreshing git status" compact />
                 ) : (
                   <RefreshCw />
                 )}

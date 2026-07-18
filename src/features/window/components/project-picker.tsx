@@ -39,7 +39,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
@@ -608,7 +608,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                 disabled={isRemoteTesting}
               >
                 {isRemoteTesting ? (
-                  <LoadingIndicator label="Testing" showLabel compact />
+                  <Spinner label="Testing" showLabel compact />
                 ) : (
                   "Test Connection"
                 )}

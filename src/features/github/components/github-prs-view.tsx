@@ -33,7 +33,7 @@ import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/side
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import {
   SidebarEmptyActionState,
   SidebarHeader,
@@ -843,7 +843,7 @@ const GitHubPRsView = memo(() => {
                           />
                         ) : isLoading && deferredPrs.length === 0 ? (
                           <div className="flex items-center justify-center p-4">
-                            <LoadingIndicator label="Loading pull requests" showLabel compact />
+                            <Spinner label="Loading pull requests" showLabel compact />
                           </div>
                         ) : deferredPrs.length === 0 ? (
                           <GitHubSidebarState
@@ -859,7 +859,7 @@ const GitHubPRsView = memo(() => {
                           <div className="space-y-1 overflow-x-hidden">
                             {isLoading ? (
                               <div className="flex items-center px-2 py-1.5">
-                                <LoadingIndicator label="Refreshing" compact />
+                                <Spinner label="Refreshing" compact />
                               </div>
                             ) : null}
                             {groupedPrs.map((group) => (

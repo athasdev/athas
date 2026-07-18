@@ -11,7 +11,7 @@ import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-f
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
 import { IS_LINUX } from "@/utils/platform";
@@ -214,7 +214,7 @@ export default function LinuxFolderPickerDialog() {
           </div>
         ) : isLoading ? (
           <div className="ui-text-sm flex flex-1 items-center justify-center text-text-lighter">
-            <LoadingIndicator label="Loading folders" showLabel compact />
+            <Spinner label="Loading folders" showLabel compact />
           </div>
         ) : entries.length === 0 ? (
           <div className="ui-text-sm flex flex-1 items-center justify-center text-text-lighter">

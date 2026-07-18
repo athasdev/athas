@@ -2,7 +2,7 @@ import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar-drag/utils/sidebar-resource-drag";
 import type { MenuItem } from "@/ui/dropdown";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { Avatar } from "@/ui/avatar";
 import { SidebarSearchFilterRow } from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -352,7 +352,7 @@ const GitCommitHistory = ({
 
                   {isLoadingMoreCommits && (
                     <div className="flex justify-center px-3 py-1.5 text-text-lighter">
-                      <LoadingIndicator label="Loading commits" showLabel compact />
+                      <Spinner label="Loading commits" showLabel compact />
                     </div>
                   )}
 

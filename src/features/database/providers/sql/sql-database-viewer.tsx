@@ -20,7 +20,7 @@ import {
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
 import type { DatabaseType } from "../../types/provider.types";
 import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
@@ -267,7 +267,7 @@ export default function SqlDatabaseViewer({
 
           {isBusy && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <LoadingIndicator label="Loading" showLabel />
+              <Spinner label="Loading" showLabel />
             </div>
           )}
 

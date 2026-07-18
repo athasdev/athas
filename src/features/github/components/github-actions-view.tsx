@@ -35,7 +35,7 @@ import {
   githubActionDetailsCache,
   githubActionListCache,
 } from "../utils/github-data-cache";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GitHubSidebarSection } from "./github-sidebar-section";
@@ -122,7 +122,7 @@ function WorkflowRunStatusIcon({
       className={cn("grid size-5 place-content-center", state.className)}
     >
       {state.animate || !Icon ? (
-        <LoadingIndicator label={state.label} compact />
+        <Spinner label={state.label} compact />
       ) : (
         <Icon className="size-4" weight="fill" />
       )}
@@ -444,7 +444,7 @@ const GitHubActionsView = memo(
             />
           ) : isLoading && deferredRuns.length === 0 ? (
             <div className="flex items-center justify-center p-4">
-              <LoadingIndicator label="Loading workflow runs" showLabel compact />
+              <Spinner label="Loading workflow runs" showLabel compact />
             </div>
           ) : deferredRuns.length === 0 ? (
             <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
@@ -457,7 +457,7 @@ const GitHubActionsView = memo(
             <div className="space-y-1 overflow-x-hidden">
               {isLoading ? (
                 <div className="flex items-center px-2 py-1.5">
-                  <LoadingIndicator label="Refreshing" compact />
+                  <Spinner label="Refreshing" compact />
                 </div>
               ) : null}
               {groupedRuns.map((group) => (

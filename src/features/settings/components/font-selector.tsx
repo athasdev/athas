@@ -9,7 +9,7 @@ import {
 } from "@/features/settings/lib/font-family-resolution";
 import { useFontStore } from "@/features/settings/stores/font.store";
 import type { FontInfo } from "@/features/settings/types/font.types";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 
@@ -141,7 +141,7 @@ export const FontSelector = ({
   };
 
   if (isLoading) {
-    return <LoadingIndicator label="Loading fonts" showLabel compact className={className} />;
+    return <Spinner label="Loading fonts" showLabel compact className={className} />;
   }
 
   if (error) {

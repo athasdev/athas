@@ -2,7 +2,7 @@ import { readFile } from "@tauri-apps/plugin-fs";
 import { FileIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { formatFileSize } from "@/features/image-editor/utils/image-file-utils";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
 
@@ -198,7 +198,7 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-primary-bg">
-        <LoadingIndicator label="Loading binary file" showLabel />
+        <Spinner label="Loading binary file" showLabel />
       </div>
     );
   }

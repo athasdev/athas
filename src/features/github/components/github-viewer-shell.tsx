@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 
 interface GitHubViewerShellProps {
@@ -72,7 +72,7 @@ interface GitHubViewerLoadingStateProps {
 export function GitHubViewerLoadingState({ label }: GitHubViewerLoadingStateProps) {
   return (
     <div className="flex min-h-32 items-center justify-center p-8">
-      <LoadingIndicator label={label} showLabel compact />
+      <Spinner label={label} showLabel compact />
     </div>
   );
 }

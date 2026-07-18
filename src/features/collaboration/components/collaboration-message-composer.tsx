@@ -1,7 +1,7 @@
 import { FilePlusIcon as FilePlus, PaperPlaneTiltIcon as PaperPlaneTilt } from "@/ui/icons";
 import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
 import Textarea from "@/ui/textarea";
 
@@ -74,7 +74,7 @@ export function CollaborationMessageComposer({
           onClick={onSubmit}
           size="icon-xs"
         >
-          {isSending ? <LoadingIndicator label="Sending" compact /> : <PaperPlaneTilt />}
+          {isSending ? <Spinner label="Sending" compact /> : <PaperPlaneTilt />}
         </Button>
       </div>
     </SidebarFooter>

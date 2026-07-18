@@ -28,7 +28,7 @@ import {
   githubIssueDetailsCache,
   githubIssueListCache,
 } from "../utils/github-data-cache";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 
 interface IssueListItemProps {
   issue: IssueListItem;
@@ -311,7 +311,7 @@ const GitHubIssuesView = memo(
             />
           ) : isLoading && deferredIssues.length === 0 ? (
             <div className="flex items-center justify-center p-4">
-              <LoadingIndicator label="Loading issues" showLabel compact />
+              <Spinner label="Loading issues" showLabel compact />
             </div>
           ) : deferredIssues.length === 0 ? (
             <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No issues" />
@@ -324,7 +324,7 @@ const GitHubIssuesView = memo(
             <div className="space-y-1 overflow-x-hidden">
               {isLoading ? (
                 <div className="flex items-center px-2 py-1.5">
-                  <LoadingIndicator label="Refreshing" compact />
+                  <Spinner label="Refreshing" compact />
                 </div>
               ) : null}
               {groupedIssues.map((group) => (

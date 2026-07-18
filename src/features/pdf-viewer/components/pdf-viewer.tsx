@@ -14,7 +14,7 @@ import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom
 import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import { getRelativePath } from "@/utils/path-helpers";
 import { PdfViewerFooter } from "./pdf-viewer-footer";
@@ -207,7 +207,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             onLoadError={onDocumentLoadError}
             loading={
               <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-                <LoadingIndicator label="Loading PDF" showLabel />
+                <Spinner label="Loading PDF" showLabel />
               </div>
             }
             error={
@@ -245,7 +245,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
                         height: pageDimensions ? pageDimensions.height * zoom : 800 * zoom,
                       }}
                     >
-                      <LoadingIndicator label="Loading page" compact />
+                      <Spinner label="Loading page" compact />
                     </div>
                   }
                 />
@@ -254,7 +254,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
           </Document>
         ) : (
           <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-            <LoadingIndicator label="Reading file" showLabel />
+            <Spinner label="Reading file" showLabel />
           </div>
         )}
       </div>

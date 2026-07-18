@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";
 import type { DebugBreakpoint, DebugStackFrame } from "../types/debugger.types";
@@ -81,7 +81,7 @@ export function DebugEmptyState({ children }: { children: ReactNode }) {
 
 export function DebugSessionStatusIcon({ status }: { status: "idle" | "running" | "paused" }) {
   if (status === "running") {
-    return <LoadingIndicator label="Running" compact />;
+    return <Spinner label="Running" compact />;
   }
 
   if (status === "paused") {

@@ -12,7 +12,7 @@ import {
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import {
@@ -177,7 +177,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
 
           {store.isLoading && (
             <div className="flex flex-1 items-center justify-center p-8">
-              <LoadingIndicator label="Loading" showLabel />
+              <Spinner label="Loading" showLabel />
             </div>
           )}
 

@@ -14,7 +14,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import type { RemoteConnection } from "../types/remote.types";
 
@@ -183,7 +183,7 @@ const ConnectionList = ({
                           aria-label="Connect"
                         >
                           {connectingMap[connection.id] ? (
-                            <LoadingIndicator label="Connecting" compact />
+                            <Spinner label="Connecting" compact />
                           ) : (
                             <Wifi />
                           )}

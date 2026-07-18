@@ -1,4 +1,4 @@
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 
 interface ChatLoadingIndicatorProps {
   label?: string;
@@ -14,6 +14,6 @@ export function ChatLoadingIndicator({
   className,
 }: ChatLoadingIndicatorProps) {
   return (
-    <LoadingIndicator label={label} showLabel={showLabel} compact={compact} className={className} />
+    <Spinner label={label} showLabel={showLabel} compact={compact} className={className} />
   );
 }

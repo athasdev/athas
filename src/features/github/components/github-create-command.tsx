@@ -20,7 +20,7 @@ import Command, {
 import { Button } from "@/ui/button";
 import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 import { toast } from "@/ui/toast";
 import { cn } from "@/utils/cn";
@@ -594,7 +594,7 @@ ${statusSummary}`;
                 disabled={mode !== "form" || isGenerating || isSubmitting}
                 onClick={handleGenerateDraft}
               >
-                {isGenerating ? <LoadingIndicator label="Generating" compact /> : <Sparkle />}
+                {isGenerating ? <Spinner label="Generating" compact /> : <Sparkle />}
                 Generate
               </CommandFooterAction>
             ) : null}
@@ -604,7 +604,7 @@ ${statusSummary}`;
               onClick={handleSubmit}
             >
               {isSubmitting ? (
-                <LoadingIndicator label={kind === "action" ? "Running" : "Creating"} compact />
+                <Spinner label={kind === "action" ? "Running" : "Creating"} compact />
               ) : (
                 <Plus />
               )}

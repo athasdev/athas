@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
 import { CommitItem } from "./commit-item";
@@ -105,7 +105,7 @@ export function PRActivityPanel({
       <div className="space-y-2">
         {isLoadingContent && activityItems.length === 0 ? (
           <div className="flex items-center justify-center p-8">
-            <LoadingIndicator label="Loading activity" showLabel />
+            <Spinner label="Loading activity" showLabel />
           </div>
         ) : contentError ? (
           <div className="flex items-center justify-center p-8 text-center">

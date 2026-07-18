@@ -16,7 +16,7 @@ import { type LspStatus, useLspStore } from "@/features/editor/lsp/stores/lsp.st
 import type { Position } from "@/features/editor/types/editor.types";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { resolveEditorViewCursorPosition } from "@/features/editor/utils/editor-view-cursor-position";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import {
@@ -195,7 +195,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         };
       case "connecting":
         return {
-          icon: <LoadingIndicator label="Connecting" compact />,
+          icon: <Spinner label="Connecting" compact />,
           color: "text-warning",
           title: "Connecting to Language Server...",
         };
@@ -660,7 +660,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               </div>
             ) : lspStatus.status === "connecting" ? (
               <div className={editorMenuMutedRowClass}>
-                <LoadingIndicator label="Connecting" showLabel compact />
+                <Spinner label="Connecting" showLabel compact />
               </div>
             ) : lspStatus.status === "error" ? (
               <div className="space-y-2 px-1 py-1">

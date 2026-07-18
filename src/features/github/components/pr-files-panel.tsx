@@ -11,7 +11,7 @@ import {
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import type { FileStatusFilter } from "../types/github-pr-viewer.types";
 import { FileDiffView } from "./file-diff-view";
@@ -102,7 +102,7 @@ export const PRFilesPanel = memo(
     if (isLoadingContent && !selectedPRDiff) {
       return (
         <div className="flex items-center justify-center p-8">
-          <LoadingIndicator label="Loading diff" showLabel />
+          <Spinner label="Loading diff" showLabel />
         </div>
       );
     }

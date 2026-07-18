@@ -12,7 +12,7 @@ import {
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { requestUIExtensionGeneration } from "../services/ui-extension-generation-service";
@@ -821,7 +821,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
       {step === "generating" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <LoadingIndicator label="Generating" showLabel />
+          <Spinner label="Generating" showLabel />
           <p className="min-h-4 text-center text-text-lighter ui-text-sm">
             {GENERATING_MESSAGES[generationMessageIndex]}
           </p>

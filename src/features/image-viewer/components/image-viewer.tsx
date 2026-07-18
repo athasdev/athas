@@ -19,7 +19,7 @@ import {
 } from "@/features/image-editor/utils/image-file-utils";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { Button } from "@/ui/button";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -309,7 +309,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           />
         ) : (
           <div className="flex items-center justify-center p-8 ui-text-sm text-text-lighter">
-            <LoadingIndicator label="Loading image" showLabel />
+            <Spinner label="Loading image" showLabel />
           </div>
         )}
       </div>

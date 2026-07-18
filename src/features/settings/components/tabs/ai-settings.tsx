@@ -24,7 +24,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig, SessionConfigOption } from "@/features/ai/types/acp.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { TypedConfirmAction } from "@/features/settings/components/typed-confirm-action";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -575,7 +575,7 @@ export const AISettings = () => {
                 leftIcon={Globe}
                 className={cn("w-56 max-w-full", ollamaStatus === "error" && "border-error/60")}
               />
-              {ollamaStatus === "checking" && <LoadingIndicator label="Checking" compact />}
+              {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
               {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
               {ollamaStatus === "error" && <AlertCircle className="text-error" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
@@ -813,7 +813,7 @@ export const AISettings = () => {
                     size="icon-xs"
                   >
                     {isLoadingAutocompleteModels ? (
-                      <LoadingIndicator label="Loading models" compact />
+                      <Spinner label="Loading models" compact />
                     ) : (
                       <RefreshCw />
                     )}

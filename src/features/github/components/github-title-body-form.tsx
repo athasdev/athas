@@ -2,7 +2,7 @@ import { CheckIcon as Check, XIcon as X } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 
 interface GitHubTitleBodyFormProps {
@@ -63,7 +63,7 @@ export function GitHubTitleBodyForm({
           Cancel
         </Button>
         <Button type="submit" variant="default" size="xs" disabled={!canSubmit}>
-          {isSubmitting ? <LoadingIndicator label={submitLabel} compact /> : <Check />}
+          {isSubmitting ? <Spinner label={submitLabel} compact /> : <Check />}
           {submitLabel}
         </Button>
       </div>

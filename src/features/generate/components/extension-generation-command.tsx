@@ -32,7 +32,7 @@ import Command, {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
-import { LoadingIndicator } from "@/ui/loading";
+import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -574,7 +574,7 @@ export function ExtensionGenerationCommand() {
             </div>
           </CommandHeader>
           <div className="flex min-h-40 flex-col items-center justify-center gap-2">
-            <LoadingIndicator label={GENERATING_MESSAGES[generationMessageIndex]} showLabel />
+            <Spinner label={GENERATING_MESSAGES[generationMessageIndex]} showLabel />
             <div className="font-sans ui-text-base text-text-lighter">
               {selectedIntent?.label ?? selectedOption.label}
             </div>
