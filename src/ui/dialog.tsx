@@ -3,7 +3,11 @@ import { cva } from "class-variance-authority";
 import { motion, useReducedMotion } from "framer-motion";
 import { type IconProps as AppIconProps, XIcon as X } from "@/ui/icons";
 import { type ReactNode } from "react";
-import { instantTransition, overlayEntrance, overlayTransition } from "@/ui/motion";
+import {
+  instantTransition,
+  overlayEntrance,
+  quickTransition,
+} from "@/design-system/motion-presets";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 
@@ -103,7 +107,7 @@ const Dialog = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={prefersReducedMotion ? instantTransition : overlayTransition}
+              transition={prefersReducedMotion ? instantTransition : quickTransition}
             />
           }
           className={cn("fixed inset-0 z-[9998] bg-black/20", classNames?.backdrop)}

@@ -38,7 +38,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { TableHeadCell, TableHeader } from "@/ui/table";
 import { ToggleGroup } from "@/ui/toggle-group";
-import { motionDuration, motionEase } from "@/ui/motion";
+import { quickTransition } from "@/design-system/motion-presets";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingRow } from "../settings-section";
@@ -49,14 +49,14 @@ const editorStepTransition = {
   initial: { opacity: 0, x: 14 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: -14 },
-  transition: { duration: motionDuration.fast, ease: motionEase.smooth },
+  transition: quickTransition,
 };
 
 const summaryStepTransition = {
   initial: { opacity: 0, x: -14 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: 14 },
-  transition: { duration: motionDuration.fast, ease: motionEase.smooth },
+  transition: quickTransition,
 };
 
 export const KeyboardSettings = () => {

@@ -14,7 +14,7 @@ import type {
 } from "react";
 import { forwardRef, useEffect, useId, useMemo, useRef, useState } from "react";
 import { buttonVariants } from "@/ui/button";
-import { controlFieldIconSizes } from "@/ui/control-field";
+import { controlIconSizes } from "@/design-system/control-variants";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
@@ -112,9 +112,9 @@ const selectSearchInputVariants = cva(
 );
 
 const iconSizes = {
-  xs: controlFieldIconSizes.xs,
-  sm: controlFieldIconSizes.sm,
-  md: controlFieldIconSizes.md,
+  xs: controlIconSizes.xs,
+  sm: controlIconSizes.sm,
+  md: controlIconSizes.md,
 };
 
 function filterSelectOptions(options: SelectOption[], searchQuery: string) {

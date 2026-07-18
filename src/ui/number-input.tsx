@@ -3,10 +3,10 @@ import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import {
-  controlFieldIconSizes,
-  controlFieldSizeVariants,
-  controlFieldSurfaceVariants,
-} from "@/ui/control-field";
+  controlIconSizes,
+  controlSizeVariants,
+  controlSurfaceVariants,
+} from "@/design-system/control-variants";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<
@@ -140,7 +140,7 @@ export default function NumberInput({
         aria-label="Decrease value"
         className="shrink-0"
       >
-        <Minus size={controlFieldIconSizes[size]} />
+        <Minus size={controlIconSizes[size]} />
       </Button>
 
       <input
@@ -154,8 +154,8 @@ export default function NumberInput({
         type="text"
         inputMode="decimal"
         className={cn(
-          controlFieldSurfaceVariants({ variant: "secondary" }),
-          controlFieldSizeVariants({ size }),
+          controlSurfaceVariants({ variant: "default" }),
+          controlSizeVariants({ size }),
           numberInputTextSize[size],
           numberInputFieldPadding[size],
           "min-w-[5ch] flex-1 bg-transparent text-center tabular-nums text-text outline-none placeholder:text-text-lighter",
@@ -171,7 +171,7 @@ export default function NumberInput({
         aria-label="Increase value"
         className="shrink-0"
       >
-        <Plus size={controlFieldIconSizes[size]} />
+        <Plus size={controlIconSizes[size]} />
       </Button>
     </div>
   );

@@ -1,16 +1,12 @@
 import { cva } from "class-variance-authority";
 
-export const controlFieldSurfaceVariants = cva(
+export const controlSurfaceVariants = cva(
   "font-sans min-w-0 text-text transition-[border-color,box-shadow,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] outline-none disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
           "rounded-lg border border-border bg-secondary-bg focus:border-border-strong focus:bg-secondary-bg focus:ring-1 focus:ring-border-strong/35",
-        secondary:
-          "rounded-lg border border-border bg-secondary-bg focus:border-border-strong focus:bg-secondary-bg focus:ring-1 focus:ring-border-strong/35",
-        outline:
-          "rounded-lg border border-border/70 bg-transparent focus:border-border-strong focus:ring-1 focus:ring-border-strong/25",
         ghost: "border-none bg-transparent focus:ring-0",
         inline:
           "rounded-none border-0 border-text border-b bg-transparent focus:border-text-lighter focus:ring-0",
@@ -22,7 +18,7 @@ export const controlFieldSurfaceVariants = cva(
   },
 );
 
-export const controlFieldSizeVariants = cva("", {
+export const controlSizeVariants = cva("", {
   variants: {
     size: {
       xs: "h-6 ui-text-sm",
@@ -35,7 +31,7 @@ export const controlFieldSizeVariants = cva("", {
   },
 });
 
-export const controlFieldIconSizes = {
+export const controlIconSizes = {
   xs: 12,
   sm: 12,
   md: 14,

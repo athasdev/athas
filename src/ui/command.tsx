@@ -8,8 +8,7 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
-import { clampCommandListIndex, moveCommandListIndex } from "@/ui/command-navigation";
-import { instantTransition, motionEase, motionDuration } from "@/ui/motion";
+import { instantTransition, quickTransition } from "@/design-system/motion-presets";
 import { Tab } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
@@ -158,11 +157,7 @@ const Command = ({
                         ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
                         : { opacity: 0, scale: 0.98, y: -8, filter: "blur(2px)" }
                     }
-                    transition={
-                      prefersReducedMotion
-                        ? instantTransition
-                        : { duration: motionDuration.fast, ease: motionEase.smooth }
-                    }
+                    transition={prefersReducedMotion ? instantTransition : quickTransition}
                   />
                 }
                 className={cn(commandContentVariants(), "pointer-events-auto", className)}
@@ -632,6 +627,19 @@ export const CommandItemRow = ({
 );
 
 CommandItemRow.displayName = "CommandItemRow";
+
+export function clampCommandListIndex(index: number, itemCount: number): number {
+  return Math.min(Math.max(index, 0), Math.max(itemCount - 1, 0));
+}
+
+export function moveCommandListIndex(
+  index: number,
+  itemCount: number,
+  direction: "next" | "previous",
+): number {
+  const currentIndex = clampCommandListIndex(index, itemCount);
+  return clampCommandListIndex(currentIndex + (direction === "next" ? 1 : -1), itemCount);
+}
 
 interface UseCommandListNavigationOptions {
   itemCount: number;

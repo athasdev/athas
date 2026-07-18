@@ -7,7 +7,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { instantTransition, overlayEntrance } from "@/ui/motion";
+import { instantTransition, overlayEntrance } from "@/design-system/motion-presets";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(

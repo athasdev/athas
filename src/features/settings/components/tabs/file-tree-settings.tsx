@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
+import Textarea from "@/ui/textarea";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
-import { controlFieldSurfaceVariants } from "@/ui/control-field";
 import Switch from "@/ui/switch";
-import { cn } from "@/utils/cn";
 
 export const FileTreeSettings = () => {
   const settings = useSettingsStore(
@@ -159,7 +158,7 @@ export const FileTreeSettings = () => {
             getDefaultSetting("hiddenFilePatterns").join(",")
           }
         >
-          <textarea
+          <Textarea
             value={filePatternsInput}
             onChange={(e) => setFilePatternsInput(e.target.value)}
             onBlur={commitFilePatterns}
@@ -171,10 +170,8 @@ export const FileTreeSettings = () => {
             }}
             placeholder="*.log, *.tmp, **/*.bak"
             rows={2}
-            className={cn(
-              controlFieldSurfaceVariants({ variant: "secondary" }),
-              "font-sans ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
-            )}
+            size="md"
+            className="w-48 max-w-full resize-none"
           />
         </SettingRow>
 
@@ -189,7 +186,7 @@ export const FileTreeSettings = () => {
             getDefaultSetting("hiddenDirectoryPatterns").join(",")
           }
         >
-          <textarea
+          <Textarea
             value={directoryPatternsInput}
             onChange={(e) => setDirectoryPatternsInput(e.target.value)}
             onBlur={commitDirectoryPatterns}
@@ -201,10 +198,8 @@ export const FileTreeSettings = () => {
             }}
             placeholder="node_modules, .git, build/"
             rows={2}
-            className={cn(
-              controlFieldSurfaceVariants({ variant: "secondary" }),
-              "font-sans ui-text-base w-48 max-w-full resize-none px-2 py-1.5 placeholder:text-text-lighter",
-            )}
+            size="md"
+            className="w-48 max-w-full resize-none"
           />
         </SettingRow>
       </Section>

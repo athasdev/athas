@@ -3,7 +3,7 @@ import type { Icon as AppIcon } from "@/ui/icons";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
 import { forwardRef, useRef, type ButtonHTMLAttributes, type CSSProperties } from "react";
-import { controlFieldIconSizes, controlFieldSizeVariants } from "@/ui/control-field";
+import { controlIconSizes, controlSizeVariants } from "@/design-system/control-variants";
 import { cn } from "@/utils/cn";
 
 const Combobox = ComboboxPrimitive.Root;
@@ -172,7 +172,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
 ) {
   const hasLeftIcon = Boolean(LeftIcon);
   const hasEndActions = showTrigger || showClear;
-  const iconSize = leftIconSize ?? controlFieldIconSizes[size];
+  const iconSize = leftIconSize ?? controlIconSizes[size];
 
   return (
     <div
@@ -180,7 +180,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
       style={containerStyle}
       className={cn(
         comboboxInputGroupVariants({ variant }),
-        controlFieldSizeVariants({ size }),
+        controlSizeVariants({ size }),
         className,
       )}
     >

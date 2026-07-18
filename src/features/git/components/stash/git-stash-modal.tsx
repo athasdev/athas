@@ -4,7 +4,11 @@ import { createPortal } from "react-dom";
 import { useOnClickOutside } from "usehooks-ts";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { instantTransition, overlayEntrance, overlayTransition } from "@/ui/motion";
+import {
+  instantTransition,
+  overlayEntrance,
+  quickTransition,
+} from "@/design-system/motion-presets";
 import { cn } from "@/utils/cn";
 
 interface StashMessageModalProps {
@@ -69,7 +73,7 @@ const StashMessageModalContent = ({
     <motion.div
       initial={prefersReducedMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={prefersReducedMotion ? instantTransition : overlayTransition}
+      transition={prefersReducedMotion ? instantTransition : quickTransition}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
       <motion.div

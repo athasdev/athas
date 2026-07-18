@@ -12,7 +12,7 @@ import {
 } from "react";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
-import { motionDuration, motionEase } from "@/ui/motion";
+import { quickTransition } from "@/design-system/motion-presets";
 import { PopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -652,7 +652,7 @@ export function Dropdown(props: DropdownProps) {
         y: resolvedSide === "top" ? 4 : -4,
         filter: "blur(2px)",
       }}
-      transition={{ duration: motionDuration.fast, ease: motionEase.smooth }}
+      transition={quickTransition}
     >
       <div role="menu" className={menuClassName} onKeyDown={handleKeyDown}>
         {searchable && (

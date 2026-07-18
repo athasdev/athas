@@ -3,10 +3,10 @@ import { cva } from "class-variance-authority";
 import type React from "react";
 import { forwardRef } from "react";
 import {
-  controlFieldIconSizes,
-  controlFieldSizeVariants,
-  controlFieldSurfaceVariants,
-} from "@/ui/control-field";
+  controlIconSizes,
+  controlSizeVariants,
+  controlSurfaceVariants,
+} from "@/design-system/control-variants";
 import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
@@ -80,9 +80,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const iconSizes = {
-    xs: controlFieldIconSizes.xs,
-    sm: controlFieldIconSizes.sm,
-    md: controlFieldIconSizes.md,
+    xs: controlIconSizes.xs,
+    sm: controlIconSizes.sm,
+    md: controlIconSizes.md,
   };
 
   const iconPositions = {
@@ -107,8 +107,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         autoCorrect={autoCorrect}
         spellCheck={spellCheck}
         className={cn(
-          controlFieldSurfaceVariants({ variant }),
-          controlFieldSizeVariants({ size }),
+          controlSurfaceVariants({ variant }),
+          controlSizeVariants({ size }),
           inputVariants({ size, variant, hasLeftIcon, hasRightIcon }),
           className,
         )}
@@ -131,8 +131,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         autoCorrect={autoCorrect}
         spellCheck={spellCheck}
         className={cn(
-          controlFieldSurfaceVariants({ variant }),
-          controlFieldSizeVariants({ size }),
+          controlSurfaceVariants({ variant }),
+          controlSizeVariants({ size }),
           inputVariants({ size, variant, hasLeftIcon, hasRightIcon }),
           className,
         )}

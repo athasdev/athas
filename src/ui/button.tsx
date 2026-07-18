@@ -2,7 +2,6 @@ import * as React from "react";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
-import { chromeControlVariants, type ChromeControlVariant } from "@/ui/chrome-control";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -45,7 +44,6 @@ export type ButtonProps = useRender.ComponentProps<"button"> &
     tooltip?: string;
     shortcut?: string;
     commandId?: string;
-    chrome?: ChromeControlVariant;
     tooltipSide?: "top" | "bottom" | "left" | "right";
   };
 
@@ -59,7 +57,6 @@ export function Button({
   tooltip,
   shortcut,
   commandId,
-  chrome,
   tooltipSide,
   "aria-label": ariaLabel,
   ...props
@@ -76,11 +73,7 @@ export function Button({
       "data-variant": variant,
       "data-size": size,
       "data-active": active,
-      className: cn(
-        buttonVariants({ variant, size }),
-        chromeControlVariants({ chrome }),
-        className,
-      ),
+      className: cn(buttonVariants({ variant, size }), className),
       "aria-label": ariaLabel ?? (tooltip ? tooltip : undefined),
       ...props,
     },
