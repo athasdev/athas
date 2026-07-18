@@ -145,6 +145,8 @@ const TabBarItem = memo(function TabBarItem({
         <div className="grid size-3 shrink-0 place-content-center">
           {buffer.path === "extensions://marketplace" ? (
             <Package className="text-text-lighter" />
+          ) : buffer.path.startsWith("whats-new://") ? (
+            <Sparkles className="text-accent" />
           ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
             <GitBranch className="text-text-lighter" />
           ) : buffer.type === "terminal" ? (

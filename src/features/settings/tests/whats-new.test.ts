@@ -3,13 +3,37 @@ import { buildWhatsNewMarkdown, resolveWhatsNewInfo } from "../lib/whats-new";
 
 describe("buildWhatsNewMarkdown", () => {
   it("uses bundled release notes when available", () => {
-    expect(
-      buildWhatsNewMarkdown({
-        version: "1.2.0",
-        previousVersion: "1.1.0",
-        body: "Added workspace restore fixes.",
-      }),
-    ).toContain("Added workspace restore fixes.");
+    const markdown = buildWhatsNewMarkdown({
+      version: "1.2.0",
+      previousVersion: "1.1.0",
+      date: "2026-07-17",
+      body: "Added workspace restore fixes.",
+    });
+
+    expect(markdown).toContain("title: What's New in Athas");
+    expect(markdown).toContain("description: Version 1.2.0");
+    expect(markdown).toContain("updated-from: 1.1.0");
+    expect(markdown).toContain("released: July 17, 2026");
+    expect(markdown).toContain("## Changes");
+    expect(markdown).toContain("Added workspace restore fixes.");
+  });
+
+  it("formats generated GitHub entries as readable links", () => {
+    const markdown = buildWhatsNewMarkdown({
+      version: "1.2.0",
+      body: [
+        "* Improve updater layout by @athasdev in https://github.com/athasdev/athas/commit/abc123",
+        "**Full Changelog**: https://github.com/athasdev/athas/compare/v1.1.0...v1.2.0",
+      ].join("\n"),
+    });
+
+    expect(markdown).toContain(
+      "- [Improve updater layout](https://github.com/athasdev/athas/commit/abc123) — @athasdev",
+    );
+    expect(markdown).toContain(
+      "**Full changelog:** [Compare changes](https://github.com/athasdev/athas/compare/v1.1.0...v1.2.0)",
+    );
+    expect(markdown).not.toContain(" by @athasdev in https://");
   });
 
   it("includes a useful fallback when release notes are missing", () => {

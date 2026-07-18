@@ -27,21 +27,69 @@ interface WhatsNewStorageState {
 
 const STORAGE_KEY = "athas-whats-new";
 
+function escapeMarkdownLinkLabel(value: string): string {
+  return value.replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+}
+
+function normalizeReleaseNotes(body: string): string {
+  return body
+    .trim()
+    .split("\n")
+    .map((line) => {
+      const releaseEntry = line.match(
+        /^\s*[*-]\s+(.+?)\s+by\s+(.+?)\s+in\s+(https:\/\/github\.com\/[^\s]+\/(?:pull\/\d+|commit\/[0-9a-f]+))\s*$/i,
+      );
+      if (releaseEntry) {
+        const [, title, author, url] = releaseEntry;
+        return `- [${escapeMarkdownLinkLabel(title)}](${url}) — ${author}`;
+      }
+
+      const fullChangelog = line.match(/^\s*\*\*Full Changelog\*\*:\s+(https?:\/\/\S+)\s*$/i);
+      if (fullChangelog) {
+        return `**Full changelog:** [Compare changes](${fullChangelog[1]})`;
+      }
+
+      return line;
+    })
+    .join("\n");
+}
+
+function formatReleaseDate(value: string): string {
+  const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
 export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
   const services = getServiceUrls();
-  const lines = [`# What's New in Athas ${info.version}`, ""];
+  const lines = ["---", "title: What's New in Athas", `description: Version ${info.version}`];
 
   if (info.previousVersion) {
-    lines.push(`Updated from \`${info.previousVersion}\`.`, "");
+    lines.push(`updated-from: ${info.previousVersion}`);
   }
 
   if (info.date) {
-    lines.push(`Released: ${info.date}`, "");
+    lines.push(`released: ${formatReleaseDate(info.date)}`);
   }
 
+  lines.push("---", "");
+
   if (info.body?.trim()) {
-    lines.push(info.body.trim(), "");
+    const releaseNotes = normalizeReleaseNotes(info.body);
+    if (!/^#{1,6}\s/m.test(releaseNotes)) {
+      lines.push("## Changes", "");
+    }
+    lines.push(releaseNotes, "");
   } else {
+    lines.push("## Release notes", "");
     lines.push("Release notes were not bundled with this update.", "");
     lines.push(
       "You can still review the GitHub release page for downloads and changelog notes.",
@@ -50,7 +98,9 @@ export function buildWhatsNewMarkdown(info: WhatsNewInfo): string {
   }
 
   lines.push("---");
-  lines.push(`[View release on GitHub](${services.githubReleasesBaseUrl}/tag/v${info.version})`);
+  lines.push(
+    `[View the full release on GitHub](${services.githubReleasesBaseUrl}/tag/v${info.version})`,
+  );
 
   return lines.join("\n");
 }

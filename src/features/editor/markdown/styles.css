@@ -1,7 +1,6 @@
 .markdown-preview {
   color: var(--color-text);
   line-height: 1.68;
-  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
 }
 
 .markdown-content {

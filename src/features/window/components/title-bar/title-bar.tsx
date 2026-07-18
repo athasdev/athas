@@ -43,22 +43,20 @@ interface TitleBarProps {
   showMinimal?: boolean;
 }
 
-function placeHeaderItemsBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>) {
+function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>) {
   const accountIndex = items.findIndex((item) => item.id === "account");
   if (accountIndex < 0) return items;
 
   const nextItems = [...items];
-  for (const id of ["updates", "ai-chat"] as const) {
-    const itemIndex = nextItems.findIndex((item) => item.id === id);
-    const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
-    if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
-      continue;
-    }
-
-    const [item] = nextItems.splice(itemIndex, 1);
-    const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
-    nextItems.splice(insertionIndex, 0, item);
+  const itemIndex = nextItems.findIndex((item) => item.id === "ai-chat");
+  const nextAccountIndex = nextItems.findIndex((item) => item.id === "account");
+  if (itemIndex < 0 || nextAccountIndex < 0 || itemIndex === nextAccountIndex - 1) {
+    return nextItems;
   }
+
+  const [item] = nextItems.splice(itemIndex, 1);
+  const insertionIndex = nextItems.findIndex((candidate) => candidate.id === "account");
+  nextItems.splice(insertionIndex, 0, item);
 
   return nextItems;
 }
@@ -262,7 +260,6 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
 
   const headerTrailingItems: Array<ChromeItem<HeaderTrailingItemId>> = [
     { id: "run-actions", label: "Run actions", content: <RunActionsButton /> },
-    { id: "updates", label: "App updates", content: <AppUpdateControl /> },
     {
       id: "ai-chat",
       label: "Agent",
@@ -332,11 +329,12 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           >
             {menuItem}
             {sidebarToggle}
+            <AppUpdateControl />
           </div>
 
           <div className={cn("flex h-full items-center", macTitleBarControlAlignment)}>
             <div className="flex items-center gap-1">
-              {placeHeaderItemsBeforeAccount(
+              {placeAgentBeforeAccount(
                 orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
               ).map((item) =>
                 item.content ? (
@@ -366,12 +364,13 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
             <div className="flex items-center gap-1">
               {menuItem}
               {sidebarToggle}
+              <AppUpdateControl />
             </div>
           </div>
         </div>
         <div className="z-20 flex items-center">
           <div className="flex items-center gap-1">
-            {placeHeaderItemsBeforeAccount(
+            {placeAgentBeforeAccount(
               orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
             ).map((item) =>
               item.content ? (

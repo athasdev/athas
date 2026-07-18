@@ -21,8 +21,8 @@ interface WhatsNewState {
 }
 
 function openWhatsNewBuffer(info: WhatsNewInfo) {
-  const path = `whats-new://v${info.version}.md`;
-  const name = `What's New ${info.version}.md`;
+  const path = `whats-new://v${info.version}`;
+  const name = "What's New";
   const content = buildWhatsNewMarkdown(info);
 
   useBufferStore
