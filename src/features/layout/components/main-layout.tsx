@@ -134,7 +134,7 @@ export function MainLayout() {
     if (result.openedFolderCount + result.openedFileCount === 0) {
       toast.warning("No supported dropped files or folders could be opened.");
     }
-  });
+  }, !rootFolderPath);
 
   const terminalWidthMode = useTerminalStore((state) => state.widthMode);
   useEffect(() => {
