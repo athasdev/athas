@@ -10,7 +10,6 @@
         "decorations": true,
         "hiddenTitle": true,
         "transparent": false,
-        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist",
         "resizable": true,
         "fullscreen": false,
         "center": true,

@@ -6,21 +6,15 @@ export function usePlatformSetup() {
   const { cleanup } = useEditorAppStore.use.actions();
 
   useLayoutEffect(() => {
-    if (isMac()) {
-      document.documentElement.classList.add("platform-macos");
-    } else {
-      document.documentElement.classList.add("platform-other");
-      if (isWindows()) {
-        document.documentElement.classList.add("platform-windows");
-      }
-    }
+    const platformClass = isMac()
+      ? "platform-macos"
+      : isWindows()
+        ? "platform-windows"
+        : "platform-other";
+    document.documentElement.classList.add(platformClass);
 
     return () => {
-      document.documentElement.classList.remove(
-        "platform-macos",
-        "platform-other",
-        "platform-windows",
-      );
+      document.documentElement.classList.remove(platformClass);
       cleanup();
     };
   }, [cleanup]);
