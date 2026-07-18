@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - "extensions/**"
-      - "src/features/extensions/**"
+      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   pull_request:
     paths:
       - "extensions/**"
-      - "src/features/extensions/**"
+      - "src/extensions/**"
       - ".github/workflows/extensions.yml"
   workflow_dispatch:
 
@@ -33,7 +33,7 @@ jobs:
 
       - name: Check generated source changes
         run: |
-          git diff --exit-code extensions src/features/extensions package.json .gitignore || (
+          git diff --exit-code extensions src/extensions package.json .gitignore || (
             echo "Extension source or generated metadata changed. Run the extension scripts locally."
             exit 1
           )
