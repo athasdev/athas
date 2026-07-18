@@ -56,7 +56,6 @@ export function FooterTabControl({
       type="button"
       variant="ghost"
       size="xs"
-      chrome="pill"
       active={active}
       tooltip={tooltip}
       tooltipSide="top"

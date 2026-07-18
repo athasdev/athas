@@ -221,7 +221,6 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
           type="button"
           variant="ghost"
           size="icon-xs"
-          chrome="icon"
           active={isOpen}
           className={className}
           aria-expanded={isOpen}

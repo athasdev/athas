@@ -8,7 +8,7 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { shouldIgnoreFile } from "@/features/global-search/utils/file-filtering";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { instantTransition, motionDuration, motionEase } from "@/ui/motion";
+import { instantTransition, quickTransition } from "@/utils/motion-presets";
 import { chatComposerDropdownClassName } from "../input/chat-composer-control-styles";
 import { AIFileSelector } from "./ai-file-selector";
 
@@ -180,11 +180,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
           ? { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
           : { opacity: 0, scale: 0.98, y: -4, filter: "blur(2px)" }
       }
-      transition={
-        prefersReducedMotion
-          ? instantTransition
-          : { duration: motionDuration.fast, ease: motionEase.smooth }
-      }
+      transition={prefersReducedMotion ? instantTransition : quickTransition}
       className={chatComposerDropdownClassName(
         "fixed z-[10040] flex select-none flex-col overflow-hidden",
       )}

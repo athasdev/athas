@@ -42,7 +42,6 @@ export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) =
           type="button"
           variant="ghost"
           size="xs"
-          chrome={unreadCount > 0 ? "pill" : "icon"}
           active={isCommandVisible}
           className={cn(className, unreadCount > 0 && "w-auto gap-1.5")}
           aria-label="Notifications"

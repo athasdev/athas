@@ -275,7 +275,6 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             type="button"
             variant="ghost"
             onClick={handleAddProject}
-            chrome="icon"
             className="athas-title-project-add-button border border-transparent text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
             tooltip="Open folder"
             aria-label="Open folder"

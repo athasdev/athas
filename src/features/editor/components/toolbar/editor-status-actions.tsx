@@ -555,7 +555,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
           size="icon-xs"
-          chrome="icon"
           className={cn("text-text-lighter", config.color, isLspOpen && "bg-hover text-text")}
           aria-label="Language server status"
           tooltip={config.title}
@@ -690,7 +689,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           onClick={() => setIsViewMenuOpen((open) => !open)}
           variant="ghost"
           size="icon-xs"
-          chrome="icon"
           className={cn(
             "text-text-lighter",
             isViewMenuOpen && "border-border/60 bg-hover/80 text-text",

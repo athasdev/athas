@@ -253,9 +253,8 @@ export const SidebarPaneSelector = ({
         tabIndex={item.tabIndex}
         title={item.title}
         isActive={!!item.isActive}
-        size={compact ? "xs" : "sm"}
+        size={compact ? "icon" : "sm"}
         variant="default"
-        chrome="icon"
         labelPosition="center"
         className={item.className}
         onClick={item.onClick}
@@ -290,8 +289,7 @@ export const SidebarPaneSelector = ({
 
   return (
     <TabsList
-      variant="default"
-      chrome={compact}
+      variant={compact ? "bare" : "default"}
       className={cn(
         !compact && "gap-0.5 p-1",
         isVertical &&

@@ -533,7 +533,7 @@ const GitBranchManager = ({
         onClick={() => void handleOpenDropdown()}
         disabled={isLoading}
         variant="ghost"
-        chrome={triggerSurface === "footer" ? "pill" : undefined}
+        size={triggerSurface === "footer" ? "xs" : "default"}
         className={cn(
           "inline-flex max-w-full shrink overflow-hidden px-2 text-text-lighter hover:bg-hover/80",
           triggerSurface === "footer" && "font-medium",

@@ -222,7 +222,6 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
               onClick={handleCompactMenuToggle}
               variant="ghost"
               size="icon-xs"
-              chrome="icon"
               className={menuBarActiveMenu ? "bg-hover/70 text-text" : undefined}
               aria-label="Menu"
               aria-expanded={Boolean(menuBarActiveMenu)}
@@ -249,7 +248,6 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       tooltip={isSidebarRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       tooltipSide="bottom"
       onClick={() => setIsSidebarRailExpanded(!isSidebarRailExpanded)}
-      chrome="icon"
       aria-label={isSidebarRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
       aria-pressed={isSidebarRailExpanded}
       size="icon-xs"
@@ -274,7 +272,6 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           onClick={() => {
             useSettingsStore.getState().toggleAIChatVisible();
           }}
-          chrome="icon"
           aria-label="Toggle Agent"
           size="icon-xs"
         >

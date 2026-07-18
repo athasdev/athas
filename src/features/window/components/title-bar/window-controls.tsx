@@ -50,7 +50,6 @@ export function WindowControls({
         <Button
           onClick={handleMinimize}
           variant="ghost"
-          chrome="icon"
           className="pointer-events-auto"
           size="icon-xs"
         >
@@ -61,7 +60,6 @@ export function WindowControls({
         <Button
           onClick={handleToggleMaximize}
           variant="ghost"
-          chrome="icon"
           className="pointer-events-auto"
           size="icon-xs"
         >
@@ -72,7 +70,6 @@ export function WindowControls({
         <Button
           onClick={handleClose}
           variant="danger"
-          chrome="icon"
           className="pointer-events-auto group hover:text-white"
           size="icon-xs"
         >

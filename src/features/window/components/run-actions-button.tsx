@@ -107,7 +107,6 @@ export default function RunActionsButton() {
             onClick={() => setIsMenuOpen((open) => !open)}
             variant="ghost"
             active={isMenuOpen}
-            chrome="icon"
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
             aria-label="Run actions"

@@ -1672,7 +1672,7 @@ const createBufferStore = () =>
           const { closedBuffersHistory, buffers } = get();
 
           if (closedBuffersHistory.length === 0) {
-            const { toast } = await import("@/ui/toast");
+            const { toast } = await import("sonner");
             toast.info("No recently closed tabs");
             return;
           }
@@ -1695,7 +1695,7 @@ const createBufferStore = () =>
           });
 
           if (!closedBuffer) {
-            const { toast } = await import("@/ui/toast");
+            const { toast } = await import("sonner");
             toast.info("No recently closed tabs");
             return;
           }
@@ -1737,7 +1737,7 @@ const createBufferStore = () =>
             }
           } catch (error) {
             logger.warn("Editor", `Failed to reopen closed tab: ${closedBuffer.path}`, error);
-            const { toast } = await import("@/ui/toast");
+            const { toast } = await import("sonner");
             toast.error(`Couldn't reopen ${closedBuffer.name}`);
           }
         },

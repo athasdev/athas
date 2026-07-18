@@ -30,7 +30,6 @@ import type {
   RefCallback,
 } from "react";
 import { forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
-import { chromeControlVariants, type ChromeControlVariant } from "@/ui/chrome-control";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -168,8 +167,9 @@ export function useTabDragClickGuard() {
   return { getClickCapture, releaseClickSuppression, suppressNextClick };
 }
 
-export type TabSize = "xs" | "sm" | "md";
+export type TabSize = "icon" | "xs" | "sm" | "md";
 export type TabVariant = "default" | "pill" | "segmented" | "connected";
+export type TabsListVariant = TabVariant | "bare";
 export type TabBarOrientation = "horizontal" | "vertical";
 export type TabLabelPosition = "start" | "center" | "end";
 export type TabContentLayout = "inline" | "stacked";
@@ -183,7 +183,6 @@ export interface TabProps extends HTMLAttributes<HTMLDivElement> {
   variant?: TabVariant;
   labelPosition?: TabLabelPosition;
   contentLayout?: TabContentLayout;
-  chrome?: ChromeControlVariant;
   children: ReactNode;
 }
 
@@ -249,6 +248,7 @@ const tabVariants = cva(
   {
     variants: {
       size: {
+        icon: "flex h-6 w-7 items-center justify-center p-0",
         xs: "ui-text-sm flex min-h-5 items-center gap-1 px-2.5",
         sm: "ui-text-sm flex min-h-7 items-center gap-1 px-2.5",
         md: "ui-text-base flex min-h-8 items-center gap-1 px-3",
@@ -365,22 +365,18 @@ function ConnectedTabShoulders() {
   );
 }
 
-const tabsListVariants = cva("flex rounded-lg bg-secondary-bg/55", {
+const tabsListVariants = cva("flex", {
   variants: {
     variant: {
-      default: "items-center gap-0.5 p-0.5",
-      pill: "items-center gap-0.5 p-0.5",
-      segmented: "min-h-6 items-stretch overflow-hidden",
+      default: "items-center gap-0.5 rounded-lg bg-secondary-bg/55 p-0.5",
+      pill: "items-center gap-0.5 rounded-lg bg-secondary-bg/55 p-0.5",
+      segmented: "min-h-6 items-stretch overflow-hidden rounded-lg bg-secondary-bg/55",
       connected: "min-h-9 items-end gap-0.5 rounded-none bg-tab-bar px-1.5 pt-1",
-    },
-    chrome: {
-      true: "pointer-events-auto gap-1 overflow-visible border-0 bg-transparent p-0",
-      false: "",
+      bare: "pointer-events-auto items-center gap-1 overflow-visible",
     },
   },
   defaultVariants: {
     variant: "default",
-    chrome: false,
   },
 });
 
@@ -394,7 +390,6 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
     variant = "default",
     labelPosition = "center",
     contentLayout = "inline",
-    chrome,
     children,
     className,
     style,
@@ -428,7 +423,6 @@ export const Tab = forwardRef<HTMLDivElement, TabProps>(function Tab(
       data-active={isActive}
       className={cn(
         tabVariants({ size, variant, active: isActive, dragged: isDragged }),
-        chromeControlVariants({ chrome }),
         actionInsetClass,
         className,
       )}
@@ -509,13 +503,13 @@ export const TabBarSurface = forwardRef<
 
 export const TabsList = forwardRef<
   HTMLDivElement,
-  HTMLAttributes<HTMLDivElement> & { variant?: TabVariant; chrome?: boolean }
->(function TabsList({ className, variant = "default", chrome = false, ...props }, ref) {
+  HTMLAttributes<HTMLDivElement> & { variant?: TabsListVariant }
+>(function TabsList({ className, variant = "default", ...props }, ref) {
   return (
     <div
       ref={ref}
       data-slot="tabs-list"
-      className={cn(tabsListVariants({ variant, chrome }), className)}
+      className={cn(tabsListVariants({ variant }), className)}
       {...props}
     />
   );
