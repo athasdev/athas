@@ -211,10 +211,9 @@ export const ThemeSelectorContent = ({
     chooseThemeFile((file) => {
       void uploadTheme(file).then((result) => {
         if (!result.success || !result.theme) {
-          toast.error(
-            result.error ?? "Failed to import theme",
-            { description: result.details?.slice(0, 4).join("\n") },
-          );
+          toast.error(result.error ?? "Failed to import theme", {
+            description: result.details?.slice(0, 4).join("\n"),
+          });
           return;
         }
 

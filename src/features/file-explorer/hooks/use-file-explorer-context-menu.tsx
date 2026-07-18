@@ -162,10 +162,9 @@ export function useFileExplorerContextMenu({
         toast.success(`Created ${targetFileName}`);
       } catch (error) {
         console.error("Failed to create env template file:", error);
-        toast.error(
-          `Failed to create ${targetFileName}`,
-          { description: error instanceof Error ? error.message : undefined },
-        );
+        toast.error(`Failed to create ${targetFileName}`, {
+          description: error instanceof Error ? error.message : undefined,
+        });
       }
     },
     [onCreateNewFileInDirectory, onRefreshDirectory],

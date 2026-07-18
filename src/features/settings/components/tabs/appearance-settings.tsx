@@ -135,10 +135,9 @@ export const AppearanceSettings = () => {
     chooseThemeFile((file) => {
       void uploadTheme(file).then((result) => {
         if (!result.success || !result.theme) {
-          toast.error(
-            result.error ?? "Failed to import theme",
-            { description: result.details?.slice(0, 4).join("\n") },
-          );
+          toast.error(result.error ?? "Failed to import theme", {
+            description: result.details?.slice(0, 4).join("\n"),
+          });
           return;
         }
 
@@ -168,10 +167,9 @@ export const AppearanceSettings = () => {
       await deleteCustomTheme(themeId);
       toast.success("Custom theme removed");
     } catch (error) {
-      toast.error(
-        "Failed to remove custom theme",
-        { description: error instanceof Error ? error.message : String(error) },
-      );
+      toast.error("Failed to remove custom theme", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
