@@ -94,6 +94,7 @@ pub struct GitBlameLine {
    pub line_number: usize,
    pub total_lines: usize,
    pub commit_hash: String,
+   pub is_uncommitted: bool,
    pub author: String,
    pub email: String,
    pub time: i64,

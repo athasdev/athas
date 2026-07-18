@@ -140,8 +140,13 @@ pub async fn git_ref_diff(
 }
 
 #[tauri::command]
-pub fn git_blame_file(root_path: &str, file_path: &str) -> Result<git_backend::GitBlame, String> {
-   git_backend::git_blame_file(&resolve_backend_path(root_path.to_string()), file_path)
+pub async fn git_blame_file(
+   root_path: String,
+   file_path: String,
+   content: String,
+) -> Result<git_backend::GitBlame, String> {
+   let root_path = resolve_backend_path(root_path);
+   run_blocking(move || git_backend::git_blame_file(&root_path, &file_path, &content)).await
 }
 
 #[tauri::command]

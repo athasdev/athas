@@ -3,18 +3,45 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitBlameLine } from "../types/git.types";
 
-export function useGitBlame(filePath: string | undefined) {
+const BLAME_REFRESH_DELAY_MS = 500;
+
+export function useGitBlame(filePath: string | undefined, content: string) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const loadBlameForFile = useGitBlameStore((state) => state.loadBlameForFile);
+  const loadBlameForFile = useGitBlameStore((state) => state.actions.loadBlameForFile);
+  const clearBlameForFile = useGitBlameStore((state) => state.actions.clearBlameForFile);
+  const blameRevision = useGitBlameStore((state) => state.revision);
   const blameData = useGitBlameStore((state) =>
-    filePath ? state.blameData.get(filePath) : undefined,
+    filePath && state.blameContent.get(filePath) === content
+      ? state.blameData.get(filePath)
+      : undefined,
   );
+  useEffect(() => {
+    if (!filePath || !rootFolderPath) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void loadBlameForFile(rootFolderPath, filePath, content);
+    }, BLAME_REFRESH_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [blameRevision, content, filePath, loadBlameForFile, rootFolderPath]);
 
   useEffect(() => {
-    if (filePath && rootFolderPath) {
-      loadBlameForFile(rootFolderPath, filePath);
-    }
-  }, [filePath, rootFolderPath, loadBlameForFile]);
+    if (!filePath) return;
+
+    const handleGitStatusUpdate = (event: Event) => {
+      const updatedFilePath = (event as CustomEvent<{ filePath?: string }>).detail?.filePath;
+      if (updatedFilePath && updatedFilePath !== filePath) return;
+
+      clearBlameForFile(filePath);
+    };
+
+    window.addEventListener("git-status-updated", handleGitStatusUpdate);
+    window.addEventListener("git-status-changed", handleGitStatusUpdate);
+    return () => {
+      window.removeEventListener("git-status-updated", handleGitStatusUpdate);
+      window.removeEventListener("git-status-changed", handleGitStatusUpdate);
+    };
+  }, [clearBlameForFile, filePath]);
 
   const getBlameForLine = useCallback(
     (lineNumber: number): GitBlameLine | null => {

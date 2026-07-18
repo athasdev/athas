@@ -96,6 +96,7 @@ export interface GitBlameLine {
   line_number: number;
   total_lines: number;
   commit_hash: string;
+  is_uncommitted: boolean;
   author: string;
   email: string;
   time: number;

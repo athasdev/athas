@@ -25,6 +25,7 @@ import {
 import { getFileDiff } from "../api/git-diff-api";
 import { commitChanges, getGitLog } from "../api/git-commits-api";
 import { pullChanges, pushChanges, type GitRemoteActionResult } from "../api/git-remotes-api";
+import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitDiff, GitFile } from "../types/git.types";
 
 interface GitCommitPanelProps {
@@ -292,6 +293,7 @@ const GitCommitPanel = ({
     try {
       const success = await commitChanges(repoPath, commitMessage.trim());
       if (success) {
+        useGitBlameStore.getState().actions.clearAllBlame();
         setCommitMessage("");
         onCommitSuccess?.();
       } else {
@@ -324,6 +326,9 @@ const GitCommitPanel = ({
 
       const result = await run();
       if (result.success) {
+        if (action === "pull") {
+          useGitBlameStore.getState().actions.clearAllBlame();
+        }
         toast.dismiss(toastId);
         toast.success(
           action === "push" ? "Changes pushed successfully." : "Changes pulled successfully.",

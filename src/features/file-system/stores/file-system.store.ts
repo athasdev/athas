@@ -653,7 +653,7 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
         gitDiffCache.clear();
 
         // Clear git blame data
-        useGitBlameStore.getState().clearAllBlame();
+        useGitBlameStore.getState().actions.clearAllBlame();
       },
 
       restoreSession: async (projectPath: string, skipBufferPath?: string) => {

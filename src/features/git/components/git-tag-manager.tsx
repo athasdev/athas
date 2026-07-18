@@ -40,6 +40,7 @@ import {
   getTags,
   pushTag,
 } from "../api/git-tags-api";
+import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitRemote, GitTag } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
@@ -192,6 +193,7 @@ const GitTagManager = ({
     try {
       const result = await checkoutTag(repoPath, tagName);
       if (result.success) {
+        useGitBlameStore.getState().actions.clearAllBlame();
         toast.success(result.message);
         onRefresh?.();
         handleClose();

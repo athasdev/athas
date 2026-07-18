@@ -135,7 +135,7 @@ export const InlineGitBlame = ({
 
   const handleViewCommit = useCallback(async () => {
     const { filePath } = useEditorStateStore.getState();
-    const { getRepoPath } = useGitBlameStore.getState();
+    const { getRepoPath } = useGitBlameStore.getState().actions;
     const repoPath = getRepoPath(filePath);
 
     if (!repoPath) return;

@@ -29,6 +29,7 @@ import { resolveRepositoryPath } from "../api/git-repo-api";
 import { createStash } from "../api/git-stash-api";
 import { addWorktree, getWorktrees } from "../api/git-worktrees-api";
 import { useRepositoryStore } from "../stores/git-repository.store";
+import { useGitBlameStore } from "../stores/git-blame.store";
 import type { GitWorktree } from "../types/git.types";
 import GitCommandSurface from "./git-command-surface";
 
@@ -264,6 +265,7 @@ const GitBranchManager = ({
                 if (stashSuccess) {
                   const retryResult = await checkoutBranch(repoPath, branchName);
                   if (retryResult.success) {
+                    useGitBlameStore.getState().actions.clearAllBlame();
                     showToast({
                       message: "Changes stashed and branch switched successfully",
                       type: "success",
@@ -287,6 +289,7 @@ const GitBranchManager = ({
           },
         });
       } else if (result.success) {
+        useGitBlameStore.getState().actions.clearAllBlame();
         setIsDropdownOpen(false);
         onBranchChange?.();
       } else {
