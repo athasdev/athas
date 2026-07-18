@@ -61,7 +61,7 @@ export const defaultSettings: Settings = {
   autoThemeDark: "athas-dark",
   nativeMenuBar: false,
   compactMenuBar: true,
-  windowTransparency: true,
+  windowTransparency: false,
   headerTrailingItemsOrder: [...HEADER_TRAILING_ITEM_IDS],
   sidebarActivityItemsOrder: [...SIDEBAR_ACTIVITY_ITEM_IDS],
   footerLeadingItemsOrder: [...FOOTER_LEADING_ITEM_IDS],

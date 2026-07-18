@@ -354,7 +354,7 @@ pub fn set_macos_window_appearance(
 ) -> Result<(), String> {
    #[cfg(all(target_os = "macos", not(feature = "linux")))]
    {
-      sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(true))?;
+      sync_macos_window_appearance(&window, &theme_type, transparency_enabled.unwrap_or(false))?;
    }
 
    #[cfg(any(not(target_os = "macos"), feature = "linux"))]
