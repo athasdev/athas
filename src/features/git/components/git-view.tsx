@@ -30,7 +30,7 @@ import {
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { formatRelativeDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { getBranches } from "../api/git-branches-api";
@@ -419,9 +419,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
       setIsSyncMenuOpen(false);
       setRemoteAction(action);
       const label = REMOTE_ACTION_LABELS[action];
-      const toastId = toast.show({
-        message: `${label.present} changes...`,
-        type: "info",
+      const toastId = toast.info(`${label.present} changes...`, {
         duration: Infinity,
       });
 

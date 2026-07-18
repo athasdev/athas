@@ -22,7 +22,7 @@ import Checkbox from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import type { IssueListItem, Label, PullRequest, WorkflowListItem } from "../types/github.types";
 
@@ -255,7 +255,7 @@ function GitHubCreateCommandContent({
           assignees: parsedAssignees,
         });
         onIssueCreated(issue);
-        toast.success("Issue created", `#${issue.number} ${issue.title}`);
+        toast.success("Issue created", { description: `#${issue.number} ${issue.title}` });
         onClose();
         return;
       }
@@ -272,7 +272,9 @@ function GitHubCreateCommandContent({
           assignees: parsedAssignees,
         });
         onPullRequestCreated(pullRequest);
-        toast.success("Pull request created", `#${pullRequest.number} ${pullRequest.title}`);
+        toast.success("Pull request created", {
+          description: `#${pullRequest.number} ${pullRequest.title}`,
+        });
         onClose();
         return;
       }

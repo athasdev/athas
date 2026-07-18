@@ -16,7 +16,7 @@ import {
   type OccurrenceRange,
 } from "@/features/editor/utils/select-next-occurrence";
 import { showChoiceDialog } from "@/features/dialogs/services/dialog-service";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { isEditorKeyboardTarget } from "../utils/editor-keyboard-target";
 
 type EditorSelection = NonNullable<ReturnType<typeof editorAPI.getSelection>>;

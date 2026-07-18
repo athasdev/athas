@@ -82,14 +82,14 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
               const pathInfo = await getSymlinkInfo(folderPath);
               if (!pathInfo.is_dir) {
                 get().updateRecentFolder(folderPath, { missing: true });
-                const { toast } = await import("@/ui/toast");
+                const { toast } = await import("sonner");
                 toast.error(`Recent project is not a folder: ${folderPath}`);
                 return;
               }
             } catch (error) {
               get().updateRecentFolder(folderPath, { missing: true });
               console.error("Recent folder is no longer available:", folderPath, error);
-              const { toast } = await import("@/ui/toast");
+              const { toast } = await import("sonner");
               toast.error(`Recent project is unavailable: ${folderPath}`);
               return;
             }

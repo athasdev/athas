@@ -40,7 +40,7 @@ import Command, {
 } from "@/ui/command";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
 

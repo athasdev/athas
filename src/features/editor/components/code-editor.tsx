@@ -26,7 +26,7 @@ import { buildSearchRegex, findLimitedMatchesCooperative } from "@/features/edit
 import type { EditorModelPositionResolver } from "@/features/editor/view-model/view-layout";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useZoomStore } from "@/features/window/stores/zoom.store";

@@ -56,7 +56,7 @@ import {
   SidebarSectionPager,
   SidebarSectionSwitcher,
 } from "@/ui/sidebar";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { getBaseName } from "@/utils/path-helpers";

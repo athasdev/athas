@@ -6,7 +6,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { ActionMenu } from "@/ui/action-menu";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import type { IssueDetails } from "../types/github.types";
 import {
   GITHUB_ISSUE_DETAILS_TTL_MS,

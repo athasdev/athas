@@ -4,7 +4,7 @@ import {
   WarningCircleIcon as WarningCircle,
   XCircleIcon as XCircle,
 } from "@/ui/icons";
-import type { NotificationEntry } from "@/ui/toast";
+import type { NotificationEntry } from "@/features/notifications/types/notifications.types";
 
 export function NotificationIcon({ type }: { type: NotificationEntry["type"] }) {
   switch (type) {

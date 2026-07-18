@@ -16,7 +16,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import {
   fetchChanges,
   pullChanges,
@@ -77,13 +77,11 @@ const GitActionsMenu = ({
   ) => {
     if (!repoPath) return;
 
-    let toastId: string | null = null;
+    let toastId: string | number | null = null;
     setIsLoading(true);
     try {
       if (messages?.loading) {
-        toastId = toast.show({
-          message: messages.loading,
-          type: "info",
+        toastId = toast.info(messages.loading, {
           duration: 0,
         });
       }

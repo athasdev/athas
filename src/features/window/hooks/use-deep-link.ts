@@ -1,7 +1,7 @@
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { useEffect } from "react";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import type { Settings } from "@/features/settings/types/settings.types";
 import type { SettingsTab } from "@/features/window/stores/ui-state/types/ui-state.types";
 import {

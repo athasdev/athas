@@ -23,7 +23,7 @@ import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { FontSelector } from "../font-selector";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import {
   chooseThemeFile,
   deleteCustomTheme,
@@ -137,7 +137,7 @@ export const AppearanceSettings = () => {
         if (!result.success || !result.theme) {
           toast.error(
             result.error ?? "Failed to import theme",
-            result.details?.slice(0, 4).join("\n"),
+            { description: result.details?.slice(0, 4).join("\n") },
           );
           return;
         }
@@ -170,7 +170,7 @@ export const AppearanceSettings = () => {
     } catch (error) {
       toast.error(
         "Failed to remove custom theme",
-        error instanceof Error ? error.message : String(error),
+        { description: error instanceof Error ? error.message : String(error) },
       );
     }
   };

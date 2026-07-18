@@ -22,7 +22,7 @@ import {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { matchesSearchQuery } from "@/utils/search-match";
 
 interface ThemeInfo {
@@ -213,7 +213,7 @@ export const ThemeSelectorContent = ({
         if (!result.success || !result.theme) {
           toast.error(
             result.error ?? "Failed to import theme",
-            result.details?.slice(0, 4).join("\n"),
+            { description: result.details?.slice(0, 4).join("\n") },
           );
           return;
         }

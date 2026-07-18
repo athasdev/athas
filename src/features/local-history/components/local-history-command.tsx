@@ -30,7 +30,7 @@ import {
   CommandList,
 } from "@/ui/command";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { formatRelativeDate, formatShortDateTime } from "@/utils/date";
 import { getBaseName } from "@/utils/path-helpers";

@@ -15,7 +15,7 @@ import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
 import { Dropdown } from "@/ui/dropdown";
 import Input from "@/ui/input";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import {
   CLAUDE_CODE_TERMINAL_AGENT_ID,
@@ -234,7 +234,7 @@ export function AgentSelector({
       } catch (error) {
         toast.error(
           `Failed to install ${agentName}`,
-          error instanceof Error ? error.message : "Unknown error",
+          { description: error instanceof Error ? error.message : "Unknown error" },
         );
       } finally {
         setInstallingAgentId(null);

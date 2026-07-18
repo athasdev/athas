@@ -1,4 +1,4 @@
-import type { NotificationEntry } from "@/ui/toast";
+import type { NotificationEntry } from "@/features/notifications/types/notifications.types";
 import { formatCalendarDateGroup, formatCompactRelativeDate } from "@/utils/date";
 
 export function formatNotificationAge(timestamp: number) {

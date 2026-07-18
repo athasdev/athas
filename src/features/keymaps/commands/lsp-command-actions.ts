@@ -1,5 +1,5 @@
 import { LspClient } from "@/features/editor/lsp/lsp-client";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 
 function getActiveLspClient() {
   return LspClient.getInstance();

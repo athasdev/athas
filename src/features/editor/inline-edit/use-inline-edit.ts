@@ -8,7 +8,7 @@ import { getProviderById } from "@/features/ai/types/providers.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { useInlineEditToolbarStore } from "@/features/editor/stores/inline-edit-toolbar.store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import {
   InlineEditError,
   requestInlineEdit,

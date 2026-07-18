@@ -16,7 +16,7 @@ import { BracketsCurlyIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 
 interface CustomThemeCreatorDialogProps {
   baseThemeId: string;
@@ -121,7 +121,7 @@ export function CustomThemeCreatorDialog({
       await writeTextFile(targetPath, formatThemeFile(themeFile));
       toast.success("Theme JSON saved");
     } catch (error) {
-      toast.error("Failed to save theme JSON", formatIssues(error)[0]);
+      toast.error("Failed to save theme JSON", { description: formatIssues(error)[0] });
     } finally {
       setIsSaving(false);
     }

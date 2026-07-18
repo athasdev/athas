@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 export type LspStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -48,10 +48,8 @@ export const useLspStore = createSelectors(
         }));
       },
       setLspError: (error) => {
-        toast.show({
-          key: LSP_ERROR_TOAST_KEY,
-          type: "error",
-          message: error,
+        toast.error(error, {
+          id: LSP_ERROR_TOAST_KEY,
           duration: 8000,
         });
         set((state) => ({
@@ -63,7 +61,7 @@ export const useLspStore = createSelectors(
         }));
       },
       clearLspError: () => {
-        toast.dismissByKey(LSP_ERROR_TOAST_KEY);
+        toast.dismiss(LSP_ERROR_TOAST_KEY);
         set((state) => ({
           lspStatus: {
             ...state.lspStatus,

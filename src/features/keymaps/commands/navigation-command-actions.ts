@@ -12,7 +12,7 @@ import { useReferencesStore } from "@/features/references/stores/references.stor
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { showPromptDialog } from "@/features/dialogs/services/dialog-service";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 
 type LspNavigationLocation = {
   uri: string;

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useCommandShortcut } from "@/features/keymaps/hooks/use-command-shortcut";
 import { NotificationsCommand } from "@/features/notifications/components/notifications-command";
 import { OPEN_NOTIFICATIONS_COMMAND_EVENT } from "@/features/notifications/constants/notifications-events";
+import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
 import { Button } from "@/ui/button";
 import { BellIcon } from "@/ui/icons";
-import { useToastStore } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 
@@ -13,7 +13,7 @@ interface NotificationsTriggerProps {
 }
 
 export const NotificationsTrigger = ({ className }: NotificationsTriggerProps) => {
-  const notifications = useToastStore.use.notifications();
+  const notifications = useNotificationsStore.use.notifications();
   const [isCommandVisible, setIsCommandVisible] = useState(false);
   const shortcut = useCommandShortcut("workbench.showNotifications");
   const unreadCount = useMemo(

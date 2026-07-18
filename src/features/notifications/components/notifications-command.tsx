@@ -14,7 +14,11 @@ import type React from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { NotificationIcon } from "@/features/notifications/components/notification-icon";
 import { NotificationListItem } from "@/features/notifications/components/notification-list-item";
-import type { NotificationFilter } from "@/features/notifications/types/notifications.types";
+import { useNotificationsStore } from "@/features/notifications/stores/notifications.store";
+import type {
+  NotificationEntry,
+  NotificationFilter,
+} from "@/features/notifications/types/notifications.types";
 import {
   formatNotificationAge,
   formatNotificationGroupDate,
@@ -31,7 +35,6 @@ import Command, {
 } from "@/ui/command";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { ItemGroup } from "@/ui/item";
-import { useToastStore, type NotificationEntry } from "@/ui/toast";
 import Tooltip from "@/ui/tooltip";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
@@ -42,10 +45,10 @@ interface NotificationsCommandProps {
 }
 
 export function NotificationsCommand({ isVisible, onClose }: NotificationsCommandProps) {
-  const notifications = useToastStore.use.notifications();
-  const markAllNotificationsRead = useToastStore((state) => state.actions.markAllNotificationsRead);
-  const removeNotification = useToastStore((state) => state.actions.removeNotification);
-  const clearNotifications = useToastStore((state) => state.actions.clearNotifications);
+  const notifications = useNotificationsStore.use.notifications();
+  const markAllNotificationsRead = useNotificationsStore((state) => state.actions.markAllRead);
+  const removeNotification = useNotificationsStore((state) => state.actions.remove);
+  const clearNotifications = useNotificationsStore((state) => state.actions.clear);
   const notificationContextMenu = useDropdownMenu<NotificationEntry>();
   const panelContextMenu = useDropdownMenu();
   const filterButtonRef = useRef<HTMLButtonElement>(null);

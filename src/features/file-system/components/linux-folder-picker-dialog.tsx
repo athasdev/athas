@@ -12,7 +12,7 @@ import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { IS_LINUX } from "@/utils/platform";
 

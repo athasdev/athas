@@ -27,7 +27,7 @@ import {
 import Input from "@/ui/input";
 import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
 import Select from "@/ui/select";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { formatShortDate } from "@/utils/date";
 import { matchesSearchQuery } from "@/utils/search-match";

@@ -21,7 +21,7 @@ import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wrapper";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";

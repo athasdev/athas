@@ -49,7 +49,7 @@ import {
   createWorkspaceScopedStore,
   type WorkspaceScopedStore,
 } from "@/features/workspace/stores/create-workspace-scoped-store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { frontendTrace } from "@/utils/frontend-trace";
 import {
   ensureTrailingPathSeparator,

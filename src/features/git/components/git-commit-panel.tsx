@@ -16,7 +16,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { SidebarComposerBody } from "@/ui/sidebar";
 import Textarea from "@/ui/textarea";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import {
   InlineEditError,
@@ -313,14 +313,12 @@ const GitCommitPanel = ({
     if (!repoPath) return;
 
     const label = action === "push" ? "Push" : "Pull";
-    let toastId: string | null = null;
+    let toastId: string | number | null = null;
     setRemoteAction(action);
     setError(null);
 
     try {
-      toastId = toast.show({
-        message: `${label}ing changes...`,
-        type: "info",
+      toastId = toast.info(`${label}ing changes...`, {
         duration: 0,
       });
 

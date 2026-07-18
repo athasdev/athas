@@ -16,7 +16,7 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import type { WorkflowRunDetails, WorkflowRunJob, WorkflowRunStep } from "../types/github.types";
 import { GITHUB_ACTION_DETAILS_TTL_MS, githubActionDetailsCache } from "../utils/github-data-cache";

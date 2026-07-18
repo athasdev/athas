@@ -1,4 +1,4 @@
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { formatCompactRelativeDate } from "@/utils/date";
 import { writeClipboardText } from "@/utils/clipboard";
 

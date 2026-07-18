@@ -30,7 +30,7 @@ import {
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, isMac } from "@/utils/platform";
 import {

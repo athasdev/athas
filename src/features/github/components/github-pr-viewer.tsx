@@ -6,7 +6,7 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import type { GitDiff, GitDiffLine } from "@/features/git/types/git.types";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import { Button } from "@/ui/button";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import type {
   Commit,
   FilePatchState,

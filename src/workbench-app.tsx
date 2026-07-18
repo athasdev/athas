@@ -6,13 +6,13 @@ import {
   traceWindowOpen,
   traceWindowOpenAfterFrame,
 } from "@/features/window/utils/window-open-diagnostics";
+import { NotificationRecorder } from "@/features/notifications/components/notification-recorder";
 
 import { MainLayout } from "./features/layout/components/main-layout";
 import { ZoomIndicator } from "./features/window/components/zoom-indicator";
-import { ToastContainer } from "./ui/toast";
+import { Toaster } from "./ui/sonner";
 import { TooltipProvider } from "./ui/tooltip";
 import { WindowResizeBorder } from "./features/window/components/window-resize-border";
-import { ToastProvider } from "./features/layout/contexts/toast-context";
 import { DialogServiceProvider } from "./features/dialogs/services/dialog-service";
 
 const bootstrapStartedAt = performance.now();
@@ -41,22 +41,21 @@ function WorkbenchApp() {
   }, []);
 
   return (
-    <ToastProvider>
-      <DialogServiceProvider>
-        <TooltipProvider>
-          <WindowResizeBorder />
+    <DialogServiceProvider>
+      <TooltipProvider>
+        <WindowResizeBorder />
 
-          <div className="h-dvh w-dvw overflow-hidden">
-            <FontStyleInjector />
-            <div className="window-container flex size-full flex-col overflow-hidden bg-primary-bg">
-              <MainLayout />
-            </div>
-            <ZoomIndicator />
-            <ToastContainer />
+        <div className="h-dvh w-dvw overflow-hidden">
+          <FontStyleInjector />
+          <div className="window-container flex size-full flex-col overflow-hidden bg-primary-bg">
+            <MainLayout />
           </div>
-        </TooltipProvider>
-      </DialogServiceProvider>
-    </ToastProvider>
+          <ZoomIndicator />
+          <Toaster />
+          <NotificationRecorder />
+        </div>
+      </TooltipProvider>
+    </DialogServiceProvider>
   );
 }
 

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { connectionStore } from "../stores/remote-connection.store";
 import type { RemoteConnection } from "../types/remote.types";
 import { getFriendlyRemoteError } from "../utils/remote-errors";

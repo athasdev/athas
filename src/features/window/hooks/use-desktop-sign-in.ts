@@ -1,6 +1,6 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useState } from "react";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import {
   beginDesktopAuthSession,

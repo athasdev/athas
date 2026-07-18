@@ -4,7 +4,7 @@ import { NotificationIcon } from "@/features/notifications/components/notificati
 import type { NotificationItemAction } from "@/features/notifications/types/notifications.types";
 import { Button } from "@/ui/button";
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/ui/item";
-import type { NotificationEntry } from "@/ui/toast";
+import type { NotificationEntry } from "@/features/notifications/types/notifications.types";
 import Tooltip from "@/ui/tooltip";
 
 interface NotificationListItemProps {

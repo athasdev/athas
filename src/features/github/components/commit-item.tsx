@@ -4,7 +4,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { memo } from "react";
 import { openCommitDiffBuffer } from "@/features/git/utils/open-commit-diff-buffer";
 import { Button } from "@/ui/button";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { Commit } from "../types/github-pr-viewer.types";

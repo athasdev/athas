@@ -37,7 +37,7 @@ import type { ContextMenuState } from "@/features/file-system/types/app.types";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Dialog from "@/ui/dialog";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 import { getBaseName, getDirName, getRelativePath, joinPath } from "@/utils/path-helpers";
 
 interface UseFileExplorerContextMenuOptions {
@@ -164,7 +164,7 @@ export function useFileExplorerContextMenu({
         console.error("Failed to create env template file:", error);
         toast.error(
           `Failed to create ${targetFileName}`,
-          error instanceof Error ? error.message : undefined,
+          { description: error instanceof Error ? error.message : undefined },
         );
       }
     },

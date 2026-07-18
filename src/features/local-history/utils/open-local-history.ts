@@ -1,7 +1,7 @@
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useLocalHistoryStore } from "@/features/local-history/stores/local-history.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { toast } from "@/ui/toast";
+import { toast } from "sonner";
 
 export function openLocalHistoryForPath(path: string | null | undefined): void {
   if (!path || path.includes("://")) {
