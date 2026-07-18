@@ -1026,6 +1026,46 @@ export class LspClient {
     }
   }
 
+  async getWorkspaceSymbols(
+    query: string,
+    workspacePath: string,
+  ): Promise<
+    {
+      name: string;
+      kind: string;
+      detail?: string;
+      line: number;
+      character: number;
+      endLine: number;
+      endCharacter: number;
+      containerName?: string;
+      filePath: string;
+    }[]
+  > {
+    try {
+      logger.debug("LSPClient", `Getting workspace symbols for "${query}" in ${workspacePath}`);
+      const symbols = await invoke<
+        {
+          name: string;
+          kind: string;
+          detail?: string;
+          line: number;
+          character: number;
+          endLine: number;
+          endCharacter: number;
+          containerName?: string;
+          filePath: string;
+        }[]
+      >("lsp_get_workspace_symbols", { workspacePath, query });
+      logger.debug("LSPClient", `Got ${symbols.length} workspace symbols`);
+      return symbols;
+    } catch (error) {
+      if (isCanceledLspRequest(error)) return [];
+      logger.error("LSPClient", "LSP workspace symbols error:", error);
+      return [];
+    }
+  }
+
   async getSignatureHelp(
     filePath: string,
     line: number,
@@ -1292,11 +1332,9 @@ export class LspClient {
   }
 
   getActiveWorkspaces(): string[] {
-    // Get unique workspace paths from all active language servers
     const workspaces = new Set<string>();
     for (const key of this.activeLanguageServers) {
-      const workspace = key.split(":")[0];
-      workspaces.add(workspace);
+      workspaces.add(this.parseServerKey(key).workspacePath);
     }
     return Array.from(workspaces);
   }

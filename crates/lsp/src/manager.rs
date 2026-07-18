@@ -662,6 +662,49 @@ impl LspManager {
       }
    }
 
+   pub async fn get_workspace_symbols(
+      &self,
+      workspace_path: &Path,
+      query: &str,
+   ) -> Result<Vec<WorkspaceSymbolResponse>> {
+      let clients = self
+         .workspace_clients
+         .get_clients_for_workspace(workspace_path);
+      if clients.is_empty() {
+         return Ok(Vec::new());
+      }
+
+      let params = WorkspaceSymbolParams {
+         query: query.to_string(),
+         work_done_progress_params: Default::default(),
+         partial_result_params: Default::default(),
+      };
+
+      // Fan out to every running LSP client for this workspace concurrently.
+      let mut join_set = tokio::task::JoinSet::new();
+      for client in clients {
+         let params = params.clone();
+         join_set.spawn(async move { client.workspace_symbol(params).await });
+      }
+
+      let mut responses = Vec::new();
+      while let Some(result) = join_set.join_next().await {
+         match result {
+            Ok(Ok(Some(response))) => responses.push(response),
+            Ok(Ok(None)) => {}
+            Ok(Err(error)) => {
+               // One server not supporting workspace/symbol (or any other per-server
+               // error) must not fail the whole call — just skip that server's results.
+               log::warn!("workspace/symbol request failed for one server: {error}");
+            }
+            Err(join_error) => {
+               log::warn!("workspace/symbol task panicked or was cancelled: {join_error}");
+            }
+         }
+      }
+      Ok(responses)
+   }
+
    pub async fn format_document(&self, file_path: &str) -> Result<Option<Vec<TextEdit>>> {
       let Some(client) = self.get_client_for_file(file_path) else {
          return Ok(None);

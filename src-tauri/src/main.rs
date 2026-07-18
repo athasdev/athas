@@ -284,6 +284,7 @@ fn main() {
          lsp_format_range,
          lsp_get_inlay_hints,
          lsp_get_document_symbols,
+         lsp_get_workspace_symbols,
          lsp_get_signature_help,
          lsp_get_signature_trigger_characters,
          lsp_get_references,

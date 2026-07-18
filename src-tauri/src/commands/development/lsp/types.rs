@@ -50,6 +50,20 @@ pub struct FlatSymbol {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct FlatWorkspaceSymbol {
+   pub name: String,
+   pub kind: String,
+   pub detail: Option<String>,
+   pub line: u32,
+   pub character: u32,
+   pub end_line: u32,
+   pub end_character: u32,
+   pub container_name: Option<String>,
+   pub file_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FlatInlayHint {
    pub line: u32,
    pub character: u32,

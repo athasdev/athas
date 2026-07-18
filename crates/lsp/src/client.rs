@@ -486,6 +486,10 @@ impl LspClient {
                   dynamic_registration: Some(true),
                }),
                workspace_folders: Some(true),
+               symbol: Some(WorkspaceSymbolClientCapabilities {
+                  dynamic_registration: Some(false),
+                  ..Default::default()
+               }),
                ..Default::default()
             }),
             ..Default::default()
@@ -846,6 +850,15 @@ impl LspClient {
       params: DocumentSymbolParams,
    ) -> Result<Option<DocumentSymbolResponse>> {
       self.request::<request::DocumentSymbolRequest>(params).await
+   }
+
+   pub async fn workspace_symbol(
+      &self,
+      params: WorkspaceSymbolParams,
+   ) -> Result<Option<WorkspaceSymbolResponse>> {
+      self
+         .request::<request::WorkspaceSymbolRequest>(params)
+         .await
    }
 
    pub async fn text_document_signature_help(
