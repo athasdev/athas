@@ -84,17 +84,17 @@ const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
 const ImageViewer = lazy(() =>
-  import("@/features/image-viewer/components/image-viewer").then((m) => ({
+  import("@/features/viewer/image/components/image-viewer").then((m) => ({
     default: m.ImageViewer,
   })),
 );
 const PdfViewer = lazy(() =>
-  import("@/features/pdf-viewer/components/pdf-viewer").then((m) => ({
+  import("@/features/viewer/pdf/components/pdf-viewer").then((m) => ({
     default: m.PdfViewer,
   })),
 );
 const BinaryFileViewer = lazy(() =>
-  import("@/features/binary-viewer/components/binary-file-viewer").then((m) => ({
+  import("@/features/viewer/binary/components/binary-file-viewer").then((m) => ({
     default: m.BinaryFileViewer,
   })),
 );
@@ -104,7 +104,7 @@ const TerminalTab = lazy(() =>
   })),
 );
 const WebViewer = lazy(() =>
-  import("@/features/web-viewer/components/web-viewer").then((m) => ({
+  import("@/features/viewer/web/components/web-viewer").then((m) => ({
     default: m.WebViewer,
   })),
 );

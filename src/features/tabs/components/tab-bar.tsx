@@ -29,7 +29,7 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
-import { useWebViewerNavigationStore } from "@/features/web-viewer/stores/web-viewer-navigation.store";
+import { useWebViewerNavigationStore } from "@/features/viewer/web/stores/web-viewer-navigation.store";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";

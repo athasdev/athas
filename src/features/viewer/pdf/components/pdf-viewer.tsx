@@ -10,14 +10,18 @@ import { ArrowSquareOutIcon as ExternalLink } from "@/ui/icons";
 // Configure PDF.js worker
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { ImageZoomControls } from "@/features/image-viewer/components/image-zoom-controls";
-import { useImageZoom } from "@/features/image-viewer/hooks/use-image-zoom";
 import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
+import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
+import { ViewerHeader } from "@/features/viewer/components/viewer-header";
+import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
+import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
+import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
-import { showConfirmDialog } from "@/features/dialogs/services/dialog-service";
+import { showConfirmDialog } from "@/ui/dialog";
+import { formatFileSize } from "@/utils/format-file-size";
 import { getRelativePath } from "@/utils/path-helpers";
-import { PdfViewerFooter } from "./pdf-viewer-footer";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -33,7 +37,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number } | null>(
     null,
   );
-  const { zoom, zoomIn, zoomOut, resetZoom, handleWheel } = useImageZoom({
+  const { zoom, zoomIn, zoomOut, resetZoom, handleWheel } = useViewerZoom({
     initialZoom: 1.0,
     maxZoom: 3.0,
     minZoom: 0.5,
@@ -153,44 +157,41 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
   };
 
   return (
-    <div className="relative size-full overflow-hidden bg-primary-bg">
-      {/* Header / Toolbar */}
-      <div className="absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2 transition-opacity hover:opacity-100">
-        <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate font-medium text-text ui-text-sm" title={fileName}>
-            {fileName}
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            variant="ghost"
-            onClick={handleOpenExternal}
-            tooltip="Open in external viewer"
-            size="icon-xs"
-          >
-            <ExternalLink className="text-text" />
-          </Button>
-          <div className="mx-1 h-4 w-px bg-border" />
-          <div className="mx-1 h-4 w-px bg-border" />
-          <ImageZoomControls
-            zoom={zoom}
-            onZoomIn={() => {
-              setIsFitted(false);
-              zoomIn();
-            }}
-            onZoomOut={() => {
-              setIsFitted(false);
-              zoomOut();
-            }}
-            onResetZoom={() => {
-              setIsFitted(true);
-              // We don't need to reset generic zoom state if we are switching to fitted mode
-              // because fitted mode ignores the zoom number for the 'width' prop in react-pdf
-              resetZoom(); // Reset to 1.0 just for cleanliness
-            }}
-          />
-        </div>
-      </div>
+    <ViewerLayout>
+      <ViewerHeader
+        className="absolute inset-x-0 top-0 z-10"
+        title={<span title={fileName}>{fileName}</span>}
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              onClick={handleOpenExternal}
+              tooltip="Open in external viewer"
+              size="icon-xs"
+            >
+              <ExternalLink className="text-text" />
+            </Button>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <ViewerZoomControls
+              zoom={zoom}
+              onZoomIn={() => {
+                setIsFitted(false);
+                zoomIn();
+              }}
+              onZoomOut={() => {
+                setIsFitted(false);
+                zoomOut();
+              }}
+              onResetZoom={() => {
+                setIsFitted(true);
+                // We don't need to reset generic zoom state if we are switching to fitted mode
+                // because fitted mode ignores the zoom number for the 'width' prop in react-pdf
+                resetZoom(); // Reset to 1.0 just for cleanliness
+              }}
+            />
+          </>
+        }
+      />
 
       {/* Main Content */}
       <div
@@ -199,7 +200,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
         onClick={handleLinkClick}
       >
         {error ? (
-          <div className="flex items-center justify-center text-error">{error}</div>
+          <ViewerErrorState message={error} />
         ) : pdfFile ? (
           <Document
             file={pdfFile}
@@ -253,24 +254,33 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             ))}
           </Document>
         ) : (
-          <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
-            <Spinner label="Reading file" showLabel />
-          </div>
+          <ViewerLoadingState label="Reading file" />
         )}
       </div>
 
-      {/* Footer */}
       <div className="absolute inset-x-0 bottom-0 z-10 h-9">
-        <PdfViewerFooter
-          zoom={zoom}
-          currentPage={currentPage}
-          totalPages={numPages}
-          pageWidth={pageDimensions?.width}
-          pageHeight={pageDimensions?.height}
-          fileSize={fileData?.byteLength || 0}
-          filePath={relativePath || filePath}
-        />
+        <ViewerFooter
+          endContent={
+            <>
+              <span className="shrink-0">Size: {formatFileSize(fileData?.byteLength || 0)}</span>
+              <span className="truncate" title={relativePath || filePath}>
+                Path: {relativePath || filePath}
+              </span>
+            </>
+          }
+        >
+          <span>Zoom: {Math.round(zoom * 100)}%</span>
+          <span>
+            Page: {currentPage}/{numPages}
+          </span>
+          {pageDimensions ? (
+            <span>
+              Size: {Math.round(pageDimensions.width)} × {Math.round(pageDimensions.height)}pt
+            </span>
+          ) : null}
+          <span>Type: PDF</span>
+        </ViewerFooter>
       </div>
-    </div>
+    </ViewerLayout>
   );
 }

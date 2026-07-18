@@ -1,13 +1,13 @@
 import { useState } from "react";
 
-export interface UseImageZoomOptions {
+export interface UseViewerZoomOptions {
   initialZoom?: number;
   minZoom?: number;
   maxZoom?: number;
   zoomSensitivity?: number;
 }
 
-export function useImageZoom(options: UseImageZoomOptions = {}) {
+export function useViewerZoom(options: UseViewerZoomOptions = {}) {
   const { initialZoom = 1, minZoom = 0.1, maxZoom = 5, zoomSensitivity = 0.001 } = options;
   const [zoom, setZoom] = useState<number>(initialZoom);
 

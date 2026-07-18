@@ -7,8 +7,9 @@ import {
   isWebViewerContent,
   type WebViewerContent,
 } from "@/features/panes/types/pane-content.types";
+import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
+import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { Spinner } from "@/ui/spinner";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useEmbeddedWebview } from "../hooks/use-embedded-webview";
 import { useWebViewerNavigationStore } from "../stores/web-viewer-navigation.store";
@@ -819,7 +820,7 @@ export function WebViewer({
   }, [handleZoomIn, handleZoomOut, handleResetZoom, isActive, isVisible]);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+    <ViewerLayout className="flex flex-col">
       <WebViewerToolbar
         canOpenDevTools={canOpenDevTools && Boolean(webviewLabel)}
         canOpenExternal={Boolean(currentUrl)}
@@ -874,13 +875,13 @@ export function WebViewer({
             )}
 
             {isLoading && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary-bg">
-                <Spinner label="Loading page" showLabel />
+              <div className="absolute inset-0 z-50">
+                <ViewerLoadingState label="Loading page" />
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </ViewerLayout>
   );
 }

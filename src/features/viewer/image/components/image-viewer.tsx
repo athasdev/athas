@@ -8,25 +8,27 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { ImageEditorToolbar } from "@/features/image-editor/components/image-editor-toolbar";
-import { ImageResizeDialog } from "@/features/image-editor/components/image-resize-dialog";
-import { useImageOperations } from "@/features/image-editor/hooks/use-image-operations";
-import { getImageDimensions } from "@/features/image-editor/utils/canvas-utils";
+import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
+import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
+import { ViewerHeader } from "@/features/viewer/components/viewer-header";
+import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
+import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
+import { ImageResizeDialog } from "@/features/viewer/image/editor/components/image-resize-dialog";
+import { useImageOperations } from "@/features/viewer/image/editor/hooks/use-image-operations";
+import { getImageDimensions } from "@/features/viewer/image/editor/utils/canvas-utils";
 import {
-  formatFileSize,
   getDataURLSize,
   saveImageToFile,
-} from "@/features/image-editor/utils/image-file-utils";
-import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
+} from "@/features/viewer/image/editor/utils/image-file-utils";
+import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
+import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
+import { formatFileSize } from "@/utils/format-file-size";
 import { getRelativePath } from "@/utils/path-helpers";
-import { useImageZoom } from "../hooks/use-image-zoom";
 import { ImageContextMenu } from "./image-context-menu";
-import { ImageViewerFooter } from "./image-viewer-footer";
-import { ImageZoomControls } from "./image-zoom-controls";
 
 interface ImageViewerProps {
   filePath: string;
@@ -36,7 +38,7 @@ interface ImageViewerProps {
 }
 
 export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageViewerProps) {
-  const { zoom, zoomIn, zoomOut, setZoom, handleWheel } = useImageZoom({ maxZoom: 5 });
+  const { zoom, zoomIn, zoomOut, setZoom, handleWheel } = useViewerZoom({ maxZoom: 5 });
   const [initialImageSrc, setInitialImageSrc] = useState<string>("");
   const [showResizeDialog, setShowResizeDialog] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
@@ -231,59 +233,57 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
   };
 
   return (
-    <div className="relative size-full select-none overflow-hidden bg-primary-bg">
-      {/* Header */}
-      <div
-        className={cn(
-          "absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between border-border border-b bg-secondary-bg px-4 py-2",
-        )}
-      >
-        <div className="mr-4 flex min-w-0 flex-1 items-center gap-2">
-          <FileIcon className="shrink-0 text-text" />
-          <span className="font-sans truncate text-text ui-text-sm" title={fileName}>
+    <ViewerLayout className="select-none">
+      <ViewerHeader
+        className="absolute inset-x-0 top-0 z-10"
+        icon={<FileIcon className="shrink-0 text-text" />}
+        title={
+          <span title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
           </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {initialImageSrc && (
-            <>
-              <ImageEditorToolbar
-                onConvertFormat={imageOperations.convertFormat}
-                onRotateCW={imageOperations.rotateCW}
-                onRotateCCW={imageOperations.rotateCCW}
-                onRotate180={imageOperations.rotate180}
-                onFlipHorizontal={() => imageOperations.flip("horizontal")}
-                onFlipVertical={() => imageOperations.flip("vertical")}
-                onResize={() => setShowResizeDialog(true)}
-                onUndo={imageOperations.undo}
-                onSave={handleSave}
-                canUndo={imageOperations.canUndo}
-                hasChanges={imageOperations.hasChanges}
-                isProcessing={imageOperations.isProcessing}
-                currentImageSrc={displayImageSrc}
-                currentFileName={fileName}
-              />
-              <div className="mx-1 h-4 w-px bg-border" />
-            </>
-          )}
-          <ImageZoomControls
-            zoom={zoom}
-            onZoomIn={handleManualZoomIn}
-            onZoomOut={handleManualZoomOut}
-            onResetZoom={handleManualReset}
-          />
-          {onClose && (
-            <Button
-              onClick={handleClose}
-              variant="ghost"
-              tooltip="Close image viewer"
-              size="icon-xs"
-            >
-              <X />
-            </Button>
-          )}
-        </div>
-      </div>
+        }
+        actions={
+          <>
+            {initialImageSrc && (
+              <>
+                <ImageEditorToolbar
+                  onConvertFormat={imageOperations.convertFormat}
+                  onRotateCW={imageOperations.rotateCW}
+                  onRotateCCW={imageOperations.rotateCCW}
+                  onRotate180={imageOperations.rotate180}
+                  onFlipHorizontal={() => imageOperations.flip("horizontal")}
+                  onFlipVertical={() => imageOperations.flip("vertical")}
+                  onResize={() => setShowResizeDialog(true)}
+                  onUndo={imageOperations.undo}
+                  onSave={handleSave}
+                  canUndo={imageOperations.canUndo}
+                  hasChanges={imageOperations.hasChanges}
+                  isProcessing={imageOperations.isProcessing}
+                  currentImageSrc={displayImageSrc}
+                  currentFileName={fileName}
+                />
+                <div className="mx-1 h-4 w-px bg-border" />
+              </>
+            )}
+            <ViewerZoomControls
+              zoom={zoom}
+              onZoomIn={handleManualZoomIn}
+              onZoomOut={handleManualZoomOut}
+              onResetZoom={handleManualReset}
+            />
+            {onClose && (
+              <Button
+                onClick={handleClose}
+                variant="ghost"
+                tooltip="Close image viewer"
+                size="icon-xs"
+              >
+                <X />
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Image Content */}
       <div
@@ -316,33 +316,33 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
 
       {/* Footer */}
       <div className="absolute inset-x-0 bottom-0 z-10 h-9">
-        <ImageViewerFooter
-          zoom={zoom}
-          fileType={fileExt}
-          additionalInfo={
-            <>
-              <span>
-                {imageDimensions.width} × {imageDimensions.height}px
-              </span>
-              <span className="flex items-center gap-1">
-                Size: {formatFileSize(currentSize)}
-                {imageOperations.hasChanges && originalSize !== currentSize && (
-                  <span className="flex items-center gap-0.5 text-accent">
-                    (
-                    {currentSize < originalSize ? (
-                      <ArrowDown className="inline" />
-                    ) : (
-                      <ArrowUp className="inline" />
-                    )}
-                    {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}
-                    %)
-                  </span>
-                )}
-              </span>
-              <span>Path: {relativePath}</span>
-            </>
+        <ViewerFooter
+          endContent={
+            <span className="truncate" title={relativePath}>
+              Path: {relativePath}
+            </span>
           }
-        />
+        >
+          <span>Zoom: {Math.round(zoom * 100)}%</span>
+          {fileExt ? <span>Type: {fileExt}</span> : null}
+          <span>
+            {imageDimensions.width} × {imageDimensions.height}px
+          </span>
+          <span className="flex items-center gap-1">
+            Size: {formatFileSize(currentSize)}
+            {imageOperations.hasChanges && originalSize !== currentSize && (
+              <span className="flex items-center gap-0.5 text-accent">
+                (
+                {currentSize < originalSize ? (
+                  <ArrowDown className="inline" />
+                ) : (
+                  <ArrowUp className="inline" />
+                )}
+                {Math.abs(Math.round(((currentSize - originalSize) / originalSize) * 100))}%)
+              </span>
+            )}
+          </span>
+        </ViewerFooter>
       </div>
 
       {/* Resize Dialog */}
@@ -390,6 +390,6 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           onCancel={handleCancelClose}
         />
       )}
-    </div>
+    </ViewerLayout>
   );
 }

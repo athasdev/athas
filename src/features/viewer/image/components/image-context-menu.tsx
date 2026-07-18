@@ -12,8 +12,8 @@ import {
 } from "@/ui/icons";
 import { useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { ImageFormatDialog } from "@/features/image-editor/components/image-format-dialog";
-import type { ImageFormat } from "@/features/image-editor/types/image-operation.types";
+import { ImageFormatDialog } from "@/features/viewer/image/editor/components/image-format-dialog";
+import type { ImageFormat } from "@/features/viewer/image/editor/types/image-operation.types";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 

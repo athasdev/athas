@@ -5,7 +5,8 @@ import Dialog from "@/ui/dialog";
 import { cn } from "@/utils/cn";
 import type { ImageFormat } from "../types/image-operation.types";
 import { convertImageFormat } from "../utils/image-conversion";
-import { formatFileSize, getDataURLSize } from "../utils/image-file-utils";
+import { formatFileSize } from "@/utils/format-file-size";
+import { getDataURLSize } from "../utils/image-file-utils";
 
 interface ImageFormatDialogProps {
   isOpen: boolean;
