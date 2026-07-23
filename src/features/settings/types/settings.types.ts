@@ -89,6 +89,7 @@ export interface Settings {
   activeV0DesignSystemId: string;
   ollamaBaseUrl: string;
   // Layout
+  activityRailExpanded: boolean;
   activityRailWidth: number;
   sidebarWidth: number;
   showGitHubPullRequests: boolean;

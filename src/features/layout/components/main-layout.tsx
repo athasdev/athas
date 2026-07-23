@@ -82,7 +82,7 @@ export function MainLayout() {
   useCollaborationPresence();
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const isSidebarRailExpanded = useUIState((state) => state.isSidebarRailExpanded);
+  const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
@@ -284,7 +284,7 @@ export function MainLayout() {
           className="flex flex-1 flex-row overflow-hidden pr-[var(--athas-workbench-gap)]"
           style={{ minHeight: 0 }}
         >
-          <SidebarActivityRail expanded={isSidebarRailExpanded} />
+          <SidebarActivityRail expanded={activityRailExpanded} />
           <ResizablePane position="left" widthKey="sidebarWidth" hidden={!isSidebarVisible}>
             <MainSidebar paneLevel="primary" />
           </ResizablePane>

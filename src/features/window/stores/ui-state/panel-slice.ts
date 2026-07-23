@@ -6,7 +6,6 @@ import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-
 
 export interface PanelState {
   isSidebarVisible: boolean;
-  isSidebarRailExpanded: boolean;
   isRightSidebarVisible: boolean;
   isFindVisible: boolean;
   isBottomPaneVisible: boolean;
@@ -15,7 +14,6 @@ export interface PanelState {
 
 export interface PanelActions {
   setIsSidebarVisible: (v: boolean) => void;
-  setIsSidebarRailExpanded: (v: boolean) => void;
   setIsRightSidebarVisible: (v: boolean) => void;
   setIsFindVisible: (v: boolean) => void;
   setIsBottomPaneVisible: (v: boolean) => void;
@@ -27,7 +25,6 @@ export type PanelSlice = PanelState & PanelActions;
 export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (set, get) => ({
   // State
   isSidebarVisible: true,
-  isSidebarRailExpanded: false,
   isRightSidebarVisible: false,
   isFindVisible: false,
   isBottomPaneVisible: false,
@@ -47,7 +44,6 @@ export const createPanelSlice: StateCreator<PanelSlice, [], [], PanelSlice> = (s
       });
     }
   },
-  setIsSidebarRailExpanded: (v: boolean) => set({ isSidebarRailExpanded: v }),
   setIsRightSidebarVisible: (v: boolean) => set({ isRightSidebarVisible: v }),
   setIsFindVisible: (v: boolean) => set({ isFindVisible: v }),
   setIsBottomPaneVisible: (v: boolean) => {

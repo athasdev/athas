@@ -65,14 +65,14 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
+  const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
   const headerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.headerTrailingItemsOrder,
   );
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const closeProject = useFileSystemStore((state) => state.closeProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
-  const isSidebarRailExpanded = useUIState((state) => state.isSidebarRailExpanded);
-  const setIsSidebarRailExpanded = useUIState((state) => state.setIsSidebarRailExpanded);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
@@ -244,12 +244,12 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     <Button
       type="button"
       variant="ghost"
-      active={isSidebarRailExpanded}
-      tooltip={isSidebarRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
+      active={activityRailExpanded}
+      tooltip={activityRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       tooltipSide="bottom"
-      onClick={() => setIsSidebarRailExpanded(!isSidebarRailExpanded)}
-      aria-label={isSidebarRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
-      aria-pressed={isSidebarRailExpanded}
+      onClick={() => void updateSetting("activityRailExpanded", !activityRailExpanded)}
+      aria-label={activityRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
+      aria-pressed={activityRailExpanded}
       size="icon-xs"
     >
       <SidebarSimpleIcon />
