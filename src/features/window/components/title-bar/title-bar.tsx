@@ -86,7 +86,6 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const usesNativeWindowChrome = useNativeWindowChrome();
   const showAppWindowControls = !isMacOS && !usesNativeWindowChrome;
   const shouldUseNativeMenuBar = !isWindows && !isLinux && nativeMenuBar;
-  const macTitleBarControlAlignment = isFullscreen ? undefined : "translate-y-0.5";
 
   useEffect(() => {
     const initWindow = async () => {
@@ -318,18 +317,13 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
           data-tauri-drag-region
           onMouseDown={handleTitleBarMouseDown}
         >
-          <div
-            className={cn(
-              "pointer-events-auto flex h-full min-w-0 items-center",
-              macTitleBarControlAlignment,
-            )}
-          >
+          <div className="pointer-events-auto flex h-full min-w-0 items-center">
             {menuItem}
             {sidebarToggle}
             <AppUpdateControl />
           </div>
 
-          <div className={cn("flex h-full items-center", macTitleBarControlAlignment)}>
+          <div className="flex h-full items-center">
             <div className="flex items-center gap-1">
               {placeAgentBeforeAccount(
                 orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),

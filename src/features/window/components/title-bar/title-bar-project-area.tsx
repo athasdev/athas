@@ -7,8 +7,11 @@ interface TitleBarProjectAreaProps {
 
 export function TitleBarProjectArea({ mode }: TitleBarProjectAreaProps) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 flex h-8 justify-center">
-      <div data-title-bar-project-tabs="true" className="pointer-events-auto flex h-8 items-center">
+    <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[var(--athas-title-bar-height)] justify-center">
+      <div
+        data-title-bar-project-tabs="true"
+        className="pointer-events-auto flex h-[var(--athas-title-bar-height)] items-center"
+      >
         {mode === "window" ? <WindowTitleDisplay /> : <ProjectTabs />}
       </div>
     </div>

@@ -137,6 +137,10 @@
     --symbol-type-parameter: var(--syntax-operator, var(--syntax-attribute));
   }
 
+  html.platform-macos {
+    --athas-title-bar-height: 2.25rem;
+  }
+
   :root[data-theme-type="dark"] {
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.24), 0 2px 4px rgb(0 0 0 / 0.18), 0 0 0 0.5px rgb(255 255 255 / 0.1);
