@@ -1,6 +1,57 @@
 use crate::git::{GitBlame, GitBlameLine};
-use git2::Repository;
+use git2::{Commit, Repository};
 use std::path::Path;
+
+struct CommitAuthor {
+   name: String,
+   email: String,
+   time: i64,
+}
+
+impl Default for CommitAuthor {
+   fn default() -> Self {
+      Self {
+         name: "Unknown".to_string(),
+         email: String::new(),
+         time: 0,
+      }
+   }
+}
+
+fn parse_author_header(header: &[u8]) -> CommitAuthor {
+   let header = String::from_utf8_lossy(header);
+   let Some(email_end) = header.rfind('>') else {
+      return CommitAuthor::default();
+   };
+   let Some(email_start) = header[..email_end].rfind('<') else {
+      return CommitAuthor::default();
+   };
+
+   let name = header[..email_start].trim();
+   let email = header[email_start + 1..email_end].trim();
+   let time = header[email_end + 1..]
+      .split_whitespace()
+      .next()
+      .and_then(|value| value.parse().ok())
+      .unwrap_or(0);
+
+   CommitAuthor {
+      name: if name.is_empty() {
+         "Unknown".to_string()
+      } else {
+         name.to_string()
+      },
+      email: email.to_string(),
+      time,
+   }
+}
+
+fn get_commit_author(commit: &Commit<'_>) -> CommitAuthor {
+   commit
+      .header_field_bytes("author")
+      .map(|header| parse_author_header(&header))
+      .unwrap_or_default()
+}
 
 pub fn git_blame_file(root_path: &str, file_path: &str, content: &str) -> Result<GitBlame, String> {
    let repo =
@@ -39,16 +90,16 @@ pub fn git_blame_file(root_path: &str, file_path: &str, content: &str) -> Result
             String::new(),
          )
       } else {
-         let signature = hunk.final_signature();
          let commit = repo
             .find_commit(commit_id)
             .map_err(|e| format!("Failed to load blame commit '{}': {}", commit_id, e))?;
+         let author = get_commit_author(&commit);
 
          (
             commit_id.to_string(),
-            signature.name().unwrap_or("Unknown").to_string(),
-            signature.email().unwrap_or("").to_string(),
-            signature.when().seconds(),
+            author.name,
+            author.email,
+            author.time,
             commit.message().unwrap_or("").to_string(),
          )
       };
@@ -151,5 +202,14 @@ mod tests {
 
       assert!(!first_line.is_uncommitted);
       assert_eq!(first_line.author, "Athas Test");
+   }
+
+   #[test]
+   fn parses_author_header_without_name() {
+      let author = parse_author_header(b"<missing@example.com> 1700000000 +0000");
+
+      assert_eq!(author.name, "Unknown");
+      assert_eq!(author.email, "missing@example.com");
+      assert_eq!(author.time, 1_700_000_000);
    }
 }
