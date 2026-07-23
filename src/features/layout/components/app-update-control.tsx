@@ -97,8 +97,7 @@ export function AppUpdateControl() {
         : `Update available: ${updateInfo.version}`;
 
   return (
-    <div className="flex items-center gap-0.5">
-      <ButtonGroupSeparator className="mx-1.5" />
+    <div className="ml-3 flex items-center">
       <ContextMenu>
         <ContextMenuTrigger
           className="contents"
@@ -107,7 +106,15 @@ export function AppUpdateControl() {
             setIsUpdateMenuOpen(false);
           }}
         >
-          <ButtonGroup ref={updateMenuRef}>
+          <ButtonGroup
+            ref={updateMenuRef}
+            variant="accent"
+            className={
+              updateError
+                ? "border-error/25 bg-error/10 [&>[data-slot=button-group-separator]]:bg-error/25"
+                : undefined
+            }
+          >
             <Button
               type="button"
               variant="ghost"
@@ -122,7 +129,7 @@ export function AppUpdateControl() {
               }}
               className={cn(
                 "font-sans ui-text-sm font-medium",
-                updateError ? "text-error hover:text-error" : "text-accent hover:text-accent",
+                updateError && "text-error hover:bg-error/10 hover:text-error",
                 updateBusy &&
                   "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
               )}
@@ -143,9 +150,7 @@ export function AppUpdateControl() {
               tooltip="Update Options"
               tooltipSide="bottom"
               onClick={() => setIsUpdateMenuOpen((open) => !open)}
-              className={
-                updateError ? "text-error hover:text-error" : "text-accent hover:text-accent"
-              }
+              className={updateError ? "text-error hover:bg-error/10 hover:text-error" : undefined}
               aria-label="Update options"
               aria-haspopup="menu"
               aria-expanded={isUpdateMenuOpen}

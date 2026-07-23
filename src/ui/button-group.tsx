@@ -13,9 +13,15 @@ const buttonGroupVariants = cva(
         vertical:
           "flex-col [&>[data-slot=button]:not(:first-child)]:rounded-t-none [&>[data-slot=button]:not(:last-child)]:rounded-b-none [&>[data-slot=button]:not(:first-child)]:border-t-0",
       },
+      variant: {
+        default: "",
+        accent:
+          "overflow-hidden rounded-md border border-accent/25 bg-accent/10 [&>[data-slot=button]]:text-accent [&>[data-slot=button]]:hover:bg-accent/10 [&>[data-slot=button-group-separator]]:bg-accent/25",
+      },
     },
     defaultVariants: {
       orientation: "horizontal",
+      variant: "default",
     },
   },
 );
@@ -23,6 +29,7 @@ const buttonGroupVariants = cva(
 function ButtonGroup({
   className,
   orientation = "horizontal",
+  variant = "default",
   ...props
 }: ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
   return (
@@ -30,7 +37,8 @@ function ButtonGroup({
       role="group"
       data-slot="button-group"
       data-orientation={orientation}
-      className={cn(buttonGroupVariants({ orientation }), className)}
+      data-variant={variant}
+      className={cn(buttonGroupVariants({ orientation, variant }), className)}
       {...props}
     />
   );
