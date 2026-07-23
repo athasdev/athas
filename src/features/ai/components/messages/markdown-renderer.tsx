@@ -13,6 +13,7 @@ import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
 } from "@/features/ai/lib/workspace-file-links";
+import { normalizePlainTextFence } from "@/features/ai/lib/assistant-markdown";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
@@ -995,13 +996,15 @@ function renderContent(
 
 // Simple markdown renderer for AI responses
 export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRendererProps) {
+  const normalizedContent = normalizePlainTextFence(content);
+
   // Check for error blocks first
-  if (content.includes("[ERROR_BLOCK]")) {
-    const errorMatch = content.match(/\[ERROR_BLOCK\]([\s\S]*?)\[\/ERROR_BLOCK\]/);
+  if (normalizedContent.includes("[ERROR_BLOCK]")) {
+    const errorMatch = normalizedContent.match(/\[ERROR_BLOCK\]([\s\S]*?)\[\/ERROR_BLOCK\]/);
     if (errorMatch) {
       return <ErrorBlock errorData={errorMatch[1]} />;
     }
   }
 
-  return <div>{renderContent(content, onApplyCode)}</div>;
+  return <div>{renderContent(normalizedContent, onApplyCode)}</div>;
 }
