@@ -598,7 +598,7 @@ dependencies = [
 
 [[package]]
 name = "athas"
-version = "0.9.0"
+version = "0.9.1-preview.5"
 dependencies = [
  "agent-client-protocol",
  "anyhow",
