@@ -849,7 +849,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
       event.preventDefault();
       projectGestureX.stop();
-      const maximumTravel = railPanelWidth * 0.96;
+      const maximumTravel = (railContentRef.current?.clientWidth ?? railPanelWidth) * 0.96;
       const nextPosition = Math.min(
         maximumTravel,
         Math.max(-maximumTravel, projectGestureX.get() - event.deltaX),
@@ -954,7 +954,9 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         )}
         style={{
           touchAction: "pan-y",
-          width: railPanelWidth,
+          width: expanded
+            ? railPanelWidth
+            : `calc(${railPanelWidth}px + var(--athas-workbench-gap))`,
           x: projectGestureX,
         }}
       >
