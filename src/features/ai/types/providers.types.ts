@@ -74,6 +74,21 @@ export const AI_PROVIDERS: ModelProvider[] = [
     requiresApiKey: true,
     models: [
       {
+        id: "gpt-5.6-sol",
+        name: "GPT-5.6 Sol",
+        maxTokens: 1050000,
+      },
+      {
+        id: "gpt-5.6-terra",
+        name: "GPT-5.6 Terra",
+        maxTokens: 1050000,
+      },
+      {
+        id: "gpt-5.6-luna",
+        name: "GPT-5.6 Luna",
+        maxTokens: 1050000,
+      },
+      {
         id: "gpt-5.5",
         name: "GPT-5.5",
         maxTokens: 1047576,

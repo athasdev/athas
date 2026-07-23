@@ -8,6 +8,7 @@ import {
 
 // Models that require max_completion_tokens instead of max_tokens
 const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = [
+  "gpt-5.6",
   "gpt-5.5",
   "gpt-5.5-pro",
   "gpt-5.4",
@@ -34,6 +35,7 @@ const MODELS_REQUIRING_MAX_COMPLETION_TOKENS = [
 
 // Models that don't support custom temperature (only default 1)
 const MODELS_WITHOUT_TEMPERATURE_SUPPORT = [
+  "gpt-5.6",
   "gpt-5.5",
   "gpt-5.5-pro",
   "gpt-5.4",
@@ -164,6 +166,10 @@ function comparePreferredOpenAIModels(a: string, b: string): number {
 
 function getOpenAIModelRank(modelId: string): number {
   const preferredOrder = [
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "gpt-5.6",
     "gpt-5.5",
     "gpt-5.5-pro",
     "gpt-5.4",
