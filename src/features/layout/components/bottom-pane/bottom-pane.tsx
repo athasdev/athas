@@ -17,6 +17,7 @@ import { cn } from "@/utils/cn";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { WorkbenchFullscreenSurface } from "@/features/window/components/workbench-fullscreen-surface";
+import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { BottomBufferPane } from "./bottom-buffer-pane";
 
 const BottomPane = () => {
@@ -201,6 +202,7 @@ const BottomPane = () => {
       aria-orientation="horizontal"
       aria-label="Resize bottom pane"
     >
+      <ResizeHandleEffect active={isResizing} orientation="horizontal" />
       <div
         className={cn(
           "h-px w-full bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",

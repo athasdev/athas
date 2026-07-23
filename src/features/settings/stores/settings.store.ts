@@ -23,6 +23,7 @@ import { scoreSettingSearchRecord } from "@/features/settings/lib/settings-searc
 import { settingsSearchIndex } from "../config/search-index";
 import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
+import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 
 export type { Settings } from "../types/settings.types";
 
@@ -129,6 +130,16 @@ export const useSettingsStore = create(
           });
 
           applySettingSideEffect(key, normalizedValue, () => useSettingsStore.getState().settings);
+
+          if (key === "theme") {
+            const activeProject = useWorkspaceTabsStore.getState().getActiveProjectTab();
+            if (activeProject) {
+              useWorkspaceTabsStore
+                .getState()
+                .setProjectTheme(activeProject.id, normalizedValue as string);
+            }
+          }
+
           debouncedSaveSettingsToStore(savePatch);
         },
 

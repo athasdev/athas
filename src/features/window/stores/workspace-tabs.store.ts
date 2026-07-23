@@ -23,6 +23,7 @@ export interface ProjectTab {
   isActive: boolean;
   lastOpened: number;
   customIcon?: string;
+  theme?: string;
 }
 
 interface WorkspaceTabsState {
@@ -30,7 +31,7 @@ interface WorkspaceTabsState {
 }
 
 interface WorkspaceTabsActions {
-  addProjectTab: (path: string, name: string) => void;
+  addProjectTab: (path: string, name: string, theme?: string) => void;
   removeProjectTab: (projectId: string) => void;
   setActiveProjectTab: (projectId: string) => void;
   reorderProjectTabs: (fromIndex: number, toIndex: number) => void;
@@ -38,6 +39,7 @@ interface WorkspaceTabsActions {
   hasProjectTab: (path: string) => boolean;
   renameRemoteProjectTabs: (connectionId: string, connectionName: string) => void;
   setProjectIcon: (projectId: string, iconPath: string | undefined) => void;
+  setProjectTheme: (projectId: string, theme: string) => void;
 }
 
 const currentWebviewWindow = typeof window === "undefined" ? null : getCurrentWebviewWindow();
@@ -62,7 +64,7 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
     immer((set, get) => ({
       projectTabs: [],
 
-      addProjectTab: (path: string, name: string) => {
+      addProjectTab: (path: string, name: string, theme?: string) => {
         const normalizedPath = normalizeProjectTabPath(path);
         const existing = get().projectTabs.find((tab) =>
           areProjectTabPathsEqual(tab.path, normalizedPath),
@@ -93,6 +95,7 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
             path: normalizedPath,
             isActive: true,
             lastOpened: Date.now(),
+            theme,
           });
         });
       },
@@ -143,6 +146,15 @@ const useWorkspaceTabsStoreBase = create<WorkspaceTabsState & WorkspaceTabsActio
           const tab = state.projectTabs.find((t) => t.id === projectId);
           if (tab) {
             tab.customIcon = iconPath;
+          }
+        });
+      },
+
+      setProjectTheme: (projectId: string, theme: string) => {
+        set((state) => {
+          const tab = state.projectTabs.find((projectTab) => projectTab.id === projectId);
+          if (tab) {
+            tab.theme = theme;
           }
         });
       },

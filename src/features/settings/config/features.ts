@@ -12,6 +12,7 @@ import {
   HardDrivesIcon as Server,
   TerminalWindowIcon as TerminalIcon,
   UsersThreeIcon as UsersThree,
+  SparkleIcon as Sparkle,
 } from "@/ui/icons";
 import type { CoreFeature, CoreFeaturesState } from "../types/feature.types";
 
@@ -108,6 +109,14 @@ export const createCoreFeaturesList = (coreFeatures: CoreFeaturesState): CoreFea
     description: "Open URLs in embedded editor tabs",
     icon: Globe,
     enabled: coreFeatures.webViewer,
+    status: "experimental",
+  },
+  {
+    id: "energyEdge",
+    name: "Energy Edge",
+    description: "Adds a luminous animated edge to resize handles while dragging",
+    icon: Sparkle,
+    enabled: coreFeatures.energyEdge,
     status: "experimental",
   },
 ];

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { MIN_PANE_SIZE } from "../constants/pane";
 
 interface PaneResizeHandleProps {
@@ -155,6 +156,10 @@ export function PaneResizeHandle({
       aria-valuemax={100 - MIN_PANE_SIZE}
       tabIndex={0}
     >
+      <ResizeHandleEffect
+        active={isDragging}
+        orientation={isHorizontal ? "vertical" : "horizontal"}
+      />
       <div
         className={`bg-transparent transition-colors ${
           isDragging ? "bg-accent" : "group-hover:bg-accent"

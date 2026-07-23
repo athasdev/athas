@@ -22,6 +22,7 @@ import {
   SidebarSectionLabel,
 } from "@/ui/sidebar";
 import { cn } from "@/utils/cn";
+import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -506,7 +507,9 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         aria-valuemax={MAX_NAVIGATOR_WIDTH}
         aria-valuenow={Math.round(width)}
         tabIndex={0}
-      />
+      >
+        <ResizeHandleEffect active={isResizing} orientation="vertical" />
+      </div>
       {isResizing ? (
         <div className="pointer-events-none fixed inset-0 z-10 cursor-col-resize" />
       ) : null}

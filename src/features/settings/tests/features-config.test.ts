@@ -40,4 +40,17 @@ describe("features config", () => {
       status: "experimental",
     });
   });
+
+  it("keeps Energy Edge experimental and off by default", () => {
+    const feature = createCoreFeaturesList(defaultSettings.coreFeatures).find(
+      (item) => item.id === "energyEdge",
+    );
+
+    expect(feature).toMatchObject({
+      name: "Energy Edge",
+      description: "Adds a luminous animated edge to resize handles while dragging",
+      enabled: false,
+      status: "experimental",
+    });
+  });
 });

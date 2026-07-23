@@ -1,4 +1,5 @@
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { WorkspaceRuntimeDescriptor } from "@/features/workspace/types/workspace-runtime.types";
 import { WELCOME_WORKSPACE_ID } from "@/features/workspace/types/workspace-runtime.types";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -15,6 +16,7 @@ interface SwitchWorkspaceRuntimeOptions {
   initialize: (workspaceId: string, path: string, name: string) => Promise<boolean>;
   persistCurrent?: () => void;
   resume?: (workspaceId: string, path: string) => Promise<void>;
+  onActivate?: (workspaceId: string) => void;
 }
 
 interface CloseWorkspaceRuntimeOptions {
@@ -63,7 +65,9 @@ export async function openWorkspaceRuntime({
     persistCurrent?.();
   }
 
-  useWorkspaceTabsStore.getState().addProjectTab(descriptor.path, descriptor.name);
+  useWorkspaceTabsStore
+    .getState()
+    .addProjectTab(descriptor.path, descriptor.name, useSettingsStore.getState().settings.theme);
   activateDescriptor({ ...descriptor, id: workspaceId });
 
   try {
@@ -100,7 +104,7 @@ export async function openWorkspaceRuntime({
 
 export async function switchWorkspaceRuntime(
   workspaceId: string,
-  { initialize, persistCurrent, resume }: SwitchWorkspaceRuntimeOptions,
+  { initialize, persistCurrent, resume, onActivate }: SwitchWorkspaceRuntimeOptions,
 ) {
   const tab = useWorkspaceTabsStore
     .getState()
@@ -120,6 +124,7 @@ export async function switchWorkspaceRuntime(
   const previousWorkspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
   persistCurrent?.();
   activateDescriptor({ id: tab.id, name: tab.name, path: tab.path });
+  onActivate?.(workspaceId);
 
   try {
     if (workspaceRuntimeRegistry.isWorkspaceReady(workspaceId)) {

@@ -2541,12 +2541,27 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
 
       switchToProject: async (projectId: string) => {
         const currentStore = get();
+        const previousTheme = useSettingsStore.getState().settings.theme;
+        const targetProject = useWorkspaceTabsStore
+          .getState()
+          .projectTabs.find((projectTab) => projectTab.id === projectId);
         currentStore.setIsSwitchingProject(true);
 
         const { switchWorkspaceRuntime } =
           await import("@/features/workspace/services/workspace-lifecycle");
         const switched = await switchWorkspaceRuntime(projectId, {
           persistCurrent: () => currentStore.persistActiveProjectSession(),
+          onActivate: () => {
+            const settingsStore = useSettingsStore.getState();
+            const projectTheme = targetProject?.theme ?? previousTheme;
+
+            if (targetProject && !targetProject.theme) {
+              useWorkspaceTabsStore.getState().setProjectTheme(targetProject.id, projectTheme);
+            }
+            if (settingsStore.settings.theme !== projectTheme) {
+              void settingsStore.updateSetting("theme", projectTheme);
+            }
+          },
           initialize: async (workspaceId, path, name) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
             targetStore.setIsSwitchingProject(true);
@@ -2591,8 +2606,14 @@ const createFileSystemStore = (): StoreApi<ScopedFileSystemStoreState> =>
 
         currentStore.setIsSwitchingProject(false);
         if (!switched) {
+          const settingsStore = useSettingsStore.getState();
+          if (settingsStore.settings.theme !== previousTheme) {
+            await settingsStore.updateSetting("theme", previousTheme);
+          }
           toast.error("Failed to switch project.");
+          return switched;
         }
+
         return switched;
       },
       closeProject: async (projectId: string) => {

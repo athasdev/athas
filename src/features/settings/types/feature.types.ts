@@ -24,4 +24,5 @@ export interface CoreFeaturesState {
   breadcrumbs: boolean;
   persistentCommands: boolean;
   webViewer: boolean;
+  energyEdge: boolean;
 }

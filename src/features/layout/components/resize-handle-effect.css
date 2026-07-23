@@ -1,0 +1,173 @@
+.athas-energy-edge {
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  isolation: isolate;
+  opacity: 0;
+  transition:
+    opacity 140ms var(--app-ease-smooth),
+    scale 220ms var(--app-ease-smooth);
+}
+
+.athas-energy-edge[data-orientation="vertical"] {
+  top: 5px;
+  bottom: 5px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  scale: 1 0.92;
+}
+
+.athas-energy-edge[data-orientation="horizontal"] {
+  top: 50%;
+  right: 5px;
+  left: 5px;
+  height: 2px;
+  transform: translateY(-50%);
+  scale: 0.92 1;
+}
+
+.athas-energy-edge[data-active="true"] {
+  opacity: 1;
+  scale: 1;
+}
+
+.athas-energy-edge [data-slot="energy-edge-aura"],
+.athas-energy-edge [data-slot="energy-edge-core"],
+.athas-energy-edge [data-slot="energy-edge-pulse"] {
+  position: absolute;
+  border-radius: 999px;
+}
+
+.athas-energy-edge [data-slot="energy-edge-aura"] {
+  inset: -4px;
+  background: var(--accent);
+  opacity: 0.58;
+  filter: blur(5px);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--accent) 75%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 48%, transparent),
+    0 0 32px color-mix(in srgb, var(--accent) 24%, transparent);
+  animation: athasEnergyEdgeBreathe 1.25s ease-in-out infinite alternate;
+  animation-play-state: paused;
+}
+
+.athas-energy-edge [data-slot="energy-edge-core"] {
+  inset: 0;
+  background: color-mix(in srgb, var(--accent) 34%, var(--text));
+  box-shadow:
+    0 0 2px color-mix(in srgb, var(--accent) 25%, var(--text)),
+    0 0 6px var(--accent),
+    0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.athas-energy-edge[data-orientation="vertical"] [data-slot="energy-edge-core"] {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--accent) 5%,
+    color-mix(in srgb, var(--accent) 32%, var(--text)) 14%,
+    color-mix(in srgb, var(--accent) 32%, var(--text)) 86%,
+    var(--accent) 95%,
+    transparent
+  );
+}
+
+.athas-energy-edge[data-orientation="horizontal"] [data-slot="energy-edge-core"] {
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--accent) 5%,
+    color-mix(in srgb, var(--accent) 32%, var(--text)) 14%,
+    color-mix(in srgb, var(--accent) 32%, var(--text)) 86%,
+    var(--accent) 95%,
+    transparent
+  );
+}
+
+.athas-energy-edge [data-slot="energy-edge-pulse"] {
+  background: color-mix(in srgb, var(--accent) 18%, var(--text));
+  filter: blur(0.5px);
+  box-shadow: 0 0 12px 3px var(--accent);
+}
+
+.athas-energy-edge[data-orientation="vertical"] [data-slot="energy-edge-pulse"] {
+  top: -24%;
+  left: -2px;
+  width: 6px;
+  height: 22%;
+  animation: athasEnergyEdgeTravelVertical 1.1s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+.athas-energy-edge[data-orientation="horizontal"] [data-slot="energy-edge-pulse"] {
+  top: -2px;
+  left: -24%;
+  width: 22%;
+  height: 6px;
+  animation: athasEnergyEdgeTravelHorizontal 1.1s ease-in-out infinite;
+  animation-play-state: paused;
+}
+
+.athas-energy-edge[data-active="true"] [data-slot="energy-edge-aura"],
+.athas-energy-edge[data-active="true"] [data-slot="energy-edge-pulse"] {
+  animation-play-state: running;
+}
+
+@keyframes athasEnergyEdgeBreathe {
+  from {
+    opacity: 0.44;
+    filter: blur(4px);
+  }
+  to {
+    opacity: 0.72;
+    filter: blur(6px);
+  }
+}
+
+@keyframes athasEnergyEdgeTravelVertical {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(565%);
+    opacity: 0;
+  }
+}
+
+@keyframes athasEnergyEdgeTravelHorizontal {
+  from {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(565%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .athas-energy-edge,
+  .athas-energy-edge [data-slot="energy-edge-aura"],
+  .athas-energy-edge [data-slot="energy-edge-pulse"] {
+    animation: none;
+    transition: none;
+  }
+
+  .athas-energy-edge [data-slot="energy-edge-pulse"] {
+    display: none;
+  }
+}

@@ -1,5 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import "./project-carousel.css";
+import { animate, motion, useMotionValue, useReducedMotion, type PanInfo } from "framer-motion";
 import {
   memo,
   useCallback,
@@ -8,10 +8,10 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import { flushSync } from "react-dom";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -24,12 +24,14 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
+import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import ProjectIconPicker from "@/features/window/components/project-icon-picker";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   useWorkspaceTabsStore,
@@ -50,19 +52,25 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { InlineRenameInput } from "@/ui/input";
 import {
   ChevronExpandYIcon,
+  CopyIcon,
   FolderIcon,
+  FolderOpenIcon,
+  ImageIcon,
   OpenExternalIcon,
   PencilSimpleLineIcon,
   PlusIcon,
   RemoteIcon,
   TrashIcon,
+  WindowExpandIcon,
 } from "@/ui/icons";
+import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 
 interface MainSidebarProps {
@@ -81,22 +89,21 @@ interface SidebarActivityRailProps {
   expanded?: boolean;
 }
 
-type ProjectCarouselAnimation = {
-  direction: 1 | -1;
-  phase: "exit" | "enter";
-};
-
 const COLLAPSED_ACTIVITY_RAIL_WIDTH = 40;
 const DEFAULT_ACTIVITY_RAIL_WIDTH = 160;
 const MIN_ACTIVITY_RAIL_WIDTH = 140;
 const MAX_ACTIVITY_RAIL_WIDTH = 320;
 const ACTIVITY_RAIL_HORIZONTAL_GUTTER = 8;
 const AGENT_HISTORY_INLINE_LIMIT = 5;
-const PROJECT_SWIPE_THRESHOLD_PX = 48;
-const PROJECT_WHEEL_THRESHOLD_PX = 36;
-const PROJECT_WHEEL_COOLDOWN_MS = 500;
-const PROJECT_CAROUSEL_EXIT_MS = 120;
-const PROJECT_CAROUSEL_ENTER_MS = 180;
+const PROJECT_SWIPE_THRESHOLD_PX = 42;
+const PROJECT_SWIPE_VELOCITY_PX = 420;
+const PROJECT_WHEEL_END_DELAY_MS = 80;
+const PROJECT_SNAP_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 720,
+  damping: 56,
+  mass: 0.42,
+};
 
 const clampActivityRailWidth = (width: number) =>
   Math.min(MAX_ACTIVITY_RAIL_WIDTH, Math.max(MIN_ACTIVITY_RAIL_WIDTH, Math.round(width)));
@@ -137,20 +144,16 @@ function ProjectGlyph({
 
 function SidebarProjectSwitcher({
   expanded,
-  displayProjectId,
+  project,
 }: {
   expanded: boolean;
-  displayProjectId?: string | null;
+  project?: ProjectTab;
 }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const projectTabs = useWorkspaceTabsStore.use.projectTabs();
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const [detectedIconPath, setDetectedIconPath] = useState<string | undefined>();
   const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
-  const activeProject = projectTabs.find((tab) => tab.isActive);
-  const displayProject = displayProjectId
-    ? (projectTabs.find((tab) => tab.id === displayProjectId) ?? activeProject)
-    : activeProject;
+  const displayProject = project;
   const projectName = displayProject?.name || getProjectNameFromPath(rootFolderPath);
   const projectPath = displayProject?.path || rootFolderPath;
   const customIcon = displayProject?.customIcon;
@@ -238,6 +241,123 @@ function SidebarProjectSwitcher({
   );
 }
 
+function SidebarProjectDots({
+  projects,
+  activeProjectId,
+  isSwitchingProject,
+  onSelectProject,
+}: {
+  projects: ProjectTab[];
+  activeProjectId?: string;
+  isSwitchingProject: boolean;
+  onSelectProject: (projectId: string) => void;
+}) {
+  const closeProject = useFileSystemStore((state) => state.closeProject);
+  const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
+
+  if (projects.length === 0) return null;
+
+  return (
+    <>
+      <div className="pointer-events-none absolute right-[var(--athas-workbench-gap)] bottom-1.5 left-0 z-20 flex justify-center px-2">
+        <div className="scrollbar-hidden pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full bg-secondary-bg/70 px-1.5 py-1 shadow-sm backdrop-blur-sm">
+          {projects.map((project) => {
+            const isRemote = isRemoteProjectPath(project.path);
+            const isActive = project.id === activeProjectId;
+
+            return (
+              <ContextMenu key={project.id}>
+                <ContextMenuTrigger
+                  className="group/project-dot flex size-4 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                  aria-label={`${isActive ? "Current project" : "Switch to"} ${project.name}`}
+                  aria-current={isActive ? "page" : undefined}
+                  aria-disabled={isSwitchingProject}
+                  title={project.name}
+                  onClick={() => {
+                    if (!isSwitchingProject) onSelectProject(project.id);
+                  }}
+                >
+                  <span
+                    className={cn(
+                      "h-1.5 rounded-full transition-[width,background-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+                      isActive
+                        ? "w-3 bg-accent"
+                        : "w-1.5 bg-text-lighter/55 group-hover/project-dot:bg-text-lighter",
+                    )}
+                  />
+                </ContextMenuTrigger>
+                <ContextMenuContent side="top" sideOffset={6} align="center">
+                  <ContextMenuItem
+                    disabled={isActive || isSwitchingProject}
+                    onClick={() => onSelectProject(project.id)}
+                  >
+                    <OpenExternalIcon />
+                    Switch to Project
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => void writeClipboardText(project.path)}>
+                    <CopyIcon />
+                    Copy Path
+                  </ContextMenuItem>
+                  {!isRemote ? (
+                    <ContextMenuItem
+                      onClick={() =>
+                        useFileSystemStore.getState().handleRevealInFolder?.(project.path)
+                      }
+                    >
+                      <FolderOpenIcon />
+                      Reveal in Finder
+                    </ContextMenuItem>
+                  ) : null}
+                  <ContextMenuItem
+                    onClick={() => {
+                      if (isRemote) {
+                        const match = project.path.match(/^remote:\/\/([^/]+)(\/.*)?$/);
+                        if (!match) return;
+                        void createAppWindow({
+                          remoteConnectionId: match[1],
+                          remoteConnectionName: project.name,
+                        });
+                        return;
+                      }
+
+                      void createAppWindow({ path: project.path, isDirectory: true });
+                    }}
+                  >
+                    <WindowExpandIcon />
+                    Open in New Window
+                  </ContextMenuItem>
+                  {!isRemote ? (
+                    <ContextMenuItem onClick={() => setIconPickerProject(project)}>
+                      <ImageIcon />
+                      Select Icon
+                    </ContextMenuItem>
+                  ) : null}
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    variant="destructive"
+                    onClick={() => void closeProject(project.id)}
+                  >
+                    <TrashIcon />
+                    Remove Project
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            );
+          })}
+        </div>
+      </div>
+      {iconPickerProject ? (
+        <ProjectIconPicker
+          isOpen
+          onClose={() => setIconPickerProject(null)}
+          projectId={iconPickerProject.id}
+          projectPath={iconPickerProject.path}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function SidebarNewAgentButton({
   onCreate,
   iconOnlyRow = false,
@@ -278,7 +398,13 @@ function SidebarNewAgentButton({
   );
 }
 
-function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
+function SidebarAgentHistory({
+  expanded,
+  workspacePath,
+}: {
+  expanded: boolean;
+  workspacePath: string | null;
+}) {
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const switchToChat = useAIChatStore((state) => state.switchToChat);
@@ -290,10 +416,6 @@ function SidebarAgentHistory({ expanded }: { expanded: boolean }) {
   const [olderAgentsMenu, setOlderAgentsMenu] = useState({
     isOpen: false,
     position: { x: 0, y: 0 },
-  });
-  const workspacePath = useWorkspaceTabsStore((state) => {
-    const activeProject = state.projectTabs.find((tab) => tab.isActive);
-    return activeProject?.path ?? null;
   });
   const sortedChats = useMemo(
     () =>
@@ -429,27 +551,45 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     clampActivityRailWidth(configuredActivityRailWidth || DEFAULT_ACTIVITY_RAIL_WIDTH),
   );
   const [isActivityRailResizing, setIsActivityRailResizing] = useState(false);
-  const [projectCarouselAnimation, setProjectCarouselAnimation] =
-    useState<ProjectCarouselAnimation | null>(null);
-  const [displayProjectId, setDisplayProjectId] = useState<string | null>(null);
+  const [carouselProjectId, setCarouselProjectId] = useState<string | null>(null);
+  const [carouselTargetProjectId, setCarouselTargetProjectId] = useState<string | null>(null);
+  const [projectCarouselDirection, setProjectCarouselDirection] = useState<1 | -1>(1);
+  const [isProjectGestureSettling, setIsProjectGestureSettling] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const projectGestureX = useMotionValue(0);
   const railRef = useRef<HTMLDivElement>(null);
   const railContentRef = useRef<HTMLDivElement>(null);
   const resizeFrameRef = useRef<number | null>(null);
   const isResizingRef = useRef(false);
-  const projectCarouselTimerRef = useRef<number | null>(null);
-  const projectSwipeRef = useRef<{
-    pointerId: number;
-    startX: number;
-    startY: number;
-  } | null>(null);
-  const projectWheelDeltaRef = useRef(0);
-  const lastProjectWheelSwitchRef = useRef(0);
+  const isProjectGestureSettlingRef = useRef(false);
+  const projectWheelEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isExtensionsBufferActive = useBufferStore((state) => {
     const activeBuffer = state.buffers.find((buffer) => buffer.id === state.activeBufferId);
     return activeBuffer?.type === "extensions";
   });
   const coreFeatures = useSettingsStore((state) => state.settings.coreFeatures);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
+  const activeProject = projectTabs.find((project) => project.isActive);
+  const carouselProject =
+    projectTabs.find((project) => project.id === carouselProjectId) ?? activeProject;
+  const carouselProjectIndex = carouselProject
+    ? projectTabs.findIndex((project) => project.id === carouselProject.id)
+    : -1;
+  const previousProject =
+    carouselProjectIndex >= 0
+      ? projectTabs[(carouselProjectIndex - 1 + projectTabs.length) % projectTabs.length]
+      : undefined;
+  const nextProject =
+    carouselProjectIndex >= 0
+      ? projectTabs[(carouselProjectIndex + 1) % projectTabs.length]
+      : undefined;
+  const carouselTargetProject = carouselTargetProjectId
+    ? projectTabs.find((project) => project.id === carouselTargetProjectId)
+    : undefined;
+  const renderedPreviousProject =
+    projectCarouselDirection < 0 && carouselTargetProject ? carouselTargetProject : previousProject;
+  const renderedNextProject =
+    projectCarouselDirection > 0 && carouselTargetProject ? carouselTargetProject : nextProject;
   const switchToProject = useFileSystemStore((state) => state.switchToProject);
   const isSwitchingProject = useFileSystemStore((state) => state.isSwitchingProject);
   const { openSidebarView } = useSidebarPaneController();
@@ -466,25 +606,19 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   }, [configuredActivityRailWidth]);
 
   useEffect(() => {
+    if (isProjectGestureSettlingRef.current) return;
+    setCarouselProjectId(activeProject?.id ?? null);
+  }, [activeProject?.id]);
+
+  useEffect(() => {
     return () => {
       if (resizeFrameRef.current !== null) {
         cancelAnimationFrame(resizeFrameRef.current);
       }
-      if (projectCarouselTimerRef.current !== null) {
-        window.clearTimeout(projectCarouselTimerRef.current);
+      if (projectWheelEndTimerRef.current !== null) {
+        clearTimeout(projectWheelEndTimerRef.current);
       }
     };
-  }, []);
-
-  useEffect(() => {
-    if (displayProjectId && projectTabs.some((project) => project.id === displayProjectId)) return;
-    setDisplayProjectId(null);
-  }, [displayProjectId, projectTabs]);
-
-  const clearProjectCarouselTimer = useCallback(() => {
-    if (projectCarouselTimerRef.current === null) return;
-    window.clearTimeout(projectCarouselTimerRef.current);
-    projectCarouselTimerRef.current = null;
   }, []);
 
   const previewActivityRailWidth = useCallback((nextWidth: number) => {
@@ -565,108 +699,232 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     [activityRailWidth, expanded, previewActivityRailWidth, updateSetting],
   );
 
-  const switchProjectByOffset = useCallback(
-    (offset: 1 | -1) => {
-      if (isSwitchingProject || projectTabs.length < 2) return;
+  const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH;
 
-      const activeIndex = projectTabs.findIndex((project) => project.isActive);
-      if (activeIndex < 0) return;
-
-      const nextIndex = (activeIndex + offset + projectTabs.length) % projectTabs.length;
-      const nextProject = projectTabs[nextIndex];
-      if (!nextProject || nextProject.isActive) return;
-
-      clearProjectCarouselTimer();
-      setProjectCarouselAnimation({ direction: offset, phase: "exit" });
-
-      projectCarouselTimerRef.current = window.setTimeout(() => {
-        setDisplayProjectId(nextProject.id);
-        void switchToProject(nextProject.id);
-        setProjectCarouselAnimation({ direction: offset, phase: "enter" });
-
-        projectCarouselTimerRef.current = window.setTimeout(() => {
-          setProjectCarouselAnimation(null);
-          setDisplayProjectId(null);
-          projectCarouselTimerRef.current = null;
-        }, PROJECT_CAROUSEL_ENTER_MS);
-      }, PROJECT_CAROUSEL_EXIT_MS);
-    },
-    [clearProjectCarouselTimer, isSwitchingProject, projectTabs, switchToProject],
-  );
-
-  const projectCarouselClassName =
-    projectCarouselAnimation === null
-      ? undefined
-      : projectCarouselAnimation.phase === "exit"
-        ? projectCarouselAnimation.direction > 0
-          ? "athas-project-carousel-exit-forward"
-          : "athas-project-carousel-exit-back"
-        : projectCarouselAnimation.direction > 0
-          ? "athas-project-carousel-enter-forward"
-          : "athas-project-carousel-enter-back";
-
-  const handleProjectSwipeStart = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (isActivityRailResizing || projectTabs.length < 2) return;
-
-      projectSwipeRef.current = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-      };
-    },
-    [isActivityRailResizing, projectTabs.length],
-  );
-
-  const handleProjectSwipeEnd = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      const swipe = projectSwipeRef.current;
-      projectSwipeRef.current = null;
-
-      if (!swipe || swipe.pointerId !== event.pointerId) return;
-
-      const deltaX = event.clientX - swipe.startX;
-      const deltaY = event.clientY - swipe.startY;
-      const absDeltaX = Math.abs(deltaX);
-      const absDeltaY = Math.abs(deltaY);
-
-      if (absDeltaX < PROJECT_SWIPE_THRESHOLD_PX || absDeltaX <= absDeltaY * 1.25) {
+  const settleProjectGesture = useCallback(
+    async (offset: 1 | -1, requestedProjectId?: string) => {
+      if (
+        isActivityRailResizing ||
+        isSwitchingProject ||
+        isProjectGestureSettlingRef.current ||
+        projectTabs.length < 2 ||
+        carouselProjectIndex < 0
+      ) {
         return;
       }
 
-      switchProjectByOffset(deltaX < 0 ? 1 : -1);
+      const targetIndex = requestedProjectId
+        ? projectTabs.findIndex((project) => project.id === requestedProjectId)
+        : (carouselProjectIndex + offset + projectTabs.length) % projectTabs.length;
+      const targetProject = projectTabs[targetIndex];
+      if (!targetProject || targetProject.id === carouselProject?.id) return;
+
+      isProjectGestureSettlingRef.current = true;
+      flushSync(() => {
+        setProjectCarouselDirection(offset);
+        setCarouselTargetProjectId(targetProject.id);
+        setIsProjectGestureSettling(true);
+      });
+
+      projectGestureX.stop();
+      if (prefersReducedMotion) {
+        projectGestureX.jump(-offset * railPanelWidth);
+      } else {
+        await animate(projectGestureX, -offset * railPanelWidth, PROJECT_SNAP_TRANSITION);
+      }
+
+      flushSync(() => {
+        setCarouselProjectId(targetProject.id);
+        setCarouselTargetProjectId(null);
+      });
+      projectGestureX.jump(0);
+
+      try {
+        const switched = await switchToProject(targetProject.id);
+        if (!switched) {
+          flushSync(() => setCarouselProjectId(activeProject?.id ?? null));
+        }
+      } catch {
+        flushSync(() => setCarouselProjectId(activeProject?.id ?? null));
+      } finally {
+        isProjectGestureSettlingRef.current = false;
+        setIsProjectGestureSettling(false);
+      }
     },
-    [switchProjectByOffset],
+    [
+      activeProject?.id,
+      carouselProject?.id,
+      carouselProjectIndex,
+      isActivityRailResizing,
+      isSwitchingProject,
+      prefersReducedMotion,
+      projectGestureX,
+      projectTabs,
+      railPanelWidth,
+      switchToProject,
+    ],
   );
 
-  const handleProjectSwipeCancel = useCallback(() => {
-    projectSwipeRef.current = null;
-  }, []);
+  const returnProjectGestureToOrigin = useCallback(() => {
+    projectGestureX.stop();
+    if (prefersReducedMotion) {
+      projectGestureX.jump(0);
+      return;
+    }
+    void animate(projectGestureX, 0, PROJECT_SNAP_TRANSITION);
+  }, [prefersReducedMotion, projectGestureX]);
+
+  const handleProjectSelect = useCallback(
+    (projectId: string) => {
+      if (isSwitchingProject || isProjectGestureSettlingRef.current) return;
+
+      const activeIndex = carouselProjectIndex;
+      const targetIndex = projectTabs.findIndex((project) => project.id === projectId);
+      if (activeIndex < 0 || targetIndex < 0 || activeIndex === targetIndex) return;
+
+      const forwardDistance = (targetIndex - activeIndex + projectTabs.length) % projectTabs.length;
+      const backwardDistance =
+        (activeIndex - targetIndex + projectTabs.length) % projectTabs.length;
+      const offset = forwardDistance <= backwardDistance ? 1 : -1;
+      void settleProjectGesture(offset, projectId);
+    },
+    [carouselProjectIndex, isSwitchingProject, projectTabs, settleProjectGesture],
+  );
+
+  const handleProjectDragEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (
+        isActivityRailResizing ||
+        isSwitchingProject ||
+        isProjectGestureSettlingRef.current ||
+        projectTabs.length < 2
+      ) {
+        return;
+      }
+
+      const shouldSwitch =
+        Math.abs(info.offset.x) >= PROJECT_SWIPE_THRESHOLD_PX ||
+        Math.abs(info.velocity.x) >= PROJECT_SWIPE_VELOCITY_PX;
+      if (!shouldSwitch) {
+        returnProjectGestureToOrigin();
+        return;
+      }
+
+      const horizontalIntent =
+        Math.abs(info.velocity.x) >= PROJECT_SWIPE_VELOCITY_PX ? info.velocity.x : info.offset.x;
+      void settleProjectGesture(horizontalIntent < 0 ? 1 : -1);
+    },
+    [
+      isActivityRailResizing,
+      isSwitchingProject,
+      projectTabs.length,
+      returnProjectGestureToOrigin,
+      settleProjectGesture,
+    ],
+  );
+
+  const finishProjectWheelGesture = useCallback(() => {
+    projectWheelEndTimerRef.current = null;
+    const position = projectGestureX.get();
+
+    if (Math.abs(position) < PROJECT_SWIPE_THRESHOLD_PX) {
+      returnProjectGestureToOrigin();
+      return;
+    }
+
+    void settleProjectGesture(position < 0 ? 1 : -1);
+  }, [projectGestureX, returnProjectGestureToOrigin, settleProjectGesture]);
 
   const handleProjectWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
-      if (isActivityRailResizing || isSwitchingProject || projectTabs.length < 2) return;
+      if (
+        isActivityRailResizing ||
+        isSwitchingProject ||
+        isProjectGestureSettlingRef.current ||
+        projectTabs.length < 2
+      ) {
+        return;
+      }
       if (Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
 
-      const now = Date.now();
-      if (now - lastProjectWheelSwitchRef.current < PROJECT_WHEEL_COOLDOWN_MS) return;
+      event.preventDefault();
+      projectGestureX.stop();
+      const maximumTravel = railPanelWidth * 0.96;
+      const nextPosition = Math.min(
+        maximumTravel,
+        Math.max(-maximumTravel, projectGestureX.get() - event.deltaX),
+      );
+      projectGestureX.jump(nextPosition);
 
-      projectWheelDeltaRef.current += event.deltaX;
-
-      if (Math.abs(projectWheelDeltaRef.current) < PROJECT_WHEEL_THRESHOLD_PX) return;
-
-      const offset = projectWheelDeltaRef.current > 0 ? 1 : -1;
-      projectWheelDeltaRef.current = 0;
-      lastProjectWheelSwitchRef.current = now;
-      switchProjectByOffset(offset);
+      if (projectWheelEndTimerRef.current !== null) {
+        clearTimeout(projectWheelEndTimerRef.current);
+      }
+      projectWheelEndTimerRef.current = setTimeout(
+        finishProjectWheelGesture,
+        PROJECT_WHEEL_END_DELAY_MS,
+      );
     },
-    [isActivityRailResizing, isSwitchingProject, projectTabs.length, switchProjectByOffset],
+    [
+      finishProjectWheelGesture,
+      isActivityRailResizing,
+      isSwitchingProject,
+      projectGestureX,
+      projectTabs.length,
+      railPanelWidth,
+    ],
   );
 
   const renderedRailWidth = `calc(${
     expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH
   }px + var(--athas-workbench-gap))`;
-  const railContentWidth = expanded ? activityRailWidth : renderedRailWidth;
+  const canSwipeProjects =
+    !isActivityRailResizing &&
+    !isSwitchingProject &&
+    !isProjectGestureSettling &&
+    projectTabs.length > 1;
+
+  const renderProjectPanel = (
+    project: ProjectTab | undefined,
+    position: "previous" | "current" | "next",
+  ) => (
+    <div
+      key={`${position}-${project?.id ?? "welcome"}`}
+      aria-hidden={position === "current" ? undefined : true}
+      inert={position === "current" ? undefined : true}
+      className={cn(
+        "absolute inset-y-0 left-0 flex w-full flex-col items-start gap-1 overflow-hidden pt-1.5 pb-7",
+        position !== "current" && "pointer-events-none",
+      )}
+      style={{
+        boxSizing: "border-box",
+        paddingLeft: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
+        paddingRight: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
+        transform:
+          position === "previous"
+            ? "translateX(-100%)"
+            : position === "next"
+              ? "translateX(100%)"
+              : undefined,
+      }}
+    >
+      <SidebarProjectSwitcher expanded={expanded} project={project} />
+      <SidebarPaneSelector
+        activeSidebarView={activeSidebarView}
+        isGitViewActive={isGitViewActive}
+        isGitHubPRsViewActive={isGitHubPRsViewActive}
+        isSidebarVisible={isSidebarVisible}
+        coreFeatures={coreFeatures}
+        onViewChange={handleSidebarViewChange}
+        onSearchClick={() => openGlobalSearchBuffer()}
+        onExtensionsClick={() => openExtensionsBuffer()}
+        isExtensionsActive={isExtensionsBufferActive}
+        compact={!expanded}
+        showLabels={expanded}
+        orientation="vertical"
+      />
+      <SidebarAgentHistory expanded={expanded} workspacePath={project?.path ?? null} />
+    </div>
+  );
 
   return (
     <div
@@ -680,44 +938,38 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         width: renderedRailWidth,
       }}
     >
-      <div
+      <motion.div
         ref={railContentRef}
+        drag={canSwipeProjects ? "x" : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={1}
+        dragMomentum={false}
+        onDragEnd={handleProjectDragEnd}
+        onWheel={handleProjectWheel}
         className={cn(
-          "flex h-full shrink-0 flex-col overflow-hidden pb-1.5 pt-1.5",
+          "absolute inset-y-0 left-0 shrink-0 will-change-transform",
+          canSwipeProjects && "cursor-grab active:cursor-grabbing",
           !isActivityRailResizing &&
             "transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
-          "items-start gap-1",
-          projectCarouselClassName,
         )}
         style={{
-          boxSizing: "border-box",
-          paddingLeft: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
-          paddingRight: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
           touchAction: "pan-y",
-          width: railContentWidth,
+          width: railPanelWidth,
+          x: projectGestureX,
         }}
-        onPointerDown={handleProjectSwipeStart}
-        onPointerUp={handleProjectSwipeEnd}
-        onPointerCancel={handleProjectSwipeCancel}
-        onWheel={handleProjectWheel}
       >
-        <SidebarProjectSwitcher expanded={expanded} displayProjectId={displayProjectId} />
-        <SidebarPaneSelector
-          activeSidebarView={activeSidebarView}
-          isGitViewActive={isGitViewActive}
-          isGitHubPRsViewActive={isGitHubPRsViewActive}
-          isSidebarVisible={isSidebarVisible}
-          coreFeatures={coreFeatures}
-          onViewChange={handleSidebarViewChange}
-          onSearchClick={() => openGlobalSearchBuffer()}
-          onExtensionsClick={() => openExtensionsBuffer()}
-          isExtensionsActive={isExtensionsBufferActive}
-          compact={!expanded}
-          showLabels={expanded}
-          orientation="vertical"
+        {renderProjectPanel(renderedPreviousProject, "previous")}
+        {renderProjectPanel(carouselProject, "current")}
+        {renderProjectPanel(renderedNextProject, "next")}
+      </motion.div>
+      {expanded ? (
+        <SidebarProjectDots
+          projects={projectTabs}
+          activeProjectId={carouselProject?.id}
+          isSwitchingProject={isSwitchingProject}
+          onSelectProject={handleProjectSelect}
         />
-        <SidebarAgentHistory expanded={expanded} />
-      </div>
+      ) : null}
       {expanded ? (
         <div
           role="separator"
@@ -726,6 +978,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
           className="group absolute top-0 right-0 z-20 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center hover:bg-accent/8"
           onMouseDown={handleResizeMouseDown}
         >
+          <ResizeHandleEffect active={isActivityRailResizing} orientation="vertical" />
           <div className="h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent" />
         </div>
       ) : null}
