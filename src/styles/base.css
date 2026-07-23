@@ -2,7 +2,6 @@
 
 * {
   box-sizing: border-box;
-  border-color: var(--border);
   overscroll-behavior: none;
 }
 
@@ -27,6 +26,10 @@ body {
 }
 
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;

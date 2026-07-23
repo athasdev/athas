@@ -24,7 +24,7 @@ const bubbleVariants = cva(
         outline:
           "*:data-[slot=bubble-content]:border-border *:data-[slot=bubble-content]:bg-primary-bg",
         ghost:
-          "border-none *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0",
+          "w-full max-w-full *:data-[slot=bubble-content]:w-full *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:border-0 *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0",
         destructive:
           "*:data-[slot=bubble-content]:bg-error/10 *:data-[slot=bubble-content]:text-error",
       },
