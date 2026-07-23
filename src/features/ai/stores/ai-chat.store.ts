@@ -485,6 +485,33 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           get().syncChatToDatabase(chatId);
         },
 
+        replaceUserMessage: (chatId, messageId, content) => {
+          const nextContent = content.trim();
+          if (!nextContent) return false;
+
+          let didReplace = false;
+          set((state) => {
+            const chat = state.chats.find((c) => c.id === chatId);
+            if (!chat) return;
+
+            const messageIndex = chat.messages.findIndex((message) => message.id === messageId);
+            const message = chat.messages[messageIndex];
+            if (!message || message.role !== "user") return;
+
+            message.content = nextContent;
+            message.timestamp = new Date();
+            chat.messages.splice(messageIndex + 1);
+            chat.lastMessageAt = new Date();
+            didReplace = true;
+          });
+
+          if (didReplace) {
+            get().syncChatToDatabase(chatId);
+          }
+
+          return didReplace;
+        },
+
         regenerateResponse: () => {
           const state = get();
           if (!state.currentChatId) return null;

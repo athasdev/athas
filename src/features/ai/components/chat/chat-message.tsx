@@ -1,12 +1,17 @@
-import { CopySimpleIcon as CopySimple, FileTextIcon as FileText } from "@/ui/icons";
-import type { ReactNode } from "react";
-import { memo, useCallback } from "react";
+import {
+  CopySimpleIcon as CopySimple,
+  FileTextIcon as FileText,
+  PencilSimpleIcon as PencilSimple,
+} from "@/ui/icons";
+import type { FormEvent, ReactNode } from "react";
+import { memo, useCallback, useState } from "react";
 import { MessageAction, MessageResponse } from "@/features/ai/components/elements/message";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
 import { writeClipboardText } from "@/utils/clipboard";
+import { Button } from "@/ui/button";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import {
@@ -20,6 +25,7 @@ import {
 } from "@/ui/attachment";
 import { Bubble, BubbleContent } from "@/ui/bubble";
 import { Message, MessageContent, MessageFooter } from "@/ui/message";
+import Textarea from "@/ui/textarea";
 import MarkdownRenderer from "../messages/markdown-renderer";
 import { PlanBlockDisplay } from "../messages/plan-block-display";
 import { ToolCallGroupDisplay } from "../messages/tool-call-display";
@@ -29,6 +35,8 @@ interface ChatMessageProps {
   message: AIMessage;
   isLastMessage: boolean;
   onApplyCode?: (code: string, language?: string) => void;
+  onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
+  canEditUserMessage?: boolean;
   searchQuery?: string;
 }
 
@@ -66,8 +74,12 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
 export const ChatMessage = memo(function ChatMessage({
   message,
   onApplyCode,
+  onEditUserMessage,
+  canEditUserMessage = false,
   searchQuery = "",
 }: ChatMessageProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftContent, setDraftContent] = useState(message.content);
   const isToolOnlyMessage =
     message.role === "assistant" &&
     message.toolCalls &&
@@ -84,27 +96,93 @@ export const ChatMessage = memo(function ChatMessage({
 
   if (message.role === "user") {
     const messageTime = formatTime(message.timestamp);
+    const startEditing = () => {
+      setDraftContent(message.content);
+      setIsEditing(true);
+    };
+    const cancelEditing = () => {
+      setDraftContent(message.content);
+      setIsEditing(false);
+    };
+    const submitEdit = (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const nextContent = draftContent.trim();
+      if (!nextContent || nextContent === message.content) {
+        cancelEditing();
+        return;
+      }
+
+      setIsEditing(false);
+      void onEditUserMessage?.(message.id, nextContent);
+    };
 
     return (
       <Message align="end">
         <MessageContent>
-          <Bubble variant="secondary" align="end">
-            <BubbleContent title={messageTime}>
-              <div className="ai-chat-message-content whitespace-pre-wrap break-words">
-                <HighlightedPlainText text={message.content} query={searchQuery} />
-              </div>
+          <Bubble
+            variant="secondary"
+            align="end"
+            className={isEditing ? "w-full max-w-[80%]" : undefined}
+          >
+            <BubbleContent title={messageTime} className={isEditing ? "w-full" : undefined}>
+              {isEditing ? (
+                <form onSubmit={submitEdit} className="flex min-w-0 flex-col gap-2">
+                  <Textarea
+                    autoFocus
+                    value={draftContent}
+                    onChange={(event) => setDraftContent(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        cancelEditing();
+                      }
+                    }}
+                    variant="ghost"
+                    className="min-h-16 resize-y p-0"
+                    aria-label="Edit prompt"
+                  />
+                  <div className="flex justify-end gap-1">
+                    <Button type="button" variant="ghost" size="xs" onClick={cancelEditing}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="accent"
+                      size="xs"
+                      disabled={!draftContent.trim()}
+                    >
+                      Send
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="ai-chat-message-content whitespace-pre-wrap break-words">
+                  <HighlightedPlainText text={message.content} query={searchQuery} />
+                </div>
+              )}
             </BubbleContent>
           </Bubble>
-          <MessageFooter>
-            <span>{messageTime}</span>
-            <MessageAction
-              onClick={() => void copyText(message.content)}
-              label="Copy prompt"
-              className="hover:bg-transparent hover:text-text-lighter"
-            >
-              <CopySimple className="size-3.5" />
-            </MessageAction>
-          </MessageFooter>
+          {isEditing ? null : (
+            <MessageFooter>
+              <span>{messageTime}</span>
+              <MessageAction
+                onClick={() => void copyText(message.content)}
+                label="Copy prompt"
+                className="hover:bg-transparent hover:text-text-lighter"
+              >
+                <CopySimple className="size-3.5" />
+              </MessageAction>
+              {canEditUserMessage && onEditUserMessage ? (
+                <MessageAction
+                  onClick={startEditing}
+                  label="Edit prompt"
+                  className="hover:bg-transparent hover:text-text-lighter"
+                >
+                  <PencilSimple className="size-3.5" />
+                </MessageAction>
+              ) : null}
+            </MessageFooter>
+          )}
         </MessageContent>
       </Message>
     );

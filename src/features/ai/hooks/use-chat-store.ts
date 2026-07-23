@@ -34,6 +34,7 @@ export function useChatActions() {
     updateChatTitle: useAIChatStore((state) => state.updateChatTitle),
     addMessage: useAIChatStore((state) => state.addMessage),
     updateMessage: useAIChatStore((state) => state.updateMessage),
+    replaceUserMessage: useAIChatStore((state) => state.replaceUserMessage),
     setIsChatHistoryVisible: useAIChatStore((state) => state.setIsChatHistoryVisible),
     setApiKeyModalState: useAIChatStore((state) => state.setApiKeyModalState),
     saveApiKey: useAIChatStore((state) => state.saveApiKey),

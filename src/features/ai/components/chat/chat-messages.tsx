@@ -18,6 +18,8 @@ import { ChatMessage } from "./chat-message";
 interface ChatMessagesProps {
   onApplyCode?: (code: string, language?: string) => void;
   onSendFollowUp?: (message: string) => void | Promise<void>;
+  onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
+  canEditUserMessages?: boolean;
   acpEvents?: ChatAcpEvent[];
   chatId?: string | null;
   searchQuery?: string;
@@ -34,6 +36,8 @@ const getTimestampMs = (value: Date | string): number => {
 export const ChatMessages = memo(function ChatMessages({
   onApplyCode,
   onSendFollowUp,
+  onEditUserMessage,
+  canEditUserMessages = false,
   acpEvents,
   chatId,
   searchQuery = "",
@@ -162,6 +166,8 @@ export const ChatMessages = memo(function ChatMessages({
               message={message}
               isLastMessage={isLastMessage}
               onApplyCode={onApplyCode}
+              onEditUserMessage={onEditUserMessage}
+              canEditUserMessage={canEditUserMessages}
               searchQuery={searchQuery}
             />
             {isLastMessage && message.role === "assistant" && onSendFollowUp ? (

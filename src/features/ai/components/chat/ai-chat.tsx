@@ -492,16 +492,21 @@ const AIChat = memo(function AIChat({
     [chatActions.updateMessage],
   );
 
-  const processMessage = async (messageContent: string) => {
+  const processMessage = async (
+    messageContent: string,
+    options: { editedUserMessageId?: string } = {},
+  ) => {
     const store = useAIChatStore.getState();
     const targetChat = effectiveChatId
       ? store.chats.find((chat) => chat.id === effectiveChatId)
       : null;
     const currentAgentId = targetChat?.agentId ?? store.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
+    const trimmedMessageContent = messageContent.trim();
     // For ACP agents, we don't need an API key.
     // For Custom API, we need an API key to be set
-    if (!messageContent.trim() || (!isAcp && !store.hasApiKey)) return;
+    if (!trimmedMessageContent || (!isAcp && !store.hasApiKey)) return;
+    if (options.editedUserMessageId && currentAgentId !== "custom") return;
 
     // Agents are started automatically by AcpStreamHandler when needed
 
@@ -512,15 +517,32 @@ const AIChat = memo(function AIChat({
       targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId);
     }
 
+    const existingMessages = useAIChatStore.getState().getMessagesForChat(targetChatId);
+    const editedUserMessageIndex = options.editedUserMessageId
+      ? existingMessages.findIndex(
+          (message) => message.id === options.editedUserMessageId && message.role === "user",
+        )
+      : -1;
+    if (options.editedUserMessageId && editedUserMessageIndex === -1) return;
+
     const conversationContext = buildConversationHistory(
-      useAIChatStore.getState().getMessagesForChat(targetChatId),
+      editedUserMessageIndex >= 0
+        ? existingMessages.slice(0, editedUserMessageIndex)
+        : existingMessages,
     );
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: messageContent.trim(),
-      role: "user",
-      timestamp: new Date(),
-    };
+    const userMessage: Message =
+      editedUserMessageIndex >= 0
+        ? {
+            ...existingMessages[editedUserMessageIndex],
+            content: trimmedMessageContent,
+            timestamp: new Date(),
+          }
+        : {
+            id: Date.now().toString(),
+            content: trimmedMessageContent,
+            role: "user",
+            timestamp: new Date(),
+          };
 
     const assistantMessageId = (Date.now() + 1).toString();
     const assistantMessage: Message = {
@@ -531,7 +553,16 @@ const AIChat = memo(function AIChat({
       isStreaming: true,
     };
 
-    chatActions.addMessage(targetChatId, userMessage);
+    if (options.editedUserMessageId) {
+      const didReplace = chatActions.replaceUserMessage(
+        targetChatId,
+        options.editedUserMessageId,
+        trimmedMessageContent,
+      );
+      if (!didReplace) return;
+    } else {
+      chatActions.addMessage(targetChatId, userMessage);
+    }
     chatActions.addMessage(targetChatId, assistantMessage);
 
     const currentMessages = useAIChatStore.getState().getMessagesForChat(targetChatId);
@@ -550,7 +581,7 @@ const AIChat = memo(function AIChat({
 
     try {
       const { processedMessage, mentionedFiles } = await parseMentionsAndLoadFiles(
-        messageContent.trim(),
+        trimmedMessageContent,
         allProjectFiles,
       );
       const latestSettings = useSettingsStore.getState().settings;
@@ -559,7 +590,7 @@ const AIChat = memo(function AIChat({
 
       // Handle direct ACP UI intents locally so they are always reliable.
       if (isAcp) {
-        const directAction = parseDirectAcpUiAction(messageContent);
+        const directAction = parseDirectAcpUiAction(trimmedMessageContent);
         if (directAction) {
           const bufferActions = useBufferStore.getState().actions;
           if (directAction.kind === "open_web_viewer" && directAction.url) {
@@ -597,7 +628,7 @@ const AIChat = memo(function AIChat({
         }
       }
 
-      const enhancedMessage = isAcp ? messageContent.trim() : processedMessage;
+      const enhancedMessage = isAcp ? trimmedMessageContent : processedMessage;
       if (isAcp) {
         setAcpEvents([]);
       }
@@ -629,7 +660,7 @@ const AIChat = memo(function AIChat({
 
           if (!hasVisibleResponse) {
             if (isAcpAgent(currentAgentId) && acpProducedStateOnlyUpdate) {
-              const slashCommand = messageContent.trim().match(/^\/([^\s]+)/)?.[1];
+              const slashCommand = trimmedMessageContent.match(/^\/([^\s]+)/)?.[1];
               const fallbackContent =
                 acpCommandResultLabel ||
                 (slashCommand ? `Applied \`/${slashCommand}\`.` : "Session updated.");
@@ -1035,6 +1066,14 @@ details: ${errorDetails || mainError}
     [sendMessage],
   );
 
+  const handleEditUserMessage = async (messageId: string, content: string) => {
+    if (chatState.isTyping || chatState.streamingMessageId || currentChat?.agentId !== "custom") {
+      return;
+    }
+
+    await processMessage(content, { editedUserMessageId: messageId });
+  };
+
   useEffect(() => {
     const pendingLaunch = chatState.pendingAgentLaunchRequest;
     if (!pendingLaunch) return;
@@ -1146,6 +1185,14 @@ details: ${errorDetails || mainError}
                     chatId={effectiveChatId}
                     onApplyCode={onApplyCode}
                     onSendFollowUp={handleSendMessage}
+                    onEditUserMessage={handleEditUserMessage}
+                    canEditUserMessages={
+                      currentChat?.agentId === "custom" &&
+                      chatState.hasApiKey &&
+                      !chatState.isTyping &&
+                      !chatState.streamingMessageId &&
+                      !isAiChatBlockedByPolicy
+                    }
                     acpEvents={acpEvents}
                     searchQuery={messageSearchQuery}
                     activeSearchMessageId={activeMessageSearchMatch?.messageId ?? null}
