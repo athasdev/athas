@@ -154,7 +154,10 @@ fn detect_codex_adapter(config: &mut AgentConfig) {
    if let Some(path) = find_binary("npx") {
       config.installed = true;
       config.binary_path = Some(path.to_string_lossy().to_string());
-      config.args = vec!["-y".to_string(), "@zed-industries/codex-acp".to_string()];
+      config.args = vec![
+         "-y".to_string(),
+         "@agentclientprotocol/codex-acp".to_string(),
+      ];
       log::debug!("Using npx fallback for codex-acp at {}", path.display());
       return;
    }

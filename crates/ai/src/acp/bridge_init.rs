@@ -231,7 +231,7 @@ fn spawn_agent_process(
       && config
          .args
          .iter()
-         .any(|arg| arg == "@zed-industries/codex-acp");
+         .any(|arg| arg == "@agentclientprotocol/codex-acp" || arg == "@zed-industries/codex-acp");
 
    for (key, value) in &config.env_vars {
       cmd.env(key, value);

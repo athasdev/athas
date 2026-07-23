@@ -16,7 +16,7 @@
       "args": [],
       "install": {
         "runtime": "node",
-        "package": "@zed-industries/codex-acp",
+        "package": "@agentclientprotocol/codex-acp",
         "command": "codex-acp"
       }
     }
