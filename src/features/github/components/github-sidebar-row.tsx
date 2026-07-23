@@ -81,7 +81,7 @@ export function GitHubSidebarRow({
   );
 
   const rowClassName = cn(
-    "font-sans group/github-row flex min-h-12 w-full min-w-0 cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
+    "font-sans group/github-row flex min-h-12 w-full min-w-0 max-w-full cursor-pointer items-start gap-2 overflow-hidden rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
     "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
     active && "bg-hover/80 text-text",
     className,
@@ -91,15 +91,17 @@ export function GitHubSidebarRow({
       <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center overflow-hidden">
         {leading}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="ui-text-base block truncate whitespace-nowrap font-medium leading-5 text-text">
+      <span className="w-0 min-w-0 flex-1 overflow-hidden">
+        <span className="ui-text-base block w-full truncate whitespace-nowrap font-medium leading-5 text-text">
           {title}
         </span>
         {description || trailing ? (
-          <span className="ui-text-sm mt-0.5 flex min-w-0 items-center gap-2 leading-4 text-text-lighter">
-            <span className="min-w-0 flex-1 truncate whitespace-nowrap">{description}</span>
+          <span className="ui-text-sm mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden leading-4 text-text-lighter">
+            <span className="min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap">
+              {description}
+            </span>
             {trailing ? (
-              <span className="ml-auto flex max-w-[45%] shrink-0 items-center gap-1.5 truncate whitespace-nowrap text-right">
+              <span className="ml-auto flex min-w-0 max-w-[45%] shrink-0 items-center justify-end gap-1.5 overflow-hidden whitespace-nowrap text-right">
                 {trailing}
               </span>
             ) : null}
