@@ -224,7 +224,8 @@ export const CommandList = ({
   ...props
 }: CommandListProps) => (
   <ScrollArea
-    className={cn("flex-1", className)}
+    className={cn("flex min-h-0 flex-1", className)}
+    viewportClassName="h-auto min-h-0 flex-1 overscroll-contain"
     contentClassName={cn("p-2", contentClassName)}
     viewportProps={{ ref, ...props }}
   >
