@@ -3,7 +3,6 @@ import "../../styles/ai-chat.css";
 import { KeyIcon as KeyRound } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ProviderApiKeyCommand } from "@/features/ai/components/provider-api-key-command";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
 import { getChatTitleFromSessionInfo } from "@/features/ai/lib/acp-session-info";
 import { parseDirectAcpUiAction } from "@/features/ai/lib/acp-ui-intents";
@@ -149,6 +148,7 @@ function getMessageSearchMatches(messages: Message[], query: string) {
 
 const AIChat = memo(function AIChat({
   className,
+  surfaceId,
   chatId,
   isActiveSurface = true,
   activeBuffer,
@@ -167,6 +167,7 @@ const AIChat = memo(function AIChat({
 
   const chatState = useChatState();
   const chatActions = useChatActions();
+  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -183,15 +184,18 @@ const AIChat = memo(function AIChat({
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [activeMessageSearchIndex, setActiveMessageSearchIndex] = useState(0);
-  const effectiveChatId =
-    chatId ??
-    (activeBuffer?.type === "agent"
-      ? (activeBuffer.sessionId ?? chatState.currentChatId)
-      : chatState.currentChatId);
+  const [selectedBufferIds, setSelectedBufferIds] = useState<Set<string>>(new Set());
+  const [selectedFilesPaths, setSelectedFilesPaths] = useState<Set<string>>(new Set());
+  const [isSurfaceTyping, setIsSurfaceTyping] = useState(false);
+  const [surfaceStreamingMessageId, setSurfaceStreamingMessageId] = useState<string | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
+  const messageQueueRef = useRef<string[]>([]);
+  const effectiveChatId = chatId ?? chatState.currentChatId;
   const currentChat = useMemo(
     () => chatState.chats.find((chat) => chat.id === effectiveChatId),
     [chatState.chats, effectiveChatId],
   );
+  const currentAgentId = currentChat?.agentId ?? useAIChatStore.getState().selectedAgentId;
   const messageSearchMatches = useMemo(
     () => getMessageSearchMatches(currentChat?.messages ?? [], messageSearchQuery),
     [currentChat?.messages, messageSearchQuery],
@@ -217,21 +221,6 @@ const AIChat = memo(function AIChat({
   }, [messageSearchMatches.length]);
 
   useEffect(() => {
-    if (chatId) return;
-    if (!isActiveSurface || !effectiveChatId || effectiveChatId === chatState.currentChatId) return;
-    if (!chatState.chats.some((chat) => chat.id === effectiveChatId)) return;
-
-    chatActions.switchToChat(effectiveChatId);
-  }, [
-    chatActions,
-    chatId,
-    chatState.chats,
-    chatState.currentChatId,
-    effectiveChatId,
-    isActiveSurface,
-  ]);
-
-  useEffect(() => {
     chatActions.checkApiKey(aiProviderId);
     chatActions.checkAllProviderApiKeys();
   }, [aiProviderId, chatActions.checkApiKey, chatActions.checkAllProviderApiKeys]);
@@ -240,6 +229,8 @@ const AIChat = memo(function AIChat({
   useEffect(() => {
     setAcpEvents([]);
     closeMessageSearch();
+    setSelectedBufferIds(new Set());
+    setSelectedFilesPaths(new Set());
   }, [closeMessageSearch, effectiveChatId]);
 
   useEffect(() => {
@@ -392,12 +383,10 @@ const AIChat = memo(function AIChat({
 
   const buildContext = async (agentId: string, providerId: string): Promise<ContextInfo> => {
     const selectedBuffers = buffers.filter(
-      (buffer) => buffer.type !== "agent" && chatState.selectedBufferIds.has(buffer.id),
+      (buffer) => buffer.type !== "agent" && selectedBufferIds.has(buffer.id),
     );
     const selectedActiveBuffer =
-      activeBuffer &&
-      activeBuffer.type !== "agent" &&
-      chatState.selectedBufferIds.has(activeBuffer.id)
+      activeBuffer && activeBuffer.type !== "agent" && selectedBufferIds.has(activeBuffer.id)
         ? activeBuffer
         : undefined;
 
@@ -416,7 +405,7 @@ const AIChat = memo(function AIChat({
       activeBuffer: activeBufferContext,
       openBuffers: selectedBuffers,
       selectedFiles,
-      selectedProjectFiles: Array.from(chatState.selectedFilesPaths),
+      selectedProjectFiles: Array.from(selectedFilesPaths),
       projectRoot: rootFolderPath,
       providerId,
       agentId,
@@ -459,10 +448,9 @@ const AIChat = memo(function AIChat({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    chatActions.setIsTyping(false);
-    chatActions.setStreamingMessageId(null);
+    setIsSurfaceTyping(false);
+    setSurfaceStreamingMessageId(null);
 
-    const currentAgentId = chatActions.getCurrentAgentId();
     if (isAcpAgent(currentAgentId)) {
       try {
         await AcpStreamHandler.cancelPrompt();
@@ -514,7 +502,9 @@ const AIChat = memo(function AIChat({
     if (!targetChatId) {
       targetChatId = chatActions.createNewChat(currentAgentId);
     } else {
-      targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId);
+      targetChatId = chatActions.ensureChatSession(targetChatId, currentAgentId, {
+        activate: !chatId,
+      });
     }
 
     const existingMessages = useAIChatStore.getState().getMessagesForChat(targetChatId);
@@ -570,8 +560,8 @@ const AIChat = memo(function AIChat({
       void updateInitialAgentSessionTitle(targetChatId, userMessage.content);
     }
 
-    chatActions.setIsTyping(true);
-    chatActions.setStreamingMessageId(assistantMessageId);
+    setIsSurfaceTyping(true);
+    setSurfaceStreamingMessageId(assistantMessageId);
 
     abortControllerRef.current = new AbortController();
     let currentAssistantMessageId = assistantMessageId;
@@ -599,8 +589,8 @@ const AIChat = memo(function AIChat({
                 content: "Web Viewer is disabled. Enable it in Settings > Features to open URLs.",
                 isStreaming: false,
               });
-              chatActions.setIsTyping(false);
-              chatActions.setStreamingMessageId(null);
+              setIsSurfaceTyping(false);
+              setSurfaceStreamingMessageId(null);
               return;
             }
 
@@ -620,8 +610,8 @@ const AIChat = memo(function AIChat({
             });
           }
 
-          chatActions.setIsTyping(false);
-          chatActions.setStreamingMessageId(null);
+          setIsSurfaceTyping(false);
+          setSurfaceStreamingMessageId(null);
           abortControllerRef.current = null;
           processQueuedMessages();
           return;
@@ -669,8 +659,8 @@ const AIChat = memo(function AIChat({
                 content: fallbackContent,
                 isStreaming: false,
               }));
-              chatActions.setIsTyping(false);
-              chatActions.setStreamingMessageId(null);
+              setIsSurfaceTyping(false);
+              setSurfaceStreamingMessageId(null);
               abortControllerRef.current = null;
               processQueuedMessages();
               return;
@@ -690,8 +680,8 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
 [/ERROR_BLOCK]`,
               isStreaming: false,
             }));
-            chatActions.setIsTyping(false);
-            chatActions.setStreamingMessageId(null);
+            setIsSurfaceTyping(false);
+            setSurfaceStreamingMessageId(null);
             abortControllerRef.current = null;
             processQueuedMessages();
             return;
@@ -700,8 +690,8 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           chatActions.updateMessage(targetChatId, currentAssistantMessageId, {
             isStreaming: false,
           });
-          chatActions.setIsTyping(false);
-          chatActions.setStreamingMessageId(null);
+          setIsSurfaceTyping(false);
+          setSurfaceStreamingMessageId(null);
           setAcpEvents((prev) => prev.filter((event) => event.kind !== "thinking"));
           abortControllerRef.current = null;
           processQueuedMessages();
@@ -804,8 +794,8 @@ details: ${errorDetails || mainError}
               type: "error",
             });
           }
-          chatActions.setIsTyping(false);
-          chatActions.setStreamingMessageId(null);
+          setIsSurfaceTyping(false);
+          setSurfaceStreamingMessageId(null);
           abortControllerRef.current = null;
           processQueuedMessages();
         },
@@ -823,7 +813,7 @@ details: ${errorDetails || mainError}
 
           chatActions.addMessage(targetChatId, newAssistantMessage);
           currentAssistantMessageId = newMessageId;
-          chatActions.setStreamingMessageId(newMessageId);
+          setSurfaceStreamingMessageId(newMessageId);
         },
         (event) => {
           updateStreamingAssistantMessage(
@@ -1014,49 +1004,41 @@ details: ${errorDetails || mainError}
           "Error: Failed to connect to Agent service. Please check your API key and try again.",
         isStreaming: false,
       });
-      chatActions.setIsTyping(false);
-      chatActions.setStreamingMessageId(null);
+      setIsSurfaceTyping(false);
+      setSurfaceStreamingMessageId(null);
       abortControllerRef.current = null;
     }
   };
 
   const processQueuedMessages = useCallback(async () => {
-    if (chatState.isTyping || chatState.streamingMessageId) {
+    if (isSurfaceTyping || surfaceStreamingMessageId) {
       return;
     }
 
-    const nextMessage = chatActions.processNextMessage();
+    const nextMessage = messageQueueRef.current.shift();
+    setQueueCount(messageQueueRef.current.length);
     if (nextMessage) {
-      console.log("Processing next queued message:", nextMessage.content);
+      console.log("Processing next queued message:", nextMessage);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await processMessage(nextMessage.content);
+      await processMessage(nextMessage);
     }
-  }, [chatState.isTyping, chatState.streamingMessageId, chatActions.processNextMessage]);
+  }, [isSurfaceTyping, surfaceStreamingMessageId]);
 
   const sendMessage = useCallback(
     async (messageContent: string) => {
-      const currentAgentId = chatActions.getCurrentAgentId();
       const isAcp = isAcpAgent(currentAgentId);
       // For ACP agents, we don't need an API key.
       if (!messageContent.trim() || (!isAcp && !chatState.hasApiKey)) return;
 
-      chatActions.setInput("");
-
-      if (chatState.isTyping || chatState.streamingMessageId) {
-        chatActions.addMessageToQueue(messageContent);
+      if (isSurfaceTyping || surfaceStreamingMessageId) {
+        messageQueueRef.current.push(messageContent);
+        setQueueCount(messageQueueRef.current.length);
         return;
       }
 
       await processMessage(messageContent);
     },
-    [
-      chatState.hasApiKey,
-      chatState.isTyping,
-      chatState.streamingMessageId,
-      chatActions.setInput,
-      chatActions.addMessageToQueue,
-      chatActions.getCurrentAgentId,
-    ],
+    [chatState.hasApiKey, currentAgentId, isSurfaceTyping, surfaceStreamingMessageId],
   );
 
   const handleSendMessage = useCallback(
@@ -1067,7 +1049,7 @@ details: ${errorDetails || mainError}
   );
 
   const handleEditUserMessage = async (messageId: string, content: string) => {
-    if (chatState.isTyping || chatState.streamingMessageId || currentChat?.agentId !== "custom") {
+    if (isSurfaceTyping || surfaceStreamingMessageId || currentChat?.agentId !== "custom") {
       return;
     }
 
@@ -1080,20 +1062,20 @@ details: ${errorDetails || mainError}
     if (pendingLaunch.chatId !== effectiveChatId) return;
     if (activeBuffer?.type !== "agent") return;
     if (activeBuffer.sessionId !== pendingLaunch.chatId) return;
-    if (chatState.isTyping || chatState.streamingMessageId) return;
+    if (isSurfaceTyping || surfaceStreamingMessageId) return;
     if (!isAcpAgent(pendingLaunch.agentId) && !chatState.hasApiKey) return;
 
-    chatActions.setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
-    chatActions.setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
+    setSelectedBufferIds(new Set(pendingLaunch.selectedBufferIds));
+    setSelectedFilesPaths(new Set(pendingLaunch.selectedFilesPaths));
     chatActions.setPendingAgentLaunchRequest(null);
     void sendMessage(pendingLaunch.prompt);
   }, [
     chatActions,
     effectiveChatId,
     chatState.hasApiKey,
-    chatState.isTyping,
+    isSurfaceTyping,
     chatState.pendingAgentLaunchRequest,
-    chatState.streamingMessageId,
+    surfaceStreamingMessageId,
     activeBuffer,
     sendMessage,
   ]);
@@ -1135,6 +1117,7 @@ details: ${errorDetails || mainError}
       <ChatHeader
         chatId={effectiveChatId}
         onDeleteChat={handleDeleteChat}
+        onSwitchChat={chatId ? openAgentBuffer : chatActions.switchToChat}
         isMessageSearchOpen={isMessageSearchOpen}
         messageSearchQuery={messageSearchQuery}
         onToggleMessageSearch={() => {
@@ -1166,10 +1149,36 @@ details: ${errorDetails || mainError}
           {useInitialComposer ? (
             <div className="flex min-h-0 flex-1 items-center justify-center px-8 py-10">
               <div className="flex w-full max-w-[720px] flex-col gap-4">
-                <AgentShortcuts />
+                <AgentShortcuts surfaceId={surfaceId} />
                 <AIChatInputBar
+                  key={effectiveChatId ?? "new-session"}
+                  surfaceId={surfaceId}
                   buffers={buffers}
                   allProjectFiles={allProjectFiles}
+                  currentAgentId={currentAgentId}
+                  isTyping={isSurfaceTyping}
+                  streamingMessageId={surfaceStreamingMessageId}
+                  queueCount={queueCount}
+                  selectedBufferIds={selectedBufferIds}
+                  selectedFilesPaths={selectedFilesPaths}
+                  onToggleBufferSelection={(bufferId) =>
+                    setSelectedBufferIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(bufferId)) next.delete(bufferId);
+                      else next.add(bufferId);
+                      return next;
+                    })
+                  }
+                  onToggleFileSelection={(filePath) =>
+                    setSelectedFilesPaths((current) => {
+                      const next = new Set(current);
+                      if (next.has(filePath)) next.delete(filePath);
+                      else next.add(filePath);
+                      return next;
+                    })
+                  }
+                  onSetSelectedBufferIds={setSelectedBufferIds}
+                  onSetSelectedFilesPaths={setSelectedFilesPaths}
                   isActiveSurface={isActiveSurface}
                   presentation="initial"
                   onSendMessage={handleSendMessage}
@@ -1182,6 +1191,7 @@ details: ${errorDetails || mainError}
               <MessageScroller>
                 <MessageScrollerViewport>
                   <ChatMessages
+                    surfaceId={surfaceId}
                     chatId={effectiveChatId}
                     onApplyCode={onApplyCode}
                     onSendFollowUp={handleSendMessage}
@@ -1189,8 +1199,8 @@ details: ${errorDetails || mainError}
                     canEditUserMessages={
                       currentChat?.agentId === "custom" &&
                       chatState.hasApiKey &&
-                      !chatState.isTyping &&
-                      !chatState.streamingMessageId &&
+                      !isSurfaceTyping &&
+                      !surfaceStreamingMessageId &&
                       !isAiChatBlockedByPolicy
                     }
                     acpEvents={acpEvents}
@@ -1250,24 +1260,39 @@ details: ${errorDetails || mainError}
 
           {!useInitialComposer ? (
             <AIChatInputBar
+              key={effectiveChatId ?? "new-session"}
+              surfaceId={surfaceId}
               buffers={buffers}
               allProjectFiles={allProjectFiles}
+              currentAgentId={currentAgentId}
+              isTyping={isSurfaceTyping}
+              streamingMessageId={surfaceStreamingMessageId}
+              queueCount={queueCount}
+              selectedBufferIds={selectedBufferIds}
+              selectedFilesPaths={selectedFilesPaths}
+              onToggleBufferSelection={(bufferId) =>
+                setSelectedBufferIds((current) => {
+                  const next = new Set(current);
+                  if (next.has(bufferId)) next.delete(bufferId);
+                  else next.add(bufferId);
+                  return next;
+                })
+              }
+              onToggleFileSelection={(filePath) =>
+                setSelectedFilesPaths((current) => {
+                  const next = new Set(current);
+                  if (next.has(filePath)) next.delete(filePath);
+                  else next.add(filePath);
+                  return next;
+                })
+              }
+              onSetSelectedBufferIds={setSelectedBufferIds}
+              onSetSelectedFilesPaths={setSelectedFilesPaths}
               isActiveSurface={isActiveSurface}
               onSendMessage={handleSendMessage}
               onStopStreaming={stopStreaming}
             />
           ) : null}
-
-          <ProviderApiKeyCommand
-            isOpen={chatState.apiKeyModalState.isOpen}
-            onClose={() =>
-              chatActions.setApiKeyModalState({
-                isOpen: false,
-                providerId: null,
-              })
-            }
-            initialProviderId={chatState.apiKeyModalState.providerId}
-          />
         </>
       )}
     </div>

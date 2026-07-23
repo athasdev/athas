@@ -12,7 +12,6 @@ import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
 import { formatTime } from "@/features/ai/lib/formatting";
 import { writeClipboardText } from "@/utils/clipboard";
 import { Button } from "@/ui/button";
-import { useAIChatStore } from "../../stores/ai-chat.store";
 import { GenerativeUIRenderer } from "@/extensions/ui/components/generative-ui-renderer";
 import {
   Attachment,
@@ -38,6 +37,8 @@ interface ChatMessageProps {
   onEditUserMessage?: (messageId: string, content: string) => void | Promise<void>;
   canEditUserMessage?: boolean;
   searchQuery?: string;
+  chatId?: string | null;
+  onExecutePlanStep?: (message: string) => void | Promise<void>;
 }
 
 async function copyText(text: string) {
@@ -77,6 +78,8 @@ export const ChatMessage = memo(function ChatMessage({
   onEditUserMessage,
   canEditUserMessage = false,
   searchQuery = "",
+  chatId,
+  onExecutePlanStep,
 }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftContent, setDraftContent] = useState(message.content);
@@ -86,13 +89,14 @@ export const ChatMessage = memo(function ChatMessage({
     message.toolCalls.length > 0 &&
     (!message.content || message.content.trim().length === 0);
 
-  const handleExecuteStep = useCallback((step: PlanStep, stepIndex: number) => {
-    const { setMode, addMessageToQueue } = useAIChatStore.getState();
-    setMode("chat");
-    addMessageToQueue(
-      `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
-    );
-  }, []);
+  const handleExecuteStep = useCallback(
+    (step: PlanStep, stepIndex: number) => {
+      void onExecutePlanStep?.(
+        `Execute step ${stepIndex + 1} of the plan: ${step.title}\n\n${step.description}`,
+      );
+    },
+    [onExecutePlanStep],
+  );
 
   if (message.role === "user") {
     const messageTime = formatTime(message.timestamp);
@@ -271,7 +275,11 @@ export const ChatMessage = memo(function ChatMessage({
                     onExecuteStep={handleExecuteStep}
                   />
                 ) : (
-                  <MarkdownRenderer content={message.content} onApplyCode={onApplyCode} />
+                  <MarkdownRenderer
+                    content={message.content}
+                    onApplyCode={onApplyCode}
+                    chatId={chatId}
+                  />
                 )}
               </MessageResponse>
             )}

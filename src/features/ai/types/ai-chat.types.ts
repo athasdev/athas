@@ -89,6 +89,7 @@ export interface ContextInfo {
 
 export interface AIChatProps {
   className?: string;
+  surfaceId: string;
   chatId?: string | null;
   isActiveSurface?: boolean;
   // Context from the main app
@@ -114,11 +115,23 @@ export interface ChatHistoryModalProps {
 export interface MarkdownRendererProps {
   content: string;
   onApplyCode?: (code: string) => void;
+  chatId?: string | null;
 }
 
 export interface AIChatInputBarProps {
+  surfaceId: string;
   buffers: PaneContent[];
   allProjectFiles: FileEntry[];
+  currentAgentId: AgentType;
+  isTyping: boolean;
+  streamingMessageId: string | null;
+  queueCount: number;
+  selectedBufferIds: Set<string>;
+  selectedFilesPaths: Set<string>;
+  onToggleBufferSelection: (bufferId: string) => void;
+  onToggleFileSelection: (filePath: string) => void;
+  onSetSelectedBufferIds: (bufferIds: Set<string>) => void;
+  onSetSelectedFilesPaths: (filePaths: Set<string>) => void;
   isActiveSurface?: boolean;
   presentation?: "default" | "initial";
   onSendMessage: (message: string) => Promise<void>;

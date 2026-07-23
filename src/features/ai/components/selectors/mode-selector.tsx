@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import { FadersHorizontalIcon as FadersHorizontal } from "@/ui/icons";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { ChatMode } from "@/features/ai/types/ai-chat-store.types";
+import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
 import {
@@ -14,6 +15,7 @@ interface ModeSelectorProps {
   iconOnly?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  agentId?: AgentType;
 }
 
 const FALLBACK_MODES: { id: ChatMode; label: string }[] = [
@@ -26,6 +28,7 @@ export const ModeSelector = memo(function ModeSelector({
   iconOnly = false,
   open,
   onOpenChange,
+  agentId,
 }: ModeSelectorProps) {
   const mode = useAIChatStore((state) => state.mode);
   const setMode = useAIChatStore((state) => state.setMode);
@@ -36,7 +39,7 @@ export const ModeSelector = memo(function ModeSelector({
   const changeSessionMode = useAIChatStore((state) => state.changeSessionMode);
 
   const currentAgentId =
-    chats.find((chat) => chat.id === currentChatId)?.agentId ?? selectedAgentId;
+    agentId ?? chats.find((chat) => chat.id === currentChatId)?.agentId ?? selectedAgentId;
   const isAcpAgent = currentAgentId !== "custom";
   const hasDynamicModes = isAcpAgent;
   const shouldHideForAcp = isAcpAgent && sessionModeState.availableModes.length === 0;

@@ -25,6 +25,7 @@ interface ChatMessagesProps {
   searchQuery?: string;
   activeSearchMessageId?: string | null;
   activeSearchIndex?: number;
+  surfaceId: string;
 }
 
 const getTimestampMs = (value: Date | string): number => {
@@ -43,6 +44,7 @@ export const ChatMessages = memo(function ChatMessages({
   searchQuery = "",
   activeSearchMessageId,
   activeSearchIndex,
+  surfaceId,
 }: ChatMessagesProps) {
   const { scrollToMessage } = useMessageScroller();
   const { currentChatId, chats } = useAIChatStore(
@@ -96,7 +98,7 @@ export const ChatMessages = memo(function ChatMessages({
   if (messages.length === 0) {
     return (
       <MessageScrollerContent className="justify-end px-4 pb-2 pt-4">
-        <AgentShortcuts className="mx-auto max-w-sm" />
+        <AgentShortcuts className="mx-auto max-w-sm" surfaceId={surfaceId} />
       </MessageScrollerContent>
     );
   }
@@ -169,6 +171,8 @@ export const ChatMessages = memo(function ChatMessages({
               onEditUserMessage={onEditUserMessage}
               canEditUserMessage={canEditUserMessages}
               searchQuery={searchQuery}
+              chatId={currentChat?.id}
+              onExecutePlanStep={onSendFollowUp}
             />
             {isLastMessage && message.role === "assistant" && onSendFollowUp ? (
               <ChatFollowUpActions

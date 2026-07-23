@@ -39,8 +39,6 @@ export function AgentLaunchInput({
   const setPendingAgentLaunchRequest = useAIChatStore(
     (state) => state.setPendingAgentLaunchRequest,
   );
-  const setSelectedBufferIds = useAIChatStore((state) => state.setSelectedBufferIds);
-  const setSelectedFilesPaths = useAIChatStore((state) => state.setSelectedFilesPaths);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -164,9 +162,7 @@ export function AgentLaunchInput({
 
     if (!nextPrompt) return;
 
-    const chatId = createNewChat(selectedAgentId);
-    setSelectedBufferIds(new Set(selectedBufferIds));
-    setSelectedFilesPaths(new Set(selectedFilesPaths));
+    const chatId = createNewChat(selectedAgentId, { activate: false });
     setPendingAgentLaunchRequest({
       chatId,
       agentId: selectedAgentId,
@@ -185,8 +181,6 @@ export function AgentLaunchInput({
     selectedBufferIds,
     selectedFilesPaths,
     setPendingAgentLaunchRequest,
-    setSelectedBufferIds,
-    setSelectedFilesPaths,
   ]);
 
   const handlePromptKeyDown = useCallback(

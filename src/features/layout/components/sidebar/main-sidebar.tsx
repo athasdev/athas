@@ -370,7 +370,7 @@ function SidebarNewAgentButton({
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
 
   const handleNewAgent = useCallback(() => {
-    const chatId = createNewChat(selectedAgentId);
+    const chatId = createNewChat(selectedAgentId, { activate: false });
     onCreate?.();
     openAgentBuffer(chatId);
   }, [createNewChat, onCreate, openAgentBuffer, selectedAgentId]);
@@ -407,7 +407,6 @@ function SidebarAgentHistory({
 }) {
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const switchToChat = useAIChatStore((state) => state.switchToChat);
   const deleteChat = useAIChatStore((state) => state.deleteChat);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
@@ -432,10 +431,9 @@ function SidebarAgentHistory({
 
   const handleOpenChat = useCallback(
     (chatId: string) => {
-      switchToChat(chatId);
       openAgentBuffer(chatId);
     },
-    [openAgentBuffer, switchToChat],
+    [openAgentBuffer],
   );
 
   const handleShowMoreAgents = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {

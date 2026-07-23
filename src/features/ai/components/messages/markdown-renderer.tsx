@@ -300,11 +300,10 @@ function CodeBlock({
 }
 
 // Error Block Component
-function ErrorBlock({ errorData }: { errorData: string }) {
+function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string | null }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRestartingSession, setIsRestartingSession] = useState(false);
   const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
-  const currentChatId = useAIChatStore((state) => state.currentChatId);
   const setChatAcpSessionId = useAIChatStore((state) => state.setChatAcpSessionId);
   const setAvailableSlashCommands = useAIChatStore((state) => state.setAvailableSlashCommands);
   const setSessionModeState = useAIChatStore((state) => state.setSessionModeState);
@@ -364,8 +363,8 @@ function ErrorBlock({ errorData }: { errorData: string }) {
     setIsRestartingSession(true);
     try {
       await invoke("stop_acp_agent");
-      if (currentChatId) {
-        setChatAcpSessionId(currentChatId, null);
+      if (chatId) {
+        setChatAcpSessionId(chatId, null);
       }
       setAvailableSlashCommands([]);
       setSessionModeState(null, []);
@@ -995,14 +994,14 @@ function renderContent(
 }
 
 // Simple markdown renderer for AI responses
-export default function MarkdownRenderer({ content, onApplyCode }: MarkdownRendererProps) {
+export default function MarkdownRenderer({ content, onApplyCode, chatId }: MarkdownRendererProps) {
   const normalizedContent = normalizePlainTextFence(content);
 
   // Check for error blocks first
   if (normalizedContent.includes("[ERROR_BLOCK]")) {
     const errorMatch = normalizedContent.match(/\[ERROR_BLOCK\]([\s\S]*?)\[\/ERROR_BLOCK\]/);
     if (errorMatch) {
-      return <ErrorBlock errorData={errorMatch[1]} />;
+      return <ErrorBlock errorData={errorMatch[1]} chatId={chatId} />;
     }
   }
 

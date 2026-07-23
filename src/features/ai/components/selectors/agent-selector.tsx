@@ -199,7 +199,7 @@ export function AgentSelector({
       }
 
       if (variant === "header") {
-        const newChatId = createNewChat(agentId);
+        const newChatId = createNewChat(agentId, { activate: false });
         openAgentBuffer(newChatId);
         if (agentId !== "custom") {
           void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {

@@ -29,6 +29,8 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import type { AIChatActions, AIChatState } from "../types/ai-chat-store.types";
 
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
+const createChatId = () =>
+  globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 async function buildProviderApiKeyMap(
   subscription: ReturnType<typeof useAuthStore.getState>["subscription"],
@@ -94,7 +96,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
         isChatHistoryVisible: false,
 
         providerApiKeys: new Map<string, boolean>(),
-        apiKeyModalState: { isOpen: false, providerId: null },
         dynamicModels: {},
 
         mentionState: {
@@ -276,11 +277,12 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             state.selectedFilesPaths = selectedFilesPaths;
           }),
         // Chat actions
-        createNewChat: (agentId?: AgentType) => {
+        createNewChat: (agentId?: AgentType, options = {}) => {
           const state = get();
+          const activate = options.activate ?? true;
           const chatAgentId = agentId || state.selectedAgentId;
           const newChat: Chat = {
-            id: Date.now().toString(),
+            id: createChatId(),
             title: "New Session",
             messages: [],
             createdAt: new Date(),
@@ -291,20 +293,23 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           };
           set((state) => {
             state.chats.unshift(newChat);
-            state.currentChatId = newChat.id;
+            if (activate) {
+              state.currentChatId = newChat.id;
+            }
             state.activeAgentChatIds = [
               newChat.id,
               ...state.activeAgentChatIds.filter((chatId) => chatId !== newChat.id),
             ];
-            state.isChatHistoryVisible = false;
-            // Clear input and reset state when creating new chat
-            state.input = "";
-            state.pastedImages = [];
-            state.selectedBufferIds = new Set<string>();
-            state.selectedFilesPaths = new Set<string>();
-            state.isTyping = false;
-            state.streamingMessageId = null;
-            state.pendingAgentLaunchRequest = null;
+            if (activate) {
+              state.isChatHistoryVisible = false;
+              state.input = "";
+              state.pastedImages = [];
+              state.selectedBufferIds = new Set<string>();
+              state.selectedFilesPaths = new Set<string>();
+              state.isTyping = false;
+              state.streamingMessageId = null;
+              state.pendingAgentLaunchRequest = null;
+            }
           });
           // Save to SQLite
           saveChatToDb(newChat).catch((err) =>
@@ -312,7 +317,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           );
           return newChat.id;
         },
-        ensureChatSession: (chatId, agentId) => {
+        ensureChatSession: (chatId, agentId, options = {}) => {
           const state = get();
           const existingChat = state.chats.find((chat) => chat.id === chatId);
           if (existingChat) {
@@ -333,12 +338,16 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
 
           set((state) => {
             state.chats.unshift(newChat);
-            state.currentChatId = newChat.id;
+            if (options.activate ?? true) {
+              state.currentChatId = newChat.id;
+            }
             state.activeAgentChatIds = [
               newChat.id,
               ...state.activeAgentChatIds.filter((item) => item !== newChat.id),
             ];
-            state.isChatHistoryVisible = false;
+            if (options.activate ?? true) {
+              state.isChatHistoryVisible = false;
+            }
           });
 
           saveChatToDb(newChat).catch((err) =>
@@ -555,10 +564,6 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }),
 
         // Provider API key actions
-        setApiKeyModalState: (apiKeyModalState) =>
-          set((state) => {
-            state.apiKeyModalState = apiKeyModalState;
-          }),
 
         checkApiKey: async (providerId) => {
           try {

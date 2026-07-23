@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { AIChatState } from "@/features/ai/types/ai-chat-store.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { FileItem } from "@/features/global-search/types/global-search.types";
@@ -13,6 +13,9 @@ interface FileMentionDropdownProps {
   files: FileEntry[];
   onSelect: (file: FileEntry) => void;
   onVisibleFilesChange?: (files: FileEntry[]) => void;
+  mentionState: AIChatState["mentionState"];
+  onClose: () => void;
+  onSelectedIndexChange: (index: number) => void;
 }
 
 export const FileMentionDropdown = React.memo(function FileMentionDropdown({
@@ -20,14 +23,15 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
   files,
   onSelect,
   onVisibleFilesChange,
+  mentionState,
+  onClose,
+  onSelectedIndexChange,
 }: FileMentionDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [fallbackFiles, setFallbackFiles] = useState<FileEntry[]>([]);
 
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
-  const { mentionState, hideMention } = useAIChatStore();
-  const setSelectedIndex = useAIChatStore((state) => state.setSelectedIndex);
   const { selectedIndex } = mentionState;
   const effectiveFiles = files.length > 0 ? files : fallbackFiles;
 
@@ -88,7 +92,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
     <ComposerAttachedPanel
       open={mentionState.active}
       anchorRef={anchorRef}
-      onClose={hideMention}
+      onClose={onClose}
       ariaLabel="File suggestions"
       maxHeight={260}
     >
@@ -99,7 +103,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
           onSelect={handleFileClick}
           rootFolderPath={rootFolderPath}
           selectedIndex={selectedIndex}
-          onSelectedIndexChange={setSelectedIndex}
+          onSelectedIndexChange={onSelectedIndexChange}
           onResultsChange={handleResultsChange}
           showSearchInput={false}
           listClassName="max-h-full bg-primary-bg"

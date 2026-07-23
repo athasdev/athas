@@ -29,6 +29,7 @@ export function AgentTab({ buffer, isActive = true }: AgentTabProps) {
       <div className="mx-auto size-full max-w-4xl">
         <AIChat
           mode="chat"
+          surfaceId={`agent-tab:${buffer.id}`}
           chatId={buffer.sessionId}
           activeBuffer={activeBuffer}
           buffers={contextBuffers}

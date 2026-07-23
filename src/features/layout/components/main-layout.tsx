@@ -306,6 +306,7 @@ export function MainLayout() {
               <Suspense fallback={null}>
                 <AIChat
                   mode="chat"
+                  surfaceId="activity-sidebar"
                   activeBuffer={activeBuffer}
                   buffers={buffers}
                   allProjectFiles={allProjectFiles}

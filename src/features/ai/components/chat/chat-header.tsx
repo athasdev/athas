@@ -80,6 +80,7 @@ function EditableChatTitle({
 interface ChatHeaderProps {
   chatId?: string | null;
   onDeleteChat?: (chatId: string, event: React.MouseEvent) => void;
+  onSwitchChat: (chatId: string) => void;
   isMessageSearchOpen: boolean;
   messageSearchQuery: string;
   onToggleMessageSearch: () => void;
@@ -94,6 +95,7 @@ interface ChatHeaderProps {
 export function ChatHeader({
   chatId,
   onDeleteChat,
+  onSwitchChat,
   isMessageSearchOpen,
   messageSearchQuery,
   onToggleMessageSearch,
@@ -108,10 +110,8 @@ export function ChatHeader({
   const chats = useAIChatStore((state) => state.chats);
   const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
-  const isChatHistoryVisible = useAIChatStore((state) => state.isChatHistoryVisible);
-  const setIsChatHistoryVisible = useAIChatStore((state) => state.setIsChatHistoryVisible);
+  const [isChatHistoryVisible, setIsChatHistoryVisible] = useState(false);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
-  const switchToChat = useAIChatStore((state) => state.switchToChat);
 
   const { openSettingsDialog } = useUIState();
   const effectiveChatId = chatId ?? currentChatId;
@@ -189,6 +189,7 @@ export function ChatHeader({
 
           <AgentSelector
             variant="header"
+            selectedAgentId={currentAgentId}
             onOpenSettings={() => openSettingsDialog("ai")}
             triggerClassName={chatMiniIconButtonClassName()}
           />
@@ -271,7 +272,10 @@ export function ChatHeader({
         onClose={() => setIsChatHistoryVisible(false)}
         chats={workspaceChats}
         currentChatId={effectiveChatId}
-        onSwitchToChat={switchToChat}
+        onSwitchToChat={(nextChatId) => {
+          setIsChatHistoryVisible(false);
+          onSwitchChat(nextChatId);
+        }}
         onDeleteChat={onDeleteChat ?? (() => {})}
         triggerRef={historyButtonRef}
       />

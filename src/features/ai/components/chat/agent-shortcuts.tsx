@@ -44,7 +44,13 @@ const builtinShortcuts: AIChatSkill[] = [
   },
 ];
 
-export function AgentShortcuts({ className }: { className?: string }) {
+export function AgentShortcuts({
+  className,
+  surfaceId,
+}: {
+  className?: string;
+  surfaceId: string;
+}) {
   const skills = useSettingsStore((state) => state.settings.aiSkills);
   const visibleSkills = useMemo(
     () =>
@@ -67,7 +73,7 @@ export function AgentShortcuts({ className }: { className?: string }) {
             variant="ghost"
             size="lg"
             className="w-full justify-start overflow-hidden"
-            onClick={() => dispatchAIChatSkillInsert(skill)}
+            onClick={() => dispatchAIChatSkillInsert(skill, surfaceId)}
           >
             <Icon className={shortcutIconClassNames[index % shortcutIconClassNames.length]} />
             <span className="min-w-0 truncate">{skill.title}</span>

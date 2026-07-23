@@ -12,9 +12,12 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { shouldIgnoreFile } from "@/features/quick-open/utils/file-filtering";
 import { classifySessionConfigOption } from "@/features/ai/lib/session-config-option-classifier";
-import { AI_CHAT_INSERT_SKILL_EVENT } from "@/features/ai/lib/skill-events";
+import {
+  AI_CHAT_INSERT_SKILL_EVENT,
+  type AIChatSkillInsertDetail,
+} from "@/features/ai/lib/skill-events";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { InlineDropdownPosition } from "@/features/ai/types/ai-chat-store.types";
+import type { InlineDropdownPosition, PastedImage } from "@/features/ai/types/ai-chat-store.types";
 import type { AIChatSkill } from "@/features/ai/types/skills.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import type { AIChatInputBarProps } from "@/features/ai/types/ai-chat.types";
@@ -84,6 +87,17 @@ function getMicrophoneAccessErrorMessage(error?: string): string {
 const AIChatInputBar = memo(function AIChatInputBar({
   buffers,
   allProjectFiles,
+  surfaceId,
+  currentAgentId,
+  isTyping,
+  streamingMessageId,
+  queueCount,
+  selectedBufferIds,
+  selectedFilesPaths,
+  onToggleBufferSelection,
+  onToggleFileSelection,
+  onSetSelectedBufferIds,
+  onSetSelectedFilesPaths,
   isActiveSurface = true,
   presentation = "default",
   onSendMessage,
@@ -107,18 +121,25 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const [isSkillsOpen, setIsSkillsOpen] = useState(false);
   const [isApiKeyManagerOpen, setIsApiKeyManagerOpen] = useState(false);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
+  const inputValueRef = useRef("");
+  const [pastedImages, setPastedImages] = useState<PastedImage[]>([]);
+  const [isContextDropdownOpen, setIsContextDropdownOpen] = useState(false);
+  const [mentionState, setMentionState] = useState({
+    active: false,
+    position: { top: 0, bottom: 0, left: 0, width: 0 },
+    search: "",
+    startIndex: 0,
+    selectedIndex: 0,
+  });
+  const [slashCommandState, setSlashCommandState] = useState({
+    active: false,
+    position: { top: 0, bottom: 0, left: 0, width: 0 },
+    search: "",
+    selectedIndex: 0,
+  });
   const slashCommandRangeRef = useRef({ startIndex: 0, endIndex: 0 });
 
-  // Get state from store - DO NOT subscribe to 'input' to avoid re-renders on every keystroke
-  const isTyping = useAIChatStore((state) => state.isTyping);
-  const streamingMessageId = useAIChatStore((state) => state.streamingMessageId);
-  const selectedBufferIds = useAIChatStore((state) => state.selectedBufferIds);
-  const selectedFilesPaths = useAIChatStore((state) => state.selectedFilesPaths);
-  const isContextDropdownOpen = useAIChatStore((state) => state.isContextDropdownOpen);
-  const queueCount = useAIChatStore((state) => state.messageQueue.length);
   const hasApiKey = useAIChatStore((state) => state.hasApiKey);
-  const mentionState = useAIChatStore((state) => state.mentionState);
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
   const sessionConfigOptions = useAIChatStore((state) => state.sessionConfigOptions);
   const sessionModeState = useAIChatStore((state) => state.sessionModeState);
   const acpStatus = useAIChatStore((state) => state.acpStatus);
@@ -131,7 +152,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
   const updateSetting = useSettingsStore((state) => state.updateSetting);
 
   // Check if current agent is "custom" (only show model selector for custom agent)
-  const currentAgentId = getCurrentAgentId();
   const isCustomAgent = currentAgentId === "custom";
 
   // ACP agents don't need API key (they handle their own auth)
@@ -163,25 +183,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     isTyping &&
     (!acpStatus?.initialized || (!hasAcpLegacyModeOptions && !hasAcpConfigOptions));
 
-  // Memoize action selectors
-  const setInput = useAIChatStore((state) => state.setInput);
-  const setIsContextDropdownOpen = useAIChatStore((state) => state.setIsContextDropdownOpen);
-  const toggleBufferSelection = useAIChatStore((state) => state.toggleBufferSelection);
-  const toggleFileSelection = useAIChatStore((state) => state.toggleFileSelection);
-  const setSelectedBufferIds = useAIChatStore((state) => state.setSelectedBufferIds);
-  const setSelectedFilesPaths = useAIChatStore((state) => state.setSelectedFilesPaths);
-  const showMention = useAIChatStore((state) => state.showMention);
-  const hideMention = useAIChatStore((state) => state.hideMention);
-  const updatePosition = useAIChatStore((state) => state.updatePosition);
-  const setSelectedIndex = useAIChatStore((state) => state.setSelectedIndex);
-
-  // Slash command state and actions
-  const slashCommandState = useAIChatStore((state) => state.slashCommandState);
-  const showSlashCommands = useAIChatStore((state) => state.showSlashCommands);
-  const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
-  const selectNextSlashCommand = useAIChatStore((state) => state.selectNextSlashCommand);
-  const selectPreviousSlashCommand = useAIChatStore((state) => state.selectPreviousSlashCommand);
-  const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
   const changeSessionConfigOption = useAIChatStore((state) => state.changeSessionConfigOption);
 
   const handleAthasProviderChange = useCallback(
@@ -209,11 +210,70 @@ const AIChatInputBar = memo(function AIChatInputBar({
     [aiProviderId, updateSetting],
   );
 
-  // Pasted images state and actions
-  const pastedImages = useAIChatStore((state) => state.pastedImages);
-  const addPastedImage = useAIChatStore((state) => state.addPastedImage);
-  const removePastedImage = useAIChatStore((state) => state.removePastedImage);
-  const clearPastedImages = useAIChatStore((state) => state.clearPastedImages);
+  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
+  const filteredSlashCommands = useMemo(() => {
+    const search = slashCommandState.search.trim().toLowerCase();
+    if (!search) return availableSlashCommands;
+    return availableSlashCommands.filter(
+      (command) =>
+        command.name.toLowerCase().includes(search) ||
+        command.description?.toLowerCase().includes(search),
+    );
+  }, [availableSlashCommands, slashCommandState.search]);
+
+  const setInput = useCallback((input: string) => {
+    inputValueRef.current = input;
+  }, []);
+  const addPastedImage = useCallback((image: PastedImage) => {
+    setPastedImages((current) => [...current, image]);
+  }, []);
+  const removePastedImage = useCallback((imageId: string) => {
+    setPastedImages((current) => current.filter((image) => image.id !== imageId));
+  }, []);
+  const clearPastedImages = useCallback(() => setPastedImages([]), []);
+  const toggleBufferSelection = onToggleBufferSelection;
+  const toggleFileSelection = onToggleFileSelection;
+  const setSelectedBufferIds = onSetSelectedBufferIds;
+  const setSelectedFilesPaths = onSetSelectedFilesPaths;
+  const showMention = useCallback(
+    (position: InlineDropdownPosition, search: string, startIndex: number) => {
+      setMentionState({ active: true, position, search, startIndex, selectedIndex: 0 });
+    },
+    [],
+  );
+  const hideMention = useCallback(() => {
+    setMentionState((current) => ({ ...current, active: false }));
+  }, []);
+  const updatePosition = useCallback((position: InlineDropdownPosition) => {
+    setMentionState((current) => ({ ...current, position }));
+  }, []);
+  const setSelectedIndex = useCallback((selectedIndex: number) => {
+    setMentionState((current) => ({ ...current, selectedIndex }));
+  }, []);
+  const showSlashCommands = useCallback((position: InlineDropdownPosition, search: string) => {
+    setSlashCommandState({ active: true, position, search, selectedIndex: 0 });
+  }, []);
+  const hideSlashCommands = useCallback(() => {
+    setSlashCommandState((current) => ({ ...current, active: false }));
+  }, []);
+  const selectNextSlashCommand = useCallback(() => {
+    setSlashCommandState((current) => ({
+      ...current,
+      selectedIndex: Math.min(
+        current.selectedIndex + 1,
+        Math.max(filteredSlashCommands.length - 1, 0),
+      ),
+    }));
+  }, [filteredSlashCommands.length]);
+  const selectPreviousSlashCommand = useCallback(() => {
+    setSlashCommandState((current) => ({
+      ...current,
+      selectedIndex: Math.max(current.selectedIndex - 1, 0),
+    }));
+  }, []);
+  const setSlashCommandSelectedIndex = useCallback((selectedIndex: number) => {
+    setSlashCommandState((current) => ({ ...current, selectedIndex }));
+  }, []);
 
   const closeComposerPopovers = useCallback(() => {
     if (slashCommandState.active) {
@@ -245,24 +305,22 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   const addBufferToContext = useCallback(
     (bufferId: string) => {
-      const currentSelectedBufferIds = useAIChatStore.getState().selectedBufferIds;
-      if (currentSelectedBufferIds.has(bufferId)) return;
-      const nextSelectedBufferIds = new Set(currentSelectedBufferIds);
+      if (selectedBufferIds.has(bufferId)) return;
+      const nextSelectedBufferIds = new Set(selectedBufferIds);
       nextSelectedBufferIds.add(bufferId);
       setSelectedBufferIds(nextSelectedBufferIds);
     },
-    [setSelectedBufferIds],
+    [selectedBufferIds, setSelectedBufferIds],
   );
 
   const addPathToContext = useCallback(
     (filePath: string) => {
-      const currentSelectedFilesPaths = useAIChatStore.getState().selectedFilesPaths;
-      if (currentSelectedFilesPaths.has(filePath)) return;
-      const nextSelectedFilesPaths = new Set(currentSelectedFilesPaths);
+      if (selectedFilesPaths.has(filePath)) return;
+      const nextSelectedFilesPaths = new Set(selectedFilesPaths);
       nextSelectedFilesPaths.add(filePath);
       setSelectedFilesPaths(nextSelectedFilesPaths);
     },
-    [setSelectedFilesPaths],
+    [selectedFilesPaths, setSelectedFilesPaths],
   );
 
   const addSidebarResourceToContext = useCallback(
@@ -294,6 +352,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   useEffect(() => {
     const handleSidebarResourceDropOnAI = (event: Event) => {
+      if (!isActiveSurface || surfaceId !== "activity-sidebar") return;
       const resource = (event as CustomEvent<{ resource?: SidebarDragResource }>).detail?.resource;
       if (!resource) return;
       void addSidebarResourceToContext(resource);
@@ -302,7 +361,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     window.addEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
     return () =>
       window.removeEventListener(SIDEBAR_RESOURCE_DROP_ON_AI_EVENT, handleSidebarResourceDropOnAI);
-  }, [addSidebarResourceToContext]);
+  }, [addSidebarResourceToContext, isActiveSurface, surfaceId]);
 
   const handleContextDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     if (!hasSidebarResourceDragData(event.dataTransfer)) return;
@@ -603,63 +662,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     getSlashDropdownPosition,
   ]);
 
-  // Sync contentEditable div with input state when it changes externally (e.g., when switching chats)
-  // We use a ref to track the last synced input to avoid subscribing to every keystroke
-  const lastSyncedInputRef = useRef("");
-
-  useEffect(() => {
-    let syncTimer: ReturnType<typeof setTimeout> | null = null;
-
-    // Only sync when input changes externally (not from user typing)
-    const checkAndSync = () => {
-      if (!inputRef.current || isUpdatingContentRef.current) return;
-
-      const storeInput = useAIChatStore.getState().input;
-      const currentContent = getPlainTextFromDiv();
-
-      // Only sync if store input differs from what's in the DOM and it's an external change
-      if (storeInput !== currentContent && storeInput !== lastSyncedInputRef.current) {
-        isUpdatingContentRef.current = true;
-        lastSyncedInputRef.current = storeInput;
-
-        // Update contentEditable content
-        if (storeInput === "") {
-          inputRef.current.innerHTML = "";
-        } else {
-          inputRef.current.textContent = storeInput;
-        }
-
-        // Position cursor at the end
-        syncTimer = setTimeout(() => {
-          if (inputRef.current) {
-            const selection = window.getSelection();
-            if (selection) {
-              const range = document.createRange();
-              range.selectNodeContents(inputRef.current);
-              range.collapse(false);
-              selection.removeAllRanges();
-              selection.addRange(range);
-            }
-            inputRef.current.focus();
-          }
-          isUpdatingContentRef.current = false;
-        }, 0);
-      }
-    };
-
-    // Check on mount and when component updates
-    checkAndSync();
-
-    // Note: We don't subscribe to continuous changes to avoid re-renders
-    // The checkAndSync on mount handles initial sync and chat switching
-    return () => {
-      if (syncTimer) {
-        clearTimeout(syncTimer);
-        isUpdatingContentRef.current = false;
-      }
-    };
-  }, [getPlainTextFromDiv]);
-
   useEffect(() => {
     return () => {
       shouldKeepListeningRef.current = false;
@@ -679,9 +681,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
         selectPreviousSlashCommand();
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        const filteredCommands = getFilteredSlashCommands();
-        if (filteredCommands[slashCommandState.selectedIndex]) {
-          handleSlashCommandSelect(filteredCommands[slashCommandState.selectedIndex]);
+        if (filteredSlashCommands[slashCommandState.selectedIndex]) {
+          handleSlashCommandSelect(filteredSlashCommands[slashCommandState.selectedIndex]);
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -800,8 +801,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
     const plainTextFromDiv = getPlainTextFromDiv();
 
-    // Use store's getState to avoid dependency on input prop
-    const currentInput = useAIChatStore.getState().input;
+    // Keep keystrokes local to this composer so sibling surfaces cannot mirror them.
+    const currentInput = inputValueRef.current;
 
     // Only update if content actually changed
     if (plainTextFromDiv !== currentInput) {
@@ -947,14 +948,14 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
   useEffect(() => {
     const handleInsertSkill = (event: Event) => {
-      const skill = (event as CustomEvent<AIChatSkill>).detail;
-      if (!skill) return;
-      insertSkillAtCursor(skill);
+      const detail = (event as CustomEvent<AIChatSkillInsertDetail>).detail;
+      if (!isActiveSurface || detail?.surfaceId !== surfaceId) return;
+      insertSkillAtCursor(detail.skill);
     };
 
     window.addEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
     return () => window.removeEventListener(AI_CHAT_INSERT_SKILL_EVENT, handleInsertSkill);
-  }, [insertSkillAtCursor]);
+  }, [insertSkillAtCursor, isActiveSurface]);
 
   // Handle paste - strip HTML formatting, keep only plain text. Images are added to preview.
   const handlePaste = useCallback(
@@ -1029,7 +1030,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
       isUpdatingContentRef.current = true;
 
-      const currentInput = useAIChatStore.getState().input;
+      const currentInput = inputValueRef.current;
       const beforeMention = currentInput.slice(0, mentionState.startIndex);
       const afterMention = currentInput.slice(
         mentionState.startIndex + mentionState.search.length + 1,
@@ -1174,8 +1175,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
   );
 
   const handleSendMessage = async () => {
-    const currentInput = useAIChatStore.getState().input;
-    const currentImages = useAIChatStore.getState().pastedImages;
+    const currentInput = inputValueRef.current;
+    const currentImages = pastedImages;
     const hasContent = currentInput.trim() || currentImages.length > 0;
     if (!hasContent || !isInputEnabled) return;
 
@@ -1304,8 +1305,6 @@ const AIChatInputBar = memo(function AIChatInputBar({
     void startVoiceInput();
   }, [isListening, startVoiceInput, stopVoiceInput]);
 
-  // Get available slash commands
-  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
   const hasSlashCommands = availableSlashCommands.length > 0;
   const hasAttachedComposerDropdown =
     mentionState.active || slashCommandState.active || isContextDropdownOpen || isSkillsOpen;
@@ -1643,6 +1642,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
 
               {(isCustomAgent || !hasAcpConfigModeOption) && (
                 <ModeSelector
+                  agentId={currentAgentId}
                   open={activeInlineControl === "mode"}
                   onOpenChange={(open) => {
                     if (open) {
@@ -1717,6 +1717,9 @@ const AIChatInputBar = memo(function AIChatInputBar({
         <FileMentionDropdown
           anchorRef={aiChatContainerRef}
           files={mentionableFiles}
+          mentionState={mentionState}
+          onClose={hideMention}
+          onSelectedIndexChange={setSelectedIndex}
           onSelect={handleFileMentionSelect}
           onVisibleFilesChange={(files) => {
             visibleMentionFilesRef.current = files;
@@ -1727,11 +1730,18 @@ const AIChatInputBar = memo(function AIChatInputBar({
       {slashCommandState.active && (
         <SlashCommandDropdown
           anchorRef={aiChatContainerRef}
+          slashCommandState={slashCommandState}
+          availableSlashCommands={availableSlashCommands}
+          filteredCommands={filteredSlashCommands}
+          onSelectedIndexChange={setSlashCommandSelectedIndex}
           onSelect={(command) => {
             setActiveInlineControl(null);
             handleSlashCommandSelect(command);
           }}
-          onClose={() => setActiveInlineControl(null)}
+          onClose={() => {
+            hideSlashCommands();
+            setActiveInlineControl(null);
+          }}
         />
       )}
 

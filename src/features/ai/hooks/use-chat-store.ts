@@ -2,15 +2,9 @@ import { useAIChatStore } from "../stores/ai-chat.store";
 
 export function useChatState() {
   return {
-    selectedBufferIds: useAIChatStore((state) => state.selectedBufferIds),
-    selectedFilesPaths: useAIChatStore((state) => state.selectedFilesPaths),
     chats: useAIChatStore((state) => state.chats),
     currentChatId: useAIChatStore((state) => state.currentChatId),
     hasApiKey: useAIChatStore((state) => state.hasApiKey),
-    isChatHistoryVisible: useAIChatStore((state) => state.isChatHistoryVisible),
-    apiKeyModalState: useAIChatStore((state) => state.apiKeyModalState),
-    isTyping: useAIChatStore((state) => state.isTyping),
-    streamingMessageId: useAIChatStore((state) => state.streamingMessageId),
     pendingAgentLaunchRequest: useAIChatStore((state) => state.pendingAgentLaunchRequest),
     mode: useAIChatStore((state) => state.mode),
     outputStyle: useAIChatStore((state) => state.outputStyle),
@@ -21,11 +15,6 @@ export function useChatActions() {
   return {
     checkApiKey: useAIChatStore((state) => state.checkApiKey),
     checkAllProviderApiKeys: useAIChatStore((state) => state.checkAllProviderApiKeys),
-    setInput: useAIChatStore((state) => state.setInput),
-    setIsTyping: useAIChatStore((state) => state.setIsTyping),
-    setStreamingMessageId: useAIChatStore((state) => state.setStreamingMessageId),
-    setSelectedBufferIds: useAIChatStore((state) => state.setSelectedBufferIds),
-    setSelectedFilesPaths: useAIChatStore((state) => state.setSelectedFilesPaths),
     setPendingAgentLaunchRequest: useAIChatStore((state) => state.setPendingAgentLaunchRequest),
     createNewChat: useAIChatStore((state) => state.createNewChat),
     ensureChatSession: useAIChatStore((state) => state.ensureChatSession),
@@ -35,19 +24,10 @@ export function useChatActions() {
     addMessage: useAIChatStore((state) => state.addMessage),
     updateMessage: useAIChatStore((state) => state.updateMessage),
     replaceUserMessage: useAIChatStore((state) => state.replaceUserMessage),
-    setIsChatHistoryVisible: useAIChatStore((state) => state.setIsChatHistoryVisible),
-    setApiKeyModalState: useAIChatStore((state) => state.setApiKeyModalState),
+    getMessagesForChat: useAIChatStore((state) => state.getMessagesForChat),
     saveApiKey: useAIChatStore((state) => state.saveApiKey),
     removeApiKey: useAIChatStore((state) => state.removeApiKey),
     hasProviderApiKey: useAIChatStore((state) => state.hasProviderApiKey),
-    getCurrentChat: useAIChatStore((state) => state.getCurrentChat),
-    getCurrentMessages: useAIChatStore((state) => state.getCurrentMessages),
-    getChatById: useAIChatStore((state) => state.getChatById),
-    getMessagesForChat: useAIChatStore((state) => state.getMessagesForChat),
-    getCurrentAgentId: useAIChatStore((state) => state.getCurrentAgentId),
     switchToChat: useAIChatStore((state) => state.switchToChat),
-    addMessageToQueue: useAIChatStore((state) => state.addMessageToQueue),
-    processNextMessage: useAIChatStore((state) => state.processNextMessage),
-    regenerateResponse: useAIChatStore((state) => state.regenerateResponse),
   };
 }

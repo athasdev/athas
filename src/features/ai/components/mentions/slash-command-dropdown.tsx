@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, type RefObject } from "react";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
+import type { AIChatState } from "@/features/ai/types/ai-chat-store.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
@@ -15,32 +15,30 @@ interface SlashCommandDropdownProps {
   anchorRef: RefObject<HTMLElement | null>;
   onSelect: (command: SlashCommand) => void;
   onClose?: () => void;
+  slashCommandState: AIChatState["slashCommandState"];
+  availableSlashCommands: SlashCommand[];
+  filteredCommands: SlashCommand[];
+  onSelectedIndexChange: (index: number) => void;
 }
 
 export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
   anchorRef,
   onSelect,
   onClose,
+  slashCommandState,
+  availableSlashCommands,
+  filteredCommands,
+  onSelectedIndexChange,
 }: SlashCommandDropdownProps) {
   const listRef = useRef<HTMLDivElement>(null);
 
-  const slashCommandState = useAIChatStore((state) => state.slashCommandState);
-  const hideSlashCommands = useAIChatStore((state) => state.hideSlashCommands);
-  const setSlashCommandSelectedIndex = useAIChatStore(
-    (state) => state.setSlashCommandSelectedIndex,
-  );
-  const availableSlashCommands = useAIChatStore((state) => state.availableSlashCommands);
-  const getFilteredSlashCommands = useAIChatStore((state) => state.getFilteredSlashCommands);
   const setIsQuickOpenVisible = useUIState((state) => state.setIsQuickOpenVisible);
   const setIsCommandPaletteVisible = useUIState((state) => state.setIsCommandPaletteVisible);
 
   const { selectedIndex } = slashCommandState;
-  const filteredCommands = getFilteredSlashCommands();
-
   const closeSlashCommands = useCallback(() => {
-    hideSlashCommands();
     onClose?.();
-  }, [hideSlashCommands, onClose]);
+  }, [onClose]);
 
   useEffect(() => {
     const selectedItem = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
@@ -97,7 +95,7 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               data-item-index={index}
               isSelected={index === selectedIndex}
               onClick={() => onSelect(command)}
-              onMouseEnter={() => setSlashCommandSelectedIndex(index)}
+              onMouseEnter={() => onSelectedIndexChange(index)}
               role="option"
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}

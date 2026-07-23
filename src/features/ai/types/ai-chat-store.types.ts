@@ -73,7 +73,6 @@ export interface AIChatState {
 
   // Provider API keys state
   providerApiKeys: Map<string, boolean>;
-  apiKeyModalState: { isOpen: boolean; providerId: string | null };
 
   // Dynamic models state
   dynamicModels: Record<string, ProviderModel[]>;
@@ -141,8 +140,12 @@ export interface AIChatActions {
   setSelectedFilesPaths: (selectedFilesPaths: Set<string>) => void;
 
   // Chat actions
-  createNewChat: (agentId?: AgentType) => string;
-  ensureChatSession: (chatId: string, agentId?: AgentType) => string;
+  createNewChat: (agentId?: AgentType, options?: { activate?: boolean }) => string;
+  ensureChatSession: (
+    chatId: string,
+    agentId?: AgentType,
+    options?: { activate?: boolean },
+  ) => string;
   ensureChatForAgent: (agentId: AgentType) => string;
   switchToChat: (chatId: string) => void;
   deleteChat: (chatId: string) => void;
@@ -162,7 +165,6 @@ export interface AIChatActions {
   clearAllChats: () => Promise<void>;
 
   // Provider API key actions
-  setApiKeyModalState: (apiKeyModalState: { isOpen: boolean; providerId: string | null }) => void;
   checkApiKey: (providerId: string) => Promise<void>;
   checkAllProviderApiKeys: () => Promise<void>;
   saveApiKey: (providerId: string, apiKey: string) => Promise<boolean>;
