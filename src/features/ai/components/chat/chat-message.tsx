@@ -208,6 +208,17 @@ export const ChatMessage = memo(function ChatMessage({
             )}
           </BubbleContent>
         </Bubble>
+        {message.content.trim() ? (
+          <MessageFooter className="opacity-100 transition-opacity md:opacity-0 md:group-hover/message:opacity-100 md:group-focus-within/message:opacity-100">
+            <MessageAction
+              onClick={() => void copyText(message.content)}
+              label="Copy response"
+              className="hover:bg-transparent hover:text-text-lighter"
+            >
+              <CopySimple className="size-3.5" />
+            </MessageAction>
+          </MessageFooter>
+        ) : null}
       </MessageContent>
     </Message>
   );
