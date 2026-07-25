@@ -1,7 +1,7 @@
 import { PlusIcon, XIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
@@ -269,8 +269,8 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                 <Checkbox
                   id={`column-not-null-${index}`}
                   checked={column.notnull}
-                  onChange={(checked) => updateColumn(index, "notnull", checked)}
-                  ariaLabel={`Set ${column.name || `column ${index + 1}`} as not null`}
+                  onCheckedChange={(checked) => updateColumn(index, "notnull", checked)}
+                  aria-label={`Set ${column.name || `column ${index + 1}`} as not null`}
                 />
                 NOT NULL
               </label>

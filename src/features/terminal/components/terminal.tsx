@@ -311,6 +311,7 @@ export const XtermTerminal = ({
       // remounted after a pane split or tab move), reuse the existing
       // connection instead of killing the running process.
       let activeConnectionId: string;
+      let activeRemoteConnectionId = remoteConnectionId || existingSession?.remoteConnectionId;
       if (existingSession?.connectionId) {
         activeConnectionId = existingSession.connectionId;
       } else {
@@ -318,13 +319,13 @@ export const XtermTerminal = ({
           workingDirectory || existingSession?.currentDirectory || rootFolderPath;
         const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
         const wslInfo = targetDirectory ? parseWslPath(targetDirectory) : null;
-        const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
+        activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
         const events = createTerminalEventChannel();
 
-        activeConnectionId = effectiveRemoteConnectionId
+        activeConnectionId = activeRemoteConnectionId
           ? await (async () => {
-              const connection = await connectionStore.getConnection(effectiveRemoteConnectionId);
+              const connection = await connectionStore.getConnection(activeRemoteConnectionId);
               if (!connection) {
                 throw new Error("Remote terminal connection not found.");
               }
@@ -357,7 +358,7 @@ export const XtermTerminal = ({
         updateSession(sessionId, {
           connectionId: activeConnectionId,
           currentDirectory: targetDirectory,
-          remoteConnectionId: effectiveRemoteConnectionId,
+          remoteConnectionId: activeRemoteConnectionId,
         });
       }
 
@@ -372,7 +373,11 @@ export const XtermTerminal = ({
 
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {
-          detail: { terminalId: sessionId, connectionId: activeConnectionId },
+          detail: {
+            terminalId: sessionId,
+            connectionId: activeConnectionId,
+            remoteConnectionId: activeRemoteConnectionId,
+          },
         }),
       );
 

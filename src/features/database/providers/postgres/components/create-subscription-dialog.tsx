@@ -1,7 +1,7 @@
 import { RadioButtonIcon as Radio } from "@/ui/icons";
 import { useState } from "react";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
@@ -142,35 +142,35 @@ export default function CreateSubscriptionDialog({
           <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.enabled}
-              onChange={(checked) => setForm((prev) => ({ ...prev, enabled: checked }))}
+              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, enabled: checked }))}
             />
             Enabled
           </label>
           <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.create_slot}
-              onChange={(checked) => setForm((prev) => ({ ...prev, create_slot: checked }))}
+              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, create_slot: checked }))}
             />
             Create Slot
           </label>
           <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.copy_data}
-              onChange={(checked) => setForm((prev) => ({ ...prev, copy_data: checked }))}
+              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, copy_data: checked }))}
             />
             Copy Existing Data
           </label>
           <label className="flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.connect}
-              onChange={(checked) => setForm((prev) => ({ ...prev, connect: checked }))}
+              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, connect: checked }))}
             />
             Connect Immediately
           </label>
           <label className="col-span-2 flex items-center gap-2 ui-text-sm">
             <Checkbox
               checked={form.failover}
-              onChange={(checked) => setForm((prev) => ({ ...prev, failover: checked }))}
+              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, failover: checked }))}
             />
             Enable failover slot sync
           </label>

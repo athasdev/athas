@@ -69,7 +69,7 @@ export function getAiUsageModeLabel(params: {
   if (!aiAllowedByPolicy) return "Blocked";
   if (isPro) return "Hosted";
   if (!byokAllowedByPolicy) return "Blocked";
-  return hasOpenRouterKey ? "BYOK" : "Key required";
+  return hasOpenRouterKey ? "Your API key" : "Key required";
 }
 
 export function getUsageProgress(usage: AutocompleteUsageSummary | null): number {

@@ -1,5 +1,4 @@
 import { WarningIcon as AlertTriangle } from "@/ui/icons";
-import { useEffect } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
 
@@ -11,18 +10,6 @@ interface Props {
 }
 
 const UnsavedChangesDialog = ({ onSave, onDiscard, onCancel, fileName }: Props) => {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
-
   return (
     <Dialog
       title="Unsaved Changes"

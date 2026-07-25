@@ -3,7 +3,7 @@ import { memo, useCallback } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabBarTab } from "@/ui/tabs";
+import { TabBarTab } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 
 interface TerminalTabBarItemProps {

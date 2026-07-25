@@ -2,6 +2,7 @@ import { cva } from "class-variance-authority";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import {
   type CSSProperties,
+  type ComponentProps,
   type ReactNode,
   type RefObject,
   type WheelEvent as ReactWheelEvent,
@@ -57,7 +58,7 @@ interface PopoverContentProps {
   transition?: Transition;
 }
 
-export function PopoverContent({
+export function FloatingPopoverContent({
   isOpen,
   contentRef,
   children,
@@ -95,3 +96,85 @@ export function PopoverContent({
 
   return createPortal(<AnimatePresence>{node}</AnimatePresence>, portalContainer ?? document.body);
 }
+
+function Popover(props: PopoverPrimitive.Root.Props) {
+  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+}
+
+function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+}
+
+function PopoverContent({
+  className,
+  align = "center",
+  alignOffset = 0,
+  side = "bottom",
+  sideOffset = 6,
+  collisionPadding = 8,
+  anchor,
+  portalContainer,
+  ...props
+}: PopoverPrimitive.Popup.Props &
+  Pick<
+    PopoverPrimitive.Positioner.Props,
+    "align" | "alignOffset" | "anchor" | "collisionPadding" | "side" | "sideOffset"
+  > & {
+    portalContainer?: HTMLElement | ShadowRoot | null;
+  }) {
+  return (
+    <PopoverPrimitive.Portal data-slot="popover-portal" container={portalContainer}>
+      <PopoverPrimitive.Positioner
+        align={align}
+        alignOffset={alignOffset}
+        anchor={anchor}
+        side={side}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        className="isolate z-[10070]"
+      >
+        <PopoverPrimitive.Popup
+          data-slot="popover-content"
+          className={cn(
+            "z-[10070] flex w-72 origin-[var(--transform-origin)] flex-col gap-2.5 rounded-xl border border-border bg-secondary-bg/95 p-2.5 font-sans ui-text-sm text-text shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            className,
+          )}
+          {...props}
+        />
+      </PopoverPrimitive.Positioner>
+    </PopoverPrimitive.Portal>
+  );
+}
+
+function PopoverHeader({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="popover-header"
+      className={cn("flex flex-col gap-0.5 font-sans ui-text-sm", className)}
+      {...props}
+    />
+  );
+}
+
+function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
+  return (
+    <PopoverPrimitive.Title
+      data-slot="popover-title"
+      className={cn("font-medium text-text", className)}
+      {...props}
+    />
+  );
+}
+
+function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {
+  return (
+    <PopoverPrimitive.Description
+      data-slot="popover-description"
+      className={cn("text-text-lighter", className)}
+      {...props}
+    />
+  );
+}
+
+export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger };
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";

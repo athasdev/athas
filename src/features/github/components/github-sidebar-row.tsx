@@ -1,5 +1,5 @@
-import { PreviewCard } from "@base-ui/react/preview-card";
 import { type DragEventHandler, type MouseEventHandler, type ReactNode, useCallback } from "react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import { cn } from "@/utils/cn";
 
 type PreviewBadgeTone = "default" | "accent" | "success" | "warning" | "error" | "muted";
@@ -130,8 +130,8 @@ export function GitHubSidebarRow({
   }
 
   return (
-    <PreviewCard.Root onOpenChange={handleOpenChange}>
-      <PreviewCard.Trigger
+    <HoverCard onOpenChange={handleOpenChange}>
+      <HoverCardTrigger
         delay={360}
         closeDelay={120}
         draggable={draggable}
@@ -144,89 +144,81 @@ export function GitHubSidebarRow({
         render={<button type="button" className={rowClassName} />}
       >
         {rowContent}
-      </PreviewCard.Trigger>
-      <PreviewCard.Portal>
-        <PreviewCard.Positioner
-          side="right"
-          align="start"
-          sideOffset={10}
-          collisionPadding={10}
-          className="z-[10080]"
-        >
-          <PreviewCard.Popup className="font-sans w-[21rem] overflow-hidden rounded-xl border border-border/75 bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:translate-x-1 data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:translate-x-1 data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]">
-            <div className="border-border/70 border-b p-3">
-              <div className="flex min-w-0 items-start gap-2.5">
-                {preview.icon ? (
-                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-bg">
-                    {preview.icon}
-                  </span>
-                ) : null}
-                <div className="min-w-0 flex-1">
-                  <div className="line-clamp-2 font-medium text-text ui-text-base">
-                    {preview.title}
-                  </div>
-                  {preview.subtitle ? (
-                    <div className="mt-1 truncate text-text-lighter ui-text-sm">
-                      {preview.subtitle}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              {preview.badges?.length ? (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {preview.badges.map((badge, index) => (
-                    <span
-                      key={index}
-                      className={cn(
-                        "inline-flex h-5 max-w-full items-center rounded-full px-1.5 leading-none ui-text-sm",
-                        previewBadgeClassName(badge.tone),
-                      )}
-                    >
-                      <span className="truncate">{badge.label}</span>
-                    </span>
-                  ))}
-                </div>
+      </HoverCardTrigger>
+      <HoverCardContent
+        side="right"
+        align="start"
+        sideOffset={10}
+        collisionPadding={10}
+        className="z-[10080] w-[21rem] overflow-hidden p-0"
+      >
+        <div className="border-border/70 border-b p-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {preview.icon ? (
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-bg">
+                {preview.icon}
+              </span>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <div className="line-clamp-2 font-medium text-text ui-text-base">{preview.title}</div>
+              {preview.subtitle ? (
+                <div className="mt-1 truncate text-text-lighter ui-text-sm">{preview.subtitle}</div>
               ) : null}
             </div>
-            {preview.details?.length ? (
-              <dl className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 ui-text-sm">
-                {preview.details.map((detail, index) =>
-                  detail.value ? (
-                    <div key={index} className="contents">
-                      <dt className="text-text-lighter">{detail.label}</dt>
-                      <dd className="min-w-0 truncate text-text">
-                        {detail.onClick ? (
-                          <button
-                            type="button"
-                            aria-label={detail.actionLabel}
-                            className={cn(
-                              "-mx-1 -my-0.5 max-w-full cursor-pointer truncate rounded px-1 py-0.5 text-left hover:bg-hover focus-visible:bg-hover focus-visible:outline-none",
-                              detail.mono && "font-mono",
-                              detail.className,
-                            )}
-                            onClick={detail.onClick}
-                          >
-                            {detail.value}
-                          </button>
-                        ) : (
-                          <span className={cn(detail.mono && "font-mono", detail.className)}>
-                            {detail.value}
-                          </span>
+          </div>
+          {preview.badges?.length ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {preview.badges.map((badge, index) => (
+                <span
+                  key={index}
+                  className={cn(
+                    "inline-flex h-5 max-w-full items-center rounded-full px-1.5 leading-none ui-text-sm",
+                    previewBadgeClassName(badge.tone),
+                  )}
+                >
+                  <span className="truncate">{badge.label}</span>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {preview.details?.length ? (
+          <dl className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 p-3 ui-text-sm">
+            {preview.details.map((detail, index) =>
+              detail.value ? (
+                <div key={index} className="contents">
+                  <dt className="text-text-lighter">{detail.label}</dt>
+                  <dd className="min-w-0 truncate text-text">
+                    {detail.onClick ? (
+                      <button
+                        type="button"
+                        aria-label={detail.actionLabel}
+                        className={cn(
+                          "-mx-1 -my-0.5 max-w-full cursor-pointer truncate rounded px-1 py-0.5 text-left hover:bg-hover focus-visible:bg-hover focus-visible:outline-none",
+                          detail.mono && "font-mono",
+                          detail.className,
                         )}
-                      </dd>
-                    </div>
-                  ) : null,
-                )}
-              </dl>
-            ) : null}
-            {preview.footer ? (
-              <div className="border-border/70 border-t px-3 py-2 text-text-lighter ui-text-sm">
-                {preview.footer}
-              </div>
-            ) : null}
-          </PreviewCard.Popup>
-        </PreviewCard.Positioner>
-      </PreviewCard.Portal>
-    </PreviewCard.Root>
+                        onClick={detail.onClick}
+                      >
+                        {detail.value}
+                      </button>
+                    ) : (
+                      <span className={cn(detail.mono && "font-mono", detail.className)}>
+                        {detail.value}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              ) : null,
+            )}
+          </dl>
+        ) : null}
+        {preview.footer ? (
+          <div className="border-border/70 border-t px-3 py-2 text-text-lighter ui-text-sm">
+            {preview.footer}
+          </div>
+        ) : null}
+      </HoverCardContent>
+    </HoverCard>
   );
 }

@@ -10,7 +10,9 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
@@ -160,20 +162,20 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           </div>
 
           {!store.isLoading && !store.selectedCollection && (
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className={databaseCardClassName("px-5 py-4 text-center")}>
-                <div className="ui-text-sm">Select a collection</div>
-                <div className="mt-1 text-text-lighter ui-text-sm">
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>Select a collection</EmptyTitle>
+                <EmptyDescription>
                   Choose a collection from the sidebar to browse documents.
-                </div>
-              </div>
-            </div>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
 
           {store.error && (
-            <div className="mx-3 mt-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
-              {store.error}
-            </div>
+            <Alert tone="error" className="mx-3 mt-3 mb-2 w-auto">
+              <AlertDescription>{store.error}</AlertDescription>
+            </Alert>
           )}
 
           {store.isLoading && (
@@ -236,14 +238,14 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {!store.isLoading && store.documents.length === 0 && store.selectedCollection && (
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className={databaseCardClassName("px-5 py-4 text-center")}>
-                <div className="ui-text-sm">No documents found</div>
-                <div className="mt-1 text-text-lighter ui-text-sm">
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No documents found</EmptyTitle>
+                <EmptyDescription>
                   The current filter returned an empty result set.
-                </div>
-              </div>
-            </div>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
 
           {!store.isLoading && store.totalPages > 1 && (

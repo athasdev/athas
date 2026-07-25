@@ -53,6 +53,7 @@ import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
@@ -1697,9 +1698,9 @@ export const ExtensionsSidebar = () => {
               ) : null}
 
               {selectedExtension.runtimeIssues?.length ? (
-                <div className="rounded-lg border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
-                  {selectedExtension.runtimeIssues[0]?.message}
-                </div>
+                <Alert tone="error">
+                  <AlertDescription>{selectedExtension.runtimeIssues[0]?.message}</AlertDescription>
+                </Alert>
               ) : null}
 
               {isAppearanceExtension(selectedExtension) &&

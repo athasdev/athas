@@ -5,11 +5,12 @@ import {
   EyeSlashIcon as EyeOff,
 } from "@/ui/icons";
 import type { Dispatch, FormEvent, Ref, SetStateAction } from "react";
-import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
+import { Field, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
+import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import Select from "@/ui/select";
-import { cn } from "@/utils/cn";
 import type { RemoteConnectionFormData } from "../types/remote.types";
 
 const connectionTypeOptions = [
@@ -61,10 +62,10 @@ export default function ConnectionForm({
     <form id={formId} className="space-y-4" onSubmit={handleSubmit}>
       <p className="ui-text-sm text-text-lighter">{intro}</p>
 
-      <div className="space-y-1.5">
-        <label htmlFor={`${idPrefix}-name`} className="ui-text-sm font-medium text-text">
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-name`}>
           Connection Name <span className="text-text-lighter">*</span>
-        </label>
+        </FieldLabel>
         <Input
           ref={nameInputRef}
           id={`${idPrefix}-name`}
@@ -75,13 +76,13 @@ export default function ConnectionForm({
           size="md"
           disabled={disabled}
         />
-      </div>
+      </Field>
 
       <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-8 space-y-1.5">
-          <label htmlFor={`${idPrefix}-host`} className="ui-text-sm font-medium text-text">
+        <Field className="col-span-8">
+          <FieldLabel htmlFor={`${idPrefix}-host`}>
             Host <span className="text-text-lighter">*</span>
-          </label>
+          </FieldLabel>
           <Input
             id={`${idPrefix}-host`}
             type="text"
@@ -91,11 +92,9 @@ export default function ConnectionForm({
             size="md"
             disabled={disabled}
           />
-        </div>
-        <div className="col-span-4 space-y-1.5">
-          <label htmlFor={`${idPrefix}-port`} className="ui-text-sm font-medium text-text">
-            Port
-          </label>
+        </Field>
+        <Field className="col-span-4">
+          <FieldLabel htmlFor={`${idPrefix}-port`}>Port</FieldLabel>
           <Input
             id={`${idPrefix}-port`}
             type="number"
@@ -107,13 +106,11 @@ export default function ConnectionForm({
             size="md"
             disabled={disabled}
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor={`${idPrefix}-type`} className="ui-text-sm font-medium text-text">
-          Connection Type
-        </label>
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-type`}>Connection Type</FieldLabel>
         <Select
           id={`${idPrefix}-type`}
           value={formData.type}
@@ -122,12 +119,12 @@ export default function ConnectionForm({
           className="ui-text-sm"
           menuClassName={selectMenuClassName}
         />
-      </div>
+      </Field>
 
-      <div className="space-y-1.5">
-        <label htmlFor={`${idPrefix}-username`} className="ui-text-sm font-medium text-text">
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-username`}>
           Username <span className="text-text-lighter">*</span>
-        </label>
+        </FieldLabel>
         <Input
           id={`${idPrefix}-username`}
           type="text"
@@ -137,55 +134,55 @@ export default function ConnectionForm({
           size="md"
           disabled={disabled}
         />
-      </div>
+      </Field>
 
-      <div className="space-y-1.5">
-        <label htmlFor={`${idPrefix}-password`} className="ui-text-sm font-medium text-text">
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-password`}>
           Password <span className="text-text-lighter">(optional)</span>
-        </label>
-        <div className="relative">
-          <Input
+        </FieldLabel>
+        <InputGroup>
+          <InputGroupInput
             id={`${idPrefix}-password`}
             type={showPassword ? "text" : "password"}
             value={formData.password}
             onChange={(event) => onChange({ password: event.target.value })}
             placeholder="Leave empty to use key authentication"
-            className="pr-10"
             size="md"
             disabled={disabled}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onShowPasswordChange((value) => !value)}
-            className="-translate-y-1/2 absolute top-1/2 right-3 transform text-text-lighter hover:text-text"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            size="icon"
-          >
-            {showPassword ? <EyeOff /> : <Eye />}
-          </Button>
-        </div>
-      </div>
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
+              type="button"
+              variant="ghost"
+              onClick={() => onShowPasswordChange((value) => !value)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              tooltip={showPassword ? "Hide password" : "Show password"}
+              size="icon-sm"
+            >
+              {showPassword ? <EyeOff /> : <Eye />}
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </Field>
 
       {formData.password ? (
-        <label
-          htmlFor={`${idPrefix}-save-credentials`}
-          className="flex cursor-pointer items-center gap-2"
-        >
+        <Field orientation="horizontal">
           <Checkbox
             id={`${idPrefix}-save-credentials`}
             checked={!!formData.saveCredentials}
-            onChange={(checked) => onChange({ saveCredentials: !!checked })}
+            onCheckedChange={(checked) => onChange({ saveCredentials: checked })}
             disabled={disabled}
           />
-          <span className="ui-text-sm text-text">Save password for future connections</span>
-        </label>
+          <FieldLabel htmlFor={`${idPrefix}-save-credentials`} className="cursor-pointer">
+            Save password for future connections
+          </FieldLabel>
+        </Field>
       ) : null}
 
-      <div className="space-y-1.5">
-        <label htmlFor={`${idPrefix}-keypath`} className="ui-text-sm font-medium text-text">
+      <Field>
+        <FieldLabel htmlFor={`${idPrefix}-keypath`}>
           Private Key Path <span className="text-text-lighter">(optional)</span>
-        </label>
+        </FieldLabel>
         <Input
           id={`${idPrefix}-keypath`}
           type="text"
@@ -195,32 +192,31 @@ export default function ConnectionForm({
           size="md"
           disabled={disabled}
         />
-      </div>
+      </Field>
 
       {testStatus !== "idle" ? (
-        <div
-          className={cn(
-            "ui-text-sm flex items-center gap-2",
-            testStatus === "success" ? "text-success" : "text-error",
-          )}
-        >
-          {testStatus === "success" ? <CheckCircle /> : <AlertCircle />}
-          {testMessage}
-        </div>
+        <Marker tone={testStatus === "success" ? "success" : "error"}>
+          <MarkerIcon>{testStatus === "success" ? <CheckCircle /> : <AlertCircle />}</MarkerIcon>
+          <MarkerContent>{testMessage}</MarkerContent>
+        </Marker>
       ) : null}
 
       {validationStatus === "valid" ? (
-        <div className="ui-text-sm flex items-center gap-2 text-success">
-          <CheckCircle />
-          Connection saved successfully.
-        </div>
+        <Marker tone="success">
+          <MarkerIcon>
+            <CheckCircle />
+          </MarkerIcon>
+          <MarkerContent>Connection saved successfully.</MarkerContent>
+        </Marker>
       ) : null}
 
       {validationStatus === "invalid" ? (
-        <div className="ui-text-sm flex items-center gap-2 text-error">
-          <AlertCircle />
-          {errorMessage}
-        </div>
+        <Marker tone="error">
+          <MarkerIcon>
+            <AlertCircle />
+          </MarkerIcon>
+          <MarkerContent>{errorMessage}</MarkerContent>
+        </Marker>
       ) : null}
     </form>
   );

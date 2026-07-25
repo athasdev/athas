@@ -14,6 +14,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/ui/item";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -73,73 +75,79 @@ const ConnectionList = ({
       {/* Connections List */}
       <ScrollArea className="flex-1">
         {connections.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-            <Server className="mb-2 text-text-lighter" />
-            <p className="mb-3 text-text-lighter ui-text-sm">No remote connections</p>
-            <Button
-              onClick={onAddNew}
-              variant="default"
-              className="font-sans flex items-center gap-1.5"
-              size="xs"
-            >
-              <Plus />
-              Add Connection
-            </Button>
-          </div>
+          <Empty className="h-full min-h-48">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Server />
+              </EmptyMedia>
+              <EmptyTitle>No remote connections</EmptyTitle>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                onClick={onAddNew}
+                variant="default"
+                className="font-sans flex items-center gap-1.5"
+                size="xs"
+              >
+                <Plus />
+                Add Connection
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : (
-          <div className="flex flex-col">
+          <div role="list" className="flex flex-col p-1">
             {connections.map((connection) => (
               <ContextMenu key={connection.id}>
                 <ContextMenuTrigger>
-                  <Button
-                    type="button"
-                    variant="ghost"
+                  <Item
+                    render={<div role="button" tabIndex={0} />}
                     onClick={() => {
                       if (!connectingMap[connection.id]) {
-                        onConnect(connection.id);
+                        void onConnect(connection.id);
                       }
                     }}
+                    onKeyDown={(event) => {
+                      if (
+                        !connectingMap[connection.id] &&
+                        (event.key === "Enter" || event.key === " ")
+                      ) {
+                        event.preventDefault();
+                        void onConnect(connection.id);
+                      }
+                    }}
+                    size="xs"
                     className={cn(
-                      "h-auto w-full justify-start gap-2 px-2 py-1.5 text-left",
-                      "text-text hover:bg-hover focus:outline-none",
+                      "relative cursor-pointer flex-nowrap border-0 text-left hover:bg-hover",
                       connection.isConnected && "bg-selected",
                       connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                     )}
-                    disabled={!!connectingMap[connection.id]}
+                    aria-disabled={!!connectingMap[connection.id]}
                     aria-busy={!!connectingMap[connection.id]}
                   >
-                    {/* Status Indicator */}
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 shrink-0 rounded-full",
-                        connection.isConnected ? "bg-success" : "bg-text-lighter/40",
-                      )}
-                    />
-
-                    {/* Connection Info */}
-                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                      <span className="truncate">{connection.name}</span>
-                      <span className="ui-text-sm shrink-0 text-text-lighter">
+                    <ItemMedia>
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          connection.isConnected ? "bg-success" : "bg-text-lighter/40",
+                        )}
+                      />
+                    </ItemMedia>
+                    <ItemContent className="flex-row items-center gap-1.5">
+                      <ItemTitle className="truncate font-normal">{connection.name}</ItemTitle>
+                      <ItemDescription className="shrink-0">
                         {connection.type.toUpperCase()}
-                      </span>
-                    </div>
-
-                    {/* Status Text */}
-                    {(() => {
-                      const statusText = connectingMap[connection.id]
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemDescription className="shrink-0">
+                      {connectingMap[connection.id]
                         ? "Connecting…"
                         : connection.isConnected
                           ? "Connected"
                           : connection.lastConnected
                             ? formatLastConnected(connection.lastConnected)
-                            : "";
-                      return (
-                        <span className="ui-text-sm shrink-0 text-text-lighter">{statusText}</span>
-                      );
-                    })()}
-
-                    {/* Action Buttons */}
-                    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                            : ""}
+                    </ItemDescription>
+                    <ItemActions className="gap-0.5 opacity-0 transition-opacity group-hover/item:opacity-100 group-focus-within/item:opacity-100">
                       {connection.isConnected ? (
                         <>
                           <Button
@@ -158,7 +166,7 @@ const ConnectionList = ({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onConnect(connection.id);
+                              void onConnect(connection.id);
                             }}
                             variant="ghost"
                             size="icon-xs"
@@ -190,8 +198,8 @@ const ConnectionList = ({
                           )}
                         </Button>
                       )}
-                    </div>
-                  </Button>
+                    </ItemActions>
+                  </Item>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => onEdit(connection)}>

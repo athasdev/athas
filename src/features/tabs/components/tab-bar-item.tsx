@@ -19,7 +19,7 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabBarTab } from "@/ui/tabs";
+import { TabBarTab } from "@/ui/tab-bar";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";

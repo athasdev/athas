@@ -8,6 +8,7 @@ import {
   type WebViewerContent,
 } from "@/features/panes/types/pane-content.types";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { writeClipboardText } from "@/utils/clipboard";
@@ -866,12 +867,14 @@ export function WebViewer({
         <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-primary-bg shadow-[var(--shadow-card)]">
           <div ref={containerRef} className="absolute inset-px overflow-hidden rounded-[7px]">
             {!currentUrl && !isLoading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-primary-bg px-6 text-center">
-                <div className="font-sans ui-text-sm text-text">Open a page</div>
-                <div className="ui-text-sm max-w-[320px] text-text-lighter">
-                  Enter a URL to load a website, local development server, or app-bound page.
-                </div>
-              </div>
+              <Empty className="absolute inset-0 bg-primary-bg px-6">
+                <EmptyHeader>
+                  <EmptyTitle>Open a page</EmptyTitle>
+                  <EmptyDescription>
+                    Enter a URL to load a website, local development server, or app-bound page.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
 
             {isLoading && (

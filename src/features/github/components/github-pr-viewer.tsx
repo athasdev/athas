@@ -373,7 +373,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       try {
         await checkoutPR(repoPath, prNumber);
         toast.success(`Checked out PR #${prNumber}`);
-        window.dispatchEvent(new CustomEvent("git-status-updated"));
       } catch (err) {
         console.error("Failed to checkout PR:", err);
         toast.error(err instanceof Error ? err.message : `Failed to checkout PR #${prNumber}`);

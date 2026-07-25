@@ -23,6 +23,7 @@ import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
+import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
@@ -1779,9 +1780,9 @@ export function DockerSidebar() {
         />
 
         {error ? (
-          <div className="border-y border-border/60 bg-error/8 px-2 py-1.5 ui-text-sm text-error">
-            {error}
-          </div>
+          <Alert tone="error" className="rounded-none border-x-0">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : null}
 
         {isLoading ? (
@@ -2467,9 +2468,9 @@ export function DockerSidebar() {
                     </div>
                   </div>
                   {registryError ? (
-                    <div className="mx-2 mb-1 whitespace-pre-wrap rounded border border-error/30 bg-error/8 px-2 py-1 ui-text-sm text-error">
-                      {registryError}
-                    </div>
+                    <Alert tone="error" className="mx-2 mb-1 w-auto whitespace-pre-wrap">
+                      <AlertDescription>{registryError}</AlertDescription>
+                    </Alert>
                   ) : null}
                   {registryOutput ? (
                     <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">

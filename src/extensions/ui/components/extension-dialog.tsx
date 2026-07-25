@@ -2,6 +2,7 @@ import { XIcon as X } from "@/ui/icons";
 import { useUIExtensionStore } from "../stores/ui-extension-store";
 import { ExtensionErrorBoundary } from "./extension-error-boundary";
 import { Button } from "@/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { ScrollArea } from "@/ui/scroll-area";
 
 export function ExtensionDialogs() {
@@ -13,37 +14,37 @@ export function ExtensionDialogs() {
   return (
     <>
       {activeDialogs.map((dialog) => (
-        <div
+        <Dialog
           key={dialog.id}
-          className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50"
-          role="dialog"
-          aria-label={dialog.title}
+          open
+          onOpenChange={(open) => {
+            if (!open) closeDialog(dialog.id);
+          }}
         >
-          <div
-            className="flex flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-2xl"
+          <DialogContent
+            aria-describedby={undefined}
+            showCloseButton={false}
+            className="max-w-[calc(100vw-2rem)]"
             style={{
               width: dialog.width ?? 480,
               maxHeight: dialog.height ?? 600,
             }}
           >
-            <div className="flex items-center justify-between border-border border-b px-4 py-3">
-              <h2 className="font-medium ui-text-sm text-text">{dialog.title}</h2>
-              <Button
-                onClick={() => closeDialog(dialog.id)}
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Close dialog"
+            <DialogHeader className="flex-row items-center justify-between gap-2 border-border border-b px-4 py-3">
+              <DialogTitle>{dialog.title}</DialogTitle>
+              <DialogClose
+                render={<Button variant="ghost" size="icon-xs" aria-label="Close dialog" />}
               >
                 <X />
-              </Button>
-            </div>
+              </DialogClose>
+            </DialogHeader>
             <ScrollArea className="min-h-0 flex-1" contentClassName="p-4">
               <ExtensionErrorBoundary extensionId={dialog.extensionId} name={dialog.title}>
                 {dialog.render()}
               </ExtensionErrorBoundary>
             </ScrollArea>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       ))}
     </>
   );

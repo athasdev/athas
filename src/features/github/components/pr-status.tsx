@@ -14,6 +14,7 @@ import { memo, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github.types";
@@ -84,14 +85,16 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
   if (!summary) return null;
 
   return (
-    <div className="relative inline-flex shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="ui-text-sm h-auto min-w-0 px-1.5 py-1 text-left"
-        aria-expanded={isExpanded}
+    <Popover open={isExpanded} onOpenChange={setIsExpanded}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="h-auto min-w-0 px-1.5 py-1 text-left ui-text-sm"
+          />
+        }
       >
         {summary.icon}
         <span className={cn("font-sans ui-text-sm", summary.tone)}>{summary.label}</span>
@@ -100,45 +103,42 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         ) : (
           <ChevronRight className="text-text-lighter" />
         )}
-      </Button>
-
-      {isExpanded && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-[320px] rounded-xl border border-border/70 bg-secondary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
-          {checks.map((check, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => {
-                if (check.detailsUrl) {
-                  void openUrl(check.detailsUrl);
-                }
-              }}
-              disabled={!check.detailsUrl}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
-            >
-              {check.conclusion === "SUCCESS" ? (
-                <CheckCircle2 className="text-success" />
-              ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-                <XCircle className="text-error" />
-              ) : (
-                <Spinner label="Pending check" compact />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="min-w-[320px] p-1.5">
+        {checks.map((check, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => {
+              if (check.detailsUrl) {
+                void openUrl(check.detailsUrl);
+              }
+            }}
+            disabled={!check.detailsUrl}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
+          >
+            {check.conclusion === "SUCCESS" ? (
+              <CheckCircle2 className="text-success" />
+            ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
+              <XCircle className="text-error" />
+            ) : (
+              <Spinner label="Pending check" compact />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-sans ui-text-sm text-text">{check.name ?? "Check"}</p>
+              {check.workflowName && (
+                <p className="truncate font-sans ui-text-sm text-text-lighter">
+                  {check.workflowName}
+                </p>
               )}
-              <div className="min-w-0 flex-1">
-                <p className="font-sans ui-text-sm truncate text-text">{check.name ?? "Check"}</p>
-                {check.workflowName && (
-                  <p className="font-sans ui-text-sm truncate text-text-lighter">
-                    {check.workflowName}
-                  </p>
-                )}
-              </div>
-              <Badge variant={getCheckBadgeVariant(check)} size="compact" className="capitalize">
-                {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
-              </Badge>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+            </div>
+            <Badge variant={getCheckBadgeVariant(check)} size="compact" className="capitalize">
+              {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
+            </Badge>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 });
 

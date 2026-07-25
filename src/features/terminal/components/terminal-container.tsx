@@ -457,14 +457,15 @@ const TerminalContainer = ({
       const customEvent = event as CustomEvent<{
         terminalId: string;
         connectionId: string;
+        remoteConnectionId?: string;
       }>;
-      const { terminalId, connectionId } = customEvent.detail;
+      const { terminalId, connectionId, remoteConnectionId } = customEvent.detail;
 
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
       if (pendingCommand && connectionId) {
         // Small delay to ensure shell prompt is ready
         setTimeout(() => {
-          invoke("terminal_write", {
+          invoke(remoteConnectionId ? "remote_terminal_write" : "terminal_write", {
             id: connectionId,
             input: { kind: "text", data: pendingCommand },
           }).catch(() => {});

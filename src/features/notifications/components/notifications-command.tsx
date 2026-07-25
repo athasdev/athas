@@ -25,6 +25,7 @@ import {
   formatNotificationText,
 } from "@/features/notifications/utils/notification-formatters";
 import { Button } from "@/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -370,12 +371,19 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
             <CommandList>
               <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                 {groupedNotifications.map((group) => (
-                  <div key={group.label} className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      className="font-sans ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
-                      aria-expanded={!collapsedNotificationGroups.has(group.label)}
-                      onClick={() => toggleNotificationGroup(group.label)}
+                  <Collapsible
+                    key={group.label}
+                    open={!collapsedNotificationGroups.has(group.label)}
+                    onOpenChange={() => toggleNotificationGroup(group.label)}
+                    className="flex flex-col gap-1"
+                  >
+                    <CollapsibleTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left font-sans ui-text-base text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:ring-2 focus-visible:ring-accent/20 focus-visible:outline-none"
+                        />
+                      }
                     >
                       <CaretRight
                         className={cn(
@@ -385,8 +393,8 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                       />
                       <span className="min-w-0 flex-1 truncate">{group.label}</span>
                       <CommandItemBadge>{group.notifications.length}</CommandItemBadge>
-                    </button>
-                    {!collapsedNotificationGroups.has(group.label) ? (
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
                       <ItemGroup className="gap-0.5">
                         {group.notifications.map((notification) => (
                           <NotificationListItem
@@ -425,8 +433,8 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                           />
                         ))}
                       </ItemGroup>
-                    ) : null}
-                  </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 ))}
               </div>
             </CommandList>

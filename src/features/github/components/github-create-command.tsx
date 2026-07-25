@@ -18,7 +18,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
@@ -567,8 +567,8 @@ ${statusSummary}`;
                   <label className="flex items-center gap-2 px-1 font-sans ui-text-base text-text-lighter">
                     <Checkbox
                       checked={draft}
-                      onChange={setDraft}
-                      ariaLabel="Create as draft pull request"
+                      onCheckedChange={setDraft}
+                      aria-label="Create as draft pull request"
                     />
                     Draft
                   </label>

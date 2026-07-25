@@ -7,8 +7,10 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import { useEffect, useRef, useState } from "react";
+import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -186,9 +188,9 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
 
         <div className={databasePanelClassName("flex-1")}>
           {store.error && (
-            <div className="mx-3 mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
-              {store.error}
-            </div>
+            <Alert tone="error" className="mx-3 mt-3 w-auto">
+              <AlertDescription>{store.error}</AlertDescription>
+            </Alert>
           )}
 
           {store.isLoading && (
@@ -250,14 +252,14 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           )}
 
           {!store.isLoading && !showInfo && !store.selectedKey && (
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className={databaseCardClassName("px-5 py-4 text-center")}>
-                <div className="ui-text-sm">Select a key</div>
-                <div className="mt-1 text-text-lighter ui-text-sm">
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>Select a key</EmptyTitle>
+                <EmptyDescription>
                   Pick a Redis key from the sidebar to inspect its value.
-                </div>
-              </div>
-            </div>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </div>
       </div>

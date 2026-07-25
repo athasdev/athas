@@ -13,7 +13,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import {
   CommandEmpty,
   CommandFooter,
@@ -536,8 +536,8 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               <Checkbox
                 id="database-sidebar-save-password"
                 checked={saveCredential}
-                onChange={setSaveCredential}
-                ariaLabel="Save password securely"
+                onCheckedChange={setSaveCredential}
+                aria-label="Save password securely"
               />
               <span className="font-sans text-text-lighter ui-text-sm">Save password securely</span>
             </label>

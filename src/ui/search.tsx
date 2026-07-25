@@ -13,6 +13,7 @@ import {
 import { forwardRef, type ComponentProps, type ReactNode, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { Toggle } from "@/ui/toggle";
 import { cn } from "@/utils/cn";
 
 export interface SearchToggleOption {
@@ -145,19 +146,18 @@ export function SearchPopover({
         <div className="mt-1.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1">
             {options.map((option) => (
-              <Button
+              <Toggle
                 key={option.id}
                 type="button"
                 onClick={option.onToggle}
-                variant="ghost"
-                active={option.active}
+                pressed={option.active}
                 tooltip={option.label}
                 aria-label={option.label}
-                aria-pressed={option.active}
-                size="icon-xs"
+                size="xs"
+                className="size-6 min-h-0 min-w-0 p-0"
               >
                 {option.icon}
-              </Button>
+              </Toggle>
             ))}
           </div>
 
@@ -330,19 +330,18 @@ export function SearchInput({
       {options.length > 0 && (
         <div className="flex shrink-0 items-center gap-1">
           {options.map((option) => (
-            <Button
+            <Toggle
               key={option.id}
               type="button"
               onClick={option.onToggle}
-              variant="ghost"
-              active={option.active}
+              pressed={option.active}
               tooltip={option.label}
               aria-label={option.label}
-              aria-pressed={option.active}
-              size="icon-xs"
+              size="xs"
+              className="size-6 min-h-0 min-w-0 p-0"
             >
               {option.icon}
-            </Button>
+            </Toggle>
           ))}
         </div>
       )}

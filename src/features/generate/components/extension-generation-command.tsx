@@ -22,6 +22,8 @@ import { useGenerateStore } from "@/features/generate/stores/generate.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { getServiceUrls } from "@/config/services";
+import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import Command, {
   CommandEmpty,
   CommandFooter,
@@ -432,16 +434,18 @@ export function ExtensionGenerationCommand() {
           </CommandHeader>
           <CommandList>
             <div className="p-3">
-              <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">
-                <div className="font-sans ui-text-base font-medium text-text">
-                  {isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue"}
-                </div>
-                <div className="mt-1 font-sans ui-text-base leading-[1.45] text-text-lighter">
-                  {isAuthenticated
-                    ? "Hosted extension generation is available with Athas Pro."
-                    : "Sign in with your Athas account to generate UI extensions."}
-                </div>
-              </div>
+              <Card size="sm">
+                <CardHeader>
+                  <CardTitle>
+                    {isAuthenticated ? "Upgrade to generate extensions" : "Sign in to continue"}
+                  </CardTitle>
+                  <CardDescription>
+                    {isAuthenticated
+                      ? "Hosted extension generation is available with Athas Pro."
+                      : "Sign in with your Athas account to generate UI extensions."}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
             </div>
           </CommandList>
           <CommandFooter>
@@ -590,16 +594,17 @@ export function ExtensionGenerationCommand() {
           </CommandHeader>
           <CommandList>
             <div className="space-y-2 p-2">
-              <div className="rounded-lg border border-success/30 bg-success/10 p-3">
-                <div className="font-sans ui-text-base font-medium text-text">{result?.name}</div>
-                <div className="mt-1 font-sans ui-text-base leading-[1.45] text-text-lighter">
+              <Alert tone="success" role="status">
+                <Check />
+                <AlertTitle>{result?.name}</AlertTitle>
+                <AlertDescription>
                   {selectedType === "sidebar"
                     ? "The new sidebar view is open now."
                     : selectedType === "toolbar"
                       ? "The new toolbar action is active in the editor."
                       : "The new command is available from the command palette."}
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
             </div>
           </CommandList>
           <CommandFooter>
@@ -622,9 +627,10 @@ export function ExtensionGenerationCommand() {
           <CommandList>
             <div className="space-y-2 p-2">
               {error ? (
-                <div className="rounded-lg border border-error/30 bg-error/10 p-3 font-sans ui-text-base leading-[1.45] text-error">
-                  {error}
-                </div>
+                <Alert tone="error">
+                  <AlertTitle>Generation failed</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               ) : result ? (
                 <>
                   <div className="rounded-lg border border-border/70 bg-secondary-bg/50 p-3">

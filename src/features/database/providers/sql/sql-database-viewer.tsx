@@ -20,6 +20,7 @@ import {
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Spinner } from "@/ui/spinner";
 import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
 import type { DatabaseType } from "../../types/provider.types";
@@ -260,9 +261,9 @@ export default function SqlDatabaseViewer({
           )}
 
           {store.error && (
-            <div className="mx-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 font-sans ui-text-sm text-error">
-              {store.error}
-            </div>
+            <Alert tone="error" className="mx-3 mb-2 w-auto">
+              <AlertDescription>{store.error}</AlertDescription>
+            </Alert>
           )}
 
           {isBusy && (

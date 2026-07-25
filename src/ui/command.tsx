@@ -10,7 +10,7 @@ import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
 import { instantTransition, quickTransition } from "@/utils/motion-presets";
 import { ScrollArea } from "@/ui/scroll-area";
-import { Tab } from "@/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface CommandProps {
@@ -29,16 +29,21 @@ const commandContentVariants = cva(
 );
 
 const commandItemVariants = cva(
-  "group/command-item font-sans ui-text-base mb-1 flex min-h-8 w-full cursor-pointer items-center justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left leading-[1.35] transition-colors",
+  "group/command-item font-sans flex w-full cursor-pointer items-center justify-start text-left transition-colors",
   {
     variants: {
       selected: {
         true: "bg-selected text-text",
         false: "bg-transparent text-text hover:bg-hover",
       },
+      density: {
+        default: "ui-text-base mb-1 min-h-8 gap-2.5 rounded-lg px-2.5 py-2 leading-[1.35]",
+        compact: "ui-text-sm mb-0.5 min-h-7 gap-1.5 rounded-md px-2 py-1 leading-normal",
+      },
     },
     defaultVariants: {
       selected: false,
+      density: "default",
     },
   },
 );
@@ -372,6 +377,7 @@ export interface CommandItemProps {
   className?: string;
   disabled?: boolean;
   type?: React.ComponentProps<"button">["type"];
+  density?: "default" | "compact";
 }
 
 export const CommandItem = ({
@@ -384,6 +390,7 @@ export const CommandItem = ({
   className,
   disabled = false,
   type,
+  density = "default",
   ...props
 }: CommandItemProps &
   Omit<
@@ -421,7 +428,7 @@ export const CommandItem = ({
         onMouseLeave={onMouseLeave}
         {...divProps}
         className={cn(
-          commandItemVariants({ selected: isSelected }),
+          commandItemVariants({ selected: isSelected, density }),
           disabled && "pointer-events-none opacity-50",
           className,
         )}
@@ -440,7 +447,7 @@ export const CommandItem = ({
       type={type ?? "button"}
       {...props}
       variant="ghost"
-      className={cn(commandItemVariants({ selected: isSelected }), className)}
+      className={cn(commandItemVariants({ selected: isSelected, density }), className)}
       size="xs"
     >
       {children}
@@ -464,39 +471,31 @@ interface CommandTabsProps {
   className?: string;
 }
 
-export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) => (
-  <div
-    role="tablist"
-    aria-label={ariaLabel}
-    className={cn(
-      "flex shrink-0 items-center justify-start gap-1 bg-primary-bg px-2 pt-2",
-      className,
-    )}
-  >
-    {items.map((item) => (
-      <Tab
-        key={item.id}
-        role="tab"
-        aria-selected={item.isActive}
-        tabIndex={0}
-        isActive={item.isActive}
-        size="md"
-        variant="pill"
-        className="w-fit justify-start rounded-full"
-        onClick={item.onSelect}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            item.onSelect();
-          }
-        }}
-      >
-        {item.icon}
-        {item.label}
-      </Tab>
-    ))}
-  </div>
-);
+export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) => {
+  const activeItemId = items.find((item) => item.isActive)?.id;
+
+  return (
+    <Tabs
+      value={activeItemId}
+      onValueChange={(value) => items.find((item) => item.id === value)?.onSelect()}
+      className={cn("shrink-0 gap-0 bg-primary-bg px-2 pt-2", className)}
+    >
+      <TabsList variant="bare" aria-label={ariaLabel}>
+        {items.map((item) => (
+          <TabsTrigger
+            key={item.id}
+            value={item.id}
+            size="md"
+            className="w-fit flex-none justify-start rounded-full px-3"
+          >
+            {item.icon}
+            {item.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+};
 
 CommandTabs.displayName = "CommandTabs";
 

@@ -13,6 +13,7 @@ import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
+import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
@@ -419,9 +420,9 @@ export default function DebuggerView() {
             </div>
 
             {startError ? (
-              <div className="font-sans rounded-lg border border-error/30 bg-error/5 px-2 py-1.5 text-error ui-text-sm">
-                {startError}
-              </div>
+              <Alert tone="error">
+                <AlertDescription>{startError}</AlertDescription>
+              </Alert>
             ) : null}
           </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { cn } from "@/utils/cn";
 
 interface AvatarProps {
@@ -17,36 +17,33 @@ export function getAvatarInitials(name: string) {
 }
 
 export function Avatar({ name, src, className }: AvatarProps) {
-  const [failed, setFailed] = useState(false);
-  const imageSource = src?.trim() || null;
+  const imageSource = src?.trim() || undefined;
   const label = name.trim() || "Unknown author";
 
-  useEffect(() => {
-    setFailed(false);
-  }, [imageSource]);
-
-  if (imageSource && !failed) {
-    return (
-      <img
-        src={imageSource}
-        alt={label}
-        className={cn("shrink-0 rounded-full bg-secondary-bg object-cover", className)}
-        loading="lazy"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-
   return (
-    <span
+    <AvatarPrimitive.Root
       className={cn(
-        "ui-text-sm flex shrink-0 items-center justify-center rounded-full bg-secondary-bg font-medium text-text-lighter",
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary-bg",
         className,
       )}
       title={label}
       aria-label={label}
     >
-      {getAvatarInitials(label)}
-    </span>
+      {imageSource ? (
+        <AvatarPrimitive.Image
+          key={imageSource}
+          src={imageSource}
+          alt={label}
+          loading="lazy"
+          className="size-full object-cover"
+        />
+      ) : null}
+      <AvatarPrimitive.Fallback
+        delay={imageSource ? 150 : 0}
+        className="ui-text-sm flex size-full items-center justify-center font-medium text-text-lighter"
+      >
+        {getAvatarInitials(label)}
+      </AvatarPrimitive.Fallback>
+    </AvatarPrimitive.Root>
   );
 }

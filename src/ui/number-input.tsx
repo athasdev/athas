@@ -1,6 +1,7 @@
+import { NumberField as NumberFieldPrimitive } from "@base-ui/react/number-field";
+import { cva } from "class-variance-authority";
 import type React from "react";
 import { MinusIcon as Minus, PlusIcon as Plus } from "@/ui/icons";
-import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import {
   controlIconSizes,
@@ -11,9 +12,14 @@ import { cn } from "@/utils/cn";
 
 interface InputProps extends Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
-  "size" | "onChange"
+  "defaultValue" | "max" | "min" | "onChange" | "size" | "step" | "value"
 > {
   size?: "xs" | "sm" | "md";
+  value?: number | string;
+  defaultValue?: number | string;
+  min?: number | string;
+  max?: number | string;
+  step?: number | string;
   onChange?: (value: number) => void;
 }
 
@@ -29,130 +35,72 @@ const numberInputTextSize = {
   md: "ui-text-base",
 } as const;
 
+const numberInputGroupVariants = cva("flex min-w-0 items-center gap-1", {
+  variants: {
+    disabled: {
+      true: "opacity-50",
+      false: "",
+    },
+  },
+});
+
+function toNumber(value: number | string | undefined) {
+  if (value === undefined || value === "") return undefined;
+  const parsed = typeof value === "number" ? value : Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export default function NumberInput({
   size = "sm",
   value,
+  defaultValue,
   onChange,
   className,
   disabled = false,
-  onKeyDown,
+  min,
+  max,
+  step,
+  required,
+  readOnly,
+  name,
+  id,
   ...props
 }: InputProps) {
-  const parseNumber = (raw: string | number | readonly string[]) => {
-    const normalized = Array.isArray(raw) ? raw[0] : raw;
-    return Number.parseFloat(normalized.toString());
-  };
-
-  const step = props.step ? parseNumber(props.step) : 1;
+  const numericStep = toNumber(step) ?? 1;
   const precision =
-    Number.isFinite(step) && step > 0 ? (step.toString().split(".")[1]?.length ?? 0) : 0;
-
-  const formatValue = (num: number) => {
-    if (Number.isNaN(num)) return "0";
-
-    return precision > 0
-      ? num.toFixed(precision).replace(/\.?0+$/, "")
-      : Math.round(num).toString();
-  };
-
-  const [inputValue, setInputValue] = useState<string>(value?.toString() || "0");
-  const [numericValue, setNumericValue] = useState<number>(value ? parseNumber(value) : 0);
-
-  const min = props.min ? parseNumber(props.min) : Number.MIN_SAFE_INTEGER;
-  const max = props.max ? parseNumber(props.max) : Number.MAX_SAFE_INTEGER;
-
-  useEffect(() => {
-    if (value === undefined) return;
-
-    const nextValue = parseNumber(value);
-    if (Number.isNaN(nextValue)) return;
-
-    setInputValue(formatValue(nextValue));
-    setNumericValue(nextValue);
-  }, [value, precision]);
-
-  const commitValue = (nextValue: number) => {
-    const clampedValue = Math.max(min, Math.min(max, nextValue));
-    setInputValue(formatValue(clampedValue));
-    setNumericValue(clampedValue);
-    onChange?.(clampedValue);
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextInputValue = event.target.value;
-    setInputValue(nextInputValue);
-
-    if (nextInputValue === "" || nextInputValue === "-") {
-      return;
-    }
-
-    const nextValue = parseNumber(nextInputValue);
-    if (!Number.isNaN(nextValue)) {
-      setNumericValue(nextValue);
-      onChange?.(nextValue);
-    }
-  };
-
-  const handleBlur = () => {
-    if (inputValue === "" || inputValue === "-") {
-      commitValue(0);
-      return;
-    }
-
-    const parsedValue = parseNumber(inputValue);
-    commitValue(Number.isNaN(parsedValue) ? numericValue : parsedValue);
-  };
-
-  const handleStep = (direction: 1 | -1) => {
-    if (disabled) return;
-
-    const nextValue = Number((numericValue + step * direction).toFixed(Math.max(precision, 6)));
-    commitValue(nextValue);
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    onKeyDown?.(event);
-    if (event.defaultPrevented || disabled) return;
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      handleStep(1);
-      return;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      handleStep(-1);
-    }
-  };
-
-  const canDecrement = !disabled && numericValue > min;
-  const canIncrement = !disabled && numericValue < max;
+    numericStep > 0 ? (numericStep.toString().split(".")[1]?.length ?? 0) : undefined;
 
   return (
-    <div className={cn("flex items-center gap-1", className)}>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        onClick={() => handleStep(-1)}
-        disabled={!canDecrement}
+    <NumberFieldPrimitive.Root
+      id={id}
+      name={name}
+      value={toNumber(value)}
+      defaultValue={toNumber(defaultValue) ?? 0}
+      min={toNumber(min)}
+      max={toNumber(max)}
+      step={numericStep}
+      required={required}
+      readOnly={readOnly}
+      disabled={disabled}
+      format={{
+        useGrouping: false,
+        maximumFractionDigits: precision,
+      }}
+      onValueChange={(nextValue) => {
+        if (nextValue !== null) onChange?.(nextValue);
+      }}
+      className={cn(numberInputGroupVariants({ disabled }), className)}
+    >
+      <NumberFieldPrimitive.Decrement
+        render={<Button type="button" variant="ghost" size="icon-xs" className="shrink-0" />}
         aria-label="Decrease value"
-        className="shrink-0"
       >
         <Minus size={controlIconSizes[size]} />
-      </Button>
+      </NumberFieldPrimitive.Decrement>
 
-      <input
+      <NumberFieldPrimitive.Input
         data-setting-primary-control="true"
         {...props}
-        value={inputValue}
-        onChange={handleInputChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        type="text"
-        inputMode="decimal"
         className={cn(
           controlSurfaceVariants({ variant: "default" }),
           controlSizeVariants({ size }),
@@ -162,17 +110,12 @@ export default function NumberInput({
         )}
       />
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        onClick={() => handleStep(1)}
-        disabled={!canIncrement}
+      <NumberFieldPrimitive.Increment
+        render={<Button type="button" variant="ghost" size="icon-xs" className="shrink-0" />}
         aria-label="Increase value"
-        className="shrink-0"
       >
         <Plus size={controlIconSizes[size]} />
-      </Button>
-    </div>
+      </NumberFieldPrimitive.Increment>
+    </NumberFieldPrimitive.Root>
   );
 }

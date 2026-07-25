@@ -15,7 +15,7 @@ import {
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
 import { quickTransition } from "@/utils/motion-presets";
-import { PopoverContent } from "@/ui/popover";
+import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { CaretRightIcon, CheckIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
@@ -634,7 +634,7 @@ export function Dropdown(props: DropdownProps) {
     originMap[`${resolvedSide}-${anchorAlign}`] ?? (point ? "top left" : "top left");
 
   return (
-    <PopoverContent
+    <FloatingPopoverContent
       isOpen={isOpen}
       contentRef={menuRef}
       portalContainer={portalContainer}
@@ -700,7 +700,7 @@ export function Dropdown(props: DropdownProps) {
             </div>
           ))}
       </div>
-    </PopoverContent>
+    </FloatingPopoverContent>
   );
 }
 

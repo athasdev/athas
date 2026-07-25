@@ -4,8 +4,10 @@ import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
 import { ViewerHeader } from "@/features/viewer/components/viewer-header";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
 import { ViewerErrorState, ViewerLoadingState } from "@/features/viewer/components/viewer-state";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { FileIcon } from "@/ui/icons";
 import { ScrollArea } from "@/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { formatFileSize } from "@/utils/format-file-size";
 import { cn } from "@/utils/cn";
 import { getRelativePath } from "@/utils/path-helpers";
@@ -65,28 +67,24 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
 
       <ScrollArea className="min-h-0 flex-1" contentClassName="p-4">
         <div className="mx-auto max-w-2xl space-y-4">
-          {/* File Info Card */}
-          <div className="rounded-xl border border-border/60 bg-secondary-bg">
-            <div className="border-border/40 border-b px-4 py-2.5">
-              <span className="font-sans ui-text-sm font-medium text-text">File Information</span>
-            </div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 p-4">
+          <Card className="gap-0 border-border/60 py-0">
+            <CardHeader className="border-border/40 border-b py-2.5">
+              <CardTitle>File Information</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-x-6 gap-y-2 py-4">
               <InfoRow label="Type" value={metadata.fileType} />
               <InfoRow label="Size" value={formatFileSize(metadata.fileSize)} />
               <InfoRow label="Extension" value={`.${ext.toLowerCase()}`} />
               <InfoRow label="Path" value={relativePath} />
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* WASM Metadata */}
           {metadata.wasmMetadata && (
-            <div className="rounded-xl border border-border/60 bg-secondary-bg">
-              <div className="border-border/40 border-b px-4 py-2.5">
-                <span className="font-sans ui-text-sm font-medium text-text">
-                  WebAssembly Module
-                </span>
-              </div>
-              <div className="p-4">
+            <Card className="gap-0 border-border/60 py-0">
+              <CardHeader className="border-border/40 border-b py-2.5">
+                <CardTitle>WebAssembly Module</CardTitle>
+              </CardHeader>
+              <CardContent className="py-4">
                 <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-2">
                   <InfoRow label="WASM Version" value={`${metadata.wasmMetadata.version}`} />
                   <InfoRow label="Sections" value={`${metadata.wasmMetadata.sections.length}`} />
@@ -94,53 +92,46 @@ export function BinaryFileViewer({ filePath, fileName, rootFolderPath }: BinaryF
 
                 {metadata.wasmMetadata.sections.length > 0 && (
                   <div className="mt-3 overflow-hidden rounded-md border border-border/40">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-border/40 border-b bg-primary-bg/50">
-                          <th className="font-sans ui-text-sm px-3 py-1.5 text-left font-normal text-text-lighter">
-                            Section
-                          </th>
-                          <th className="font-sans ui-text-sm px-3 py-1.5 text-right font-normal text-text-lighter">
-                            Size
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table>
+                      <TableHeader className="static bg-primary-bg/50">
+                        <TableRow>
+                          <TableHead className="px-3 font-normal">Section</TableHead>
+                          <TableHead className="px-3 text-right font-normal">Size</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {metadata.wasmMetadata.sections.map((section, i) => (
-                          <tr
+                          <TableRow
                             key={`${section.id}-${i}`}
                             className={cn(
                               "border-border/20 border-b last:border-b-0",
                               i % 2 === 0 ? "bg-transparent" : "bg-primary-bg/30",
                             )}
                           >
-                            <td className="font-sans ui-text-sm px-3 py-1.5 text-text">
-                              {section.name}
-                            </td>
-                            <td className="font-sans ui-text-sm px-3 py-1.5 text-right text-text-lighter tabular-nums">
+                            <TableCell className="px-3">{section.name}</TableCell>
+                            <TableCell className="px-3 text-right text-text-lighter tabular-nums">
                               {formatFileSize(section.size)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Hex Preview */}
-          <div className="rounded-xl border border-border/60 bg-secondary-bg">
-            <div className="border-border/40 border-b px-4 py-2.5">
-              <span className="font-sans ui-text-sm font-medium text-text">Hex Preview</span>
-            </div>
-            <div className="overflow-auto p-4">
+          <Card className="gap-0 border-border/60 py-0">
+            <CardHeader className="border-border/40 border-b py-2.5">
+              <CardTitle>Hex Preview</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-auto py-4">
               <pre className="ui-text-sm font-mono text-text-lighter leading-[18px]">
                 {metadata.hexPreview}
               </pre>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </ScrollArea>
 

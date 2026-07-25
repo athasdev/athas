@@ -11,7 +11,9 @@ import {
 } from "@/ui/icons";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { Spinner } from "@/ui/spinner";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useProFeature } from "../hooks/use-pro-feature";
@@ -665,10 +667,12 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex flex-1 flex-col justify-center gap-4">
-          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
-            <p className="font-medium ui-text-sm text-text">{title}</p>
-            <p className="mt-1 text-text-lighter ui-text-sm">{description}</p>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+          </Card>
 
           <div className="grid gap-2 ui-text-sm text-text-lighter">
             <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
@@ -750,13 +754,15 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
       {step === "type" && (
         <div className="flex flex-col gap-3">
-          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
-            <p className="font-medium ui-text-sm text-text">Build a UI extension from a prompt</p>
-            <p className="mt-1 text-text-lighter ui-text-sm">
-              Choose where it should live, describe the workflow, then install it directly into
-              Athas.
-            </p>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Build a UI extension from a prompt</CardTitle>
+              <CardDescription>
+                Choose where it should live, describe the workflow, then install it directly into
+                Athas.
+              </CardDescription>
+            </CardHeader>
+          </Card>
           {CONTRIBUTION_OPTIONS.map((option) => (
             <button
               key={option.id}
@@ -831,9 +837,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       {step === "done" && (
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
-            <div className="rounded-lg border border-error/30 bg-error/10 p-3">
-              <p className="text-error ui-text-sm">{error}</p>
-            </div>
+            <Alert tone="error">
+              <AlertTitle>Extension generation failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : generatedExtension ? (
             <>
               <div className="rounded-lg border border-border/60 bg-secondary-bg/40 p-3">
@@ -847,16 +854,16 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               </div>
 
               {isInstalled ? (
-                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3">
+                <Alert tone="success" role="status">
                   <Check className="size-4 text-success" />
-                  <p className="text-success ui-text-sm">
+                  <AlertDescription>
                     Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}
                     {generatedExtension.contributionType === "toolbar" &&
                       " Check the editor toolbar for your new action."}
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <div className="flex gap-2">
                   <Button onClick={handleInstall} variant="accent" className="gap-1.5" size="xs">

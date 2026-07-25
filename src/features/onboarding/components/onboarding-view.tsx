@@ -15,6 +15,7 @@ import { buildOnboardingViewModel } from "@/features/onboarding/lib/onboarding-v
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useWhatsNewStore } from "@/features/settings/stores/whats-new.store";
 import { Button } from "@/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { ScrollArea } from "@/ui/scroll-area";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
@@ -131,7 +132,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
         </div>
 
         {viewModel.showSettings ? (
-          <div className="overflow-hidden rounded-lg border border-border/70 bg-secondary-bg/45">
+          <Card className="gap-0 rounded-lg py-0">
             <SettingRow
               title="Keybinding preset"
               description={keybindingPresetDefinitions[keybindingPreset].description}
@@ -181,17 +182,17 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
                 Import
               </Button>
             </SettingRow>
-          </div>
+          </Card>
         ) : (
-          <div className="rounded-lg border border-border/70 bg-secondary-bg/45 px-5 py-4">
-            <div className="font-sans ui-text-sm font-medium text-text">
-              Your settings are unchanged
-            </div>
-            <p className="font-sans ui-text-sm mt-1 text-text-light">
-              Existing editor, privacy, keyboard, and window preferences remain in place after this
-              update.
-            </p>
-          </div>
+          <Card className="rounded-lg">
+            <CardHeader className="px-5">
+              <CardTitle>Your settings are unchanged</CardTitle>
+              <CardDescription className="text-text-light">
+                Existing editor, privacy, keyboard, and window preferences remain in place after
+                this update.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         )}
 
         <div className="mt-6 flex items-center justify-end gap-2">

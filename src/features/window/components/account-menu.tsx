@@ -26,6 +26,7 @@ import {
   UserIcon,
   UsersThreeIcon,
 } from "@/ui/icons";
+import { Progress } from "@/ui/progress";
 import Tooltip from "@/ui/tooltip";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { cn } from "@/utils/cn";
@@ -250,7 +251,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                 void handleOpenBillingDashboard();
               }}
               variant="ghost"
-              className="h-auto w-full justify-start p-2.5 text-left hover:bg-hover/50"
+              className="h-auto w-full flex-col items-stretch gap-0 p-2.5 text-left hover:bg-hover/50"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -278,12 +279,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                       {formatUsdFromCents(autocompleteUsage.budgetCents)}
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
-                    <div
-                      className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
-                      style={{ width: `${usageProgress}%` }}
-                    />
-                  </div>
+                  <Progress value={usageProgress} size="md" aria-label="Hosted AI monthly usage" />
                   <div className="flex items-center justify-between gap-3">
                     <span className="ui-text-sm text-text-lighter/70">
                       {formatUsageDate(autocompleteUsage.periodStart)} -{" "}

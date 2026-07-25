@@ -2,7 +2,7 @@ import { MagnifyingGlassIcon as Search, XIcon as X } from "@/ui/icons";
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenizer } from "@/features/editor/hooks/use-tokenizer";
 import { Button } from "@/ui/button";
-import Input from "@/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import Textarea from "@/ui/textarea";
 import { cn } from "@/utils/cn";
 import { databaseCardClassName } from "./database-surface";
@@ -305,30 +305,33 @@ export default function QueryBar({
   return (
     <div className="px-3 py-2">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Input
+        <InputGroup className="flex-1">
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+          <InputGroupInput
             value={draftSearchTerm}
             onChange={(e) => setDraftSearchTerm(e.target.value)}
             placeholder="Search..."
-            leftIcon={Search}
           />
           {draftSearchTerm && (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setDraftSearchTerm("");
-                setSearchTerm("");
-              }}
-              className="-translate-y-1/2 absolute top-1/2 right-1.5 text-text-lighter hover:text-text"
-              aria-label="Clear search"
-              tooltip="Clear search"
-              size="icon"
-            >
-              <X />
-            </Button>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setDraftSearchTerm("");
+                  setSearchTerm("");
+                }}
+                aria-label="Clear search"
+                tooltip="Clear search"
+                size="icon-xs"
+              >
+                <X />
+              </InputGroupButton>
+            </InputGroupAddon>
           )}
-        </div>
+        </InputGroup>
       </div>
     </div>
   );

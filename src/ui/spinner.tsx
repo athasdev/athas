@@ -1,8 +1,7 @@
 import type { ComponentProps } from "react";
-import { ArrowClockwiseIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
-type SpinnerProps = ComponentProps<typeof ArrowClockwiseIcon> & {
+type SpinnerProps = Omit<ComponentProps<"span">, "children"> & {
   label?: string;
   showLabel?: boolean;
   compact?: boolean;
@@ -16,11 +15,15 @@ function Spinner({
   ...props
 }: SpinnerProps) {
   const icon = (
-    <ArrowClockwiseIcon
+    <span
       role={showLabel ? undefined : "status"}
       aria-hidden={showLabel || undefined}
       aria-label={showLabel ? undefined : label}
-      className={cn("animate-spin", compact ? "size-3" : "size-4", !showLabel && className)}
+      className={cn(
+        "inline-block shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent",
+        compact ? "size-3" : "size-4",
+        !showLabel && className,
+      )}
       {...props}
     />
   );
