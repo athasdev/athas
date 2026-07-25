@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="Rust Folder Open" shape-rendering="geometricPrecision">
+  <path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="#B66D50" opacity=".14"/><path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="#B66D50" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="#B66D50" opacity=".25"/><path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="none" stroke="#B66D50" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.15 9.75h13.7" stroke="#AD938C" stroke-width="1.15" stroke-linecap="round" opacity=".58"/>
+  <circle cx="10" cy="12.4" r="2.45" fill="none" stroke="#AD938C" stroke-width="1.15"/><circle cx="10" cy="12.4" r=".8" fill="#AD938C"/><path d="M10 9.1v.8M10 14.9v.8M6.7 12.4h.8M12.5 12.4h.8M7.7 10.1l.6.6M11.7 14.1l.6.6M12.3 10.1l-.6.6M8.3 14.1l-.6.6" stroke="#AD938C" stroke-width="1" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="Security Folder Open" shape-rendering="geometricPrecision">
+  <path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="#A88343" opacity=".14"/><path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="#A88343" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="#A88343" opacity=".25"/><path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="none" stroke="#A88343" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.15 9.75h13.7" stroke="#E9D4AA" stroke-width="1.15" stroke-linecap="round" opacity=".58"/>
+  <path d="M10 9.2 13 10.3v2.1c0 1.9-1.2 3.1-3 3.8-1.8-.7-3-1.9-3-3.8v-2.1z" fill="none" stroke="#E9D4AA" stroke-width="1.1" stroke-linejoin="round"/><path d="m8.6 12.7.9.9 1.9-2" fill="none" stroke="#E9D4AA" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

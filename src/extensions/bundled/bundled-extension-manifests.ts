@@ -1,5 +1,6 @@
 import athasIconTheme from "./icon-themes/athas/extension.json";
 import materialIconTheme from "./icon-themes/material/extension.json";
+import pierreIconTheme from "./icon-themes/pierre/extension.json";
 import symbolsIconTheme from "./icon-themes/symbols/extension.json";
 import type { ExtensionManifest } from "../types/extension-manifest";
 
@@ -16,6 +17,10 @@ export const bundledExtensionManifests: BundledExtensionManifestEntry[] = [
   {
     manifest: symbolsIconTheme as ExtensionManifest,
     relativePath: "icon-themes/symbols",
+  },
+  {
+    manifest: pierreIconTheme as ExtensionManifest,
+    relativePath: "icon-themes/pierre",
   },
   {
     manifest: materialIconTheme as ExtensionManifest,

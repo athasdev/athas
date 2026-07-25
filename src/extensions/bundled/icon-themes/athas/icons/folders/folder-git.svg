@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="Git Folder" shape-rendering="geometricPrecision">
+  <path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="#CA6B52" opacity=".14"/><path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="#CA6B52" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1.25 7.35h17.5v8.3c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="#CA6B52" opacity=".22"/><path d="M1.25 7.35h17.5v8.3c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="#CA6B52" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.6 8.95h14.8" stroke="#F7C8B9" stroke-width="1.15" stroke-linecap="round" opacity=".58"/>
+  <path d="M8 9.7v4.9M8 11h2.3c1 0 1.7.7 1.7 1.7v1.2" fill="none" stroke="#F7C8B9" stroke-width="1.15" stroke-linecap="round"/><circle cx="8" cy="9.7" r=".8" fill="#F7C8B9"/><circle cx="8" cy="14.7" r=".8" fill="#F7C8B9"/><circle cx="12" cy="14.2" r=".8" fill="#F7C8B9"/>
+</svg>

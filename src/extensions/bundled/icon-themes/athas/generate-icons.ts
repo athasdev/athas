@@ -47,6 +47,29 @@ type IconKind =
   | "shield"
   | "warning";
 
+type FolderKind =
+  | "folder"
+  | "source"
+  | "components"
+  | "test"
+  | "config"
+  | "assets"
+  | "docs"
+  | "scripts"
+  | "rust"
+  | "packages"
+  | "git"
+  | "build"
+  | "database"
+  | "routes"
+  | "styles"
+  | "locales"
+  | "cloud"
+  | "mobile"
+  | "security"
+  | "ai"
+  | "extensions";
+
 interface FileIcon {
   id: string;
   label: string;
@@ -61,6 +84,8 @@ interface FolderIcon {
   label: string;
   color: string;
   accent: string;
+  kind: FolderKind;
+  isOpen: boolean;
 }
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -721,9 +746,165 @@ fileIcons.push(
   },
 );
 
-const folderIcons: FolderIcon[] = [
-  { id: "folder", label: "Folder", color: "#7F8EA3", accent: "#C5D0DE" },
+const folderIconStyles: Array<Omit<FolderIcon, "isOpen">> = [
+  {
+    id: "folder",
+    label: "Folder",
+    color: "#7F8EA3",
+    accent: "#C5D0DE",
+    kind: "folder",
+  },
+  {
+    id: "folder-source",
+    label: "Source Folder",
+    color: "#4F87C7",
+    accent: "#C7DFFF",
+    kind: "source",
+  },
+  {
+    id: "folder-components",
+    label: "Components Folder",
+    color: "#7E70C9",
+    accent: "#D9D2FF",
+    kind: "components",
+  },
+  {
+    id: "folder-test",
+    label: "Test Folder",
+    color: "#6F9C50",
+    accent: "#D5EABD",
+    kind: "test",
+  },
+  {
+    id: "folder-config",
+    label: "Config Folder",
+    color: "#70869B",
+    accent: "#CEDAE6",
+    kind: "config",
+  },
+  {
+    id: "folder-assets",
+    label: "Assets Folder",
+    color: "#469888",
+    accent: "#C5EEE5",
+    kind: "assets",
+  },
+  {
+    id: "folder-docs",
+    label: "Docs Folder",
+    color: "#5C83C8",
+    accent: "#CADBFA",
+    kind: "docs",
+  },
+  {
+    id: "folder-scripts",
+    label: "Scripts Folder",
+    color: "#57966A",
+    accent: "#C9E8D2",
+    kind: "scripts",
+  },
+  {
+    id: "folder-rust",
+    label: "Rust Folder",
+    color: "#C47452",
+    accent: "#F4C9B6",
+    kind: "rust",
+  },
+  {
+    id: "folder-packages",
+    label: "Packages Folder",
+    color: "#B88443",
+    accent: "#EED1AA",
+    kind: "packages",
+  },
+  {
+    id: "folder-git",
+    label: "Git Folder",
+    color: "#CA6B52",
+    accent: "#F7C8B9",
+    kind: "git",
+  },
+  {
+    id: "folder-build",
+    label: "Build Folder",
+    color: "#B88C43",
+    accent: "#F0D6A9",
+    kind: "build",
+  },
+  {
+    id: "folder-database",
+    label: "Database Folder",
+    color: "#4E88B8",
+    accent: "#C8E0F3",
+    kind: "database",
+  },
+  {
+    id: "folder-routes",
+    label: "Routes Folder",
+    color: "#4D9A77",
+    accent: "#C5EBD6",
+    kind: "routes",
+  },
+  {
+    id: "folder-styles",
+    label: "Styles Folder",
+    color: "#B46A9B",
+    accent: "#F0CCE3",
+    kind: "styles",
+  },
+  {
+    id: "folder-locales",
+    label: "Locales Folder",
+    color: "#7D72C5",
+    accent: "#D8D2F7",
+    kind: "locales",
+  },
+  {
+    id: "folder-cloud",
+    label: "Infrastructure Folder",
+    color: "#508BBC",
+    accent: "#C9E2F5",
+    kind: "cloud",
+  },
+  {
+    id: "folder-mobile",
+    label: "Mobile Folder",
+    color: "#4F83C6",
+    accent: "#C4DDF9",
+    kind: "mobile",
+  },
+  {
+    id: "folder-security",
+    label: "Security Folder",
+    color: "#A88343",
+    accent: "#E9D4AA",
+    kind: "security",
+  },
+  {
+    id: "folder-ai",
+    label: "AI Folder",
+    color: "#776DC7",
+    accent: "#D7D1FA",
+    kind: "ai",
+  },
+  {
+    id: "folder-extensions",
+    label: "Extensions Folder",
+    color: "#657DC2",
+    accent: "#CFD9F7",
+    kind: "extensions",
+  },
 ];
+
+const folderIcons: FolderIcon[] = folderIconStyles.flatMap((icon) => [
+  { ...icon, isOpen: false },
+  {
+    ...icon,
+    id: `${icon.id}-open`,
+    label: `${icon.label} Open`,
+    isOpen: true,
+  },
+]);
 
 const fileExtensions: Record<string, string> = {
   ".txt": "text",
@@ -1068,123 +1249,123 @@ Object.assign(filenames, {
 });
 
 const folders: Record<string, string> = {
-  src: "folder",
-  source: "folder",
-  components: "folder",
-  component: "folder",
-  hooks: "folder",
-  utils: "folder",
-  util: "folder",
-  tests: "folder",
-  test: "folder",
-  __tests__: "folder",
-  config: "folder",
-  configs: "folder",
-  assets: "folder",
-  public: "folder",
-  images: "folder",
-  img: "folder",
-  docs: "folder",
-  scripts: "folder",
-  crates: "folder",
-  rust: "folder",
-  "src-tauri": "folder",
-  tauri: "folder",
-  node_modules: "folder",
-  ".git": "folder",
-  ".github": "folder",
-  ".vscode": "folder",
-  build: "folder",
-  dist: "folder",
-  database: "folder",
-  databases: "folder",
-  api: "folder",
-  routes: "folder",
-  router: "folder",
-  stores: "folder",
-  store: "folder",
-  features: "folder",
-  ui: "folder",
-  pages: "folder",
-  app: "folder",
-  views: "folder",
-  view: "folder",
-  lib: "folder",
-  libs: "folder",
-  services: "folder",
-  service: "folder",
-  types: "folder",
-  typings: "folder",
-  styles: "folder",
-  style: "folder",
-  css: "folder",
-  locales: "folder",
-  i18n: "folder",
-  terminal: "folder",
-  shell: "folder",
-  auth: "folder",
-  security: "folder",
-  ".circleci": "folder",
-  ".buildkite": "folder",
-  ".docker": "folder",
-  docker: "folder",
-  k8s: "folder",
-  kubernetes: "folder",
-  helm: "folder",
-  cloud: "folder",
-  ".firebase": "folder",
-  firebase: "folder",
-  ".supabase": "folder",
-  supabase: "folder",
-  prisma: "folder",
-  cache: "folder",
-  logs: "folder",
-  log: "folder",
-  tmp: "folder",
-  temp: "folder",
-  mobile: "folder",
-  ios: "folder",
-  android: "folder",
-  ".storybook": "folder",
-  storybook: "folder",
-  fixtures: "folder",
-  mocks: "folder",
-  mock: "folder",
-  generated: "folder",
-  gen: "folder",
-  benchmark: "folder",
-  benchmarks: "folder",
-  extensions: "folder",
-  extension: "folder",
-  themes: "folder",
-  theme: "folder",
-  ai: "folder",
-  ".agents": "folder",
-  agents: "folder",
-  ".codex": "folder",
-  codex: "folder",
-  ".claude": "folder",
-  claude: "folder",
-  packages: "folder",
-  package: "folder",
-  examples: "folder",
-  example: "folder",
-  playground: "folder",
-  play: "folder",
-  commands: "folder",
-  command: "folder",
-  plugins: "folder",
-  plugin: "folder",
-  workflows: "folder",
-  workflow: "folder",
-  ".devcontainer": "folder",
-  devcontainer: "folder",
-  web: "folder",
-  www: "folder",
-  server: "folder",
-  client: "folder",
-  shared: "folder",
-  common: "folder",
+  src: "folder-source",
+  source: "folder-source",
+  components: "folder-components",
+  component: "folder-components",
+  hooks: "folder-source",
+  utils: "folder-source",
+  util: "folder-source",
+  tests: "folder-test",
+  test: "folder-test",
+  __tests__: "folder-test",
+  config: "folder-config",
+  configs: "folder-config",
+  assets: "folder-assets",
+  public: "folder-assets",
+  images: "folder-assets",
+  img: "folder-assets",
+  docs: "folder-docs",
+  scripts: "folder-scripts",
+  crates: "folder-rust",
+  rust: "folder-rust",
+  "src-tauri": "folder-rust",
+  tauri: "folder-rust",
+  node_modules: "folder-packages",
+  ".git": "folder-git",
+  ".github": "folder-git",
+  ".vscode": "folder-config",
+  build: "folder-build",
+  dist: "folder-build",
+  database: "folder-database",
+  databases: "folder-database",
+  api: "folder-routes",
+  routes: "folder-routes",
+  router: "folder-routes",
+  stores: "folder-source",
+  store: "folder-source",
+  features: "folder-source",
+  ui: "folder-components",
+  pages: "folder-components",
+  app: "folder-components",
+  views: "folder-components",
+  view: "folder-components",
+  lib: "folder-source",
+  libs: "folder-source",
+  services: "folder-source",
+  service: "folder-source",
+  types: "folder-source",
+  typings: "folder-source",
+  styles: "folder-styles",
+  style: "folder-styles",
+  css: "folder-styles",
+  locales: "folder-locales",
+  i18n: "folder-locales",
+  terminal: "folder-scripts",
+  shell: "folder-scripts",
+  auth: "folder-security",
+  security: "folder-security",
+  ".circleci": "folder-git",
+  ".buildkite": "folder-git",
+  ".docker": "folder-cloud",
+  docker: "folder-cloud",
+  k8s: "folder-cloud",
+  kubernetes: "folder-cloud",
+  helm: "folder-cloud",
+  cloud: "folder-cloud",
+  ".firebase": "folder-database",
+  firebase: "folder-database",
+  ".supabase": "folder-database",
+  supabase: "folder-database",
+  prisma: "folder-database",
+  cache: "folder-build",
+  logs: "folder-build",
+  log: "folder-build",
+  tmp: "folder-build",
+  temp: "folder-build",
+  mobile: "folder-mobile",
+  ios: "folder-mobile",
+  android: "folder-mobile",
+  ".storybook": "folder-components",
+  storybook: "folder-components",
+  fixtures: "folder-test",
+  mocks: "folder-test",
+  mock: "folder-test",
+  generated: "folder-build",
+  gen: "folder-build",
+  benchmark: "folder-test",
+  benchmarks: "folder-test",
+  extensions: "folder-extensions",
+  extension: "folder-extensions",
+  themes: "folder-styles",
+  theme: "folder-styles",
+  ai: "folder-ai",
+  ".agents": "folder-ai",
+  agents: "folder-ai",
+  ".codex": "folder-ai",
+  codex: "folder-ai",
+  ".claude": "folder-ai",
+  claude: "folder-ai",
+  packages: "folder-packages",
+  package: "folder-packages",
+  examples: "folder-docs",
+  example: "folder-docs",
+  playground: "folder-test",
+  play: "folder-test",
+  commands: "folder-scripts",
+  command: "folder-scripts",
+  plugins: "folder-extensions",
+  plugin: "folder-extensions",
+  workflows: "folder-git",
+  workflow: "folder-git",
+  ".devcontainer": "folder-cloud",
+  devcontainer: "folder-cloud",
+  web: "folder-mobile",
+  www: "folder-mobile",
+  server: "folder-routes",
+  client: "folder-mobile",
+  shared: "folder-source",
+  common: "folder-source",
 };
 
 function esc(value: string) {
@@ -1224,7 +1405,7 @@ const themeVariants: ThemeVariant[] = [
   {
     id: "athas-icons",
     name: "Dark assets",
-    description: "Original duotone file and folder icons for dark Athas themes.",
+    description: "Calm outline and duotone file and folder icons for dark Athas themes.",
     directory: "",
     background: "#11151B",
     transform: (icon) => icon,
@@ -1232,12 +1413,12 @@ const themeVariants: ThemeVariant[] = [
   {
     id: "athas-icons-light-assets",
     name: "Light assets",
-    description: "A brighter Athas icon palette tuned for light themes.",
+    description: "A higher-contrast Athas icon palette tuned for light themes.",
     directory: "light",
     background: "#F6F8FB",
     transform: (icon) => ({
-      color: mixColor(icon.color, "#FFFFFF", 0.16),
-      accent: mixColor(icon.accent, "#243044", 0.14),
+      color: mixColor(icon.color, "#172033", 0.08),
+      accent: mixColor(icon.accent, "#172033", 0.32),
     }),
   },
 ];
@@ -1336,21 +1517,74 @@ function fileGlyph(icon: FileIcon) {
 }
 
 function fileSvg(icon: FileIcon) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 2 18 20" role="img" aria-label="${esc(icon.label)}">
-  <path d="M6.5 2.8h8.1L19.5 7.7v13.5H6.5a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="${icon.color}"/>
-  <path d="M14.6 2.8v4.9h4.9Z" fill="${icon.accent}" opacity=".82"/>
-  <path d="M7 5.2h6.6v4.6h3.6v9H7Z" fill="#10161F" opacity=".18"/>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="2 2 20 20" role="img" aria-label="${esc(icon.label)}" shape-rendering="geometricPrecision">
+  <path d="M6.5 2.8h7.15l5.85 5.85V19.2a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="${icon.color}" opacity=".16"/>
+  <path d="M6.5 2.8h7.15l5.85 5.85V19.2a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V4.8a2 2 0 0 1 2-2Z" fill="none" stroke="${icon.color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13.65 2.8v4.35a1.5 1.5 0 0 0 1.5 1.5h4.35Z" fill="${icon.accent}" opacity=".24"/>
+  <path d="M13.65 2.8v4.35a1.5 1.5 0 0 0 1.5 1.5h4.35" fill="none" stroke="${icon.color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
   ${fileGlyph(icon)}
 </svg>
 `;
 }
 
+function folderGlyph(icon: FolderIcon) {
+  switch (icon.kind) {
+    case "source":
+      return `<path d="m8.5 10.5-2 2 2 2M11.5 10.5l2 2-2 2" fill="none" stroke="${icon.accent}" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case "components":
+      return `<path d="m10 9.7 2.5 1.4-2.5 1.4-2.5-1.4zM7.5 13l2.5 1.4 2.5-1.4" fill="none" stroke="${icon.accent}" stroke-width="1.15" stroke-linejoin="round"/>`;
+    case "test":
+      return `<path d="M8.3 9.6h3.4M9 9.6v2.2l-1.7 2.8h5.4L11 11.8V9.6" fill="none" stroke="${icon.accent}" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case "config":
+      return `<circle cx="10" cy="12.4" r="1.6" fill="none" stroke="${icon.accent}" stroke-width="1.2"/><path d="M10 9.4v1M10 14.4v1M7 12.4h1M12 12.4h1M7.9 10.3l.7.7M11.4 13.8l.7.7M12.1 10.3l-.7.7M8.6 13.8l-.7.7" stroke="${icon.accent}" stroke-width="1.1" stroke-linecap="round"/>`;
+    case "assets":
+      return `<rect x="6.5" y="9.4" width="7" height="5.8" rx="1.1" fill="none" stroke="${icon.accent}" stroke-width="1.15"/><circle cx="8.5" cy="11.2" r=".65" fill="${icon.accent}"/><path d="m7.3 14.3 1.8-1.8 1.3 1.2.9-.9 1.4 1.5" fill="none" stroke="${icon.accent}" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case "docs":
+      return `<path d="M7 9.4h4.3c1 0 1.7.7 1.7 1.7v4.1H8.7A1.7 1.7 0 0 1 7 13.5z" fill="none" stroke="${icon.accent}" stroke-width="1.15"/><path d="M8.7 9.4v5.8M9.8 11.3h2" stroke="${icon.accent}" stroke-width="1.05" stroke-linecap="round"/>`;
+    case "scripts":
+      return `<path d="m7.3 10.4 2 2-2 2M10.6 14.4h2.2" fill="none" stroke="${icon.accent}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case "rust":
+      return `<circle cx="10" cy="12.4" r="2.45" fill="none" stroke="${icon.accent}" stroke-width="1.15"/><circle cx="10" cy="12.4" r=".8" fill="${icon.accent}"/><path d="M10 9.1v.8M10 14.9v.8M6.7 12.4h.8M12.5 12.4h.8M7.7 10.1l.6.6M11.7 14.1l.6.6M12.3 10.1l-.6.6M8.3 14.1l-.6.6" stroke="${icon.accent}" stroke-width="1" stroke-linecap="round"/>`;
+    case "packages":
+      return `<path d="m10 9.4 3 1.6v3.2l-3 1.6-3-1.6V11zM7 11l3 1.6 3-1.6M10 12.6v3.2" fill="none" stroke="${icon.accent}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    case "git":
+      return `<path d="M8 9.7v4.9M8 11h2.3c1 0 1.7.7 1.7 1.7v1.2" fill="none" stroke="${icon.accent}" stroke-width="1.15" stroke-linecap="round"/><circle cx="8" cy="9.7" r=".8" fill="${icon.accent}"/><circle cx="8" cy="14.7" r=".8" fill="${icon.accent}"/><circle cx="12" cy="14.2" r=".8" fill="${icon.accent}"/>`;
+    case "build":
+      return `<path d="m10.7 9.2-3.6 3.9h2.5L9 15.8l4-4.5h-2.6z" fill="${icon.accent}"/>`;
+    case "database":
+      return `<ellipse cx="10" cy="10.5" rx="3" ry="1.3" fill="none" stroke="${icon.accent}" stroke-width="1.15"/><path d="M7 10.5v3.6c0 .8 1.3 1.4 3 1.4s3-.6 3-1.4v-3.6M7 12.3c0 .8 1.3 1.4 3 1.4s3-.6 3-1.4" fill="none" stroke="${icon.accent}" stroke-width="1.1"/>`;
+    case "routes":
+      return `<circle cx="7.3" cy="10.2" r=".85" fill="${icon.accent}"/><circle cx="12.7" cy="10.2" r=".85" fill="${icon.accent}"/><circle cx="10" cy="15" r=".85" fill="${icon.accent}"/><path d="m8 10.8 1.5 3.3M12 10.8l-1.5 3.3M8.2 10.2h3.6" stroke="${icon.accent}" stroke-width="1.05" stroke-linecap="round"/>`;
+    case "styles":
+      return `<path d="M10 9.2a3.4 3.4 0 0 0 0 6.8h.7c.7 0 1-.8.5-1.2-.4-.4-.1-1.1.5-1.1h.7c.9 0 1.5-.7 1.5-1.7A3.5 3.5 0 0 0 10 9.2Z" fill="none" stroke="${icon.accent}" stroke-width="1.1"/><circle cx="8.6" cy="11.8" r=".45" fill="${icon.accent}"/><circle cx="10.2" cy="10.8" r=".45" fill="${icon.accent}"/><circle cx="11.8" cy="11.7" r=".45" fill="${icon.accent}"/>`;
+    case "locales":
+      return `<circle cx="10" cy="12.5" r="3.2" fill="none" stroke="${icon.accent}" stroke-width="1.1"/><path d="M6.8 12.5h6.4M10 9.3c1 1 1.5 2.1 1.5 3.2S11 14.7 10 15.7M10 9.3c-1 1-1.5 2.1-1.5 3.2S9 14.7 10 15.7" fill="none" stroke="${icon.accent}" stroke-width="1" stroke-linecap="round"/>`;
+    case "cloud":
+      return `<path d="M7.8 15.1h4.7a1.8 1.8 0 0 0 .2-3.6 2.7 2.7 0 0 0-5.1.7 1.5 1.5 0 0 0 .2 2.9Z" fill="none" stroke="${icon.accent}" stroke-width="1.15" stroke-linejoin="round"/>`;
+    case "mobile":
+      return `<rect x="8" y="9" width="4" height="6.7" rx="1" fill="none" stroke="${icon.accent}" stroke-width="1.1"/><path d="M9.4 10.2h1.2M9.7 14.5h.6" stroke="${icon.accent}" stroke-width="1" stroke-linecap="round"/>`;
+    case "security":
+      return `<path d="M10 9.2 13 10.3v2.1c0 1.9-1.2 3.1-3 3.8-1.8-.7-3-1.9-3-3.8v-2.1z" fill="none" stroke="${icon.accent}" stroke-width="1.1" stroke-linejoin="round"/><path d="m8.6 12.7.9.9 1.9-2" fill="none" stroke="${icon.accent}" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case "ai":
+      return `<path d="m10 9.2.75 2.3 2.3.75-2.3.75L10 15.3 9.25 13l-2.3-.75 2.3-.75z" fill="${icon.accent}"/><path d="m13.2 9 .35 1.05 1.05.35-1.05.35-.35 1.05-.35-1.05-1.05-.35 1.05-.35z" fill="${icon.accent}" opacity=".8"/>`;
+    case "extensions":
+      return `<path d="M7.2 10h2v-1a1 1 0 0 1 2 0v1h1.6v1.6h1a1 1 0 0 1 0 2h-1v1.6h-2v-1a1 1 0 0 0-2 0v1h-1.6v-2h1a1 1 0 0 0 0-2h-1z" fill="none" stroke="${icon.accent}" stroke-width="1.05" stroke-linejoin="round"/>`;
+    default:
+      return "";
+  }
+}
+
 function folderSvg(icon: FolderIcon) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="${esc(icon.label)}">
-  <path d="M.7 4.4c0-1.1.9-2 2-2h6.1l2.1 2.5h6.4c1.1 0 2 .9 2 2v10.4c0 1.1-.9 2-2 2H2.7c-1.1 0-2-.9-2-2z" fill="${icon.color}"/>
-  <path d="M2.4 6.2h15.2v2H2.4z" fill="${icon.accent}" opacity=".48"/>
-  <path d="M3.2 4.9h5.1l1.4 1.7H3.2z" fill="${icon.accent}" opacity=".8"/>
-</svg>
+  const glyph = folderGlyph(icon);
+  const back = `<path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="${icon.color}" opacity=".14"/><path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="${icon.color}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const front = icon.isOpen
+    ? `<path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="${icon.color}" opacity=".25"/><path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="none" stroke="${icon.color}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.15 9.75h13.7" stroke="${icon.accent}" stroke-width="1.15" stroke-linecap="round" opacity=".58"/>`
+    : `<path d="M1.25 7.35h17.5v8.3c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="${icon.color}" opacity=".22"/><path d="M1.25 7.35h17.5v8.3c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="${icon.color}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.6 8.95h14.8" stroke="${icon.accent}" stroke-width="1.15" stroke-linecap="round" opacity=".58"/>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="${esc(icon.label)}" shape-rendering="geometricPrecision">
+  ${back}
+  ${front}
+${glyph ? `  ${glyph}\n` : ""}</svg>
 `;
 }
 
@@ -1401,16 +1635,18 @@ function themeContribution() {
   return {
     id: "athas-icons",
     name: "Athas Icons",
-    description: "Original duotone file and folder icons for Athas.",
+    description: "Calm outline and duotone icons designed for the Athas interface.",
     iconDefinitions: iconDefinitions(darkVariant),
     lightIconDefinitions: iconDefinitions(lightVariant),
     fileExtensions,
     filenames,
-    folders: Object.fromEntries(Object.keys(folders).map((name) => [name, "folder"])),
-    expandedFolders: Object.fromEntries(Object.keys(folders).map((name) => [name, "folder"])),
+    folders,
+    expandedFolders: Object.fromEntries(
+      Object.entries(folders).map(([name, icon]) => [name, `${icon}-open`]),
+    ),
     defaultFile: "file",
     defaultFolder: "folder",
-    defaultFolderOpen: "folder",
+    defaultFolderOpen: "folder-open",
   };
 }
 
@@ -1420,8 +1656,8 @@ function manifest() {
     id: "athas.icon-theme.athas-icons",
     name: "athas-icons",
     displayName: "Athas Icons",
-    version: "0.1.0",
-    description: "Original duotone file and folder icons for Athas.",
+    version: "0.2.0",
+    description: "Calm outline and duotone icons designed for the Athas interface.",
     publisher: "Athas",
     categories: ["Icon Theme"],
     activationEvents: ["onIconTheme:athas-icons"],
@@ -1484,14 +1720,20 @@ function previewHtml() {
     )
     .join("\n");
   const sampleRows = [
-    { type: "folder", id: "folder", name: ".codex", detail: "AI workspace config", depth: 0 },
-    { type: "folder", id: "folder", name: "src", detail: "source", depth: 0 },
-    { type: "folder", id: "folder", name: "components", detail: "ui", depth: 1 },
+    { type: "folder", id: "folder-ai", name: ".codex", detail: "AI workspace config", depth: 0 },
+    { type: "folder", id: "folder-source-open", name: "src", detail: "source", depth: 0 },
+    {
+      type: "folder",
+      id: "folder-components-open",
+      name: "components",
+      detail: "ui",
+      depth: 1,
+    },
     { type: "file", id: "react", name: "icon-preview.tsx", detail: "React component", depth: 2 },
     { type: "file", id: "typescript", name: "generate-icons.ts", detail: "TypeScript", depth: 1 },
     {
       type: "folder",
-      id: "folder",
+      id: "folder-git-open",
       name: ".github/workflows",
       detail: "automation",
       depth: 0,
@@ -1894,9 +2136,9 @@ function previewHtml() {
     <header>
       <div>
         <h1>Athas Icons</h1>
-        <p>Original duotone file and folder icons designed for the Athas explorer. This page is static and can be opened directly from disk.</p>
+        <p>Calm outline and duotone icons designed for every Athas file surface. This page is static and can be opened directly from disk.</p>
       </div>
-      <span class="meta">${fileIcons.length} files / ${folderIcons.length} folders / ${themeVariants.length} colorways</span>
+      <span class="meta">${fileIcons.length} files / ${folderIconStyles.length} folder styles / 2 folder states / ${themeVariants.length} colorways</span>
     </header>
     <div class="toolbar">
       <input class="search" id="icon-search" type="search" placeholder="Search icons" autocomplete="off">
