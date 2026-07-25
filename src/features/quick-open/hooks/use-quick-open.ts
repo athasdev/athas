@@ -53,6 +53,7 @@ export const useQuickOpen = () => {
 
   const {
     files,
+    hasLoadedFiles,
     isLoadingFiles,
     isIndexing,
     rootFolderPath: loaderRootFolder,
@@ -69,6 +70,7 @@ export const useQuickOpen = () => {
     isSymbolMode || isWorkspaceSymbolMode ? "" : debouncedQuery,
     isSymbolMode || isWorkspaceSymbolMode ? null : fffHits,
     {
+      hasLoadedFiles,
       rootFolderPath,
       useBackendResults:
         useBackendFileSearch &&

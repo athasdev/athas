@@ -21,6 +21,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
 
 interface ActionItem {
   id: string;
@@ -32,7 +33,7 @@ interface ActionItem {
 }
 
 const quickActionCardClassName =
-  "h-20 w-full flex-col items-start justify-between rounded-xl border border-border/65 bg-transparent p-3 text-left text-text-lighter hover:border-border-strong/75 hover:bg-hover/35 hover:text-text focus-visible:border-border-strong/80 disabled:opacity-45";
+  "h-20 min-w-0 w-full overflow-hidden flex-col items-start justify-between rounded-xl border border-border/65 bg-transparent p-3 text-left text-text-lighter hover:border-border-strong/75 hover:bg-hover/35 hover:text-text focus-visible:border-border-strong/80 disabled:opacity-45";
 
 const quickActionIconClassName =
   "flex size-7 items-center justify-center rounded-md text-text-lighter group-hover:text-text";
@@ -108,19 +109,19 @@ export function EmptyEditorState() {
   return (
     <ContextMenu>
       <ContextMenuTrigger className="flex h-full min-h-0 w-full overflow-auto">
-        <div className="m-auto flex w-[min(680px,calc(100%-56px))] min-w-0 flex-col items-center gap-4 px-6 py-8">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className="flex size-8 items-center justify-center text-text">
+        <Empty className="m-auto max-w-2xl gap-4 px-6 py-8">
+          <EmptyHeader>
+            <EmptyMedia className="size-8 text-text">
               <Sparkles className="size-5" weight="duotone" />
-            </span>
-            <h1 className="font-medium text-text ui-text-lg">Where should we begin?</h1>
-          </div>
+            </EmptyMedia>
+            <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
+          </EmptyHeader>
 
           <div className="w-full rounded-xl border border-border/70 bg-secondary-bg/16 p-3">
             <AgentLaunchInput active autoFocus variant="hero" />
           </div>
 
-          <div className="grid w-full grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
             {quickActions.map((item) => (
               <Button
                 key={item.id}
@@ -131,14 +132,14 @@ export function EmptyEditorState() {
                 className={`group ${quickActionCardClassName}`}
               >
                 <span className={quickActionIconClassName}>{item.icon}</span>
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="font-medium text-text ui-text-sm">{item.label}</span>
-                  <span className="text-text-lighter ui-text-sm">{item.description}</span>
+                <span className="flex w-full min-w-0 flex-col gap-0.5">
+                  <span className="truncate font-medium text-text ui-text-sm">{item.label}</span>
+                  <span className="truncate text-text-lighter ui-text-sm">{item.description}</span>
                 </span>
               </Button>
             ))}
           </div>
-        </div>
+        </Empty>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={handleNewFile}>

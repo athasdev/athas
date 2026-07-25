@@ -107,6 +107,7 @@ interface SessionState {
     terminals?: PersistedTerminal[],
     aiSession?: AIWorkspaceSessionSnapshot | null,
     workspaceFolders?: WorkspaceFolderSession[],
+    uiState?: ProjectUiSession,
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
   saveUiState: (projectPath: string, uiState: ProjectUiSession) => void;
@@ -123,6 +124,7 @@ export function buildSavedProjectSession({
   terminals,
   aiSession,
   workspaceFolders,
+  uiState,
   now,
 }: {
   previousSession?: ProjectSession;
@@ -132,6 +134,7 @@ export function buildSavedProjectSession({
   terminals?: PersistedTerminal[];
   aiSession?: AIWorkspaceSessionSnapshot | null;
   workspaceFolders?: WorkspaceFolderSession[];
+  uiState?: ProjectUiSession;
   now: number;
 }): ProjectSession {
   return {
@@ -143,7 +146,7 @@ export function buildSavedProjectSession({
     buffers,
     terminals: terminals === undefined ? (previousSession?.terminals ?? []) : terminals,
     aiSession: aiSession === undefined ? (previousSession?.aiSession ?? null) : aiSession,
-    uiState: previousSession?.uiState ?? null,
+    uiState: uiState === undefined ? (previousSession?.uiState ?? null) : uiState,
     lastSaved: now,
   };
 }
@@ -191,6 +194,7 @@ const useSessionStoreBase = create<SessionState>()(
         terminals,
         aiSession,
         workspaceFolders,
+        uiState,
       ) => {
         set((state) => ({
           sessions: {
@@ -203,6 +207,7 @@ const useSessionStoreBase = create<SessionState>()(
               terminals,
               aiSession,
               workspaceFolders,
+              uiState,
               now: Date.now(),
             }),
           },

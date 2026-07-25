@@ -1,4 +1,3 @@
-import { useProjectStore } from "@/features/window/stores/project.store";
 import type { BufferSession } from "@/features/window/stores/session.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import { getEditorWorkspaceScope } from "@/features/file-system/controllers/workspace-session";
@@ -87,12 +86,14 @@ const sessionSaveQueue = createWorkspaceSessionSaveQueue(
   SAVE_SESSION_DEBOUNCE_MS,
 );
 
-export const saveSessionToStore = (buffers: PaneContent[], activeBufferId: string | null) => {
-  const rootFolderPath = useProjectStore.getState().rootFolderPath;
+export const saveSessionToStore = (
+  projectPath: string | undefined,
+  buffers: PaneContent[],
+  activeBufferId: string | null,
+) => {
+  if (!projectPath) return;
 
-  if (!rootFolderPath) return;
-
-  sessionSaveQueue.schedule(rootFolderPath, {
+  sessionSaveQueue.schedule(projectPath, {
     buffers,
     activeBufferId,
   });

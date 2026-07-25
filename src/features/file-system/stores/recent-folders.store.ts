@@ -5,6 +5,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import type { RecentFolder, RecentFolderMetadata } from "../types/recent-folders.types";
 import {
+  removeMissingRecentFolders,
   toggleRecentFolderPinned,
   uniqueRecentFolderImports,
   updateRecentFolderMetadata,
@@ -26,6 +27,7 @@ interface RecentFoldersActions {
   importRecentFolders: (folders: RecentFolderImport[]) => number;
   openRecentFolder: (folderPath: string) => Promise<void>;
   removeFromRecents: (folderPath: string) => void;
+  removeMissingFromRecents: () => void;
   clearRecents: () => void;
   togglePinned: (folderPath: string) => void;
   updateRecentFolder: (folderPath: string, metadata: RecentFolderMetadata) => void;
@@ -121,6 +123,12 @@ export const useRecentFoldersStore = create<RecentFoldersState & RecentFoldersAc
         removeFromRecents: (folderPath: string) => {
           set((state) => {
             state.recentFolders = state.recentFolders.filter((f) => f.path !== folderPath);
+          });
+        },
+
+        removeMissingFromRecents: () => {
+          set((state) => {
+            state.recentFolders = removeMissingRecentFolders(state.recentFolders);
           });
         },
 

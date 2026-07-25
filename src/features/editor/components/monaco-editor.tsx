@@ -30,6 +30,7 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.s
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -37,6 +38,7 @@ import { useVimStore } from "@/features/vim/stores/vim.store";
 import { formatRelativeTime } from "@/utils/date";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
+import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
 import EditorContextMenu from "../context-menu/context-menu";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
@@ -163,6 +165,8 @@ export function MonacoEditor({
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
@@ -180,9 +184,15 @@ export function MonacoEditor({
     filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
   );
 
+  const modelDisplayPath = useMemo(() => {
+    const workspaceRoot = [rootFolderPath, ...workspaceFolders.map((folder) => folder.path)]
+      .filter((path): path is string => Boolean(path && pathStartsWithRoot(filePath, path)))
+      .sort((left, right) => right.length - left.length)[0];
+    return getRelativePath(filePath, workspaceRoot);
+  }, [filePath, rootFolderPath, workspaceFolders]);
   const modelUri = useMemo(
-    () => createModelUri(activeBufferId ?? undefined, filePath),
-    [activeBufferId, filePath],
+    () => createModelUri(activeBufferId ?? undefined, filePath, modelDisplayPath),
+    [activeBufferId, filePath, modelDisplayPath],
   );
 
   latestContentChangeRef.current = onContentChange;

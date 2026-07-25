@@ -4,8 +4,11 @@ export function ensureBufferInPane(
   paneId: string,
   bufferId: string,
   setActive = true,
+  workspaceId?: string,
 ): string | null {
-  const paneActions = usePaneStore.getState().actions;
+  const paneActions = (
+    workspaceId ? usePaneStore.getStore(workspaceId).getState() : usePaneStore.getState()
+  ).actions;
   const pane = paneActions.getPaneById(paneId);
   if (!pane) {
     return null;

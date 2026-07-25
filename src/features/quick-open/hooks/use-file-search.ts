@@ -4,7 +4,6 @@ import { getOpenBufferSearchSnapshot } from "@/features/editor/utils/open-buffer
 import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { RecentFile } from "@/features/file-system/types/recent-files.types";
 import type { FffSearchHit } from "@/features/file-search/lib/file-search-api";
-import { pathStartsWithRoot } from "@/utils/path-helpers";
 import {
   MAX_OPEN_BUFFERS_SHOWN,
   MAX_OTHER_FILES_SHOWN,
@@ -12,9 +11,11 @@ import {
   MAX_RESULTS,
 } from "../constants/limits";
 import type { CategorizedFiles, FileItem, SearchResult } from "../types/quick-open.types";
+import { filterQuickOpenRecentFiles } from "../utils/file-filtering";
 import { fuzzyScore } from "../utils/fuzzy-search";
 
 interface FileSearchOptions {
+  hasLoadedFiles?: boolean;
   rootFolderPath?: string | null;
   useBackendResults?: boolean;
 }
@@ -54,12 +55,6 @@ function recentFileToItem(file: RecentFile): FileItem {
     path: file.path,
     isDir: false,
   };
-}
-
-function isRecentFileInWorkspace(file: RecentFile, rootFolderPath: string | null | undefined) {
-  if (!rootFolderPath) return true;
-  if (file.workspacePath === rootFolderPath) return true;
-  return pathStartsWithRoot(file.path, rootFolderPath);
 }
 
 function categorizeBackendHits(
@@ -116,8 +111,12 @@ export const useFileSearch = (
 
   const categorizedFiles = useMemo((): CategorizedFiles => {
     const { activeBufferPath, openBufferPaths, openBuffers } = bufferSearchSnapshot;
-    const recentFiles = getRecentFilesOrderedByFrecency().filter((file) =>
-      isRecentFileInWorkspace(file, options.rootFolderPath),
+    const indexedFilePaths = new Set(files.map((file) => file.path));
+    const recentFiles = filterQuickOpenRecentFiles(
+      getRecentFilesOrderedByFrecency(),
+      options.rootFolderPath,
+      indexedFilePaths,
+      options.hasLoadedFiles ?? false,
     );
     const recentFilePaths = new Set<string>();
     const recentFileIndices = new Map<string, number>();
@@ -251,6 +250,7 @@ export const useFileSearch = (
     bufferSearchSnapshot,
     getRecentFilesOrderedByFrecency,
     fffHits,
+    options.hasLoadedFiles,
     options.rootFolderPath,
     options.useBackendResults,
   ]);

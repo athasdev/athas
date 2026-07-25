@@ -5,6 +5,8 @@ import { combine } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferByPath } from "@/features/editor/utils/buffer-index";
+import { emitGitChanged } from "@/features/git/events/git-events";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { useFileSystemStore } from "../stores/file-system.store";
 
@@ -120,15 +122,16 @@ export const useFileWatcherStore = createWorkspaceScopedStore(
 const pendingRefreshes = new Map<string, ReturnType<typeof setTimeout>>();
 const REFRESH_DEBOUNCE_MS = 300;
 
-function scheduleDirectoryRefresh(dirPath: string) {
-  const existing = pendingRefreshes.get(dirPath);
+function scheduleDirectoryRefresh(workspaceId: string, dirPath: string) {
+  const refreshKey = `${workspaceId}:${dirPath}`;
+  const existing = pendingRefreshes.get(refreshKey);
   if (existing) clearTimeout(existing);
 
   pendingRefreshes.set(
-    dirPath,
+    refreshKey,
     setTimeout(async () => {
-      pendingRefreshes.delete(dirPath);
-      await useFileSystemStore.getState().refreshDirectory(dirPath);
+      pendingRefreshes.delete(refreshKey);
+      await useFileSystemStore.getStore(workspaceId).getState().refreshDirectory(dirPath);
     }, REFRESH_DEBOUNCE_MS),
   );
 }
@@ -141,6 +144,7 @@ export async function initializeFileWatcherListener() {
   // Listen for file changes
   unlistenFileChanged = await listen<FileChangeEvent>("file-changed", async (event) => {
     const { path, event_type } = event.payload;
+    const workspaceId = workspaceRuntimeRegistry.getActiveWorkspaceId();
     const parentDir = await dirname(path);
 
     window.dispatchEvent(
@@ -151,27 +155,29 @@ export async function initializeFileWatcherListener() {
 
     // Handle deleted files - refresh parent directory
     if (event_type === "deleted") {
-      scheduleDirectoryRefresh(parentDir);
+      scheduleDirectoryRefresh(workspaceId, parentDir);
       return;
     }
 
     // Handle new files created externally - refresh parent directory
     if (event_type === "opened") {
-      scheduleDirectoryRefresh(parentDir);
+      scheduleDirectoryRefresh(workspaceId, parentDir);
       return;
     }
 
     // Handle reloaded files (content changed externally)
     // Check if this file has a pending save
-    const { pendingSaves } = useFileWatcherStore.getState();
+    const fileWatcherState = useFileWatcherStore.getStore(workspaceId).getState();
+    const { pendingSaves } = fileWatcherState;
     if (pendingSaves.has(path)) {
       // Don't clear here - let the auto-clear timeout handle it
       return;
     }
 
     // Handle the file change directly
-    const { buffers } = useBufferStore.getState();
-    const { reloadBufferFromDisk } = useBufferStore.getState().actions;
+    const bufferState = useBufferStore.getStore(workspaceId).getState();
+    const { buffers } = bufferState;
+    const { reloadBufferFromDisk } = bufferState.actions;
     const buffer = getBufferByPath(buffers, path);
 
     if (buffer) {
@@ -182,11 +188,11 @@ export async function initializeFileWatcherListener() {
       window.dispatchEvent(new CustomEvent("file-reloaded", { detail: { path } }));
 
       // Also trigger git gutter update for external file changes
-      window.dispatchEvent(
-        new CustomEvent("git-status-updated", {
-          detail: { filePath: path },
-        }),
-      );
+      emitGitChanged({
+        filePath: path,
+        scopes: ["working-tree"],
+        source: "external-file-change",
+      });
     }
   });
 }

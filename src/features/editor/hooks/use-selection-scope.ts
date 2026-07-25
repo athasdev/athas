@@ -3,6 +3,7 @@ import { useEffect } from "react";
 const SELECTION_SCOPE_CLASS = "selection-scope-active";
 const ACTIVE_SCOPE_ATTR = "data-selection-scope-active";
 const ROOT_SCOPE_ATTR = "data-selection-scope-root";
+const EXCLUDED_SCOPE_SELECTOR = "[data-selection-scope-exclude='true']";
 
 export function useSelectionScope(root: React.RefObject<HTMLElement | null>, enabled = true) {
   useEffect(() => {
@@ -18,6 +19,9 @@ export function useSelectionScope(root: React.RefObject<HTMLElement | null>, ena
 
     const activate = (event: MouseEvent) => {
       if (event.button !== 0) return;
+      if (event.target instanceof Element && event.target.closest(EXCLUDED_SCOPE_SELECTOR)) {
+        return;
+      }
       element.setAttribute(ACTIVE_SCOPE_ATTR, "true");
       document.body.classList.add(SELECTION_SCOPE_CLASS);
     };

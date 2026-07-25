@@ -42,8 +42,9 @@ export const FileListItem = memo(
         onClick={() => onClick(file.path)}
         onMouseEnter={onPreview ? () => onPreview(file.path) : undefined}
         isSelected={isSelected}
-        className={compact ? "min-h-7 rounded-md px-2 py-1" : undefined}
+        density={compact ? "compact" : "default"}
         icon={<ThemedFileIcon fileName={file.name} isDir={false} />}
+        iconClassName={compact ? "size-4" : undefined}
         title={file.name}
         description={directoryPath}
         accessory={

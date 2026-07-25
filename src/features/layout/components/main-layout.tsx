@@ -10,8 +10,9 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { useFileSystemFolderDrop } from "@/features/file-system/hooks/use-file-system-folder-drop";
 import { openDroppedWorkspacePaths } from "@/features/file-system/utils/open-dropped-workspace-paths";
 import { useGitStore } from "@/features/git/stores/git.store";
+import { isGitChangeRelevant, subscribeToGitChanges } from "@/features/git/events/git-events";
 import { useOnboardingStore } from "@/features/onboarding/stores/onboarding.store";
-import { SplitViewRoot } from "@/features/panes/components/split-view-root";
+import { CachedWorkspaceSplitViews } from "@/features/panes/components/split-view-root";
 import { usePaneKeyboard } from "@/features/panes/hooks/use-pane-keyboard";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -238,28 +239,17 @@ export function MainLayout() {
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const refreshGitState = (event?: Event) => {
-      const filePath =
-        event instanceof CustomEvent && typeof event.detail?.filePath === "string"
-          ? event.detail.filePath
-          : null;
-
-      if (filePath && !filePath.startsWith(rootFolderPath)) {
-        return;
-      }
+    const unsubscribe = subscribeToGitChanges((change) => {
+      if (!isGitChangeRelevant(change, rootFolderPath)) return;
 
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         void refreshWorkspaceGitStatus(rootFolderPath);
       }, 300);
-    };
-
-    window.addEventListener("git-status-updated", refreshGitState);
-    window.addEventListener("git-status-changed", refreshGitState);
+    });
 
     return () => {
-      window.removeEventListener("git-status-updated", refreshGitState);
-      window.removeEventListener("git-status-changed", refreshGitState);
+      unsubscribe();
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [rootFolderPath, refreshWorkspaceGitStatus, setWorkspaceGitStatus]);
@@ -291,7 +281,7 @@ export function MainLayout() {
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
-              <SplitViewRoot />
+              <CachedWorkspaceSplitViews />
             </div>
             {terminalWidthMode === "editor" && deferredSurfacesReady && (
               <Suspense fallback={null}>

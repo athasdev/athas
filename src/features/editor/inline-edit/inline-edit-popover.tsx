@@ -1,5 +1,6 @@
 import { ArrowBendDownLeftIcon as CornerDownLeft, XIcon as X } from "@/ui/icons";
 import { forwardRef } from "react";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import type { Range } from "@/features/editor/types/editor.types";
@@ -131,14 +132,14 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
             </Button>
           </div>
           {state.inlineEditError && (
-            <div
+            <Alert
               id="inline-edit-error"
-              role="alert"
               aria-live="assertive"
-              className="font-sans border-t border-border/50 bg-error/10 px-2 py-1 ui-text-sm text-error"
+              tone="error"
+              className="rounded-none border-x-0 border-b-0 py-1"
             >
-              {state.inlineEditError}
-            </div>
+              <AlertDescription>{state.inlineEditError}</AlertDescription>
+            </Alert>
           )}
         </div>
       </div>

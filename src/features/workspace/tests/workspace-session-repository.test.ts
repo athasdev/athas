@@ -59,6 +59,28 @@ describe("workspace session repository", () => {
     expect(saved?.terminals.map(({ id }) => id)).toEqual(["terminal-a"]);
   });
 
+  it("saves editor and UI state in one workspace snapshot", () => {
+    workspaceSessionRepository.save({
+      projectPath: "/workspace",
+      buffers: [],
+      activeBufferPath: null,
+      uiState: {
+        isSidebarVisible: true,
+        isBottomPaneVisible: false,
+        bottomPaneActiveTab: "terminal",
+        activeSidebarView: "files",
+        paneState: null,
+      },
+    });
+
+    const saved = workspaceSessionRepository.load("/workspace").session;
+    expect(saved?.uiState).toMatchObject({
+      isSidebarVisible: true,
+      isBottomPaneVisible: false,
+      activeSidebarView: "files",
+    });
+  });
+
   it("uses legacy terminal storage only when no canonical terminal session exists", () => {
     saveWorkspaceTerminalsToStorage("/workspace", [terminal("legacy-terminal")]);
     expect(workspaceSessionRepository.load("/workspace").terminals.map(({ id }) => id)).toEqual([

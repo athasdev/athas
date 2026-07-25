@@ -22,6 +22,10 @@ import {
   type SidebarDragResource,
 } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import Badge from "@/ui/badge";
@@ -316,7 +320,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const carouselViewportRef = useRef<HTMLDivElement>(null);
   const lastCarouselBufferIdRef = useRef<string | null>(null);
   const suppressAutoCenterRef = useRef(false);
-  const isActivePane = pane.id === activePaneId;
+  const workspaceScopeId = useWorkspaceStoreScopeId();
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const isWorkspaceSurfaceActive = !workspaceScopeId || workspaceScopeId === activeWorkspaceId;
+  const isActivePane = pane.id === activePaneId && isWorkspaceSurfaceActive;
 
   const { activeBuffer, paneBuffers } = useBufferStore(
     useShallow((state) => {
@@ -408,6 +415,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       fileDragData: { path: string; name: string; isDir: boolean },
       point: { x: number; y: number },
     ) => {
+      if (!isWorkspaceSurfaceActive) return;
       if (fileDragData.isDir) return;
       if (!handleFileOpen) return;
 
@@ -432,11 +440,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         delete window.__fileDragData;
       }
     },
-    [handleFileOpen, pane.id],
+    [handleFileOpen, isWorkspaceSurfaceActive, pane.id],
   );
 
   const openSidebarResourceInPane = useCallback(
     async (resource: SidebarDragResource, point: { x: number; y: number }) => {
+      if (!isWorkspaceSurfaceActive) return;
       const opensBuffer =
         !(resource.type === "file" && resource.isDir) && resource.type !== "git-worktree";
       const target = resolveDropTarget(point);
@@ -459,7 +468,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         console.error("Failed to open sidebar resource from drop:", error);
       }
     },
-    [pane.id],
+    [isWorkspaceSurfaceActive, pane.id],
   );
 
   const getCarouselWidthBounds = useCallback(() => {
@@ -554,9 +563,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       if (!rootFolderPath) return;
       try {
         const success = await stageHunk(rootFolderPath, hunk);
-        if (success) {
-          window.dispatchEvent(new CustomEvent("git-status-changed"));
-        }
+        if (!success) return;
       } catch (error) {
         console.error("Error staging hunk:", error);
       }
@@ -569,9 +576,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       if (!rootFolderPath) return;
       try {
         const success = await unstageHunk(rootFolderPath, hunk);
-        if (success) {
-          window.dispatchEvent(new CustomEvent("git-status-changed"));
-        }
+        if (!success) return;
       } catch (error) {
         console.error("Error unstaging hunk:", error);
       }
@@ -587,6 +592,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   // Listen for file tree drops on this pane
   useEffect(() => {
+    if (!isWorkspaceSurfaceActive) {
+      return;
+    }
+
     const syncHover = () => {
       const hover = getInternalTabDragHover();
       setInternalHoverZone(hover.paneId === pane.id ? hover.zone : null);
@@ -594,9 +603,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
     window.addEventListener("athas-internal-tab-drag-hover", syncHover);
     return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
-  }, [pane.id]);
+  }, [isWorkspaceSurfaceActive, pane.id]);
 
   useEffect(() => {
+    if (!isWorkspaceSurfaceActive) {
+      return;
+    }
+
     const handleFileTreeDrop = async (e: CustomEvent) => {
       const fileDragData = window.__fileDragData;
       if (!fileDragData) return;
@@ -614,7 +627,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         handleFileTreeDrop as unknown as EventListener,
       );
     };
-  }, [openFileTreeDropInPane]);
+  }, [isWorkspaceSurfaceActive, openFileTreeDropInPane]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();

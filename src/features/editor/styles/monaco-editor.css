@@ -80,7 +80,7 @@
 .monaco-editor-shell .monaco-hover .hover-contents {
   color: var(--color-text, var(--text, #faf9f5)) !important;
   font-family: var(--app-font-family);
-  font-size: var(--ui-text-sm, 13px);
+  font-size: var(--ui-text-sm);
   line-height: 1.5;
 }
 
@@ -148,24 +148,240 @@
   background: color-mix(in srgb, var(--color-secondary-bg, var(--secondary-bg)) 68%, transparent);
   color: var(--color-text-light, var(--text-light));
   font-family: var(--app-font-family);
-  font-size: 12px;
+  font-size: var(--ui-text-sm);
 }
 
-.monaco-editor-shell .peekview-widget .head .peekview-title,
-.monaco-editor-shell .reference-zone-widget .ref-tree,
-.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list-row,
+.monaco-editor-shell .zone-widget .zone-widget-container.reference-zone-widget {
+  border-color: color-mix(
+    in srgb,
+    var(--color-border, var(--border, rgba(255, 255, 255, 0.12))) 78%,
+    transparent
+  ) !important;
+  background: var(--color-primary-bg, var(--primary-bg, #0f1117));
+  box-shadow:
+    0 -1px 0 color-mix(in srgb, var(--color-border, var(--border)) 32%, transparent),
+    0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+.monaco-editor-shell .peekview-widget .head {
+  align-items: center;
+  background: color-mix(
+    in srgb,
+    var(--color-secondary-bg, var(--secondary-bg, #1c1b19)) 96%,
+    transparent
+  ) !important;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title {
+  flex: 1;
+  margin-left: 10px;
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+  font-family: var(--app-font-family);
+  font-size: var(--ui-text-sm);
+  line-height: 1.35;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title.clickable {
+  border-radius: var(--radius-md, 8px);
+  outline: none;
+  transition: color var(--app-duration-fast) var(--app-ease-smooth);
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title.clickable:hover .filename {
+  color: var(--color-accent, var(--accent, #4f8cff)) !important;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title .filename {
+  max-width: min(42%, 28rem);
+  flex: 0 1 auto;
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+  font-weight: 500;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title .dirname:not(:empty) {
+  min-width: 0;
+  max-width: min(52%, 42rem);
+  flex: 1 1 auto;
+  margin-left: 7px;
+  color: var(--color-text-lighter, var(--text-lighter, rgba(128, 128, 128, 0.78))) !important;
+  direction: rtl;
+  font-size: inherit;
+  font-weight: 400;
+  text-align: left;
+  unicode-bidi: plaintext;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-title .meta {
+  flex: 0 0 auto;
+  color: var(--color-text-lighter, var(--text-lighter, rgba(128, 128, 128, 0.78))) !important;
+  font-weight: 400;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-actions {
+  flex: 0 0 auto;
+  padding-right: 6px;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-actions .action-item {
+  display: flex;
+  align-items: center;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-actions .action-label {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-text-lighter, var(--text-lighter, rgba(128, 128, 128, 0.78))) !important;
+  outline: none;
+  transition:
+    background-color var(--app-duration-fast) var(--app-ease-smooth),
+    color var(--app-duration-fast) var(--app-ease-smooth),
+    transform var(--app-duration-fast) var(--app-ease-smooth);
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-actions .action-label:hover {
+  background: color-mix(in srgb, var(--color-hover, var(--hover, #333333)) 72%, transparent);
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-actions .action-label:active {
+  transform: scale(var(--app-press-scale, 0.96));
+}
+
+.monaco-editor-shell .peekview-widget .head .peekview-actions .action-label:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #4f8cff) 32%, transparent);
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+}
+
+.monaco-editor-shell .peekview-widget > .body {
+  border-top-color: color-mix(
+    in srgb,
+    var(--color-border, var(--border, rgba(255, 255, 255, 0.12))) 70%,
+    transparent
+  ) !important;
+  background: var(--color-primary-bg, var(--primary-bg, #0f1117));
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree {
+  background: var(--color-secondary-bg, var(--secondary-bg, #1c1b19)) !important;
+  color: var(--color-text-light, var(--text-light, rgba(180, 180, 180, 0.9))) !important;
+  font-family: var(--app-font-family);
+  font-size: var(--ui-text-sm);
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list-row {
+  box-sizing: border-box;
+  width: calc(100% - 8px) !important;
+  margin-inline: 4px;
+  border-radius: var(--radius-sm, 6px);
+  transition:
+    background-color var(--app-duration-fast) var(--app-ease-smooth),
+    color var(--app-duration-fast) var(--app-ease-smooth);
+}
+
+.monaco-editor-shell
+  .reference-zone-widget
+  .ref-tree
+  .monaco-list-row:hover:not(.selected):not(.focused) {
+  background: color-mix(
+    in srgb,
+    var(--color-hover, var(--hover, #333333)) 54%,
+    transparent
+  ) !important;
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list-row.selected,
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list-row.focused {
+  background: var(--color-selected, var(--selected, rgba(255, 255, 255, 0.08))) !important;
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .monaco-list:focus .monaco-list-row.focused {
+  box-shadow: inset 2px 0 0 var(--color-accent, var(--accent, #4f8cff));
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .reference-file {
+  align-items: center;
+  padding-right: 8px;
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+  font-family: var(--app-font-family);
+  font-weight: 500;
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .reference-file .monaco-icon-label-container {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+}
+
+.monaco-editor-shell
+  .reference-zone-widget
+  .ref-tree
+  .reference-file
+  .monaco-icon-description-container {
+  min-width: 0;
+  flex: 1;
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .reference-file .label-description {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-lighter, var(--text-lighter, rgba(128, 128, 128, 0.78)));
+  direction: rtl;
+  font-size: inherit;
+  font-weight: 400;
+  text-align: left;
+  text-overflow: ellipsis;
+  unicode-bidi: plaintext;
+}
+
 .monaco-editor-shell .reference-zone-widget .ref-tree .reference,
-.monaco-editor-shell .reference-zone-widget .ref-tree .reference-file,
 .monaco-editor-shell .reference-zone-widget .ref-tree .referenceMatch,
 .monaco-editor-shell .reference-zone-widget .ref-tree .monaco-highlighted-label,
 .monaco-editor-shell .reference-zone-widget .ref-tree .monaco-highlighted-label span {
   font-family: var(--athas-monaco-font-family, var(--editor-font-family));
   font-size: var(--athas-monaco-font-size, 13px);
-  line-height: var(--athas-monaco-line-height, 20px);
 }
 
-.monaco-editor-shell .peekview-widget .head .peekview-title .dirname:not(:empty) {
-  font-size: 0.9em;
+.monaco-editor-shell .reference-zone-widget .ref-tree .reference {
+  padding-right: 8px;
+  color: var(--color-text-light, var(--text-light, rgba(180, 180, 180, 0.9)));
+}
+
+.monaco-editor-shell .reference-zone-widget .ref-tree .referenceMatch .highlight {
+  border-radius: 3px;
+  color: var(--color-text, var(--text, #faf9f5)) !important;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--color-accent, var(--accent, #4f8cff)) 24%, transparent);
+}
+
+.monaco-editor-shell .reference-zone-widget .preview,
+.monaco-editor-shell .reference-zone-widget .preview .monaco-editor,
+.monaco-editor-shell .reference-zone-widget .preview .monaco-editor-background,
+.monaco-editor-shell .reference-zone-widget .preview .monaco-editor .margin {
+  background: var(--color-primary-bg, var(--primary-bg, #0f1117)) !important;
+}
+
+.monaco-editor-shell .reference-zone-widget .monaco-sash.vertical::before {
+  width: 1px;
+  left: calc(50% - 0.5px);
+  background: color-mix(
+    in srgb,
+    var(--color-border, var(--border, rgba(255, 255, 255, 0.12))) 72%,
+    transparent
+  );
+}
+
+.monaco-editor-shell .reference-zone-widget .monaco-sash.vertical.hover::before,
+.monaco-editor-shell .reference-zone-widget .monaco-sash.vertical.active::before {
+  width: 2px;
+  left: calc(50% - 1px);
+  background: color-mix(in srgb, var(--color-accent, var(--accent, #4f8cff)) 74%, transparent);
 }
 
 .monaco-vim-statusbar {

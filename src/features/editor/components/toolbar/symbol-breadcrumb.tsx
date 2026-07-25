@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
@@ -8,6 +8,14 @@ import { findSymbolPathAtPosition } from "@/features/outline/utils/symbol-path";
 import { openOutlineSymbol } from "@/features/outline/utils/outline-symbols";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/ui/breadcrumb";
 import { cn } from "@/utils/cn";
 
 interface SymbolBreadcrumbProps {
@@ -66,30 +74,37 @@ export function SymbolBreadcrumb({
   }
 
   return (
-    <div
-      className={cn("flex min-w-0 items-center gap-0.5 overflow-x-auto scrollbar-none", className)}
+    <Breadcrumb
+      aria-label="Symbol path"
+      className={cn("min-w-0 overflow-x-auto scrollbar-none", className)}
     >
-      {symbolChain.map((symbol) => (
-        <div key={symbol.id} className="flex shrink-0 items-center gap-0.5">
-          <span aria-hidden="true" className="mx-0.5 shrink-0 text-text-lighter ui-text-sm">
-            ›
-          </span>
-          {interactive ? (
-            <Button
-              onClick={() => openOutlineSymbol(symbol)}
-              variant="ghost"
-              size="xs"
-              className="min-w-0 gap-1 whitespace-nowrap rounded px-1 py-0.5 text-text-lighter ui-text-sm hover:text-text"
-            >
-              {symbol.name}
-            </Button>
-          ) : (
-            <span className="truncate rounded px-1 py-0.5 text-text-lighter ui-text-sm">
-              {symbol.name}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
+      <BreadcrumbList className="flex-nowrap gap-0">
+        {symbolChain.map((symbol, index) => {
+          const isLast = index === symbolChain.length - 1;
+
+          return (
+            <Fragment key={symbol.id}>
+              <BreadcrumbSeparator className="mx-0.5 shrink-0" />
+              <BreadcrumbItem className="shrink-0 gap-0">
+                {interactive ? (
+                  <BreadcrumbLink
+                    render={
+                      <Button onClick={() => openOutlineSymbol(symbol)} variant="ghost" size="xs" />
+                    }
+                    className="min-w-0 whitespace-nowrap text-text-lighter hover:text-text"
+                  >
+                    {symbol.name}
+                  </BreadcrumbLink>
+                ) : isLast ? (
+                  <BreadcrumbPage className="truncate px-1.5">{symbol.name}</BreadcrumbPage>
+                ) : (
+                  <span className="truncate px-1.5 text-text-lighter">{symbol.name}</span>
+                )}
+              </BreadcrumbItem>
+            </Fragment>
+          );
+        })}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }

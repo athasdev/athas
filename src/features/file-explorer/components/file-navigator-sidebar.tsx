@@ -15,14 +15,9 @@ import {
 } from "react";
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
-import {
-  SidebarHeaderIconButton,
-  SidebarListItem,
-  SidebarSearchFilterRow,
-  SidebarSectionLabel,
-} from "@/ui/sidebar";
+import { SidebarListItem, SidebarSearchFilterRow, SidebarSectionLabel } from "@/ui/sidebar";
+import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
-import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -428,39 +423,19 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           searchContainerClassName="file-explorer-search-field"
           className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}
           actions={
-            <div
-              className={cn(
-                "inline-flex shrink-0 rounded p-0.5",
-                surface === "inset" ? "bg-primary-bg" : "bg-transparent",
-              )}
-            >
-              <SidebarHeaderIconButton
-                className={cn(
-                  "file-navigator-view-mode-button rounded",
-                  viewMode === "flat" && "bg-selected text-text",
-                )}
-                onClick={() => onViewModeChange("flat")}
-                aria-label="Show flat file list"
-                aria-pressed={viewMode === "flat"}
-                tooltip="Flat list"
-                tooltipSide="bottom"
-              >
-                <ListBullets />
-              </SidebarHeaderIconButton>
-              <SidebarHeaderIconButton
-                className={cn(
-                  "file-navigator-view-mode-button rounded",
-                  viewMode === "tree" && "bg-selected text-text",
-                )}
-                onClick={() => onViewModeChange("tree")}
-                aria-label="Show file tree"
-                aria-pressed={viewMode === "tree"}
-                tooltip="File tree"
-                tooltipSide="bottom"
-              >
-                <TreeStructure />
-              </SidebarHeaderIconButton>
-            </div>
+            <ToggleGroup
+              value={viewMode}
+              onValueChange={onViewModeChange}
+              ariaLabel="File navigator view"
+              options={[
+                { value: "flat", label: "Flat list", icon: <ListBullets /> },
+                { value: "tree", label: "File tree", icon: <TreeStructure /> },
+              ]}
+              iconOnly
+              wrap={false}
+              size="xs"
+              className={cn("shrink-0", surface === "inset" && "bg-primary-bg")}
+            />
           }
         />
       ) : null}
@@ -507,9 +482,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         aria-valuemax={MAX_NAVIGATOR_WIDTH}
         aria-valuenow={Math.round(width)}
         tabIndex={0}
-      >
-        <ResizeHandleEffect active={isResizing} orientation="vertical" />
-      </div>
+      />
       {isResizing ? (
         <div className="pointer-events-none fixed inset-0 z-10 cursor-col-resize" />
       ) : null}

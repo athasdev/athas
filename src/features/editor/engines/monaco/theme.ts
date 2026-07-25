@@ -150,6 +150,10 @@ export function defineMonacoTheme(themeId: string): string {
     colorValue(theme, "primary-bg"),
     fallbackColor(theme, "primary-bg"),
   );
+  const secondaryBackground = toMonacoColor(
+    colorValue(theme, "secondary-bg"),
+    fallbackColor(theme, "secondary-bg"),
+  );
   const foreground = toMonacoColor(colorValue(theme, "text"), fallbackColor(theme, "text"));
   const subtleForeground = toMonacoColor(
     colorValue(theme, "text-lighter"),
@@ -198,6 +202,23 @@ export function defineMonacoTheme(themeId: string): string {
       "input.background": background,
       "input.foreground": foreground,
       "input.border": border,
+      "peekView.border": border,
+      "peekViewTitle.background": secondaryBackground,
+      "peekViewTitleLabel.foreground": foreground,
+      "peekViewTitleDescription.foreground": subtleForeground,
+      "peekViewResult.background": secondaryBackground,
+      "peekViewResult.lineForeground": subtleForeground,
+      "peekViewResult.fileForeground": foreground,
+      "peekViewResult.selectionBackground": selected,
+      "peekViewResult.selectionForeground": foreground,
+      "peekViewResult.matchHighlightBackground": selection,
+      "peekViewEditor.background": background,
+      "peekViewEditorGutter.background": background,
+      "peekViewEditorStickyScroll.background": background,
+      "peekViewEditorStickyScrollGutter.background": background,
+      "peekViewEditor.matchHighlightBackground": selection,
+      "peekViewEditor.matchHighlightBorder": accent,
+      "sash.hoverBorder": accent,
       focusBorder: accent,
     },
   });

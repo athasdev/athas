@@ -4,9 +4,13 @@ import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { CommandInput } from "@/ui/command";
 import { SEARCH_TOGGLE_ICONS, SearchReplaceRow, SearchReplaceToggle } from "@/ui/search";
-import { TabsList } from "@/ui/tabs";
-import { cn } from "@/utils/cn";
+import { ToggleGroup, type ToggleGroupOption } from "@/ui/toggle-group";
 import type { ContentSearchOptions } from "../types/global-search.types";
+import {
+  fromSearchOptionValues,
+  toSearchOptionValues,
+  type SearchOptionValue,
+} from "../utils/search-options";
 
 interface GlobalSearchToolbarProps {
   inputRef: RefObject<HTMLInputElement | null>;
@@ -60,29 +64,24 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
   excludeQuery,
   onExcludeQueryChange,
 }: GlobalSearchToolbarProps) {
-  const searchOptionButtons = [
+  const searchOptionButtons: ToggleGroupOption<SearchOptionValue>[] = [
     {
-      id: "case-sensitive",
+      value: "case-sensitive",
       label: "Match case",
       icon: SEARCH_TOGGLE_ICONS.caseSensitive,
-      active: searchOptions.caseSensitive,
-      onToggle: () => setSearchOption("caseSensitive", !searchOptions.caseSensitive),
     },
     {
-      id: "whole-word",
+      value: "whole-word",
       label: "Match whole word",
       icon: SEARCH_TOGGLE_ICONS.wholeWord,
-      active: searchOptions.wholeWord,
-      onToggle: () => setSearchOption("wholeWord", !searchOptions.wholeWord),
     },
     {
-      id: "regex",
+      value: "regex",
       label: "Use regular expression",
       icon: SEARCH_TOGGLE_ICONS.regex,
-      active: searchOptions.useRegex,
-      onToggle: () => setSearchOption("useRegex", !searchOptions.useRegex),
     },
   ];
+  const activeSearchOptions = toSearchOptionValues(searchOptions);
 
   return (
     <div className="border-border/70 border-b bg-secondary-bg/55 px-3 py-2">
@@ -122,26 +121,23 @@ export const GlobalSearchToolbar = memo(function GlobalSearchToolbar({
             </Button>
           ) : null}
         </div>
-        <TabsList variant="segmented" className="shrink-0">
-          {searchOptionButtons.map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              onClick={option.onToggle}
-              variant="ghost"
-              className={cn(
-                "h-full w-7 rounded-none border-0 text-text-lighter hover:bg-hover/60 hover:text-text focus-visible:rounded-none",
-                option.active && "bg-hover/80 text-text",
-              )}
-              tooltip={option.label}
-              aria-label={option.label}
-              aria-pressed={option.active}
-              size="icon-xs"
-            >
-              {option.icon}
-            </Button>
-          ))}
-        </TabsList>
+        <ToggleGroup<SearchOptionValue>
+          type="multiple"
+          value={activeSearchOptions}
+          options={searchOptionButtons}
+          onValueChange={(nextValues) => {
+            const next = fromSearchOptionValues(nextValues);
+            setSearchOption("caseSensitive", next.caseSensitive);
+            setSearchOption("wholeWord", next.wholeWord);
+            setSearchOption("useRegex", next.useRegex);
+          }}
+          ariaLabel="Search options"
+          variant="segmented"
+          size="xs"
+          wrap={false}
+          iconOnly
+          className="shrink-0"
+        />
         {searchWarning ? (
           <Badge
             variant="warning"

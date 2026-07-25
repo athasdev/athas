@@ -22,6 +22,17 @@ describe("WorkspaceRuntimeRegistry", () => {
     expect(registry.getStore<{ count: number }>("counter").getState().count).toBe(4);
   });
 
+  it("gives each store factory its owning workspace id", () => {
+    registry.registerStore("owned", (workspaceId) => createStore(() => ({ workspaceId })));
+
+    expect(
+      registry.getStore<{ workspaceId: string }>("owned", "workspace-a").getState().workspaceId,
+    ).toBe("workspace-a");
+    expect(
+      registry.getStore<{ workspaceId: string }>("owned", "workspace-b").getState().workspaceId,
+    ).toBe("workspace-b");
+  });
+
   it("keeps runtime status separate from activation", () => {
     registry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
     expect(registry.isWorkspaceReady("workspace-a")).toBe(false);
