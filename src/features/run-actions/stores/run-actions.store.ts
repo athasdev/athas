@@ -1,51 +1,44 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
+import type { CustomRunAction } from "../types/run-action.types";
 
-export interface CustomTerminalAction {
-  id: string;
-  name: string;
-  command: string;
-  icon?: string;
-  workspacePath?: string;
-}
-
-interface CustomActionsState {
-  actions: CustomTerminalAction[];
+interface RunActionsState {
+  actions: CustomRunAction[];
   storeActions: {
-    addAction: (action: Omit<CustomTerminalAction, "id">) => void;
-    updateAction: (id: string, updates: Partial<CustomTerminalAction>) => void;
+    addAction: (action: Omit<CustomRunAction, "id">) => void;
+    updateAction: (id: string, updates: Partial<CustomRunAction>) => void;
     deleteAction: (id: string) => void;
-    getAction: (id: string) => CustomTerminalAction | undefined;
-    getActionsForWorkspace: (workspacePath?: string) => CustomTerminalAction[];
+    getAction: (id: string) => CustomRunAction | undefined;
+    getActionsForWorkspace: (workspacePath?: string) => CustomRunAction[];
     reorderActions: (startIndex: number, endIndex: number) => void;
   };
 }
 
-const useCustomActionsStoreBase = create<CustomActionsState>()(
+const useRunActionsStoreBase = create<RunActionsState>()(
   persist(
     (set, get) => ({
       actions: [],
       storeActions: {
         addAction: (action) => {
-          const id = `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const id = `action_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
           set((state) => ({
             actions: [...state.actions, { ...action, id }],
           }));
         },
         updateAction: (id, updates) => {
           set((state) => ({
-            actions: state.actions.map((a) => (a.id === id ? { ...a, ...updates } : a)),
+            actions: state.actions.map((action) =>
+              action.id === id ? { ...action, ...updates } : action,
+            ),
           }));
         },
         deleteAction: (id) => {
           set((state) => ({
-            actions: state.actions.filter((a) => a.id !== id),
+            actions: state.actions.filter((action) => action.id !== id),
           }));
         },
-        getAction: (id) => {
-          return get().actions.find((a) => a.id === id);
-        },
+        getAction: (id) => get().actions.find((action) => action.id === id),
         getActionsForWorkspace: (workspacePath) => {
           const actions = get().actions;
           if (!workspacePath) {
@@ -60,6 +53,7 @@ const useCustomActionsStoreBase = create<CustomActionsState>()(
           set((state) => {
             const result = Array.from(state.actions);
             const [removed] = result.splice(startIndex, 1);
+            if (!removed) return state;
             result.splice(endIndex, 0, removed);
             return { actions: result };
           });
@@ -71,11 +65,11 @@ const useCustomActionsStoreBase = create<CustomActionsState>()(
       partialize: (state) => ({ actions: state.actions }),
       merge: (persistedState, currentState) => ({
         ...currentState,
-        ...(persistedState as Partial<CustomActionsState>),
+        ...(persistedState as Partial<RunActionsState>),
         storeActions: currentState.storeActions,
       }),
     },
   ),
 );
 
-export const useCustomActionsStore = createSelectors(useCustomActionsStoreBase);
+export const useRunActionsStore = createSelectors(useRunActionsStoreBase);

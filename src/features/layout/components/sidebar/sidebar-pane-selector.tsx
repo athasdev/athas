@@ -1,11 +1,11 @@
-import { Fragment, useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { CoreFeaturesState } from "@/features/settings/types/feature.types";
 import { useExtensionViews } from "@/extensions/ui/hooks/use-extension-views";
 import { DynamicIcon } from "@/extensions/ui/components/dynamic-icon";
 import { normalizeItemOrder } from "@/features/layout/config/item-order";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { Tab, TabsList, type TabsItem } from "@/ui/tabs";
 import { SidebarListItem } from "@/ui/sidebar";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   BoxIcon,
   GitBranchIcon,
@@ -17,6 +17,22 @@ import {
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import type { SidebarView } from "../../utils/sidebar-pane-utils";
+
+interface SidebarPaneItem {
+  id: string;
+  label?: ReactNode;
+  icon?: ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
+  ariaLabel?: string;
+  className?: string;
+  tooltip?: {
+    content: string;
+    shortcut?: string;
+    side?: "top" | "bottom" | "left" | "right";
+    className?: string;
+  };
+}
 
 function orderItems<T extends { id: string }>(items: T[], orderedIds: string[]) {
   const itemMap = new Map(items.map((item) => [item.id, item]));
@@ -74,7 +90,7 @@ export const SidebarPaneSelector = ({
     (state) => state.settings.sidebarActivityItemsOrder,
   );
 
-  const items = useMemo<TabsItem[]>(
+  const items = useMemo<SidebarPaneItem[]>(
     () => [
       {
         id: "files",
@@ -82,7 +98,6 @@ export const SidebarPaneSelector = ({
         icon: <FilesIcon className={iconClassName} />,
         isActive: isFilesActive,
         onClick: () => onViewChange("files"),
-        role: "tab",
         ariaLabel: "Files",
         tooltip: {
           content: "Files",
@@ -104,7 +119,7 @@ export const SidebarPaneSelector = ({
                 shortcut: "Mod+Shift+F",
                 side: tooltipSide,
               },
-            } satisfies TabsItem,
+            } satisfies SidebarPaneItem,
           ]
         : []),
       ...(coreFeatures.git
@@ -115,14 +130,13 @@ export const SidebarPaneSelector = ({
               icon: <GitBranchIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && isGitViewActive,
               onClick: () => onViewChange("git"),
-              role: "tab",
               ariaLabel: "Git Source Control",
               tooltip: {
                 content: "Source Control",
                 shortcut: "Mod+Shift+G",
                 side: tooltipSide,
               },
-            } satisfies TabsItem,
+            } satisfies SidebarPaneItem,
           ]
         : []),
       ...(coreFeatures.github
@@ -133,13 +147,12 @@ export const SidebarPaneSelector = ({
               icon: <GitPullRequestIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && isGitHubPRsViewActive,
               onClick: () => onViewChange("github-prs"),
-              role: "tab",
               ariaLabel: "GitHub Pull Requests",
               tooltip: {
                 content: "Pull Requests",
                 side: tooltipSide,
               },
-            } satisfies TabsItem,
+            } satisfies SidebarPaneItem,
           ]
         : []),
       ...(coreFeatures.docker
@@ -150,13 +163,12 @@ export const SidebarPaneSelector = ({
               icon: <BoxIcon className={iconClassName} />,
               isActive: isPrimarySidebarItemActive && activeSidebarView === "docker",
               onClick: () => onViewChange("docker"),
-              role: "tab",
               ariaLabel: "Docker",
               tooltip: {
                 content: "Docker",
                 side: tooltipSide,
               },
-            } satisfies TabsItem,
+            } satisfies SidebarPaneItem,
           ]
         : []),
       {
@@ -179,13 +191,12 @@ export const SidebarPaneSelector = ({
             icon: <DynamicIcon name={view.icon} className={iconClassName} />,
             isActive: isPrimarySidebarItemActive && activeSidebarView === view.id,
             onClick: () => onViewChange(view.id),
-            role: "tab",
             ariaLabel: view.title,
             tooltip: {
               content: view.title,
               side: tooltipSide,
             },
-          }) satisfies TabsItem,
+          }) satisfies SidebarPaneItem,
       ),
     ],
     [
@@ -246,24 +257,21 @@ export const SidebarPaneSelector = ({
 
   const renderedItems = orderedItems.map((item) => {
     const tabNode = (
-      <Tab
-        role={item.role}
-        aria-selected={item.isActive}
+      <TabsTrigger
+        value={item.id}
         aria-label={item.ariaLabel}
-        tabIndex={item.tabIndex}
-        title={item.title}
-        isActive={!!item.isActive}
-        size={compact ? "icon" : "sm"}
-        variant="default"
-        labelPosition="center"
-        className={item.className}
-        onClick={item.onClick}
+        size={compact ? "xs" : "sm"}
+        className={cn(
+          compact && "aspect-[7/6] flex-none px-0",
+          !compact && "flex-none",
+          item.className,
+        )}
       >
         {item.icon}
         {item.label ? (
           <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
         ) : null}
-      </Tab>
+      </TabsTrigger>
     );
 
     const content =
@@ -282,26 +290,27 @@ export const SidebarPaneSelector = ({
 
     return {
       id: item.id,
-      label: item.tooltip?.content ?? item.ariaLabel ?? item.title ?? item.id,
       content,
     };
   });
 
   return (
-    <TabsList
-      variant={compact ? "bare" : "default"}
-      className={cn(
-        !compact && "gap-0.5 p-1",
-        isVertical &&
-          cn(
-            "flex-col rounded-none border-0 bg-transparent p-0",
-            showLabels ? "w-full items-stretch gap-1" : "items-center gap-1",
-          ),
-      )}
+    <Tabs
+      value={orderedItems.find((item) => item.isActive)?.id}
+      onValueChange={(value) => orderedItems.find((item) => item.id === value)?.onClick?.()}
+      className="gap-0"
     >
-      {renderedItems.map((item) => (
-        <Fragment key={item.id}>{item.content}</Fragment>
-      ))}
-    </TabsList>
+      <TabsList
+        variant={compact ? "bare" : "default"}
+        className={cn(!compact && "gap-0.5 p-1")}
+        aria-label="Sidebar views"
+      >
+        {renderedItems.map((item) => (
+          <span key={item.id} className="contents">
+            {item.content}
+          </span>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 };

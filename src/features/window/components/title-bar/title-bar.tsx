@@ -6,6 +6,7 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import { AppUpdateControl } from "@/features/layout/components/app-update-control";
 import type { HeaderTrailingItemId } from "@/features/layout/config/item-order";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
+import RunActionsButton from "@/features/run-actions/components/run-actions-button";
 import SettingsDialog from "@/features/settings/components/settings-dialog";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -29,12 +30,12 @@ import {
   TrashIcon,
   WindowExpandIcon,
 } from "@/ui/icons";
+import { Toggle } from "@/ui/toggle";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_MAC, IS_WINDOWS } from "@/utils/platform";
 import { AccountMenu } from "../account-menu";
 import ProjectPicker from "../project-picker";
-import RunActionsButton from "../run-actions-button";
 import { WindowControls } from "./window-controls";
 import WindowMenuBar from "../window-menu-bar";
 
@@ -240,19 +241,17 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
     ) : null;
 
   const sidebarToggle = (
-    <Button
+    <Toggle
       type="button"
-      variant="ghost"
-      active={activityRailExpanded}
+      pressed={activityRailExpanded}
       tooltip={activityRailExpanded ? "Collapse Activity Bar" : "Expand Activity Bar"}
       tooltipSide="bottom"
-      onClick={() => void updateSetting("activityRailExpanded", !activityRailExpanded)}
+      onPressedChange={(pressed) => void updateSetting("activityRailExpanded", pressed)}
       aria-label={activityRailExpanded ? "Collapse activity bar" : "Expand activity bar"}
-      aria-pressed={activityRailExpanded}
-      size="icon-xs"
+      size="xs"
     >
       <SidebarSimpleIcon />
-    </Button>
+    </Toggle>
   );
 
   const headerTrailingItems: Array<ChromeItem<HeaderTrailingItemId>> = [

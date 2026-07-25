@@ -20,7 +20,7 @@ import {
   WindowExpandIcon,
   XIcon,
 } from "@/ui/icons";
-import { Tabs } from "@/ui/tabs";
+import { SortableTabs } from "@/ui/tab-bar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import ProjectIconPicker from "../project-icon-picker";
@@ -249,7 +249,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   return (
     <>
       <div className="group flex min-w-0 items-center">
-        <Tabs
+        <SortableTabs
           items={projectTabItems}
           size="xs"
           variant="segmented"

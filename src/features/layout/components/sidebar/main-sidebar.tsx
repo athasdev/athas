@@ -24,12 +24,16 @@ import { useFileSystemStore } from "@/features/file-system/stores/file-system.st
 import GitView from "@/features/git/components/git-view";
 import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
-import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
+import {
+  getAdjacentProjectIndex,
+  getProjectCarouselDirection,
+} from "@/features/layout/utils/project-carousel";
 import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import ProjectIconPicker from "@/features/window/components/project-icon-picker";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { useUIState } from "@/features/window/stores/ui-state.store";
@@ -57,6 +61,7 @@ import {
 } from "@/ui/context-menu";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { InlineRenameInput } from "@/ui/input";
+import { Spinner } from "@/ui/spinner";
 import {
   ChevronExpandYIcon,
   CopyIcon,
@@ -98,15 +103,23 @@ const AGENT_HISTORY_INLINE_LIMIT = 5;
 const PROJECT_SWIPE_THRESHOLD_PX = 42;
 const PROJECT_SWIPE_VELOCITY_PX = 420;
 const PROJECT_WHEEL_END_DELAY_MS = 80;
+const PROJECT_BOUNDARY_TRAVEL_PX = 32;
 const PROJECT_SNAP_TRANSITION = {
   type: "spring" as const,
-  stiffness: 720,
-  damping: 56,
-  mass: 0.42,
+  stiffness: 560,
+  damping: 52,
+  mass: 0.5,
 };
 
 const clampActivityRailWidth = (width: number) =>
   Math.min(MAX_ACTIVITY_RAIL_WIDTH, Math.max(MIN_ACTIVITY_RAIL_WIDTH, Math.round(width)));
+
+const waitForProjectCarouselPaint = () =>
+  new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
 
 const getProjectNameFromPath = (path?: string) => {
   if (!path) return "Open Project";
@@ -145,17 +158,21 @@ function ProjectGlyph({
 function SidebarProjectSwitcher({
   expanded,
   project,
+  openProject = false,
 }: {
   expanded: boolean;
   project?: ProjectTab;
+  openProject?: boolean;
 }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const [detectedIconPath, setDetectedIconPath] = useState<string | undefined>();
   const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
-  const displayProject = project;
-  const projectName = displayProject?.name || getProjectNameFromPath(rootFolderPath);
-  const projectPath = displayProject?.path || rootFolderPath;
+  const displayProject = openProject ? undefined : project;
+  const projectName = openProject
+    ? "Open Project"
+    : displayProject?.name || getProjectNameFromPath(rootFolderPath);
+  const projectPath = openProject ? undefined : displayProject?.path || rootFolderPath;
   const customIcon = displayProject?.customIcon;
   const isRemote = isRemoteProjectPath(projectPath);
   const displayIconPath = customIcon ?? detectedIconPath;
@@ -223,7 +240,7 @@ function SidebarProjectSwitcher({
         iconOnly={!expanded}
         trailing={expanded ? <ChevronExpandYIcon className="size-3.5" /> : undefined}
         onClick={handleOpenProjectPicker}
-        aria-label="Switch project"
+        aria-label={openProject ? "Open project switcher" : "Switch project"}
         title={expanded ? undefined : projectName}
         className="ui-text-sm min-h-6 py-1"
       >
@@ -541,6 +558,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const activeSidebarView = useUIState((state) => state.activeSidebarView);
+  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const openGlobalSearchBuffer = useBufferStore.use.actions().openGlobalSearchBuffer;
   const openExtensionsBuffer = useBufferStore.use.actions().openExtensionsBuffer;
   const configuredActivityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
@@ -551,6 +569,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const [isActivityRailResizing, setIsActivityRailResizing] = useState(false);
   const [carouselProjectId, setCarouselProjectId] = useState<string | null>(null);
   const [carouselTargetProjectId, setCarouselTargetProjectId] = useState<string | null>(null);
+  const [loadingCarouselProjectId, setLoadingCarouselProjectId] = useState<string | null>(null);
   const [projectCarouselDirection, setProjectCarouselDirection] = useState<1 | -1>(1);
   const [isProjectGestureSettling, setIsProjectGestureSettling] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -574,13 +593,8 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     ? projectTabs.findIndex((project) => project.id === carouselProject.id)
     : -1;
   const previousProject =
-    carouselProjectIndex >= 0
-      ? projectTabs[(carouselProjectIndex - 1 + projectTabs.length) % projectTabs.length]
-      : undefined;
-  const nextProject =
-    carouselProjectIndex >= 0
-      ? projectTabs[(carouselProjectIndex + 1) % projectTabs.length]
-      : undefined;
+    carouselProjectIndex >= 0 ? projectTabs[carouselProjectIndex - 1] : undefined;
+  const nextProject = carouselProjectIndex >= 0 ? projectTabs[carouselProjectIndex + 1] : undefined;
   const carouselTargetProject = carouselTargetProjectId
     ? projectTabs.find((project) => project.id === carouselTargetProjectId)
     : undefined;
@@ -699,13 +713,45 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
   const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH;
 
+  const settleProjectBoundary = useCallback(
+    async (direction: 1 | -1) => {
+      isProjectGestureSettlingRef.current = true;
+      flushSync(() => {
+        setProjectCarouselDirection(direction);
+        setCarouselTargetProjectId(null);
+        setIsProjectGestureSettling(true);
+      });
+
+      try {
+        projectGestureX.stop();
+        if (prefersReducedMotion) {
+          projectGestureX.jump(0);
+        } else {
+          const boundaryPosition =
+            -direction * Math.min(PROJECT_BOUNDARY_TRAVEL_PX, railPanelWidth / 4);
+          await animate(projectGestureX, boundaryPosition, PROJECT_SNAP_TRANSITION);
+          await animate(projectGestureX, 0, PROJECT_SNAP_TRANSITION);
+        }
+      } finally {
+        projectGestureX.jump(0);
+        isProjectGestureSettlingRef.current = false;
+        setIsProjectGestureSettling(false);
+      }
+
+      if (direction > 0) {
+        setIsProjectPickerVisible(true);
+      }
+    },
+    [prefersReducedMotion, projectGestureX, railPanelWidth, setIsProjectPickerVisible],
+  );
+
   const settleProjectGesture = useCallback(
     async (offset: 1 | -1, requestedProjectId?: string) => {
       if (
         isActivityRailResizing ||
         isSwitchingProject ||
         isProjectGestureSettlingRef.current ||
-        projectTabs.length < 2 ||
+        projectTabs.length === 0 ||
         carouselProjectIndex < 0
       ) {
         return;
@@ -713,7 +759,12 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
 
       const targetIndex = requestedProjectId
         ? projectTabs.findIndex((project) => project.id === requestedProjectId)
-        : (carouselProjectIndex + offset + projectTabs.length) % projectTabs.length;
+        : getAdjacentProjectIndex(carouselProjectIndex, offset, projectTabs.length);
+      if (targetIndex === null || targetIndex < 0) {
+        await settleProjectBoundary(offset);
+        return;
+      }
+
       const targetProject = projectTabs[targetIndex];
       if (!targetProject || targetProject.id === carouselProject?.id) return;
 
@@ -721,30 +772,55 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       flushSync(() => {
         setProjectCarouselDirection(offset);
         setCarouselTargetProjectId(targetProject.id);
+        setLoadingCarouselProjectId(
+          workspaceRuntimeRegistry.isWorkspaceReady(targetProject.id) ? null : targetProject.id,
+        );
         setIsProjectGestureSettling(true);
       });
 
-      projectGestureX.stop();
-      if (prefersReducedMotion) {
-        projectGestureX.jump(-offset * railPanelWidth);
-      } else {
-        await animate(projectGestureX, -offset * railPanelWidth, PROJECT_SNAP_TRANSITION);
-      }
-
-      flushSync(() => {
-        setCarouselProjectId(targetProject.id);
-        setCarouselTargetProjectId(null);
-      });
-      projectGestureX.jump(0);
-
       try {
-        const switched = await switchToProject(targetProject.id);
-        if (!switched) {
-          flushSync(() => setCarouselProjectId(activeProject?.id ?? null));
+        const switchPromise = switchToProject(targetProject.id);
+        projectGestureX.stop();
+        if (prefersReducedMotion) {
+          projectGestureX.jump(-offset * railPanelWidth);
+        } else {
+          await Promise.all([
+            animate(projectGestureX, -offset * railPanelWidth, PROJECT_SNAP_TRANSITION),
+            switchPromise,
+          ]);
         }
+
+        const switched = await switchPromise;
+        if (!switched) {
+          if (prefersReducedMotion) {
+            projectGestureX.jump(0);
+          } else {
+            await animate(projectGestureX, 0, PROJECT_SNAP_TRANSITION);
+          }
+          flushSync(() => {
+            setCarouselProjectId(activeProject?.id ?? null);
+            setCarouselTargetProjectId(null);
+            setLoadingCarouselProjectId(null);
+          });
+          return;
+        }
+
+        await waitForProjectCarouselPaint();
+        flushSync(() => {
+          setCarouselProjectId(targetProject.id);
+          setCarouselTargetProjectId(null);
+          setLoadingCarouselProjectId(null);
+          projectGestureX.jump(0);
+        });
       } catch {
-        flushSync(() => setCarouselProjectId(activeProject?.id ?? null));
+        flushSync(() => {
+          setCarouselProjectId(activeProject?.id ?? null);
+          setCarouselTargetProjectId(null);
+          setLoadingCarouselProjectId(null);
+          projectGestureX.jump(0);
+        });
       } finally {
+        projectGestureX.jump(0);
         isProjectGestureSettlingRef.current = false;
         setIsProjectGestureSettling(false);
       }
@@ -759,6 +835,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       projectGestureX,
       projectTabs,
       railPanelWidth,
+      settleProjectBoundary,
       switchToProject,
     ],
   );
@@ -780,10 +857,8 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       const targetIndex = projectTabs.findIndex((project) => project.id === projectId);
       if (activeIndex < 0 || targetIndex < 0 || activeIndex === targetIndex) return;
 
-      const forwardDistance = (targetIndex - activeIndex + projectTabs.length) % projectTabs.length;
-      const backwardDistance =
-        (activeIndex - targetIndex + projectTabs.length) % projectTabs.length;
-      const offset = forwardDistance <= backwardDistance ? 1 : -1;
+      const offset = getProjectCarouselDirection(activeIndex, targetIndex);
+      if (!offset) return;
       void settleProjectGesture(offset, projectId);
     },
     [carouselProjectIndex, isSwitchingProject, projectTabs, settleProjectGesture],
@@ -795,7 +870,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         isActivityRailResizing ||
         isSwitchingProject ||
         isProjectGestureSettlingRef.current ||
-        projectTabs.length < 2
+        projectTabs.length === 0
       ) {
         return;
       }
@@ -839,7 +914,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         isActivityRailResizing ||
         isSwitchingProject ||
         isProjectGestureSettlingRef.current ||
-        projectTabs.length < 2
+        projectTabs.length === 0
       ) {
         return;
       }
@@ -879,50 +954,74 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     !isActivityRailResizing &&
     !isSwitchingProject &&
     !isProjectGestureSettling &&
-    projectTabs.length > 1;
+    projectTabs.length > 0;
 
   const renderProjectPanel = (
     project: ProjectTab | undefined,
     position: "previous" | "current" | "next",
-  ) => (
-    <div
-      key={`${position}-${project?.id ?? "welcome"}`}
-      aria-hidden={position === "current" ? undefined : true}
-      inert={position === "current" ? undefined : true}
-      className={cn(
-        "absolute inset-y-0 left-0 flex w-full flex-col items-start gap-1 overflow-hidden pt-1.5 pb-7",
-        position !== "current" && "pointer-events-none",
-      )}
-      style={{
-        boxSizing: "border-box",
-        paddingLeft: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
-        paddingRight: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
-        transform:
-          position === "previous"
-            ? "translateX(-100%)"
-            : position === "next"
-              ? "translateX(100%)"
-              : undefined,
-      }}
-    >
-      <SidebarProjectSwitcher expanded={expanded} project={project} />
-      <SidebarPaneSelector
-        activeSidebarView={activeSidebarView}
-        isGitViewActive={isGitViewActive}
-        isGitHubPRsViewActive={isGitHubPRsViewActive}
-        isSidebarVisible={isSidebarVisible}
-        coreFeatures={coreFeatures}
-        onViewChange={handleSidebarViewChange}
-        onSearchClick={() => openGlobalSearchBuffer()}
-        onExtensionsClick={() => openExtensionsBuffer()}
-        isExtensionsActive={isExtensionsBufferActive}
-        compact={!expanded}
-        showLabels={expanded}
-        orientation="vertical"
-      />
-      <SidebarAgentHistory expanded={expanded} workspacePath={project?.path ?? null} />
-    </div>
-  );
+  ) => {
+    const isBoundaryPanel = position !== "current" && !project;
+    const opensProjectPicker = isBoundaryPanel && position === "next";
+    const isLoadingProject = project?.id === loadingCarouselProjectId;
+
+    return (
+      <div
+        key={`${position}-${project?.id ?? (opensProjectPicker ? "open-project" : "boundary")}`}
+        aria-hidden={position === "current" ? undefined : true}
+        inert={position === "current" ? undefined : true}
+        className={cn(
+          "absolute inset-y-0 left-0 flex w-full flex-col items-start gap-1 overflow-hidden pt-1.5 pb-7",
+          position !== "current" && "pointer-events-none",
+        )}
+        style={{
+          boxSizing: "border-box",
+          paddingLeft: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
+          paddingRight: ACTIVITY_RAIL_HORIZONTAL_GUTTER,
+          transform:
+            position === "previous"
+              ? "translateX(-100%)"
+              : position === "next"
+                ? "translateX(100%)"
+                : undefined,
+        }}
+      >
+        {opensProjectPicker ? (
+          <SidebarProjectSwitcher expanded={expanded} openProject />
+        ) : isBoundaryPanel ? null : (
+          <>
+            <SidebarProjectSwitcher expanded={expanded} project={project} />
+            {isLoadingProject ? (
+              <div className="flex min-h-0 flex-1 self-stretch items-center justify-center">
+                <Spinner
+                  label={`Opening ${project?.name ?? "project"}`}
+                  showLabel={expanded}
+                  compact={!expanded}
+                />
+              </div>
+            ) : (
+              <>
+                <SidebarPaneSelector
+                  activeSidebarView={activeSidebarView}
+                  isGitViewActive={isGitViewActive}
+                  isGitHubPRsViewActive={isGitHubPRsViewActive}
+                  isSidebarVisible={isSidebarVisible}
+                  coreFeatures={coreFeatures}
+                  onViewChange={handleSidebarViewChange}
+                  onSearchClick={() => openGlobalSearchBuffer()}
+                  onExtensionsClick={() => openExtensionsBuffer()}
+                  isExtensionsActive={isExtensionsBufferActive}
+                  compact={!expanded}
+                  showLabels={expanded}
+                  orientation="vertical"
+                />
+                <SidebarAgentHistory expanded={expanded} workspacePath={project?.path ?? null} />
+              </>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
@@ -978,7 +1077,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
           className="group absolute top-0 right-0 z-20 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center hover:bg-accent/8"
           onMouseDown={handleResizeMouseDown}
         >
-          <ResizeHandleEffect active={isActivityRailResizing} orientation="vertical" />
           <div className="h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent" />
         </div>
       ) : null}
