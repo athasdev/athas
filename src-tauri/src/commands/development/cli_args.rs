@@ -107,7 +107,15 @@ pub fn parse_open_arg(arg: &str, cwd: &Path) -> Option<OpenRequest> {
 }
 
 fn is_chromium_runtime_arg(arg: &str) -> bool {
-   arg == "--disable-vulkan" || arg == "--ozone-platform=x11" || arg == "--disable-features=Vulkan"
+   matches!(
+      arg,
+      "--disable-features=Vulkan"
+         | "--disable-gpu"
+         | "--disable-gpu-compositing"
+         | "--disable-setuid-sandbox"
+         | "--disable-vulkan"
+         | "--ozone-platform=x11"
+   )
 }
 
 pub fn parse_cli_args(args: &[String], cwd: &Path) -> Vec<CliRequest> {
@@ -320,6 +328,9 @@ mod tests {
          "--ozone-platform=x11".to_string(),
          "--disable-vulkan".to_string(),
          "--disable-features=Vulkan".to_string(),
+         "--disable-gpu".to_string(),
+         "--disable-gpu-compositing".to_string(),
+         "--disable-setuid-sandbox".to_string(),
          "web".to_string(),
          "https://athas.dev".to_string(),
       ];

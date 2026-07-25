@@ -224,6 +224,15 @@ patch_deb_dependencies() {
       }
     ' "$work_dir/package/DEBIAN/control" > "$work_dir/control"
     mv "$work_dir/control" "$work_dir/package/DEBIAN/control"
+
+    chrome_sandbox="$(find "$work_dir/package" -type f -name chrome-sandbox -print -quit)"
+    if [[ -z "$chrome_sandbox" ]]; then
+      echo "Debian package is missing chrome-sandbox." >&2
+      rm -rf "$work_dir"
+      return 1
+    fi
+    chmod 4755 "$chrome_sandbox"
+
     dpkg-deb --root-owner-group -b "$work_dir/package" "$work_dir/repacked.deb" >/dev/null
     mv "$work_dir/repacked.deb" "$deb"
     rm -rf "$work_dir"
