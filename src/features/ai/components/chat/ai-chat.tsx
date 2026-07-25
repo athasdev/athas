@@ -24,6 +24,7 @@ import type { AIChatProps, Message } from "@/features/ai/types/ai-chat.types";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
@@ -1137,12 +1138,14 @@ details: ${errorDetails || mainError}
       />
       {isAiChatBlockedByPolicy ? (
         <div className="flex h-full items-center justify-center p-6">
-          <div className="max-w-md rounded-lg border border-border bg-secondary-bg/40 p-4 text-center">
-            <p className="font-medium ui-text-sm text-text">Agent is disabled</p>
-            <p className="mt-2 text-text-lighter ui-text-sm">
-              Your organization policy has disabled Agent for this workspace.
-            </p>
-          </div>
+          <Card className="max-w-md text-center">
+            <CardHeader>
+              <CardTitle>Agent is disabled</CardTitle>
+              <CardDescription>
+                Your organization policy has disabled Agent for this workspace.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </div>
       ) : (
         <>

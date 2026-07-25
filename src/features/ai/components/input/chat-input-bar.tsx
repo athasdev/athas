@@ -42,6 +42,7 @@ import {
 } from "@/ui/attachment";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Toggle } from "@/ui/toggle";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, isMac } from "@/utils/platform";
@@ -1404,11 +1405,11 @@ const AIChatInputBar = memo(function AIChatInputBar({
           )}
 
           <div className="flex shrink-0 items-center gap-1">
-            <Button
+            <Toggle
               type="button"
               disabled={!isInputEnabled || !isSpeechRecognitionSupported}
-              onClick={toggleVoiceInput}
-              variant="ghost"
+              pressed={isListening}
+              onPressedChange={toggleVoiceInput}
               className={cn(
                 chatComposerIconButtonClassName(),
                 isListening && "bg-accent/10 text-accent hover:bg-accent/14 hover:text-accent",
@@ -1423,11 +1424,10 @@ const AIChatInputBar = memo(function AIChatInputBar({
                       : "Start voice input"
               }
               aria-label={isListening ? "Stop voice input" : "Start voice input"}
-              aria-pressed={isListening}
-              size="icon-sm"
+              size="sm"
             >
               <Mic size={12} className={cn(isListening && "animate-pulse")} />
-            </Button>
+            </Toggle>
 
             <Button
               type="button"

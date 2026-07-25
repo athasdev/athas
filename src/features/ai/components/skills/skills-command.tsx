@@ -341,6 +341,7 @@ export function SkillsCommand({
 
   const canSave = title.trim().length > 0;
   const SyncIcon = getSyncIcon(syncEnabled, syncStatus);
+  const isComposerAttached = Boolean(anchorRef);
 
   const panelContent =
     view === "list" || view === "browse" ? (
@@ -369,7 +370,7 @@ export function SkillsCommand({
           </CommandHeaderAction>
         </CommandHeader>
 
-        <CommandList ref={resultsRef}>
+        <CommandList ref={resultsRef} contentClassName={isComposerAttached ? "p-1.5" : undefined}>
           {view === "browse" ? (
             isLoadingMarketplace ? (
               <CommandEmpty>Loading available skills...</CommandEmpty>
@@ -397,6 +398,7 @@ export function SkillsCommand({
                     }
                     onMouseEnter={() => setSelectedIndex(index)}
                     className="group"
+                    density={isComposerAttached ? "compact" : "default"}
                     title={skill.title}
                     description={
                       <>
@@ -404,13 +406,13 @@ export function SkillsCommand({
                         {skill.author ? <span>by {skill.author}</span> : null}
                       </>
                     }
-                    contentLayout="stacked"
+                    contentLayout={isComposerAttached ? "inline" : "stacked"}
                     accessory={
                       <>
                         {skill.version ? (
                           <CommandItemBadge>v{skill.version}</CommandItemBadge>
                         ) : null}
-                        {skill.tags.slice(0, 3).map((tag) => (
+                        {skill.tags.slice(0, isComposerAttached ? 1 : 3).map((tag) => (
                           <CommandItemBadge key={tag}>{tag}</CommandItemBadge>
                         ))}
                       </>
@@ -420,6 +422,7 @@ export function SkillsCommand({
                         type="button"
                         variant={isInstalled ? "default" : "default"}
                         disabled={isInstalled}
+                        size={isComposerAttached ? "xs" : undefined}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (!isInstalled) {
@@ -452,9 +455,10 @@ export function SkillsCommand({
                   onClick={() => handleSelectSkill(skill)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   className="group"
+                  density={isComposerAttached ? "compact" : "default"}
                   title={skill.title}
                   description={preview}
-                  contentLayout="stacked"
+                  contentLayout={isComposerAttached ? "inline" : "stacked"}
                   accessory={
                     <>
                       {skill.source === "marketplace" ? (
@@ -477,7 +481,7 @@ export function SkillsCommand({
                         className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                         tooltip="Edit skill"
                         aria-label={`Edit ${skill.title}`}
-                        size="icon"
+                        size={isComposerAttached ? "icon-xs" : "icon"}
                       >
                         <PencilSimple size={13} />
                       </Button>
@@ -491,7 +495,7 @@ export function SkillsCommand({
                         className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
                         tooltip="Delete skill"
                         aria-label={`Delete ${skill.title}`}
-                        size="icon"
+                        size={isComposerAttached ? "icon-xs" : "icon"}
                       >
                         <Trash size={13} />
                       </Button>
@@ -580,7 +584,7 @@ export function SkillsCommand({
         anchorRef={anchorRef}
         onClose={handleClose}
         ariaLabel="Skills"
-        maxHeight={440}
+        maxHeight={view === "editor" ? 440 : 320}
       >
         {panelContent}
       </ComposerAttachedPanel>

@@ -94,7 +94,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
       anchorRef={anchorRef}
       onClose={onClose}
       ariaLabel="File suggestions"
-      maxHeight={260}
+      maxHeight={240}
     >
       <div ref={dropdownRef} className="flex min-h-0 flex-col">
         <AIFileSelector
