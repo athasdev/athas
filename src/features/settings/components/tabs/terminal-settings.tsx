@@ -11,9 +11,11 @@ import {
   getAllTerminalProfiles,
 } from "@/features/terminal/utils/terminal-profiles";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
+import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
@@ -106,7 +108,7 @@ export const TerminalSettings = () => {
   }, [allProfiles, settings.terminalDefaultProfileId, updateSetting]);
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section
         title="Launch"
         description="Choose which shell and profile new terminal tabs should use by default."
@@ -183,6 +185,7 @@ export const TerminalSettings = () => {
                   startupCommands: [],
                 })
               }
+              size="sm"
             >
               <Plus className="mr-1" />
               Add Profile
@@ -190,9 +193,11 @@ export const TerminalSettings = () => {
           </div>
 
           {profiles.length === 0 ? (
-            <div className="font-sans ui-text-base rounded-lg border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
-              No custom terminal profiles yet.
-            </div>
+            <Empty className="min-h-24 border border-border/70 bg-secondary-bg/50 px-3 py-3">
+              <EmptyDescription className="ui-text-base">
+                No custom terminal profiles yet.
+              </EmptyDescription>
+            </Empty>
           ) : (
             profiles.map((profile) => (
               <div
@@ -210,16 +215,17 @@ export const TerminalSettings = () => {
                     variant="danger"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
-                    size="icon"
+                    size="icon-sm"
                   >
                     <Trash2 />
                   </Button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="font-sans ui-text-base text-text">Name</label>
+                  <Field>
+                    <FieldLabel htmlFor={`terminal-profile-name-${profile.id}`}>Name</FieldLabel>
                     <Input
+                      id={`terminal-profile-name-${profile.id}`}
                       value={profile.name}
                       onChange={(event) =>
                         profileActions.updateProfile(profile.id, {
@@ -229,10 +235,11 @@ export const TerminalSettings = () => {
                       placeholder="My Profile"
                       size="md"
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="font-sans ui-text-base text-text">Shell</label>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={`terminal-profile-shell-${profile.id}`}>Shell</FieldLabel>
                     <Select
+                      id={`terminal-profile-shell-${profile.id}`}
                       value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
                       options={shellOptions}
                       onChange={(value) =>
@@ -246,12 +253,15 @@ export const TerminalSettings = () => {
                       searchable
                       searchableTrigger="input"
                     />
-                  </div>
+                  </Field>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-sans ui-text-base text-text">Startup Directory</label>
+                <Field>
+                  <FieldLabel htmlFor={`terminal-profile-directory-${profile.id}`}>
+                    Startup Directory
+                  </FieldLabel>
                   <Input
+                    id={`terminal-profile-directory-${profile.id}`}
                     value={profile.startupDirectory || ""}
                     onChange={(event) =>
                       profileActions.updateProfile(profile.id, {
@@ -261,11 +271,17 @@ export const TerminalSettings = () => {
                     placeholder="Leave empty to use the current workspace directory"
                     size="md"
                   />
-                </div>
+                  <FieldDescription>
+                    Leave empty to use the current workspace directory.
+                  </FieldDescription>
+                </Field>
 
-                <div className="space-y-1.5">
-                  <label className="font-sans ui-text-base text-text">Startup Commands</label>
+                <Field>
+                  <FieldLabel htmlFor={`terminal-profile-commands-${profile.id}`}>
+                    Startup Commands
+                  </FieldLabel>
                   <Textarea
+                    id={`terminal-profile-commands-${profile.id}`}
                     value={(profile.startupCommands || []).join("\n")}
                     onChange={(event) =>
                       profileActions.updateProfile(profile.id, {
@@ -279,7 +295,8 @@ export const TerminalSettings = () => {
                     rows={3}
                     size="md"
                   />
-                </div>
+                  <FieldDescription>Enter one command per line.</FieldDescription>
+                </Field>
               </div>
             ))
           )}
@@ -447,6 +464,6 @@ export const TerminalSettings = () => {
           />
         </SettingRow>
       </Section>
-    </div>
+    </SettingsView>
   );
 };

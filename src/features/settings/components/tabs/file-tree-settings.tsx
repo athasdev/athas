@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
 import Textarea from "@/ui/textarea";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 
 export const FileTreeSettings = () => {
@@ -50,7 +50,7 @@ export const FileTreeSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Display">
         <SettingRow
           label="Indent Size"
@@ -203,6 +203,6 @@ export const FileTreeSettings = () => {
           />
         </SettingRow>
       </Section>
-    </div>
+    </SettingsView>
   );
 };

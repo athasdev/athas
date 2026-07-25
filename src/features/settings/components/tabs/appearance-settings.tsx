@@ -17,7 +17,7 @@ import {
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { cn } from "@/utils/cn";
@@ -178,7 +178,7 @@ export const AppearanceSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Theme">
         <SettingRow
           label="Sync With OS"
@@ -205,7 +205,7 @@ export const AppearanceSettings = () => {
               options={normalizedThemeOptions}
               onChange={(value) => updateSetting("theme", value)}
               className={SETTINGS_CONTROL_WIDTHS.wide}
-              size="md"
+              size="sm"
               variant="default"
               searchable
               searchableTrigger="input"
@@ -226,7 +226,7 @@ export const AppearanceSettings = () => {
                 options={lightThemeOptions}
                 onChange={(value) => updateSetting("autoThemeLight", value)}
                 className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="md"
+                size="sm"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -244,7 +244,7 @@ export const AppearanceSettings = () => {
                 options={darkThemeOptions}
                 onChange={(value) => updateSetting("autoThemeDark", value)}
                 className={SETTINGS_CONTROL_WIDTHS.wide}
-                size="md"
+                size="sm"
                 variant="default"
                 searchable
                 searchableTrigger="input"
@@ -264,7 +264,7 @@ export const AppearanceSettings = () => {
             options={normalizedIconThemeOptions}
             onChange={handleIconThemeChange}
             className={SETTINGS_CONTROL_WIDTHS.wide}
-            size="md"
+            size="sm"
             variant="default"
             searchable
             searchableTrigger="input"
@@ -288,11 +288,11 @@ export const AppearanceSettings = () => {
           }
         >
           <div className="flex items-center gap-2">
-            <Button type="button" size="xs" onClick={() => setIsThemeCreatorOpen(true)}>
+            <Button type="button" size="sm" onClick={() => setIsThemeCreatorOpen(true)}>
               <FilePlusIcon />
               Create
             </Button>
-            <Button type="button" size="xs" onClick={handleUploadTheme}>
+            <Button type="button" size="sm" onClick={handleUploadTheme}>
               <UploadIcon />
               Import
             </Button>
@@ -346,7 +346,7 @@ export const AppearanceSettings = () => {
             value={settings.uiFontSize}
             onChange={(value) => updateSetting("uiFontSize", value)}
             className={cn(SETTINGS_CONTROL_WIDTHS.number, "tabular-nums")}
-            size="md"
+            size="sm"
             aria-label={`UI font size: ${formatUiFontSize(settings.uiFontSize)} pixels`}
           />
         </SettingRow>
@@ -426,6 +426,6 @@ export const AppearanceSettings = () => {
           onInstalled={selectImportedTheme}
         />
       ) : null}
-    </div>
+    </SettingsView>
   );
 };

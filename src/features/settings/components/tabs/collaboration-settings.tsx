@@ -5,7 +5,7 @@ import { useCollaborationRuntimeStore } from "@/features/collaboration/stores/co
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 
 export const CollaborationSettings = () => {
   const user = useAuthStore((state) => state.user);
@@ -37,7 +37,7 @@ export const CollaborationSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section
         title={workspace?.name ?? "Collaboration"}
         description="Teams workspace status. Manage members, channels, invites, and policies in the web dashboard."
@@ -48,7 +48,7 @@ export const CollaborationSettings = () => {
             variant="default"
             className="ui-text-base"
             onClick={openDashboardCollaboration}
-            size="xs"
+            size="sm"
           >
             <UsersThree />
             Open
@@ -87,6 +87,7 @@ export const CollaborationSettings = () => {
                 collaborationRuntimeActions.setPresenceChannel(null);
                 collaborationRuntimeActions.setFollowingUser(null);
               }}
+              size="sm"
             >
               Clear
             </Button>
@@ -130,6 +131,7 @@ export const CollaborationSettings = () => {
                 className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setPresenceChannel(channel.id)}
+                size="sm"
               >
                 Join
               </Button>
@@ -144,6 +146,7 @@ export const CollaborationSettings = () => {
                 className="ui-text-base"
                 disabled={!collaboration?.capabilities.presence}
                 onClick={() => collaborationRuntimeActions.setFollowingUser(member.userId)}
+                size="sm"
               >
                 Follow
               </Button>
@@ -151,6 +154,6 @@ export const CollaborationSettings = () => {
           ))}
         </Section>
       ) : null}
-    </div>
+    </SettingsView>
   );
 };

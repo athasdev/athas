@@ -4,6 +4,7 @@ import {
   useId,
   useLayoutEffect,
   useRef,
+  type ComponentProps,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -16,6 +17,24 @@ interface SectionProps {
   description?: string;
   children: ReactNode;
   className?: string;
+}
+
+interface SettingsViewProps extends ComponentProps<"div"> {
+  layout?: "stack" | "fill";
+}
+
+export function SettingsView({ layout = "stack", className, ...props }: SettingsViewProps) {
+  return (
+    <div
+      data-slot="settings-view"
+      className={cn(
+        "min-w-0",
+        layout === "stack" ? "space-y-4" : "flex h-full min-h-0 flex-col",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export const SETTINGS_CONTROL_WIDTHS = {
@@ -32,7 +51,7 @@ export const SETTINGS_CONTROL_WIDTHS = {
 export default function Section({ title, description, children, className }: SectionProps) {
   return (
     <section
-      className={cn("px-1 py-0.5 first:[&>.settings-section-header]:hidden", className)}
+      className={cn("first:[&>.settings-section-header]:hidden", className)}
       data-settings-section={title}
       data-settings-section-key={getSettingSearchTargetKey(title)}
     >
@@ -201,7 +220,7 @@ export function SettingRow({
         {description && (
           <div
             id={descriptionId}
-            className="font-sans ui-text-base cursor-default text-text-lighter"
+            className="font-sans ui-text-base cursor-default leading-snug text-text-lighter"
           >
             {description}
           </div>

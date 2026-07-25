@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { toast } from "sonner";
 import { Button } from "@/ui/button";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
 import { updateEnterprisePolicy } from "@/features/window/services/auth-api";
@@ -65,30 +65,30 @@ export const EnterpriseSettings = () => {
 
   if (!hasAccess) {
     return (
-      <div className="space-y-4">
+      <SettingsView>
         <Section title="Enterprise Controls" description="Access restricted">
           <div className="font-sans ui-text-base px-1 py-2 text-text-lighter">
             Enterprise policy controls are available only for enterprise workspaces.
           </div>
         </Section>
-      </div>
+      </SettingsView>
     );
   }
 
   if (!policy) {
     return (
-      <div className="space-y-4">
+      <SettingsView>
         <Section title="Enterprise Controls" description="Policy unavailable">
           <div className="font-sans ui-text-base px-1 py-2 text-text-lighter">
             Enterprise policy could not be loaded. Try re-authenticating.
           </div>
         </Section>
-      </div>
+      </SettingsView>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section
         title="Enterprise Controls"
         description={isAdmin ? "Manage organization policy controls." : "Read-only policy view."}
@@ -185,6 +185,7 @@ export const EnterpriseSettings = () => {
                 variant="default"
                 onClick={() => setAllowlistInput("")}
                 disabled={!isAdmin || isSaving || !policy.managedMode}
+                size="sm"
               >
                 Clear
               </Button>
@@ -196,6 +197,7 @@ export const EnterpriseSettings = () => {
                   )
                 }
                 disabled={!isAdmin || isSaving || !policy.managedMode}
+                size="sm"
               >
                 {isSaving ? "Saving..." : "Apply allowlist"}
               </Button>
@@ -203,6 +205,6 @@ export const EnterpriseSettings = () => {
           </div>
         </div>
       </Section>
-    </div>
+    </SettingsView>
   );
 };

@@ -97,7 +97,7 @@
       monospace;
     --app-ui-font-size: 15px;
     --app-ui-scale: 1;
-    --ui-text-sm: calc(var(--app-ui-font-size) * 0.86);
+    --ui-text-sm: var(--app-ui-font-size);
     --ui-text-base: var(--app-ui-font-size);
     --athas-title-bar-height: 2rem;
     --athas-footer-height: 2rem;

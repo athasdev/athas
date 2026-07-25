@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
-import { ResizeHandleEffect } from "./resize-handle-effect";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
@@ -161,7 +160,6 @@ export function ResizablePane({
       aria-valuemax={Math.round(getMaxWidth())}
       tabIndex={0}
     >
-      <ResizeHandleEffect active={isResizing} orientation="vertical" />
       <div
         className={cn(
           "h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",

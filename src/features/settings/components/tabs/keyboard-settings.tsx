@@ -7,6 +7,7 @@ import {
   DownloadSimpleIcon as DownloadSimple,
   SlidersIcon as Sliders,
   UserIcon as User,
+  WarningCircleIcon as WarningCircle,
 } from "@/ui/icons";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -33,15 +34,17 @@ import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { Button } from "@/ui/button";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
-import { TableHeadCell, TableHeader } from "@/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { quickTransition } from "@/utils/motion-presets";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
-import { SettingRow } from "../settings-section";
+import { SettingsView, SettingRow } from "../settings-section";
 
 type FilterType = "all" | "user" | "default" | "preset" | "preset-changes" | "extension";
 
@@ -219,7 +222,7 @@ export const KeyboardSettings = () => {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <SettingsView layout="fill">
       <AnimatePresence mode="wait" initial={false}>
         {isEditingKeybindings ? (
           <motion.div
@@ -232,16 +235,17 @@ export const KeyboardSettings = () => {
                 variant="default"
                 onClick={() => setIsEditingKeybindings(false)}
                 className="gap-1.5"
+                size="sm"
               >
                 <ArrowLeft size={14} weight="duotone" />
                 Back
               </Button>
               <div className="flex items-center gap-2">
                 <TypedConfirmAction actionLabel="Reset to Defaults" onConfirm={handleResetAll} />
-                <Button variant="default" onClick={handleImport} size="xs">
+                <Button variant="default" onClick={handleImport} size="sm">
                   Import
                 </Button>
-                <Button variant="default" onClick={() => void handleExport()}>
+                <Button variant="default" onClick={() => void handleExport()} size="sm">
                   Export
                 </Button>
               </div>
@@ -300,36 +304,47 @@ export const KeyboardSettings = () => {
 
             <div className="flex-1 overflow-hidden">
               <div className="h-full overflow-x-auto overflow-y-auto">
-                <div className={keybindingTableMinWidth()}>
-                  <TableHeader
-                    gridCols="minmax(220px,2fr) minmax(156px,1fr) minmax(128px,1.25fr) 72px 92px"
-                    className="gap-3 px-1.5 py-1"
-                  >
-                    <TableHeadCell>Command</TableHeadCell>
-                    <TableHeadCell>Keybinding</TableHeadCell>
-                    <TableHeadCell>When</TableHeadCell>
-                    <TableHeadCell>Source</TableHeadCell>
-                    <TableHeadCell>Actions</TableHeadCell>
+                <Table className={keybindingTableMinWidth()}>
+                  <colgroup>
+                    <col className="w-[32%]" />
+                    <col className="w-[23%]" />
+                    <col className="w-[20%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[14%]" />
+                  </colgroup>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Command</TableHead>
+                      <TableHead>Keybinding</TableHead>
+                      <TableHead>When</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
                   </TableHeader>
-
-                  {filteredCommands.length === 0 ? (
-                    <div className="font-sans ui-text-base flex items-center justify-center py-12 text-text-lighter">
-                      No keybindings found
-                    </div>
-                  ) : (
-                    filteredCommands.map((command) => {
-                      const binding = getKeybindingForCommand(command.id);
-                      return (
-                        <KeybindingRow key={command.id} command={command} keybinding={binding} />
-                      );
-                    })
-                  )}
-                </div>
+                  <TableBody>
+                    {filteredCommands.length === 0 ? (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={5} className="p-0">
+                          <Empty className="min-h-36 py-8">
+                            <EmptyDescription>No keybindings found</EmptyDescription>
+                          </Empty>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredCommands.map((command) => {
+                        const binding = getKeybindingForCommand(command.id);
+                        return (
+                          <KeybindingRow key={command.id} command={command} keybinding={binding} />
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </motion.div>
         ) : (
-          <motion.div key="keyboard-summary" className="space-y-2" {...summaryStepTransition}>
+          <motion.div key="keyboard-summary" className="space-y-4" {...summaryStepTransition}>
             <SettingRow
               label="Vim Mode"
               description="Enable vim keybindings and commands"
@@ -364,16 +379,19 @@ export const KeyboardSettings = () => {
             </SettingRow>
 
             {keybindingPreset !== "none" && !selectedPresetCoverage.isComplete ? (
-              <div className="font-sans ui-text-base rounded-lg border border-warning/30 bg-warning/8 px-3 py-2 text-warning">
-                This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
-                built-in command
-                {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still
-                missing preset coverage.
-              </div>
+              <Alert tone="warning">
+                <WarningCircle />
+                <AlertDescription>
+                  This preset is incomplete. {selectedPresetCoverage.missingCommandIds.length}{" "}
+                  built-in command
+                  {selectedPresetCoverage.missingCommandIds.length === 1 ? " is" : "s are"} still
+                  missing preset coverage.
+                </AlertDescription>
+              </Alert>
             ) : null}
 
             <SettingRow label="Edit Keybindings" description="Customize shortcuts individually.">
-              <Button variant="default" onClick={() => setIsEditingKeybindings(true)}>
+              <Button variant="default" onClick={() => setIsEditingKeybindings(true)} size="sm">
                 Open Editor
               </Button>
             </SettingRow>
@@ -386,6 +404,6 @@ export const KeyboardSettings = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </SettingsView>
   );
 };

@@ -13,7 +13,7 @@ import {
   UserCircleIcon as UserCircle,
   UsersThreeIcon as UsersThree,
 } from "@/ui/icons";
-import { useCallback, useRef, type ComponentType, type WheelEvent } from "react";
+import type { ComponentType } from "react";
 import { useUpgradeToPro } from "@/features/settings/hooks/use-upgrade-to-pro";
 import { resolveSettingsAccess } from "@/features/settings/lib/settings-access";
 import { filterVisibleSettingsTabs } from "@/features/settings/lib/settings-tab-visibility";
@@ -22,6 +22,7 @@ import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
 import { ScrollArea } from "@/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
 
 interface SettingsVerticalTabsProps {
@@ -112,120 +113,71 @@ export const SettingsVerticalTabs = ({
   const { hasSettingsSync } = useProFeature();
   const { promptUpgrade } = useUpgradeToPro();
   const settingsAccess = resolveSettingsAccess(subscription);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
   const visibleTabs = filterVisibleSettingsTabs(SETTINGS_TAB_ITEMS, {
     ...settingsAccess,
     matchingTabs: null,
   });
 
-  const handleSidebarWheel = (event: WheelEvent<HTMLDivElement>) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const canScroll = container.scrollHeight > container.clientHeight;
-    if (!canScroll || event.deltaY === 0) return;
-
-    container.scrollTop += event.deltaY;
-    event.preventDefault();
-  };
-
-  const focusTabAtIndex = useCallback(
-    (index: number) => {
-      const nextTab = visibleTabs[index];
-      if (!nextTab) return;
-
-      onTabChange(nextTab.id);
-      window.requestAnimationFrame(() => {
-        tabRefs.current[index]?.focus();
-      });
-    },
-    [onTabChange, visibleTabs],
-  );
-
   return (
-    <div className="flex h-full flex-col">
-      <ScrollArea
-        className="flex-1"
-        contentClassName="space-y-0.5 p-2"
-        viewportProps={{
-          ref: scrollContainerRef,
-          role: "tablist",
-          "aria-orientation": "vertical",
-          "aria-label": "Settings sections",
-          onWheelCapture: handleSidebarWheel,
-        }}
+    <div data-slot="settings-sidebar" className="flex h-full min-h-0 min-w-0 flex-col">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => onTabChange(value as SettingsTab)}
+        orientation="vertical"
+        className="min-h-0 flex-1 gap-0"
       >
-        {visibleTabs.length > 0 ? (
-          visibleTabs.map((item, index) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+        <ScrollArea
+          className="min-h-0 min-w-0 flex-1"
+          contentClassName="p-2"
+          viewportProps={{
+            "aria-label": "Settings navigation",
+          }}
+        >
+          <TabsList
+            variant="bare"
+            aria-label="Settings sections"
+            className="flex w-full flex-col items-stretch gap-0.5"
+          >
+            {visibleTabs.length > 0 ? (
+              visibleTabs.map((item) => {
+                const Icon = item.icon;
 
-            return (
-              <Button
-                key={item.id}
-                ref={(element) => {
-                  tabRefs.current[index] = element;
-                }}
-                type="button"
-                variant="ghost"
-                size="xs"
-                onClick={() => onTabChange(item.id)}
-                onKeyDown={(event) => {
-                  switch (event.key) {
-                    case "ArrowDown":
-                    case "ArrowRight":
-                      event.preventDefault();
-                      focusTabAtIndex((index + 1) % visibleTabs.length);
-                      break;
-                    case "ArrowUp":
-                    case "ArrowLeft":
-                      event.preventDefault();
-                      focusTabAtIndex((index - 1 + visibleTabs.length) % visibleTabs.length);
-                      break;
-                    case "Home":
-                      event.preventDefault();
-                      focusTabAtIndex(0);
-                      break;
-                    case "End":
-                      event.preventDefault();
-                      focusTabAtIndex(visibleTabs.length - 1);
-                      break;
-                    default:
-                      break;
-                  }
-                }}
-                role="tab"
-                id={`settings-tab-${item.id}`}
-                aria-selected={isActive}
-                aria-controls={panelIdForTab(item.id)}
-                tabIndex={isActive ? 0 : -1}
-                className={cn(
-                  "ui-text-base h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-1.5 text-left",
-                  isActive ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
-                )}
-              >
-                <Icon className="size-[18px] shrink-0 text-current" weight="duotone" />
-                <span className="truncate">{item.label}</span>
-              </Button>
-            );
-          })
-        ) : (
-          <div className="font-sans ui-text-base p-2 text-center text-text-lighter">
-            No matching settings
-          </div>
-        )}
-      </ScrollArea>
+                return (
+                  <TabsTrigger
+                    key={item.id}
+                    value={item.id}
+                    size="md"
+                    id={`settings-tab-${item.id}`}
+                    aria-controls={panelIdForTab(item.id)}
+                    className={cn(
+                      "h-auto w-full justify-start gap-2.5 px-2.5 py-1.5 text-left",
+                      activeTab === item.id
+                        ? "bg-accent/10 text-accent"
+                        : "text-text hover:bg-hover",
+                    )}
+                  >
+                    <Icon className="size-[18px] shrink-0 text-current" weight="duotone" />
+                    <span className="truncate">{item.label}</span>
+                  </TabsTrigger>
+                );
+              })
+            ) : (
+              <div className="font-sans ui-text-base p-2 text-center text-text-lighter">
+                No matching settings
+              </div>
+            )}
+          </TabsList>
+        </ScrollArea>
+      </Tabs>
 
       {!hasSettingsSync ? (
-        <div className="p-2">
+        <div data-slot="settings-sidebar-footer" className="shrink-0 p-2">
           <Button
             type="button"
             variant="default"
             onClick={promptUpgrade}
-            className="w-full justify-center border border-border/70"
-            size="xs"
+            className="w-full justify-center"
+            size="sm"
           >
             <ArrowSquareUp className="size-4" weight="duotone" />
             Upgrade to Pro

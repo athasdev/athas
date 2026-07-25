@@ -122,7 +122,6 @@ export const defaultSettings: Settings = {
     breadcrumbs: true,
     persistentCommands: true,
     webViewer: false,
-    energyEdge: false,
   },
   // Advanced
   enterpriseManagedMode: false,

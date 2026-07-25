@@ -20,6 +20,7 @@ html {
 body {
   margin: 0;
   padding: 0;
+  font-size: var(--ui-text-base);
   overflow: hidden;
   overscroll-behavior: none !important;
   background: transparent;

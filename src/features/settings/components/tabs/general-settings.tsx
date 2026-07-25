@@ -13,9 +13,10 @@ import Command, {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { Progress } from "@/ui/progress";
 import { writeClipboardText } from "@/utils/clipboard";
 import { matchesSearchQuery } from "@/utils/search-match";
-import { SettingRow } from "../settings-section";
+import { SettingsView, SettingRow } from "../settings-section";
 
 const REPORT_BUG_CHANNELS = [
   {
@@ -164,7 +165,7 @@ export const GeneralSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <SettingRow
         label="Version"
         description="Check for updates and install the latest app version."
@@ -175,7 +176,7 @@ export const GeneralSettings = () => {
               onClick={downloadAndInstall}
               disabled={downloading || installing}
               variant="default"
-              size="xs"
+              size="sm"
             >
               {downloading
                 ? "Downloading..."
@@ -188,7 +189,7 @@ export const GeneralSettings = () => {
               onClick={handleCheckForUpdates}
               disabled={checking || downloading || installing}
               variant="default"
-              size="xs"
+              size="sm"
             >
               {checking ? "Checking..." : "Check"}
             </Button>
@@ -196,7 +197,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="font-sans ui-text-base -mt-3 px-1 text-text-lighter/75">
+      <div className="font-sans ui-text-sm -mt-3 px-1 text-text-lighter/75">
         {downloading
           ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
           : installing
@@ -208,18 +209,15 @@ export const GeneralSettings = () => {
                 : `Athas ${appVersion || "..."} · App is up to date`}
       </div>
 
-      {downloading && downloadProgress && (
-        <div className="px-3">
-          <div className="h-1 w-full overflow-hidden rounded-full bg-secondary-bg">
-            <div
-              className="h-full bg-accent transition-[width] duration-[var(--app-duration-slow)] ease-[var(--app-ease-smooth)]"
-              style={{ width: `${downloadProgress.percentage}%` }}
-            />
-          </div>
-        </div>
-      )}
+      {downloading && downloadProgress ? (
+        <Progress
+          value={downloadProgress.percentage}
+          aria-label="Athas update download progress"
+          className="px-3"
+        />
+      ) : null}
 
-      {error && <div className="font-sans ui-text-base px-3 text-error">{error}</div>}
+      {error && <div className="font-sans ui-text-sm px-3 text-error">{error}</div>}
 
       <SettingRow
         label="Terminal Command"
@@ -239,7 +237,7 @@ export const GeneralSettings = () => {
                 onClick={() => void handleInstallCli()}
                 disabled={cliInstalling || cliChecking}
                 variant="default"
-                size="xs"
+                size="sm"
               >
                 {cliInstalling ? "Installing..." : "Install"}
               </Button>
@@ -248,7 +246,7 @@ export const GeneralSettings = () => {
                 disabled={cliChecking}
                 variant="default"
                 tooltip="Copy install command to clipboard"
-                size="xs"
+                size="sm"
               >
                 Copy
               </Button>
@@ -257,7 +255,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="font-sans ui-text-base -mt-3 px-1 text-text-lighter/75">
+      <div className="font-sans ui-text-sm -mt-3 px-1 text-text-lighter/75">
         {cliChecking
           ? "Checking..."
           : cliInstalled
@@ -266,7 +264,7 @@ export const GeneralSettings = () => {
       </div>
 
       <SettingRow label="Import Settings" description="Import matching setup from another editor.">
-        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" size="xs">
+        <Button onClick={() => setIsImportDialogOpen(true)} variant="default" size="sm">
           Import
         </Button>
       </SettingRow>
@@ -275,7 +273,7 @@ export const GeneralSettings = () => {
         label="Report a Bug"
         description="Choose where to report an issue with environment details."
       >
-        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" size="xs">
+        <Button onClick={() => setIsReportBugDialogOpen(true)} variant="default" size="sm">
           Open
         </Button>
       </SettingRow>
@@ -289,7 +287,7 @@ export const GeneralSettings = () => {
           onSelect={(channel) => void handleReportBug(channel)}
         />
       )}
-    </div>
+    </SettingsView>
   );
 };
 

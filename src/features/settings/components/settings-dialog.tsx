@@ -12,6 +12,7 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
+import { Card } from "@/ui/card";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import Input from "@/ui/input";
@@ -260,11 +261,11 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           header: "max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
           title: "max-[720px]:min-w-0",
           headerActions: "max-[720px]:min-w-0",
-          content: "flex p-0",
+          content: "flex h-full p-0",
         }}
       >
         <div className="flex size-full min-w-0 overflow-hidden">
-          <div className="w-52 shrink-0 max-[720px]:hidden">
+          <div className="h-full w-52 shrink-0 max-[720px]:hidden">
             <SettingsVerticalTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -272,20 +273,26 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             />
           </div>
 
-          <ScrollArea
-            className="min-w-0 flex-1"
-            contentClassName="p-3 max-[720px]:p-2"
-            viewportProps={{
-              ref: contentRef,
-              id: activePanelId,
-              role: "tabpanel",
-              "aria-labelledby": activeTabId,
-              "data-settings-content": "",
-              tabIndex: -1,
-            }}
+          <Card
+            variant="elevated"
+            size="flush"
+            className="my-2 mr-2 ml-0 min-w-0 flex-1 max-[720px]:ml-2"
           >
-            {renderTabContent()}
-          </ScrollArea>
+            <ScrollArea
+              className="min-w-0 flex-1"
+              contentClassName="p-3 max-[720px]:p-2"
+              viewportProps={{
+                ref: contentRef,
+                id: activePanelId,
+                role: "tabpanel",
+                "aria-labelledby": activeTabId,
+                "data-settings-content": "",
+                tabIndex: -1,
+              }}
+            >
+              {renderTabContent()}
+            </ScrollArea>
+          </Card>
         </div>
       </Dialog>
       <Dropdown

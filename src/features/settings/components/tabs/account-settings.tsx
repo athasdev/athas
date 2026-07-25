@@ -20,8 +20,9 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Progress } from "@/ui/progress";
 import Switch from "@/ui/switch";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 
 export const AccountSettings = () => {
   const services = getServiceUrls();
@@ -101,7 +102,7 @@ export const AccountSettings = () => {
         : "Keep non-sensitive settings synced across your devices.";
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Account">
         <SettingRow
           label="Account"
@@ -115,7 +116,7 @@ export const AccountSettings = () => {
               onClick={signIn}
               disabled={isSigningIn}
               className="ui-text-base"
-              size="xs"
+              size="sm"
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
@@ -152,12 +153,7 @@ export const AccountSettings = () => {
                     {formatUsdFromCents(autocompleteUsage.budgetCents)}
                   </span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
-                  <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
-                    style={{ width: `${usageProgress}%` }}
-                  />
-                </div>
+                <Progress value={usageProgress} size="md" aria-label="Hosted AI monthly usage" />
                 <div className="flex items-center justify-between gap-4">
                   <span className="font-sans ui-text-base text-text-lighter/70">
                     {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
@@ -190,7 +186,7 @@ export const AccountSettings = () => {
                 variant="default"
                 onClick={handleManagePlan}
                 className="ui-text-base"
-                size="xs"
+                size="sm"
               >
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
@@ -231,6 +227,7 @@ export const AccountSettings = () => {
                 onClick={() => void handleSyncNow()}
                 className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
+                size="sm"
               >
                 {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
               </Button>
@@ -245,6 +242,7 @@ export const AccountSettings = () => {
                 onClick={() => void handleRestoreFromCloud()}
                 className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
+                size="sm"
               >
                 Restore
               </Button>
@@ -261,7 +259,7 @@ export const AccountSettings = () => {
               variant="default"
               onClick={handleManageAccount}
               className="ui-text-base"
-              size="xs"
+              size="sm"
             >
               Open Dashboard
             </Button>
@@ -273,12 +271,17 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button variant="default" onClick={() => void logout()} className="ui-text-base">
+            <Button
+              variant="default"
+              onClick={() => void logout()}
+              className="ui-text-base"
+              size="sm"
+            >
               Sign Out
             </Button>
           </SettingRow>
         )}
       </Section>
-    </div>
+    </SettingsView>
   );
 };

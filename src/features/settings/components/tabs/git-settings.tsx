@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 
@@ -33,7 +33,7 @@ export const GitSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Integration">
         <SettingRow
           label="Git Integration"
@@ -253,6 +253,6 @@ export const GitSettings = () => {
           />
         </SettingRow>
       </Section>
-    </div>
+    </SettingsView>
   );
 };

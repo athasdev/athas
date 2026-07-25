@@ -351,6 +351,7 @@ export function normalizeSettings(settings: Settings): Settings {
     ...normalizedSettings.coreFeatures,
   };
   delete (normalizedSettings.coreFeatures as { athasEditorEngine?: unknown }).athasEditorEngine;
+  delete (normalizedSettings.coreFeatures as { energyEdge?: unknown }).energyEdge;
 
   if (
     persistedGitPanelMode === "none" ||

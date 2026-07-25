@@ -112,16 +112,18 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("athas-icons");
   });
 
-  it("drops the legacy Athas editor feature flag", () => {
+  it("drops retired core feature flags", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       coreFeatures: {
         ...getDefaultSettingsSnapshot().coreFeatures,
         athasEditorEngine: true,
+        energyEdge: true,
       },
     } as never);
 
     expect("athasEditorEngine" in normalized.coreFeatures).toBe(false);
+    expect("energyEdge" in normalized.coreFeatures).toBe(false);
   });
 
   it("removes legacy worktrees from git sidebar settings", () => {

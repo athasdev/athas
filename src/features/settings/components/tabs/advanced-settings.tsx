@@ -16,7 +16,7 @@ import {
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Switch from "@/ui/switch";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import { getServiceUrls } from "@/config/services";
 
 const telemetryDescription =
@@ -128,7 +128,7 @@ export const AdvancedSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Features" description="Toggle application features on or off">
         {coreFeaturesList.map((feature: CoreFeature) => (
           <SettingRow
@@ -158,7 +158,7 @@ export const AdvancedSettings = () => {
       </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
-          <Button variant="default" onClick={() => void handleExportSettings()}>
+          <Button variant="default" onClick={() => void handleExportSettings()} size="sm">
             Export
           </Button>
         </SettingRow>
@@ -166,7 +166,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button variant="default" onClick={handleImportSettings} size="xs">
+          <Button variant="default" onClick={handleImportSettings} size="sm">
             Import
           </Button>
         </SettingRow>
@@ -202,10 +202,14 @@ export const AdvancedSettings = () => {
           description="Inspect the local queue and recent telemetry delivery results."
         >
           <div className="flex gap-2">
-            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
+            <Button
+              variant="default"
+              onClick={() => setShowTelemetryLog((value) => !value)}
+              size="sm"
+            >
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="default" onClick={handleClearTelemetryLog} size="xs">
+            <Button variant="default" onClick={handleClearTelemetryLog} size="sm">
               Clear
             </Button>
           </div>
@@ -248,6 +252,6 @@ export const AdvancedSettings = () => {
           </div>
         )}
       </Section>
-    </div>
+    </SettingsView>
   );
 };

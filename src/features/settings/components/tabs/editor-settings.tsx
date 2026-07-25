@@ -3,7 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import { getAllLanguages } from "@/features/editor/utils/language-id";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { FontSelector } from "../font-selector";
@@ -55,7 +55,7 @@ export const EditorSettings = () => {
     { value: "all", label: "All" },
   ];
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Editor">
         <SettingRow
           label="Editor Font Family"
@@ -402,6 +402,6 @@ export const EditorSettings = () => {
           />
         </SettingRow>
       </Section>
-    </div>
+    </SettingsView>
   );
 };
