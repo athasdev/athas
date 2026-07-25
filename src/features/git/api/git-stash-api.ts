@@ -1,5 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitStash } from "../types/git.types";
+import { emitGitChanged } from "../events/git-events";
+import { runGitRead } from "../runtime/git-read-coordinator";
 import {
   isNotGitRepositoryError,
   resolveRepositoryPath,
@@ -13,10 +15,11 @@ export const getStashes = async (repoPath: string): Promise<GitStash[]> => {
       return [];
     }
 
-    const stashes = await tauriInvoke<GitStash[]>("git_get_stashes", {
-      repoPath: resolvedRepoPath,
-    });
-    return stashes;
+    return await runGitRead(resolvedRepoPath, "stashes", () =>
+      tauriInvoke<GitStash[]>("git_get_stashes", {
+        repoPath: resolvedRepoPath,
+      }),
+    );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get stashes:", error);
@@ -39,6 +42,11 @@ export const createStash = async (
       includeUntracked,
       files,
     });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["working-tree", "stashes"],
+      source: "create-stash",
+    });
     return true;
   } catch (error) {
     console.error("Failed to create stash:", error);
@@ -50,6 +58,11 @@ export const applyStash = async (repoPath: string, stashIndex: number): Promise<
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_apply_stash", { repoPath: resolvedRepoPath, stashIndex });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["working-tree"],
+      source: "apply-stash",
+    });
     return true;
   } catch (error) {
     console.error("Failed to apply stash:", error);
@@ -61,6 +74,11 @@ export const popStash = async (repoPath: string, stashIndex?: number): Promise<b
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_pop_stash", { repoPath: resolvedRepoPath, stashIndex });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["working-tree", "stashes"],
+      source: "pop-stash",
+    });
     return true;
   } catch (error) {
     console.error("Failed to pop stash:", error);
@@ -72,6 +90,11 @@ export const dropStash = async (repoPath: string, stashIndex: number): Promise<b
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_drop_stash", { repoPath: resolvedRepoPath, stashIndex });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["stashes"],
+      source: "drop-stash",
+    });
     return true;
   } catch (error) {
     console.error("Failed to drop stash:", error);

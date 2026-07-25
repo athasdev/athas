@@ -12,10 +12,11 @@ import {
   UploadIcon as Upload,
   XIcon as X,
 } from "@/ui/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
+import { Collapsible, CollapsibleContent } from "@/ui/collapsible";
 import {
   CommandEmpty,
   CommandForm,
@@ -71,11 +72,21 @@ const GitTagManager = ({
   const [selectedRemote, setSelectedRemote] = useState("origin");
   const [expandedTagName, setExpandedTagName] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
+  const tagLoadRequestIdRef = useRef(0);
+  const remoteLoadRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      tagLoadRequestIdRef.current += 1;
+      remoteLoadRequestIdRef.current += 1;
+      return;
+    }
     void loadTags();
     void loadRemotes();
+    return () => {
+      tagLoadRequestIdRef.current += 1;
+      remoteLoadRequestIdRef.current += 1;
+    };
   }, [isOpen, repoPath]);
 
   const resetTransientState = () => {
@@ -108,18 +119,26 @@ const GitTagManager = ({
   const loadTags = async () => {
     if (!repoPath) return;
 
+    const requestId = ++tagLoadRequestIdRef.current;
     setIsLoading(true);
     try {
-      setTags(await getTags(repoPath));
+      const nextTags = await getTags(repoPath);
+      if (requestId === tagLoadRequestIdRef.current) {
+        setTags(nextTags);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === tagLoadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const loadRemotes = async () => {
     if (!repoPath) return;
 
+    const requestId = ++remoteLoadRequestIdRef.current;
     const remoteList = await getRemotes(repoPath);
+    if (requestId !== remoteLoadRequestIdRef.current) return;
     setRemotes(remoteList);
     if (remoteList.length > 0 && !remoteList.some((remote) => remote.name === selectedRemote)) {
       setSelectedRemote(remoteList[0].name);
@@ -303,7 +322,7 @@ const GitTagManager = ({
           </CommandFormField>
           <CommandFormField span="full">
             <label className="inline-flex items-center gap-2 text-text-lighter ui-text-sm">
-              <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
+              <Checkbox checked={newTagSigned} onCheckedChange={setNewTagSigned} />
               Sign tag
             </label>
           </CommandFormField>
@@ -329,7 +348,12 @@ const GitTagManager = ({
               setExpandedTagName((current) => (current === tag.name ? null : tag.name));
 
             return (
-              <div key={tag.name} className="group/tag">
+              <Collapsible
+                key={tag.name}
+                open={isExpanded}
+                onOpenChange={(open) => setExpandedTagName(open ? tag.name : null)}
+                className="group/tag"
+              >
                 <CommandItemRow
                   as="div"
                   onClick={toggleTagDetails}
@@ -506,7 +530,7 @@ const GitTagManager = ({
                     </div>
                   }
                 />
-                {isExpanded ? (
+                <CollapsibleContent>
                   <div className="border-border/50 border-t px-2.5 py-2">
                     <div className="grid gap-1.5 pl-9">
                       <div className="flex min-w-0 items-center gap-2">
@@ -549,8 +573,8 @@ const GitTagManager = ({
                       ) : null}
                     </div>
                   </div>
-                ) : null}
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
             );
           })
         )}

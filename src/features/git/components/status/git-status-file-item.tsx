@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git.types";
@@ -114,7 +114,7 @@ export const GitFileItem = ({
         >
           <Checkbox
             checked={file.staged}
-            onChange={(checked) => {
+            onCheckedChange={(checked) => {
               if (checked) {
                 onStage?.();
                 return;
@@ -122,7 +122,7 @@ export const GitFileItem = ({
               onUnstage?.();
             }}
             disabled={disabled}
-            ariaLabel={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
+            aria-label={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
           />
         </div>
       </div>

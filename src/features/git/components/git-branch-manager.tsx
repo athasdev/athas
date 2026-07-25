@@ -142,6 +142,8 @@ const GitBranchManager = ({
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const commandInputRef = useRef<HTMLInputElement>(null);
+  const branchLoadRequestIdRef = useRef(0);
+  const worktreeLoadRequestIdRef = useRef(0);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
@@ -190,9 +192,12 @@ const GitBranchManager = ({
   const loadBranches = useCallback(async () => {
     if (!repoPath) return;
 
+    const requestId = ++branchLoadRequestIdRef.current;
     try {
       const branchList = await getBranches(repoPath);
-      setBranches(branchList);
+      if (requestId === branchLoadRequestIdRef.current) {
+        setBranches(branchList);
+      }
     } catch (error) {
       console.error("Failed to load branches:", error);
     }
@@ -201,13 +206,26 @@ const GitBranchManager = ({
   const loadWorktrees = useCallback(async () => {
     if (!repoPath) return;
 
+    const requestId = ++worktreeLoadRequestIdRef.current;
     setIsLoadingWorktrees(true);
     try {
       const nextWorktrees = await getWorktrees(repoPath);
-      setWorktrees(nextWorktrees);
+      if (requestId === worktreeLoadRequestIdRef.current) {
+        setWorktrees(nextWorktrees);
+      }
     } finally {
-      setIsLoadingWorktrees(false);
+      if (requestId === worktreeLoadRequestIdRef.current) {
+        setIsLoadingWorktrees(false);
+      }
     }
+  }, [repoPath]);
+
+  useEffect(() => {
+    branchLoadRequestIdRef.current += 1;
+    worktreeLoadRequestIdRef.current += 1;
+    setBranches([]);
+    setWorktrees([]);
+    setIsLoadingWorktrees(false);
   }, [repoPath]);
 
   useEffect(() => {
@@ -222,13 +240,11 @@ const GitBranchManager = ({
       if (!paletteTarget || !repoPath) return;
       setActiveTab("branches");
       setIsDropdownOpen(true);
-      void loadBranches();
-      void loadWorktrees();
     };
 
     window.addEventListener(openEventName, handleOpenFromPalette);
     return () => window.removeEventListener(openEventName, handleOpenFromPalette);
-  }, [openEventName, paletteTarget, repoPath, loadBranches, loadWorktrees]);
+  }, [openEventName, paletteTarget, repoPath]);
 
   useEffect(() => {
     if (!isDropdownOpen) {

@@ -54,13 +54,11 @@ const DiffHunkHeader = memo(
         if (isStaged) {
           const success = await unstageHunk(rootFolderPath, gitHunk);
           if (success) {
-            window.dispatchEvent(new CustomEvent("git-status-changed"));
             onUnstageHunk?.(gitHunk);
           }
         } else {
           const success = await stageHunk(rootFolderPath, gitHunk);
           if (success) {
-            window.dispatchEvent(new CustomEvent("git-status-changed"));
             onStageHunk?.(gitHunk);
           }
         }
@@ -86,9 +84,10 @@ const DiffHunkHeader = memo(
     return (
       <div
         className={cn(
-          "group grid cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-center",
+          "group grid cursor-pointer select-none grid-cols-[2.75rem_minmax(0,1fr)] items-center",
           "font-mono code-editor-font-override border-border/70 border-b bg-primary-bg text-text-lighter",
         )}
+        data-selection-scope-exclude="true"
         style={headerStyle}
         onClick={onToggleCollapse}
       >

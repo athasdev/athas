@@ -3,6 +3,7 @@ import { useDiffData } from "../../hooks/use-git-diff-data";
 import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff.types";
 import GitDiffEditorStack from "./git-diff-editor-stack";
 import GitDiffEditorSurface from "./git-diff-editor-surface";
+import { BinaryDiffViewer } from "./git-diff-binary";
 import ImageDiffViewer from "./git-diff-image";
 
 function isMultiFileDiff(data: unknown): data is MultiFileDiff {
@@ -51,6 +52,14 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
 
   if (diff.is_image) {
     return <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />;
+  }
+
+  if (diff.is_binary) {
+    return (
+      <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+        <BinaryDiffViewer fileName={fileName} />
+      </div>
+    );
   }
 
   return (

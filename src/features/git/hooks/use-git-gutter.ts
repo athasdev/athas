@@ -3,6 +3,7 @@ import { useEditorDecorationsStore } from "@/features/editor/stores/decorations.
 import type { Decoration } from "@/features/editor/types/editor.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiff, getFileDiffAgainstContent } from "../api/git-diff-api";
+import { isGitChangeRelevant, subscribeToGitChanges } from "../events/git-events";
 import type { GitDiff } from "../types/git.types";
 
 interface GitGutterHookOptions {
@@ -287,29 +288,22 @@ export function useGitGutter({ filePath, content, enabled = true }: GitGutterHoo
       }
     };
 
-    const handleGitStatusUpdate = (event?: CustomEvent) => {
-      if (event?.detail?.filePath) {
-        const eventFilePath = event.detail.filePath;
-        if (eventFilePath !== filePath && !filePath.endsWith(eventFilePath)) {
-          return;
-        }
-      }
-
-      updateGitGutter(false);
-    };
+    const unsubscribeGitChanges = subscribeToGitChanges((change) => {
+      if (!isGitChangeRelevant(change, rootFolderPath, filePath)) return;
+      void updateGitGutter(false);
+    });
 
     window.addEventListener("file-reloaded", handleFileReload as EventListener);
-    window.addEventListener("git-status-updated", handleGitStatusUpdate as EventListener);
 
     return () => {
       window.removeEventListener("file-reloaded", handleFileReload as EventListener);
-      window.removeEventListener("git-status-updated", handleGitStatusUpdate as EventListener);
+      unsubscribeGitChanges();
 
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [enabled, filePath, updateGitGutter]);
+  }, [enabled, filePath, rootFolderPath, updateGitGutter]);
 
   return {
     updateGitGutter: useCallback(() => updateGitGutter(false), [updateGitGutter]),

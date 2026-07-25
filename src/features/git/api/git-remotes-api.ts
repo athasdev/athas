@@ -1,5 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitRemote } from "../types/git.types";
+import { emitGitChanged } from "../events/git-events";
+import { runGitRead } from "../runtime/git-read-coordinator";
 import {
   isNotGitRepositoryError,
   resolveRepositoryPath,
@@ -18,10 +20,11 @@ export const getRemotes = async (repoPath: string): Promise<GitRemote[]> => {
       return [];
     }
 
-    const remotes = await tauriInvoke<GitRemote[]>("git_get_remotes", {
-      repoPath: resolvedRepoPath,
-    });
-    return remotes;
+    return await runGitRead(resolvedRepoPath, "remotes", () =>
+      tauriInvoke<GitRemote[]>("git_get_remotes", {
+        repoPath: resolvedRepoPath,
+      }),
+    );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get remotes:", error);
@@ -34,6 +37,11 @@ export const addRemote = async (repoPath: string, name: string, url: string): Pr
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_add_remote", { repoPath: resolvedRepoPath, name, url });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["remotes"],
+      source: "add-remote",
+    });
     return true;
   } catch (error) {
     console.error("Failed to add remote:", error);
@@ -45,6 +53,11 @@ export const removeRemote = async (repoPath: string, name: string): Promise<bool
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_remove_remote", { repoPath: resolvedRepoPath, name });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["remotes"],
+      source: "remove-remote",
+    });
     return true;
   } catch (error) {
     console.error("Failed to remove remote:", error);
@@ -60,6 +73,11 @@ export const pushChanges = async (
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_push", { repoPath: resolvedRepoPath, branch, remote });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["refs", "remotes"],
+      source: "push",
+    });
     return { success: true };
   } catch (error) {
     console.error("Failed to push changes:", error);
@@ -78,6 +96,11 @@ export const pullChanges = async (
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_pull", { repoPath: resolvedRepoPath, branch, remote });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["working-tree", "history", "refs", "remotes"],
+      source: "pull",
+    });
     return { success: true };
   } catch (error) {
     console.error("Failed to pull changes:", error);
@@ -95,6 +118,11 @@ export const fetchChanges = async (
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_fetch", { repoPath: resolvedRepoPath, remote });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["refs", "remotes"],
+      source: "fetch",
+    });
     return { success: true };
   } catch (error) {
     console.error("Failed to fetch changes:", error);

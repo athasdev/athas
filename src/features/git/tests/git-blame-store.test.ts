@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { getGitBlame } from "../api/git-blame-api";
-import { createGitBlameStore } from "../stores/git-blame.store";
+import { getResolvedGitBlame, type ResolvedGitBlame } from "../api/git-blame-api";
+import { createGitBlameStore, getGitBlameCacheKey } from "../stores/git-blame.store";
 import type { GitBlame } from "../types/git.types";
 
 vi.mock("../api/git-blame-api", () => ({
-  getGitBlame: vi.fn(),
+  getResolvedGitBlame: vi.fn(),
 }));
 
-const mockGetGitBlame = vi.mocked(getGitBlame);
+const mockGetGitBlame = vi.mocked(getResolvedGitBlame);
 
 function createBlame(author: string): GitBlame {
   return {
@@ -28,8 +28,8 @@ function createBlame(author: string): GitBlame {
 }
 
 function deferredBlame() {
-  let resolve: (value: GitBlame | null) => void = () => {};
-  const promise = new Promise<GitBlame | null>((resolver) => {
+  let resolve: (value: ResolvedGitBlame | null) => void = () => {};
+  const promise = new Promise<ResolvedGitBlame | null>((resolver) => {
     resolve = resolver;
   });
   return { promise, resolve };
@@ -41,18 +41,28 @@ describe("git blame store", () => {
   });
 
   it("reuses blame loaded for identical editor content", async () => {
-    mockGetGitBlame.mockResolvedValue(createBlame("Current"));
+    mockGetGitBlame.mockResolvedValue({
+      blame: createBlame("Current"),
+      repoPath: "/workspace",
+      filePath: "src/app.ts",
+    });
     const store = createGitBlameStore();
 
     await store.getState().actions.loadBlameForFile("/workspace", "src/app.ts", "current");
     await store.getState().actions.loadBlameForFile("/workspace", "src/app.ts", "current");
 
     expect(mockGetGitBlame).toHaveBeenCalledTimes(1);
-    expect(store.getState().blameContent.get("src/app.ts")).toBe("current");
+    expect(store.getState().blameContent.get(getGitBlameCacheKey("/workspace", "src/app.ts"))).toBe(
+      "current",
+    );
   });
 
   it("reloads identical content after repository blame is cleared", async () => {
-    mockGetGitBlame.mockResolvedValue(createBlame("Current"));
+    mockGetGitBlame.mockResolvedValue({
+      blame: createBlame("Current"),
+      repoPath: "/workspace",
+      filePath: "src/app.ts",
+    });
     const store = createGitBlameStore();
 
     await store.getState().actions.loadBlameForFile("/workspace", "src/app.ts", "current");
@@ -60,7 +70,10 @@ describe("git blame store", () => {
     await store.getState().actions.loadBlameForFile("/workspace", "src/app.ts", "current");
 
     expect(mockGetGitBlame).toHaveBeenCalledTimes(2);
-    expect(store.getState().blameData.get("src/app.ts")?.lines[0]?.author).toBe("Current");
+    expect(
+      store.getState().blameData.get(getGitBlameCacheKey("/workspace", "src/app.ts"))?.lines[0]
+        ?.author,
+    ).toBe("Current");
   });
 
   it("does not let an older request replace blame for newer content", async () => {
@@ -76,12 +89,45 @@ describe("git blame store", () => {
       .getState()
       .actions.loadBlameForFile("/workspace", "src/app.ts", "newer");
 
-    newer.resolve(createBlame("Newer"));
+    newer.resolve({
+      blame: createBlame("Newer"),
+      repoPath: "/workspace",
+      filePath: "src/app.ts",
+    });
     await newerRequest;
-    older.resolve(createBlame("Older"));
+    older.resolve({
+      blame: createBlame("Older"),
+      repoPath: "/workspace",
+      filePath: "src/app.ts",
+    });
     await olderRequest;
 
-    expect(store.getState().blameContent.get("src/app.ts")).toBe("newer");
-    expect(store.getState().blameData.get("src/app.ts")?.lines[0]?.author).toBe("Newer");
+    const cacheKey = getGitBlameCacheKey("/workspace", "src/app.ts");
+    expect(store.getState().blameContent.get(cacheKey)).toBe("newer");
+    expect(store.getState().blameData.get(cacheKey)?.lines[0]?.author).toBe("Newer");
+  });
+
+  it("does not reuse blame for the same relative path in another repository", async () => {
+    mockGetGitBlame
+      .mockResolvedValueOnce({
+        blame: createBlame("First"),
+        repoPath: "/first",
+        filePath: "src/app.ts",
+      })
+      .mockResolvedValueOnce({
+        blame: createBlame("Second"),
+        repoPath: "/second",
+        filePath: "src/app.ts",
+      });
+    const store = createGitBlameStore();
+
+    await store.getState().actions.loadBlameForFile("/first", "src/app.ts", "same");
+    await store.getState().actions.loadBlameForFile("/second", "src/app.ts", "same");
+
+    expect(mockGetGitBlame).toHaveBeenCalledTimes(2);
+    expect(
+      store.getState().blameData.get(getGitBlameCacheKey("/second", "src/app.ts"))?.lines[0]
+        ?.author,
+    ).toBe("Second");
   });
 });

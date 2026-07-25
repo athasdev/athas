@@ -16,7 +16,7 @@ import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { ScrollArea } from "@/ui/scroll-area";
 import { showConfirmDialog } from "@/ui/dialog";
@@ -26,12 +26,20 @@ import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
 import {
   discardFileChanges,
+  setFilesStaged,
   stageAllFiles,
   stageFile,
   unstageAllFiles,
   unstageFile,
 } from "../../api/git-status-api";
 import type { GitFile } from "../../types/git.types";
+import {
+  buildGitFolderTree,
+  buildGitStatusPresentation,
+  GIT_STATUS_ORDER,
+  type GitFolderNode,
+  type GitStatusGroup,
+} from "../../utils/git-status-model";
 import { StashMessageModal } from "../stash/git-stash-modal";
 import { GitFileItem } from "./git-status-file-item";
 
@@ -60,95 +68,13 @@ interface ContextMenuState {
   isStaged: boolean;
 }
 
-type StatusGroup = "added" | "modified" | "deleted" | "renamed" | "untracked";
 type StatusSection = "tracked" | "untracked";
 type GitStatusDiffScope = "all" | "unstaged" | "staged";
 
-const STATUS_ORDER: StatusGroup[] = ["added", "modified", "deleted", "renamed", "untracked"];
 const SECTION_LABELS = {
   tracked: "Tracked",
   untracked: "Untracked",
 } as const;
-
-const createEmptyStatusGroups = (): Record<StatusGroup, GitFile[]> => ({
-  added: [],
-  modified: [],
-  deleted: [],
-  renamed: [],
-  untracked: [],
-});
-
-interface GitFolderNode {
-  name: string;
-  fullPath: string;
-  folders: Map<string, GitFolderNode>;
-  files: GitFile[];
-  descendantFiles: GitFile[];
-  sortedFolders: GitFolderNode[];
-  sortedFiles: GitFile[];
-  descendantFilePaths: string[];
-  areAllDescendantFilesStaged: boolean;
-}
-
-const createFolderNode = (name: string, fullPath: string): GitFolderNode => ({
-  name,
-  fullPath,
-  folders: new Map<string, GitFolderNode>(),
-  files: [],
-  descendantFiles: [],
-  sortedFolders: [],
-  sortedFiles: [],
-  descendantFilePaths: [],
-  areAllDescendantFilesStaged: false,
-});
-
-const normalizePathSegments = (path: string): string[] =>
-  path
-    .replace(/\\/g, "/")
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0);
-
-function finalizeGitFolderTree(node: GitFolderNode): void {
-  node.sortedFolders = Array.from(node.folders.values()).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-  node.sortedFiles = [...node.files].sort((a, b) => a.path.localeCompare(b.path));
-  node.descendantFilePaths = node.descendantFiles.map((file) => file.path);
-  node.areAllDescendantFilesStaged =
-    node.descendantFiles.length > 0 && node.descendantFiles.every((file) => file.staged);
-
-  for (const folderNode of node.sortedFolders) {
-    finalizeGitFolderTree(folderNode);
-  }
-}
-
-const buildGitFolderTree = (fileList: GitFile[]): GitFolderNode => {
-  const root = createFolderNode("", "");
-
-  for (const file of fileList) {
-    const segments = normalizePathSegments(file.path);
-    if (segments.length === 0) continue;
-
-    let currentNode = root;
-    currentNode.descendantFiles.push(file);
-    let currentPath = "";
-    const directorySegments = segments.slice(0, -1);
-    for (const segment of directorySegments) {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      if (!currentNode.folders.has(segment)) {
-        currentNode.folders.set(segment, createFolderNode(segment, currentPath));
-      }
-      currentNode = currentNode.folders.get(segment)!;
-      currentNode.descendantFiles.push(file);
-    }
-
-    currentNode.files.push(file);
-  }
-
-  finalizeGitFolderTree(root);
-  return root;
-};
 
 const GitStatusPanel = ({
   files,
@@ -206,59 +132,7 @@ const GitStatusPanel = ({
     untrackedFiles,
     groupedTrackedFiles,
     groupedUntrackedFiles,
-  } = useMemo(() => {
-    const nextStagedFiles: GitFile[] = [];
-    const nextUnstagedFiles: GitFile[] = [];
-    const filesByPath = new Map<string, GitFile>();
-    let nextHasStagedDiffableFiles = false;
-    let nextHasUnstagedDiffableFiles = false;
-
-    for (const file of displayFiles) {
-      if (file.staged) {
-        nextStagedFiles.push(file);
-        nextHasStagedDiffableFiles ||= file.status !== "untracked";
-      } else {
-        nextUnstagedFiles.push(file);
-        nextHasUnstagedDiffableFiles ||= file.status !== "untracked";
-      }
-
-      const existingFile = filesByPath.get(file.path);
-      if (!existingFile || (!existingFile.staged && file.staged)) {
-        filesByPath.set(file.path, file);
-      }
-    }
-
-    const nextVisibleFiles: GitFile[] = [];
-    const nextTrackedFiles: GitFile[] = [];
-    const nextUntrackedFiles: GitFile[] = [];
-    const nextGroupedTrackedFiles = createEmptyStatusGroups();
-    const nextGroupedUntrackedFiles = createEmptyStatusGroups();
-
-    for (const file of filesByPath.values()) {
-      nextVisibleFiles.push(file);
-
-      if (file.status === "untracked") {
-        nextUntrackedFiles.push(file);
-        nextGroupedUntrackedFiles.untracked.push(file);
-      } else {
-        nextTrackedFiles.push(file);
-        nextGroupedTrackedFiles[file.status].push(file);
-      }
-    }
-
-    return {
-      stagedFiles: nextStagedFiles,
-      unstagedFiles: nextUnstagedFiles,
-      hasStagedDiffableFiles: nextHasStagedDiffableFiles,
-      hasUnstagedDiffableFiles: nextHasUnstagedDiffableFiles,
-      visibleFiles: nextVisibleFiles,
-      displayFileByPath: filesByPath,
-      trackedFiles: nextTrackedFiles,
-      untrackedFiles: nextUntrackedFiles,
-      groupedTrackedFiles: nextGroupedTrackedFiles,
-      groupedUntrackedFiles: nextGroupedUntrackedFiles,
-    };
-  }, [displayFiles]);
+  } = useMemo(() => buildGitStatusPresentation(displayFiles), [displayFiles]);
   const getDiffStats = useCallback(
     (file: GitFile) => {
       const primaryKey = `${file.staged ? "staged" : "unstaged"}:${file.path}`;
@@ -306,8 +180,12 @@ const GitStatusPanel = ({
     setOptimisticStage([filePath], true);
     setIsLoading(true);
     try {
-      await stageFile(repoPath, filePath);
-      onRefresh?.();
+      const success = await stageFile(repoPath, filePath);
+      if (!success) {
+        setOptimisticStage([filePath], false);
+        return;
+      }
+      await onRefresh?.();
     } finally {
       setIsLoading(false);
     }
@@ -318,8 +196,12 @@ const GitStatusPanel = ({
     setOptimisticStage([filePath], false);
     setIsLoading(true);
     try {
-      await unstageFile(repoPath, filePath);
-      onRefresh?.();
+      const success = await unstageFile(repoPath, filePath);
+      if (!success) {
+        setOptimisticStage([filePath], true);
+        return;
+      }
+      await onRefresh?.();
     } finally {
       setIsLoading(false);
     }
@@ -331,12 +213,14 @@ const GitStatusPanel = ({
     setOptimisticStage(filePaths, staged);
     setIsLoading(true);
     try {
-      await Promise.all(
-        filePaths.map((filePath) =>
-          staged ? stageFile(repoPath, filePath) : unstageFile(repoPath, filePath),
-        ),
-      );
-      onRefresh?.();
+      const results = await setFilesStaged(repoPath, filePaths, staged);
+      const failedPaths = filePaths.filter((filePath) => !results.get(filePath));
+      if (failedPaths.length > 0) {
+        setOptimisticStage(failedPaths, !staged);
+      }
+      if (Array.from(results.values()).some(Boolean)) {
+        await onRefresh?.();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -350,8 +234,15 @@ const GitStatusPanel = ({
     );
     setIsLoading(true);
     try {
-      await stageAllFiles(repoPath);
-      onRefresh?.();
+      const success = await stageAllFiles(repoPath);
+      if (!success) {
+        setOptimisticStage(
+          unstagedFiles.map((file) => file.path),
+          false,
+        );
+        return;
+      }
+      await onRefresh?.();
     } finally {
       setIsLoading(false);
     }
@@ -365,8 +256,15 @@ const GitStatusPanel = ({
     );
     setIsLoading(true);
     try {
-      await unstageAllFiles(repoPath);
-      onRefresh?.();
+      const success = await unstageAllFiles(repoPath);
+      if (!success) {
+        setOptimisticStage(
+          stagedFiles.map((file) => file.path),
+          true,
+        );
+        return;
+      }
+      await onRefresh?.();
     } finally {
       setIsLoading(false);
     }
@@ -385,8 +283,10 @@ const GitStatusPanel = ({
     }
     setIsLoading(true);
     try {
-      await discardFileChanges(repoPath, filePath);
-      onRefresh?.();
+      const success = await discardFileChanges(repoPath, filePath);
+      if (success) {
+        await onRefresh?.();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -421,7 +321,7 @@ const GitStatusPanel = ({
       await createStash(repoPath, message || "Stash all unstaged changes", false, paths);
     }
 
-    onRefresh?.();
+    await onRefresh?.();
   };
 
   const handleContextMenu = (e: React.MouseEvent, filePath: string, isStaged: boolean) => {
@@ -458,8 +358,8 @@ const GitStatusPanel = ({
     });
   };
 
-  const renderFlatFileList = (groupedFiles: Record<StatusGroup, GitFile[]>) => {
-    return STATUS_ORDER.map((status) => {
+  const renderFlatFileList = (groupedFiles: Record<GitStatusGroup, GitFile[]>) => {
+    return GIT_STATUS_ORDER.map((status) => {
       const statusFiles = groupedFiles[status];
       if (statusFiles.length === 0) return null;
 
@@ -550,11 +450,11 @@ const GitStatusPanel = ({
               <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>
                 <Checkbox
                   checked={folderNode.areAllDescendantFilesStaged}
-                  onChange={(checked) =>
+                  onCheckedChange={(checked) =>
                     void handleSetFilesStaged(folderNode.descendantFilePaths, checked)
                   }
                   disabled={isLoading || folderNode.descendantFilePaths.length === 0}
-                  ariaLabel={
+                  aria-label={
                     folderNode.areAllDescendantFilesStaged
                       ? `Unstage folder ${folderNode.name}`
                       : `Stage folder ${folderNode.name}`

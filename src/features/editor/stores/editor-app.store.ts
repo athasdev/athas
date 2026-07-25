@@ -4,7 +4,7 @@ import { immer } from "zustand/middleware/immer";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useFileWatcherStore } from "@/features/file-system/stores/file-watcher.store";
-import { gitDiffCache } from "@/features/git/utils/git-diff-cache";
+import { emitGitChanged } from "@/features/git/events/git-events";
 import { recordLocalHistoryFile } from "@/features/local-history/api/local-history-api";
 import {
   isEditorContent,
@@ -175,14 +175,12 @@ async function saveEditorBufferById(bufferId: string): Promise<boolean> {
 
     const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
     if (rootFolderPath) {
-      gitDiffCache.invalidate(rootFolderPath, activeBuffer.path);
-      setTimeout(() => {
-        window.dispatchEvent(
-          new CustomEvent("git-status-updated", {
-            detail: { filePath: activeBuffer.path },
-          }),
-        );
-      }, 50);
+      emitGitChanged({
+        repoPath: rootFolderPath,
+        filePath: activeBuffer.path,
+        scopes: ["working-tree"],
+        source: "save",
+      });
     }
     return true;
   } catch (error) {
@@ -301,14 +299,12 @@ export const useEditorAppStore = createSelectors(
 
                   const rootFolderPath = useFileSystemStore.getState().rootFolderPath;
                   if (rootFolderPath) {
-                    gitDiffCache.invalidate(rootFolderPath, activeBuffer.path);
-                    setTimeout(() => {
-                      window.dispatchEvent(
-                        new CustomEvent("git-status-updated", {
-                          detail: { filePath: activeBuffer.path },
-                        }),
-                      );
-                    }, 50);
+                    emitGitChanged({
+                      repoPath: rootFolderPath,
+                      filePath: activeBuffer.path,
+                      scopes: ["working-tree"],
+                      source: "auto-save",
+                    });
                   }
                 } catch (error) {
                   console.error("Error saving file:", error);

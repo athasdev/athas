@@ -92,4 +92,30 @@ describe("working-tree multi diff helpers", () => {
     expect(result.totalAdditions).toBe(1);
     expect(result.totalDeletions).toBe(1);
   });
+
+  test("keeps non-image binary changes in the working-tree diff", async () => {
+    const status: GitStatus = {
+      branch: "main",
+      ahead: 0,
+      behind: 0,
+      files: [createFile("payload.bin", false)],
+    };
+
+    const result = await buildWorkingTreeMultiDiff({
+      repoPath: "/repo",
+      status,
+      loadDiff: async () => ({
+        file_path: "payload.bin",
+        is_new: false,
+        is_deleted: false,
+        is_renamed: false,
+        is_binary: true,
+        is_image: false,
+        lines: [],
+      }),
+    });
+
+    expect(result.fileKeys).toEqual(["unstaged:payload.bin"]);
+    expect(result.totalFiles).toBe(1);
+  });
 });

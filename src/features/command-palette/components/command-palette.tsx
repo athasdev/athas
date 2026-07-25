@@ -20,7 +20,6 @@ import {
   stageAllFiles,
   unstageAllFiles,
 } from "@/features/git/api/git-status-api";
-import { useGitStore } from "@/features/git/stores/git.store";
 import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { useGitHubStore } from "@/features/github/stores/github.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
@@ -156,7 +155,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const lspStatus = useLspStore.use.lspStatus();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const gitActions = useGitStore((state) => state.actions);
   const { checkAuth: checkGitHubAuth } = useGitHubStore().actions;
   const extensionCommands = useUIExtensionStore.use.commands();
   const extensionViews = useCommandPaletteViews();
@@ -343,11 +341,6 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
       setIsSidebarVisible,
       setActiveView,
       showToast,
-      gitStore: {
-        actions: {
-          setIsRefreshing: gitActions.setIsRefreshing,
-        },
-      },
       gitOperations: {
         stageAllFiles,
         unstageAllFiles,

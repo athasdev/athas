@@ -10,6 +10,7 @@ import {
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { emitGitChanged } from "@/features/git/events/git-events";
 import { readFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   deleteLocalHistoryEntry,
@@ -293,9 +294,11 @@ export function LocalHistoryCommandContent({
           bufferStore.actions.markBufferDirty(openBuffer.id, false);
         }
 
-        window.dispatchEvent(
-          new CustomEvent("git-status-updated", { detail: { filePath: targetPath } }),
-        );
+        emitGitChanged({
+          filePath: targetPath,
+          scopes: ["working-tree"],
+          source: "restore-local-history",
+        });
         toast.success("Snapshot restored");
         onClose();
       } catch (error) {

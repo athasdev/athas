@@ -2,6 +2,7 @@ import {
   ColumnsIcon as Columns2,
   DotsThreeIcon as MoreHorizontal,
   ListBulletsIcon as ListBullets,
+  MagnifyingGlassIcon as Search,
   RowsIcon as Rows3,
 } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,7 +23,13 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useEditorSettingsStore } from "@/features/editor/stores/settings.store";
 import { calculateLineHeight, splitLines } from "@/features/editor/utils/lines";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import {
+  buildSearchRegex,
+  findAllMatches,
+  type SearchOptions,
+} from "@/features/editor/utils/search";
 import { formatRelativeDate } from "@/utils/date";
 import { cn } from "@/utils/cn";
 import { joinPath } from "@/utils/path-helpers";
@@ -35,13 +42,20 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
+import { SEARCH_TOGGLE_ICONS, SearchPopover } from "@/ui/search";
 import { getRemotes } from "../../api/git-remotes-api";
 import { getGitStatus } from "../../api/git-status-api";
+import { isGitChangeRelevant, subscribeToGitChanges } from "../../events/git-events";
 import { useDiffEditorBuffer } from "../../hooks/use-diff-editor-buffer";
 import type { MultiFileDiff } from "../../types/git-diff.types";
 import type { GitDiff } from "../../types/git.types";
 import { gitDiffCache } from "../../utils/git-diff-cache";
 import { getFileStatus } from "../../utils/git-diff-helpers";
+import {
+  findMultiDiffMatches,
+  getMultiDiffSectionKey,
+  type MultiDiffSearchMatch,
+} from "../../utils/multi-diff-search";
 import {
   DIFF_INLINE_RENDER_LINE_THRESHOLD,
   getInitialExpandedDiffFileKeys,
@@ -55,6 +69,7 @@ import {
 } from "../../utils/diff-editor-content";
 import DiffLineBackgroundLayer from "./diff-line-background-layer";
 import ImageDiffViewer from "./git-diff-image";
+import { BinaryDiffViewer } from "./git-diff-binary";
 import TextDiffViewer from "./git-diff-text";
 
 function countStats(diff: GitDiff) {
@@ -82,10 +97,6 @@ const statusTextClass: Record<string, string> = {
   modified: "text-git-modified",
   renamed: "text-git-renamed",
 };
-
-function getDiffSectionKey(multiDiff: MultiFileDiff, diff: GitDiff, index: number): string {
-  return multiDiff.fileKeys?.[index] ?? `${diff.file_path}:${index}`;
-}
 
 function parseGitHubRemoteSlug(remoteUrl: string): { owner: string; repo: string } | null {
   const normalized = remoteUrl.trim();
@@ -119,9 +130,34 @@ function buildGitHubReferenceUrl(remoteUrl: string, gitRef: string): string | nu
   return `https://github.com/${slug.owner}/${slug.repo}/commit/${encodeURIComponent(gitRef)}`;
 }
 
-function LargeDiffSectionEditor({ diff, cacheKey }: { diff: GitDiff; cacheKey: string }) {
+function getContentSearchMatches(
+  content: string,
+  searchQuery: string,
+  searchOptions: SearchOptions,
+) {
+  const regex = buildSearchRegex(searchQuery, searchOptions);
+  return regex ? findAllMatches(content, regex) : [];
+}
+
+function LargeDiffSectionEditor({
+  diff,
+  cacheKey,
+  searchQuery,
+  searchOptions,
+  currentSearchMatchIndex,
+}: {
+  diff: GitDiff;
+  cacheKey: string;
+  searchQuery: string;
+  searchOptions: SearchOptions;
+  currentSearchMatchIndex: number;
+}) {
   const sourcePath = diff.new_path || diff.old_path || diff.file_path;
   const editorContent = useMemo(() => serializeGitDiffForEditor(diff), [diff]);
+  const highlightMatches = useMemo(
+    () => getContentSearchMatches(editorContent, searchQuery, searchOptions),
+    [editorContent, searchOptions, searchQuery],
+  );
   const bufferId = useDiffEditorBuffer({
     cacheKey: `${cacheKey}_large`,
     content: editorContent,
@@ -140,6 +176,8 @@ function LargeDiffSectionEditor({ diff, cacheKey }: { diff: GitDiff; cacheKey: s
         showToolbar={false}
         readOnly={true}
         scrollable={true}
+        highlightMatches={highlightMatches}
+        currentHighlightIndex={currentSearchMatchIndex}
       />
     </div>
   );
@@ -149,10 +187,18 @@ function EmbeddedDiffSectionEditor({
   diff,
   cacheKey,
   viewMode,
+  searchQuery,
+  searchOptions,
+  searchMatches,
+  currentSearchMatch,
 }: {
   diff: GitDiff;
   cacheKey: string;
   viewMode: "unified" | "split";
+  searchQuery: string;
+  searchOptions: SearchOptions;
+  searchMatches: MultiDiffSearchMatch[];
+  currentSearchMatch: MultiDiffSearchMatch | null;
 }) {
   const fontSize = useEditorSettingsStore.use.fontSize();
   const editorLineHeight = useEditorSettingsStore.use.lineHeight();
@@ -161,6 +207,33 @@ function EmbeddedDiffSectionEditor({
   const sourcePath = diff.new_path || diff.old_path || diff.file_path;
   const unifiedContent = useMemo(() => serializeGitDiffSourceForEditor(diff), [diff]);
   const splitContent = useMemo(() => serializeGitDiffSourceForSplitEditor(diff), [diff]);
+  const unifiedHighlightMatches = useMemo(
+    () => getContentSearchMatches(unifiedContent.content, searchQuery, searchOptions),
+    [searchOptions, searchQuery, unifiedContent.content],
+  );
+  const leftHighlightMatches = useMemo(
+    () => getContentSearchMatches(splitContent.left.content, searchQuery, searchOptions),
+    [searchOptions, searchQuery, splitContent.left.content],
+  );
+  const rightHighlightMatches = useMemo(
+    () => getContentSearchMatches(splitContent.right.content, searchQuery, searchOptions),
+    [searchOptions, searchQuery, splitContent.right.content],
+  );
+  const unifiedCurrentMatchIndex = currentSearchMatch
+    ? searchMatches.indexOf(currentSearchMatch)
+    : -1;
+  const leftSearchMatches = searchMatches.filter(
+    (match) => diff.lines[match.lineIndex]?.line_type !== "added",
+  );
+  const rightSearchMatches = searchMatches.filter(
+    (match) => diff.lines[match.lineIndex]?.line_type !== "removed",
+  );
+  const leftCurrentMatchIndex = currentSearchMatch
+    ? leftSearchMatches.indexOf(currentSearchMatch)
+    : -1;
+  const rightCurrentMatchIndex = currentSearchMatch
+    ? rightSearchMatches.indexOf(currentSearchMatch)
+    : -1;
   const unifiedBufferId = useDiffEditorBuffer({
     cacheKey,
     content: unifiedContent.content,
@@ -257,6 +330,8 @@ function EmbeddedDiffSectionEditor({
             showToolbar={false}
             readOnly={true}
             scrollable={false}
+            highlightMatches={leftHighlightMatches}
+            currentHighlightIndex={leftCurrentMatchIndex}
             onReadonlySurfaceClick={({ line, column }) =>
               void openSourceLocation(line, column, splitContent.left.actualLines)
             }
@@ -273,6 +348,8 @@ function EmbeddedDiffSectionEditor({
             showToolbar={false}
             readOnly={true}
             scrollable={false}
+            highlightMatches={rightHighlightMatches}
+            currentHighlightIndex={rightCurrentMatchIndex}
             onReadonlySurfaceClick={({ line, column }) =>
               void openSourceLocation(line, column, splitContent.right.actualLines)
             }
@@ -291,6 +368,8 @@ function EmbeddedDiffSectionEditor({
         showToolbar={false}
         readOnly={true}
         scrollable={false}
+        highlightMatches={unifiedHighlightMatches}
+        currentHighlightIndex={unifiedCurrentMatchIndex}
         onReadonlySurfaceClick={({ line, column }) =>
           void openSourceLocation(line, column, unifiedContent.actualLines)
         }
@@ -303,16 +382,46 @@ function DiffSectionEditor({
   diff,
   cacheKey,
   viewMode,
+  searchQuery,
+  searchOptions,
+  searchMatches,
+  currentSearchMatch,
 }: {
   diff: GitDiff;
   cacheKey: string;
   viewMode: "unified" | "split";
+  searchQuery: string;
+  searchOptions: SearchOptions;
+  searchMatches: MultiDiffSearchMatch[];
+  currentSearchMatch: MultiDiffSearchMatch | null;
 }) {
+  const currentSearchMatchIndex = currentSearchMatch
+    ? searchMatches.indexOf(currentSearchMatch)
+    : -1;
+
   if (shouldUseScrollableDiffEditor(diff)) {
-    return <LargeDiffSectionEditor diff={diff} cacheKey={cacheKey} />;
+    return (
+      <LargeDiffSectionEditor
+        diff={diff}
+        cacheKey={cacheKey}
+        searchQuery={searchQuery}
+        searchOptions={searchOptions}
+        currentSearchMatchIndex={currentSearchMatchIndex}
+      />
+    );
   }
 
-  return <EmbeddedDiffSectionEditor diff={diff} cacheKey={cacheKey} viewMode={viewMode} />;
+  return (
+    <EmbeddedDiffSectionEditor
+      diff={diff}
+      cacheKey={cacheKey}
+      viewMode={viewMode}
+      searchQuery={searchQuery}
+      searchOptions={searchOptions}
+      searchMatches={searchMatches}
+      currentSearchMatch={currentSearchMatch}
+    />
+  );
 }
 
 const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
@@ -376,6 +485,10 @@ const DiffFileSection = memo(function DiffFileSection({
   viewMode,
   showWhitespace,
   onOpenFile,
+  searchMatches,
+  currentSearchMatch,
+  searchQuery,
+  searchOptions,
 }: {
   diff: GitDiff;
   sectionKey: string;
@@ -384,6 +497,10 @@ const DiffFileSection = memo(function DiffFileSection({
   onOpenFile: (filePath: string) => void | Promise<void>;
   viewMode: "unified" | "split";
   showWhitespace: boolean;
+  searchMatches: MultiDiffSearchMatch[];
+  currentSearchMatch: MultiDiffSearchMatch | null;
+  searchQuery: string;
+  searchOptions: SearchOptions;
 }) {
   const filePath = diff.new_path || diff.old_path || diff.file_path;
   const fileName = filePath.split("/").pop() || filePath;
@@ -399,6 +516,21 @@ const DiffFileSection = memo(function DiffFileSection({
   }, [filePath, onOpenFile]);
   const shouldUseInlineTextDiff =
     !shouldUseScrollableDiffEditor(diff) && diff.lines.length <= DIFF_INLINE_RENDER_LINE_THRESHOLD;
+  const searchHighlights = useMemo(() => {
+    const highlights = new Map<number, Array<{ start: number; end: number; isCurrent: boolean }>>();
+
+    for (const match of searchMatches) {
+      const lineHighlights = highlights.get(match.lineIndex) ?? [];
+      lineHighlights.push({
+        start: match.start,
+        end: match.end,
+        isCurrent: match === currentSearchMatch,
+      });
+      highlights.set(match.lineIndex, lineHighlights);
+    }
+
+    return highlights;
+  }, [currentSearchMatch, searchMatches]);
 
   return (
     <section
@@ -431,6 +563,12 @@ const DiffFileSection = memo(function DiffFileSection({
               <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />
             </LazyDiffSectionBody>
           </div>
+        ) : diff.is_binary ? (
+          <div className="min-w-0 max-w-full overflow-hidden">
+            <LazyDiffSectionBody expanded={expanded}>
+              <BinaryDiffViewer fileName={fileName} />
+            </LazyDiffSectionBody>
+          </div>
         ) : (
           <div className="min-w-0 max-w-full overflow-hidden">
             <LazyDiffSectionBody expanded={expanded}>
@@ -441,9 +579,18 @@ const DiffFileSection = memo(function DiffFileSection({
                   viewMode={viewMode}
                   showWhitespace={showWhitespace}
                   isEmbeddedInScrollView={true}
+                  searchHighlights={searchHighlights}
                 />
               ) : (
-                <DiffSectionEditor diff={diff} cacheKey={sectionKey} viewMode={viewMode} />
+                <DiffSectionEditor
+                  diff={diff}
+                  cacheKey={sectionKey}
+                  viewMode={viewMode}
+                  searchQuery={searchQuery}
+                  searchOptions={searchOptions}
+                  searchMatches={searchMatches}
+                  currentSearchMatch={currentSearchMatch}
+                />
               )}
             </LazyDiffSectionBody>
           </div>
@@ -468,19 +615,40 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   const updateBufferContent = useBufferStore.use.actions().updateBufferContent;
   const closeBuffer = useBufferStore.use.actions().closeBuffer;
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const isFindVisible = useUIState((state) => state.isFindVisible);
+  const setIsFindVisible = useUIState((state) => state.setIsFindVisible);
   const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
   const [showWhitespace, setShowWhitespace] = useState(false);
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
   const [fileNavigatorViewMode, setFileNavigatorViewMode] = useState<FileNavigatorViewMode>("flat");
   const isWorkingTree = multiDiff.commitHash === "working-tree";
   const isWorkingTreeBuffer = activeBuffer?.path === "diff://working-tree/all-files";
+  const isActiveMultiDiff = activeBuffer?.type === "diff" && activeBuffer.diffData === multiDiff;
   const isRefreshingRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const sectionElementsRef = useRef(new Map<string, HTMLDivElement>());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOptions, setSearchOptions] = useState<SearchOptions>({
+    caseSensitive: false,
+    wholeWord: false,
+    useRegex: false,
+  });
+  const [currentSearchMatchIndex, setCurrentSearchMatchIndex] = useState(-1);
   const [selectedFileKey, setSelectedFileKey] = useState<string | null>(
     () =>
       multiDiff.initiallyExpandedFileKey ??
-      (multiDiff.files[0] ? getDiffSectionKey(multiDiff, multiDiff.files[0], 0) : null),
+      (multiDiff.files[0] ? getMultiDiffSectionKey(multiDiff, multiDiff.files[0], 0) : null),
   );
+  const searchMatches = useMemo(
+    () => findMultiDiffMatches(multiDiff, searchQuery, searchOptions),
+    [multiDiff, searchOptions, searchQuery],
+  );
+  const currentSearchMatch =
+    currentSearchMatchIndex >= 0 ? (searchMatches[currentSearchMatchIndex] ?? null) : null;
+  const isInvalidSearch =
+    searchOptions.useRegex &&
+    searchQuery.length > 0 &&
+    buildSearchRegex(searchQuery, searchOptions) === null;
   const handleOpenFile = useCallback(
     async (filePath: string) => {
       const repoPath = multiDiff.repoPath ?? rootFolderPath;
@@ -520,7 +688,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         const status = getFileStatus(diff);
 
         return {
-          key: getDiffSectionKey(multiDiff, diff, index),
+          key: getMultiDiffSectionKey(multiDiff, diff, index),
           path: filePath,
           iconClassName: statusTextClass[status],
           metadata: [
@@ -539,6 +707,16 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       return next;
     });
   }, []);
+  const navigateSearch = useCallback(
+    (direction: 1 | -1) => {
+      if (searchMatches.length === 0) return;
+      setCurrentSearchMatchIndex((current) => {
+        const base = current >= 0 ? current : direction === 1 ? -1 : 0;
+        return (base + direction + searchMatches.length) % searchMatches.length;
+      });
+    },
+    [searchMatches.length],
+  );
   const registerSectionElement = useCallback((sectionKey: string, node: HTMLDivElement | null) => {
     if (node) {
       sectionElementsRef.current.set(sectionKey, node);
@@ -564,7 +742,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   }, []);
   useEffect(() => {
     const nextKeys = new Set(
-      multiDiff.files.map((diff, index) => getDiffSectionKey(multiDiff, diff, index)),
+      multiDiff.files.map((diff, index) => getMultiDiffSectionKey(multiDiff, diff, index)),
     );
 
     setExpandedFiles((previous) => {
@@ -585,10 +763,73 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       if (previous && nextKeys.has(previous)) return previous;
       return (
         multiDiff.initiallyExpandedFileKey ??
-        (multiDiff.files[0] ? getDiffSectionKey(multiDiff, multiDiff.files[0], 0) : null)
+        (multiDiff.files[0] ? getMultiDiffSectionKey(multiDiff, multiDiff.files[0], 0) : null)
       );
     });
   }, [multiDiff.fileKeys, multiDiff.files, multiDiff.initiallyExpandedFileKey]);
+
+  useEffect(() => {
+    if (searchMatches.length === 0) {
+      setCurrentSearchMatchIndex(-1);
+      return;
+    }
+
+    setCurrentSearchMatchIndex(0);
+  }, [searchMatches]);
+
+  useEffect(() => {
+    if (!isFindVisible || !isActiveMultiDiff) return;
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, [isActiveMultiDiff, isFindVisible]);
+
+  useEffect(() => {
+    if (!currentSearchMatch) return;
+
+    setSelectedFileKey(currentSearchMatch.sectionKey);
+    setExpandedFiles((previous) => {
+      if (previous.has(currentSearchMatch.sectionKey)) return previous;
+      const next = new Set(previous);
+      next.add(currentSearchMatch.sectionKey);
+      return next;
+    });
+
+    const section = sectionElementsRef.current.get(currentSearchMatch.sectionKey);
+    section?.scrollIntoView({ block: "center" });
+
+    const revealTimer = window.setTimeout(() => {
+      const line = section?.querySelector(
+        `[data-diff-search-line="${currentSearchMatch.lineIndex}"]`,
+      );
+      line?.scrollIntoView({ block: "center", inline: "nearest" });
+    }, 50);
+
+    return () => window.clearTimeout(revealTimer);
+  }, [currentSearchMatch]);
+
+  useEffect(() => {
+    if (!isActiveMultiDiff) return;
+
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      const hasCommandModifier = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+
+      if (hasCommandModifier && key === "f") {
+        event.preventDefault();
+        setIsFindVisible(true);
+        window.requestAnimationFrame(() => searchInputRef.current?.select());
+        return;
+      }
+
+      if (hasCommandModifier && key === "g" && searchMatches.length > 0) {
+        event.preventDefault();
+        setIsFindVisible(true);
+        navigateSearch(event.shiftKey ? -1 : 1);
+      }
+    };
+
+    document.addEventListener("keydown", handleSearchShortcut, { capture: true });
+    return () => document.removeEventListener("keydown", handleSearchShortcut, { capture: true });
+  }, [isActiveMultiDiff, navigateSearch, searchMatches.length, setIsFindVisible]);
 
   const refreshWorkingTreeBuffer = useCallback(async () => {
     if (!isWorkingTree || !isWorkingTreeBuffer || !rootFolderPath || !activeBuffer) return;
@@ -627,17 +868,20 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   useEffect(() => {
     if (!isWorkingTree) return;
 
-    const handleGitStatusChanged = () => {
-      window.setTimeout(() => {
+    let timeoutId: number | null = null;
+    const unsubscribe = subscribeToGitChanges((change) => {
+      if (!isGitChangeRelevant(change, multiDiff.repoPath ?? rootFolderPath)) return;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
         void refreshWorkingTreeBuffer();
       }, 50);
-    };
+    });
 
-    window.addEventListener("git-status-changed", handleGitStatusChanged);
     return () => {
-      window.removeEventListener("git-status-changed", handleGitStatusChanged);
+      unsubscribe();
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [isWorkingTree, refreshWorkingTreeBuffer]);
+  }, [isWorkingTree, multiDiff.repoPath, refreshWorkingTreeBuffer, rootFolderPath]);
 
   useEffect(() => {
     if (isWorkingTree || multiDiff.commitHash.startsWith("stash@{")) {
@@ -671,22 +915,35 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   }, [isWorkingTree, multiDiff.commitHash, multiDiff.repoPath, rootFolderPath]);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex h-full flex-col overflow-hidden bg-primary-bg">
       <Breadcrumb
         filePathOverride={multiDiff.title || "Uncommitted Changes"}
         interactive={false}
         showPath={false}
-        showDefaultActions={true}
+        showDefaultActions={false}
         extraLeftContent={
-          <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
-            <span>{indexedFileLabel}</span>
-            <span className="text-git-added">+{multiDiff.totalAdditions}</span>
-            <span className="text-git-deleted">-{multiDiff.totalDeletions}</span>
+          <div className="ui-text-sm flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-text-lighter">
+            <span className="shrink-0 font-medium text-text">
+              {multiDiff.title || "Uncommitted Changes"}
+            </span>
+            <span className="truncate">{indexedFileLabel}</span>
+            <span className="shrink-0 text-git-added">+{multiDiff.totalAdditions}</span>
+            <span className="shrink-0 text-git-deleted">-{multiDiff.totalDeletions}</span>
             {isIndexingDiffs ? <span>{indexingLabel}</span> : null}
           </div>
         }
         rightContent={
           <div className="flex items-center gap-1">
+            <BreadcrumbActionButton
+              type="button"
+              active={isFindVisible}
+              onClick={() => setIsFindVisible(!isFindVisible)}
+              tooltip="Search changes"
+              tooltipSide="bottom"
+              aria-label="Search changes"
+            >
+              <Search />
+            </BreadcrumbActionButton>
             <BreadcrumbActionButton
               type="button"
               active={isFileTreeVisible}
@@ -750,6 +1007,78 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
         }
       />
 
+      {isFindVisible && isActiveMultiDiff ? (
+        <SearchPopover
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setIsFindVisible(false);
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              navigateSearch(event.shiftKey ? -1 : 1);
+            }
+          }}
+          onClose={() => setIsFindVisible(false)}
+          placeholder="Search changes"
+          inputRef={searchInputRef}
+          matchLabel={
+            searchQuery
+              ? isInvalidSearch
+                ? "Invalid expression"
+                : searchMatches.length > 0
+                  ? `${currentSearchMatchIndex + 1} of ${searchMatches.length}`
+                  : "No results"
+              : null
+          }
+          matchTone={
+            isInvalidSearch || (searchQuery.length > 0 && searchMatches.length === 0)
+              ? "warning"
+              : "default"
+          }
+          onNext={() => navigateSearch(1)}
+          onPrevious={() => navigateSearch(-1)}
+          canNavigate={searchMatches.length > 0}
+          options={[
+            {
+              id: "case-sensitive",
+              label: "Match case",
+              icon: SEARCH_TOGGLE_ICONS.caseSensitive,
+              active: searchOptions.caseSensitive,
+              onToggle: () =>
+                setSearchOptions((current) => ({
+                  ...current,
+                  caseSensitive: !current.caseSensitive,
+                })),
+            },
+            {
+              id: "whole-word",
+              label: "Match whole word",
+              icon: SEARCH_TOGGLE_ICONS.wholeWord,
+              active: searchOptions.wholeWord,
+              onToggle: () =>
+                setSearchOptions((current) => ({
+                  ...current,
+                  wholeWord: !current.wholeWord,
+                })),
+            },
+            {
+              id: "regex",
+              label: "Use regular expression",
+              icon: SEARCH_TOGGLE_ICONS.regex,
+              active: searchOptions.useRegex,
+              onToggle: () =>
+                setSearchOptions((current) => ({
+                  ...current,
+                  useRegex: !current.useRegex,
+                })),
+            },
+          ]}
+          className="absolute top-9 right-2 z-50 max-w-[calc(100%-1rem)]"
+        />
+      ) : null}
+
       {!isWorkingTree &&
       (multiDiff.commitMessage || multiDiff.commitAuthor || multiDiff.commitDate) ? (
         <div className="border-border/60 border-b bg-primary-bg px-4 py-3">
@@ -812,7 +1141,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
           >
             <div className="flex min-w-0 max-w-full flex-col">
               {multiDiff.files.map((diff, index) => {
-                const sectionKey = getDiffSectionKey(multiDiff, diff, index);
+                const sectionKey = getMultiDiffSectionKey(multiDiff, diff, index);
+                const sectionSearchMatches = searchMatches.filter(
+                  (match) => match.sectionKey === sectionKey,
+                );
 
                 return (
                   <div key={sectionKey} ref={(node) => registerSectionElement(sectionKey, node)}>
@@ -822,6 +1154,10 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
                       expanded={expandedFiles.has(sectionKey)}
                       viewMode={viewMode}
                       showWhitespace={showWhitespace}
+                      searchMatches={isFindVisible ? sectionSearchMatches : []}
+                      currentSearchMatch={isFindVisible ? currentSearchMatch : null}
+                      searchQuery={isFindVisible ? searchQuery : ""}
+                      searchOptions={searchOptions}
                       onToggle={handleToggleSection}
                       onOpenFile={handleOpenFile}
                     />

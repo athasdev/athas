@@ -1,4 +1,5 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 import { discoverWorkspaceRepositories, normalizeRepositoryPath } from "../api/git-repo-api";
 
@@ -10,6 +11,8 @@ interface RepositoryState {
   activeRepoPath: string | null;
   availableRepoPaths: string[];
   isDiscovering: boolean;
+  hasDiscoveredWorkspace: boolean;
+  discoveryRequestId: number;
   error: string | null;
 
   actions: {
@@ -50,11 +53,13 @@ const initialState = {
   activeRepoPath: null,
   availableRepoPaths: [],
   isDiscovering: false,
+  hasDiscoveredWorkspace: false,
+  discoveryRequestId: 0,
   error: null,
 };
 
-export const useRepositoryStore = createSelectors(
-  create<RepositoryState>((set, get) => ({
+export const createGitRepositoryStore = () =>
+  createStore<RepositoryState>()((set, get) => ({
     ...initialState,
 
     actions: {
@@ -74,6 +79,8 @@ export const useRepositoryStore = createSelectors(
               availableRepoPaths,
               activeRepoPath,
               isDiscovering: false,
+              hasDiscoveredWorkspace: true,
+              discoveryRequestId: state.discoveryRequestId + 1,
               error: null,
             };
           });
@@ -84,14 +91,16 @@ export const useRepositoryStore = createSelectors(
         if (
           !force &&
           current.workspaceRootPath === normalizedRoot &&
-          (current.workspaceRepoPaths.length > 0 || current.isDiscovering)
+          (current.hasDiscoveredWorkspace || current.isDiscovering)
         ) {
           return;
         }
 
+        const requestId = current.discoveryRequestId + 1;
         set({
           workspaceRootPath: normalizedRoot,
           isDiscovering: true,
+          discoveryRequestId: requestId,
           error: null,
         });
 
@@ -99,6 +108,13 @@ export const useRepositoryStore = createSelectors(
           const discoveredRepos = await discoverWorkspaceRepositories(normalizedRoot, { force });
 
           set((state) => {
+            if (
+              state.discoveryRequestId !== requestId ||
+              state.workspaceRootPath !== normalizedRoot
+            ) {
+              return state;
+            }
+
             const availableRepoPaths = mergeRepositoryPaths(discoveredRepos, state.manualRepoPaths);
             const availableRepoPathSet = new Set(availableRepoPaths);
             const previousActive = state.activeRepoPath;
@@ -115,14 +131,20 @@ export const useRepositoryStore = createSelectors(
               availableRepoPaths,
               activeRepoPath: nextActiveRepoPath,
               isDiscovering: false,
+              hasDiscoveredWorkspace: true,
               error: null,
             };
           });
         } catch (error) {
-          set({
-            isDiscovering: false,
-            error: error instanceof Error ? error.message : String(error),
-          });
+          set((state) =>
+            state.discoveryRequestId === requestId && state.workspaceRootPath === normalizedRoot
+              ? {
+                  isDiscovering: false,
+                  hasDiscoveredWorkspace: true,
+                  error: error instanceof Error ? error.message : String(error),
+                }
+              : state,
+          );
         }
       },
 
@@ -206,5 +228,8 @@ export const useRepositoryStore = createSelectors(
 
       reset: () => set(initialState),
     },
-  })),
+  }));
+
+export const useRepositoryStore = createSelectors(
+  createWorkspaceScopedStore("git-repository", createGitRepositoryStore),
 );

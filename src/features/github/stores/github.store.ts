@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
+import { emitGitChanged } from "@/features/git/events/git-events";
 import type {
   PRFilter,
   PullRequest,
@@ -437,7 +438,11 @@ export const useGitHubStore = create(
       checkoutPR: async (repoPath: string, prNumber: number) => {
         try {
           await invoke("github_checkout_pr", { repoPath, prNumber });
-          window.dispatchEvent(new CustomEvent("git-status-changed"));
+          emitGitChanged({
+            repoPath,
+            scopes: ["working-tree", "history", "refs"],
+            source: "checkout-pull-request",
+          });
         } catch (err) {
           console.error("Failed to checkout PR:", err);
           throw err;

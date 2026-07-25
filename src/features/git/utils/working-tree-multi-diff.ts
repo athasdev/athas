@@ -128,7 +128,11 @@ export const buildWorkingTreeMultiDiff = async ({
     ): entry is {
       fileKey: string;
       diff: GitDiff;
-    } => !!entry.diff && (entry.diff.lines.length > 0 || entry.diff.is_image === true),
+    } =>
+      !!entry.diff &&
+      (entry.diff.lines.length > 0 ||
+        entry.diff.is_image === true ||
+        entry.diff.is_binary === true),
   );
 
   const stats = countDiffStats(resolvedDiffs.map((entry) => entry.diff));

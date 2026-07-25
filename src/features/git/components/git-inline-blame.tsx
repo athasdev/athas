@@ -5,17 +5,14 @@ import {
   GitBranchIcon as GitBranch,
   GitCommitIcon as GitCommit,
 } from "@/ui/icons";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useEventListener } from "usehooks-ts";
+import { useCallback, useRef, useState } from "react";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { useOverlayManager } from "@/features/editor/hooks/use-overlay-manager";
-import { useThrottledCallback } from "@/features/editor/hooks/use-performance";
 import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import "@/features/editor/styles/overlay-card.css";
 import { useEditorStateStore } from "@/features/editor/stores/state.store";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/ui/hover-card";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import { formatRelativeTime } from "@/utils/date";
@@ -39,93 +36,18 @@ export const InlineGitBlame = ({
   lineHeight,
 }: InlineGitBlameProps) => {
   const [showCard, setShowCard] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const [isCopied, setIsCopied] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const documentRef = useRef(document);
   const settingsFontSize = useSettingsStore((state) => state.settings.fontSize);
   const effectiveFontSize = fontSize ?? settingsFontSize;
   const effectiveLineHeight =
     lineHeight ?? settingsFontSize * EDITOR_CONSTANTS.LINE_HEIGHT_MULTIPLIER;
-  const [isCopied, setIsCopied] = useState(false);
-  const { showOverlay, hideOverlay, shouldShowOverlay } = useOverlayManager();
-
-  const POPOVER_MARGIN = 8;
 
   useSelectionScope(popoverRef, showCard);
 
-  const clearHideTimeout = useCallback(() => {
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-  }, []);
-
-  const clearShowTimeout = useCallback(() => {
-    if (showTimeoutRef.current) {
-      clearTimeout(showTimeoutRef.current);
-      showTimeoutRef.current = null;
-    }
-  }, []);
-
-  const scheduleHide = useCallback(() => {
-    clearHideTimeout();
-    hideTimeoutRef.current = setTimeout(() => {
-      setShowCard(false);
-    }, 150);
-  }, [clearHideTimeout]);
-
-  const updatePosition = useCallback(() => {
-    if (!triggerRef.current) return;
-
-    const rect = triggerRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    const popoverRect = popoverRef.current?.getBoundingClientRect();
-    const popoverWidth = popoverRect?.width ?? 384;
-    const popoverHeight = popoverRect?.height ?? 200;
-
-    let x = rect.left;
-    let y = rect.bottom + POPOVER_MARGIN;
-
-    if (x + popoverWidth > viewportWidth - POPOVER_MARGIN) {
-      x = viewportWidth - popoverWidth - POPOVER_MARGIN;
-    }
-    if (x < POPOVER_MARGIN) {
-      x = POPOVER_MARGIN;
-    }
-
-    if (y + popoverHeight > viewportHeight - POPOVER_MARGIN) {
-      y = rect.top - popoverHeight - POPOVER_MARGIN;
-    }
-
-    setPosition({ x, y });
-  }, []);
-
-  const showPopover = useCallback(() => {
-    clearHideTimeout();
-    if (!showCard && !showTimeoutRef.current) {
-      showTimeoutRef.current = setTimeout(() => {
-        updatePosition();
-        setShowCard(true);
-        showOverlay("git-blame");
-        showTimeoutRef.current = null;
-      }, 1000);
-    }
-  }, [clearHideTimeout, showCard, updatePosition, showOverlay]);
-
-  const hidePopover = useCallback(() => {
-    clearShowTimeout();
-    scheduleHide();
-    hideOverlay("git-blame");
-  }, [clearShowTimeout, scheduleHide, hideOverlay]);
-
   const handleCopyCommitHash = useCallback(
-    async (e: React.MouseEvent) => {
-      e.stopPropagation();
+    async (event: React.MouseEvent) => {
+      event.stopPropagation();
       await writeClipboardText(blameLine.commit_hash.substring(0, 7));
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 1500);
@@ -150,182 +72,84 @@ export const InlineGitBlame = ({
     }
   }, [blameLine.commit_hash]);
 
-  const throttleCallback = useThrottledCallback((e: MouseEvent) => {
-    if (!triggerRef.current) return;
-
-    const { clientX, clientY } = e;
-
-    const {
-      left: triggerLeft,
-      top: triggerTop,
-      width: triggerWidth,
-      height: triggerHeight,
-    } = triggerRef.current.getBoundingClientRect();
-
-    const isOverTrigger =
-      clientX >= triggerLeft &&
-      clientX <= triggerLeft + triggerWidth &&
-      clientY >= triggerTop &&
-      clientY <= triggerTop + triggerHeight;
-
-    let isOverPopover = false;
-    if (popoverRef.current) {
-      const {
-        left: popoverLeft,
-        top: popoverTop,
-        width: popoverWidth,
-        height: popoverHeight,
-      } = popoverRef.current.getBoundingClientRect();
-      isOverPopover =
-        clientX >= popoverLeft &&
-        clientX <= popoverLeft + popoverWidth &&
-        clientY >= popoverTop &&
-        clientY <= popoverTop + popoverHeight;
-    }
-
-    if (isOverTrigger || isOverPopover) {
-      showPopover();
-    } else {
-      hidePopover();
-    }
-  }, 100);
-
-  useEventListener("mousemove", throttleCallback, documentRef);
-
-  useEffect(() => {
-    if (showCard && triggerRef.current && popoverRef.current) {
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const popoverRect = popoverRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      let x = triggerRect.left;
-      let y = triggerRect.bottom + POPOVER_MARGIN;
-
-      if (x + popoverRect.width > viewportWidth - POPOVER_MARGIN) {
-        x = viewportWidth - popoverRect.width - POPOVER_MARGIN;
-      }
-      if (x < POPOVER_MARGIN) {
-        x = POPOVER_MARGIN;
-      }
-
-      if (y + popoverRect.height > viewportHeight - POPOVER_MARGIN) {
-        y = triggerRect.top - popoverRect.height - POPOVER_MARGIN;
-      }
-
-      setPosition({ x, y });
-    }
-  }, [showCard]);
-
-  useEffect(() => {
-    if (!showCard) return;
-
-    const handleResize = () => {
-      setShowCard(false);
-    };
-
-    const handleScroll = () => {
-      setShowCard(false);
-    };
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleScroll, true);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll, true);
-    };
-  }, [showCard]);
-
-  useEffect(() => {
-    return () => {
-      clearHideTimeout();
-      clearShowTimeout();
-    };
-  }, [clearHideTimeout, clearShowTimeout]);
-
   return (
-    <div
-      ref={triggerRef}
-      className={cn("relative flex items-center", containerClassName)}
-      style={{ height: `${effectiveLineHeight}px` }}
-    >
-      <div
-        className={cn("ml-2 flex items-center gap-1", "text-text-lighter", className)}
-        style={{
-          fontSize: `${effectiveFontSize}px`,
-          lineHeight: 1,
-          verticalAlign: "top",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <span className="flex shrink-0 items-center">
-          <GitBranch size={effectiveFontSize} />
-        </span>
-        <span>{blameLine.author},</span>
-        <span>{formatRelativeTime(blameLine.time)}</span>
-      </div>
-
-      {showCard &&
-        shouldShowOverlay("git-blame") &&
-        createPortal(
+    <HoverCard open={showCard} onOpenChange={setShowCard}>
+      <HoverCardTrigger
+        delay={1000}
+        closeDelay={150}
+        render={
           <div
-            ref={popoverRef}
-            className="editor-overlay-card fixed min-w-92"
-            style={{
-              zIndex: EDITOR_CONSTANTS.Z_INDEX.TOOLTIP,
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onSelect={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex max-w-96 flex-col gap-2 p-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium ui-text-sm text-text">
-                  {blameLine.author}
-                </span>
-                <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-sm">
-                  <Clock />
-                  <span>{formatRelativeTime(blameLine.time)}</span>
-                </div>
-              </div>
+            className={cn("relative flex items-center", containerClassName)}
+            style={{ height: `${effectiveLineHeight}px` }}
+          />
+        }
+      >
+        <div
+          className={cn("ml-2 flex items-center gap-1 text-text-lighter", className)}
+          style={{
+            fontSize: `${effectiveFontSize}px`,
+            lineHeight: 1,
+            verticalAlign: "top",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span className="flex shrink-0 items-center">
+            <GitBranch size={effectiveFontSize} />
+          </span>
+          <span>{blameLine.author},</span>
+          <span>{formatRelativeTime(blameLine.time)}</span>
+        </div>
+      </HoverCardTrigger>
 
-              <pre className="whitespace-pre-wrap break-words text-text-light ui-text-sm leading-relaxed">
-                {blameLine.commit.trim()}
-              </pre>
-
-              <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="gap-1.5 px-1.5"
-                  onClick={handleViewCommit}
-                  tooltip="View commit details"
-                  size="xs"
-                >
-                  <GitCommit />
-                  <span className="font-sans text-text">
-                    {blameLine.commit_hash.substring(0, 7)}
-                  </span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="ml-auto text-text-lighter hover:text-text"
-                  onClick={handleCopyCommitHash}
-                  tooltip="Copy commit hash"
-                  size="icon-xs"
-                >
-                  {isCopied ? <Check className="text-success" /> : <Copy />}
-                </Button>
-              </div>
+      <HoverCardContent
+        ref={popoverRef}
+        side="bottom"
+        align="start"
+        sideOffset={8}
+        className="editor-overlay-card min-w-92 p-0"
+        onClick={(event) => event.stopPropagation()}
+        onSelect={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex max-w-96 flex-col gap-2 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate font-medium ui-text-sm text-text">{blameLine.author}</span>
+            <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-sm">
+              <Clock />
+              <span>{formatRelativeTime(blameLine.time)}</span>
             </div>
-          </div>,
-          document.body,
-        )}
-    </div>
+          </div>
+
+          <pre className="whitespace-pre-wrap break-words text-text-light ui-text-sm leading-relaxed">
+            {blameLine.commit.trim()}
+          </pre>
+
+          <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
+            <Button
+              type="button"
+              variant="ghost"
+              className="gap-1.5 px-1.5"
+              onClick={handleViewCommit}
+              tooltip="View commit details"
+              size="xs"
+            >
+              <GitCommit />
+              <span className="font-sans text-text">{blameLine.commit_hash.substring(0, 7)}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="ml-auto text-text-lighter hover:text-text"
+              onClick={handleCopyCommitHash}
+              tooltip="Copy commit hash"
+              size="icon-xs"
+            >
+              {isCopied ? <Check className="text-success" /> : <Copy />}
+            </Button>
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
   );
 };
 
