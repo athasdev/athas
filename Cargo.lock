@@ -814,6 +814,7 @@ dependencies = [
  "log",
  "reqwest 0.12.28",
  "serde",
+ "sha2",
  "tar",
  "tempfile",
  "which",

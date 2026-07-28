@@ -2,7 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $MinimumNodeVersion = [version]"22.0.0"
-$MinimumBunVersion = [version]"1.3.2"
+$MinimumBunVersion = [version]"1.3.14"
 $MinimumRustVersion = [version]"1.80.0"
 $NodeWingetId = "OpenJS.NodeJS.22"
 $BunWingetId = "Oven-sh.Bun"
@@ -202,7 +202,7 @@ function Ensure-Bun {
 
     $bunVersion = Get-BunVersion
     if (-not (Test-MinimumVersion $bunVersion $MinimumBunVersion)) {
-        throw "Bun 1.3.2+ is required, but setup could not verify the installed version."
+        throw "Bun 1.3.14+ is required, but setup could not verify the installed version."
     }
 
     Write-Success "Bun is ready (v$bunVersion)"
