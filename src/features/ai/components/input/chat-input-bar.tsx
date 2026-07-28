@@ -1322,7 +1322,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
     <PromptInput
       ref={aiChatContainerRef}
       standalone={isInitialPresentation}
-      attached={hasAttachedComposerDropdown}
+      connected={hasAttachedComposerDropdown}
       data-ai-context-drop-target
       onDragOver={handleContextDragOver}
       onDragLeave={handleContextDragLeave}
@@ -1331,9 +1331,8 @@ const AIChatInputBar = memo(function AIChatInputBar({
       className={cn(isInitialPresentation && "w-full")}
     >
       <PromptInputBody
-        surface
-        prominent={isInitialPresentation}
-        attached={hasAttachedComposerDropdown}
+        variant={isInitialPresentation ? "prominent" : "surface"}
+        connected={hasAttachedComposerDropdown}
       >
         {pastedImages.length > 0 && (
           <AttachmentGroup className={cn("px-3 pt-3", isInitialPresentation && "px-4 pt-4")}>

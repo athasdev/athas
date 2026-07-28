@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
+import { SidebarPanel } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { FileExplorerTree } from "./file-explorer-tree";
 
@@ -27,7 +28,7 @@ function FileExplorerPaneComponent() {
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   return (
-    <div className="relative h-full">
+    <SidebarPanel className="relative">
       {(!isFileTreeLoading || isSwitchingProject) && (
         <FileExplorerTree
           files={files}
@@ -55,7 +56,7 @@ function FileExplorerPaneComponent() {
           </div>
         </div>
       )}
-    </div>
+    </SidebarPanel>
   );
 }
 

@@ -1,6 +1,6 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotionConfig } from "motion/react";
 import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import {
   AlertDialog,
@@ -23,7 +23,7 @@ import {
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion-presets";
+import { instantTransition, overlayEntrance, quickTransition } from "@/design-system/motion";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 
@@ -188,7 +188,7 @@ const AppDialog = ({
   size = "md",
   classNames,
 }: DialogProps) => {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionConfig();
   const popupMotion = prefersReducedMotion
     ? {
         initial: false as const,

@@ -97,11 +97,25 @@
       monospace;
     --app-ui-font-size: 15px;
     --app-ui-scale: 1;
+    --ui-text-caption: 12px;
+    --ui-text-chrome: 13px;
     --ui-text-sm: var(--app-ui-font-size);
     --ui-text-base: var(--app-ui-font-size);
     --athas-title-bar-height: 2rem;
-    --athas-footer-height: 2rem;
+    --athas-footer-height: 1.75rem;
+    --athas-pane-header-height: 2.75rem;
+    --athas-tab-bar-height: var(--athas-pane-header-height);
+    --athas-tab-height: 1.75rem;
+    --athas-sidebar-header-height: 2rem;
     --athas-workbench-gap: 8px;
+    --athas-chrome-control-height: 1.5rem;
+    --athas-chrome-hit-target: 1.75rem;
+    --athas-chrome-line-height: 1rem;
+    --athas-chrome-gap-tight: 2px;
+    --athas-chrome-gap: 4px;
+    --athas-chrome-gap-loose: 6px;
+    --athas-chrome-padding-inline: 8px;
+    --athas-chrome-radius: 6px;
     --radius: 10px;
     --app-duration-fast: 150ms;
     --app-duration-normal: 200ms;
@@ -115,7 +129,6 @@
     --tab-active-bg: var(--primary-bg);
     --tab-hover-bg: color-mix(in srgb, var(--hover) 72%, transparent);
     --tab-radius: calc(var(--radius) * 1.2);
-    --tab-shoulder-size: 8px;
     --shadow-card:
       0 1px 2px rgb(0 0 0 / 0.05), 0 2px 4px rgb(0 0 0 / 0.02), 0 0 0 0.5px rgb(0 0 0 / 0.08);
     --shadow-popover:
@@ -139,6 +152,20 @@
 
   html.platform-macos {
     --athas-title-bar-height: 2.25rem;
+  }
+
+  :root[data-window-chrome-density="comfortable"] {
+    --ui-text-caption: 13px;
+    --ui-text-chrome: 14px;
+    --athas-footer-height: 2rem;
+    --athas-tab-height: 2rem;
+    --athas-sidebar-header-height: 2.25rem;
+    --athas-chrome-control-height: 1.75rem;
+    --athas-chrome-hit-target: 2rem;
+    --athas-chrome-gap-tight: 4px;
+    --athas-chrome-gap: 6px;
+    --athas-chrome-gap-loose: 8px;
+    --athas-chrome-padding-inline: 10px;
   }
 
   :root[data-theme-type="dark"] {

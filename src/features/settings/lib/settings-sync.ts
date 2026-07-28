@@ -28,6 +28,13 @@ type SyncableSettingsKey =
   | "renderIndentGuides"
   | "highlightOccurrences"
   | "showMinimap"
+  | "editorFontLigatures"
+  | "editorStickyScroll"
+  | "editorBracketPairColorization"
+  | "editorSmoothScrolling"
+  | "editorScrollBeyondLastLine"
+  | "editorCursorStyle"
+  | "editorCursorBlinking"
   | "terminalFontFamily"
   | "terminalFontSize"
   | "terminalLineHeight"
@@ -36,8 +43,17 @@ type SyncableSettingsKey =
   | "terminalCursorStyle"
   | "terminalCursorBlink"
   | "terminalCursorWidth"
+  | "terminalCursorInactiveStyle"
+  | "terminalAltClickMovesCursor"
+  | "terminalMacOptionIsMeta"
+  | "terminalRightClickSelectsWord"
   | "uiFontFamily"
   | "uiFontSize"
+  | "reduceMotion"
+  | "showStatusBar"
+  | "showTabIcons"
+  | "tabCloseButtonVisibility"
+  | "windowChromeDensity"
   | "theme"
   | "iconTheme"
   | "syncSystemTheme"
@@ -47,6 +63,7 @@ type SyncableSettingsKey =
   | "windowTransparency"
   | "headerTrailingItemsOrder"
   | "sidebarActivityItemsOrder"
+  | "hiddenSidebarActivityItems"
   | "footerLeadingItemsOrder"
   | "footerTrailingItemsOrder"
   | "openFoldersInNewWindow"
@@ -68,6 +85,11 @@ type SyncableSettingsKey =
   | "ollamaBaseUrl"
   | "activityRailExpanded"
   | "activityRailWidth"
+  | "showActivityRailProjectSwitcher"
+  | "showActivityRailAgentHistory"
+  | "showActivityRailTerminals"
+  | "showActivityRailProjectIcons"
+  | "collapsedActivityRailSections"
   | "sidebarWidth"
   | "showGitHubPullRequests"
   | "showGitHubIssues"
@@ -88,6 +110,16 @@ type SyncableSettingsKey =
   | "extensionsActiveTab"
   | "maxOpenTabs"
   | "horizontalTabScroll"
+  | "fileTreeSortOrder"
+  | "fileTreeIndentSize"
+  | "compactFoldersInFileTree"
+  | "hideRootFolderInFileTree"
+  | "autoRevealActiveFileInFileTree"
+  | "showFileIconsInFileTree"
+  | "showIndentGuidesInFileTree"
+  | "confirmBeforeFileDelete"
+  | "showHiddenFilesInFileTree"
+  | "showGitignoredFilesInFileTree"
   | "hiddenFilePatterns"
   | "hiddenDirectoryPatterns"
   | "gitChangesFolderView"
@@ -121,6 +153,13 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "renderIndentGuides",
   "highlightOccurrences",
   "showMinimap",
+  "editorFontLigatures",
+  "editorStickyScroll",
+  "editorBracketPairColorization",
+  "editorSmoothScrolling",
+  "editorScrollBeyondLastLine",
+  "editorCursorStyle",
+  "editorCursorBlinking",
   "terminalFontFamily",
   "terminalFontSize",
   "terminalLineHeight",
@@ -129,8 +168,17 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "terminalCursorStyle",
   "terminalCursorBlink",
   "terminalCursorWidth",
+  "terminalCursorInactiveStyle",
+  "terminalAltClickMovesCursor",
+  "terminalMacOptionIsMeta",
+  "terminalRightClickSelectsWord",
   "uiFontFamily",
   "uiFontSize",
+  "reduceMotion",
+  "showStatusBar",
+  "showTabIcons",
+  "tabCloseButtonVisibility",
+  "windowChromeDensity",
   "theme",
   "iconTheme",
   "syncSystemTheme",
@@ -140,6 +188,7 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "windowTransparency",
   "headerTrailingItemsOrder",
   "sidebarActivityItemsOrder",
+  "hiddenSidebarActivityItems",
   "footerLeadingItemsOrder",
   "footerTrailingItemsOrder",
   "openFoldersInNewWindow",
@@ -161,6 +210,11 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "ollamaBaseUrl",
   "activityRailExpanded",
   "activityRailWidth",
+  "showActivityRailProjectSwitcher",
+  "showActivityRailAgentHistory",
+  "showActivityRailTerminals",
+  "showActivityRailProjectIcons",
+  "collapsedActivityRailSections",
   "sidebarWidth",
   "showGitHubPullRequests",
   "showGitHubIssues",
@@ -181,6 +235,16 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "extensionsActiveTab",
   "maxOpenTabs",
   "horizontalTabScroll",
+  "fileTreeSortOrder",
+  "fileTreeIndentSize",
+  "compactFoldersInFileTree",
+  "hideRootFolderInFileTree",
+  "autoRevealActiveFileInFileTree",
+  "showFileIconsInFileTree",
+  "showIndentGuidesInFileTree",
+  "confirmBeforeFileDelete",
+  "showHiddenFilesInFileTree",
+  "showGitignoredFilesInFileTree",
   "hiddenFilePatterns",
   "hiddenDirectoryPatterns",
   "gitChangesFolderView",

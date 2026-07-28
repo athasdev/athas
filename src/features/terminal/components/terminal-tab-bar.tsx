@@ -29,6 +29,7 @@ import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.st
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
+import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import {
@@ -313,11 +314,54 @@ const TerminalTabBar = ({
     });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "F2" && activeTerminalId) {
+  const handleKeyDown = (e: React.KeyboardEvent, terminalId: string) => {
+    const currentIndex = sortedTerminals.findIndex((terminal) => terminal.id === terminalId);
+    const currentTerminal = sortedTerminals[currentIndex];
+    if (!currentTerminal || currentIndex < 0) return;
+
+    if (e.key === "F2") {
       e.preventDefault();
       e.stopPropagation();
-      startRename(activeTerminalId);
+      startRename(terminalId);
+      return;
+    }
+
+    if ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu") {
+      e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenu({
+        isOpen: true,
+        position: { x: rect.left + 8, y: rect.bottom + 4 },
+        terminal: currentTerminal,
+      });
+      return;
+    }
+
+    const nextIndex = getChromeNavigationIndex(
+      e.key,
+      currentIndex,
+      sortedTerminals.length,
+      orientation,
+    );
+    if (nextIndex !== null) {
+      const nextTerminal = sortedTerminals[nextIndex];
+      if (!nextTerminal || nextIndex === currentIndex) return;
+
+      e.preventDefault();
+      onTabClick(nextTerminal.id);
+      tabRefs.current[nextIndex]?.focus();
+      return;
+    }
+
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onTabClick(terminalId);
+      return;
+    }
+
+    if ((e.key === "Delete" || e.key === "Backspace") && !currentTerminal.isPinned) {
+      e.preventDefault();
+      onTabClose(terminalId);
     }
   };
 
@@ -409,18 +453,30 @@ const TerminalTabBar = ({
       )}
     >
       {onSearchTerminal && (
-        <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-          <Button onClick={onSearchTerminal} variant="ghost" size="icon-xs">
-            <Search />
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={onSearchTerminal}
+          variant="ghost"
+          size="icon-xs"
+          tooltip="Find in Terminal"
+          commandId="terminal.find"
+          tooltipSide="bottom"
+          aria-label="Find in terminal"
+        >
+          <Search />
+        </Button>
       )}
       <div className="flex shrink-0 items-center gap-0.5">
-        <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-          <Button onClick={onNewTerminal} variant="ghost" size="icon-xs">
-            <Plus />
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={onNewTerminal}
+          variant="ghost"
+          size="icon-xs"
+          tooltip="New Terminal"
+          commandId="terminal.new"
+          tooltipSide="bottom"
+          aria-label="New terminal"
+        >
+          <Plus />
+        </Button>
         {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
           <Tooltip content="Choose Terminal Profile" side="bottom">
             <Button
@@ -647,16 +703,18 @@ const TerminalTabBar = ({
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-0.5">
-            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-              <Button
-                onClick={onNewTerminal}
-                variant="ghost"
-                className="rounded-lg text-text-lighter"
-                size="icon-xs"
-              >
-                <Plus />
-              </Button>
-            </Tooltip>
+            <Button
+              onClick={onNewTerminal}
+              variant="ghost"
+              className="rounded-[var(--athas-chrome-radius)] text-text-lighter"
+              size="icon-xs"
+              commandId="terminal.new"
+              tooltip="New Terminal"
+              tooltipSide="bottom"
+              aria-label="New Terminal"
+            >
+              <Plus />
+            </Button>
             {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
               <Tooltip content="Choose Terminal Profile" side="bottom">
                 <Button
@@ -743,7 +801,7 @@ const TerminalTabBar = ({
                             tabRef={() => {}}
                             onClick={() => onTabClick(terminal.id)}
                             onContextMenu={(e) => handleContextMenu(e, terminal)}
-                            onKeyDown={handleKeyDown}
+                            onKeyDown={(event) => handleKeyDown(event, terminal.id)}
                             handleTabClose={handleTabCloseWrapper}
                             handleTabPin={handleTabPin}
                             isEditing={editingTerminalId === terminal.id}
@@ -805,7 +863,7 @@ const TerminalTabBar = ({
                           tabRef={() => {}}
                           onClick={() => onTabClick(terminal.id)}
                           onContextMenu={(e) => handleContextMenu(e, terminal)}
-                          onKeyDown={handleKeyDown}
+                          onKeyDown={(event) => handleKeyDown(event, terminal.id)}
                           handleTabClose={handleTabCloseWrapper}
                           handleTabPin={handleTabPin}
                           isEditing={editingTerminalId === terminal.id}

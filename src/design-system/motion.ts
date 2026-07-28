@@ -1,4 +1,4 @@
-import type { Transition } from "framer-motion";
+import type { Transition } from "motion/react";
 
 export const quickTransition: Transition = {
   duration: 0.15,

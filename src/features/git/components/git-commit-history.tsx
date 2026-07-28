@@ -1,12 +1,20 @@
-import { CheckIcon as Check, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { FunnelIcon as Funnel } from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
-import type { MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { Avatar } from "@/ui/avatar";
 import {
-  SidebarSearchFilterRow,
+  SidebarHeaderIconButton,
+  SidebarHeaderSearch,
   SidebarSectionEmptyState,
+  SidebarToolbar,
 } from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
@@ -16,14 +24,10 @@ import { cn } from "@/utils/cn";
 import type { GitCommit } from "../types/git.types";
 import { useGitStore } from "../stores/git.store";
 import { getGitAuthorAvatarUrl } from "../utils/git-author-avatar";
-import GitSidebarSectionHeader from "./git-sidebar-section-header";
 
 interface GitCommitHistoryProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
   onViewCommitDiff?: (commitHash: string, filePath?: string) => void;
   repoPath?: string;
-  showHeader?: boolean;
   ahead?: number;
   behind?: number;
 }
@@ -121,11 +125,8 @@ const CommitItem = memo(
 );
 
 const GitCommitHistory = ({
-  isCollapsed,
-  onToggle,
   onViewCommitDiff,
   repoPath,
-  showHeader = true,
   ahead = 0,
   behind = 0,
 }: GitCommitHistoryProps) => {
@@ -141,7 +142,6 @@ const GitCommitHistory = ({
   const [selectedCommitHash, setSelectedCommitHash] = useState<string | null>(null);
   const [historySearchQuery, setHistorySearchQuery] = useState("");
   const [historySearchScope, setHistorySearchScope] = useState<HistorySearchScope>("all");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const handleViewCommitDiff = useCallback(
     (commitHash: string, filePath?: string) => {
@@ -170,21 +170,6 @@ const GitCommitHistory = ({
 
   const hasHistoryRows = commits.length > 0;
   const hasHistoryFilter = historySearchScope !== "all";
-
-  const filterMenuItems = useMemo<MenuItem[]>(
-    () =>
-      (Object.keys(HISTORY_SEARCH_SCOPE_LABELS) as HistorySearchScope[]).map((scope) => ({
-        id: scope,
-        label: HISTORY_SEARCH_SCOPE_LABELS[scope],
-        keybinding:
-          historySearchScope === scope ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: () => {
-          setHistorySearchScope(scope);
-          setIsFilterOpen(false);
-        },
-      })),
-    [historySearchScope],
-  );
 
   useEffect(() => {
     if (!repoPath) return;
@@ -267,106 +252,92 @@ const GitCommitHistory = ({
   }, [commits.length, hasMoreCommits, isLoadingMoreCommits, repoPath, actions]);
 
   return (
-    <div
-      className={cn(
-        "select-none",
-        isCollapsed ? "shrink-0" : "flex h-full min-h-0 flex-1 flex-col",
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden select-none">
+      <SidebarToolbar>
+        <SidebarHeaderSearch
+          value={historySearchQuery}
+          onChange={setHistorySearchQuery}
+          placeholder="Search history"
+          aria-label="Search history"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarHeaderIconButton
+                active={hasHistoryFilter}
+                tooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[historySearchScope]}`}
+                tooltipSide="bottom"
+                aria-label="Filter history"
+              />
+            }
+          >
+            <Funnel />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup
+              value={historySearchScope}
+              onValueChange={(scope) => setHistorySearchScope(scope as HistorySearchScope)}
+            >
+              {(Object.keys(HISTORY_SEARCH_SCOPE_LABELS) as HistorySearchScope[]).map((scope) => (
+                <DropdownMenuRadioItem key={scope} value={scope} closeOnClick>
+                  {HISTORY_SEARCH_SCOPE_LABELS[scope]}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarToolbar>
+
+      {(ahead > 0 || behind > 0) && (
+        <div className="space-y-1 px-2 pb-1">
+          {ahead > 0 ? (
+            <div className="ui-text-sm text-text-lighter">
+              <span className="text-accent">{ahead}</span>{" "}
+              {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
+            </div>
+          ) : null}
+          {behind > 0 ? (
+            <div className="ui-text-sm text-text-lighter">
+              <span className="text-accent">{behind}</span>{" "}
+              {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
+            </div>
+          ) : null}
+        </div>
       )}
-    >
+
       <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-hidden",
-          showHeader && "rounded-xl border border-border/60 bg-primary-bg/55",
-        )}
+        className="scrollbar-none relative min-h-0 flex-1 overflow-y-scroll bg-transparent pb-1"
+        ref={scrollContainerRef}
       >
-        {showHeader ? (
-          <div className="shrink-0 py-1">
-            <GitSidebarSectionHeader
-              title="History"
-              collapsible
-              isCollapsed={isCollapsed}
-              onToggle={onToggle}
-            />
-          </div>
-        ) : null}
-
-        {!isCollapsed && (
+        {!hasHistoryRows ? (
+          <SidebarSectionEmptyState>No commits</SidebarSectionEmptyState>
+        ) : filteredCommits.length === 0 ? (
+          <SidebarSectionEmptyState>No commits match the current filters</SidebarSectionEmptyState>
+        ) : (
           <>
-            <SidebarSearchFilterRow
-              value={historySearchQuery}
-              onChange={setHistorySearchQuery}
-              searchIcon={Search}
-              placeholder="Search history"
-              searchAriaLabel="Search history"
-              filterOpen={isFilterOpen}
-              onFilterOpenChange={setIsFilterOpen}
-              filterItems={filterMenuItems}
-              filterActive={hasHistoryFilter}
-              filterTooltip={`Filter: ${HISTORY_SEARCH_SCOPE_LABELS[historySearchScope]}`}
-              filterAriaLabel="Filter history"
-              filterCloseOnSelect={false}
-              filterMenuClassName="w-fit min-w-fit"
-              className="px-1 pb-1 pt-0"
-            />
+            {filteredCommits.map((commit) => (
+              <CommitItem
+                key={commit.hash}
+                commit={commit}
+                onViewCommitDiff={handleViewCommitDiff}
+                isSelected={commit.hash === selectedCommitHash}
+                syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
+                repoPath={repoPath}
+                account={account}
+              />
+            ))}
 
-            {(ahead > 0 || behind > 0) && (
-              <div className="space-y-1 px-2 pb-1">
-                {ahead > 0 ? (
-                  <div className="ui-text-sm text-text-lighter">
-                    <span className="text-accent">{ahead}</span>{" "}
-                    {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
-                  </div>
-                ) : null}
-                {behind > 0 ? (
-                  <div className="ui-text-sm text-text-lighter">
-                    <span className="text-accent">{behind}</span>{" "}
-                    {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
-                  </div>
-                ) : null}
+            {isLoadingMoreCommits && (
+              <div className="flex justify-center px-3 py-1.5 text-text-lighter">
+                <Spinner label="Loading commits" showLabel compact />
               </div>
             )}
 
-            <div
-              className={cn(
-                "scrollbar-none relative min-h-0 flex-1 overflow-y-scroll pb-1",
-                showHeader ? "bg-primary-bg/70" : "bg-transparent",
-              )}
-              ref={scrollContainerRef}
-            >
-              {!hasHistoryRows ? (
-                <SidebarSectionEmptyState>No commits</SidebarSectionEmptyState>
-              ) : filteredCommits.length === 0 ? (
-                <SidebarSectionEmptyState>
-                  No commits match the current filters
-                </SidebarSectionEmptyState>
-              ) : (
-                <>
-                  {filteredCommits.map((commit) => (
-                    <CommitItem
-                      key={commit.hash}
-                      commit={commit}
-                      onViewCommitDiff={handleViewCommitDiff}
-                      isSelected={commit.hash === selectedCommitHash}
-                      syncState={commitSyncStateByHash.get(commit.hash) ?? "pushed"}
-                      repoPath={repoPath}
-                      account={account}
-                    />
-                  ))}
-
-                  {isLoadingMoreCommits && (
-                    <div className="flex justify-center px-3 py-1.5 text-text-lighter">
-                      <Spinner label="Loading commits" showLabel compact />
-                    </div>
-                  )}
-
-                  {!hasMoreCommits && commits.length > 0 && (
-                    <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
-                      end of history
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            {!hasMoreCommits && commits.length > 0 && (
+              <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
+                end of history
+              </div>
+            )}
           </>
         )}
       </div>

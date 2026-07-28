@@ -16,7 +16,14 @@ export const EditorSettings = () => {
       autoSave: state.settings.autoSave,
       breadcrumbShowSymbols: state.settings.breadcrumbShowSymbols,
       defaultLanguage: state.settings.defaultLanguage,
+      editorBracketPairColorization: state.settings.editorBracketPairColorization,
+      editorCursorBlinking: state.settings.editorCursorBlinking,
+      editorCursorStyle: state.settings.editorCursorStyle,
+      editorFontLigatures: state.settings.editorFontLigatures,
       editorLineHeight: state.settings.editorLineHeight,
+      editorScrollBeyondLastLine: state.settings.editorScrollBeyondLastLine,
+      editorSmoothScrolling: state.settings.editorSmoothScrolling,
+      editorStickyScroll: state.settings.editorStickyScroll,
       fontFamily: state.settings.fontFamily,
       fontSize: state.settings.fontSize,
       formatOnSave: state.settings.formatOnSave,
@@ -84,6 +91,21 @@ export const EditorSettings = () => {
             onChange={(val) => updateSetting("fontSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="md"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Font Ligatures"
+          description="Use programming ligatures provided by the selected editor font"
+          onReset={() =>
+            updateSetting("editorFontLigatures", getDefaultSetting("editorFontLigatures"))
+          }
+          canReset={settings.editorFontLigatures !== getDefaultSetting("editorFontLigatures")}
+        >
+          <Switch
+            checked={settings.editorFontLigatures}
+            onChange={(checked) => updateSetting("editorFontLigatures", checked)}
+            size="sm"
           />
         </SettingRow>
 
@@ -221,6 +243,129 @@ export const EditorSettings = () => {
             size="sm"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Sticky Scroll"
+          description="Keep containing scopes visible at the top while scrolling"
+          onReset={() =>
+            updateSetting("editorStickyScroll", getDefaultSetting("editorStickyScroll"))
+          }
+          canReset={settings.editorStickyScroll !== getDefaultSetting("editorStickyScroll")}
+        >
+          <Switch
+            checked={settings.editorStickyScroll}
+            onChange={(checked) => updateSetting("editorStickyScroll", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Bracket Pair Colorization"
+          description="Use matching colors to distinguish nested bracket pairs"
+          onReset={() =>
+            updateSetting(
+              "editorBracketPairColorization",
+              getDefaultSetting("editorBracketPairColorization"),
+            )
+          }
+          canReset={
+            settings.editorBracketPairColorization !==
+            getDefaultSetting("editorBracketPairColorization")
+          }
+        >
+          <Switch
+            checked={settings.editorBracketPairColorization}
+            onChange={(checked) => updateSetting("editorBracketPairColorization", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Smooth Scrolling"
+          description="Animate editor scrolling between positions"
+          onReset={() =>
+            updateSetting("editorSmoothScrolling", getDefaultSetting("editorSmoothScrolling"))
+          }
+          canReset={settings.editorSmoothScrolling !== getDefaultSetting("editorSmoothScrolling")}
+        >
+          <Switch
+            checked={settings.editorSmoothScrolling}
+            onChange={(checked) => updateSetting("editorSmoothScrolling", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Scroll Beyond Last Line"
+          description="Allow scrolling the final line above the bottom of the editor"
+          onReset={() =>
+            updateSetting(
+              "editorScrollBeyondLastLine",
+              getDefaultSetting("editorScrollBeyondLastLine"),
+            )
+          }
+          canReset={
+            settings.editorScrollBeyondLastLine !== getDefaultSetting("editorScrollBeyondLastLine")
+          }
+        >
+          <Switch
+            checked={settings.editorScrollBeyondLastLine}
+            onChange={(checked) => updateSetting("editorScrollBeyondLastLine", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Cursor Style"
+          description="Shape of the editor cursor outside Vim normal mode"
+          onReset={() => updateSetting("editorCursorStyle", getDefaultSetting("editorCursorStyle"))}
+          canReset={settings.editorCursorStyle !== getDefaultSetting("editorCursorStyle")}
+        >
+          <Select
+            value={settings.editorCursorStyle}
+            options={[
+              { value: "line", label: "Line" },
+              { value: "line-thin", label: "Thin Line" },
+              { value: "block", label: "Block" },
+              { value: "block-outline", label: "Block Outline" },
+              { value: "underline", label: "Underline" },
+              { value: "underline-thin", label: "Thin Underline" },
+            ]}
+            onChange={(value) =>
+              updateSetting("editorCursorStyle", value as typeof settings.editorCursorStyle)
+            }
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="md"
+            variant="default"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Cursor Blinking"
+          description="Animation used by the editor cursor outside Vim normal mode"
+          onReset={() =>
+            updateSetting("editorCursorBlinking", getDefaultSetting("editorCursorBlinking"))
+          }
+          canReset={settings.editorCursorBlinking !== getDefaultSetting("editorCursorBlinking")}
+        >
+          <Select
+            value={settings.editorCursorBlinking}
+            options={[
+              { value: "blink", label: "Blink" },
+              { value: "smooth", label: "Smooth" },
+              { value: "phase", label: "Phase" },
+              { value: "expand", label: "Expand" },
+              { value: "solid", label: "Solid" },
+            ]}
+            onChange={(value) =>
+              updateSetting("editorCursorBlinking", value as typeof settings.editorCursorBlinking)
+            }
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="md"
+            variant="default"
+          />
+        </SettingRow>
+
         <SettingRow
           label="Max Open Tabs"
           description="Maximum number of tabs before oldest closes"

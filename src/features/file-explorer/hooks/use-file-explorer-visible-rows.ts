@@ -57,10 +57,12 @@ export function useFileExplorerVisibleRows({
   rootFolderPath,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
-  const { compactFolders, hideRootFolder } = useSettingsStore(
+  const { autoRevealActiveFile, compactFolders, hideRootFolder, sortOrder } = useSettingsStore(
     useShallow((state) => ({
+      autoRevealActiveFile: state.settings.autoRevealActiveFileInFileTree,
       compactFolders: state.settings.compactFoldersInFileTree,
       hideRootFolder: state.settings.hideRootFolderInFileTree,
+      sortOrder: state.settings.fileTreeSortOrder,
     })),
   );
   const rowHeight = FILE_TREE_ROW_HEIGHT;
@@ -69,8 +71,17 @@ export function useFileExplorerVisibleRows({
     return buildVisibleFileTreeRows(files, expandedPathsOverride ?? expandedPaths, {
       compactFolders,
       hiddenRootPath: hideRootFolder ? rootFolderPath : undefined,
+      sortOrder,
     });
-  }, [compactFolders, expandedPaths, expandedPathsOverride, files, hideRootFolder, rootFolderPath]);
+  }, [
+    compactFolders,
+    expandedPaths,
+    expandedPathsOverride,
+    files,
+    hideRootFolder,
+    rootFolderPath,
+    sortOrder,
+  ]);
   const visibleRowIndexByPath = useMemo(() => {
     const indexByPath = new Map<string, number>();
     for (let index = 0; index < visibleRows.length; index++) {
@@ -92,6 +103,11 @@ export function useFileExplorerVisibleRows({
   const revealedActivePathRef = useRef<ActivePathRevealState | null>(null);
 
   useLayoutEffect(() => {
+    if (!autoRevealActiveFile) {
+      revealedActivePathRef.current = null;
+      return;
+    }
+
     if (!activePath) {
       revealedActivePathRef.current = null;
       return;
@@ -133,7 +149,14 @@ export function useFileExplorerVisibleRows({
 
     rowVirtualizer.scrollToIndex(index, { align: "center" });
     revealedActivePathRef.current = { path: activePath, index, rowHeight };
-  }, [activePath, containerRef, rowHeight, rowVirtualizer, visibleRowIndexByPath]);
+  }, [
+    activePath,
+    autoRevealActiveFile,
+    containerRef,
+    rowHeight,
+    rowVirtualizer,
+    visibleRowIndexByPath,
+  ]);
 
   return { visibleRows, visibleRowIndexByPath, rowVirtualizer };
 }

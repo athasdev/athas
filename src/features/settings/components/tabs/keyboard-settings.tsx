@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import {
   ArrowLeftIcon as ArrowLeft,
@@ -41,7 +41,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { ToggleGroup } from "@/ui/toggle-group";
-import { quickTransition } from "@/utils/motion-presets";
+import { quickTransition } from "@/design-system/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingsView, SettingRow } from "../settings-section";

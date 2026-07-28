@@ -1,4 +1,6 @@
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { useShallow } from "zustand/react/shallow";
 import { useEditorSettingsStore } from "../../stores/settings.store";
 import { calculateLineHeight } from "../../utils/lines";
 
@@ -13,6 +15,25 @@ export function useMonacoEditorSettings() {
   const renderIndentGuides = useEditorSettingsStore.use.renderIndentGuides();
   const highlightOccurrences = useEditorSettingsStore.use.highlightOccurrences();
   const themeId = useEditorSettingsStore.use.theme();
+  const {
+    editorFontLigatures,
+    editorStickyScroll,
+    editorBracketPairColorization,
+    editorSmoothScrolling,
+    editorScrollBeyondLastLine,
+    editorCursorStyle,
+    editorCursorBlinking,
+  } = useSettingsStore(
+    useShallow((state) => ({
+      editorFontLigatures: state.settings.editorFontLigatures,
+      editorStickyScroll: state.settings.editorStickyScroll,
+      editorBracketPairColorization: state.settings.editorBracketPairColorization,
+      editorSmoothScrolling: state.settings.editorSmoothScrolling,
+      editorScrollBeyondLastLine: state.settings.editorScrollBeyondLastLine,
+      editorCursorStyle: state.settings.editorCursorStyle,
+      editorCursorBlinking: state.settings.editorCursorBlinking,
+    })),
+  );
   const zoomLevel = useZoomStore.use.editorZoomLevel();
   const fontSize = baseFontSize * zoomLevel;
 
@@ -26,6 +47,13 @@ export function useMonacoEditorSettings() {
     renderWhitespace,
     renderIndentGuides,
     highlightOccurrences,
+    editorFontLigatures,
+    editorStickyScroll,
+    editorBracketPairColorization,
+    editorSmoothScrolling,
+    editorScrollBeyondLastLine,
+    editorCursorStyle,
+    editorCursorBlinking,
     themeId,
   };
 }

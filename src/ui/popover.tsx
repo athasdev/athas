@@ -1,5 +1,5 @@
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig, type Transition } from "motion/react";
 import {
   type CSSProperties,
   type ComponentProps,
@@ -8,7 +8,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { instantTransition, overlayEntrance } from "@/utils/motion-presets";
+import { instantTransition, overlayEntrance } from "@/design-system/motion";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(
@@ -71,7 +71,7 @@ export function FloatingPopoverContent({
   exit = overlayEntrance.exit,
   transition = overlayEntrance.transition,
 }: PopoverContentProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionConfig();
 
   if (typeof document === "undefined") return null;
 

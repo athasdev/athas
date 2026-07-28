@@ -104,7 +104,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                   : "opacity-0 group-hover/tab:opacity-100",
               )}
               tooltip={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
-              shortcut={terminal.isPinned ? undefined : "mod+w"}
+              commandId={terminal.isPinned ? undefined : "terminal.close"}
               tabIndex={-1}
               draggable={false}
             >
@@ -138,7 +138,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "font-sans ui-text-sm max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
+              "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
               isActive ? "text-text" : "text-text-lighter",
             )}

@@ -18,7 +18,6 @@ export const GitSettings = () => {
       gitDefaultDiffView: state.settings.gitDefaultDiffView,
       openDiffOnClick: state.settings.openDiffOnClick,
       rememberLastGitPanelMode: state.settings.rememberLastGitPanelMode,
-      showGitStatusInFileTree: state.settings.showGitStatusInFileTree,
       showStagedFirst: state.settings.showStagedFirst,
       showUntrackedFiles: state.settings.showUntrackedFiles,
     })),
@@ -230,25 +229,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.enableGitGutter}
             onChange={(checked) => updateSetting("enableGitGutter", checked)}
-            size="sm"
-          />
-        </SettingRow>
-      </Section>
-
-      <Section title="File Tree">
-        <SettingRow
-          label="Show Git Status In File Tree"
-          description="Display Git color decorations in Files"
-          onReset={() =>
-            updateSetting("showGitStatusInFileTree", getDefaultSetting("showGitStatusInFileTree"))
-          }
-          canReset={
-            settings.showGitStatusInFileTree !== getDefaultSetting("showGitStatusInFileTree")
-          }
-        >
-          <Switch
-            checked={settings.showGitStatusInFileTree}
-            onChange={(checked) => updateSetting("showGitStatusInFileTree", checked)}
             size="sm"
           />
         </SettingRow>

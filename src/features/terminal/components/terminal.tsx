@@ -90,6 +90,18 @@ export const XtermTerminal = ({
   const terminalCursorStyle = useSettingsStore((state) => state.settings.terminalCursorStyle);
   const terminalCursorBlink = useSettingsStore((state) => state.settings.terminalCursorBlink);
   const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
+  const terminalCursorInactiveStyle = useSettingsStore(
+    (state) => state.settings.terminalCursorInactiveStyle,
+  );
+  const terminalAltClickMovesCursor = useSettingsStore(
+    (state) => state.settings.terminalAltClickMovesCursor,
+  );
+  const terminalMacOptionIsMeta = useSettingsStore(
+    (state) => state.settings.terminalMacOptionIsMeta,
+  );
+  const terminalRightClickSelectsWord = useSettingsStore(
+    (state) => state.settings.terminalRightClickSelectsWord,
+  );
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const workspaceRootRef = useRef(rootFolderPath);
@@ -207,12 +219,14 @@ export const XtermTerminal = ({
         cursorBlink: terminalCursorBlink,
         cursorStyle: terminalCursorStyle,
         cursorWidth: effectiveTerminalCursorWidth,
+        cursorInactiveStyle: terminalCursorInactiveStyle,
+        altClickMovesCursor: terminalAltClickMovesCursor,
         allowProposedApi: true,
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
         convertEol: false,
-        macOptionIsMeta: false,
-        rightClickSelectsWord: false,
+        macOptionIsMeta: terminalMacOptionIsMeta,
+        rightClickSelectsWord: terminalRightClickSelectsWord,
         ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
       });
 
@@ -404,13 +418,17 @@ export const XtermTerminal = ({
     remoteConnectionId,
     sessionId,
     terminalCursorBlink,
+    terminalCursorInactiveStyle,
     terminalCursorStyle,
     terminalCursorWidth,
+    terminalAltClickMovesCursor,
     terminalFontFamily,
     effectiveTerminalCursorWidth,
     effectiveTerminalFontSize,
     effectiveTerminalLetterSpacing,
     terminalLineHeight,
+    terminalMacOptionIsMeta,
+    terminalRightClickSelectsWord,
     terminalScrollback,
     terminalIsRemote,
     updateSession,
@@ -441,6 +459,10 @@ export const XtermTerminal = ({
       xtermRef.current.options.cursorBlink = terminalCursorBlink;
       xtermRef.current.options.cursorStyle = terminalCursorStyle;
       xtermRef.current.options.cursorWidth = effectiveTerminalCursorWidth;
+      xtermRef.current.options.cursorInactiveStyle = terminalCursorInactiveStyle;
+      xtermRef.current.options.altClickMovesCursor = terminalAltClickMovesCursor;
+      xtermRef.current.options.macOptionIsMeta = terminalMacOptionIsMeta;
+      xtermRef.current.options.rightClickSelectsWord = terminalRightClickSelectsWord;
 
       fitTerminal();
     };
@@ -458,7 +480,11 @@ export const XtermTerminal = ({
     terminalLineHeight,
     terminalScrollback,
     terminalCursorBlink,
+    terminalCursorInactiveStyle,
     terminalCursorStyle,
+    terminalAltClickMovesCursor,
+    terminalMacOptionIsMeta,
+    terminalRightClickSelectsWord,
     fitTerminal,
   ]);
 

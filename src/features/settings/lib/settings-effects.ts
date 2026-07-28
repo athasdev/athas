@@ -8,6 +8,7 @@ import {
 } from "@/features/settings/lib/theme-resolution";
 import { invoke } from "@tauri-apps/api/core";
 import type { Settings, Theme } from "@/features/settings/types/settings.types";
+import { getUiRootAttributes } from "@/features/settings/lib/ui-preferences";
 
 const ALL_THEME_CLASSES = [
   "force-athas-light",
@@ -37,6 +38,16 @@ function applyWindowTransparency(enabled: boolean) {
   void invoke("set_window_transparency_enabled", { enabled }).catch((error) => {
     console.warn("Failed to sync window transparency", error);
   });
+}
+
+function applyUiPreferences(
+  settings: Pick<Settings, "reduceMotion" | "showStatusBar" | "windowChromeDensity">,
+) {
+  if (typeof document === "undefined") return;
+
+  for (const [name, value] of Object.entries(getUiRootAttributes(settings))) {
+    document.documentElement.setAttribute(name, value);
+  }
 }
 
 function stopSystemThemeSync() {
@@ -164,6 +175,7 @@ export async function syncOllamaApiKey() {
 export function applySettingsSideEffects(settings: Settings) {
   cacheFontSettings(settings);
   applyWindowTransparency(settings.windowTransparency);
+  applyUiPreferences(settings);
   void applyTheme(resolveEffectiveTheme(settings));
   if (settings.syncSystemTheme) {
     syncThemeWithSystem(settings);
@@ -209,5 +221,9 @@ export function applySettingSideEffect<K extends keyof Settings>(
 
   if (key === "windowTransparency") {
     applyWindowTransparency(value as boolean);
+  }
+
+  if (key === "reduceMotion" || key === "showStatusBar" || key === "windowChromeDensity") {
+    applyUiPreferences(getSettings());
   }
 }

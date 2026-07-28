@@ -1,5 +1,4 @@
-import { useCallback, useMemo } from "react";
-import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
+import { useMemo } from "react";
 import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
@@ -9,38 +8,24 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { NotificationsTrigger } from "@/features/notifications/components/notifications-trigger";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/ui/context-menu";
-import type { MenuItem } from "@/ui/dropdown";
-import {
-  FOOTER_LEADING_ITEM_IDS,
   FOOTER_TRAILING_ITEM_IDS,
   normalizeItemOrder,
   type FooterLeadingItemId,
   type FooterTrailingItemId,
 } from "@/features/layout/config/item-order";
 import { orderChromeItems, type ChromeItem } from "@/features/layout/utils/chrome-items";
+import { useFooterDebuggerItem } from "./footer-debugger-item";
 import { useFooterGitBranchItem } from "./footer-git-branch-item";
 import { FooterControlBadge, FooterTabControl } from "./footer-tab-control";
 import {
-  BugIcon,
-  CaretLeftIcon,
-  CaretRightIcon,
   DatabaseIcon,
   ExtensionsIcon,
   ListIcon,
-  RefreshIcon,
   TerminalWindowIcon,
-  TrashIcon,
   UsersThreeIcon,
   WarningIcon,
 } from "@/ui/icons";
-
-const DEBUGGER_FOOTER_ITEM_ID: FooterLeadingItemId = "debugger";
+import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 
 const Footer = () => {
   const terminalEnabled = useSettingsStore((state) => state.settings.coreFeatures.terminal);
@@ -56,7 +41,6 @@ const Footer = () => {
   const footerTrailingItemsOrder = useSettingsStore(
     (state) => state.settings.footerTrailingItemsOrder,
   );
-  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isCommandPaletteVisible = useUIState((state) => state.isCommandPaletteVisible);
@@ -87,141 +71,13 @@ const Footer = () => {
   });
   const branchItem = useFooterGitBranchItem();
 
-  const debuggerBreakpointsCount = useDebuggerStore((state) => state.breakpoints.length);
-  const debuggerWatchExpressionsCount = useDebuggerStore((state) => state.watchExpressions.length);
-  const debuggerTranscriptCount = useDebuggerStore(
-    (state) => state.adapterMessages.length + state.adapterOutput.length,
-  );
-  const debuggerActions = useDebuggerStore.use.actions();
+  const debuggerItem = useFooterDebuggerItem(debuggerEnabled, footerLeadingItemsOrder);
   const extensionUpdatesCount = useExtensionStore.use.extensionsWithUpdates().size;
   const diagnosticsByFile = useDiagnosticsStore.use.diagnosticsByFile();
   const diagnosticsCount = Array.from(diagnosticsByFile.values()).reduce(
     (total, diagnostics) => total + diagnostics.length,
     0,
   );
-  const normalizedFooterLeadingOrder = useMemo<FooterLeadingItemId[]>(() => {
-    return normalizeItemOrder(
-      footerLeadingItemsOrder,
-      FOOTER_LEADING_ITEM_IDS,
-    ) as FooterLeadingItemId[];
-  }, [footerLeadingItemsOrder]);
-  const debuggerFooterIndex = normalizedFooterLeadingOrder.indexOf(DEBUGGER_FOOTER_ITEM_ID);
-  const openDebuggerPane = useCallback(() => {
-    setBottomPaneActiveTab("debugger");
-    setIsBottomPaneVisible(true);
-  }, [setBottomPaneActiveTab, setIsBottomPaneVisible]);
-  const toggleDebuggerPane = useCallback(() => {
-    const showingDebugger = isBottomPaneVisible && bottomPaneActiveTab === "debugger";
-    if (showingDebugger) {
-      setIsBottomPaneVisible(false);
-      return;
-    }
-
-    openDebuggerPane();
-  }, [bottomPaneActiveTab, isBottomPaneVisible, openDebuggerPane, setIsBottomPaneVisible]);
-  const moveDebuggerFooterItem = useCallback(
-    (direction: -1 | 1) => {
-      const currentIndex = normalizedFooterLeadingOrder.indexOf(DEBUGGER_FOOTER_ITEM_ID);
-      const nextIndex = currentIndex + direction;
-      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= normalizedFooterLeadingOrder.length) {
-        return;
-      }
-
-      const nextOrder = [...normalizedFooterLeadingOrder];
-      const [debuggerItem] = nextOrder.splice(currentIndex, 1);
-      if (!debuggerItem) return;
-
-      nextOrder.splice(nextIndex, 0, debuggerItem);
-      void updateSetting("footerLeadingItemsOrder", nextOrder);
-    },
-    [normalizedFooterLeadingOrder, updateSetting],
-  );
-  const resetFooterOrder = useCallback(() => {
-    void updateSetting("footerLeadingItemsOrder", [...FOOTER_LEADING_ITEM_IDS]);
-  }, [updateSetting]);
-  const debuggerContextMenuItems = useMemo<MenuItem[]>(
-    () => [
-      {
-        id: "toggle-debugger",
-        label:
-          isBottomPaneVisible && bottomPaneActiveTab === "debugger"
-            ? "Hide Run and Debug"
-            : "Show Run and Debug",
-        icon: <BugIcon />,
-        onClick: toggleDebuggerPane,
-      },
-      {
-        id: "debugger-actions-separator",
-        label: "",
-        onClick: () => {},
-        separator: true,
-      },
-      {
-        id: "clear-breakpoints",
-        label: "Clear Breakpoints",
-        icon: <TrashIcon />,
-        disabled: debuggerBreakpointsCount === 0,
-        onClick: debuggerActions.clearBreakpoints,
-      },
-      {
-        id: "clear-watch-expressions",
-        label: "Clear Watch Expressions",
-        icon: <TrashIcon />,
-        disabled: debuggerWatchExpressionsCount === 0,
-        onClick: debuggerActions.clearWatchExpressions,
-      },
-      {
-        id: "clear-debug-console",
-        label: "Clear Debug Console",
-        icon: <TrashIcon />,
-        disabled: debuggerTranscriptCount === 0,
-        onClick: debuggerActions.clearAdapterTranscript,
-      },
-      {
-        id: "debugger-footer-separator",
-        label: "",
-        onClick: () => {},
-        separator: true,
-      },
-      {
-        id: "move-debugger-left",
-        label: "Move Left",
-        icon: <CaretLeftIcon />,
-        disabled: debuggerFooterIndex <= 0,
-        onClick: () => moveDebuggerFooterItem(-1),
-      },
-      {
-        id: "move-debugger-right",
-        label: "Move Right",
-        icon: <CaretRightIcon />,
-        disabled:
-          debuggerFooterIndex < 0 || debuggerFooterIndex >= normalizedFooterLeadingOrder.length - 1,
-        onClick: () => moveDebuggerFooterItem(1),
-      },
-      {
-        id: "reset-footer-order",
-        label: "Reset Footer Order",
-        icon: <RefreshIcon />,
-        onClick: resetFooterOrder,
-      },
-    ],
-    [
-      bottomPaneActiveTab,
-      debuggerActions.clearAdapterTranscript,
-      debuggerActions.clearBreakpoints,
-      debuggerActions.clearWatchExpressions,
-      debuggerBreakpointsCount,
-      debuggerFooterIndex,
-      debuggerTranscriptCount,
-      debuggerWatchExpressionsCount,
-      isBottomPaneVisible,
-      moveDebuggerFooterItem,
-      normalizedFooterLeadingOrder.length,
-      resetFooterOrder,
-      toggleDebuggerPane,
-    ],
-  );
-
   const footerLeadingItemsSource: Array<ChromeItem<FooterLeadingItemId> | null> = [
     branchItem,
     terminalEnabled
@@ -244,38 +100,7 @@ const Footer = () => {
           ),
         }
       : null,
-    debuggerEnabled
-      ? {
-          id: "debugger",
-          label: "Run and Debug",
-          content: (
-            <ContextMenu>
-              <ContextMenuTrigger className="contents">
-                <FooterTabControl
-                  tooltip="Toggle Run and Debug"
-                  active={isBottomPaneVisible && bottomPaneActiveTab === "debugger"}
-                  commandId="workbench.showDebugger"
-                  onClick={toggleDebuggerPane}
-                >
-                  <BugIcon />
-                </FooterTabControl>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                {debuggerContextMenuItems.map((item) =>
-                  item.separator ? (
-                    <ContextMenuSeparator key={item.id} />
-                  ) : (
-                    <ContextMenuItem key={item.id} disabled={item.disabled} onClick={item.onClick}>
-                      {item.icon}
-                      {item.label}
-                    </ContextMenuItem>
-                  ),
-                )}
-              </ContextMenuContent>
-            </ContextMenu>
-          ),
-        }
-      : null,
+    debuggerItem,
     diagnosticsEnabled
       ? {
           id: "diagnostics",
@@ -396,25 +221,27 @@ const Footer = () => {
   ];
 
   return (
-    <>
-      <div className="athas-footer-bar relative z-20 flex h-[var(--athas-footer-height)] shrink-0 items-center justify-between bg-transparent px-2.5 py-1">
-        <div className="font-sans flex items-center gap-1 text-text-lighter">
-          {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
-            <div key={item.id} className="flex min-h-6 items-center">
-              {item.content}
-            </div>
-          ))}
-        </div>
+    <ChromeBar
+      region="footer"
+      className="athas-footer-bar relative z-20 justify-between"
+      aria-label="Status bar"
+    >
+      <ChromeGroup gap="tight">
+        {orderChromeItems(footerLeadingItems, footerLeadingItemsOrder).map((item) => (
+          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+            {item.content}
+          </div>
+        ))}
+      </ChromeGroup>
 
-        <div className="font-sans flex items-center gap-1 text-text-lighter">
-          {orderChromeItems(footerTrailingItems, footerTrailingOrder).map((item) => (
-            <div key={item.id} className="flex min-h-6 items-center">
-              {item.content}
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
+      <ChromeGroup gap="tight">
+        {orderChromeItems(footerTrailingItems, footerTrailingOrder).map((item) => (
+          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+            {item.content}
+          </div>
+        ))}
+      </ChromeGroup>
+    </ChromeBar>
   );
 };
 

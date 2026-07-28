@@ -296,7 +296,7 @@ export function AgentLaunchInput({
           autoCorrect="off"
           spellCheck={false}
         />
-        <div className="mt-2 flex min-w-0 items-center justify-between gap-2 border-border/45 border-t pt-2">
+        <div className="mt-2 flex min-w-0 items-center justify-between gap-2 pt-2">
           {contextControl}
           {agentControls}
         </div>

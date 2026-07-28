@@ -29,9 +29,9 @@ export function CollaborationMessageComposer({
   const isSubmitDisabled = !value.trim() || disabled || isSending;
 
   return (
-    <SidebarFooter surface className="mx-0 mb-0">
+    <SidebarFooter variant="surface" className="mx-0 mb-0">
       {error ? <div className="ui-text-sm mb-1.5 px-1 text-error">{error}</div> : null}
-      <SidebarComposerBody surface={false}>
+      <SidebarComposerBody variant="plain">
         <Textarea
           value={value}
           variant="ghost"

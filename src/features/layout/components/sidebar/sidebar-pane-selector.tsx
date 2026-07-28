@@ -89,6 +89,9 @@ export const SidebarPaneSelector = ({
   const sidebarActivityItemsOrder = useSettingsStore(
     (state) => state.settings.sidebarActivityItemsOrder,
   );
+  const hiddenSidebarActivityItems = useSettingsStore(
+    (state) => state.settings.hiddenSidebarActivityItems,
+  );
 
   const items = useMemo<SidebarPaneItem[]>(
     () => [
@@ -232,11 +235,12 @@ export const SidebarPaneSelector = ({
   );
 
   const orderedItems = orderItems(items, orderedIds);
+  const visibleItems = orderedItems.filter((item) => !hiddenSidebarActivityItems.includes(item.id));
 
   if (isVertical) {
     return (
       <>
-        {orderedItems.map((item) => (
+        {visibleItems.map((item) => (
           <SidebarListItem
             key={item.id}
             active={!!item.isActive}
@@ -255,7 +259,7 @@ export const SidebarPaneSelector = ({
     );
   }
 
-  const renderedItems = orderedItems.map((item) => {
+  const renderedItems = visibleItems.map((item) => {
     const tabNode = (
       <TabsTrigger
         value={item.id}
@@ -296,8 +300,8 @@ export const SidebarPaneSelector = ({
 
   return (
     <Tabs
-      value={orderedItems.find((item) => item.isActive)?.id}
-      onValueChange={(value) => orderedItems.find((item) => item.id === value)?.onClick?.()}
+      value={visibleItems.find((item) => item.isActive)?.id}
+      onValueChange={(value) => visibleItems.find((item) => item.id === value)?.onClick?.()}
       className="gap-0"
     >
       <TabsList

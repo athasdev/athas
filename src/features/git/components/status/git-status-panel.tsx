@@ -20,7 +20,12 @@ import { Checkbox } from "@/ui/checkbox";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
 import { ScrollArea } from "@/ui/scroll-area";
 import { showConfirmDialog } from "@/ui/dialog";
-import { SidebarEmptyActionState, SidebarHeaderIconButton } from "@/ui/sidebar";
+import {
+  SidebarEmptyActionState,
+  SidebarHeaderIconButton,
+  SidebarSectionHeader,
+  SidebarToolbar,
+} from "@/ui/sidebar";
 import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import { createStash } from "../../api/git-stash-api";
@@ -395,24 +400,15 @@ const GitStatusPanel = ({
     </Badge>
   );
 
-  const renderSectionHeader = (section: StatusSection, title: string) => (
-    <Button
-      type="button"
-      variant="ghost"
-      size="xs"
-      className="ui-text-sm mt-2 h-auto w-full min-w-0 justify-between gap-2 px-2.5 py-1 text-left text-text-lighter"
-      onClick={() => toggleSectionCollapsed(section)}
-      aria-expanded={!collapsedSections.has(section)}
+  const renderSectionHeader = (section: StatusSection, title: string, count: number) => (
+    <SidebarSectionHeader
+      variant="surface"
+      count={count}
+      expanded={!collapsedSections.has(section)}
+      onToggle={() => toggleSectionCollapsed(section)}
     >
-      <span className="min-w-0 truncate">{title}</span>
-      <span className="flex shrink-0 items-center gap-1.5">
-        {collapsedSections.has(section) ? (
-          <CaretRight className="size-3 text-text-lighter" />
-        ) : (
-          <CaretDown className="size-3 text-text-lighter" />
-        )}
-      </span>
-    </Button>
+      {title}
+    </SidebarSectionHeader>
   );
 
   const renderFolderTree = (rootNode: GitFolderNode, section: "changes") => {
@@ -566,7 +562,7 @@ const GitStatusPanel = ({
     <div className="flex h-full min-h-0 flex-col select-none">
       {hasFiles ? (
         <>
-          <div className="flex min-h-7 shrink-0 items-center justify-between gap-1.5 bg-primary-bg px-2.5 py-1">
+          <SidebarToolbar>
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <ButtonGroup ref={diffMenuAnchorRef}>
                 <Button
@@ -642,25 +638,25 @@ const GitStatusPanel = ({
                 </SidebarHeaderIconButton>
               )}
             </div>
-          </div>
-          <ScrollArea className="min-h-0 flex-1">
+          </SidebarToolbar>
+          <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
             {trackedFiles.length > 0 && (
-              <>
-                {renderSectionHeader("tracked", SECTION_LABELS.tracked)}
+              <section className="space-y-0.5">
+                {renderSectionHeader("tracked", SECTION_LABELS.tracked, trackedFiles.length)}
                 {!collapsedSections.has("tracked") &&
                   (gitChangesFolderView
                     ? trackedFolderTree && renderFolderTree(trackedFolderTree, "changes")
                     : renderFlatFileList(groupedTrackedFiles))}
-              </>
+              </section>
             )}
             {untrackedFiles.length > 0 && (
-              <>
-                {renderSectionHeader("untracked", SECTION_LABELS.untracked)}
+              <section className="space-y-0.5 pt-2">
+                {renderSectionHeader("untracked", SECTION_LABELS.untracked, untrackedFiles.length)}
                 {!collapsedSections.has("untracked") &&
                   (gitChangesFolderView
                     ? untrackedFolderTree && renderFolderTree(untrackedFolderTree, "changes")
                     : renderFlatFileList(groupedUntrackedFiles))}
-              </>
+              </section>
             )}
           </ScrollArea>
         </>

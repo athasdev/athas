@@ -136,10 +136,30 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   }, [isOpen, clearSearch]);
 
   useEffect(() => {
-    if (!isOpen || !selectedResultId) return;
+    if (!isOpen) return;
+
+    const clearSearchHighlights = () => {
+      const content = contentRef.current;
+      if (!content) return;
+
+      content
+        .querySelectorAll<HTMLElement>("[data-settings-search-active='true']")
+        .forEach((element) => element.removeAttribute("data-settings-search-active"));
+      content
+        .querySelectorAll<HTMLElement>("[data-settings-search-section-active='true']")
+        .forEach((element) => element.removeAttribute("data-settings-search-section-active"));
+    };
+
+    if (!selectedResultId) {
+      clearSearchHighlights();
+      return;
+    }
 
     const result = visibleSearchResults.find((item) => item.id === selectedResultId);
-    if (!result || result.tab !== activeTab) return;
+    if (!result || result.tab !== activeTab) {
+      clearSearchHighlights();
+      return;
+    }
 
     const frameId = window.requestAnimationFrame(() => {
       const content = contentRef.current;
@@ -155,19 +175,16 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
 
       if (!target) return;
 
-      content
-        .querySelectorAll<HTMLElement>("[data-settings-search-active='true']")
-        .forEach((element) => element.removeAttribute("data-settings-search-active"));
+      clearSearchHighlights();
+      section?.setAttribute("data-settings-search-section-active", "true");
       target.setAttribute("data-settings-search-active", "true");
       target.scrollIntoView({ block: "center" });
       target.focus({ preventScroll: true });
-
-      window.setTimeout(() => {
-        target.removeAttribute("data-settings-search-active");
-      }, 1600);
     });
 
-    return () => window.cancelAnimationFrame(frameId);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
 
   const renderTabContent = () => {
@@ -258,8 +275,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         }
         classNames={{
           modal:
-            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
-          header: "max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
+            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 bg-secondary-bg max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
+          header:
+            "bg-secondary-bg max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
           title: "max-[720px]:min-w-0",
           headerActions: "max-[720px]:min-w-0",
           content: "flex h-full p-0",
@@ -277,7 +295,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           <Card
             variant="elevated"
             size="flush"
-            className="my-2 mr-2 ml-0 min-w-0 flex-1 max-[720px]:ml-2"
+            className="mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-primary-bg max-[720px]:ml-2"
           >
             <ScrollArea
               className="min-w-0 flex-1"

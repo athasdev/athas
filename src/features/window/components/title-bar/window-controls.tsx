@@ -1,3 +1,4 @@
+import type { Window as TauriWindow } from "@tauri-apps/api/window";
 import {
   CornersInIcon as CornersIn,
   CornersOutIcon as CornersOut,
@@ -5,10 +6,10 @@ import {
   XIcon as X,
 } from "@/ui/icons";
 import { Button } from "@/ui/button";
-import Tooltip from "@/ui/tooltip";
+import { ChromeGroup } from "@/ui/chrome";
 
 interface WindowControlsProps {
-  currentWindow: any;
+  currentWindow: TauriWindow | null;
   isMaximized: boolean;
   onMaximizedChange: (isMaximized: boolean) => void;
 }
@@ -30,7 +31,9 @@ export function WindowControls({
     try {
       await currentWindow?.toggleMaximize();
       const maximized = await currentWindow?.isMaximized();
-      onMaximizedChange(maximized);
+      if (typeof maximized === "boolean") {
+        onMaximizedChange(maximized);
+      }
     } catch (error) {
       console.error("Error toggling maximize:", error);
     }
@@ -45,37 +48,40 @@ export function WindowControls({
   };
 
   return (
-    <div className="flex items-center gap-1">
-      <Tooltip content="Minimize" side="bottom">
-        <Button
-          onClick={handleMinimize}
-          variant="ghost"
-          className="pointer-events-auto"
-          size="icon-xs"
-        >
-          <Minus weight="bold" />
-        </Button>
-      </Tooltip>
-      <Tooltip content={isMaximized ? "Restore" : "Maximize"} side="bottom">
-        <Button
-          onClick={handleToggleMaximize}
-          variant="ghost"
-          className="pointer-events-auto"
-          size="icon-xs"
-        >
-          {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
-        </Button>
-      </Tooltip>
-      <Tooltip content="Close" side="bottom">
-        <Button
-          onClick={handleClose}
-          variant="danger"
-          className="pointer-events-auto group hover:text-white"
-          size="icon-xs"
-        >
-          <X weight="bold" />
-        </Button>
-      </Tooltip>
-    </div>
+    <ChromeGroup gap="tight">
+      <Button
+        onClick={handleMinimize}
+        variant="ghost"
+        className="pointer-events-auto"
+        size="icon-xs"
+        tooltip="Minimize"
+        tooltipSide="bottom"
+        aria-label="Minimize"
+      >
+        <Minus weight="bold" />
+      </Button>
+      <Button
+        onClick={handleToggleMaximize}
+        variant="ghost"
+        className="pointer-events-auto"
+        size="icon-xs"
+        tooltip={isMaximized ? "Restore" : "Maximize"}
+        tooltipSide="bottom"
+        aria-label={isMaximized ? "Restore" : "Maximize"}
+      >
+        {isMaximized ? <CornersIn weight="duotone" /> : <CornersOut weight="duotone" />}
+      </Button>
+      <Button
+        onClick={handleClose}
+        variant="danger"
+        className="pointer-events-auto group hover:text-white"
+        size="icon-xs"
+        tooltip="Close"
+        tooltipSide="bottom"
+        aria-label="Close"
+      >
+        <X weight="bold" />
+      </Button>
+    </ChromeGroup>
   );
 }

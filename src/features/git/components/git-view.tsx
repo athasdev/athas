@@ -11,7 +11,7 @@ import {
   TrashIcon as Trash2,
   UploadIcon as Upload,
 } from "@/ui/icons";
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/ui/button-group";
@@ -23,11 +23,12 @@ import {
   SidebarEmptyActionState,
   SidebarEmptyState,
   SidebarFooter,
-  SidebarHeader,
   SidebarHeaderIconButton,
   SidebarPanel,
   SidebarSectionPager,
-  SidebarSectionSwitcher,
+  SidebarTabBar,
+  SidebarTitleBar,
+  SidebarToolbar,
 } from "@/ui/sidebar";
 import { toast } from "sonner";
 import { formatRelativeDate } from "@/utils/date";
@@ -557,6 +558,21 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
     </SidebarHeaderIconButton>
   );
 
+  const renderRefreshButton = () => (
+    <SidebarHeaderIconButton
+      onClick={handleManualRefresh}
+      disabled={isLoadingGitData || isRefreshing}
+      tooltip="Refresh"
+      aria-label="Refresh git status"
+    >
+      {isLoadingGitData || isRefreshing ? (
+        <Spinner label="Refreshing git status" compact />
+      ) : (
+        <RefreshCw />
+      )}
+    </SidebarHeaderIconButton>
+  );
+
   const renderInitializeRepositoryButton = () => {
     const canInitializeRepository = Boolean(repoPath);
 
@@ -677,21 +693,18 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   const gitTabs: Array<{
     id: GitSidebarTab;
     label: string;
-    icon: ReactNode;
   }> = [...gitSidebarTabOrder]
     .filter((id): id is GitSidebarTab => id === "changes" || id === "history")
     .sort((a, b) => gitTabOrder.indexOf(a) - gitTabOrder.indexOf(b))
     .map((id) => {
-      const tabMap: Record<GitSidebarTab, { id: GitSidebarTab; label: string; icon: ReactNode }> = {
+      const tabMap: Record<GitSidebarTab, { id: GitSidebarTab; label: string }> = {
         changes: {
           id: "changes",
           label: "Changes",
-          icon: <FolderSimpleStar size={16} weight="duotone" />,
         },
         history: {
           id: "history",
           label: "History",
-          icon: <ClockCounterClockwise size={16} weight="duotone" />,
         },
       };
 
@@ -702,10 +715,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (!activeRepoPath) {
     return (
       <>
-        <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
-            <div className="flex items-center gap-2">{renderActionsButton()}</div>
-          </SidebarHeader>
+        <SidebarPanel>
+          <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
           <SidebarEmptyActionState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
@@ -721,10 +732,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (isLoadingGitData && !gitStatus) {
     return (
       <>
-        <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
-            <div className="flex items-center gap-2">{renderActionsButton()}</div>
-          </SidebarHeader>
+        <SidebarPanel>
+          <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
           <SidebarEmptyState className="h-full">Loading Git status...</SidebarEmptyState>
         </SidebarPanel>
         {renderGitActionsMenu({ hasGitRepo: false, onRefresh: handleManualRefresh })}
@@ -735,10 +744,8 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
   if (!gitStatus) {
     return (
       <>
-        <SidebarPanel className="gap-2 p-2">
-          <SidebarHeader className="justify-between bg-transparent p-0 backdrop-blur-none">
-            <div className="flex items-center gap-2">{renderActionsButton()}</div>
-          </SidebarHeader>
+        <SidebarPanel>
+          <SidebarTitleBar title="Source Control">{renderActionsButton()}</SidebarTitleBar>
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
@@ -756,123 +763,108 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
 
   return (
     <>
-      <SidebarPanel className="font-sans ui-text-sm select-none gap-2 p-2">
-        <div className="@container flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          <SidebarSectionSwitcher
-            items={gitTabs}
-            value={activeTab}
-            onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
-          />
-
-          <div className="flex min-w-0 shrink-0 items-end gap-2 overflow-hidden">
-            <div className="flex min-w-0 shrink flex-col">
-              <GitBranchManager
-                currentBranch={gitStatus.branch}
-                repoPath={activeRepoPath}
-                paletteTarget
-                openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
-                onBranchChange={() => void handleManualRefresh()}
-                onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
-                onRepositoryChange={() => setRepoSelectionError(null)}
-              />
-            </div>
-
-            <div className="ml-auto flex shrink-0 items-center gap-1 pb-0.5">
-              <ButtonGroup ref={syncMenuAnchorRef}>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="xs"
-                  onClick={() => void handleRemoteAction(primaryRemoteAction)}
-                  disabled={!activeRepoPath || isRemoteActionLoading}
-                  aria-label={`${syncActionLabel} remote changes`}
-                >
-                  <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
-                </Button>
-                <ButtonGroupSeparator />
-                <Button
-                  type="button"
-                  variant="default"
-                  size="icon-xs"
-                  onClick={() => setIsSyncMenuOpen((open) => !open)}
-                  disabled={!activeRepoPath || isRemoteActionLoading}
-                  active={isSyncMenuOpen}
-                  aria-label="Choose remote action"
-                  aria-haspopup="menu"
-                  aria-expanded={isSyncMenuOpen}
-                >
-                  <CaretDown className="size-3" />
-                </Button>
-              </ButtonGroup>
-              <Dropdown
-                isOpen={isSyncMenuOpen}
-                anchorRef={syncMenuAnchorRef}
-                anchorAlign="end"
-                onClose={() => setIsSyncMenuOpen(false)}
-                items={syncMenuItems}
-                className="min-w-[132px]"
-              />
-              <SidebarHeaderIconButton
-                onClick={handleManualRefresh}
-                disabled={isLoadingGitData || isRefreshing}
-                className="disabled:opacity-50"
-                tooltip="Refresh"
-                aria-label="Refresh git status"
-              >
-                {isLoadingGitData || isRefreshing ? (
-                  <Spinner label="Refreshing git status" compact />
-                ) : (
-                  <RefreshCw />
-                )}
-              </SidebarHeaderIconButton>
-              {renderActionsButton()}
-            </div>
+      <SidebarPanel className="font-sans ui-text-sm select-none">
+        <SidebarTitleBar title="Source Control">
+          {renderRefreshButton()}
+          {renderActionsButton()}
+        </SidebarTitleBar>
+        <SidebarTabBar
+          items={gitTabs}
+          value={activeTab}
+          onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
+        />
+        <SidebarToolbar className="overflow-hidden">
+          <div className="flex min-w-0 flex-1">
+            <GitBranchManager
+              currentBranch={gitStatus.branch}
+              repoPath={activeRepoPath}
+              paletteTarget
+              openEventName={GIT_VIEW_BRANCH_MANAGER_EVENT}
+              onBranchChange={() => void handleManualRefresh()}
+              onWorktreeChange={(worktreePath) => void handleGitViewWorktreeChange(worktreePath)}
+              onRepositoryChange={() => setRepoSelectionError(null)}
+            />
           </div>
 
-          <SidebarSectionPager
-            className="flex-1"
-            items={[
-              {
-                id: "changes",
-                content: (
-                  <GitStatusPanel
-                    files={visibleGitFiles}
-                    fileDiffStats={fileDiffStats}
-                    onFileSelect={handleGitFileClick}
-                    onOpenFile={handleOpenOriginalFile}
-                    onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
-                    onShowCommitDiffPicker={handleShowCommitDiffList}
-                    onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
-                    onShowStashDiffPicker={() => {
-                      setShowStashList(true);
-                      setStashSearchQuery("");
-                    }}
-                    onRefresh={refreshAfterAction}
-                    repoPath={activeRepoPath}
-                  />
-                ),
-              },
-              {
-                id: "history",
-                content: (
-                  <GitCommitHistory
-                    isCollapsed={false}
-                    onToggle={() => {}}
-                    onViewCommitDiff={handleViewCommitDiff}
-                    repoPath={activeRepoPath}
-                    showHeader={false}
-                    ahead={gitStatus.ahead}
-                    behind={gitStatus.behind}
-                  />
-                ),
-              },
-            ].filter((item) => gitTabs.some((tab) => tab.id === item.id))}
-            value={activeTab}
-            onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
-          />
-        </div>
+          <div className="ml-auto flex min-w-0 max-w-[45%] shrink-0 items-center">
+            <ButtonGroup ref={syncMenuAnchorRef} className="min-w-0 max-w-full">
+              <Button
+                type="button"
+                variant="default"
+                size="xs"
+                className="min-w-0 flex-1"
+                onClick={() => void handleRemoteAction(primaryRemoteAction)}
+                disabled={!activeRepoPath || isRemoteActionLoading}
+                aria-label={`${syncActionLabel} remote changes`}
+              >
+                <span className="min-w-0 truncate whitespace-nowrap">{syncActionLabel}</span>
+              </Button>
+              <ButtonGroupSeparator />
+              <Button
+                type="button"
+                variant="default"
+                size="icon-xs"
+                onClick={() => setIsSyncMenuOpen((open) => !open)}
+                disabled={!activeRepoPath || isRemoteActionLoading}
+                active={isSyncMenuOpen}
+                aria-label="Choose remote action"
+                aria-haspopup="menu"
+                aria-expanded={isSyncMenuOpen}
+              >
+                <CaretDown className="size-3" />
+              </Button>
+            </ButtonGroup>
+            <Dropdown
+              isOpen={isSyncMenuOpen}
+              anchorRef={syncMenuAnchorRef}
+              anchorAlign="end"
+              onClose={() => setIsSyncMenuOpen(false)}
+              items={syncMenuItems}
+              className="min-w-[132px]"
+            />
+          </div>
+        </SidebarToolbar>
 
-        <SidebarFooter surface>
+        <SidebarSectionPager
+          className="flex-1"
+          items={[
+            {
+              id: "changes",
+              content: (
+                <GitStatusPanel
+                  files={visibleGitFiles}
+                  fileDiffStats={fileDiffStats}
+                  onFileSelect={handleGitFileClick}
+                  onOpenFile={handleOpenOriginalFile}
+                  onViewDiff={(scope) => void handleViewWorkingTreeDiff(scope)}
+                  onShowCommitDiffPicker={handleShowCommitDiffList}
+                  onShowBranchDiffPicker={() => void handleShowBranchDiffList()}
+                  onShowStashDiffPicker={() => {
+                    setShowStashList(true);
+                    setStashSearchQuery("");
+                  }}
+                  onRefresh={refreshAfterAction}
+                  repoPath={activeRepoPath}
+                />
+              ),
+            },
+            {
+              id: "history",
+              content: (
+                <GitCommitHistory
+                  onViewCommitDiff={handleViewCommitDiff}
+                  repoPath={activeRepoPath}
+                  ahead={gitStatus.ahead}
+                  behind={gitStatus.behind}
+                />
+              ),
+            },
+          ].filter((item) => gitTabs.some((tab) => tab.id === item.id))}
+          value={activeTab}
+          onChange={(tab) => setActiveTab(tab as GitSidebarTab)}
+        />
+
+        <SidebarFooter variant="surface">
           <GitCommitPanel
             stagedFilesCount={stagedFiles.length}
             stagedFiles={stagedFiles}

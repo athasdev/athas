@@ -45,6 +45,8 @@ interface FileExplorerTreeItemProps {
   previousDepth: number;
   nextDepth: number;
   indentSize: number;
+  showIcon: boolean;
+  showIndentGuides: boolean;
   isExpanded: boolean;
   isActive: boolean;
   isCut: boolean;
@@ -89,6 +91,8 @@ function FileExplorerTreeItemComponent({
   previousDepth,
   nextDepth,
   indentSize,
+  showIcon,
+  showIndentGuides,
   isExpanded,
   isActive,
   isCut,
@@ -106,33 +110,34 @@ function FileExplorerTreeItemComponent({
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const gitStatusDecoration = getGitStatusDecoration(file);
   const guideLevels = Array.from({ length: depth }, (_, level) => level);
-  const renderTreeGuides = () => (
-    <div className="file-tree-guides">
-      {guideLevels.map((level) => {
-        const target = guideTargets[level];
-        const startsHere = previousDepth <= level;
-        const endsHere = nextDepth <= level;
-        return (
-          <span
-            key={level}
-            className="file-tree-guide"
-            data-file-path={target?.path}
-            data-is-dir={target?.isDir}
-            data-path={target?.path}
-            data-active={target?.isActive ? "true" : undefined}
-            title={target?.name}
-            style={
-              {
-                left: `calc(${FILE_TREE_BASE_INDENT + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
-                top: startsHere ? "4px" : "0",
-                bottom: endsHere ? "4px" : "0",
-              } as React.CSSProperties
-            }
-          />
-        );
-      })}
-    </div>
-  );
+  const renderTreeGuides = () =>
+    showIndentGuides ? (
+      <div className="file-tree-guides">
+        {guideLevels.map((level) => {
+          const target = guideTargets[level];
+          const startsHere = previousDepth <= level;
+          const endsHere = nextDepth <= level;
+          return (
+            <span
+              key={level}
+              className="file-tree-guide"
+              data-file-path={target?.path}
+              data-is-dir={target?.isDir}
+              data-path={target?.path}
+              data-active={target?.isActive ? "true" : undefined}
+              title={target?.name}
+              style={
+                {
+                  left: `calc(${FILE_TREE_BASE_INDENT + level * indentSize}px + var(--file-tree-guide-icon-offset, 7px))`,
+                  top: startsHere ? "4px" : "0",
+                  bottom: endsHere ? "4px" : "0",
+                } as React.CSSProperties
+              }
+            />
+          );
+        })}
+      </div>
+    ) : null;
 
   if (file.isEditing || file.isRenaming) {
     return (
@@ -147,12 +152,14 @@ function FileExplorerTreeItemComponent({
             paddingLeft: `${paddingLeft}px`,
           }}
         >
-          <ThemedFileIcon
-            fileName={file.isDir ? "folder" : "file"}
-            isDir={file.isDir}
-            isExpanded={false}
-            className="relative z-[1] shrink-0 text-text-lighter"
-          />
+          {showIcon ? (
+            <ThemedFileIcon
+              fileName={file.isDir ? "folder" : "file"}
+              isDir={file.isDir}
+              isExpanded={false}
+              className="relative z-[1] shrink-0 text-text-lighter"
+            />
+          ) : null}
           <InlineRenameInput
             type="text"
             autoCapitalize="none"
@@ -217,13 +224,15 @@ function FileExplorerTreeItemComponent({
         depth={depth}
         indentSize={indentSize}
       >
-        <ThemedFileIcon
-          fileName={file.name}
-          isDir={file.isDir}
-          isExpanded={isExpanded}
-          isSymlink={file.isSymlink}
-          className="relative z-1 shrink-0 text-text-lighter"
-        />
+        {showIcon ? (
+          <ThemedFileIcon
+            fileName={file.name}
+            isDir={file.isDir}
+            isExpanded={isExpanded}
+            isSymlink={file.isSymlink}
+            className="relative z-1 shrink-0 text-text-lighter"
+          />
+        ) : null}
         <span
           className={cn(
             "relative z-1 select-none whitespace-nowrap",
@@ -247,6 +256,8 @@ export const FileExplorerTreeItem = memo(
     prev.previousDepth === next.previousDepth &&
     prev.nextDepth === next.nextDepth &&
     prev.indentSize === next.indentSize &&
+    prev.showIcon === next.showIcon &&
+    prev.showIndentGuides === next.showIndentGuides &&
     prev.isExpanded === next.isExpanded &&
     prev.isActive === next.isActive &&
     prev.isCut === next.isCut &&

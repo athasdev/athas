@@ -14,7 +14,7 @@ import {
 } from "react";
 import { buttonVariants } from "@/ui/button";
 import Input from "@/ui/input";
-import { quickTransition } from "@/utils/motion-presets";
+import { quickTransition } from "@/design-system/motion";
 import { FloatingPopoverContent } from "@/ui/popover";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";

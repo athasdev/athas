@@ -104,12 +104,48 @@ const EDITOR_LINE_HEIGHT_MIN = 1;
 const EDITOR_LINE_HEIGHT_MAX = 2;
 const FILE_TREE_INDENT_SIZE_MIN = 8;
 const FILE_TREE_INDENT_SIZE_MAX = 32;
+const ACTIVITY_RAIL_WIDTH_MIN = 140;
+const ACTIVITY_RAIL_WIDTH_MAX = 320;
+const SIDEBAR_WIDTH_MIN = 140;
+const SIDEBAR_WIDTH_MAX = 600;
 const RENDER_WHITESPACE_MODES = new Set<Settings["renderWhitespace"]>([
   "none",
   "boundary",
   "trailing",
   "all",
 ]);
+const EDITOR_CURSOR_STYLES = new Set<Settings["editorCursorStyle"]>([
+  "line",
+  "block",
+  "underline",
+  "line-thin",
+  "block-outline",
+  "underline-thin",
+]);
+const EDITOR_CURSOR_BLINKING_MODES = new Set<Settings["editorCursorBlinking"]>([
+  "blink",
+  "smooth",
+  "phase",
+  "expand",
+  "solid",
+]);
+const TERMINAL_CURSOR_INACTIVE_STYLES = new Set<Settings["terminalCursorInactiveStyle"]>([
+  "outline",
+  "block",
+  "bar",
+  "underline",
+  "none",
+]);
+const TAB_CLOSE_BUTTON_VISIBILITY_MODES = new Set<Settings["tabCloseButtonVisibility"]>([
+  "active",
+  "hover",
+  "always",
+]);
+const WINDOW_CHROME_DENSITIES = new Set<Settings["windowChromeDensity"]>([
+  "focused",
+  "comfortable",
+]);
+const FILE_TREE_SORT_ORDERS = new Set<Settings["fileTreeSortOrder"]>(["folders-first", "name"]);
 const EXTERNAL_EDITOR_MODES = new Set<Settings["externalEditor"]>([
   "none",
   "nvim",
@@ -150,6 +186,24 @@ function normalizeFileTreeIndentSize(value: number): number {
   return Math.min(FILE_TREE_INDENT_SIZE_MAX, Math.max(FILE_TREE_INDENT_SIZE_MIN, snapped));
 }
 
+function normalizeBoundedWidth(value: unknown, fallback: number, min: number, max: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value.filter((item): item is string => typeof item === "string" && item.trim().length > 0),
+    ),
+  );
+}
+
 function normalizeIconTheme(value: string): string {
   if (
     value === "athas-icons-dimmed" ||
@@ -184,6 +238,44 @@ function normalizeRenderWhitespace(value: unknown): Settings["renderWhitespace"]
   }
 
   return "none";
+}
+
+function normalizeEditorCursorStyle(value: unknown): Settings["editorCursorStyle"] {
+  return EDITOR_CURSOR_STYLES.has(value as Settings["editorCursorStyle"])
+    ? (value as Settings["editorCursorStyle"])
+    : defaultSettings.editorCursorStyle;
+}
+
+function normalizeEditorCursorBlinking(value: unknown): Settings["editorCursorBlinking"] {
+  return EDITOR_CURSOR_BLINKING_MODES.has(value as Settings["editorCursorBlinking"])
+    ? (value as Settings["editorCursorBlinking"])
+    : defaultSettings.editorCursorBlinking;
+}
+
+function normalizeTerminalCursorInactiveStyle(
+  value: unknown,
+): Settings["terminalCursorInactiveStyle"] {
+  return TERMINAL_CURSOR_INACTIVE_STYLES.has(value as Settings["terminalCursorInactiveStyle"])
+    ? (value as Settings["terminalCursorInactiveStyle"])
+    : defaultSettings.terminalCursorInactiveStyle;
+}
+
+function normalizeTabCloseButtonVisibility(value: unknown): Settings["tabCloseButtonVisibility"] {
+  return TAB_CLOSE_BUTTON_VISIBILITY_MODES.has(value as Settings["tabCloseButtonVisibility"])
+    ? (value as Settings["tabCloseButtonVisibility"])
+    : defaultSettings.tabCloseButtonVisibility;
+}
+
+function normalizeWindowChromeDensity(value: unknown): Settings["windowChromeDensity"] {
+  return WINDOW_CHROME_DENSITIES.has(value as Settings["windowChromeDensity"])
+    ? (value as Settings["windowChromeDensity"])
+    : defaultSettings.windowChromeDensity;
+}
+
+function normalizeFileTreeSortOrder(value: unknown): Settings["fileTreeSortOrder"] {
+  return FILE_TREE_SORT_ORDERS.has(value as Settings["fileTreeSortOrder"])
+    ? (value as Settings["fileTreeSortOrder"])
+    : defaultSettings.fileTreeSortOrder;
 }
 
 function normalizeExternalEditor(
@@ -388,6 +480,36 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.renderWhitespace = normalizeRenderWhitespace(
     (normalizedSettings as { renderWhitespace?: unknown }).renderWhitespace,
   );
+  normalizedSettings.editorCursorStyle = normalizeEditorCursorStyle(
+    (normalizedSettings as { editorCursorStyle?: unknown }).editorCursorStyle,
+  );
+  normalizedSettings.editorCursorBlinking = normalizeEditorCursorBlinking(
+    (normalizedSettings as { editorCursorBlinking?: unknown }).editorCursorBlinking,
+  );
+  normalizedSettings.terminalCursorInactiveStyle = normalizeTerminalCursorInactiveStyle(
+    (normalizedSettings as { terminalCursorInactiveStyle?: unknown }).terminalCursorInactiveStyle,
+  );
+  normalizedSettings.tabCloseButtonVisibility = normalizeTabCloseButtonVisibility(
+    (normalizedSettings as { tabCloseButtonVisibility?: unknown }).tabCloseButtonVisibility,
+  );
+  normalizedSettings.windowChromeDensity = normalizeWindowChromeDensity(
+    (normalizedSettings as { windowChromeDensity?: unknown }).windowChromeDensity,
+  );
+  normalizedSettings.fileTreeSortOrder = normalizeFileTreeSortOrder(
+    (normalizedSettings as { fileTreeSortOrder?: unknown }).fileTreeSortOrder,
+  );
+  normalizedSettings.activityRailWidth = normalizeBoundedWidth(
+    normalizedSettings.activityRailWidth,
+    defaultSettings.activityRailWidth,
+    ACTIVITY_RAIL_WIDTH_MIN,
+    ACTIVITY_RAIL_WIDTH_MAX,
+  );
+  normalizedSettings.sidebarWidth = normalizeBoundedWidth(
+    normalizedSettings.sidebarWidth,
+    defaultSettings.sidebarWidth,
+    SIDEBAR_WIDTH_MIN,
+    SIDEBAR_WIDTH_MAX,
+  );
   normalizedSettings.externalEditor = normalizeExternalEditor(
     (normalizedSettings as { externalEditor?: unknown }).externalEditor,
     normalizedSettings.customEditorCommand,
@@ -414,6 +536,12 @@ export function normalizeSettings(settings: Settings): Settings {
   normalizedSettings.sidebarActivityItemsOrder = normalizeItemOrder(
     normalizedSettings.sidebarActivityItemsOrder,
     SIDEBAR_ACTIVITY_ITEM_IDS,
+  );
+  normalizedSettings.hiddenSidebarActivityItems = normalizeStringList(
+    normalizedSettings.hiddenSidebarActivityItems,
+  );
+  normalizedSettings.collapsedActivityRailSections = normalizeStringList(
+    normalizedSettings.collapsedActivityRailSections,
   );
   normalizedSettings.footerLeadingItemsOrder = normalizeItemOrder(
     normalizedSettings.footerLeadingItemsOrder,
@@ -457,6 +585,52 @@ export function normalizeSettingValue<K extends keyof Settings>(
 
   if (key === "renderWhitespace") {
     return normalizeRenderWhitespace(value) as Settings[K];
+  }
+
+  if (key === "editorCursorStyle") {
+    return normalizeEditorCursorStyle(value) as Settings[K];
+  }
+
+  if (key === "editorCursorBlinking") {
+    return normalizeEditorCursorBlinking(value) as Settings[K];
+  }
+
+  if (key === "terminalCursorInactiveStyle") {
+    return normalizeTerminalCursorInactiveStyle(value) as Settings[K];
+  }
+
+  if (key === "tabCloseButtonVisibility") {
+    return normalizeTabCloseButtonVisibility(value) as Settings[K];
+  }
+
+  if (key === "windowChromeDensity") {
+    return normalizeWindowChromeDensity(value) as Settings[K];
+  }
+
+  if (key === "fileTreeSortOrder") {
+    return normalizeFileTreeSortOrder(value) as Settings[K];
+  }
+
+  if (key === "activityRailWidth") {
+    return normalizeBoundedWidth(
+      value,
+      defaultSettings.activityRailWidth,
+      ACTIVITY_RAIL_WIDTH_MIN,
+      ACTIVITY_RAIL_WIDTH_MAX,
+    ) as Settings[K];
+  }
+
+  if (key === "sidebarWidth") {
+    return normalizeBoundedWidth(
+      value,
+      defaultSettings.sidebarWidth,
+      SIDEBAR_WIDTH_MIN,
+      SIDEBAR_WIDTH_MAX,
+    ) as Settings[K];
+  }
+
+  if (key === "hiddenSidebarActivityItems" || key === "collapsedActivityRailSections") {
+    return normalizeStringList(value) as Settings[K];
   }
 
   if (key === "fileTreeIndentSize") {

@@ -25,8 +25,9 @@ export function GitHubSidebarSection({
   }, [defaultExpanded]);
 
   return (
-    <section className="space-y-px pt-1 first:pt-0">
+    <section className="space-y-0.5 pt-2 first:pt-0">
       <SidebarSectionHeader
+        variant="surface"
         aria-controls={contentId}
         expanded={expanded}
         count={count}

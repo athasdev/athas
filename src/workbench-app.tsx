@@ -1,7 +1,9 @@
 import { useEffect } from "react";
+import { MotionConfig } from "motion/react";
 import { FontStyleInjector } from "@/features/settings/components/font-style-injector";
 import { initializeAppBootstrap } from "@/features/bootstrap/initialize-app-bootstrap";
 import { useAppBootstrap } from "@/features/bootstrap/use-app-bootstrap";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import {
   traceWindowOpen,
   traceWindowOpenAfterFrame,
@@ -31,6 +33,7 @@ void initializeAppBootstrap()
 
 function WorkbenchApp() {
   useAppBootstrap();
+  const reduceMotion = useSettingsStore((state) => state.settings.reduceMotion);
 
   useEffect(() => {
     const mountedAt = performance.now();
@@ -41,21 +44,23 @@ function WorkbenchApp() {
   }, []);
 
   return (
-    <DialogServiceProvider>
-      <TooltipProvider>
-        <WindowResizeBorder />
+    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
+      <DialogServiceProvider>
+        <TooltipProvider>
+          <WindowResizeBorder />
 
-        <div className="h-dvh w-dvw overflow-hidden">
-          <FontStyleInjector />
-          <div className="window-container flex size-full flex-col overflow-hidden bg-primary-bg">
-            <MainLayout />
+          <div className="h-dvh w-dvw overflow-hidden">
+            <FontStyleInjector />
+            <div className="window-container flex size-full flex-col overflow-hidden bg-primary-bg">
+              <MainLayout />
+            </div>
+            <ZoomIndicator />
+            <Toaster />
+            <NotificationRecorder />
           </div>
-          <ZoomIndicator />
-          <Toaster />
-          <NotificationRecorder />
-        </div>
-      </TooltipProvider>
-    </DialogServiceProvider>
+        </TooltipProvider>
+      </DialogServiceProvider>
+    </MotionConfig>
   );
 }
 

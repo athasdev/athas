@@ -113,6 +113,11 @@ describe("default keymaps", () => {
     expectKeybinding("editor.paste", "cmd+v", "editorFocus");
   });
 
+  it("keeps chrome actions in the command registry", () => {
+    expectKeybinding("workbench.openSettings", "cmd+,");
+    expectKeybinding("terminal.find", "cmd+f", "terminalFocus");
+  });
+
   it("has registered commands for every default keybinding", () => {
     keymapRegistry.clear();
     registerCommands();

@@ -271,12 +271,7 @@ export function AgentSelector({
       ) : (
         <ComboboxTrigger
           render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="font-sans flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
-            />
+            <Button type="button" variant="ghost" size="sm" className="max-w-[min(220px,100%)]" />
           }
           className="size-auto"
         >

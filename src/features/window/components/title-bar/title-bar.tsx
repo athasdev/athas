@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, type Window as TauriWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { openFolder } from "@/features/file-system/controllers/platform";
@@ -14,6 +14,7 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { useNativeWindowChrome } from "@/features/window/hooks/use-native-window-chrome";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { Button } from "@/ui/button";
+import { ChromeBar, ChromeGroup } from "@/ui/chrome";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -40,7 +41,6 @@ import { WindowControls } from "./window-controls";
 import WindowMenuBar from "../window-menu-bar";
 
 interface TitleBarProps {
-  title?: string;
   showMinimal?: boolean;
 }
 
@@ -62,6 +62,21 @@ function placeAgentBeforeAccount(items: Array<ChromeItem<HeaderTrailingItemId>>)
   return nextItems;
 }
 
+function TitleBarTrailingActions({ items }: { items: Array<ChromeItem<HeaderTrailingItemId>> }) {
+  return (
+    <ChromeGroup gap="tight">
+      <AppUpdateControl />
+      {items.map((item) =>
+        item.content ? (
+          <div key={item.id} className="flex min-h-(--athas-chrome-control-height) items-center">
+            {item.content}
+          </div>
+        ) : null,
+      )}
+    </ChromeGroup>
+  );
+}
+
 const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const nativeMenuBar = useSettingsStore((state) => state.settings.nativeMenuBar);
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
@@ -79,7 +94,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [currentWindow, setCurrentWindow] = useState<any>(null);
+  const [currentWindow, setCurrentWindow] = useState<TauriWindow | null>(null);
 
   const isMacOS = IS_MAC;
   const isWindows = IS_WINDOWS;
@@ -283,15 +298,19 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
       content: <AccountMenu className={!isMacOS ? "mr-1" : undefined} />,
     },
   ];
+  const orderedTrailingItems = placeAgentBeforeAccount(
+    orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
+  );
 
   if (showMinimal) {
     return (
-      <div
+      <ChromeBar
+        region="title"
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
-        className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] select-none items-center justify-between bg-transparent px-2"
+        className="athas-title-bar relative z-50 justify-between select-none"
       >
-        <div className="flex-1" />
+        <ChromeGroup grow />
 
         {showAppWindowControls && (
           <WindowControls
@@ -300,7 +319,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
             onMaximizedChange={setIsMaximized}
           />
         )}
-      </div>
+      </ChromeBar>
     );
   }
 
@@ -310,31 +329,20 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         <ContextMenuTrigger
           onContextMenu={handleTitleBarContextMenu}
           className={cn(
-            "athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between bg-transparent pr-2",
+            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between gap-(--athas-chrome-gap) bg-transparent pr-(--athas-chrome-padding-inline) text-text-lighter",
             isFullscreen ? "pl-2" : "pl-[94px]",
           )}
           data-tauri-drag-region
           onMouseDown={handleTitleBarMouseDown}
         >
-          <div className="pointer-events-auto flex h-full min-w-0 items-center">
+          <ChromeGroup className="pointer-events-auto h-full">
             {menuItem}
             {sidebarToggle}
-            <AppUpdateControl />
-          </div>
+          </ChromeGroup>
 
-          <div className="flex h-full items-center">
-            <div className="flex items-center gap-1">
-              {placeAgentBeforeAccount(
-                orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
-              ).map((item) =>
-                item.content ? (
-                  <div key={item.id} className="flex min-h-6 items-center">
-                    {item.content}
-                  </div>
-                ) : null,
-              )}
-            </div>
-          </div>
+          <ChromeGroup className="h-full">
+            <TitleBarTrailingActions items={orderedTrailingItems} />
+          </ChromeGroup>
         </ContextMenuTrigger>
         {titleBarContextMenuContent}
       </ContextMenu>
@@ -347,29 +355,16 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
-        className="athas-title-bar relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between bg-transparent px-2"
+        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline) text-text-lighter"
       >
-        <div data-tauri-drag-region className="flex flex-1 items-center">
-          <div className="pointer-events-auto">
-            <div className="flex items-center gap-1">
-              {menuItem}
-              {sidebarToggle}
-              <AppUpdateControl />
-            </div>
-          </div>
-        </div>
-        <div className="z-20 flex items-center">
-          <div className="flex items-center gap-1">
-            {placeAgentBeforeAccount(
-              orderChromeItems(headerTrailingItems, headerTrailingItemsOrder),
-            ).map((item) =>
-              item.content ? (
-                <div key={item.id} className="flex min-h-6 items-center">
-                  {item.content}
-                </div>
-              ) : null,
-            )}
-          </div>
+        <ChromeGroup data-tauri-drag-region grow>
+          <ChromeGroup className="pointer-events-auto">
+            {menuItem}
+            {sidebarToggle}
+          </ChromeGroup>
+        </ChromeGroup>
+        <ChromeGroup className="z-20">
+          <TitleBarTrailingActions items={orderedTrailingItems} />
 
           {showAppWindowControls && (
             <WindowControls
@@ -378,7 +373,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
               onMaximizedChange={setIsMaximized}
             />
           )}
-        </div>
+        </ChromeGroup>
       </ContextMenuTrigger>
       {titleBarContextMenuContent}
     </ContextMenu>
@@ -390,21 +385,6 @@ const TitleBarWithSettings = (props: TitleBarProps) => {
   const isProjectPickerVisible = useUIState((state) => state.isProjectPickerVisible);
   const setIsSettingsDialogVisible = useUIState((state) => state.setIsSettingsDialogVisible);
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
-
-  // Handle Cmd+, (Mac) or Ctrl+, (Windows/Linux) to open settings
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isSettingsShortcut = event.key === "," && (IS_MAC ? event.metaKey : event.ctrlKey);
-
-      if (isSettingsShortcut) {
-        event.preventDefault();
-        setIsSettingsDialogVisible(true);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [setIsSettingsDialogVisible]);
 
   return (
     <>

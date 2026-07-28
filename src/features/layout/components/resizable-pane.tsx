@@ -1,12 +1,15 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import { cn } from "@/utils/cn";
+import {
+  clampResponsivePaneWidth,
+  getResponsivePaneMaxWidth,
+  MIN_RESPONSIVE_PANE_WIDTH,
+} from "../utils/resizable-pane-layout";
 
 type WidthSettingKey = "sidebarWidth" | "aiChatWidth";
 
-const MIN_PANE_WIDTH = 50;
 const MIN_SIDEBAR_WIDTH = 140;
 const MIN_AI_CHAT_WIDTH = 300;
 const MIN_AI_CHAT_COMPACT_WIDTH = 220;
@@ -17,6 +20,8 @@ interface ResizablePaneProps {
   widthKey: WidthSettingKey;
   className?: string;
   hidden?: boolean;
+  outerEdge?: boolean;
+  reservedWidth?: number;
 }
 
 export function ResizablePane({
@@ -25,14 +30,12 @@ export function ResizablePane({
   widthKey,
   className,
   hidden = false,
+  outerEdge = true,
+  reservedWidth = 0,
 }: ResizablePaneProps) {
   const storedWidth = useSettingsStore((state) => state.settings[widthKey]);
-  const isAIChatVisible = useSettingsStore((state) => state.settings.isAIChatVisible);
-  const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
-  const aiChatWidth = useSettingsStore((state) => state.settings.aiChatWidth);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
-  const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
-  const [width, setWidth] = useState(Math.max(storedWidth, MIN_PANE_WIDTH));
+  const [width, setWidth] = useState(Math.max(storedWidth, MIN_RESPONSIVE_PANE_WIDTH));
   const [isResizing, setIsResizing] = useState(false);
   const paneRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -48,53 +51,37 @@ export function ResizablePane({
   }, [widthKey]);
 
   const getMaxWidth = useCallback(() => {
-    const windowWidth = getViewportWidth();
-    const MIN_MAIN_CONTENT_WIDTH = 360; // Keep editor area readable on smaller windows
-    const shouldAccountForAiChat = isAIChatVisible;
-
-    // Calculate available space accounting for both sidebars and minimum main content
-    if (widthKey === "sidebarWidth" && shouldAccountForAiChat) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - aiChatWidth - MIN_MAIN_CONTENT_WIDTH);
-    }
-    if (widthKey === "aiChatWidth" && isSidebarVisible) {
-      return Math.max(MIN_PANE_WIDTH, windowWidth - sidebarWidth - MIN_MAIN_CONTENT_WIDTH);
-    }
-
-    // Single sidebar case - leave room for main content
-    return Math.max(MIN_PANE_WIDTH, windowWidth - MIN_MAIN_CONTENT_WIDTH);
-  }, [widthKey, isAIChatVisible, aiChatWidth, sidebarWidth, isSidebarVisible]);
+    return getResponsivePaneMaxWidth(getViewportWidth(), reservedWidth);
+  }, [reservedWidth]);
 
   const clampWidth = useCallback(
     (value: number) => {
-      const maxWidth = getMaxWidth();
-      const minWidth = Math.min(getMinWidth(), maxWidth);
-      return Math.max(minWidth, Math.min(value, maxWidth));
+      return clampResponsivePaneWidth({
+        value,
+        minWidth: getMinWidth(),
+        viewportWidth: getViewportWidth(),
+        reservedWidth,
+      });
     },
-    [getMaxWidth, getMinWidth],
+    [getMinWidth, reservedWidth],
   );
 
   useEffect(() => {
     const nextWidth = clampWidth(storedWidth);
 
     setWidth(nextWidth);
-    if (nextWidth !== storedWidth) {
-      updateSetting(widthKey, nextWidth);
-    }
-  }, [storedWidth, widthKey, updateSetting, clampWidth]);
+  }, [storedWidth, clampWidth]);
 
   useEffect(() => {
     const handleWindowResize = () => {
       const currentStored = useSettingsStore.getState().settings[widthKey];
       const nextWidth = clampWidth(currentStored);
       setWidth(nextWidth);
-      if (nextWidth !== currentStored) {
-        updateSetting(widthKey, nextWidth);
-      }
     };
 
     window.addEventListener("resize", handleWindowResize);
     return () => window.removeEventListener("resize", handleWindowResize);
-  }, [widthKey, clampWidth, updateSetting]);
+  }, [widthKey, clampWidth]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -117,7 +104,7 @@ export function ResizablePane({
         if (rafId !== null) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
           if (paneEl) {
-            paneEl.style.width = `calc(${currentWidth}px + var(--athas-workbench-gap))`;
+            paneEl.style.width = `${currentWidth}px`;
           }
           if (contentEl) {
             contentEl.style.width = `${currentWidth}px`;
@@ -144,12 +131,17 @@ export function ResizablePane({
     [width, position, widthKey, updateSetting, clampWidth],
   );
 
-  const totalWidth = hidden ? "0px" : `calc(${width}px + var(--athas-workbench-gap))`;
+  const totalWidth = hidden ? "0px" : `${width}px`;
   const resizeHandle = !hidden ? (
     <div
       onMouseDown={handleMouseDown}
+      style={
+        position === "left"
+          ? { right: "calc(var(--athas-workbench-gap) / -2)" }
+          : { left: "calc(var(--athas-workbench-gap) / -2)" }
+      }
       className={cn(
-        "group relative flex h-full w-[var(--athas-workbench-gap)] shrink-0 cursor-col-resize items-center justify-center",
+        "group absolute top-0 z-30 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center",
         "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/8",
       )}
       role="separator"
@@ -174,7 +166,7 @@ export function ResizablePane({
       ref={paneRef}
       style={{ width: totalWidth }}
       className={cn(
-        "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-hidden bg-transparent",
+        "athas-resizable-pane relative flex h-full min-w-0 shrink-0 overflow-visible bg-transparent",
         hidden && "pointer-events-none",
         className,
       )}
@@ -189,8 +181,11 @@ export function ResizablePane({
       >
         <div
           className={cn(
-            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border border-border/70 bg-primary-bg",
-            !hidden && "rounded-xl",
+            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border/70 border-y bg-primary-bg",
+            position === "left" && "border-l border-r",
+            position === "right" && "border-r",
+            !hidden && position === "left" && "rounded-l-xl",
+            !hidden && position === "right" && outerEdge && "rounded-r-xl",
           )}
         >
           {children}

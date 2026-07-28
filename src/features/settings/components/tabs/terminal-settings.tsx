@@ -404,6 +404,67 @@ export const TerminalSettings = () => {
         </SettingRow>
       </Section>
 
+      <Section title="Interaction">
+        <SettingRow
+          label="Alt Click Moves Cursor"
+          description="Move the shell prompt cursor to the clicked position when supported"
+          onReset={() =>
+            updateSetting(
+              "terminalAltClickMovesCursor",
+              getDefaultSetting("terminalAltClickMovesCursor"),
+            )
+          }
+          canReset={
+            settings.terminalAltClickMovesCursor !==
+            getDefaultSetting("terminalAltClickMovesCursor")
+          }
+        >
+          <Switch
+            checked={settings.terminalAltClickMovesCursor}
+            onChange={(checked) => updateSetting("terminalAltClickMovesCursor", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Option as Meta"
+          description="Treat the Option key as Meta in terminal applications on macOS"
+          onReset={() =>
+            updateSetting("terminalMacOptionIsMeta", getDefaultSetting("terminalMacOptionIsMeta"))
+          }
+          canReset={
+            settings.terminalMacOptionIsMeta !== getDefaultSetting("terminalMacOptionIsMeta")
+          }
+        >
+          <Switch
+            checked={settings.terminalMacOptionIsMeta}
+            onChange={(checked) => updateSetting("terminalMacOptionIsMeta", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Right Click Selects Word"
+          description="Select the word under the pointer before opening the context menu"
+          onReset={() =>
+            updateSetting(
+              "terminalRightClickSelectsWord",
+              getDefaultSetting("terminalRightClickSelectsWord"),
+            )
+          }
+          canReset={
+            settings.terminalRightClickSelectsWord !==
+            getDefaultSetting("terminalRightClickSelectsWord")
+          }
+        >
+          <Switch
+            checked={settings.terminalRightClickSelectsWord}
+            onChange={(checked) => updateSetting("terminalRightClickSelectsWord", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Cursor">
         <SettingRow
           label="Cursor Style"
@@ -461,6 +522,41 @@ export const TerminalSettings = () => {
             onChange={(val) => updateSetting("terminalCursorWidth", val)}
             className={SETTINGS_CONTROL_WIDTHS.number}
             size="md"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Inactive Cursor Style"
+          description="Appearance of the terminal cursor when the terminal is not focused"
+          onReset={() =>
+            updateSetting(
+              "terminalCursorInactiveStyle",
+              getDefaultSetting("terminalCursorInactiveStyle"),
+            )
+          }
+          canReset={
+            settings.terminalCursorInactiveStyle !==
+            getDefaultSetting("terminalCursorInactiveStyle")
+          }
+        >
+          <Select
+            value={settings.terminalCursorInactiveStyle}
+            options={[
+              { value: "outline", label: "Outline" },
+              { value: "block", label: "Block" },
+              { value: "bar", label: "Bar" },
+              { value: "underline", label: "Underline" },
+              { value: "none", label: "Hidden" },
+            ]}
+            onChange={(value) =>
+              updateSetting(
+                "terminalCursorInactiveStyle",
+                value as typeof settings.terminalCursorInactiveStyle,
+              )
+            }
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="md"
+            variant="default"
           />
         </SettingRow>
       </Section>

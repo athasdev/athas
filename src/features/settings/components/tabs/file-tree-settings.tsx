@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { getDefaultSetting, useSettingsStore } from "@/features/settings/stores/settings.store";
+import type { FileTreeSortOrder } from "@/features/settings/types/settings.types";
 import NumberInput from "@/ui/number-input";
+import Select from "@/ui/select";
 import Textarea from "@/ui/textarea";
 import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Switch from "@/ui/switch";
@@ -9,13 +11,19 @@ import Switch from "@/ui/switch";
 export const FileTreeSettings = () => {
   const settings = useSettingsStore(
     useShallow((state) => ({
+      autoRevealActiveFileInFileTree: state.settings.autoRevealActiveFileInFileTree,
       compactFoldersInFileTree: state.settings.compactFoldersInFileTree,
+      confirmBeforeFileDelete: state.settings.confirmBeforeFileDelete,
       fileTreeIndentSize: state.settings.fileTreeIndentSize,
+      fileTreeSortOrder: state.settings.fileTreeSortOrder,
       hiddenDirectoryPatterns: state.settings.hiddenDirectoryPatterns,
       hiddenFilePatterns: state.settings.hiddenFilePatterns,
       hideRootFolderInFileTree: state.settings.hideRootFolderInFileTree,
+      showFileIconsInFileTree: state.settings.showFileIconsInFileTree,
       showGitignoredFilesInFileTree: state.settings.showGitignoredFilesInFileTree,
+      showGitStatusInFileTree: state.settings.showGitStatusInFileTree,
       showHiddenFilesInFileTree: state.settings.showHiddenFilesInFileTree,
+      showIndentGuidesInFileTree: state.settings.showIndentGuidesInFileTree,
     })),
   );
   const updateSetting = useSettingsStore((state) => state.updateSetting);
@@ -53,6 +61,25 @@ export const FileTreeSettings = () => {
     <SettingsView>
       <Section title="Display">
         <SettingRow
+          label="Sort Order"
+          description="Choose whether folders stay above files or everything sorts by name"
+          onReset={() => updateSetting("fileTreeSortOrder", getDefaultSetting("fileTreeSortOrder"))}
+          canReset={settings.fileTreeSortOrder !== getDefaultSetting("fileTreeSortOrder")}
+        >
+          <Select
+            value={settings.fileTreeSortOrder}
+            options={[
+              { value: "folders-first", label: "Folders First" },
+              { value: "name", label: "Name" },
+            ]}
+            onChange={(value) => updateSetting("fileTreeSortOrder", value as FileTreeSortOrder)}
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="sm"
+            variant="default"
+          />
+        </SettingRow>
+
+        <SettingRow
           label="Indent Size"
           description="Pixels per nesting level"
           onReset={() =>
@@ -67,6 +94,43 @@ export const FileTreeSettings = () => {
             onChange={(val) => updateSetting("fileTreeIndentSize", val)}
             className={SETTINGS_CONTROL_WIDTHS.numberCompact}
             size="md"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show File Icons"
+          description="Show themed file and folder icons"
+          onReset={() =>
+            updateSetting("showFileIconsInFileTree", getDefaultSetting("showFileIconsInFileTree"))
+          }
+          canReset={
+            settings.showFileIconsInFileTree !== getDefaultSetting("showFileIconsInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showFileIconsInFileTree}
+            onChange={(checked) => updateSetting("showFileIconsInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Indent Guides"
+          description="Show vertical guides for nested folders"
+          onReset={() =>
+            updateSetting(
+              "showIndentGuidesInFileTree",
+              getDefaultSetting("showIndentGuidesInFileTree"),
+            )
+          }
+          canReset={
+            settings.showIndentGuidesInFileTree !== getDefaultSetting("showIndentGuidesInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showIndentGuidesInFileTree}
+            onChange={(checked) => updateSetting("showIndentGuidesInFileTree", checked)}
+            size="sm"
           />
         </SettingRow>
 
@@ -141,6 +205,63 @@ export const FileTreeSettings = () => {
           <Switch
             checked={!settings.showGitignoredFilesInFileTree}
             onChange={(checked) => updateSetting("showGitignoredFilesInFileTree", !checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Show Git Status"
+          description="Display Git color decorations beside changed files"
+          onReset={() =>
+            updateSetting("showGitStatusInFileTree", getDefaultSetting("showGitStatusInFileTree"))
+          }
+          canReset={
+            settings.showGitStatusInFileTree !== getDefaultSetting("showGitStatusInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.showGitStatusInFileTree}
+            onChange={(checked) => updateSetting("showGitStatusInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
+      <Section title="Behavior">
+        <SettingRow
+          label="Auto Reveal Active File"
+          description="Expand and scroll Files to the active editor file"
+          onReset={() =>
+            updateSetting(
+              "autoRevealActiveFileInFileTree",
+              getDefaultSetting("autoRevealActiveFileInFileTree"),
+            )
+          }
+          canReset={
+            settings.autoRevealActiveFileInFileTree !==
+            getDefaultSetting("autoRevealActiveFileInFileTree")
+          }
+        >
+          <Switch
+            checked={settings.autoRevealActiveFileInFileTree}
+            onChange={(checked) => updateSetting("autoRevealActiveFileInFileTree", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Confirm Before Delete"
+          description="Ask for confirmation before deleting a file or folder"
+          onReset={() =>
+            updateSetting("confirmBeforeFileDelete", getDefaultSetting("confirmBeforeFileDelete"))
+          }
+          canReset={
+            settings.confirmBeforeFileDelete !== getDefaultSetting("confirmBeforeFileDelete")
+          }
+        >
+          <Switch
+            checked={settings.confirmBeforeFileDelete}
+            onChange={(checked) => updateSetting("confirmBeforeFileDelete", checked)}
             size="sm"
           />
         </SettingRow>

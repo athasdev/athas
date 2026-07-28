@@ -2,20 +2,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { GitHubAuthStatusMessage } from "./github-auth-status";
 import {
-  ChatCircleTextIcon as ChatCircleText,
-  CheckIcon as Check,
   CopyIcon as Copy,
+  FunnelIcon as Funnel,
   GitBranchIcon as GitBranch,
   GithubLogoIcon as GithubLogo,
   GitPullRequestIcon as GitPullRequest,
-  LightningIcon as Lightning,
-  MagnifyingGlassIcon as Search,
   PlusIcon as Plus,
 } from "@/ui/icons";
 import { WarningCircleIcon as AlertCircle, ArrowClockwiseIcon as RefreshCw } from "@/ui/icons";
 import {
   memo,
-  type ReactNode,
   startTransition,
   useCallback,
   useDeferredValue,
@@ -32,17 +28,27 @@ import { useRepositoryStore } from "@/features/git/stores/git-repository.store";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
-import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import {
+  Dropdown,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+  useDropdownMenu,
+  type MenuItem,
+} from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarEmptyActionState,
-  SidebarHeader,
   SidebarHeaderIconButton,
+  SidebarHeaderSearch,
   SidebarPanel,
-  SidebarSearchFilterRow,
   SidebarSectionPager,
-  SidebarSectionSwitcher,
+  SidebarTabBar,
+  SidebarTitleBar,
+  SidebarToolbar,
 } from "@/ui/sidebar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useGitHubStore } from "../stores/github.store";
@@ -233,7 +239,6 @@ const GitHubPRsView = memo(() => {
   const isGitHubPRsViewActive = useUIState((state) => state.isGitHubPRsViewActive);
   const effectiveRepoPath = activeRepoPath ?? rootFolderPath ?? null;
 
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSelectingRepo, setIsSelectingRepo] = useState(false);
   const [repoSelectionError, setRepoSelectionError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<GitHubSidebarSection>("pull-requests");
@@ -466,22 +471,14 @@ const GitHubPRsView = memo(() => {
     }
   }, [setManualRepository]);
 
-  const handleFilterChange = useCallback(
-    (filter: PRFilter) => {
-      setFilter(filter);
-      setIsFilterOpen(false);
-    },
-    [setFilter],
-  );
+  const handleFilterChange = useCallback((filter: PRFilter) => setFilter(filter), [setFilter]);
 
   const handleIssueFilterChange = useCallback((filter: IssueFilter) => {
     setIssueFilter(filter);
-    setIsFilterOpen(false);
   }, []);
 
   const handleActionFilterChange = useCallback((filter: WorkflowRunFilter) => {
     setActionFilter(filter);
-    setIsFilterOpen(false);
   }, []);
 
   const handleSelectPR = useCallback(
@@ -596,24 +593,18 @@ const GitHubPRsView = memo(() => {
   ];
 
   const allSectionTabs = useMemo(() => {
-    const tabMap: Record<
-      GitHubSidebarSection,
-      { id: GitHubSidebarSection; label: string; icon: ReactNode }
-    > = {
+    const tabMap: Record<GitHubSidebarSection, { id: GitHubSidebarSection; label: string }> = {
       "pull-requests": {
         id: "pull-requests",
         label: "Pull Requests",
-        icon: <GitPullRequest size={16} weight="duotone" />,
       },
       issues: {
         id: "issues",
         label: "Issues",
-        icon: <ChatCircleText size={16} weight="duotone" />,
       },
       actions: {
         id: "actions",
         label: "Actions",
-        icon: <Lightning size={16} weight="duotone" />,
       },
     };
 
@@ -621,6 +612,8 @@ const GitHubPRsView = memo(() => {
   }, [githubSidebarSectionOrder]);
 
   const sectionTabs = allSectionTabs.filter((tab) => availableSections.includes(tab.id));
+  const activeSectionTitle =
+    sectionTabs.find((section) => section.id === activeSection)?.label ?? "GitHub";
   const activeFilterLabel =
     activeSection === "pull-requests"
       ? filterLabels[currentFilter]
@@ -633,40 +626,27 @@ const GitHubPRsView = memo(() => {
       : activeSection === "issues"
         ? issueFilter === "open"
         : actionFilter === "all";
-  const filterMenuItems = useMemo<MenuItem[]>(() => {
+  const activeFilterOptions =
+    activeSection === "issues"
+      ? Object.entries(issueFilterLabels)
+      : activeSection === "actions"
+        ? Object.entries(actionFilterLabels)
+        : Object.entries(filterLabels);
+  const activeFilterValue =
+    activeSection === "issues"
+      ? issueFilter
+      : activeSection === "actions"
+        ? actionFilter
+        : currentFilter;
+  const handleActiveFilterChange = (filter: string) => {
     if (activeSection === "issues") {
-      return (Object.keys(issueFilterLabels) as IssueFilter[]).map((filter) => ({
-        id: filter,
-        label: issueFilterLabels[filter],
-        keybinding: issueFilter === filter ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: () => handleIssueFilterChange(filter),
-      }));
+      handleIssueFilterChange(filter as IssueFilter);
+    } else if (activeSection === "actions") {
+      handleActionFilterChange(filter as WorkflowRunFilter);
+    } else {
+      handleFilterChange(filter as PRFilter);
     }
-
-    if (activeSection === "actions") {
-      return (Object.keys(actionFilterLabels) as WorkflowRunFilter[]).map((filter) => ({
-        id: filter,
-        label: actionFilterLabels[filter],
-        keybinding: actionFilter === filter ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: () => handleActionFilterChange(filter),
-      }));
-    }
-
-    return (Object.keys(filterLabels) as PRFilter[]).map((filter) => ({
-      id: filter,
-      label: filterLabels[filter],
-      keybinding: currentFilter === filter ? <Check className="size-3.5 text-accent" /> : null,
-      onClick: () => handleFilterChange(filter),
-    }));
-  }, [
-    actionFilter,
-    activeSection,
-    currentFilter,
-    handleActionFilterChange,
-    handleFilterChange,
-    handleIssueFilterChange,
-    issueFilter,
-  ]);
+  };
   const filteredPrs = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase();
     if (!query) return deferredPrs;
@@ -728,10 +708,8 @@ const GitHubPRsView = memo(() => {
 
   if (!isAuthenticated) {
     return (
-      <SidebarPanel className="gap-2 p-2">
-        <SidebarHeader className="bg-transparent p-0 backdrop-blur-none">
-          <span className="ui-text-sm font-medium text-text">GitHub</span>
-        </SidebarHeader>
+      <SidebarPanel>
+        <SidebarTitleBar title="GitHub" />
         <GitHubAuthStatusMessage />
       </SidebarPanel>
     );
@@ -740,7 +718,7 @@ const GitHubPRsView = memo(() => {
   return (
     <>
       <SidebarPanel
-        className="font-sans select-none gap-2 p-2"
+        className="font-sans select-none"
         onContextMenu={(event) => {
           sectionContextMenu.open(event, null);
         }}
@@ -752,57 +730,74 @@ const GitHubPRsView = memo(() => {
           />
         ) : (
           <>
-            <SidebarSectionSwitcher
+            <SidebarTitleBar title={activeSectionTitle}>
+              <SidebarHeaderIconButton
+                disabled={!effectiveRepoPath}
+                tooltip={
+                  activeSection === "pull-requests"
+                    ? "New Pull Request"
+                    : activeSection === "issues"
+                      ? "New Issue"
+                      : "Run Workflow"
+                }
+                tooltipSide="bottom"
+                onClick={() => {
+                  const nextKind =
+                    activeSection === "pull-requests"
+                      ? "pull-request"
+                      : activeSection === "issues"
+                        ? "issue"
+                        : "action";
+                  setCreateKind(nextKind);
+                }}
+              >
+                <Plus />
+              </SidebarHeaderIconButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <SidebarHeaderIconButton
+                      active={!isActiveFilterDefault}
+                      tooltip={`Filter: ${activeFilterLabel}`}
+                      tooltipSide="bottom"
+                      aria-label={`Filter GitHub ${activeSection}`}
+                    />
+                  }
+                >
+                  <Funnel />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuRadioGroup
+                    value={activeFilterValue}
+                    onValueChange={handleActiveFilterChange}
+                  >
+                    {activeFilterOptions.map(([value, label]) => (
+                      <DropdownMenuRadioItem key={value} value={value} closeOnClick>
+                        {label}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarTitleBar>
+
+            <SidebarTabBar
               items={sectionTabs}
               value={activeSection}
               onChange={(section) => setActiveSection(section as GitHubSidebarSection)}
             />
 
-            <SidebarSearchFilterRow
-              value={searchQuery}
-              onChange={setSearchQuery}
-              searchIcon={Search}
-              placeholder="Search"
-              searchContainerClassName="min-w-0 flex-1 pl-1"
-              filterOpen={isFilterOpen}
-              onFilterOpenChange={setIsFilterOpen}
-              filterItems={filterMenuItems}
-              filterActive={!isActiveFilterDefault}
-              filterTooltip={`Filter: ${activeFilterLabel}`}
-              filterCloseOnSelect={false}
-              filterMenuClassName="w-fit min-w-fit"
-              leading={
-                <GitProjectSelector
-                  className="min-w-0 max-w-[34%] shrink-0"
-                  onRepositoryChange={() => setRepoSelectionError(null)}
-                />
-              }
-              actions={
-                <SidebarHeaderIconButton
-                  className="shrink-0"
-                  disabled={!effectiveRepoPath}
-                  tooltip={
-                    activeSection === "pull-requests"
-                      ? "New Pull Request"
-                      : activeSection === "issues"
-                        ? "New Issue"
-                        : "Run Workflow"
-                  }
-                  tooltipSide="bottom"
-                  onClick={() => {
-                    const nextKind =
-                      activeSection === "pull-requests"
-                        ? "pull-request"
-                        : activeSection === "issues"
-                          ? "issue"
-                          : "action";
-                    setCreateKind(nextKind);
-                  }}
-                >
-                  <Plus />
-                </SidebarHeaderIconButton>
-              }
-            />
+            <SidebarToolbar>
+              <GitProjectSelector
+                className="min-w-0 max-w-[34%] shrink-0"
+                onRepositoryChange={() => setRepoSelectionError(null)}
+              />
+              <SidebarHeaderSearch
+                value={searchQuery}
+                onChange={setSearchQuery}
+                aria-label="Search GitHub"
+              />
+            </SidebarToolbar>
 
             <SidebarSectionPager
               className="flex-1"
@@ -811,7 +806,7 @@ const GitHubPRsView = memo(() => {
                   id: "pull-requests",
                   content: (
                     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-                      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
+                      <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
                         {!effectiveRepoPath ? (
                           <GitHubSidebarState
                             icon={<GitBranch className="size-4" />}

@@ -4,14 +4,19 @@ import { cn } from "@/utils/cn";
 
 export const PromptInput = forwardRef<
   HTMLDivElement,
-  Omit<ComponentProps<typeof SidebarFooter>, "surface"> & {
+  Omit<ComponentProps<typeof SidebarFooter>, "variant"> & {
     dragActive?: boolean;
     standalone?: boolean;
+    connected?: boolean;
   }
->(function PromptInput({ className, dragActive, standalone = false, ...props }, ref) {
+>(function PromptInput(
+  { className, dragActive, standalone = false, connected = false, ...props },
+  ref,
+) {
   const rootClassName = cn(
     "ai-chat-container relative z-20",
     dragActive && "border-accent bg-accent/5 shadow-[0_0_0_1px_var(--color-accent)]",
+    connected && "rounded-t-none",
     className,
   );
 
@@ -19,8 +24,8 @@ export const PromptInput = forwardRef<
     return (
       <SidebarComposer
         ref={ref}
-        elevated
-        prominent
+        variant="prominent"
+        elevation="raised"
         data-ai-element="prompt-input"
         className={rootClassName}
         {...props}
@@ -31,7 +36,7 @@ export const PromptInput = forwardRef<
   return (
     <SidebarFooter
       ref={ref}
-      surface
+      variant="surface"
       data-ai-element="prompt-input"
       className={rootClassName}
       {...props}
@@ -41,13 +46,17 @@ export const PromptInput = forwardRef<
 
 export function PromptInputBody({
   className,
+  connected = false,
   ...props
-}: ComponentProps<typeof SidebarComposerBody>) {
+}: ComponentProps<typeof SidebarComposerBody> & {
+  connected?: boolean;
+}) {
   return (
     <SidebarComposerBody
       data-ai-element="prompt-input-body"
       className={cn(
         "transition-[border-color,background-color,box-shadow] duration-[var(--app-duration-fast)]",
+        connected && "rounded-t-none",
         className,
       )}
       {...props}

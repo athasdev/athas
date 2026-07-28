@@ -27,6 +27,7 @@ import { findPaneGroup } from "@/features/panes/utils/pane-tree";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { useEditorAppStore } from "@/features/editor/stores/editor-app.store";
+import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
 import { useTerminalStore } from "@/features/terminal/stores/terminal.store";
 import { useWebViewerNavigationStore } from "@/features/viewer/web/stores/web-viewer-navigation.store";
@@ -605,61 +606,23 @@ const TabBar = ({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent, index: number) => {
       const buffer = sortedBuffers[index];
+      const nextIndex = getChromeNavigationIndex(e.key, index, sortedBuffers.length, "horizontal");
+
+      if (nextIndex !== null) {
+        e.preventDefault();
+        const nextBuffer = sortedBuffers[nextIndex];
+        if (nextBuffer && nextIndex !== index) {
+          handleTabClick(nextBuffer.id);
+          updateActivePath(nextBuffer.path);
+          setSrAnnouncement(
+            `Switched to ${nextBuffer.name}${nextBuffer.type === "editor" && nextBuffer.isDirty ? ", unsaved changes" : ""}`,
+          );
+          tabRefs.current[nextIndex]?.focus();
+        }
+        return;
+      }
 
       switch (e.key) {
-        case "ArrowLeft":
-          e.preventDefault();
-          if (index > 0) {
-            const prevBuffer = sortedBuffers[index - 1];
-            handleTabClick(prevBuffer.id);
-            updateActivePath(prevBuffer.path);
-            setSrAnnouncement(
-              `Switched to ${prevBuffer.name}${prevBuffer.type === "editor" && prevBuffer.isDirty ? ", unsaved changes" : ""}`,
-            );
-            tabRefs.current[index - 1]?.focus();
-          }
-          break;
-
-        case "ArrowRight":
-          e.preventDefault();
-          if (index < sortedBuffers.length - 1) {
-            const nextBuffer = sortedBuffers[index + 1];
-            handleTabClick(nextBuffer.id);
-            updateActivePath(nextBuffer.path);
-            setSrAnnouncement(
-              `Switched to ${nextBuffer.name}${nextBuffer.type === "editor" && nextBuffer.isDirty ? ", unsaved changes" : ""}`,
-            );
-            tabRefs.current[index + 1]?.focus();
-          }
-          break;
-
-        case "Home":
-          e.preventDefault();
-          if (sortedBuffers.length > 0) {
-            const firstBuffer = sortedBuffers[0];
-            handleTabClick(firstBuffer.id);
-            updateActivePath(firstBuffer.path);
-            setSrAnnouncement(
-              `Switched to ${firstBuffer.name}${firstBuffer.type === "editor" && firstBuffer.isDirty ? ", unsaved changes" : ""}`,
-            );
-            tabRefs.current[0]?.focus();
-          }
-          break;
-
-        case "End":
-          e.preventDefault();
-          if (sortedBuffers.length > 0) {
-            const lastIndex = sortedBuffers.length - 1;
-            const lastBuffer = sortedBuffers[lastIndex];
-            handleTabClick(lastBuffer.id);
-            updateActivePath(lastBuffer.path);
-            setSrAnnouncement(
-              `Switched to ${lastBuffer.name}${lastBuffer.type === "editor" && lastBuffer.isDirty ? ", unsaved changes" : ""}`,
-            );
-            tabRefs.current[lastIndex]?.focus();
-          }
-          break;
-
         case "Delete":
         case "Backspace":
           if (!buffer.isPinned) {

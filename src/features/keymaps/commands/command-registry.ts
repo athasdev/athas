@@ -256,6 +256,15 @@ const terminalCommands: Command[] = [
     },
   },
   {
+    id: "terminal.find",
+    title: "Find in Terminal",
+    category: "Terminal",
+    keybinding: "cmd+f",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-open-search"));
+    },
+  },
+  {
     id: "terminal.split",
     title: "Split Terminal",
     category: "Terminal",
@@ -971,6 +980,15 @@ const databaseCommands: Command[] = [
 ];
 
 const windowCommands: Command[] = [
+  {
+    id: "workbench.openSettings",
+    title: "Open Settings",
+    category: "Window",
+    keybinding: "cmd+,",
+    execute: () => {
+      useUIState.getState().setIsSettingsDialogVisible(true);
+    },
+  },
   {
     id: "window.toggleFullscreen",
     title: "Toggle Fullscreen",

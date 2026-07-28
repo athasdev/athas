@@ -23,12 +23,17 @@ import { useMenuEventsWrapper } from "@/features/window/hooks/use-menu-events-wr
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { toast } from "sonner";
+import { cn } from "@/utils/cn";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { getInternalTabDragData } from "@/features/tabs/utils/internal-tab-drag";
 import TitleBarWithSettings from "../../window/components/title-bar/title-bar";
 import Footer from "./footer/footer";
 import { ResizablePane } from "./resizable-pane";
-import { MainSidebar, SidebarActivityRail } from "./sidebar/main-sidebar";
+import {
+  COLLAPSED_ACTIVITY_RAIL_WIDTH,
+  MainSidebar,
+  SidebarActivityRail,
+} from "./sidebar/main-sidebar";
 
 const AIChat = lazy(() => import("@/features/ai/components/chat/ai-chat"));
 const AgentLauncher = lazy(() =>
@@ -84,6 +89,10 @@ export function MainLayout() {
 
   const isSidebarVisible = useUIState((state) => state.isSidebarVisible);
   const activityRailExpanded = useSettingsStore((state) => state.settings.activityRailExpanded);
+  const activityRailWidth = useSettingsStore((state) => state.settings.activityRailWidth);
+  const sidebarWidth = useSettingsStore((state) => state.settings.sidebarWidth);
+  const aiChatWidth = useSettingsStore((state) => state.settings.aiChatWidth);
+  const showStatusBar = useSettingsStore((state) => state.settings.showStatusBar);
   const isRightSidebarVisible = useUIState((state) => state.isRightSidebarVisible);
   const activeRightSidebarView = useUIState((state) => state.activeRightSidebarView);
   const isDatabaseConnectionVisible = useUIState((state) => state.isDatabaseConnectionVisible);
@@ -91,6 +100,22 @@ export function MainLayout() {
     (state) => state.setIsDatabaseConnectionVisible,
   );
   const showInlineAiChat = useSettingsStore((state) => state.settings.isAIChatVisible);
+  const renderedActivityRailWidth = activityRailExpanded
+    ? activityRailWidth
+    : COLLAPSED_ACTIVITY_RAIL_WIDTH;
+  const visibleInlineAiChat = showInlineAiChat && deferredSurfacesReady;
+  const leftPaneReservedWidth =
+    renderedActivityRailWidth +
+    (isRightSidebarVisible ? sidebarWidth : 0) +
+    (visibleInlineAiChat ? aiChatWidth : 0);
+  const aiPaneReservedWidth =
+    renderedActivityRailWidth +
+    (isSidebarVisible ? sidebarWidth : 0) +
+    (isRightSidebarVisible ? sidebarWidth : 0);
+  const rightPaneReservedWidth =
+    renderedActivityRailWidth +
+    (isSidebarVisible ? sidebarWidth : 0) +
+    (visibleInlineAiChat ? aiChatWidth : 0);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const relativeLineNumbers = useVimStore.use.relativeLineNumbers();
   const { setRelativeLineNumbers } = useVimStore.use.actions();
@@ -275,12 +300,23 @@ export function MainLayout() {
           style={{ minHeight: 0 }}
         >
           <SidebarActivityRail expanded={activityRailExpanded} />
-          <ResizablePane position="left" widthKey="sidebarWidth" hidden={!isSidebarVisible}>
+          <ResizablePane
+            position="left"
+            widthKey="sidebarWidth"
+            hidden={!isSidebarVisible}
+            reservedWidth={leftPaneReservedWidth}
+          >
             <MainSidebar paneLevel="primary" />
           </ResizablePane>
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="athas-glass-island relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
+            <div
+              className={cn(
+                "athas-glass-island relative min-h-0 flex-1 overflow-hidden border-border/70 border-y border-r bg-primary-bg",
+                !isSidebarVisible && "rounded-l-xl border-l",
+                !visibleInlineAiChat && !isRightSidebarVisible && "rounded-r-xl",
+              )}
+            >
               <CachedWorkspaceSplitViews />
             </div>
             {terminalWidthMode === "editor" && deferredSurfacesReady && (
@@ -291,8 +327,13 @@ export function MainLayout() {
           </div>
 
           {/* Right side panes are ordered from inner to edge. */}
-          {showInlineAiChat && deferredSurfacesReady ? (
-            <ResizablePane position="right" widthKey="aiChatWidth">
+          {visibleInlineAiChat ? (
+            <ResizablePane
+              position="right"
+              widthKey="aiChatWidth"
+              outerEdge={!isRightSidebarVisible}
+              reservedWidth={aiPaneReservedWidth}
+            >
               <Suspense fallback={null}>
                 <AIChat
                   mode="chat"
@@ -305,7 +346,12 @@ export function MainLayout() {
             </ResizablePane>
           ) : null}
 
-          <ResizablePane position="right" widthKey="sidebarWidth" hidden={!isRightSidebarVisible}>
+          <ResizablePane
+            position="right"
+            widthKey="sidebarWidth"
+            hidden={!isRightSidebarVisible}
+            reservedWidth={rightPaneReservedWidth}
+          >
             <MainSidebar
               paneLevel="edge"
               activeView={activeRightSidebarView}
@@ -324,7 +370,7 @@ export function MainLayout() {
         )}
       </div>
 
-      <Footer />
+      {showStatusBar ? <Footer /> : null}
 
       {/* Global modals and overlays */}
       {deferredSurfacesReady ? (

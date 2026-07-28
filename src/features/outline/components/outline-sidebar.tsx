@@ -3,12 +3,10 @@ import {
   BracketsCurlyIcon as Braces,
   CaretDownIcon as CaretDown,
   CaretRightIcon as CaretRight,
-  CheckIcon as Check,
   CodeIcon as Code,
   CopyIcon as Copy,
   FunnelIcon as Funnel,
   FunctionIcon,
-  MagnifyingGlassIcon as Search,
   SquaresFourIcon as SquaresFour,
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -19,14 +17,29 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
-import type { MenuItem } from "@/ui/dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { writeClipboardText } from "@/utils/clipboard";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
-import { SidebarEmptyActionState, SidebarEmptyState, SidebarSearchFilterRow } from "@/ui/sidebar";
+import {
+  SidebarEmptyActionState,
+  SidebarEmptyState,
+  SidebarHeaderIconButton,
+  SidebarHeaderSearch,
+  SidebarPanel,
+  SidebarToolbar,
+} from "@/ui/sidebar";
 import { ScrollArea } from "@/ui/scroll-area";
 import { useDocumentOutline } from "../hooks/use-document-outline";
+import { getOutlineRevealScrollTop } from "../utils/outline-scroll";
 import { getVisibleOutlineSymbols, openOutlineSymbol } from "../utils/outline-symbols";
 import { OutlineSymbolRow } from "./outline-symbol-row";
 
@@ -68,8 +81,8 @@ export function OutlineSidebar() {
   const [selectedFilters, setSelectedFilters] = useState<Set<OutlineFilter>>(
     () => new Set(OUTLINE_FILTER_OPTIONS.map((option) => option.id)),
   );
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [focusedSymbolId, setFocusedSymbolId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
@@ -98,28 +111,6 @@ export function OutlineSidebar() {
       return nextFilters;
     });
   }, []);
-  const outlineFilterMenuItems = useMemo<MenuItem[]>(
-    () => [
-      {
-        id: "all",
-        label: "All",
-        icon: <Funnel />,
-        keybinding: areAllFiltersSelected ? <Check className="size-3.5 text-accent" /> : null,
-        onClick: setAllFilters,
-      },
-      { id: "sep-filters", label: "", separator: true, onClick: () => {} },
-      ...OUTLINE_FILTER_OPTIONS.map((option) => ({
-        id: option.id,
-        label: option.label,
-        icon: option.icon,
-        keybinding: selectedFilters.has(option.id) ? (
-          <Check className="size-3.5 text-accent" />
-        ) : null,
-        onClick: () => toggleFilter(option.id),
-      })),
-    ],
-    [areAllFiltersSelected, selectedFilters, setAllFilters, toggleFilter],
-  );
   const focusedSymbolIndex = focusedSymbolId
     ? visibleSymbols.findIndex((symbol) => symbol.id === focusedSymbolId)
     : -1;
@@ -171,12 +162,35 @@ export function OutlineSidebar() {
     setCollapsedIds(new Set());
   };
 
+  const revealSymbol = useCallback((symbolId: string) => {
+    const viewport = scrollViewportRef.current;
+    const row = rowRefs.current.get(symbolId);
+    if (!viewport || !row) return;
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const nextScrollTop = getOutlineRevealScrollTop({
+      scrollTop: viewport.scrollTop,
+      viewportTop: viewportRect.top,
+      viewportBottom: viewportRect.bottom,
+      rowTop: rowRect.top,
+      rowBottom: rowRect.bottom,
+    });
+
+    if (nextScrollTop !== null) {
+      viewport.scrollTo({ top: nextScrollTop, behavior: "auto" });
+    }
+  }, []);
+
   const focusSymbolAtIndex = (index: number) => {
     const symbol = visibleSymbols[index];
     if (!symbol) return;
 
     setFocusedSymbolId(symbol.id);
-    requestAnimationFrame(() => rowRefs.current.get(symbol.id)?.focus());
+    requestAnimationFrame(() => {
+      rowRefs.current.get(symbol.id)?.focus({ preventScroll: true });
+      revealSymbol(symbol.id);
+    });
   };
 
   const focusSearch = () => {
@@ -266,36 +280,71 @@ export function OutlineSidebar() {
   };
 
   return (
-    <div
-      className="flex h-full min-h-0 flex-col bg-primary-bg"
-      onKeyDownCapture={handleSidebarKeyDown}
-    >
-      <SidebarSearchFilterRow
-        value={query}
-        onChange={setQuery}
-        searchIcon={Search}
-        placeholder="Search"
-        searchAriaLabel="Search outline"
-        searchInputRef={searchInputRef}
-        searchInputProps={{
-          onKeyDown: (event) => {
+    <SidebarPanel onKeyDownCapture={handleSidebarKeyDown}>
+      <SidebarToolbar>
+        <SidebarHeaderSearch
+          ref={searchInputRef}
+          value={query}
+          onChange={setQuery}
+          aria-label="Search outline"
+          onKeyDown={(event) => {
             if (event.key === "ArrowDown" && visibleSymbols.length > 0) {
               event.preventDefault();
               focusSymbolAtIndex(0);
             }
+          }}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarHeaderIconButton
+                active={!areAllFiltersSelected}
+                tooltip="Filter outline"
+                tooltipSide="bottom"
+                aria-label="Filter outline"
+              />
+            }
+          >
+            <Funnel />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              disabled={areAllFiltersSelected}
+              closeOnClick={false}
+              onClick={setAllFilters}
+            >
+              <Funnel />
+              Show All
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {OUTLINE_FILTER_OPTIONS.map((option) => (
+              <DropdownMenuCheckboxItem
+                key={option.id}
+                checked={selectedFilters.has(option.id)}
+                closeOnClick={false}
+                onCheckedChange={() => toggleFilter(option.id)}
+              >
+                {option.icon}
+                {option.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarToolbar>
+
+      <ScrollArea
+        className="min-h-0 min-w-0 flex-1"
+        viewportClassName="overscroll-contain"
+        viewportProps={{
+          ref: scrollViewportRef,
+          style: {
+            overflowAnchor: "none",
+            scrollBehavior: "auto",
+            scrollPaddingBlock: "4px",
           },
         }}
-        filterOpen={isFilterMenuOpen}
-        onFilterOpenChange={setIsFilterMenuOpen}
-        filterItems={outlineFilterMenuItems}
-        filterActive={!areAllFiltersSelected}
-        filterTooltip="Filter Outline"
-        filterAriaLabel="Filter outline"
-        filterCloseOnSelect={false}
-        filterMenuClassName="w-fit min-w-fit"
-      />
-
-      <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
+        contentClassName="p-1"
+      >
         {!isSupported ? (
           <SidebarEmptyActionState
             message={activeBuffer ? "No outline for the active file." : "No active file."}
@@ -324,7 +373,6 @@ export function OutlineSidebar() {
                   collapsed={collapsedIds.has(symbol.id)}
                   onClick={handleSymbolClick}
                   onToggle={toggleSymbol}
-                  onMouseEnter={() => setFocusedSymbolId(symbol.id)}
                   onKeyDown={(event) => handleSymbolKeyDown(event, symbol)}
                   tabIndex={
                     symbol.id === focusedSymbolId ||
@@ -380,6 +428,6 @@ export function OutlineSidebar() {
           ))
         )}
       </ScrollArea>
-    </div>
+    </SidebarPanel>
   );
 }

@@ -1,6 +1,6 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig } from "motion/react";
 import { ArrowClockwiseIcon as RefreshCwIcon, XIcon as X } from "@/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
@@ -8,7 +8,7 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
-import { instantTransition, quickTransition } from "@/utils/motion-presets";
+import { instantTransition, quickTransition } from "@/design-system/motion";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
@@ -126,7 +126,7 @@ const Command = ({
   autoFocus = true,
 }: CommandProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionConfig();
   const getInitialFocusTarget = useCallback(
     () => popupRef.current?.querySelector<HTMLElement>(commandInputSelector) ?? true,
     [],

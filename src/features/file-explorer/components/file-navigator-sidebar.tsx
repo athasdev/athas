@@ -1,8 +1,4 @@
-import {
-  ListBulletsIcon as ListBullets,
-  MagnifyingGlassIcon as Search,
-  TreeStructureIcon as TreeStructure,
-} from "@/ui/icons";
+import { ListBulletsIcon as ListBullets, TreeStructureIcon as TreeStructure } from "@/ui/icons";
 import {
   memo,
   type KeyboardEvent,
@@ -16,8 +12,9 @@ import {
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import {
+  SidebarHeader,
+  SidebarHeaderSearch,
   SidebarListItem,
-  SidebarSearchFilterRow,
   SidebarSectionEmptyState,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
@@ -419,30 +416,29 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarSearchFilterRow
-          value={searchQuery}
-          onChange={setSearchQuery}
-          searchIcon={Search}
-          placeholder="Search"
-          searchAriaLabel="Search files"
-          searchContainerClassName="file-explorer-search-field"
+        <SidebarHeader
+          variant="search"
           className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}
-          actions={
-            <ToggleGroup
-              value={viewMode}
-              onValueChange={onViewModeChange}
-              ariaLabel="File navigator view"
-              options={[
-                { value: "flat", label: "Flat list", icon: <ListBullets /> },
-                { value: "tree", label: "File tree", icon: <TreeStructure /> },
-              ]}
-              iconOnly
-              wrap={false}
-              size="xs"
-              className={cn("shrink-0", surface === "inset" && "bg-primary-bg")}
-            />
-          }
-        />
+        >
+          <SidebarHeaderSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            aria-label="Search files"
+          />
+          <ToggleGroup
+            value={viewMode}
+            onValueChange={onViewModeChange}
+            ariaLabel="File navigator view"
+            options={[
+              { value: "flat", label: "Flat list", icon: <ListBullets /> },
+              { value: "tree", label: "File tree", icon: <TreeStructure /> },
+            ]}
+            iconOnly
+            wrap={false}
+            size="xs"
+            className={cn("shrink-0", surface === "inset" && "bg-primary-bg")}
+          />
+        </SidebarHeader>
       ) : null}
 
       <ScrollArea className="min-h-0 flex-1" contentClassName="p-1" orientation="both">

@@ -436,7 +436,7 @@ const GitHubActionsView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
           {error ? (
             <GitHubSidebarState
               icon={<AlertCircle className="size-4" />}
