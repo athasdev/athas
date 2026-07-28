@@ -6,6 +6,64 @@ use std::{
    process::{Command, Stdio},
 };
 
+pub fn git_clone(repository_url: String, destination_path: String) -> Result<(), String> {
+   _git_clone(repository_url, destination_path).into_string_error()
+}
+
+fn _git_clone(repository_url: String, destination_path: String) -> Result<()> {
+   let repository_url = repository_url.trim();
+   if repository_url.is_empty() {
+      bail!("Repository URL cannot be empty");
+   }
+   if repository_url.starts_with('-') {
+      bail!("Repository URL cannot start with an option prefix");
+   }
+
+   let destination = Path::new(&destination_path);
+   if !destination.is_absolute() {
+      bail!("Clone destination must be an absolute path");
+   }
+   if destination.exists() {
+      bail!("Clone destination already exists");
+   }
+
+   let parent = destination
+      .parent()
+      .context("Clone destination must have a parent directory")?;
+   if !parent.is_dir() {
+      bail!("Clone destination parent does not exist");
+   }
+
+   let output = Command::new("git")
+      .current_dir(parent)
+      .env("GIT_TERMINAL_PROMPT", "0")
+      .env("GCM_INTERACTIVE", "never")
+      .env("SSH_ASKPASS_REQUIRE", "never")
+      .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
+      .stdin(Stdio::null())
+      .arg("clone")
+      .arg(repository_url)
+      .arg(destination)
+      .output()
+      .context("Failed to execute git clone")?;
+
+   if output.status.success() {
+      return Ok(());
+   }
+
+   let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+   let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+   let details = if !stderr.is_empty() {
+      stderr
+   } else if !stdout.is_empty() {
+      stdout
+   } else {
+      "Git returned a non-zero exit status without output.".to_string()
+   };
+
+   bail!("Git clone failed: {details}");
+}
+
 pub fn git_push(repo_path: String, branch: Option<String>, remote: String) -> Result<(), String> {
    _git_push(repo_path, branch, remote).into_string_error()
 }
@@ -129,4 +187,24 @@ fn _git_remove_remote(repo_path: String, name: String) -> Result<()> {
       .remote_delete(&name)
       .context("Failed to remove remote")?;
    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn clone_rejects_empty_repository_urls() {
+      let result = _git_clone(" ".to_string(), "/tmp/athas-clone-target".to_string());
+      assert!(result.is_err());
+   }
+
+   #[test]
+   fn clone_requires_an_absolute_destination() {
+      let result = _git_clone(
+         "https://github.com/athasdev/athas.git".to_string(),
+         "athas-clone-target".to_string(),
+      );
+      assert!(result.is_err());
+   }
 }

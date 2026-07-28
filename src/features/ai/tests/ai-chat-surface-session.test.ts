@@ -5,6 +5,7 @@ vi.mock("@/features/ai/services/ai-chat-history-service", () => ({
   initChatDatabase: vi.fn(),
   loadAllChatsFromDb: vi.fn(),
   loadChatFromDb: vi.fn(),
+  saveChatMetadataToDb: vi.fn().mockResolvedValue(undefined),
   saveChatToDb: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -42,5 +43,37 @@ describe("AI chat surface sessions", () => {
 
     expect(useAIChatStore.getState().currentChatId).toBe(sidebarChatId);
     expect(useAIChatStore.getState().getChatById("tab-session")).toBeDefined();
+  });
+
+  it("pins and unpins a session", () => {
+    const chatId = useAIChatStore.getState().createNewChat("custom");
+
+    useAIChatStore.getState().setChatPinned(chatId, true);
+    expect(useAIChatStore.getState().getChatById(chatId)?.isPinned).toBe(true);
+
+    useAIChatStore.getState().setChatPinned(chatId, false);
+    expect(useAIChatStore.getState().getChatById(chatId)?.isPinned).toBe(false);
+  });
+
+  it("archives a session and activates the next available session", () => {
+    const firstChatId = useAIChatStore.getState().createNewChat("custom");
+    const secondChatId = useAIChatStore.getState().createNewChat("custom");
+
+    useAIChatStore.getState().setChatPinned(secondChatId, true);
+    useAIChatStore.getState().setChatArchived(secondChatId, true);
+
+    const state = useAIChatStore.getState();
+    expect(state.getChatById(secondChatId)?.archivedAt).toBeInstanceOf(Date);
+    expect(state.getChatById(secondChatId)?.isPinned).toBe(false);
+    expect(state.currentChatId).toBe(firstChatId);
+  });
+
+  it("restores an archived session without activating it", () => {
+    const chatId = useAIChatStore.getState().createNewChat("custom");
+
+    useAIChatStore.getState().setChatArchived(chatId, true);
+    useAIChatStore.getState().setChatArchived(chatId, false);
+
+    expect(useAIChatStore.getState().getChatById(chatId)?.archivedAt).toBeNull();
   });
 });

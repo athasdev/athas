@@ -112,6 +112,7 @@ export function ChatHeader({
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const [isChatHistoryVisible, setIsChatHistoryVisible] = useState(false);
   const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
+  const setChatArchived = useAIChatStore((state) => state.setChatArchived);
 
   const { openSettingsDialog } = useUIState();
   const effectiveChatId = chatId ?? currentChatId;
@@ -276,6 +277,7 @@ export function ChatHeader({
           setIsChatHistoryVisible(false);
           onSwitchChat(nextChatId);
         }}
+        onSetChatArchived={setChatArchived}
         onDeleteChat={onDeleteChat ?? (() => {})}
         triggerRef={historyButtonRef}
       />

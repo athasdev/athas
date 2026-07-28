@@ -1,4 +1,9 @@
-import { CheckIcon as Check, MagnifyingGlassIcon as Search, TrashIcon as Trash2 } from "@/ui/icons";
+import {
+  ArrowCounterClockwiseIcon as Restore,
+  CheckIcon as Check,
+  MagnifyingGlassIcon as Search,
+  TrashIcon as Trash2,
+} from "@/ui/icons";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { getRelativeTime } from "@/features/ai/lib/formatting";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
@@ -20,6 +25,7 @@ interface ChatHistoryDropdownProps {
   chats: Chat[];
   currentChatId: string | null;
   onSwitchToChat: (chatId: string) => void;
+  onSetChatArchived: (chatId: string, archived: boolean) => void;
   onDeleteChat: (chatId: string, event: React.MouseEvent) => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
@@ -30,6 +36,7 @@ export default function ChatHistoryDropdown({
   chats,
   currentChatId,
   onSwitchToChat,
+  onSetChatArchived,
   onDeleteChat,
   triggerRef,
 }: ChatHistoryDropdownProps) {
@@ -152,23 +159,40 @@ export default function ChatHistoryDropdown({
                 title={<span className={cn(isCurrent && "text-accent")}>{chat.title}</span>}
                 accessory={
                   <>
+                    {chat.isPinned ? <CommandItemBadge>Pinned</CommandItemBadge> : null}
+                    {chat.archivedAt ? <CommandItemBadge>Archived</CommandItemBadge> : null}
                     <CommandItemBadge>{providerLabel}</CommandItemBadge>
                     <CommandItemBadge>{getRelativeTime(chat.lastMessageAt)}</CommandItemBadge>
                   </>
                 }
                 action={
-                  <CommandItemAction
-                    type="button"
-                    tone="danger"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onDeleteChat(chat.id, event);
-                    }}
-                    aria-label={`Delete ${chat.title}`}
-                    tooltip="Delete session"
-                  >
-                    <Trash2 size={13} />
-                  </CommandItemAction>
+                  <>
+                    {chat.archivedAt ? (
+                      <CommandItemAction
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSetChatArchived(chat.id, false);
+                        }}
+                        aria-label={`Restore ${chat.title}`}
+                        tooltip="Restore session"
+                      >
+                        <Restore size={13} />
+                      </CommandItemAction>
+                    ) : null}
+                    <CommandItemAction
+                      type="button"
+                      tone="danger"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDeleteChat(chat.id, event);
+                      }}
+                      aria-label={`Delete ${chat.title}`}
+                      tooltip="Delete session"
+                    >
+                      <Trash2 size={13} />
+                    </CommandItemAction>
+                  </>
                 }
               />
             );

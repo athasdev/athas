@@ -75,6 +75,11 @@ export interface Chat {
   agentId: AgentType; // Which agent this chat uses
   acpSessionId?: string | null;
   workspacePath?: string | null;
+  providerId?: string | null;
+  modelId?: string | null;
+  branch?: string | null;
+  isPinned?: boolean;
+  archivedAt?: Date | null;
 }
 
 export interface ContextInfo {

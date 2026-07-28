@@ -46,6 +46,8 @@ import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import { showAlertDialog, showPromptDialog } from "@/ui/dialog";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
+import { switchWorkspaceRuntime } from "@/features/workspace/services/workspace-lifecycle";
+import { scheduleWorkspacePrewarm } from "@/features/workspace/services/workspace-prewarm";
 import {
   createWorkspaceScopedStore,
   type WorkspaceScopedStore,
@@ -407,13 +409,15 @@ interface OpenLocalWorkspaceOptions {
   traceLabel: "handleOpenFolder" | "handleOpenFolderByPath";
   treeState: "expand-root" | "collapse-all";
   restoreUiState: boolean;
+  prewarm?: boolean;
 }
 
 interface WorkspaceInitializationActions {
+  deferActiveProjectSessionPersistence: () => void;
   initializeLocalWorkspace: (options: OpenLocalWorkspaceOptions) => Promise<boolean>;
   initializeRemoteWorkspace: (connectionId: string) => Promise<boolean>;
   initializeWslWorkspace: (distro: string, linuxPath: string) => Promise<boolean>;
-  resumeDeferredSessionRestore: () => void;
+  resumeWorkspaceSession: () => void;
 }
 
 type ScopedFileSystemStoreState = FileSystemStoreState & WorkspaceInitializationActions;
@@ -524,7 +528,7 @@ const openLocalWorkspace = async (
   set: ScopedFileSystemSet,
   get: ScopedFileSystemGet,
 ) => {
-  const { workspaceId, path, traceLabel, treeState, restoreUiState } = options;
+  const { workspaceId, path, traceLabel, treeState, restoreUiState, prewarm = false } = options;
   const openStartedAt = performance.now();
   logWorkspaceOpenStep("start", traceLabel, path);
   const bufferStore = useBufferStore.getStore(workspaceId);
@@ -582,14 +586,18 @@ const openLocalWorkspace = async (
       restoreProjectUiState(path, workspaceId);
     }
 
-    const activeProjectTab = useWorkspaceTabsStore.getState().getActiveProjectTab();
-    setActiveProjectId(activeProjectTab?.id);
-    useRecentFoldersStore.getState().addToRecents(path, {
-      activeProjectTabId: activeProjectTab?.id,
-      customIcon: activeProjectTab?.customIcon,
-      missing: false,
-    });
-    gitDiffCache.clear();
+    const workspaceTab = useWorkspaceTabsStore
+      .getState()
+      .projectTabs.find((projectTab) => projectTab.id === workspaceId);
+    setActiveProjectId(workspaceId);
+    if (!prewarm) {
+      useRecentFoldersStore.getState().addToRecents(path, {
+        activeProjectTabId: workspaceId,
+        customIcon: workspaceTab?.customIcon,
+        missing: false,
+      });
+      gitDiffCache.clear();
+    }
 
     set((state) => {
       state.isFileTreeLoading = false;
@@ -620,14 +628,16 @@ const openLocalWorkspace = async (
     toast.warning("Workspace opened, but saved tabs could not be restored.");
   }
 
-  initializeLocalWorkspaceInBackground(
-    workspaceId,
-    path,
-    get,
-    traceLabel === "handleOpenFolder"
-      ? "Failed to initialize workspace after opening folder:"
-      : "Failed to initialize workspace after opening folder by path:",
-  );
+  if (!prewarm) {
+    initializeLocalWorkspaceInBackground(
+      workspaceId,
+      path,
+      get,
+      traceLabel === "handleOpenFolder"
+        ? "Failed to initialize workspace after opening folder:"
+        : "Failed to initialize workspace after opening folder by path:",
+    );
+  }
 
   logWorkspaceOpenStep("end", traceLabel, path, openStartedAt);
   return true;
@@ -681,11 +691,36 @@ const initializeWslWorkspaceSession = async (
   }
 };
 
+const scheduleInactiveWorkspacePrewarm = () => {
+  void scheduleWorkspacePrewarm({
+    waitForIdle: waitForWorkspaceIdle,
+    isEligible: (tab) => !parseRemotePath(tab.path) && !parseWslPath(tab.path),
+    initialize: async (workspaceId, path) =>
+      await getScopedFileSystemStore(workspaceId).getState().initializeLocalWorkspace({
+        workspaceId,
+        path,
+        traceLabel: "handleOpenFolderByPath",
+        treeState: "collapse-all",
+        restoreUiState: true,
+        prewarm: true,
+      }),
+    onPrepared: (tab, prepared, durationMs) => {
+      frontendTrace("info", "bench:workspace-switch", "prewarm:end", {
+        workspaceId: tab.id,
+        path: tab.path,
+        prepared,
+        durationMs: Math.round(durationMs * 100) / 100,
+      });
+    },
+  });
+};
+
 const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemStoreState> => {
   let latestFileOpenRequestId = 0;
   let latestTreeRevealRequestId = 0;
   let pendingSessionBuffers: BufferSession[] = [];
   let resumePendingSessionRestore: (() => void) | null = null;
+  let deferredAiSession: ReturnType<typeof readPersistedAiWorkspaceSession> | undefined;
 
   return createStore<ScopedFileSystemStoreState>()(
     immer((set, get) => ({
@@ -730,7 +765,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }),
           resume: async (workspaceId) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
-            targetStore.resumeDeferredSessionRestore();
+            targetStore.resumeWorkspaceSession();
             initializeLocalWorkspaceInBackground(
               workspaceId,
               selected,
@@ -748,8 +783,27 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
       initializeLocalWorkspace: (options: OpenLocalWorkspaceOptions) =>
         openLocalWorkspace(options, set, get),
 
-      resumeDeferredSessionRestore: () => {
+      deferActiveProjectSessionPersistence: () => {
+        deferredAiSession = readPersistedAiWorkspaceSession(
+          useBufferStore.getStore(workspaceId).getState().buffers,
+        );
+        globalThis.setTimeout(() => get().persistActiveProjectSession(), 0);
+      },
+
+      resumeWorkspaceSession: () => {
         resumePendingSessionRestore?.();
+        const projectPath = get().rootFolderPath;
+        if (!projectPath) {
+          return;
+        }
+
+        const { session } = workspaceSessionRepository.load(projectPath);
+        useAIChatStore
+          .getState()
+          .restoreWorkspaceSession(
+            session?.aiSession,
+            useBufferStore.getStore(workspaceId).getState().buffers,
+          );
       },
 
       resetWorkspace: async () => {
@@ -1040,12 +1094,14 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
         restoreProjectPaneState(projectPath, workspaceId);
 
-        useAIChatStore
-          .getState()
-          .restoreWorkspaceSession(
-            session?.aiSession,
-            useBufferStore.getStore(workspaceId).getState().buffers,
-          );
+        if (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId) {
+          useAIChatStore
+            .getState()
+            .restoreWorkspaceSession(
+              session?.aiSession,
+              useBufferStore.getStore(workspaceId).getState().buffers,
+            );
+        }
       },
 
       persistActiveProjectSession: () => {
@@ -1063,9 +1119,11 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           useTerminalTabsStore.getStore(workspaceId).getState().terminals,
         );
         const aiSession =
-          workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId
+          deferredAiSession ??
+          (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId
             ? readPersistedAiWorkspaceSession(buffers)
-            : undefined;
+            : undefined);
+        deferredAiSession = undefined;
         const openPersistedBuffers = buffers
           .map((buffer) => serializeWorkspaceBuffer(buffer, currentRootPath, workspaceFolderPaths))
           .filter((buffer): buffer is BufferSession => buffer !== null);
@@ -1126,7 +1184,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             }),
           resume: async (workspaceId) => {
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
-            targetStore.resumeDeferredSessionRestore();
+            targetStore.resumeWorkspaceSession();
             initializeLocalWorkspaceInBackground(
               workspaceId,
               path,
@@ -1249,7 +1307,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               .getState()
               .initializeRemoteWorkspace(connectionId),
           resume: async (workspaceId) => {
-            getScopedFileSystemStore(workspaceId).getState().resumeDeferredSessionRestore();
+            getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
             workspaceServiceActivationVersion++;
             void useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
           },
@@ -1333,7 +1391,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
               .getState()
               .initializeWslWorkspace(distro, normalizedLinuxPath),
           resume: async (workspaceId) => {
-            getScopedFileSystemStore(workspaceId).getState().resumeDeferredSessionRestore();
+            getScopedFileSystemStore(workspaceId).getState().resumeWorkspaceSession();
             workspaceServiceActivationVersion++;
             void useFileWatcherStore.getStore(workspaceId).getState().setProjectRoot("");
           },
@@ -2771,20 +2829,21 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
 
       switchToProject: async (projectId: string) => {
         const switchStartedAt = performance.now();
+        const wasReady = workspaceRuntimeRegistry.isWorkspaceReady(projectId);
         frontendTrace("info", "bench:workspace-switch", "switch:start", {
           workspaceId: projectId,
+          wasReady,
         });
         const currentStore = get();
         const previousTheme = useSettingsStore.getState().settings.theme;
         const targetProject = useWorkspaceTabsStore
           .getState()
           .projectTabs.find((projectTab) => projectTab.id === projectId);
-        currentStore.setIsSwitchingProject(true);
-
-        const { switchWorkspaceRuntime } =
-          await import("@/features/workspace/services/workspace-lifecycle");
+        if (!wasReady) {
+          currentStore.setIsSwitchingProject(true);
+        }
         const switched = await switchWorkspaceRuntime(projectId, {
-          persistCurrent: () => currentStore.persistActiveProjectSession(),
+          persistCurrent: () => currentStore.deferActiveProjectSessionPersistence(),
           onActivate: () => {
             const settingsStore = useSettingsStore.getState();
             const projectTheme = targetProject?.theme ?? previousTheme;
@@ -2815,7 +2874,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
             const targetStore = getScopedFileSystemStore(workspaceId).getState();
             const projectStore = useProjectStore.getStore(workspaceId).getState();
             projectStore.setActiveProjectId(workspaceId);
-            targetStore.resumeDeferredSessionRestore();
+            targetStore.resumeWorkspaceSession();
 
             if (parseRemotePath(path) || parseWslPath(path)) {
               workspaceServiceActivationVersion++;
@@ -2835,10 +2894,13 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           },
         });
 
-        currentStore.setIsSwitchingProject(false);
+        if (!wasReady) {
+          currentStore.setIsSwitchingProject(false);
+        }
         frontendTrace("info", "bench:workspace-switch", "switch:end", {
           workspaceId: projectId,
           switched,
+          wasReady,
           durationMs: Math.round((performance.now() - switchStartedAt) * 100) / 100,
         });
         if (!switched) {
@@ -2850,6 +2912,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
           return switched;
         }
 
+        scheduleInactiveWorkspacePrewarm();
         return switched;
       },
       closeProject: async (projectId: string) => {

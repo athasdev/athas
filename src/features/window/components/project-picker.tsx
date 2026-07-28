@@ -2,7 +2,6 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   ArrowLeftIcon as ArrowLeft,
-  DownloadSimpleIcon as Download,
   FolderIcon as Folder,
   FolderOpenIcon as FolderOpen,
   PushPinIcon as PushPin,
@@ -14,7 +13,6 @@ import {
 } from "@/ui/icons";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IdeSettingsImportContent } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
@@ -49,6 +47,7 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
+import NewProjectContent from "./new-project-content";
 
 interface ProjectPickerProps {
   isOpen: boolean;
@@ -73,9 +72,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const [wslDistributions, setWslDistributions] = useState<WslDistribution[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [commandStep, setCommandStep] = useState<"picker" | "addRemote" | "importSettings">(
-    "picker",
-  );
+  const [commandStep, setCommandStep] = useState<"picker" | "newProject" | "addRemote">("picker");
   const [remoteFormData, setRemoteFormData] = useState<RemoteConnectionFormData>(
     createRemoteConnectionFormData,
   );
@@ -176,8 +173,8 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     await handleOpenFolder();
   };
 
-  const handleImportSettingsClick = () => {
-    setCommandStep("importSettings");
+  const handleNewProjectClick = () => {
+    setCommandStep("newProject");
   };
 
   const resetRemoteForm = () => {
@@ -419,14 +416,14 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
         title={
           commandStep === "addRemote"
             ? "New Remote Connection"
-            : commandStep === "importSettings"
-              ? "Import Settings"
+            : commandStep === "newProject"
+              ? "New Project"
               : "Open Project"
         }
         autoFocus={commandStep === "picker"}
       >
-        {commandStep === "importSettings" ? (
-          <IdeSettingsImportContent onClose={onClose} onBack={handleBackToPicker} />
+        {commandStep === "newProject" ? (
+          <NewProjectContent onBack={handleBackToPicker} onClose={onClose} />
         ) : commandStep === "picker" ? (
           <CommandHeader onClose={onClose}>
             <Search className="size-4 shrink-0 text-text-lighter" />
@@ -452,7 +449,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
           </CommandHeader>
         )}
 
-        {commandStep === "importSettings" ? null : commandStep === "picker" ? (
+        {commandStep === "newProject" ? null : commandStep === "picker" ? (
           <CommandList>
             {filteredRecentFolders.length > 0 ? (
               <div className="space-y-0.5">
@@ -620,15 +617,15 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
           </CommandList>
         )}
 
-        {commandStep === "importSettings" ? null : commandStep === "picker" ? (
+        {commandStep === "newProject" ? null : commandStep === "picker" ? (
           <CommandFooter>
             <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
               <FolderOpen />
               Open Folder
             </CommandFooterAction>
-            <CommandFooterAction onClick={handleImportSettingsClick}>
-              <Download />
-              Import Settings
+            <CommandFooterAction onClick={handleNewProjectClick}>
+              <Plus />
+              New Project
             </CommandFooterAction>
             <CommandFooterAction onClick={handleAddRemoteConnectionClick}>
               <Plus />

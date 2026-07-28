@@ -39,6 +39,21 @@ describe("workspace-scoped stores", () => {
     expect(useTerminalTabsStore.getState().activeTerminalId).toBe("terminal-a");
   });
 
+  it("expands each workspace root once without overriding a later collapse", () => {
+    workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-a", name: "A", path: "/a" });
+
+    useFileTreeStore.getState().expandRootOnce("/a");
+    expect(useFileTreeStore.getState().isExpanded("/a")).toBe(true);
+
+    useFileTreeStore.getState().setExpandedPaths(new Set());
+    useFileTreeStore.getState().expandRootOnce("/a");
+    expect(useFileTreeStore.getState().isExpanded("/a")).toBe(false);
+
+    workspaceRuntimeRegistry.activateWorkspace({ id: "workspace-b", name: "B", path: "/b" });
+    useFileTreeStore.getState().expandRootOnce("/b");
+    expect(useFileTreeStore.getState().isExpanded("/b")).toBe(true);
+  });
+
   it("keeps delayed buffer actions bound to their owning workspace panes", () => {
     const buffer: EditorContent = {
       id: "shared-buffer",

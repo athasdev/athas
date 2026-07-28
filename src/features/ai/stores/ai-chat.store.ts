@@ -8,6 +8,7 @@ import { normalizeMessageFollowUpActions } from "@/features/ai/lib/follow-up-act
 import { canUseProviderWithoutApiKey } from "@/features/ai/lib/provider-access";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useGitStore } from "@/features/git/stores/git.store";
 import { fuzzyScore } from "@/features/global-search/utils/fuzzy-search";
 import {
   getProviderApiToken,
@@ -22,6 +23,7 @@ import {
   initChatDatabase,
   loadAllChatsFromDb,
   loadChatFromDb,
+  saveChatMetadataToDb,
   saveChatToDb,
 } from "@/features/ai/services/ai-chat-history-service";
 import { useAuthStore } from "@/features/window/stores/auth.store";
@@ -31,6 +33,19 @@ import type { AIChatActions, AIChatState } from "../types/ai-chat-store.types";
 const getCurrentWorkspacePath = () => useProjectStore.getState().rootFolderPath || null;
 const createChatId = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+function getNewChatMetadata(agentId: AgentType) {
+  const settings = useSettingsStore.getState().settings;
+  const branch = useGitStore.getState().gitStatus?.branch ?? null;
+
+  return {
+    providerId: agentId === "custom" ? settings.aiProviderId : null,
+    modelId: agentId === "custom" ? settings.aiModelId : null,
+    branch,
+    isPinned: false,
+    archivedAt: null,
+  };
+}
 
 async function buildProviderApiKeyMap(
   subscription: ReturnType<typeof useAuthStore.getState>["subscription"],
@@ -290,6 +305,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             agentId: chatAgentId,
             acpSessionId: null,
             workspacePath: getCurrentWorkspacePath(),
+            ...getNewChatMetadata(chatAgentId),
           };
           set((state) => {
             state.chats.unshift(newChat);
@@ -334,6 +350,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             agentId: chatAgentId,
             acpSessionId: null,
             workspacePath: getCurrentWorkspacePath(),
+            ...getNewChatMetadata(chatAgentId),
           };
 
           set((state) => {
@@ -368,7 +385,7 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }
 
           const matchingChat = state.chats.find(
-            (c) => c.agentId === agentId && isChatInWorkspace(c, workspacePath),
+            (c) => c.agentId === agentId && !c.archivedAt && isChatInWorkspace(c, workspacePath),
           );
           if (matchingChat) {
             set((state) => {
@@ -378,7 +395,9 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             return matchingChat.id;
           }
 
-          const fallback = state.chats.find((chat) => isChatInWorkspace(chat, workspacePath));
+          const fallback = state.chats.find(
+            (chat) => !chat.archivedAt && isChatInWorkspace(chat, workspacePath),
+          );
           if (fallback) {
             set((state) => {
               state.currentChatId = fallback.id;
@@ -417,8 +436,8 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
             // If we deleted the current chat, switch to the most recent one
             if (chatId === state.currentChatId) {
               const workspacePath = getCurrentWorkspacePath();
-              const workspaceChats = state.chats.filter((chat) =>
-                isChatInWorkspace(chat, workspacePath),
+              const workspaceChats = state.chats.filter(
+                (chat) => !chat.archivedAt && isChatInWorkspace(chat, workspacePath),
               );
               if (workspaceChats.length > 0) {
                 const mostRecent = [...workspaceChats].sort(
@@ -455,6 +474,51 @@ export const useAIChatStore = create<AIChatState & AIChatActions>()(
           }
           // Save to SQLite
           get().syncChatToDatabase(chatId);
+        },
+
+        setChatPinned: (chatId, isPinned) => {
+          set((state) => {
+            const chat = state.chats.find((candidate) => candidate.id === chatId);
+            if (chat) {
+              chat.isPinned = isPinned;
+            }
+          });
+          const chat = get().chats.find((candidate) => candidate.id === chatId);
+          if (chat) {
+            void saveChatMetadataToDb(chat);
+          }
+        },
+
+        setChatArchived: (chatId, isArchived) => {
+          set((state) => {
+            const chat = state.chats.find((candidate) => candidate.id === chatId);
+            if (!chat) return;
+
+            chat.archivedAt = isArchived ? new Date() : null;
+            if (isArchived) {
+              chat.isPinned = false;
+              state.activeAgentChatIds = state.activeAgentChatIds.filter((id) => id !== chatId);
+            }
+
+            if (isArchived && state.currentChatId === chatId) {
+              const workspacePath = getCurrentWorkspacePath();
+              const nextChat = state.chats
+                .filter(
+                  (candidate) =>
+                    candidate.id !== chatId &&
+                    !candidate.archivedAt &&
+                    isChatInWorkspace(candidate, workspacePath),
+                )
+                .sort(
+                  (left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime(),
+                )[0];
+              state.currentChatId = nextChat?.id ?? null;
+            }
+          });
+          const chat = get().chats.find((candidate) => candidate.id === chatId);
+          if (chat) {
+            void saveChatMetadataToDb(chat);
+          }
         },
 
         setChatAcpSessionId: (chatId, sessionId) => {

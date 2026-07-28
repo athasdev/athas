@@ -76,6 +76,7 @@ fn main() {
          clipboard_clear,
          clipboard_paste,
          // Git commands
+         git_clone,
          git_status,
          git_discover_repo,
          git_add,
@@ -160,6 +161,7 @@ fn main() {
          // Chat history commands
          init_chat_database,
          save_chat,
+         update_chat_metadata,
          load_all_chats,
          load_chat,
          delete_chat,
