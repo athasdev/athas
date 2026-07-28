@@ -3,6 +3,7 @@ import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
 import type {
   DiffSearchHighlight,
@@ -147,9 +148,9 @@ const TextDiffViewer = memo(
 
     if (diff.lines.length === 0) {
       return (
-        <div className="flex items-center justify-center py-8 text-text-lighter ui-text-sm">
-          No changes in this file
-        </div>
+        <Empty density="compact" className="min-h-0 flex-none rounded-none py-8">
+          <EmptyDescription>No changes in this file</EmptyDescription>
+        </Empty>
       );
     }
 

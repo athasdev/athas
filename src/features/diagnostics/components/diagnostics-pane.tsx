@@ -33,6 +33,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyContent, EmptyDescription } from "@/ui/empty";
 import {
   PaneChip,
   PaneIconButton,
@@ -1027,24 +1028,26 @@ const DiagnosticsPane = ({
 
         <ScrollArea className="min-h-0 flex-1" contentClassName="px-1.5 py-1.5">
           {diagnostics.length === 0 ? (
-            <div className="ui-text-sm flex h-full items-center justify-center text-text-lighter">
-              No problems detected
-            </div>
+            <Empty density="compact" className="h-full rounded-none">
+              <EmptyDescription>No problems detected</EmptyDescription>
+            </Empty>
           ) : filteredDiagnostics.length === 0 ? (
-            <div className="ui-text-sm flex h-full flex-col items-center justify-center gap-1 text-text-lighter">
-              <p>No problems match the current filters</p>
+            <Empty density="compact" className="h-full rounded-none">
+              <EmptyDescription>No problems match the current filters</EmptyDescription>
               {hasFilters && (
-                <Button
-                  type="button"
-                  onClick={resetFilters}
-                  variant="ghost"
-                  className={CONTROL_PILL_BASE}
-                  size="xs"
-                >
-                  Reset filters
-                </Button>
+                <EmptyContent>
+                  <Button
+                    type="button"
+                    onClick={resetFilters}
+                    variant="ghost"
+                    className={CONTROL_PILL_BASE}
+                    size="xs"
+                  >
+                    Reset filters
+                  </Button>
+                </EmptyContent>
               )}
-            </div>
+            </Empty>
           ) : (
             <div className="space-y-1.5">
               {groupedDiagnostics.map((group) => {

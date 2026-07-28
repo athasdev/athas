@@ -1,6 +1,7 @@
 import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import { memo } from "react";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
@@ -92,15 +93,24 @@ export const FileDiffView = memo(
           <div className="bg-primary-bg">
             <div className="max-h-[540px] overflow-auto">
               {isLoadingPatch ? (
-                <div className="flex items-center justify-center py-6">
-                  <Spinner label="Loading file diff" showLabel compact />
-                </div>
+                <Empty density="compact" className="min-h-0 flex-none rounded-none py-6">
+                  <EmptyDescription>
+                    <Spinner label="Loading file diff" showLabel compact />
+                  </EmptyDescription>
+                </Empty>
               ) : patchError ? (
-                <div className="ui-text-sm px-3 py-4 text-center text-error">{patchError}</div>
+                <Empty
+                  density="compact"
+                  className="min-h-0 flex-none rounded-none px-3 py-4"
+                  tone="error"
+                  role="alert"
+                >
+                  <EmptyDescription>{patchError}</EmptyDescription>
+                </Empty>
               ) : fileLines.length === 0 ? (
-                <div className="ui-text-sm px-3 py-4 text-center text-text-lighter">
-                  No diff hunks available for this file.
-                </div>
+                <Empty density="compact" className="min-h-0 flex-none rounded-none px-3 py-4">
+                  <EmptyDescription>No diff hunks available for this file.</EmptyDescription>
+                </Empty>
               ) : (
                 fileLines.map((line, index) => (
                   <DiffLineDisplay

@@ -6,6 +6,7 @@ import {
 } from "@/ui/icons";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { cn } from "@/utils/cn";
 import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff.types";
 import { getFileStatus, getImgSrc } from "../../utils/git-diff-helpers";
@@ -36,7 +37,9 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
           style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
         />
       ) : (
-        <div className="text-text-lighter ui-text-sm italic">No image</div>
+        <Empty density="compact" className="bg-transparent p-0">
+          <EmptyDescription className="italic">No image</EmptyDescription>
+        </Empty>
       )}
     </div>
   </div>

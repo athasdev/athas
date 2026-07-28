@@ -8,6 +8,7 @@ import {
 } from "@/ui/icons";
 import { useCallback, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
@@ -98,15 +99,23 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       {/* Content */}
       <ScrollArea className="flex-1">
         {isLoading ? (
-          <div className="flex items-center gap-2 px-3 py-4 text-text-lighter">
-            <Spinner label="Finding references" showLabel compact />
-          </div>
+          <Empty
+            density="compact"
+            className="min-h-0 flex-none items-start rounded-none px-3 py-4 text-left"
+          >
+            <EmptyDescription>
+              <Spinner label="Finding references" showLabel compact />
+            </EmptyDescription>
+          </Empty>
         ) : references.length === 0 ? (
-          <div className="px-3 py-4 text-text-lighter">
-            <span className="font-sans ui-text-sm">
+          <Empty
+            density="compact"
+            className="min-h-0 flex-none items-start rounded-none px-3 py-4 text-left"
+          >
+            <EmptyDescription>
               {query ? "No references found" : "Use Shift+F12 to find references"}
-            </span>
-          </div>
+            </EmptyDescription>
+          </Empty>
         ) : (
           grouped.map((group) => {
             const isCollapsed = collapsedGroups[group.filePath];

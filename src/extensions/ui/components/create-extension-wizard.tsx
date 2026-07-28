@@ -14,6 +14,7 @@ import Badge from "@/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useProFeature } from "../hooks/use-pro-feature";
@@ -826,12 +827,14 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       )}
 
       {step === "generating" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <Spinner label="Generating" showLabel />
-          <p className="min-h-4 text-center text-text-lighter ui-text-sm">
+        <Empty className="rounded-none" role="status" aria-live="polite">
+          <EmptyDescription>
+            <Spinner label="Generating" showLabel role={undefined} />
+          </EmptyDescription>
+          <EmptyDescription className="min-h-4">
             {GENERATING_MESSAGES[generationMessageIndex]}
-          </p>
-        </div>
+          </EmptyDescription>
+        </Empty>
       )}
 
       {step === "done" && (

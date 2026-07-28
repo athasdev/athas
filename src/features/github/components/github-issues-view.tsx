@@ -311,9 +311,10 @@ const GitHubIssuesView = memo(
               tone="error"
             />
           ) : isLoading && deferredIssues.length === 0 ? (
-            <div className="flex items-center justify-center p-4">
-              <Spinner label="Loading issues" showLabel compact />
-            </div>
+            <GitHubSidebarState
+              icon={<Spinner label="Loading issues" compact />}
+              title="Loading issues"
+            />
           ) : deferredIssues.length === 0 ? (
             <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No issues" />
           ) : filteredIssues.length === 0 ? (

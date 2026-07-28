@@ -12,6 +12,7 @@ import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
 import { ViewerHeader } from "@/features/viewer/components/viewer-header";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
+import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/viewer/image/editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/viewer/image/editor/hooks/use-image-operations";
@@ -23,7 +24,6 @@ import {
 import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
 import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
-import { Spinner } from "@/ui/spinner";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
@@ -308,9 +308,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             draggable={false}
           />
         ) : (
-          <div className="flex items-center justify-center p-8 ui-text-sm text-text-lighter">
-            <Spinner label="Loading image" showLabel />
-          </div>
+          <ViewerLoadingState label="Loading image" className="p-8" />
         )}
       </div>
 

@@ -4,7 +4,10 @@ import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-r
 import type { MenuItem } from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { Avatar } from "@/ui/avatar";
-import { SidebarSearchFilterRow } from "@/ui/sidebar";
+import {
+  SidebarSearchFilterRow,
+  SidebarSectionEmptyState,
+} from "@/ui/sidebar";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { AuthUser } from "@/features/window/services/auth-api";
 import { formatRelativeDate } from "@/utils/date";
@@ -331,11 +334,11 @@ const GitCommitHistory = ({
               ref={scrollContainerRef}
             >
               {!hasHistoryRows ? (
-                <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">No commits</div>
+                <SidebarSectionEmptyState>No commits</SidebarSectionEmptyState>
               ) : filteredCommits.length === 0 ? (
-                <div className="ui-text-sm px-2.5 py-2 text-text-lighter italic">
+                <SidebarSectionEmptyState>
                   No commits match the current filters
-                </div>
+                </SidebarSectionEmptyState>
               ) : (
                 <>
                   {filteredCommits.map((commit) => (

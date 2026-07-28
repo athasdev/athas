@@ -15,6 +15,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { cn } from "@/utils/cn";
 import { useCellCopy } from "../hooks/use-cell-copy";
@@ -390,9 +391,9 @@ export default function DataGrid({
 
   if (queryResult.rows.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <span className="font-sans ui-text-sm text-text-lighter">No data</span>
-      </div>
+      <Empty density="compact" className="rounded-none">
+        <EmptyDescription>No data</EmptyDescription>
+      </Empty>
     );
   }
 

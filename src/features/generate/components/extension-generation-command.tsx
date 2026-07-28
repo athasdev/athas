@@ -34,6 +34,7 @@ import Command, {
   CommandItemRow,
   CommandList,
 } from "@/ui/command";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
 import { matchesSearchQuery } from "@/utils/search-match";
@@ -577,12 +578,18 @@ export function ExtensionGenerationCommand() {
               Generating {selectedOption.label.toLowerCase()}
             </div>
           </CommandHeader>
-          <div className="flex min-h-40 flex-col items-center justify-center gap-2">
-            <Spinner label={GENERATING_MESSAGES[generationMessageIndex]} showLabel />
-            <div className="font-sans ui-text-base text-text-lighter">
+          <Empty className="min-h-40 rounded-none" role="status" aria-live="polite">
+            <EmptyDescription>
+              <Spinner
+                label={GENERATING_MESSAGES[generationMessageIndex]}
+                showLabel
+                role={undefined}
+              />
+            </EmptyDescription>
+            <EmptyDescription className="ui-text-base">
               {selectedIntent?.label ?? selectedOption.label}
-            </div>
-          </div>
+            </EmptyDescription>
+          </Empty>
         </>
       ) : step === "installed" ? (
         <>

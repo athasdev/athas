@@ -15,6 +15,7 @@ import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.
 import { Card } from "@/ui/card";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import type { SearchResult } from "../types/search.types";
@@ -337,9 +338,12 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
               );
             })
           ) : (
-            <div className="font-sans ui-text-base px-3 py-2 text-text-lighter">
-              No matching settings
-            </div>
+            <Empty
+              density="compact"
+              className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left"
+            >
+              <EmptyDescription>No matching settings</EmptyDescription>
+            </Empty>
           )}
         </div>
       </Dropdown>

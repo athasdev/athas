@@ -9,6 +9,7 @@ import { useDebuggerStore } from "../stores/debugger.store";
 import type { DebugRequestContext } from "../types/debugger.types";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
+import { DebugEmptyState } from "./debugger-panels";
 
 interface DebugWatchPanelProps {
   activeSessionId?: string;
@@ -118,9 +119,7 @@ export function DebugWatchPanel({
       </div>
 
       {watchExpressions.length === 0 ? (
-        <div className="px-1 py-3 text-center text-text-lighter ui-text-sm">
-          Add expressions to inspect while paused.
-        </div>
+        <DebugEmptyState>Add expressions to inspect while paused.</DebugEmptyState>
       ) : (
         <div className="space-y-1">
           {watchExpressions.map((watchExpression) => {

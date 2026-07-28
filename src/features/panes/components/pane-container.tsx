@@ -29,6 +29,7 @@ import {
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import Badge from "@/ui/badge";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -284,14 +285,14 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
 
 function WebViewerDisabledState() {
   return (
-    <div className="flex size-full items-center justify-center bg-primary-bg px-6">
-      <div className="max-w-sm text-center">
-        <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
-        <div className="mt-1 ui-text-sm text-text-lighter">
+    <Empty className="size-full rounded-none bg-primary-bg px-6">
+      <EmptyHeader>
+        <EmptyTitle>Web Viewer is disabled</EmptyTitle>
+        <EmptyDescription>
           Enable it in Settings &gt; Features to open URLs in embedded editor tabs.
-        </div>
-      </div>
-    </div>
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -987,9 +988,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             const connectionId = buffer.connectionId;
             if (!connectionId) {
               return (
-                <div className="flex h-full items-center justify-center text-text-lighter ui-text-sm">
-                  Missing database connection
-                </div>
+                <Empty className="h-full rounded-none" tone="error" role="alert">
+                  <EmptyDescription>Missing database connection</EmptyDescription>
+                </Empty>
               );
             }
             viewerProps = { connectionId };

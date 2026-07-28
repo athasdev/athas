@@ -21,6 +21,7 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import type { SettingsTab } from "@/features/window/stores/ui-state.store";
 import { useProFeature } from "@/extensions/ui/hooks/use-pro-feature";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
@@ -162,9 +163,9 @@ export const SettingsVerticalTabs = ({
                 );
               })
             ) : (
-              <div className="font-sans ui-text-base p-2 text-center text-text-lighter">
-                No matching settings
-              </div>
+              <Empty density="compact" className="min-h-0 flex-none rounded-none p-2">
+                <EmptyDescription>No matching settings</EmptyDescription>
+              </Empty>
             )}
           </TabsList>
         </ScrollArea>

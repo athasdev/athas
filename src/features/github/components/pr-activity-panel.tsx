@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/ui/button";
-import { Spinner } from "@/ui/spinner";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
 import { CommitItem } from "./commit-item";
 import GitHubMarkdown from "./github-markdown";
+import { GitHubViewerLoadingState, GitHubViewerState } from "./github-viewer-shell";
 
 interface ActivityItemComment {
   id: string;
@@ -104,27 +103,17 @@ export function PRActivityPanel({
 
       <div className="space-y-2">
         {isLoadingContent && activityItems.length === 0 ? (
-          <div className="flex items-center justify-center p-8">
-            <Spinner label="Loading activity" showLabel />
-          </div>
+          <GitHubViewerLoadingState label="Loading activity" className="min-h-0" />
         ) : contentError ? (
-          <div className="flex items-center justify-center p-8 text-center">
-            <div>
-              <p className="font-sans ui-text-sm text-error">{contentError}</p>
-              <Button
-                onClick={onRetry}
-                variant="default"
-                className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
-                size="xs"
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
+          <GitHubViewerState
+            description={contentError}
+            actionLabel="Retry"
+            onAction={onRetry}
+            tone="error"
+            className="min-h-0"
+          />
         ) : activityItems.length === 0 ? (
-          <div className="flex items-center justify-center p-8">
-            <p className="font-sans ui-text-sm text-text-lighter">No activity</p>
-          </div>
+          <GitHubViewerState description="No activity" className="min-h-0" />
         ) : (
           <div className="w-full space-y-1">
             {visibleActivityItems.map((item) =>

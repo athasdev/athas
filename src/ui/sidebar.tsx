@@ -22,6 +22,14 @@ import { Button, type ButtonProps } from "@/ui/button";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
 import { SearchField } from "@/ui/search";
 import Tooltip from "@/ui/tooltip";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/ui/empty";
 import { cn } from "@/utils/cn";
 
 export function SidebarPanel({
@@ -468,6 +476,25 @@ export function SidebarSectionLabel({
   );
 }
 
+export function SidebarSectionEmptyState({
+  children,
+  className,
+  ...props
+}: Omit<ComponentProps<typeof Empty>, "density"> & {
+  children: ReactNode;
+}) {
+  return (
+    <Empty
+      data-sidebar-state="section-empty"
+      density="compact"
+      className={cn("min-h-0 flex-none items-start rounded-none px-2 py-1.5 text-left", className)}
+      {...props}
+    >
+      <EmptyDescription className="leading-[1.35]">{children}</EmptyDescription>
+    </Empty>
+  );
+}
+
 export interface SidebarSectionSwitcherItem {
   id: string;
   label: string;
@@ -715,15 +742,14 @@ export function SidebarEmptyState({
   children: ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "font-sans ui-text-sm flex min-h-24 select-none items-center justify-center px-3 py-6 text-center text-text-lighter",
-        className,
-      )}
+    <Empty
+      data-sidebar-state="empty"
+      density="compact"
+      className={cn("min-h-24 select-none rounded-none px-3 py-6", className)}
       {...props}
     >
-      {children}
-    </div>
+      <EmptyDescription className="leading-[1.35]">{children}</EmptyDescription>
+    </Empty>
   );
 }
 
@@ -749,52 +775,38 @@ export function SidebarEmptyActionState({
   actionClassName?: string;
   tone?: "neutral" | "error" | "success";
 }) {
+  const emptyTone = tone === "neutral" ? "neutral" : tone;
+
   return (
-    <div
-      className={cn(
-        "font-sans flex min-h-24 select-none flex-col items-center justify-center gap-1.5 px-3 py-6 text-center text-text-lighter",
-        className,
-      )}
+    <Empty
+      data-sidebar-state="empty-action"
+      density="compact"
+      tone={emptyTone}
+      className={cn("min-h-24 select-none rounded-none px-3 py-6", className)}
       {...props}
     >
-      {icon ? (
-        <span
-          className={cn(
-            "mb-0.5 flex size-7 items-center justify-center text-text-lighter",
-            tone === "error" && "text-error",
-            tone === "success" && "text-success",
-          )}
-        >
-          {icon}
-        </span>
-      ) : null}
-      <div
-        className={cn(
-          "ui-text-sm leading-[1.35]",
-          tone === "error" && "text-error",
-          tone === "success" && "text-success",
-        )}
-      >
-        {message}
-      </div>
-      {description ? (
-        <div className="ui-text-sm max-w-[24ch] leading-[1.35] text-text-lighter">
-          {description}
-        </div>
-      ) : null}
+      {icon ? <EmptyMedia className="mb-0 size-7 text-text-lighter">{icon}</EmptyMedia> : null}
+      <EmptyHeader className="gap-1">
+        <EmptyTitle className="ui-text-sm font-normal leading-[1.35]">{message}</EmptyTitle>
+        {description ? (
+          <EmptyDescription className="max-w-[24ch] leading-[1.35]">{description}</EmptyDescription>
+        ) : null}
+      </EmptyHeader>
       {actionLabel && onAction ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          className={cn("ui-text-sm h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
-          disabled={actionDisabled}
-          onClick={onAction}
-        >
-          {actionLabel}
-        </Button>
+        <EmptyContent className="gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className={cn("ui-text-sm h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
+            disabled={actionDisabled}
+            onClick={onAction}
+          >
+            {actionLabel}
+          </Button>
+        </EmptyContent>
       ) : null}
       {children}
-    </div>
+    </Empty>
   );
 }

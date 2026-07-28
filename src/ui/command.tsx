@@ -707,12 +707,12 @@ export const CommandFooterAction = (props: CommandFooterActionProps) => (
 
 CommandFooterAction.displayName = "CommandFooterAction";
 
-interface CommandEmptyProps {
-  children: React.ReactNode;
-}
-
-export const CommandEmpty = ({ children }: CommandEmptyProps) => (
-  <div className="ui-text-base p-3 text-center leading-[1.35] text-text-lighter">{children}</div>
+export const CommandEmpty = ({ className, ...props }: React.ComponentProps<"div">) => (
+  <div
+    data-slot="command-empty"
+    className={cn("ui-text-base p-3 text-center leading-[1.35] text-text-lighter", className)}
+    {...props}
+  />
 );
 
 export default Command;

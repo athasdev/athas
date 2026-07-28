@@ -1,11 +1,53 @@
 import { WarningCircleIcon as AlertCircle } from "@/ui/icons";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/ui/empty";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Spinner } from "@/ui/spinner";
 import { GITHUB_ACCOUNT_API_BASE, GITHUB_CONNECTION_URL } from "../services/github-token-service";
 import { useGitHubStore } from "../stores/github.store";
+
+function GitHubAuthState({
+  title,
+  description,
+  error,
+  children,
+  tone = "neutral",
+}: {
+  title: string;
+  description: string;
+  error?: string | null;
+  children?: ReactNode;
+  tone?: "neutral" | "error";
+}) {
+  return (
+    <Empty
+      density="compact"
+      tone={tone}
+      className="rounded-none p-4"
+      role={tone === "error" ? "alert" : undefined}
+    >
+      <EmptyHeader>
+        <EmptyMedia>
+          <AlertCircle />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+        {error ? <EmptyDescription>{error}</EmptyDescription> : null}
+      </EmptyHeader>
+      {children ? <EmptyContent className="flex-row">{children}</EmptyContent> : null}
+    </Empty>
+  );
+}
 
 export function GitHubAuthStatusMessage() {
   const githubAccountStatus = useGitHubStore((s) => s.githubAccountStatus);
@@ -28,101 +70,62 @@ export function GitHubAuthStatusMessage() {
     (isAthasAuthenticated && githubAccountStatus === "unknown")
   ) {
     return (
-      <div className="flex flex-1 items-center justify-center p-4">
-        <Spinner label="Checking GitHub account" showLabel compact />
-      </div>
+      <Empty density="compact" className="rounded-none p-4">
+        <EmptyDescription>
+          <Spinner label="Checking GitHub account" showLabel compact />
+        </EmptyDescription>
+      </Empty>
     );
   }
 
   if (authError && githubAccountStatus === "unknown") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-        <AlertCircle className="mb-2 text-text-lighter" />
-        <p className="ui-text-sm text-text">GitHub is temporarily unavailable</p>
-        <p className="ui-text-sm mt-1 max-w-64 text-balance text-text-lighter">{authError}</p>
+      <GitHubAuthState
+        title="GitHub is temporarily unavailable"
+        description={authError}
+        tone="error"
+      >
         <Button
           onClick={retry}
           variant="ghost"
-          className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
           aria-label="Retry GitHub authentication check"
           size="xs"
         >
           Retry
         </Button>
-      </div>
+      </GitHubAuthState>
     );
   }
 
   if (!isAthasAuthenticated || githubAccountStatus === "notSignedIn") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-        <AlertCircle className="mb-2 text-text-lighter" />
-        <p className="ui-text-sm text-text">GitHub account required</p>
-        <p className="ui-text-sm mt-1 text-text-lighter">
-          Sign in to Athas to use your connected GitHub account.
-        </p>
-        {authError ? (
-          <p className="ui-text-sm mt-2 max-w-64 text-balance text-text-lighter">{authError}</p>
-        ) : null}
+      <GitHubAuthState
+        title="GitHub account required"
+        description="Sign in to Athas to use your connected GitHub account."
+        error={authError}
+      >
         <Button
           onClick={() => void signIn().catch(() => undefined)}
           variant="ghost"
           size="xs"
           disabled={isSigningIn}
-          className="mt-2 h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
           aria-label="Sign in to Athas"
         >
           {isSigningIn ? "Signing in..." : "Sign in"}
         </Button>
-      </div>
+      </GitHubAuthState>
     );
   }
 
   if (githubAccountStatus === "notConnected") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-        <AlertCircle className="mb-2 text-text-lighter" />
-        <p className="ui-text-sm text-text">GitHub not connected</p>
-        <p className="ui-text-sm mt-1 text-text-lighter">
-          Connect your account to use PRs, Issues, Actions, and Releases.
-        </p>
-        {authError ? (
-          <p className="ui-text-sm mt-2 max-w-64 text-balance text-text-lighter">{authError}</p>
-        ) : null}
-        <div className="mt-2 flex items-center gap-2">
-          <Button
-            onClick={openGitHubConnection}
-            variant="ghost"
-            className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-            aria-label="Connect GitHub"
-            size="xs"
-          >
-            Connect GitHub
-          </Button>
-          <span className="text-border">|</span>
-          <Button
-            onClick={retry}
-            variant="ghost"
-            className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
-            aria-label="Retry authentication check"
-            size="xs"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-      <AlertCircle className="mb-2 text-text-lighter" />
-      <p className="ui-text-sm text-text">GitHub not authenticated</p>
-      <p className="ui-text-sm mt-1 text-text-lighter">Connect GitHub, then retry this view.</p>
-      {authError ? (
-        <p className="ui-text-sm mt-2 max-w-64 text-balance text-text-lighter">{authError}</p>
-      ) : null}
-      <div className="mt-2 flex items-center gap-2">
+      <GitHubAuthState
+        title="GitHub not connected"
+        description="Connect your account to use PRs, Issues, Actions, and Releases."
+        error={authError}
+      >
         <Button
           onClick={openGitHubConnection}
           variant="ghost"
@@ -132,7 +135,6 @@ export function GitHubAuthStatusMessage() {
         >
           Connect GitHub
         </Button>
-        <span className="text-border">|</span>
         <Button
           onClick={retry}
           variant="ghost"
@@ -142,7 +144,34 @@ export function GitHubAuthStatusMessage() {
         >
           Retry
         </Button>
-      </div>
-    </div>
+      </GitHubAuthState>
+    );
+  }
+
+  return (
+    <GitHubAuthState
+      title="GitHub not authenticated"
+      description="Connect GitHub, then retry this view."
+      error={authError}
+    >
+      <Button
+        onClick={openGitHubConnection}
+        variant="ghost"
+        className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+        aria-label="Connect GitHub"
+        size="xs"
+      >
+        Connect GitHub
+      </Button>
+      <Button
+        onClick={retry}
+        variant="ghost"
+        className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+        aria-label="Retry authentication check"
+        size="xs"
+      >
+        Retry
+      </Button>
+    </GitHubAuthState>
   );
 }

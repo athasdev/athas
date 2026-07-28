@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { LockIcon as Lock } from "@/ui/icons";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
 import { useProFeature } from "../hooks/use-pro-feature";
 import { ProBadge } from "./pro-badge";
 
@@ -20,17 +21,17 @@ export function ProGate({ children, fallback }: ProGateProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">
-      <div className="flex size-10 items-center justify-center rounded-full bg-accent/10">
-        <Lock className="size-5 text-accent" />
-      </div>
-      <div>
-        <div className="flex items-center justify-center gap-2">
-          <p className="font-medium ui-text-sm text-text">Pro Feature</p>
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon" className="size-10 rounded-full bg-accent/10 text-accent">
+          <Lock className="size-5" />
+        </EmptyMedia>
+        <EmptyTitle className="flex items-center gap-2">
+          Pro Feature
           <ProBadge />
-        </div>
-        <p className="mt-1 text-text-lighter ui-text-sm">Upgrade to Pro to unlock this feature.</p>
-      </div>
-    </div>
+        </EmptyTitle>
+        <EmptyDescription>Upgrade to Pro to unlock this feature.</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }

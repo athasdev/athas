@@ -27,6 +27,7 @@ import {
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   Combobox,
   ComboboxContent,
@@ -52,7 +53,6 @@ const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-text-lighter";
 const editorMenuRowClass =
   "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-hover";
 
-const editorMenuMutedRowClass = "flex items-center gap-2 rounded-lg px-2 py-2 text-text-lighter";
 function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
   return getLanguageDisplayName(languageId);
@@ -658,25 +658,42 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                 )}
               </div>
             ) : lspStatus.status === "connecting" ? (
-              <div className={editorMenuMutedRowClass}>
-                <Spinner label="Connecting" showLabel compact />
-              </div>
+              <Empty
+                density="compact"
+                className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left"
+              >
+                <EmptyDescription>
+                  <Spinner label="Connecting" showLabel compact />
+                </EmptyDescription>
+              </Empty>
             ) : lspStatus.status === "error" ? (
-              <div className="space-y-2 px-1 py-1">
-                <div className="flex items-center gap-2 text-error">
-                  <ZapOff weight="duotone" />
-                  <span className="ui-text-sm">Language server issue</span>
-                </div>
-                <div className="px-0.5 ui-text-sm text-text-lighter">
-                  Check notifications for the latest error. Reinstall the affected language tools
-                  from Extensions if the server binary is missing or failed to launch.
-                </div>
-              </div>
+              <Empty
+                density="compact"
+                tone="error"
+                role="alert"
+                className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left"
+              >
+                <EmptyHeader className="items-start">
+                  <EmptyTitle className="flex items-center gap-2">
+                    <ZapOff weight="duotone" />
+                    Language server issue
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    Check notifications for the latest error. Reinstall the affected language tools
+                    from Extensions if the server binary is missing or failed to launch.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
-              <div className={editorMenuMutedRowClass}>
-                <ZapOff className="opacity-50" weight="duotone" />
-                <span className="ui-text-sm">No active language servers</span>
-              </div>
+              <Empty
+                density="compact"
+                className="min-h-0 flex-none items-start rounded-lg px-2 py-2 text-left"
+              >
+                <EmptyDescription className="flex items-center gap-2">
+                  <ZapOff className="opacity-50" weight="duotone" />
+                  No active language servers
+                </EmptyDescription>
+              </Empty>
             )}
           </div>
         </Dropdown>

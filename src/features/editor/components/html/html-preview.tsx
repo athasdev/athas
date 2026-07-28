@@ -4,6 +4,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById, getBufferByPath } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { hasTextContent } from "@/features/panes/types/pane-content.types";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { buildHtmlPreviewDocument } from "./html-preview-document";
 
 export function HtmlPreview() {
@@ -33,9 +34,9 @@ export function HtmlPreview() {
 
   if (!hasSourceBuffer) {
     return (
-      <div className="flex h-full items-center justify-center text-text-lighter">
-        No active buffer
-      </div>
+      <Empty className="h-full rounded-none">
+        <EmptyDescription>No active buffer</EmptyDescription>
+      </Empty>
     );
   }
 

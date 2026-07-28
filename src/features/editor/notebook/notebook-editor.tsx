@@ -38,6 +38,7 @@ import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyMedia } from "@/ui/empty";
 import { cn } from "@/utils/cn";
 import { HighlightedCode } from "./highlighted-code";
 import { NotebookCodeCellEditor } from "./notebook-code-cell-editor";
@@ -769,14 +770,19 @@ export function NotebookEditor() {
 
   if (!parsed.ok) {
     return (
-      <div
+      <Empty
         data-notebook-editor
-        className="flex h-full items-center justify-center gap-2 overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text-lighter"
+        density="compact"
+        tone="error"
+        role="alert"
+        className="h-full overflow-auto rounded-none bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))]"
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
-        <Warning weight="duotone" />
-        <span>{parsed.message}</span>
-      </div>
+        <EmptyMedia>
+          <Warning weight="duotone" />
+        </EmptyMedia>
+        <EmptyDescription>{parsed.message}</EmptyDescription>
+      </Empty>
     );
   }
 

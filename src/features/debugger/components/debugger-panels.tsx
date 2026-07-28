@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -82,7 +83,9 @@ export function DebugSection({
 
 export function DebugEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="font-sans px-3 py-6 text-center text-text-lighter ui-text-sm">{children}</div>
+    <Empty density="compact" className="min-h-0 flex-none rounded-none px-3 py-6">
+      <EmptyDescription>{children}</EmptyDescription>
+    </Empty>
   );
 }
 

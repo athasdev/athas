@@ -14,6 +14,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ import {
   GitHubViewerHeader,
   GitHubViewerLoadingState,
   GitHubViewerShell,
+  GitHubViewerState,
 } from "./github-viewer-shell";
 
 interface GitHubActionViewerProps {
@@ -614,19 +616,12 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
       }
     >
       {error ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <p className="font-sans ui-text-sm text-error">{error}</p>
-            <Button
-              onClick={() => void fetchWorkflowRun(true)}
-              variant="default"
-              size="xs"
-              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
-            >
-              Retry
-            </Button>
-          </div>
-        </div>
+        <GitHubViewerState
+          description={error}
+          actionLabel="Retry"
+          onAction={() => void fetchWorkflowRun(true)}
+          tone="error"
+        />
       ) : details ? (
         <div className="space-y-4">
           <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border/70 border-b pb-3">
@@ -730,9 +725,12 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                             </Button>
                           ))
                         ) : (
-                          <div className="px-2 py-2 ui-text-sm text-text-lighter">
-                            No steps reported.
-                          </div>
+                          <Empty
+                            density="compact"
+                            className="min-h-0 flex-none items-start rounded-none px-2 py-2 text-left"
+                          >
+                            <EmptyDescription>No steps reported.</EmptyDescription>
+                          </Empty>
                         )}
                       </ScrollArea>
 
@@ -842,13 +840,19 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               ))}
                             </pre>
                           ) : hasLogSearchQuery && selectedStepLogs ? (
-                            <p className="ui-text-sm text-text-lighter">
-                              No log lines match this search.
-                            </p>
+                            <Empty
+                              density="compact"
+                              className="min-h-0 items-start rounded-none p-0 text-left"
+                            >
+                              <EmptyDescription>No log lines match this search.</EmptyDescription>
+                            </Empty>
                           ) : (
-                            <p className="ui-text-sm text-text-lighter">
-                              No logs available for this step.
-                            </p>
+                            <Empty
+                              density="compact"
+                              className="min-h-0 items-start rounded-none p-0 text-left"
+                            >
+                              <EmptyDescription>No logs available for this step.</EmptyDescription>
+                            </Empty>
                           )}
                         </div>
                       </div>

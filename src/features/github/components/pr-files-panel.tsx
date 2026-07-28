@@ -11,10 +11,10 @@ import {
 } from "@/features/file-explorer/components/file-navigator-sidebar";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
 import type { FileStatusFilter } from "../types/github-pr-viewer.types";
 import { FileDiffView } from "./file-diff-view";
+import { GitHubViewerLoadingState, GitHubViewerState } from "./github-viewer-shell";
 
 const statusClass: Record<DiffFileItem["status"], string> = {
   added: "text-git-added",
@@ -100,45 +100,27 @@ export const PRFilesPanel = memo(
     );
 
     if (isLoadingContent && !selectedPRDiff) {
-      return (
-        <div className="flex items-center justify-center p-8">
-          <Spinner label="Loading diff" showLabel />
-        </div>
-      );
+      return <GitHubViewerLoadingState label="Loading diff" className="min-h-0" />;
     }
 
     if (contentError) {
       return (
-        <div className="flex items-center justify-center p-8 text-center">
-          <div>
-            <p className="font-sans ui-text-sm text-error">{contentError}</p>
-            <Button
-              onClick={onRetry}
-              variant="default"
-              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
-              size="xs"
-            >
-              Retry
-            </Button>
-          </div>
-        </div>
+        <GitHubViewerState
+          description={contentError}
+          actionLabel="Retry"
+          onAction={onRetry}
+          tone="error"
+          className="min-h-0"
+        />
       );
     }
 
     if (diffFiles.length === 0) {
-      return (
-        <div className="flex items-center justify-center p-8">
-          <p className="font-sans ui-text-sm text-text-lighter">No file changes</p>
-        </div>
-      );
+      return <GitHubViewerState description="No file changes" className="min-h-0" />;
     }
 
     if (filteredDiff.length === 0) {
-      return (
-        <div className="flex items-center justify-center p-8">
-          <p className="font-sans ui-text-sm text-text-lighter">No files match your filters</p>
-        </div>
-      );
+      return <GitHubViewerState description="No files match your filters" className="min-h-0" />;
     }
 
     return (
@@ -215,9 +197,7 @@ export const PRFilesPanel = memo(
                 patchError={patchError}
               />
             ) : (
-              <div className="flex h-full items-center justify-center p-8">
-                <p className="font-sans ui-text-sm text-text-lighter">Select a file</p>
-              </div>
+              <GitHubViewerState description="Select a file" className="h-full" />
             )}
           </div>
         </div>

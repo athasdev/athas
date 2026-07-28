@@ -15,6 +15,7 @@ import {
 } from "@/features/telemetry/services/telemetry";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Switch from "@/ui/switch";
 import Section, { SettingsView, SettingRow } from "../settings-section";
 import { getServiceUrls } from "@/config/services";
@@ -217,9 +218,12 @@ export const AdvancedSettings = () => {
         {showTelemetryLog && (
           <div className="rounded-lg border border-border/70 bg-primary-bg/50">
             {telemetryLog.length === 0 ? (
-              <p className="font-sans ui-text-base px-3 py-2 text-text-lighter">
-                No telemetry entries yet.
-              </p>
+              <Empty
+                density="compact"
+                className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left"
+              >
+                <EmptyDescription>No telemetry entries yet.</EmptyDescription>
+              </Empty>
             ) : (
               <div className="max-h-72 overflow-y-auto">
                 {[...telemetryLog].reverse().map((entry) => (

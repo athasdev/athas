@@ -15,7 +15,12 @@ import {
 } from "react";
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
-import { SidebarListItem, SidebarSearchFilterRow, SidebarSectionLabel } from "@/ui/sidebar";
+import {
+  SidebarListItem,
+  SidebarSearchFilterRow,
+  SidebarSectionEmptyState,
+  SidebarSectionLabel,
+} from "@/ui/sidebar";
 import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
 import { ScrollArea } from "@/ui/scroll-area";
@@ -447,7 +452,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           </SidebarSectionLabel>
         ) : null}
         {filteredItems.length === 0 ? (
-          <SidebarSectionLabel>No files match</SidebarSectionLabel>
+          <SidebarSectionEmptyState>No files match</SidebarSectionEmptyState>
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow

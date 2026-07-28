@@ -2,14 +2,40 @@ import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
-function Empty({ className, ...props }: ComponentProps<"div">) {
+const emptyVariants = cva(
+  "group/empty flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center border-dashed text-center",
+  {
+    variants: {
+      density: {
+        default: "gap-4 rounded-xl p-6",
+        compact: "gap-2 rounded-lg p-3",
+      },
+      tone: {
+        neutral: "",
+        error: "",
+        warning: "",
+        success: "",
+      },
+    },
+    defaultVariants: {
+      density: "default",
+      tone: "neutral",
+    },
+  },
+);
+
+function Empty({
+  className,
+  density = "default",
+  tone = "neutral",
+  ...props
+}: ComponentProps<"div"> & VariantProps<typeof emptyVariants>) {
   return (
     <div
       data-slot="empty"
-      className={cn(
-        "flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed p-6 text-center",
-        className,
-      )}
+      data-density={density}
+      data-tone={tone}
+      className={cn(emptyVariants({ density, tone }), className)}
       {...props}
     />
   );
@@ -26,7 +52,7 @@ function EmptyHeader({ className, ...props }: ComponentProps<"div">) {
 }
 
 const emptyMediaVariants = cva(
-  "mb-1 flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "mb-1 flex shrink-0 items-center justify-center group-data-[tone=error]/empty:text-error group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -59,7 +85,10 @@ function EmptyTitle({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="empty-title"
-      className={cn("font-sans ui-text-base font-medium tracking-tight text-text", className)}
+      className={cn(
+        "font-sans ui-text-base font-medium tracking-tight text-text group-data-[tone=error]/empty:text-error group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning",
+        className,
+      )}
       {...props}
     />
   );
@@ -70,7 +99,7 @@ function EmptyDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="empty-description"
       className={cn(
-        "font-sans ui-text-sm leading-relaxed text-text-lighter [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-accent",
+        "font-sans ui-text-sm leading-relaxed text-text-lighter group-data-[tone=error]/empty:text-error group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-accent",
         className,
       )}
       {...props}

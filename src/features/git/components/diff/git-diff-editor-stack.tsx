@@ -35,6 +35,7 @@ import { cn } from "@/utils/cn";
 import { joinPath } from "@/utils/path-helpers";
 import { Avatar } from "@/ui/avatar";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1112,9 +1113,9 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       ) : null}
 
       {isIndexingDiffs && multiDiff.files.length === 0 ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center bg-primary-bg">
-          <div className="ui-text-sm text-text-lighter">{indexingLabel}</div>
-        </div>
+        <Empty className="rounded-none bg-primary-bg" role="status" aria-live="polite">
+          <EmptyDescription>{indexingLabel}</EmptyDescription>
+        </Empty>
       ) : null}
 
       {isIndexingDiffs && multiDiff.files.length === 0 ? null : (

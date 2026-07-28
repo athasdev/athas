@@ -444,9 +444,10 @@ const GitHubActionsView = memo(
               tone="error"
             />
           ) : isLoading && deferredRuns.length === 0 ? (
-            <div className="flex items-center justify-center p-4">
-              <Spinner label="Loading workflow runs" showLabel compact />
-            </div>
+            <GitHubSidebarState
+              icon={<Spinner label="Loading workflow runs" compact />}
+              title="Loading workflow runs"
+            />
           ) : deferredRuns.length === 0 ? (
             <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
           ) : filteredRuns.length === 0 ? (

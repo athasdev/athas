@@ -194,9 +194,11 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           )}
 
           {store.isLoading && (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <Spinner label="Loading" showLabel />
-            </div>
+            <Empty>
+              <EmptyDescription>
+                <Spinner label="Loading" showLabel />
+              </EmptyDescription>
+            </Empty>
           )}
 
           {!store.isLoading && showInfo && store.serverInfo && (

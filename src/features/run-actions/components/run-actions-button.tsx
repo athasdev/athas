@@ -8,6 +8,7 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { Button } from "@/ui/button";
 import { showConfirmDialog } from "@/ui/dialog";
 import { Dropdown } from "@/ui/dropdown";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { ArrowClockwiseIcon as RefreshIcon, PlayIcon, PlusIcon } from "@/ui/icons";
 import { SearchField } from "@/ui/search";
 import { Spinner } from "@/ui/spinner";
@@ -302,23 +303,27 @@ export default function RunActionsButton() {
             />
 
             {!hasVisibleActions && isDiscovering ? (
-              <div className="flex items-center justify-center px-6 py-8 text-text-lighter ui-text-sm">
-                <Spinner label="Scanning project actions" showLabel compact />
-              </div>
+              <Empty density="compact" className="min-h-0 flex-none rounded-none px-6 py-8">
+                <EmptyDescription>
+                  <Spinner label="Scanning project actions" showLabel compact />
+                </EmptyDescription>
+              </Empty>
             ) : null}
 
             {!hasVisibleActions && !isDiscovering ? (
-              <div className="px-6 py-8 text-center">
-                <div className="font-medium text-text ui-text-sm">
-                  {query ? "No matching actions" : "No runnable actions found"}
-                </div>
-                <div className="mt-1 text-text-lighter ui-text-sm">
-                  {query
-                    ? "Try another name, command, or source."
-                    : (discoveryError ??
-                      "Add a custom command, or open a file with runnable LSP CodeLens actions.")}
-                </div>
-              </div>
+              <Empty density="compact" className="min-h-0 flex-none rounded-none px-6 py-8">
+                <EmptyHeader>
+                  <EmptyTitle>
+                    {query ? "No matching actions" : "No runnable actions found"}
+                  </EmptyTitle>
+                  <EmptyDescription>
+                    {query
+                      ? "Try another name, command, or source."
+                      : (discoveryError ??
+                        "Add a custom command, or open a file with runnable LSP CodeLens actions.")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : null}
           </div>
         </div>

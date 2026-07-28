@@ -375,12 +375,14 @@ export function SkillsCommand({
             isLoadingMarketplace ? (
               <CommandEmpty>Loading available skills...</CommandEmpty>
             ) : marketplaceSkills.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-                <CommandEmpty>No published skills yet</CommandEmpty>
-                <div className="ui-text-base max-w-[280px] text-text-lighter">
-                  Published skills will appear here once the Athas skills registry is available.
+              <CommandEmpty>
+                <div className="flex flex-col items-center gap-2 px-4 py-5">
+                  <div>No published skills yet</div>
+                  <div className="max-w-[280px] text-text-lighter">
+                    Published skills will appear here once the Athas skills registry is available.
+                  </div>
                 </div>
-              </div>
+              </CommandEmpty>
             ) : filteredMarketplaceSkills.length === 0 ? (
               <CommandEmpty>No available skills match "{query}"</CommandEmpty>
             ) : (

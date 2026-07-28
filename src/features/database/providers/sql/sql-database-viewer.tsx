@@ -22,6 +22,7 @@ import { writeDatabaseClipboardText } from "../../utils/clipboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Spinner } from "@/ui/spinner";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
 import type { DatabaseType } from "../../types/provider.types";
 import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
@@ -267,9 +268,11 @@ export default function SqlDatabaseViewer({
           )}
 
           {isBusy && (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <Spinner label="Loading" showLabel />
-            </div>
+            <Empty>
+              <EmptyDescription>
+                <Spinner label="Loading" showLabel />
+              </EmptyDescription>
+            </Empty>
           )}
 
           {!isBusy && viewMode === "data" && visibleQueryResult && (

@@ -24,13 +24,13 @@ import type { AIChatProps, Message } from "@/features/ai/types/ai-chat.types";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -1137,16 +1137,14 @@ details: ${errorDetails || mainError}
         onNextMessageSearchMatch={goToNextMessageSearchMatch}
       />
       {isAiChatBlockedByPolicy ? (
-        <div className="flex h-full items-center justify-center p-6">
-          <Card className="max-w-md text-center">
-            <CardHeader>
-              <CardTitle>Agent is disabled</CardTitle>
-              <CardDescription>
-                Your organization policy has disabled Agent for this workspace.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+        <Empty className="h-full rounded-none p-6">
+          <EmptyHeader>
+            <EmptyTitle>Agent is disabled</EmptyTitle>
+            <EmptyDescription>
+              Your organization policy has disabled Agent for this workspace.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <>
           {useInitialComposer ? (

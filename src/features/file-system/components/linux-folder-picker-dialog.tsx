@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLinuxFolderPickerStore } from "@/features/file-system/stores/linux-folder-picker.store";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
@@ -207,19 +208,25 @@ export default function LinuxFolderPickerDialog() {
         </div>
 
         {error ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-            <Warning className="text-warning" size={24} />
-            <div className="ui-text-sm text-text">{error}</div>
-            <div className="ui-text-sm text-text-lighter">{currentPath}</div>
-          </div>
+          <Empty className="rounded-none px-6" tone="warning" role="alert">
+            <EmptyHeader>
+              <EmptyMedia>
+                <Warning size={24} />
+              </EmptyMedia>
+              <EmptyTitle>{error}</EmptyTitle>
+              <EmptyDescription className="font-mono">{currentPath}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : isLoading ? (
-          <div className="ui-text-sm flex flex-1 items-center justify-center text-text-lighter">
-            <Spinner label="Loading folders" showLabel compact />
-          </div>
+          <Empty density="compact" className="rounded-none">
+            <EmptyDescription>
+              <Spinner label="Loading folders" showLabel compact />
+            </EmptyDescription>
+          </Empty>
         ) : entries.length === 0 ? (
-          <div className="ui-text-sm flex flex-1 items-center justify-center text-text-lighter">
-            No folders
-          </div>
+          <Empty density="compact" className="rounded-none">
+            <EmptyDescription>No folders</EmptyDescription>
+          </Empty>
         ) : (
           <div className="max-h-[320px] overflow-y-auto py-1">
             {entries.map((entry) => (

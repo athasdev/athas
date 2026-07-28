@@ -1,5 +1,6 @@
 import { MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useMemo, useState } from "react";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import Tooltip from "@/ui/tooltip";
 import { cn } from "@/utils/cn";
@@ -204,9 +205,12 @@ export function EmojiPicker({
       </div>
 
       {filteredOptions.length === 0 ? (
-        <div className="mt-2 rounded-md border border-border/60 px-2 py-3 text-center ui-text-sm text-text-lighter">
-          No matching emoji
-        </div>
+        <Empty
+          density="compact"
+          className="mt-2 min-h-0 flex-none border border-border/60 px-2 py-3"
+        >
+          <EmptyDescription>No matching emoji</EmptyDescription>
+        </Empty>
       ) : null}
 
       {onClear ? (

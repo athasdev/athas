@@ -843,9 +843,10 @@ const GitHubPRsView = memo(() => {
                             tone="error"
                           />
                         ) : isLoading && deferredPrs.length === 0 ? (
-                          <div className="flex items-center justify-center p-4">
-                            <Spinner label="Loading pull requests" showLabel compact />
-                          </div>
+                          <GitHubSidebarState
+                            icon={<Spinner label="Loading pull requests" compact />}
+                            title="Loading pull requests"
+                          />
                         ) : deferredPrs.length === 0 ? (
                           <GitHubSidebarState
                             icon={<GitPullRequest className="size-4" />}
