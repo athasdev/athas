@@ -2,23 +2,21 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { exit } from "@tauri-apps/plugin-process";
-import { cva } from "class-variance-authority";
 import type React from "react";
-import type { ComponentProps } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import {
   Menubar,
-  MenubarContent as BaseMenubarContent,
-  MenubarItem as BaseMenubarItem,
+  MenubarContent,
+  MenubarItem,
   MenubarMenu,
-  MenubarSeparator as BaseMenubarSeparator,
+  MenubarSeparator,
   MenubarSub,
-  MenubarSubContent as BaseMenubarSubContent,
-  MenubarSubTrigger as BaseMenubarSubTrigger,
-  MenubarTrigger as BaseMenubarTrigger,
+  MenubarSubContent,
+  MenubarSubTrigger,
+  MenubarTrigger,
 } from "@/ui/menubar";
 import { cn } from "@/utils/cn";
 import { IS_LINUX, IS_WINDOWS } from "@/utils/platform";
@@ -27,157 +25,23 @@ interface Props {
   activeMenu: string | null;
   setActiveMenu: React.Dispatch<React.SetStateAction<string | null>>;
   compactFloating?: boolean;
+  onCompactClose?: () => void;
 }
 
-const windowMenuTriggerVariants = cva("", {
-  variants: {
-    platform: {
-      default: "",
-      windows: "h-6 rounded-none px-2 data-[highlighted]:bg-hover data-[state=open]:bg-hover",
-    },
-  },
-  defaultVariants: {
-    platform: "default",
-  },
-});
-
-const windowMenuContentVariants = cva("", {
-  variants: {
-    platform: {
-      default: "",
-      windows:
-        "z-[100000] min-w-64 rounded-none border border-border bg-secondary-bg p-0 shadow-[var(--shadow-popover)] backdrop-blur-none",
-    },
-  },
-  defaultVariants: {
-    platform: "default",
-  },
-});
-
-const windowMenuPositionerVariants = cva("", {
-  variants: {
-    platform: {
-      default: "",
-      windows: "z-[100000]",
-    },
-  },
-  defaultVariants: {
-    platform: "default",
-  },
-});
-
-const windowMenuItemVariants = cva("", {
-  variants: {
-    platform: {
-      default: "",
-      windows:
-        "min-h-6 rounded-none px-6 py-1 data-[highlighted]:bg-hover data-[highlighted]:text-text focus:bg-hover",
-    },
-  },
-  defaultVariants: {
-    platform: "default",
-  },
-});
-
-const windowMenuSeparatorVariants = cva("", {
-  variants: {
-    platform: {
-      default: "",
-      windows: "mx-2 my-1",
-    },
-  },
-  defaultVariants: {
-    platform: "default",
-  },
-});
-
-function MenubarTrigger({ className, ...props }: ComponentProps<typeof BaseMenubarTrigger>) {
-  return (
-    <BaseMenubarTrigger
-      className={cn(
-        windowMenuTriggerVariants({ platform: IS_WINDOWS ? "windows" : "default" }),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function MenubarContent({ className, ...props }: ComponentProps<typeof BaseMenubarContent>) {
-  return (
-    <BaseMenubarContent
-      sideOffset={IS_WINDOWS ? 0 : undefined}
-      collisionPadding={IS_WINDOWS ? 4 : undefined}
-      positionerClassName={windowMenuPositionerVariants({
-        platform: IS_WINDOWS ? "windows" : "default",
-      })}
-      className={cn(
-        windowMenuContentVariants({ platform: IS_WINDOWS ? "windows" : "default" }),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function MenubarItem({ className, ...props }: ComponentProps<typeof BaseMenubarItem>) {
-  return (
-    <BaseMenubarItem
-      className={cn(
-        windowMenuItemVariants({ platform: IS_WINDOWS ? "windows" : "default" }),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function MenubarSeparator({ className, ...props }: ComponentProps<typeof BaseMenubarSeparator>) {
-  return (
-    <BaseMenubarSeparator
-      className={cn(
-        windowMenuSeparatorVariants({ platform: IS_WINDOWS ? "windows" : "default" }),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function MenubarSubTrigger({ className, ...props }: ComponentProps<typeof BaseMenubarSubTrigger>) {
-  return (
-    <BaseMenubarSubTrigger
-      className={cn(
-        windowMenuItemVariants({ platform: IS_WINDOWS ? "windows" : "default" }),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function MenubarSubContent({ className, ...props }: ComponentProps<typeof BaseMenubarSubContent>) {
-  return (
-    <BaseMenubarSubContent
-      sideOffset={IS_WINDOWS ? 0 : undefined}
-      collisionPadding={IS_WINDOWS ? 4 : undefined}
-      positionerClassName={windowMenuPositionerVariants({
-        platform: IS_WINDOWS ? "windows" : "default",
-      })}
-      className={cn(
-        windowMenuContentVariants({ platform: IS_WINDOWS ? "windows" : "default" }),
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
+const WindowMenuBar = ({
+  activeMenu,
+  setActiveMenu,
+  compactFloating = false,
+  onCompactClose,
+}: Props) => {
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const themes = useRegisteredThemes();
   const menuWindowRaiseRef = useRef<{ restoreTo: boolean } | null>(null);
   const shouldRaiseWindowForMenu = (IS_WINDOWS || IS_LINUX) && Boolean(activeMenu);
+  const closeMenu = useCallback(() => {
+    setActiveMenu(null);
+    onCompactClose?.();
+  }, [onCompactClose, setActiveMenu]);
 
   useEffect(() => {
     let disposed = false;
@@ -236,15 +100,15 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     (event: string, payload?: unknown) => {
       const currentWindow = getCurrentWebviewWindow();
       void currentWindow.emitTo(currentWindow.label, event, payload);
-      setActiveMenu(null);
+      closeMenu();
     },
-    [setActiveMenu],
+    [closeMenu],
   );
 
   const handleOpenWebInspector = useCallback(() => {
     void invoke("reopen_current_webview_devtools");
-    setActiveMenu(null);
-  }, [setActiveMenu]);
+    closeMenu();
+  }, [closeMenu]);
 
   const handleCommand = useCallback(
     (commandId: string) => {
@@ -255,8 +119,8 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
 
   const handleNewWindow = useCallback(() => {
     void createAppWindow();
-    setActiveMenu(null);
-  }, [setActiveMenu]);
+    closeMenu();
+  }, [closeMenu]);
 
   const menus = useMemo(
     () => ({
@@ -585,7 +449,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             shortcut="alt+f9"
             onClick={async () => {
               await getCurrentWindow().minimize();
-              setActiveMenu(null);
+              closeMenu();
             }}
           >
             Minimize
@@ -594,7 +458,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             shortcut="alt+f10"
             onClick={async () => {
               await getCurrentWindow().maximize();
-              setActiveMenu(null);
+              closeMenu();
             }}
           >
             Maximize
@@ -614,7 +478,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
               const window = getCurrentWindow();
               const isFull = await window.isFullscreen();
               await window.setFullscreen(!isFull);
-              setActiveMenu(null);
+              closeMenu();
             }}
           >
             Toggle Fullscreen
@@ -643,10 +507,8 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         </MenubarContent>
       ),
     }),
-    [handleClickEmit, handleCommand, handleNewWindow, setActiveMenu, themes],
+    [closeMenu, handleClickEmit, handleCommand, handleNewWindow, themes],
   );
-
-  if (compactMenuBar && !activeMenu) return null;
 
   return (
     <div
@@ -662,14 +524,10 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         className={cn(
           compactMenuBar &&
             compactFloating &&
-            (IS_WINDOWS
-              ? "h-7 rounded-none border border-border bg-secondary-bg px-0 py-0 shadow-[var(--shadow-popover)] backdrop-blur-none"
-              : "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm"),
+            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
           compactMenuBar &&
             !compactFloating &&
-            (IS_WINDOWS
-              ? "h-full rounded-none border-none bg-transparent px-0 py-0"
-              : "h-full rounded-none border-none bg-transparent px-2 py-0"),
+            "h-full rounded-none border-none bg-transparent px-2 py-0",
         )}
       >
         {Object.entries(menus).map(([menuName, menuContent]) => (

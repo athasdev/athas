@@ -16,6 +16,10 @@ use tokio::sync::Mutex;
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
 const TERMINAL_ONLY_AGENT_IDS: &[&str] = &["claude-code"];
+const CODEX_AGENT_MANIFEST: &str = include_str!(concat!(
+   env!("CARGO_MANIFEST_DIR"),
+   "/../extensions/official/codex-cli/extension.json"
+));
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -217,6 +221,33 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
    agent
 }
 
+fn bundled_agent_fallbacks() -> Vec<AgentConfig> {
+   serde_json::from_str::<MarketplaceExtensionManifest>(CODEX_AGENT_MANIFEST)
+      .map(|manifest| manifest.agents.into_iter().map(to_agent_config).collect())
+      .unwrap_or_else(|error| {
+         log::error!("Failed to parse bundled Codex agent manifest: {}", error);
+         Vec::new()
+      })
+}
+
+fn merge_agent_catalog(
+   marketplace_agents: Vec<AgentConfig>,
+   fallback_agents: Vec<AgentConfig>,
+) -> Vec<AgentConfig> {
+   let mut agents = marketplace_agents
+      .into_iter()
+      .map(|agent| (agent.id.clone(), agent))
+      .collect::<HashMap<_, _>>();
+
+   for fallback in fallback_agents {
+      agents.entry(fallback.id.clone()).or_insert(fallback);
+   }
+
+   let mut agents = agents.into_values().collect::<Vec<_>>();
+   agents.sort_by_key(|agent| agent.name.clone());
+   agents
+}
+
 async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
    let cache = AGENT_CATALOG_CACHE.get_or_init(|| std::sync::Mutex::new(None));
    {
@@ -230,32 +261,40 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
       }
    }
 
-   let response = reqwest::Client::new()
+   let marketplace_agents = match reqwest::Client::new()
       .get(extensions_manifest_url())
       .timeout(Duration::from_secs(5))
       .send()
       .await
-      .map_err(|error| format!("Failed to load agent catalog: {}", error))?;
-
-   if !response.status().is_success() {
-      return Err(format!(
-         "Failed to load agent catalog: HTTP {}",
-         response.status()
-      ));
-   }
-
-   let manifests = response
-      .json::<HashMap<String, MarketplaceExtensionManifest>>()
-      .await
-      .map_err(|error| format!("Invalid agent catalog: {}", error))?;
-
-   let mut agents = manifests
-      .into_values()
-      .flat_map(|manifest| manifest.agents)
-      .filter(|agent| !TERMINAL_ONLY_AGENT_IDS.contains(&agent.id.as_str()))
-      .map(to_agent_config)
-      .collect::<Vec<_>>();
-   agents.sort_by_key(|agent| agent.name.clone());
+   {
+      Ok(response) if response.status().is_success() => response
+         .json::<HashMap<String, MarketplaceExtensionManifest>>()
+         .await
+         .map(|manifests| {
+            manifests
+               .into_values()
+               .flat_map(|manifest| manifest.agents)
+               .filter(|agent| !TERMINAL_ONLY_AGENT_IDS.contains(&agent.id.as_str()))
+               .map(to_agent_config)
+               .collect::<Vec<_>>()
+         })
+         .map_err(|error| format!("Invalid agent catalog: {}", error))?,
+      Ok(response) => {
+         log::warn!(
+            "Failed to load agent catalog: HTTP {}; using bundled agents",
+            response.status()
+         );
+         Vec::new()
+      }
+      Err(error) => {
+         log::warn!(
+            "Failed to load agent catalog: {}; using bundled agents",
+            error
+         );
+         Vec::new()
+      }
+   };
+   let agents = merge_agent_catalog(marketplace_agents, bundled_agent_fallbacks());
 
    let mut cached = cache
       .lock()

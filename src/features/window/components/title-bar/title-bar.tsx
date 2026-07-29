@@ -92,6 +92,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
 
   const [menuBarActiveMenu, setMenuBarActiveMenu] = useState<string | null>(null);
+  const [isCompactMenuVisible, setIsCompactMenuVisible] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentWindow, setCurrentWindow] = useState<TauriWindow | null>(null);
@@ -195,7 +196,13 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   }, [closeProject]);
 
   const handleCompactMenuToggle = useCallback(() => {
-    setMenuBarActiveMenu((activeMenu) => (activeMenu ? null : "File"));
+    setMenuBarActiveMenu(null);
+    setIsCompactMenuVisible((visible) => !visible);
+  }, []);
+
+  const handleCompactMenuClose = useCallback(() => {
+    setMenuBarActiveMenu(null);
+    setIsCompactMenuVisible(false);
   }, []);
 
   const titleBarContextMenuContent = (
@@ -237,18 +244,21 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
               onClick={handleCompactMenuToggle}
               variant="ghost"
               size="icon-xs"
-              className={menuBarActiveMenu ? "bg-hover/70 text-text" : undefined}
+              className={isCompactMenuVisible ? "bg-hover/70 text-text" : undefined}
               aria-label="Menu"
-              aria-expanded={Boolean(menuBarActiveMenu)}
+              aria-expanded={isCompactMenuVisible}
             >
               <ListIcon />
             </Button>
           </Tooltip>
-          <WindowMenuBar
-            activeMenu={menuBarActiveMenu}
-            setActiveMenu={setMenuBarActiveMenu}
-            compactFloating
-          />
+          {isCompactMenuVisible ? (
+            <WindowMenuBar
+              activeMenu={menuBarActiveMenu}
+              setActiveMenu={setMenuBarActiveMenu}
+              compactFloating
+              onCompactClose={handleCompactMenuClose}
+            />
+          ) : null}
         </div>
       ) : (
         <WindowMenuBar activeMenu={menuBarActiveMenu} setActiveMenu={setMenuBarActiveMenu} />
