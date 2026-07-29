@@ -393,7 +393,7 @@ const GitStatusPanel = ({
     <Badge
       variant="default"
       size="compact"
-      className={cn("h-5 gap-1 border-border/50 bg-hover/60 tabular-nums", className)}
+      className={cn("h-5 gap-1 border-border/50 bg-accent/60 tabular-nums", className)}
     >
       <span className="text-git-added">+{stats.additions}</span>
       <span className="text-git-deleted">-{stats.deletions}</span>
@@ -438,7 +438,7 @@ const GitStatusPanel = ({
                 fileName={folderNode.name}
                 isDir
                 isExpanded={!isCollapsed}
-                className="relative z-1 shrink-0 text-text-lighter"
+                className="relative z-1 shrink-0 text-subtle-foreground"
               />
               <span className="relative z-1 block min-w-0 truncate whitespace-nowrap leading-[1.35]">
                 {folderNode.name}
@@ -528,21 +528,21 @@ const GitStatusPanel = ({
         id: "commit",
         label: "Commit",
         disabled: !onShowCommitDiffPicker,
-        keybinding: <CaretRight className="size-3 text-text-lighter" />,
+        keybinding: <CaretRight className="size-3 text-subtle-foreground" />,
         onClick: () => openDiffPicker(onShowCommitDiffPicker),
       },
       {
         id: "branch",
         label: "Branch",
         disabled: !onShowBranchDiffPicker,
-        keybinding: <CaretRight className="size-3 text-text-lighter" />,
+        keybinding: <CaretRight className="size-3 text-subtle-foreground" />,
         onClick: () => openDiffPicker(onShowBranchDiffPicker),
       },
       {
         id: "stash",
         label: "Stash",
         disabled: !onShowStashDiffPicker,
-        keybinding: <CaretRight className="size-3 text-text-lighter" />,
+        keybinding: <CaretRight className="size-3 text-subtle-foreground" />,
         onClick: () => openDiffPicker(onShowStashDiffPicker),
       },
     ],

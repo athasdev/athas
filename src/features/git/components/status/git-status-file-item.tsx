@@ -67,9 +67,9 @@ export const GitFileItem = ({
         });
       }}
     >
-      <span className="relative z-1 flex size-3.5 shrink-0 items-center justify-center overflow-hidden text-text-lighter">
+      <span className="relative z-1 flex size-3.5 shrink-0 items-center justify-center overflow-hidden text-subtle-foreground">
         {showFileIcon ? (
-          <ThemedFileIcon fileName={fileName} isDir={false} className="text-text-lighter" />
+          <ThemedFileIcon fileName={fileName} isDir={false} className="text-subtle-foreground" />
         ) : null}
       </span>
       <div
@@ -80,13 +80,13 @@ export const GitFileItem = ({
           className={cn(
             "block min-w-0 truncate whitespace-nowrap leading-[1.35]",
             showDirectory ? "shrink-0 basis-auto max-w-[45%]" : "flex-1",
-            "text-text",
+            "text-foreground",
           )}
         >
           {fileName}
         </span>
         {showDirectory && directory && (
-          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-[1.35] text-text-lighter/80">
+          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-[1.35] text-subtle-foreground/80">
             {directory}
           </span>
         )}

@@ -121,7 +121,7 @@ export function SidebarProjectSwitcher({
               className={cn(
                 "flex size-4 items-center justify-center rounded-md",
                 canChangeIcon &&
-                  "hover:bg-hover/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+                  "hover:bg-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
               )}
               onClick={(event) => {
                 if (!canChangeIcon || !displayProject) return;
@@ -191,7 +191,7 @@ export function SidebarProjectIcons({
                 role="button"
                 tabIndex={isSwitchingProject ? -1 : 0}
                 className={cn(
-                  "pointer-events-auto flex size-(--athas-chrome-hit-target) shrink-0 items-center justify-center rounded-[var(--athas-chrome-radius)] text-text-lighter outline-none transition-[opacity,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:text-text focus-visible:ring-2 focus-visible:ring-accent/40",
+                  "pointer-events-auto flex size-(--athas-chrome-hit-target) shrink-0 items-center justify-center rounded-[var(--athas-chrome-radius)] text-subtle-foreground outline-none transition-[opacity,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
                   isActive ? "opacity-100" : "opacity-55 hover:opacity-100",
                 )}
                 aria-label={`${isActive ? "Current project" : "Switch to"} ${project.name}`}

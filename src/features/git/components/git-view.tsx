@@ -82,7 +82,7 @@ const REMOTE_ACTION_LABELS: Record<GitRemoteAction, { present: string; past: str
 };
 
 const gitEmptyActionButtonClassName =
-  "h-6 border border-border/70 bg-secondary-bg/60 px-2 text-text-lighter ui-text-sm hover:bg-hover hover:text-text";
+  "h-6 border border-border/70 bg-surface/60 px-2 text-subtle-foreground ui-text-sm hover:bg-accent hover:text-foreground";
 
 type GitPaletteAction =
   | { type: "select-repository" }
@@ -720,7 +720,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="No repository selected">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-destructive">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -749,7 +749,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
           <SidebarEmptyActionState className="h-full" message="Not a Git repository">
             {renderRepositoryEmptyActions()}
             {repoSelectionError ? (
-              <span className="ui-text-sm mt-1.5 text-error">{repoSelectionError}</span>
+              <span className="ui-text-sm mt-1.5 text-destructive">{repoSelectionError}</span>
             ) : null}
           </SidebarEmptyActionState>
         </SidebarPanel>
@@ -903,7 +903,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   <CommandItemRow
                     key={commit.hash}
                     type="button"
-                    icon={<ClockCounterClockwise size={14} className="text-text-lighter" />}
+                    icon={<ClockCounterClockwise size={14} className="text-subtle-foreground" />}
                     title={commit.message}
                     accessory={<CommandItemBadge>{shortHash}</CommandItemBadge>}
                     onClick={() => {
@@ -942,7 +942,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 <CommandItemRow
                   key={branch}
                   type="button"
-                  icon={<GitBranch size={14} className="text-text-lighter" />}
+                  icon={<GitBranch size={14} className="text-subtle-foreground" />}
                   title={branch}
                   description={`compare with ${gitStatus.branch}`}
                   onClick={() => void handleViewBranchDiff(branch)}
@@ -979,7 +979,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                 <CommandItemRow
                   key={stash.index}
                   as="div"
-                  icon={<Archive size={14} className="text-text-lighter" />}
+                  icon={<Archive size={14} className="text-subtle-foreground" />}
                   title={displayTitle}
                   description={
                     <>
@@ -989,7 +989,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                   }
                   contentLayout="inline"
                   disabled={isActionLoading}
-                  className="group/stash min-h-9 text-text-lighter hover:text-text"
+                  className="group/stash min-h-9 text-subtle-foreground hover:text-foreground"
                   onClick={() => {
                     void handleViewStashDiff(stash.index);
                     setShowStashList(false);
@@ -1010,7 +1010,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="rounded-md text-text-lighter disabled:opacity-50"
+                        className="rounded-md text-subtle-foreground disabled:opacity-50"
                         tooltip="Apply stash"
                       >
                         <Download weight="fill" />
@@ -1028,7 +1028,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="rounded-md text-text-lighter disabled:opacity-50"
+                        className="rounded-md text-subtle-foreground disabled:opacity-50"
                         tooltip="Pop stash"
                       >
                         <Upload />
@@ -1046,7 +1046,7 @@ const GitView = ({ repoPath, onFileSelect, isActive }: GitViewProps) => {
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="rounded-md text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        className="rounded-md text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip="Drop stash"
                       >
                         <Trash2 />

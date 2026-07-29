@@ -307,9 +307,9 @@ export default function DebuggerView() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-primary-bg text-text">
+    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
       <div className="flex h-10 shrink-0 items-center gap-2 border-border/70 border-b px-3">
-        <Bug size={16} className="text-text-lighter" weight="duotone" />
+        <Bug size={16} className="text-subtle-foreground" weight="duotone" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium ui-text-sm">Run and Debug</div>
         </div>
@@ -329,7 +329,7 @@ export default function DebuggerView() {
         <aside className="flex min-h-0 flex-col border-border/70 border-r">
           <div className="space-y-3 p-3">
             <div className="space-y-1.5">
-              <div className="font-sans text-text-lighter ui-text-sm">Configuration</div>
+              <div className="font-sans text-subtle-foreground ui-text-sm">Configuration</div>
               <Select
                 value={selectedConfig.id}
                 onChange={(value) => debuggerActions.setActiveConfigId(value)}
@@ -342,7 +342,7 @@ export default function DebuggerView() {
             </div>
 
             <div className="space-y-1.5">
-              <div className="font-sans text-text-lighter ui-text-sm">Command</div>
+              <div className="font-sans text-subtle-foreground ui-text-sm">Command</div>
               {resolvedSelectedConfig.runtime === "custom" ? (
                 <Input
                   value={customCommand}
@@ -351,7 +351,7 @@ export default function DebuggerView() {
                   size="sm"
                 />
               ) : (
-                <div className="font-sans min-h-8 truncate rounded-lg border border-border/60 bg-secondary-bg/70 px-2 py-1.5 font-mono ui-text-sm text-text-lighter">
+                <div className="font-sans min-h-8 truncate rounded-lg border border-border/60 bg-surface/70 px-2 py-1.5 font-mono ui-text-sm text-subtle-foreground">
                   {adapterCommandPreview || selectedCommand || "No command available"}
                 </div>
               )}
@@ -437,13 +437,13 @@ export default function DebuggerView() {
                   </Badge>
                 ) : null}
               </div>
-              <div className="mt-1 line-clamp-2 ui-text-sm text-text-lighter">
+              <div className="mt-1 line-clamp-2 ui-text-sm text-subtle-foreground">
                 {stoppedState?.description || stoppedState?.reason || activeSession.command}
               </div>
             </div>
           ) : null}
 
-          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-sm text-text-lighter">
+          <div className="mt-auto border-border/70 border-t px-3 py-2 ui-text-sm text-subtle-foreground">
             <div className="flex items-center gap-1.5">
               <FolderOpen size={12} />
               <span className="truncate">
@@ -507,7 +507,7 @@ export default function DebuggerView() {
                     key={`${output.sessionId}-${index}`}
                     className={cn(
                       "whitespace-pre-wrap break-words px-3 py-1 font-mono ui-text-sm",
-                      output.stream === "stderr" ? "text-error" : "text-text-lighter",
+                      output.stream === "stderr" ? "text-destructive" : "text-subtle-foreground",
                     )}
                   >
                     {output.data.trimEnd()}

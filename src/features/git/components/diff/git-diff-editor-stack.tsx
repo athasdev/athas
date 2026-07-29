@@ -168,7 +168,7 @@ function LargeDiffSectionEditor({
 
   return (
     <div
-      className="relative overflow-hidden bg-primary-bg"
+      className="relative overflow-hidden bg-background"
       style={{ height: "min(72vh, 760px)", minHeight: "420px" }}
     >
       <CodeEditor
@@ -319,8 +319,8 @@ function EmbeddedDiffSectionEditor({
 
   if (viewMode === "split") {
     return (
-      <div className="grid grid-cols-2 bg-primary-bg" style={{ height: `${height}px` }}>
-        <div className="relative overflow-hidden border-border border-r bg-primary-bg">
+      <div className="grid grid-cols-2 bg-background" style={{ height: `${height}px` }}>
+        <div className="relative overflow-hidden border-border border-r bg-background">
           <DiffLineBackgroundLayer
             lineKinds={splitContent.left.lineKinds}
             lineHeight={lineHeight}
@@ -338,7 +338,7 @@ function EmbeddedDiffSectionEditor({
             }
           />
         </div>
-        <div className="relative overflow-hidden bg-primary-bg">
+        <div className="relative overflow-hidden bg-background">
           <DiffLineBackgroundLayer
             lineKinds={splitContent.right.lineKinds}
             lineHeight={lineHeight}
@@ -361,7 +361,7 @@ function EmbeddedDiffSectionEditor({
   }
 
   return (
-    <div className="relative overflow-hidden bg-primary-bg" style={{ height: `${height}px` }}>
+    <div className="relative overflow-hidden bg-background" style={{ height: `${height}px` }}>
       <DiffLineBackgroundLayer lineKinds={unifiedContent.lineKinds} lineHeight={lineHeight} />
       <CodeEditor
         bufferId={unifiedBufferId}
@@ -473,7 +473,7 @@ const LazyDiffSectionBody = memo(function LazyDiffSectionBody({
 
   return (
     <div ref={bodyRef} style={{ contentVisibility: "auto", containIntrinsicSize: "960px" }}>
-      {shouldMount ? children : <div className="h-[320px] bg-primary-bg" />}
+      {shouldMount ? children : <div className="h-[320px] bg-background" />}
     </div>
   );
 });
@@ -536,7 +536,7 @@ const DiffFileSection = memo(function DiffFileSection({
   return (
     <section
       className={cn(
-        "relative isolate min-w-0 max-w-full bg-primary-bg",
+        "relative isolate min-w-0 max-w-full bg-background",
         expanded && "border-border/60 border-b",
       )}
     >
@@ -916,15 +916,15 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
   }, [isWorkingTree, multiDiff.commitHash, multiDiff.repoPath, rootFolderPath]);
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex h-full flex-col overflow-hidden bg-background">
       <Breadcrumb
         filePathOverride={multiDiff.title || "Uncommitted Changes"}
         interactive={false}
         showPath={false}
         showDefaultActions={false}
         extraLeftContent={
-          <div className="ui-text-sm flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-text-lighter">
-            <span className="shrink-0 font-medium text-text">
+          <div className="ui-text-sm flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-subtle-foreground">
+            <span className="shrink-0 font-medium text-foreground">
               {multiDiff.title || "Uncommitted Changes"}
             </span>
             <span className="truncate">{indexedFileLabel}</span>
@@ -1082,21 +1082,21 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
 
       {!isWorkingTree &&
       (multiDiff.commitMessage || multiDiff.commitAuthor || multiDiff.commitDate) ? (
-        <div className="border-border/60 border-b bg-primary-bg px-4 py-3">
+        <div className="border-border/60 border-b bg-background px-4 py-3">
           <div className="max-w-4xl">
             {multiDiff.commitMessage ? (
-              <div className="ui-text-base font-medium leading-snug text-text">
+              <div className="ui-text-base font-medium leading-snug text-foreground">
                 {multiDiff.commitMessage}
               </div>
             ) : null}
             {multiDiff.commitDescription ? (
-              <div className="ui-text-sm mt-1 whitespace-pre-wrap leading-relaxed text-text-lighter">
+              <div className="ui-text-sm mt-1 whitespace-pre-wrap leading-relaxed text-subtle-foreground">
                 {multiDiff.commitDescription}
               </div>
             ) : null}
-            <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+            <div className="ui-text-sm mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
               {multiDiff.commitAuthor ? (
-                <span className="inline-flex items-center gap-1.5 text-text-light">
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                   <Avatar name={multiDiff.commitAuthor} className="size-5" />
                   {multiDiff.commitAuthor}
                 </span>
@@ -1104,7 +1104,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
               {multiDiff.commitDate ? (
                 <span>{formatRelativeDate(multiDiff.commitDate)}</span>
               ) : null}
-              <code className="font-mono text-text-lighter" title={multiDiff.commitHash}>
+              <code className="font-mono text-subtle-foreground" title={multiDiff.commitHash}>
                 {multiDiff.commitHash.slice(0, 7)}
               </code>
             </div>
@@ -1113,7 +1113,7 @@ const GitDiffEditorStack = memo(function GitDiffEditorStack({
       ) : null}
 
       {isIndexingDiffs && multiDiff.files.length === 0 ? (
-        <Empty className="rounded-none bg-primary-bg" role="status" aria-live="polite">
+        <Empty className="rounded-none bg-background" role="status" aria-live="polite">
           <EmptyDescription>{indexingLabel}</EmptyDescription>
         </Empty>
       ) : null}

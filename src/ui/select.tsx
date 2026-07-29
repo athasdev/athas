@@ -63,10 +63,10 @@ export interface SelectProps {
 }
 
 const selectItemClassName =
-  "font-sans ui-text-sm relative flex min-h-7 w-full cursor-default select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[highlighted]:bg-hover data-[selected]:bg-selected/70 disabled:pointer-events-none disabled:opacity-50";
+  "font-sans ui-text-sm relative flex min-h-7 w-full cursor-default select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[highlighted]:bg-accent data-[selected]:bg-selected/70 disabled:pointer-events-none disabled:opacity-50";
 
 const selectPopupClassName =
-  "max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-36 origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] [filter:blur(0)] data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]";
+  "max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-36 origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] [filter:blur(0)] data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]";
 
 const selectTriggerSizeClassName = {
   xs: "ui-text-sm",
@@ -133,7 +133,7 @@ function SelectTriggerContent({
         <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {triggerIcon}
           {selectedOption?.icon ? (
-            <span className="size-3 shrink-0 text-text-lighter">{selectedOption.icon}</span>
+            <span className="size-3 shrink-0 text-subtle-foreground">{selectedOption.icon}</span>
           ) : null}
           <span data-select-label="true" className="block min-w-0 flex-1 truncate text-left">
             {selectedOption?.label || value || placeholder}
@@ -141,7 +141,7 @@ function SelectTriggerContent({
         </span>
       )}
       {!hideChevron ? (
-        <ChevronDown size={controlIconSizes[size]} className="shrink-0 text-text-lighter" />
+        <ChevronDown size={controlIconSizes[size]} className="shrink-0 text-subtle-foreground" />
       ) : null}
     </>
   );
@@ -261,13 +261,13 @@ function PlainSelect({
                     className={selectItemClassName}
                   >
                     {option.icon ? (
-                      <span className="size-3 shrink-0 text-text-lighter">{option.icon}</span>
+                      <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>
                     ) : null}
                     <SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">
                       {option.label}
                     </SelectPrimitive.ItemText>
                     {option.accessory}
-                    <SelectPrimitive.ItemIndicator className="ml-auto flex size-4 shrink-0 items-center justify-center text-accent">
+                    <SelectPrimitive.ItemIndicator className="ml-auto flex size-4 shrink-0 items-center justify-center text-primary">
                       <Check />
                     </SelectPrimitive.ItemIndicator>
                   </SelectPrimitive.Item>
@@ -362,7 +362,7 @@ function SearchableSelect({
         {(option: SelectOption) => (
           <ComboboxItem key={option.value} value={option} disabled={option.disabled}>
             {option.icon ? (
-              <span className="size-3 shrink-0 text-text-lighter">{option.icon}</span>
+              <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>
             ) : null}
             <span className="min-w-0 flex-1 truncate">{option.label}</span>
             {option.accessory}

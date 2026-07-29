@@ -88,7 +88,7 @@ export function GitHubAuthStatusMessage() {
         <Button
           onClick={retry}
           variant="ghost"
-          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/80"
           aria-label="Retry GitHub authentication check"
           size="xs"
         >
@@ -110,7 +110,7 @@ export function GitHubAuthStatusMessage() {
           variant="ghost"
           size="xs"
           disabled={isSigningIn}
-          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/80"
           aria-label="Sign in to Athas"
         >
           {isSigningIn ? "Signing in..." : "Sign in"}
@@ -129,7 +129,7 @@ export function GitHubAuthStatusMessage() {
         <Button
           onClick={openGitHubConnection}
           variant="ghost"
-          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/80"
           aria-label="Connect GitHub"
           size="xs"
         >
@@ -138,7 +138,7 @@ export function GitHubAuthStatusMessage() {
         <Button
           onClick={retry}
           variant="ghost"
-          className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+          className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/80"
           aria-label="Retry authentication check"
           size="xs"
         >
@@ -157,7 +157,7 @@ export function GitHubAuthStatusMessage() {
       <Button
         onClick={openGitHubConnection}
         variant="ghost"
-        className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+        className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/80"
         aria-label="Connect GitHub"
         size="xs"
       >
@@ -166,7 +166,7 @@ export function GitHubAuthStatusMessage() {
       <Button
         onClick={retry}
         variant="ghost"
-        className="h-auto px-0 text-accent hover:bg-transparent hover:text-accent/80"
+        className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary/80"
         aria-label="Retry authentication check"
         size="xs"
       >

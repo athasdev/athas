@@ -44,14 +44,14 @@ import VimStatusIndicator from "@/features/vim/components/vim-status-indicator";
 import { getFilenameFromPath } from "@/features/file-system/controllers/file-utils";
 
 const statusChipClass =
-  "font-sans inline-flex h-5 items-center self-center rounded-full border-0 px-1.5 ui-text-sm leading-none text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "font-sans inline-flex h-5 items-center self-center rounded-full border-0 px-1.5 ui-text-sm leading-none text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const editorMenuItemClass = dropdownItemClassName("min-h-7");
 
-const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-text-lighter";
+const editorMenuActionButtonClass = "min-h-6 px-2 ui-text-sm text-subtle-foreground";
 
 const editorMenuRowClass =
-  "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-hover";
+  "group flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent";
 
 function getLanguageDisplayNameOrNull(languageId: string | null) {
   if (!languageId) return null;
@@ -139,7 +139,7 @@ function CursorPositionChip({ editorViewKey }: { editorViewKey?: string | null }
         }}
         className={cn(
           statusChipClass,
-          "w-14 bg-hover text-text outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+          "w-14 bg-accent text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         )}
       />
     );
@@ -202,13 +202,13 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       case "error":
         return {
           icon: <ZapOff weight="duotone" />,
-          color: "text-error",
+          color: "text-destructive",
           title: "Language server issue",
         };
       default:
         return {
           icon: <ZapOff weight="duotone" />,
-          color: "text-text-lighter opacity-50",
+          color: "text-subtle-foreground opacity-50",
           title: "No active language servers",
         };
     }
@@ -519,10 +519,10 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               variant="ghost"
               showClear={false}
               showTrigger={false}
-              inputClassName="truncate ui-text-sm text-text-lighter group-hover/combobox-input:text-text"
+              inputClassName="truncate ui-text-sm text-subtle-foreground group-hover/combobox-input:text-foreground"
               className={cn(
                 statusChipClass,
-                "h-5 w-fit max-w-[240px] bg-transparent px-0 focus-within:bg-hover focus-within:text-text",
+                "h-5 w-fit max-w-[240px] bg-transparent px-0 focus-within:bg-accent focus-within:text-foreground",
               )}
               inputStyle={{
                 width: `${Math.min((currentFileDisplayName?.length ?? 10) + 2, 28)}ch`,
@@ -534,7 +534,10 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   <ComboboxItem
                     key={lang.id}
                     value={lang}
-                    className={cn("ui-text-sm", lang.id === currentFileLanguageId && "text-accent")}
+                    className={cn(
+                      "ui-text-sm",
+                      lang.id === currentFileLanguageId && "text-primary",
+                    )}
                   >
                     <span className="truncate">{lang.displayName}</span>
                   </ComboboxItem>
@@ -555,7 +558,11 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           onClick={() => setIsLspOpen((open) => !open)}
           variant="ghost"
           size="icon-xs"
-          className={cn("text-text-lighter", config.color, isLspOpen && "bg-hover text-text")}
+          className={cn(
+            "text-subtle-foreground",
+            config.color,
+            isLspOpen && "bg-accent text-foreground",
+          )}
           aria-label="Language server status"
           tooltip={config.title}
           tooltipSide="bottom"
@@ -572,7 +579,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
         >
           <div className="space-y-2">
             <div className="px-1">
-              <span className="font-medium text-text ui-text-sm">{projectName}</span>
+              <span className="font-medium text-foreground ui-text-sm">{projectName}</span>
             </div>
             {hasActiveServers || isCurrentFileLspAvailable ? (
               <div className="space-y-1">
@@ -606,7 +613,9 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                     <div key={entry.key} className={editorMenuRowClass}>
                       <div className="flex min-w-0 items-center gap-2">
                         <Zap className="shrink-0 text-success" weight="duotone" />
-                        <span className="truncate text-text ui-text-sm">{entry.displayName}</span>
+                        <span className="truncate text-foreground ui-text-sm">
+                          {entry.displayName}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
@@ -638,7 +647,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                   <div className={editorMenuRowClass}>
                     <div className="flex min-w-0 items-center gap-2">
                       <ZapOff className="shrink-0 opacity-60" weight="duotone" />
-                      <span className="truncate text-text ui-text-sm">
+                      <span className="truncate text-foreground ui-text-sm">
                         {currentFileDisplayName}
                       </span>
                     </div>
@@ -707,8 +716,8 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
           variant="ghost"
           size="icon-xs"
           className={cn(
-            "text-text-lighter",
-            isViewMenuOpen && "border-border/60 bg-hover/80 text-text",
+            "text-subtle-foreground",
+            isViewMenuOpen && "border-border/60 bg-accent/80 text-foreground",
           )}
           tooltip="Editor preferences"
           tooltipSide="bottom"
@@ -742,7 +751,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
                     <Keybinding binding={option.shortcut} className="shrink-0" />
                   ) : null}
                   <span className="flex size-4 items-center justify-center">
-                    {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
+                    {option.checked ? <Check className="text-primary" weight="duotone" /> : null}
                   </span>
                 </span>
               </Button>
@@ -760,7 +769,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               >
                 <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
+                  {option.checked ? <Check className="text-primary" weight="duotone" /> : null}
                 </span>
               </Button>
             ))}
@@ -777,7 +786,7 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
               >
                 <span>{option.label}</span>
                 <span className="flex size-4 items-center justify-center">
-                  {option.checked ? <Check className="text-accent" weight="duotone" /> : null}
+                  {option.checked ? <Check className="text-primary" weight="duotone" /> : null}
                 </span>
               </Button>
             ))}

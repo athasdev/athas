@@ -52,15 +52,17 @@ export default function Section({ title, description, children, className }: Sec
   return (
     <section
       className={cn(
-        "rounded-lg transition-[background-color,box-shadow] first:[&>.settings-section-header]:hidden data-[settings-search-section-active=true]:bg-accent/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-accent/25",
+        "rounded-lg transition-[background-color,box-shadow] first:[&>.settings-section-header]:hidden data-[settings-search-section-active=true]:bg-primary/5 data-[settings-search-section-active=true]:ring-1 data-[settings-search-section-active=true]:ring-primary/25",
         className,
       )}
       data-settings-section={title}
       data-settings-section-key={getSettingSearchTargetKey(title)}
     >
       <div className="settings-section-header mb-2 px-1 py-1.5">
-        <h4 className="font-sans ui-text-base text-text">{title}</h4>
-        {description && <p className="font-sans ui-text-base text-text-lighter">{description}</p>}
+        <h4 className="font-sans ui-text-base text-foreground">{title}</h4>
+        {description && (
+          <p className="font-sans ui-text-base text-subtle-foreground">{description}</p>
+        )}
       </div>
       <div className="space-y-2">{children}</div>
     </section>
@@ -192,14 +194,14 @@ export function SettingRow({
       data-setting-row-label={label}
       tabIndex={-1}
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-[background-color,box-shadow] hover:bg-hover/40 focus-within:bg-hover/40 focus:outline-none data-[settings-search-active=true]:bg-accent/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-accent/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
+        "flex items-center justify-between gap-3 rounded-lg px-1 py-2 select-none transition-[background-color,box-shadow] hover:bg-accent/40 focus-within:bg-accent/40 focus:outline-none data-[settings-search-active=true]:bg-primary/15 data-[settings-search-active=true]:ring-1 data-[settings-search-active=true]:ring-primary/50 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2",
         className,
       )}
       onClick={activateOnClick ? handleRowClick : undefined}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div id={labelId} className="font-sans ui-text-base cursor-default text-text">
+          <div id={labelId} className="font-sans ui-text-base cursor-default text-foreground">
             {label}
           </div>
           {labelAccessory}
@@ -223,7 +225,7 @@ export function SettingRow({
         {description && (
           <div
             id={descriptionId}
-            className="font-sans ui-text-base cursor-default leading-snug text-text-lighter"
+            className="font-sans ui-text-base cursor-default leading-snug text-subtle-foreground"
           >
             {description}
           </div>

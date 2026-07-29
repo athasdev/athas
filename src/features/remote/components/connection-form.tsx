@@ -60,11 +60,11 @@ export default function ConnectionForm({
 
   return (
     <form id={formId} className="space-y-4" onSubmit={handleSubmit}>
-      <p className="ui-text-sm text-text-lighter">{intro}</p>
+      <p className="ui-text-sm text-subtle-foreground">{intro}</p>
 
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-name`}>
-          Connection Name <span className="text-text-lighter">*</span>
+          Connection Name <span className="text-subtle-foreground">*</span>
         </FieldLabel>
         <Input
           ref={nameInputRef}
@@ -81,7 +81,7 @@ export default function ConnectionForm({
       <div className="grid grid-cols-12 gap-3">
         <Field className="col-span-8">
           <FieldLabel htmlFor={`${idPrefix}-host`}>
-            Host <span className="text-text-lighter">*</span>
+            Host <span className="text-subtle-foreground">*</span>
           </FieldLabel>
           <Input
             id={`${idPrefix}-host`}
@@ -123,7 +123,7 @@ export default function ConnectionForm({
 
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-username`}>
-          Username <span className="text-text-lighter">*</span>
+          Username <span className="text-subtle-foreground">*</span>
         </FieldLabel>
         <Input
           id={`${idPrefix}-username`}
@@ -138,7 +138,7 @@ export default function ConnectionForm({
 
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-password`}>
-          Password <span className="text-text-lighter">(optional)</span>
+          Password <span className="text-subtle-foreground">(optional)</span>
         </FieldLabel>
         <InputGroup>
           <InputGroupInput
@@ -181,7 +181,7 @@ export default function ConnectionForm({
 
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-keypath`}>
-          Private Key Path <span className="text-text-lighter">(optional)</span>
+          Private Key Path <span className="text-subtle-foreground">(optional)</span>
         </FieldLabel>
         <Input
           id={`${idPrefix}-keypath`}

@@ -43,7 +43,7 @@ export function SidebarPanel({
   return (
     <div
       className={cn(
-        "flex h-full min-h-0 min-w-0 w-full flex-col bg-primary-bg",
+        "flex h-full min-h-0 min-w-0 w-full flex-col bg-background",
         variant === "framed" && "rounded-xl border border-border/60",
         className,
       )}
@@ -71,7 +71,9 @@ export function SidebarTitleBar({
       )}
       {...props}
     >
-      <h2 className="min-w-0 flex-1 truncate pl-2 font-medium text-text ui-text-lg">{title}</h2>
+      <h2 className="min-w-0 flex-1 truncate pl-2 font-medium text-foreground ui-text-lg">
+        {title}
+      </h2>
       {children ? (
         <div className="flex max-w-[50%] shrink-0 items-center gap-1">{children}</div>
       ) : null}
@@ -104,9 +106,9 @@ export const SidebarFooter = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "ui-text-chrome shrink-0 bg-primary-bg/95 px-2 py-2",
+        "ui-text-chrome shrink-0 bg-background/95 px-2 py-2",
         variant === "surface" &&
-          "mx-2 mb-2 rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
+          "mx-2 mb-2 rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,var(--border)_18%)] p-0 pb-1 transition-[border-radius,background-color,border-color,box-shadow]",
         className,
       )}
       {...props}
@@ -117,7 +119,7 @@ export const SidebarFooter = forwardRef<
 });
 
 const sidebarHeaderVariants = cva(
-  "ui-text-chrome sticky top-0 z-20 flex h-(--athas-sidebar-header-height) shrink-0 select-none items-center gap-(--athas-chrome-gap) bg-primary-bg/92 px-(--athas-chrome-padding-inline) py-1 backdrop-blur-sm",
+  "ui-text-chrome sticky top-0 z-20 flex h-(--athas-sidebar-header-height) shrink-0 select-none items-center gap-(--athas-chrome-gap) bg-background/92 px-(--athas-chrome-padding-inline) py-1 backdrop-blur-sm",
   {
     variants: {
       variant: {
@@ -162,8 +164,8 @@ export const SidebarComposer = forwardRef<
     <div
       ref={ref}
       className={cn(
-        "overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-secondary-bg)_82%,var(--color-border)_18%)] transition-[border-radius,background-color,border-color,box-shadow]",
-        variant === "prominent" && "rounded-2xl border-0 bg-secondary-bg/55",
+        "overflow-hidden rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--surface)_82%,var(--border)_18%)] transition-[border-radius,background-color,border-color,box-shadow]",
+        variant === "prominent" && "rounded-2xl border-0 bg-surface/55",
         elevation === "raised" && "shadow-[var(--shadow-card)]",
         className,
       )}
@@ -188,8 +190,8 @@ export function SidebarComposerBody({
       className={cn(
         "overflow-hidden",
         variant === "surface" &&
-          "rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--color-primary-bg)_96%,var(--color-secondary-bg)_4%)]",
-        variant === "prominent" && "rounded-2xl bg-primary-bg",
+          "rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--background)_96%,var(--surface)_4%)]",
+        variant === "prominent" && "rounded-2xl bg-background",
         className,
       )}
       {...props}
@@ -264,9 +266,9 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 cursor-pointer items-center gap-(--athas-chrome-gap-loose) rounded-[var(--athas-chrome-radius)] px-2 py-1 text-left text-text-lighter transition-[background-color,color]",
-        "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
-        active && "bg-hover/80 text-text",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 cursor-pointer items-center gap-(--athas-chrome-gap-loose) rounded-[var(--athas-chrome-radius)] px-2 py-1 text-left text-subtle-foreground transition-[background-color,color]",
+        "hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+        active && "bg-accent/80 text-foreground",
         iconOnly && "justify-center gap-0 px-0",
         className,
       )}
@@ -286,11 +288,11 @@ export function SidebarListItem({
       >
         <span className="block max-w-full truncate">{children}</span>
         {description ? (
-          <span className="block max-w-full truncate text-text-lighter">{description}</span>
+          <span className="block max-w-full truncate text-subtle-foreground">{description}</span>
         ) : null}
       </span>
       {trailing && !iconOnly ? (
-        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground">
           {trailing}
         </span>
       ) : null}
@@ -312,7 +314,7 @@ export function SidebarListEditor({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-[var(--athas-chrome-radius)] bg-hover/80 px-2 py-1 text-text",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-[var(--athas-chrome-radius)] bg-accent/80 px-2 py-1 text-foreground",
         className,
       )}
       {...props}
@@ -322,7 +324,7 @@ export function SidebarListEditor({
       ) : null}
       <span className="min-w-0 flex-1">{children}</span>
       {trailing ? (
-        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-text-lighter">
+        <span className="ml-auto max-w-[min(42%,6rem)] shrink-0 truncate whitespace-nowrap text-right text-subtle-foreground">
           {trailing}
         </span>
       ) : null}
@@ -349,9 +351,9 @@ export function SidebarSectionHeader({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex h-(--athas-tab-height) w-full select-none items-center gap-1 rounded-[var(--athas-chrome-radius)] px-2 text-left font-medium text-text-lighter transition-colors hover:bg-hover/50 hover:text-text focus-visible:bg-hover/60 focus-visible:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+        "font-sans ui-text-chrome flex h-(--athas-tab-height) w-full select-none items-center gap-1 rounded-[var(--athas-chrome-radius)] px-2 text-left font-medium text-subtle-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/60 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         variant === "surface" &&
-          "h-8 rounded-lg bg-hover/80 px-2.5 hover:bg-hover focus-visible:bg-hover",
+          "h-8 rounded-lg bg-accent/80 px-2.5 hover:bg-accent focus-visible:bg-accent",
         className,
       )}
       aria-expanded={expanded}
@@ -361,7 +363,7 @@ export function SidebarSectionHeader({
       <span className="min-w-0 truncate">{children}</span>
       <CaretDown
         className={cn(
-          "size-3 shrink-0 text-text-lighter transition-transform",
+          "size-3 shrink-0 text-subtle-foreground transition-transform",
           !expanded && "-rotate-90",
         )}
       />
@@ -389,7 +391,7 @@ export function SidebarSectionLabel({
   return (
     <div
       className={cn(
-        "font-sans ui-text-chrome flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap-loose) px-2 text-text-lighter",
+        "font-sans ui-text-chrome flex h-(--athas-chrome-control-height) min-w-0 select-none items-center gap-(--athas-chrome-gap-loose) px-2 text-subtle-foreground",
         className,
       )}
       {...props}
@@ -398,7 +400,7 @@ export function SidebarSectionLabel({
         <span className="flex shrink-0 items-center justify-center">{leading}</span>
       ) : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {trailing ? <span className="shrink-0 text-text-lighter">{trailing}</span> : null}
+      {trailing ? <span className="shrink-0 text-subtle-foreground">{trailing}</span> : null}
     </div>
   );
 }
@@ -439,18 +441,25 @@ export function SidebarTabBar({
   items,
   value,
   onChange,
+  appearance = "pills",
   className,
 }: {
   items: SidebarSectionSwitcherItem[];
   value: string;
   onChange: (value: string) => void;
+  appearance?: "grouped" | "pills";
   className?: string;
 }) {
   return (
     <div
       className={cn("flex h-(--athas-pane-header-height) shrink-0 items-center px-3", className)}
     >
-      <SidebarSectionSwitcher items={items} value={value} appearance="pills" onChange={onChange} />
+      <SidebarSectionSwitcher
+        items={items}
+        value={value}
+        appearance={appearance}
+        onChange={onChange}
+      />
     </div>
   );
 }
@@ -598,7 +607,7 @@ export function SidebarSectionSwitcher({
             render={
               <button
                 type="button"
-                className="font-sans ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-hover px-2 text-text outline-none transition-colors hover:bg-hover/80"
+                className="font-sans ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-accent px-2 text-foreground outline-none transition-colors hover:bg-accent/80"
               />
             }
           >
@@ -608,7 +617,7 @@ export function SidebarSectionSwitcher({
               </span>
             ) : null}
             <span className="min-w-0 truncate whitespace-nowrap">{activeItem.label}</span>
-            <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+            <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
@@ -636,7 +645,7 @@ export function SidebarSectionSwitcher({
           className={cn(
             "flex h-7 w-fit max-w-full select-none items-center rounded-full",
             appearance === "grouped"
-              ? "mx-auto justify-center gap-1 bg-secondary-bg/45 p-0.5"
+              ? "mx-auto justify-center gap-1 bg-surface/45 p-0.5"
               : "w-max max-w-none justify-start gap-1.5",
           )}
         >
@@ -654,11 +663,11 @@ export function SidebarSectionSwitcher({
                   appearance === "pills" && "border",
                   selected
                     ? appearance === "pills"
-                      ? "border-border bg-hover text-text"
-                      : "bg-hover text-text"
+                      ? "border-border bg-accent text-foreground"
+                      : "bg-accent text-foreground"
                     : appearance === "pills"
-                      ? "border-border/70 bg-primary-bg text-text-lighter hover:bg-hover/70 hover:text-text"
-                      : "text-text-lighter hover:bg-hover/70 hover:text-text",
+                      ? "border-border/70 bg-background text-subtle-foreground hover:bg-accent/70 hover:text-foreground"
+                      : "text-subtle-foreground hover:bg-accent/70 hover:text-foreground",
                   item.disabled && "cursor-not-allowed opacity-50",
                 )}
                 onClick={() => onChange(item.id)}
@@ -735,7 +744,7 @@ export function SidebarEmptyActionState({
       className={cn("min-h-24 select-none rounded-none px-3 py-6", className)}
       {...props}
     >
-      {icon ? <EmptyMedia className="mb-0 size-7 text-text-lighter">{icon}</EmptyMedia> : null}
+      {icon ? <EmptyMedia className="mb-0 size-7 text-subtle-foreground">{icon}</EmptyMedia> : null}
       <EmptyHeader className="gap-1">
         <EmptyTitle className="ui-text-sm font-normal leading-[1.35]">{message}</EmptyTitle>
         {description ? (
@@ -748,7 +757,10 @@ export function SidebarEmptyActionState({
             type="button"
             variant="ghost"
             size="xs"
-            className={cn("ui-text-sm h-6 px-2 text-text-lighter hover:text-text", actionClassName)}
+            className={cn(
+              "ui-text-sm h-6 px-2 text-subtle-foreground hover:text-foreground",
+              actionClassName,
+            )}
             disabled={actionDisabled}
             onClick={onAction}
           >

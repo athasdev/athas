@@ -42,7 +42,7 @@ const AGENT_HISTORY_INLINE_LIMIT = 5;
 
 export function useNewAgentAction(onCreate?: () => void) {
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
+  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
 
   return useCallback(() => {
@@ -110,10 +110,10 @@ export function SidebarAgentHistory({
 }) {
   const chats = useAIChatStore((state) => state.chats);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
-  const deleteChat = useAIChatStore((state) => state.deleteChat);
-  const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
-  const setChatPinned = useAIChatStore((state) => state.setChatPinned);
-  const setChatArchived = useAIChatStore((state) => state.setChatArchived);
+  const deleteChat = useAIChatStore((state) => state.actions.deleteChat);
+  const updateChatTitle = useAIChatStore((state) => state.actions.updateChatTitle);
+  const setChatPinned = useAIChatStore((state) => state.actions.setChatPinned);
+  const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
   const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
   const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);

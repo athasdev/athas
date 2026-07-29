@@ -153,8 +153,8 @@ export const SettingsVerticalTabs = ({
                     className={cn(
                       "h-auto w-full justify-start gap-2.5 px-2.5 py-1.5 text-left",
                       activeTab === item.id
-                        ? "bg-accent/10 text-accent"
-                        : "text-text hover:bg-hover",
+                        ? "bg-primary/10 text-primary"
+                        : "text-foreground hover:bg-accent",
                     )}
                   >
                     <Icon className="size-[18px] shrink-0 text-current" weight="duotone" />

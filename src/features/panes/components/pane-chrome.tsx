@@ -3,12 +3,12 @@ import * as React from "react";
 import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
-const paneHeaderVariants = cva("flex min-h-7 items-center gap-1.5 bg-primary-bg px-1.5 py-1");
+const paneHeaderVariants = cva("flex min-h-7 items-center gap-1.5 bg-background px-1.5 py-1");
 
-const paneTitleVariants = cva("font-sans ui-text-sm font-medium text-text");
+const paneTitleVariants = cva("font-sans ui-text-sm font-medium text-foreground");
 
 const paneChipVariants = cva(
-  "font-sans ui-text-sm inline-flex h-5 items-center rounded-full border border-border/70 bg-primary-bg px-1.5 text-text-lighter",
+  "font-sans ui-text-sm inline-flex h-5 items-center rounded-full border border-border/70 bg-background px-1.5 text-subtle-foreground",
 );
 
 const paneGroupVariants = cva("flex items-center gap-1");
@@ -58,7 +58,7 @@ export function paneGroupClassName(className?: string) {
 }
 
 export function paneIconButtonClassName(className?: string) {
-  return cn("shrink-0 rounded-md text-text-lighter", className);
+  return cn("shrink-0 rounded-md text-subtle-foreground", className);
 }
 
 export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;

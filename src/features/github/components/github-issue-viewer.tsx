@@ -326,7 +326,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               repoPath={repoPath}
             />
           ) : (
-            <p className="font-sans ui-text-sm italic text-text-lighter">No description provided</p>
+            <p className="font-sans ui-text-sm italic text-subtle-foreground">
+              No description provided
+            </p>
           )}
 
           <div className="w-full space-y-1">

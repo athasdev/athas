@@ -89,7 +89,7 @@ function SqlEditor({
 
   return (
     <div className="mb-1">
-      <div className={databaseCardClassName("relative h-20 overflow-hidden bg-secondary-bg/60")}>
+      <div className={databaseCardClassName("relative h-20 overflow-hidden bg-surface/60")}>
         <pre
           ref={highlightRef}
           aria-hidden="true"
@@ -109,7 +109,7 @@ function SqlEditor({
               ),
             )
           ) : (
-            <span className="text-text-lighter">SELECT * FROM table_name</span>
+            <span className="text-subtle-foreground">SELECT * FROM table_name</span>
           )}
         </pre>
         <Textarea
@@ -146,7 +146,7 @@ function SqlEditor({
             highlightRef.current.scrollTop = event.currentTarget.scrollTop;
             highlightRef.current.scrollLeft = event.currentTarget.scrollLeft;
           }}
-          className="relative h-full resize-none border-0 bg-transparent font-mono ui-text-sm leading-5 text-transparent caret-text placeholder:text-transparent selection:bg-accent/30 focus:ring-0"
+          className="relative h-full resize-none border-0 bg-transparent font-mono ui-text-sm leading-5 text-transparent caret-foreground placeholder:text-transparent selection:bg-primary/30 focus:ring-0"
           placeholder="SELECT * FROM table_name"
           spellCheck={false}
           disabled={disabled}
@@ -160,7 +160,7 @@ function SqlEditor({
               type="button"
               variant="ghost"
               size="xs"
-              className="h-6 border border-border/60 px-2 text-text-lighter"
+              className="h-6 border border-border/60 px-2 text-subtle-foreground"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => applyCompletion(index)}
               aria-label={`Insert SQL ${item.detail} ${item.label}`}
@@ -272,7 +272,7 @@ export default function QueryBar({
           tableMeta={tableMeta}
         />
         <div className="flex items-center justify-between gap-2">
-          <div className="font-sans ui-text-sm text-text-lighter">
+          <div className="font-sans ui-text-sm text-subtle-foreground">
             {selectedQuery
               ? "Selection will run"
               : lastQueryExecutionMs !== null && lastQueryExecutionMs !== undefined

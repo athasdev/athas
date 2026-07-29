@@ -142,8 +142,8 @@ export function ImageFormatDialog({
       }
     >
       <div className="flex flex-col gap-1">
-        <p className="text-text ui-text-sm">{config.description}</p>
-        <p className="text-text-lighter ui-text-sm">
+        <p className="text-foreground ui-text-sm">{config.description}</p>
+        <p className="text-subtle-foreground ui-text-sm">
           Current: <span className="font-sans">{currentFileName}</span> •{" "}
           {formatFileSize(currentSize)}
         </p>
@@ -151,7 +151,7 @@ export function ImageFormatDialog({
 
       {config.supportsQuality && (
         <div className="flex flex-col gap-2">
-          <div className="font-semibold text-text ui-text-sm">Quality Setting</div>
+          <div className="font-semibold text-foreground ui-text-sm">Quality Setting</div>
           <div className="flex flex-col gap-1">
             {config.options.map((option) => (
               <Button
@@ -163,32 +163,32 @@ export function ImageFormatDialog({
                 className={cn(
                   "flex h-auto items-center justify-between rounded border px-3 py-2 text-left ui-text-sm",
                   selectedQuality === option.quality
-                    ? "border-accent bg-accent/10 text-text"
-                    : "border-border bg-primary-bg text-text hover:bg-hover",
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-background text-foreground hover:bg-accent",
                 )}
               >
                 <span>
                   {option.label}
                   {option.quality === config.recommended && (
-                    <span className="ml-2 ui-text-sm text-accent">★ RECOMMENDED</span>
+                    <span className="ml-2 ui-text-sm text-primary">★ RECOMMENDED</span>
                   )}
                 </span>
-                <span className="text-text-lighter">{Math.round(option.quality * 100)}%</span>
+                <span className="text-subtle-foreground">{Math.round(option.quality * 100)}%</span>
               </Button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="rounded border border-border bg-secondary-bg p-3">
+      <div className="rounded border border-border bg-surface p-3">
         <div className="flex items-center justify-between">
-          <span className="text-text ui-text-sm">Estimated Size:</span>
+          <span className="text-foreground ui-text-sm">Estimated Size:</span>
           <div className="flex items-center gap-2">
             {isEstimating ? (
-              <span className="text-text-lighter ui-text-sm">Calculating...</span>
+              <span className="text-subtle-foreground ui-text-sm">Calculating...</span>
             ) : estimatedSize ? (
               <>
-                <span className="font-sans text-text ui-text-sm">
+                <span className="font-sans text-foreground ui-text-sm">
                   {formatFileSize(estimatedSize)}
                 </span>
                 {sizeDiff !== 0 && (
@@ -204,7 +204,7 @@ export function ImageFormatDialog({
                 )}
               </>
             ) : (
-              <span className="text-text-lighter ui-text-sm">--</span>
+              <span className="text-subtle-foreground ui-text-sm">--</span>
             )}
           </div>
         </div>

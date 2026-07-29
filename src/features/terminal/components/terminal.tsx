@@ -675,9 +675,9 @@ export const XtermTerminal = ({
 
   const getSearchOptions = useCallback((options: TerminalSearchOptions): ISearchOptions => {
     const rootStyles = getComputedStyle(document.documentElement);
-    const selected = rootStyles.getPropertyValue("--color-selected").trim() || "#3b82f6";
-    const accent = rootStyles.getPropertyValue("--color-accent").trim() || "#60a5fa";
-    const border = rootStyles.getPropertyValue("--color-border").trim() || "#4b5563";
+    const selected = rootStyles.getPropertyValue("--selected").trim() || "#3b82f6";
+    const accent = rootStyles.getPropertyValue("--primary").trim() || "#60a5fa";
+    const border = rootStyles.getPropertyValue("--border").trim() || "#4b5563";
 
     return {
       caseSensitive: options.caseSensitive,
@@ -809,7 +809,7 @@ export const XtermTerminal = ({
   );
 
   return (
-    <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-background">
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
@@ -825,7 +825,7 @@ export const XtermTerminal = ({
           id={`terminal-${sessionId}`}
           data-terminal-drop-target
           data-terminal-session-id={sessionId}
-          className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-foreground ${!isActive ? "opacity-60" : ""}`}
           onDragOver={handleTerminalDragOver}
           onDrop={handleTerminalFileDrop}
           onMouseDown={() => {

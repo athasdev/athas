@@ -95,7 +95,11 @@ export function GitHubPRActionDialog({
             variant="default"
             onClick={() => onSubmit({ body, method })}
             disabled={!canSubmit}
-            className={copy.tone === "danger" ? "border border-error/40 text-error/90" : undefined}
+            className={
+              copy.tone === "danger"
+                ? "border border-destructive/40 text-destructive/90"
+                : undefined
+            }
           >
             {isSubmitting ? "Working..." : copy.submitLabel}
           </Button>
@@ -103,7 +107,7 @@ export function GitHubPRActionDialog({
       }
     >
       <div className="space-y-3">
-        <p className="font-sans ui-text-sm text-text-lighter">{copy.description}</p>
+        <p className="font-sans ui-text-sm text-subtle-foreground">{copy.description}</p>
 
         {kind === "merge" ? (
           <div className="grid grid-cols-3 gap-2">

@@ -3,14 +3,14 @@ import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
 const cardVariants = cva(
-  "group/card flex flex-col overflow-hidden rounded-xl font-sans ui-text-sm text-text",
+  "group/card flex flex-col overflow-hidden rounded-xl font-sans ui-text-sm text-foreground",
   {
     variants: {
       variant: {
-        default: "border border-border/70 bg-secondary-bg/45",
-        muted: "bg-secondary-bg/55",
+        default: "border border-border/70 bg-surface/45",
+        muted: "bg-surface/55",
         outline: "border border-border/70 bg-transparent",
-        elevated: "bg-secondary-bg/65 shadow-[var(--shadow-card)]",
+        elevated: "bg-surface/65 shadow-[var(--shadow-card)]",
       },
       size: {
         flush: "gap-0 py-0 [--card-spacing:0rem]",
@@ -59,7 +59,7 @@ function CardTitle({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("font-medium leading-snug text-text", className)}
+      className={cn("font-medium leading-snug text-foreground", className)}
       {...props}
     />
   );
@@ -69,7 +69,7 @@ function CardDescription({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("leading-normal text-text-lighter", className)}
+      className={cn("leading-normal text-subtle-foreground", className)}
       {...props}
     />
   );
@@ -100,7 +100,7 @@ function CardFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center border-border/70 border-t bg-secondary-bg/55 px-[var(--card-spacing)] pt-[var(--card-spacing)]",
+        "flex items-center border-border/70 border-t bg-surface/55 px-[var(--card-spacing)] pt-[var(--card-spacing)]",
         className,
       )}
       {...props}

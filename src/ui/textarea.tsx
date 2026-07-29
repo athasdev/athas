@@ -9,15 +9,15 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 const textareaVariants = cva(
-  "w-full disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-text-lighter resize-y",
+  "w-full disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-subtle-foreground resize-y",
   {
     variants: {
       variant: {
         default: cn(
-          "rounded-lg border border-border bg-secondary-bg text-text transition-colors",
-          "focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35",
+          "rounded-lg border border-border bg-surface text-foreground transition-colors",
+          "focus:border-border-strong focus:bg-surface focus:outline-none focus:ring-1 focus:ring-border-strong/35",
         ),
-        ghost: "border-none bg-transparent text-text focus:outline-none focus:ring-0",
+        ghost: "border-none bg-transparent text-foreground focus:outline-none focus:ring-0",
       },
       size: {
         sm: "px-2 py-1 ui-text-sm",

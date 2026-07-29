@@ -126,7 +126,7 @@ export function useInlineEdit({
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const subscription = useAuthStore((state) => state.subscription);
-  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
+  const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);
 
   const getSelectionAnchorPosition = useCallback((): { line: number; column: number } | null => {
     if (!selection || selection.start.offset === selection.end.offset) return null;

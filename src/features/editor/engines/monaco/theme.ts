@@ -147,25 +147,28 @@ export function defineMonacoTheme(themeId: string): string {
   });
 
   const background = toMonacoColor(
-    colorValue(theme, "primary-bg"),
-    fallbackColor(theme, "primary-bg"),
+    colorValue(theme, "background"),
+    fallbackColor(theme, "background"),
   );
   const secondaryBackground = toMonacoColor(
-    colorValue(theme, "secondary-bg"),
-    fallbackColor(theme, "secondary-bg"),
+    colorValue(theme, "surface"),
+    fallbackColor(theme, "surface"),
   );
-  const foreground = toMonacoColor(colorValue(theme, "text"), fallbackColor(theme, "text"));
+  const foreground = toMonacoColor(
+    colorValue(theme, "foreground"),
+    fallbackColor(theme, "foreground"),
+  );
   const subtleForeground = toMonacoColor(
-    colorValue(theme, "text-lighter"),
-    fallbackColor(theme, "text-lighter"),
+    colorValue(theme, "subtle-foreground"),
+    fallbackColor(theme, "subtle-foreground"),
   );
   const border = toMonacoColor(colorValue(theme, "border"), fallbackColor(theme, "border"));
   const selected = toMonacoColor(colorValue(theme, "selected"), fallbackColor(theme, "selected"));
   const selection = toMonacoColor(
-    colorValue(theme, "selection-bg"),
-    fallbackColor(theme, "selection-bg"),
+    colorValue(theme, "selection"),
+    fallbackColor(theme, "selection"),
   );
-  const accent = toMonacoColor(colorValue(theme, "accent"), fallbackColor(theme, "accent"));
+  const accent = toMonacoColor(colorValue(theme, "primary"), fallbackColor(theme, "primary"));
   const cursor = toMonacoColor(colorValue(theme, "cursor"), foreground);
 
   const monacoThemeId = toMonacoThemeName(theme.id);

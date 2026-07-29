@@ -54,16 +54,16 @@ const ConnectionList = ({
   };
 
   return (
-    <div className="flex h-full select-none flex-col bg-secondary-bg">
+    <div className="flex h-full select-none flex-col bg-surface">
       {/* Header */}
-      <div className="flex items-center justify-between border-border border-b bg-secondary-bg px-2 py-1.5">
-        <h3 className="font-sans font-medium text-text ui-text-sm tracking-wide">Remote</h3>
+      <div className="flex items-center justify-between border-border border-b bg-surface px-2 py-1.5">
+        <h3 className="font-sans font-medium text-foreground ui-text-sm tracking-wide">Remote</h3>
         <Button
           onClick={onAddNew}
           variant="ghost"
           className={cn(
             "flex items-center justify-center rounded-md",
-            "text-text-lighter transition-colors hover:bg-hover hover:text-text",
+            "text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground",
           )}
           aria-label="Add Remote Connection"
           size="icon-xs"
@@ -117,7 +117,7 @@ const ConnectionList = ({
                     }}
                     size="xs"
                     className={cn(
-                      "relative cursor-pointer flex-nowrap border-0 text-left hover:bg-hover",
+                      "relative cursor-pointer flex-nowrap border-0 text-left hover:bg-accent",
                       connection.isConnected && "bg-selected",
                       connectingMap[connection.id] && "cursor-not-allowed opacity-70",
                     )}
@@ -128,7 +128,7 @@ const ConnectionList = ({
                       <span
                         className={cn(
                           "size-1.5 rounded-full",
-                          connection.isConnected ? "bg-success" : "bg-text-lighter/40",
+                          connection.isConnected ? "bg-success" : "bg-subtle-foreground/40",
                         )}
                       />
                     </ItemMedia>
@@ -170,7 +170,7 @@ const ConnectionList = ({
                             }}
                             variant="ghost"
                             size="icon-xs"
-                            className="hover:text-error"
+                            className="hover:text-destructive"
                             aria-label="Disconnect"
                           >
                             <WifiOff />

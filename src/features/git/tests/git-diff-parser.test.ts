@@ -107,23 +107,23 @@ describe("git diff parser", () => {
     expect(getDiffLineVisualState("added")).toMatchObject({
       lineBackground: "bg-git-added/14",
       gutterBackground: "bg-git-added/18",
-      railClassName: "shadow-[inset_2px_0_0_var(--color-git-added)]",
+      railClassName: "shadow-[inset_2px_0_0_var(--git-added)]",
       gutterTextColor: "text-git-added",
-      contentColor: "text-text",
+      contentColor: "text-foreground",
     });
     expect(getDiffLineVisualState("removed")).toMatchObject({
       lineBackground: "bg-git-deleted/14",
       gutterBackground: "bg-git-deleted/18",
-      railClassName: "shadow-[inset_2px_0_0_var(--color-git-deleted)]",
+      railClassName: "shadow-[inset_2px_0_0_var(--git-deleted)]",
       gutterTextColor: "text-git-deleted",
-      contentColor: "text-text",
+      contentColor: "text-foreground",
     });
     expect(getDiffLineVisualState("header")).toMatchObject({
       lineBackground: "",
-      gutterBackground: "bg-primary-bg",
+      gutterBackground: "bg-background",
       railClassName: "",
-      gutterTextColor: "text-text-lighter",
-      contentColor: "text-text",
+      gutterTextColor: "text-subtle-foreground",
+      contentColor: "text-foreground",
     });
   });
 

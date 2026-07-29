@@ -34,7 +34,7 @@ interface MultipleToggleGroupProps<Value extends string> extends ToggleGroupComm
 }
 
 const toggleGroupVariants = cva(
-  "inline-flex max-w-full items-stretch self-start rounded-lg bg-secondary-bg/55",
+  "inline-flex max-w-full items-stretch self-start rounded-lg bg-surface/55",
   {
     variants: {
       variant: {
@@ -53,7 +53,7 @@ const toggleGroupVariants = cva(
 );
 
 const toggleGroupItemVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md font-sans text-text-lighter outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover/50 hover:text-text active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-accent/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-hover/80 data-pressed:text-text",
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1 rounded-md font-sans text-subtle-foreground outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/50 hover:text-foreground active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-primary/20 data-disabled:pointer-events-none data-disabled:opacity-50 data-pressed:bg-accent/80 data-pressed:text-foreground",
   {
     variants: {
       size: {

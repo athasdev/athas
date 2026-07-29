@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/utils/cn";
 
 const progressTrackVariants = cva(
-  "relative flex w-full items-center overflow-hidden rounded-full bg-secondary-bg",
+  "relative flex w-full items-center overflow-hidden rounded-full bg-surface",
   {
     variants: {
       size: {
@@ -59,7 +59,7 @@ function ProgressIndicator({ className, ...props }: ProgressPrimitive.Indicator.
     <ProgressPrimitive.Indicator
       data-slot="progress-indicator"
       className={cn(
-        "h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
+        "h-full rounded-full bg-primary transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
         className,
       )}
       {...props}
@@ -71,7 +71,7 @@ function ProgressLabel({ className, ...props }: ProgressPrimitive.Label.Props) {
   return (
     <ProgressPrimitive.Label
       data-slot="progress-label"
-      className={cn("font-medium text-text", className)}
+      className={cn("font-medium text-foreground", className)}
       {...props}
     />
   );
@@ -81,7 +81,7 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
   return (
     <ProgressPrimitive.Value
       data-slot="progress-value"
-      className={cn("ml-auto tabular-nums text-text-lighter", className)}
+      className={cn("ml-auto tabular-nums text-subtle-foreground", className)}
       {...props}
     />
   );

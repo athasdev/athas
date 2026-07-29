@@ -66,8 +66,8 @@
   max-width: 100%;
   max-height: min(70vh, 48rem);
   object-fit: contain;
-  background: var(--color-secondary-bg);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 

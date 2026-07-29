@@ -49,7 +49,9 @@ export const InlineEditModelSelector = ({
   const [isLoadingModels, setIsLoadingModels] = useState(false);
 
   const subscription = useAuthStore((state) => state.subscription);
-  const { dynamicModels, setDynamicModels, hasProviderApiKey } = useAIChatStore();
+  const dynamicModels = useAIChatStore((state) => state.dynamicModels);
+  const setDynamicModels = useAIChatStore((state) => state.actions.setDynamicModels);
+  const hasProviderApiKey = useAIChatStore((state) => state.actions.hasProviderApiKey);
 
   const providers = useAvailableProviders();
   const currentProvider = getProviderById(providerId);
@@ -181,7 +183,7 @@ export const InlineEditModelSelector = ({
         size="xs"
         onClick={openSelector}
         disabled={disabled}
-        className="max-w-[144px] justify-start px-1.5 text-text"
+        className="max-w-[144px] justify-start px-1.5 text-foreground"
         tooltip="Inline edit model"
       >
         <span className="truncate ui-text-base">
@@ -201,7 +203,7 @@ export const InlineEditModelSelector = ({
               <CaretLeft />
             </CommandHeaderAction>
           ) : (
-            <Search className="shrink-0 text-text-lighter" size={14} />
+            <Search className="shrink-0 text-subtle-foreground" size={14} />
           )}
           <CommandInput
             ref={inputRef}
@@ -230,11 +232,11 @@ export const InlineEditModelSelector = ({
                         <ProviderIcon
                           providerId={selectedProvider.id}
                           size={14}
-                          className="text-text-lighter"
+                          className="text-subtle-foreground"
                         />
                       }
                       title={model.name}
-                      accessory={isSelected ? <Check className="text-accent" size={13} /> : null}
+                      accessory={isSelected ? <Check className="text-primary" size={13} /> : null}
                     />
                   );
                 })
@@ -261,7 +263,7 @@ export const InlineEditModelSelector = ({
                     <ProviderIcon
                       providerId={provider.id}
                       size={14}
-                      className="text-text-lighter"
+                      className="text-subtle-foreground"
                     />
                   }
                   title={provider.name}

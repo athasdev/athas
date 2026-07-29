@@ -146,7 +146,7 @@ export const FontSelector = ({
 
   if (error) {
     return (
-      <div className={cn("font-sans ui-text-sm text-error", className)}>
+      <div className={cn("font-sans ui-text-sm text-destructive", className)}>
         Error loading fonts: {error}
       </div>
     );

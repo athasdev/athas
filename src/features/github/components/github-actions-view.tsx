@@ -62,7 +62,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     return {
       label: "Failed",
       icon: XCircle,
-      className: "text-error",
+      className: "text-destructive",
       animate: false,
     };
   }
@@ -71,7 +71,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     return {
       label: normalizedConclusion === "skipped" ? "Skipped" : "Cancelled",
       icon: XCircle,
-      className: "text-text-lighter",
+      className: "text-subtle-foreground",
       animate: false,
     };
   }
@@ -84,7 +84,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     return {
       label: "Running",
       icon: null,
-      className: "text-accent",
+      className: "text-primary",
       animate: true,
     };
   }
@@ -101,7 +101,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   return {
     label: normalizedConclusion || normalizedStatus || "Unknown",
     icon: Activity,
-    className: "text-text-lighter",
+    className: "text-subtle-foreground",
     animate: false,
   };
 };

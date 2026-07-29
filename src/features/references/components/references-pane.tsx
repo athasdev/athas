@@ -74,7 +74,7 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
       {/* Header */}
       <div className={paneHeaderClassName("justify-between border-border/70 border-b")}>
         <div className="flex items-center gap-1.5">
-          <span className="font-sans ui-text-sm font-medium text-text">References</span>
+          <span className="font-sans ui-text-sm font-medium text-foreground">References</span>
           {query && <PaneChip>{query.symbol}</PaneChip>}
           <PaneChip>{isLoading ? "..." : references.length}</PaneChip>
         </div>
@@ -124,18 +124,18 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.filePath)}
-                  className="flex w-full items-center gap-1 px-2 py-1 text-left transition-colors hover:bg-hover/50"
+                  className="flex w-full items-center gap-1 px-2 py-1 text-left transition-colors hover:bg-accent/50"
                 >
                   {isCollapsed ? (
-                    <ChevronRight size={12} className="shrink-0 text-text-lighter" />
+                    <ChevronRight size={12} className="shrink-0 text-subtle-foreground" />
                   ) : (
-                    <ChevronDown size={12} className="shrink-0 text-text-lighter" />
+                    <ChevronDown size={12} className="shrink-0 text-subtle-foreground" />
                   )}
-                  <FileCode size={12} className="shrink-0 text-accent" />
-                  <span className="font-sans ui-text-sm truncate font-medium text-text">
+                  <FileCode size={12} className="shrink-0 text-primary" />
+                  <span className="font-sans ui-text-sm truncate font-medium text-foreground">
                     {group.fileName}
                   </span>
-                  <span className="font-sans ui-text-sm shrink-0 text-text-lighter">
+                  <span className="font-sans ui-text-sm shrink-0 text-subtle-foreground">
                     {group.items.length}
                   </span>
                 </button>
@@ -145,12 +145,12 @@ const ReferencesPane = ({ onFullScreen, isFullScreen = false }: ReferencesPanePr
                       type="button"
                       key={`${ref.filePath}:${ref.line}:${ref.column}:${index}`}
                       onClick={() => void handleReferenceClick(ref)}
-                      className="group flex w-full items-baseline gap-2 py-0.5 pr-2 pl-7 text-left transition-colors hover:bg-hover/50"
+                      className="group flex w-full items-baseline gap-2 py-0.5 pr-2 pl-7 text-left transition-colors hover:bg-accent/50"
                     >
-                      <span className="font-sans ui-text-sm shrink-0 tabular-nums text-text-lighter">
+                      <span className="font-sans ui-text-sm shrink-0 tabular-nums text-subtle-foreground">
                         {ref.line + 1}
                       </span>
-                      <span className="font-sans ui-text-sm truncate text-text-lighter group-hover:text-text">
+                      <span className="font-sans ui-text-sm truncate text-subtle-foreground group-hover:text-foreground">
                         {ref.lineContent.trim()}
                       </span>
                     </button>

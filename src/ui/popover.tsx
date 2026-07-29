@@ -8,11 +8,11 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { instantTransition, overlayEntrance } from "@/design-system/motion";
+import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(
-  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-surface/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
@@ -136,7 +136,7 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-[10070] flex w-72 origin-[var(--transform-origin)] flex-col gap-2.5 rounded-xl border border-border bg-secondary-bg/95 p-2.5 font-sans ui-text-sm text-text shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            "z-[10070] flex w-72 origin-[var(--transform-origin)] flex-col gap-2.5 rounded-xl border border-border bg-surface/95 p-2.5 font-sans ui-text-sm text-foreground shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             className,
           )}
           {...props}
@@ -160,7 +160,7 @@ function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
   return (
     <PopoverPrimitive.Title
       data-slot="popover-title"
-      className={cn("font-medium text-text", className)}
+      className={cn("font-medium text-foreground", className)}
       {...props}
     />
   );
@@ -170,7 +170,7 @@ function PopoverDescription({ className, ...props }: PopoverPrimitive.Descriptio
   return (
     <PopoverPrimitive.Description
       data-slot="popover-description"
-      className={cn("text-text-lighter", className)}
+      className={cn("text-subtle-foreground", className)}
       {...props}
     />
   );

@@ -41,7 +41,7 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const subscription = useAuthStore((s) => s.subscription);
   const logout = useAuthStore((s) => s.logout);
-  const checkAllProviderApiKeys = useAIChatStore((state) => state.checkAllProviderApiKeys);
+  const checkAllProviderApiKeys = useAIChatStore((state) => state.actions.checkAllProviderApiKeys);
   const hasOpenRouterKey = useAIChatStore(
     (state) => state.providerApiKeys.get("openrouter") || false,
   );
@@ -251,47 +251,47 @@ export const AccountMenu = ({ className }: AccountMenuProps) => {
                 void handleOpenBillingDashboard();
               }}
               variant="ghost"
-              className="h-auto w-full flex-col items-stretch gap-0 p-2.5 text-left hover:bg-hover/50"
+              className="h-auto w-full flex-col items-stretch gap-0 p-2.5 text-left hover:bg-accent/50"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="ui-text-sm font-medium text-text">AI usage</span>
+                  <span className="ui-text-sm font-medium text-foreground">AI usage</span>
                   <Badge
                     variant="default"
                     size="compact"
                     className={cn(
                       isPro || isEnterprise
-                        ? "border-accent/30 bg-accent/10 text-accent"
-                        : "border-border/60 bg-primary-bg/50 text-text-lighter",
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border/60 bg-background/50 text-subtle-foreground",
                     )}
                   >
                     {planLabel}
                   </Badge>
                 </div>
-                <span className="ui-text-sm text-text-lighter">{modeLabel}</span>
+                <span className="ui-text-sm text-subtle-foreground">{modeLabel}</span>
               </div>
               {autocompleteUsage ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-sm text-text-lighter">Hosted AI</span>
-                    <span className="ui-text-sm font-medium text-text">
+                    <span className="ui-text-sm text-subtle-foreground">Hosted AI</span>
+                    <span className="ui-text-sm font-medium text-foreground">
                       {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                       {formatUsdFromCents(autocompleteUsage.budgetCents)}
                     </span>
                   </div>
                   <Progress value={usageProgress} size="md" aria-label="Hosted AI monthly usage" />
                   <div className="flex items-center justify-between gap-3">
-                    <span className="ui-text-sm text-text-lighter/70">
+                    <span className="ui-text-sm text-subtle-foreground/70">
                       {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                       {formatUsageDate(autocompleteUsage.periodEnd)}
                     </span>
-                    <span className="ui-text-sm text-text-lighter/70">
+                    <span className="ui-text-sm text-subtle-foreground/70">
                       Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
+                <div className="flex items-center gap-1.5 text-subtle-foreground ui-text-sm">
                   <MoneyIcon />
                   <span>Usage unavailable</span>
                 </div>

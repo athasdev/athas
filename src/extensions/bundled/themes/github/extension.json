@@ -18,15 +18,15 @@
         "description": "Clean light theme inspired by GitHub",
         "appearance": "light",
         "colors": {
-          "primary-bg": "#ffffff",
-          "secondary-bg": "#f6f8fa",
-          "text": "#24292f",
-          "text-light": "#656d76",
-          "text-lighter": "#8c959f",
+          "background": "#ffffff",
+          "surface": "#f6f8fa",
+          "foreground": "#24292f",
+          "muted-foreground": "#656d76",
+          "subtle-foreground": "#8c959f",
           "border": "#d0d7de",
-          "hover": "#f3f4f6",
+          "accent": "#f3f4f6",
           "selected": "#eaeef2",
-          "accent": "#0969da"
+          "primary": "#0969da"
         },
         "syntax": {
           "keyword": "#cf222e",
@@ -53,15 +53,15 @@
         "description": "Dark theme inspired by GitHub Dark",
         "appearance": "dark",
         "colors": {
-          "primary-bg": "#0d1117",
-          "secondary-bg": "#161b22",
-          "text": "#e6edf3",
-          "text-light": "#7d8590",
-          "text-lighter": "#656d76",
+          "background": "#0d1117",
+          "surface": "#161b22",
+          "foreground": "#e6edf3",
+          "muted-foreground": "#7d8590",
+          "subtle-foreground": "#656d76",
           "border": "#30363d",
-          "hover": "#21262d",
+          "accent": "#21262d",
           "selected": "#30363d",
-          "accent": "#2f81f7"
+          "primary": "#2f81f7"
         },
         "syntax": {
           "keyword": "#ff7b72",
@@ -88,15 +88,15 @@
         "description": "Dimmed variant for reduced eye strain",
         "appearance": "dark",
         "colors": {
-          "primary-bg": "#22272e",
-          "secondary-bg": "#2d333b",
-          "text": "#adbac7",
-          "text-light": "#768390",
-          "text-lighter": "#636e7b",
+          "background": "#22272e",
+          "surface": "#2d333b",
+          "foreground": "#adbac7",
+          "muted-foreground": "#768390",
+          "subtle-foreground": "#636e7b",
           "border": "#444c56",
-          "hover": "#373e47",
+          "accent": "#373e47",
           "selected": "#444c56",
-          "accent": "#539bf5"
+          "primary": "#539bf5"
         },
         "syntax": {
           "keyword": "#f47067",

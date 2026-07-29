@@ -98,7 +98,9 @@ export function PRActivityPanel({
           repoPath={repoPath}
         />
       ) : (
-        <p className="font-sans ui-text-sm italic text-text-lighter">No description provided</p>
+        <p className="font-sans ui-text-sm italic text-subtle-foreground">
+          No description provided
+        </p>
       )}
 
       <div className="space-y-2">
@@ -129,7 +131,7 @@ export function PRActivityPanel({
               ),
             )}
             {activityItems.length > visibleActivityItems.length ? (
-              <div className="font-sans ui-text-sm px-1 py-2 text-text-lighter">
+              <div className="font-sans ui-text-sm px-1 py-2 text-subtle-foreground">
                 {`Loading ${activityItems.length - visibleActivityItems.length} more activity items...`}
               </div>
             ) : null}

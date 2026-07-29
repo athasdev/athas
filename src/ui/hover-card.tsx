@@ -35,7 +35,7 @@ function HoverCardContent({
         <HoverCardPrimitive.Popup
           data-slot="hover-card-content"
           className={cn(
-            "z-[10070] w-64 origin-[var(--transform-origin)] rounded-xl border border-border bg-secondary-bg/95 p-3 font-sans ui-text-sm text-text shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            "z-[10070] w-64 origin-[var(--transform-origin)] rounded-xl border border-border bg-surface/95 p-3 font-sans ui-text-sm text-foreground shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
             className,
           )}
           {...props}

@@ -169,7 +169,7 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
               tooltip="Open in external viewer"
               size="icon-xs"
             >
-              <ExternalLink className="text-text" />
+              <ExternalLink className="text-foreground" />
             </Button>
             <div className="mx-1 h-4 w-px bg-border" />
             <ViewerZoomControls
@@ -207,12 +207,12 @@ export function PdfViewer({ filePath, fileName }: PdfViewerProps) {
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={onDocumentLoadError}
             loading={
-              <div className="mt-20 flex flex-col items-center gap-2 text-text-lighter">
+              <div className="mt-20 flex flex-col items-center gap-2 text-subtle-foreground">
                 <Spinner label="Loading PDF" showLabel />
               </div>
             }
             error={
-              <div className="mt-20 flex flex-col items-center gap-2 text-error">
+              <div className="mt-20 flex flex-col items-center gap-2 text-destructive">
                 <span>Failed to load PDF document.</span>
               </div>
             }

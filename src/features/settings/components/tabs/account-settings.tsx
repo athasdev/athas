@@ -109,7 +109,7 @@ export const AccountSettings = () => {
           description="Sign in to access account and subscription features."
         >
           {isAuthenticated ? (
-            <span className="font-sans ui-text-base text-text-lighter">{user?.email}</span>
+            <span className="font-sans ui-text-base text-subtle-foreground">{user?.email}</span>
           ) : (
             <Button
               variant="default"
@@ -132,12 +132,12 @@ export const AccountSettings = () => {
           >
             <div className="mb-3">
               <div className="min-w-0">
-                <div id="account-ai-usage-label" className="font-sans ui-text-base text-text">
+                <div id="account-ai-usage-label" className="font-sans ui-text-base text-foreground">
                   AI Usage
                 </div>
                 <div
                   id="account-ai-usage-description"
-                  className="font-sans ui-text-base text-text-lighter"
+                  className="font-sans ui-text-base text-subtle-foreground"
                 >
                   Monthly hosted AI usage across chat, agents, inline edits, generation, and other
                   Athas AI features.
@@ -147,25 +147,27 @@ export const AccountSettings = () => {
             {autocompleteUsage ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-sans ui-text-base text-text-lighter">Monthly usage</span>
-                  <span className="font-sans ui-text-base font-medium text-text">
+                  <span className="font-sans ui-text-base text-subtle-foreground">
+                    Monthly usage
+                  </span>
+                  <span className="font-sans ui-text-base font-medium text-foreground">
                     {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                     {formatUsdFromCents(autocompleteUsage.budgetCents)}
                   </span>
                 </div>
                 <Progress value={usageProgress} size="md" aria-label="Hosted AI monthly usage" />
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-sans ui-text-base text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-subtle-foreground/70">
                     {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                     {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
-                  <span className="font-sans ui-text-base text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-subtle-foreground/70">
                     Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="font-sans ui-text-base text-text-lighter">Usage unavailable</div>
+              <div className="font-sans ui-text-base text-subtle-foreground">Usage unavailable</div>
             )}
           </div>
         )}
@@ -177,7 +179,7 @@ export const AccountSettings = () => {
                 <Badge
                   variant="default"
                   size="compact"
-                  className="bg-accent/10 font-normal text-accent"
+                  className="bg-primary/10 font-normal text-primary"
                 >
                   {planLabel}
                 </Badge>

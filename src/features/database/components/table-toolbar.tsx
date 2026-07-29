@@ -96,15 +96,17 @@ export default function TableToolbar({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 items-center gap-1.5">
-            <Database className="text-text-lighter" />
-            <span className="font-sans ui-text-sm min-w-0 truncate text-text">{fileName}</span>
+            <Database className="text-subtle-foreground" />
+            <span className="font-sans ui-text-sm min-w-0 truncate text-foreground">
+              {fileName}
+            </span>
             {dbInfo && (
-              <span className="font-sans ui-text-sm shrink-0 text-text-lighter">
+              <span className="font-sans ui-text-sm shrink-0 text-subtle-foreground">
                 {dbInfo.tables}t {dbInfo.indexes}i
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-secondary-bg/60 p-0.5">
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-surface/60 p-0.5">
             {VIEW_TABS.map(({ mode, label }) => (
               <Button
                 key={mode}
@@ -112,8 +114,8 @@ export default function TableToolbar({
                 variant={viewMode === mode ? "default" : "ghost"}
                 size="xs"
                 className={cn(
-                  "px-2.5 ui-text-sm text-text-lighter",
-                  viewMode === mode ? "text-text" : "text-text-lighter",
+                  "px-2.5 ui-text-sm text-subtle-foreground",
+                  viewMode === mode ? "text-foreground" : "text-subtle-foreground",
                 )}
                 aria-label={`Switch to ${label} view`}
                 tooltip={`Switch to ${label} view`}
@@ -129,7 +131,7 @@ export default function TableToolbar({
               onClick={() => setShowColumnTypes(!showColumnTypes)}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label="Toggle column types"
               tooltip={showColumnTypes ? "Hide column types" : "Show column types"}
             >
@@ -137,7 +139,9 @@ export default function TableToolbar({
             </Button>
           )}
           {resultSummary && (
-            <span className={databaseChipClassName("px-2 font-sans ui-text-sm text-text-lighter")}>
+            <span
+              className={databaseChipClassName("px-2 font-sans ui-text-sm text-subtle-foreground")}
+            >
               {resultSummary}
             </span>
           )}
@@ -146,7 +150,7 @@ export default function TableToolbar({
               onClick={() => setIsCustomQuery(true)}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               disabled={isCustomQuery}
               aria-label="Open SQL editor"
               tooltip="Open SQL editor"
@@ -158,7 +162,7 @@ export default function TableToolbar({
             <Button
               onClick={onCreateSubscription}
               variant="ghost"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label="Create subscription"
               tooltip="Create subscription"
               size="icon-xs"
@@ -170,7 +174,7 @@ export default function TableToolbar({
             <Button
               onClick={onToggleSubscription}
               variant="ghost"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               tooltip={subscriptionInfo.enabled ? "Disable subscription" : "Enable subscription"}
               size="icon-xs"
@@ -182,7 +186,7 @@ export default function TableToolbar({
             <Button
               onClick={onRefreshSubscription}
               variant="ghost"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label="Refresh subscription"
               tooltip="Refresh subscription"
               size="icon-xs"
@@ -194,7 +198,7 @@ export default function TableToolbar({
             <Button
               onClick={onDropSubscription}
               variant="ghost"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label="Drop subscription"
               tooltip="Drop subscription"
               size="icon-xs"
@@ -207,7 +211,7 @@ export default function TableToolbar({
               <Button
                 onClick={exportAsCSV}
                 variant="ghost"
-                className="text-text-lighter"
+                className="text-subtle-foreground"
                 aria-label={exportLabel}
                 tooltip={exportTooltip}
                 size="icon-xs"
@@ -217,7 +221,7 @@ export default function TableToolbar({
               <Button
                 onClick={copyAsJSON}
                 variant="ghost"
-                className="text-text-lighter"
+                className="text-subtle-foreground"
                 aria-label={jsonLabel}
                 tooltip={jsonTooltip}
                 size="icon-xs"

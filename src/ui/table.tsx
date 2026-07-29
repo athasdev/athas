@@ -16,7 +16,7 @@ function TableHeader({ className, ...props }: ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "sticky top-0 z-10 border-border border-b bg-primary-bg [&_tr]:border-b-0",
+        "sticky top-0 z-10 border-border border-b bg-background [&_tr]:border-b-0",
         className,
       )}
       {...props}
@@ -38,7 +38,7 @@ function TableFooter({ className, ...props }: ComponentProps<"tfoot">) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn("border-border border-t bg-secondary-bg/55 font-medium", className)}
+      className={cn("border-border border-t bg-surface/55 font-medium", className)}
       {...props}
     />
   );
@@ -49,7 +49,7 @@ function TableRow({ className, ...props }: ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "border-border border-b transition-colors hover:bg-hover data-[state=selected]:bg-selected",
+        "border-border border-b transition-colors hover:bg-accent data-[state=selected]:bg-selected",
         className,
       )}
       {...props}
@@ -62,7 +62,7 @@ function TableHead({ className, ...props }: ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-8 px-1.5 text-left align-middle font-medium text-text-lighter whitespace-nowrap",
+        "h-8 px-1.5 text-left align-middle font-medium text-subtle-foreground whitespace-nowrap",
         className,
       )}
       {...props}
@@ -74,7 +74,7 @@ function TableCell({ className, ...props }: ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn("px-1.5 py-1.5 align-middle text-text", className)}
+      className={cn("px-1.5 py-1.5 align-middle text-foreground", className)}
       {...props}
     />
   );
@@ -84,7 +84,7 @@ function TableCaption({ className, ...props }: ComponentProps<"caption">) {
   return (
     <caption
       data-slot="table-caption"
-      className={cn("mt-3 text-text-lighter", className)}
+      className={cn("mt-3 text-subtle-foreground", className)}
       {...props}
     />
   );

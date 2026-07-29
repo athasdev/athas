@@ -18,14 +18,14 @@ function Tabs({ className, orientation = "horizontal", ...props }: TabsPrimitive
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center text-text-lighter group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
+  "group/tabs-list inline-flex w-fit items-center justify-center text-subtle-foreground group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col",
   {
     variants: {
       variant: {
         default:
-          "gap-(--athas-chrome-gap-tight) rounded-[var(--athas-chrome-radius)] bg-secondary-bg/55 p-0.5",
+          "gap-(--athas-chrome-gap-tight) rounded-[var(--athas-chrome-radius)] bg-surface/55 p-0.5",
         segmented:
-          "min-h-(--athas-chrome-control-height) items-stretch overflow-hidden rounded-[var(--athas-chrome-radius)] bg-secondary-bg/55",
+          "min-h-(--athas-chrome-control-height) items-stretch overflow-hidden rounded-[var(--athas-chrome-radius)] bg-surface/55",
         line: "gap-(--athas-chrome-gap) bg-transparent",
         bare: "gap-(--athas-chrome-gap) bg-transparent",
       },
@@ -52,7 +52,7 @@ function TabsList({
 }
 
 const tabsTriggerVariants = cva(
-  "relative inline-flex flex-1 select-none items-center justify-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-[var(--athas-chrome-radius)] border border-transparent font-sans font-normal text-text-lighter outline-none transition-[background-color,border-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover/50 hover:text-text focus-visible:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent/20 disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-hover/80 data-[active]:text-text group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-[active]:bg-transparent group-data-[variant=bare]/tabs-list:bg-transparent group-data-[variant=bare]/tabs-list:data-[active]:bg-hover/80 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "relative inline-flex flex-1 select-none items-center justify-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-[var(--athas-chrome-radius)] border border-transparent font-sans font-normal text-subtle-foreground outline-none transition-[background-color,border-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/50 hover:text-foreground focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/80 data-[active]:text-foreground group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-[active]:bg-transparent group-data-[variant=bare]/tabs-list:bg-transparent group-data-[variant=bare]/tabs-list:data-[active]:bg-accent/80 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       size: {

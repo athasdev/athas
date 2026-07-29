@@ -164,7 +164,7 @@ export default function SqlDatabaseViewer({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg text-text">
+    <div className="flex h-full flex-col overflow-hidden bg-surface text-foreground">
       <TableToolbar
         fileName={store.fileName}
         dbInfo={store.dbInfo}
@@ -233,7 +233,7 @@ export default function SqlDatabaseViewer({
           onClearHistory={actions.clearSqlHistory}
         />
 
-        <div className={databasePanelClassName("flex-1 border border-border/70 bg-primary-bg")}>
+        <div className={databasePanelClassName("flex-1 border border-border/70 bg-background")}>
           <QueryBar
             searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}

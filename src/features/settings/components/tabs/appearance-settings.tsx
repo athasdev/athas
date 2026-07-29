@@ -292,7 +292,7 @@ export const AppearanceSettings = () => {
                 href={themeDocsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link hover:underline"
+                className="text-primary hover:underline"
               >
                 Format guide
               </a>

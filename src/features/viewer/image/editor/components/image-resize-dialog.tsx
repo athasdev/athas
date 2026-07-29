@@ -79,7 +79,7 @@ export function ImageResizeDialog({
           type="number"
           value={width}
           onChange={(e) => handleWidthChange(Number.parseInt(e.target.value) || 0)}
-          className="w-full bg-primary-bg"
+          className="w-full bg-background"
           min={1}
         />
       </Field>
@@ -91,7 +91,7 @@ export function ImageResizeDialog({
           type="number"
           value={height}
           onChange={(e) => handleHeightChange(Number.parseInt(e.target.value) || 0)}
-          className="w-full bg-primary-bg"
+          className="w-full bg-background"
           min={1}
         />
       </Field>
@@ -107,7 +107,7 @@ export function ImageResizeDialog({
         </FieldLabel>
       </Field>
 
-      <div className="ui-text-sm text-text-lighter">
+      <div className="ui-text-sm text-subtle-foreground">
         Original: {currentWidth} × {currentHeight}px
       </div>
     </Dialog>

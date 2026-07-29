@@ -122,7 +122,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       id: tab.id,
       label: tab.label,
       icon: <Icon className="size-4" weight="duotone" />,
-      className: tab.id === activeTab ? "bg-hover text-text" : undefined,
+      className: tab.id === activeTab ? "bg-accent text-foreground" : undefined,
       onClick: () => handleTabChange(tab.id),
     };
   });
@@ -233,12 +233,12 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             <button
               ref={tabDropdownRef}
               type="button"
-              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-secondary-bg/50 px-2 text-left text-text transition-colors hover:bg-hover max-[720px]:inline-flex"
+              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-surface/50 px-2 text-left text-foreground transition-colors hover:bg-accent max-[720px]:inline-flex"
               onClick={() => setIsTabDropdownOpen(true)}
             >
-              <ActiveTabIcon className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+              <ActiveTabIcon className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
               <span className="truncate">{activeTabItem.label}</span>
-              <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+              <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
             </button>
           </>
         }
@@ -275,9 +275,9 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         }
         classNames={{
           modal:
-            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 bg-secondary-bg max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
+            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 bg-surface max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
           header:
-            "bg-secondary-bg max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
+            "bg-surface max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
           title: "max-[720px]:min-w-0",
           headerActions: "max-[720px]:min-w-0",
           content: "flex h-full p-0",
@@ -295,7 +295,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
           <Card
             variant="elevated"
             size="flush"
-            className="mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-primary-bg max-[720px]:ml-2"
+            className="mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-background max-[720px]:ml-2"
           >
             <ScrollArea
               className="min-w-0 flex-1"
@@ -345,11 +345,11 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   onClick={() => navigateToSearchResult(result)}
                   className={[
                     "font-sans flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
-                    isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
+                    isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
                   ].join(" ")}
                 >
                   <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-base w-full truncate text-text-lighter">
+                  <span className="ui-text-base w-full truncate text-subtle-foreground">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>

@@ -172,7 +172,7 @@ export const TerminalSettings = () => {
       >
         <div className="space-y-3 px-1">
           <div className="flex items-center justify-between">
-            <div className="font-sans ui-text-base text-text-lighter">
+            <div className="font-sans ui-text-base text-subtle-foreground">
               Built-in profiles are generated from detected shells. Custom profiles appear in the
               terminal toolbar profile picker.
             </div>
@@ -193,7 +193,7 @@ export const TerminalSettings = () => {
           </div>
 
           {profiles.length === 0 ? (
-            <Empty className="min-h-24 border border-border/70 bg-secondary-bg/50 px-3 py-3">
+            <Empty className="min-h-24 border border-border/70 bg-surface/50 px-3 py-3">
               <EmptyDescription className="ui-text-base">
                 No custom terminal profiles yet.
               </EmptyDescription>
@@ -202,12 +202,14 @@ export const TerminalSettings = () => {
             profiles.map((profile) => (
               <div
                 key={profile.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-secondary-bg/60 p-3"
+                className="space-y-3 rounded-lg border border-border/70 bg-surface/60 p-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="font-sans ui-text-base mb-1 text-text">{profile.name}</div>
-                    <div className="font-sans ui-text-base text-text-lighter">
+                    <div className="font-sans ui-text-base mb-1 text-foreground">
+                      {profile.name}
+                    </div>
+                    <div className="font-sans ui-text-base text-subtle-foreground">
                       Visible in the terminal profile picker.
                     </div>
                   </div>
@@ -325,7 +327,7 @@ export const TerminalSettings = () => {
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT} side="left">
-              <Info className="size-4 cursor-help text-text-lighter transition-colors hover:text-text" />
+              <Info className="size-4 cursor-help text-subtle-foreground transition-colors hover:text-foreground" />
             </Tooltip>
           </div>
         </SettingRow>

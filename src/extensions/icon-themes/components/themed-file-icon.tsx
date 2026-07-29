@@ -25,7 +25,7 @@ export function ThemedFileIcon({
   isDir,
   isExpanded = false,
   isSymlink = false,
-  className = "text-text-lighter",
+  className = "text-subtle-foreground",
 }: ThemedFileIconProps) {
   const iconThemeId = useSettingsStore((state) => state.settings.iconTheme);
   useSyncExternalStore(
@@ -93,7 +93,7 @@ export function ThemedFileIcon({
         {renderIcon()}
         <svg
           viewBox="0 0 16 16"
-          className="-bottom-0.5 -right-0.5 themed-file-icon-badge absolute text-accent"
+          className="-bottom-0.5 -right-0.5 themed-file-icon-badge absolute text-primary"
           role="img"
           aria-label="Symlink"
         >

@@ -51,7 +51,7 @@ export function KeybindingInput({
     <div
       className={cn(
         "flex h-7 w-full min-w-0 items-center justify-between gap-1 rounded border px-2",
-        isRecording ? "border-accent bg-accent/5" : "border-border bg-secondary-bg",
+        isRecording ? "border-primary bg-primary/5" : "border-border bg-surface",
       )}
       onClick={handleClick}
       onKeyDown={(e) => {
@@ -69,7 +69,7 @@ export function KeybindingInput({
         {keys.length > 0 ? (
           <Keybinding keys={keys} />
         ) : (
-          <span className="font-sans ui-text-sm text-text-lighter">
+          <span className="font-sans ui-text-sm text-subtle-foreground">
             {isRecording ? "Press keys..." : value || "Not assigned"}
           </span>
         )}
@@ -82,7 +82,7 @@ export function KeybindingInput({
             e.stopPropagation();
             handleCancel();
           }}
-          className="ui-text-sm shrink-0 px-1 text-text-lighter hover:bg-transparent hover:text-text"
+          className="ui-text-sm shrink-0 px-1 text-subtle-foreground hover:bg-transparent hover:text-foreground"
           aria-label="Cancel recording"
         >
           ESC

@@ -33,10 +33,10 @@ interface ActionItem {
 }
 
 const quickActionCardClassName =
-  "h-20 min-w-0 w-full overflow-hidden flex-col items-start justify-between rounded-xl border border-border/65 bg-transparent p-3 text-left text-text-lighter hover:border-border-strong/75 hover:bg-hover/35 hover:text-text focus-visible:border-border-strong/80 disabled:opacity-45";
+  "h-20 min-w-0 w-full overflow-hidden flex-col items-start justify-between rounded-xl border border-border/65 bg-transparent p-3 text-left text-subtle-foreground hover:border-border-strong/75 hover:bg-accent/35 hover:text-foreground focus-visible:border-border-strong/80 disabled:opacity-45";
 
 const quickActionIconClassName =
-  "flex size-7 items-center justify-center rounded-md text-text-lighter group-hover:text-text";
+  "flex size-7 items-center justify-center rounded-md text-subtle-foreground group-hover:text-foreground";
 
 export function EmptyEditorState() {
   const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
@@ -111,13 +111,13 @@ export function EmptyEditorState() {
       <ContextMenuTrigger className="flex h-full min-h-0 w-full overflow-auto">
         <Empty className="m-auto max-w-2xl gap-4 px-6 py-8">
           <EmptyHeader>
-            <EmptyMedia className="size-8 text-text">
+            <EmptyMedia className="size-8 text-foreground">
               <Sparkles className="size-5" weight="duotone" />
             </EmptyMedia>
             <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
           </EmptyHeader>
 
-          <div className="w-full rounded-xl border border-border/70 bg-secondary-bg/16 p-3">
+          <div className="w-full rounded-xl border border-border/70 bg-surface/16 p-3">
             <AgentLaunchInput active autoFocus variant="hero" />
           </div>
 
@@ -133,8 +133,12 @@ export function EmptyEditorState() {
               >
                 <span className={quickActionIconClassName}>{item.icon}</span>
                 <span className="flex w-full min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-medium text-text ui-text-sm">{item.label}</span>
-                  <span className="truncate text-text-lighter ui-text-sm">{item.description}</span>
+                  <span className="truncate font-medium text-foreground ui-text-sm">
+                    {item.label}
+                  </span>
+                  <span className="truncate text-subtle-foreground ui-text-sm">
+                    {item.description}
+                  </span>
                 </span>
               </Button>
             ))}

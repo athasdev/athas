@@ -67,7 +67,7 @@ export const EnterpriseSettings = () => {
     return (
       <SettingsView>
         <Section title="Enterprise Controls" description="Access restricted">
-          <div className="font-sans ui-text-base px-1 py-2 text-text-lighter">
+          <div className="font-sans ui-text-base px-1 py-2 text-subtle-foreground">
             Enterprise policy controls are available only for enterprise workspaces.
           </div>
         </Section>
@@ -79,7 +79,7 @@ export const EnterpriseSettings = () => {
     return (
       <SettingsView>
         <Section title="Enterprise Controls" description="Policy unavailable">
-          <div className="font-sans ui-text-base px-1 py-2 text-text-lighter">
+          <div className="font-sans ui-text-base px-1 py-2 text-subtle-foreground">
             Enterprise policy could not be loaded. Try re-authenticating.
           </div>
         </Section>
@@ -177,8 +177,8 @@ export const EnterpriseSettings = () => {
             disabled={!isAdmin || isSaving || !policy.managedMode}
           />
           <div className="flex items-center justify-between gap-2">
-            <p className="font-sans ui-text-base text-text-lighter">
-              Parsed entries: <span className="text-text">{parsedAllowlist.length}</span>
+            <p className="font-sans ui-text-base text-subtle-foreground">
+              Parsed entries: <span className="text-foreground">{parsedAllowlist.length}</span>
             </p>
             <div className="flex gap-2">
               <Button

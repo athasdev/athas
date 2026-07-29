@@ -210,7 +210,7 @@ export function FilePathBreadcrumb({
                 className={dropdownItemClassName("justify-start gap-2 font-normal")}
                 size="xs"
               >
-                <ChevronLeft className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+                <ChevronLeft className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
                 <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
                   Go back
                 </span>
@@ -251,7 +251,7 @@ export function FilePathBreadcrumb({
                 fileName={item.name}
                 isDir={item.isDir}
                 isExpanded={false}
-                className="shrink-0 text-text-lighter"
+                className="shrink-0 text-subtle-foreground"
               />
               <span className="min-w-0 flex-1 truncate text-left ui-text-sm font-normal">
                 {item.name}

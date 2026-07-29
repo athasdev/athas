@@ -45,17 +45,17 @@ interface GitHubSidebarRowProps {
 function previewBadgeClassName(tone: PreviewBadgeTone = "default") {
   switch (tone) {
     case "accent":
-      return "bg-accent/12 text-accent";
+      return "bg-primary/12 text-primary";
     case "success":
       return "bg-success/12 text-success";
     case "warning":
       return "bg-warning/12 text-warning";
     case "error":
-      return "bg-error/12 text-error";
+      return "bg-destructive/12 text-destructive";
     case "muted":
-      return "bg-hover/70 text-text-lighter";
+      return "bg-accent/70 text-subtle-foreground";
     default:
-      return "bg-primary-bg text-text-lighter";
+      return "bg-background text-subtle-foreground";
   }
 }
 
@@ -81,9 +81,9 @@ export function GitHubSidebarRow({
   );
 
   const rowClassName = cn(
-    "font-sans group/github-row flex min-h-12 w-full min-w-0 max-w-full cursor-pointer items-start gap-2 overflow-hidden rounded-lg px-2 py-1.5 text-left text-text-lighter transition-[background-color,color]",
-    "hover:bg-hover/70 hover:text-text focus-visible:bg-hover/70 focus-visible:text-text focus-visible:outline-none",
-    active && "bg-hover/80 text-text",
+    "font-sans group/github-row flex min-h-12 w-full min-w-0 max-w-full cursor-pointer items-start gap-2 overflow-hidden rounded-lg px-2 py-1.5 text-left text-subtle-foreground transition-[background-color,color]",
+    "hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none",
+    active && "bg-accent/80 text-foreground",
     className,
   );
   const rowContent = (
@@ -92,11 +92,11 @@ export function GitHubSidebarRow({
         {leading}
       </span>
       <span className="w-0 min-w-0 flex-1 overflow-hidden">
-        <span className="ui-text-base block w-full truncate whitespace-nowrap font-medium leading-5 text-text">
+        <span className="ui-text-base block w-full truncate whitespace-nowrap font-medium leading-5 text-foreground">
           {title}
         </span>
         {description || trailing ? (
-          <span className="ui-text-sm mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden leading-4 text-text-lighter">
+          <span className="ui-text-sm mt-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden leading-4 text-subtle-foreground">
             <span className="min-w-0 flex-1 overflow-hidden truncate whitespace-nowrap">
               {description}
             </span>
@@ -155,14 +155,18 @@ export function GitHubSidebarRow({
         <div className="border-border/70 border-b p-3">
           <div className="flex min-w-0 items-start gap-2.5">
             {preview.icon ? (
-              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-bg">
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-background">
                 {preview.icon}
               </span>
             ) : null}
             <div className="min-w-0 flex-1">
-              <div className="line-clamp-2 font-medium text-text ui-text-base">{preview.title}</div>
+              <div className="line-clamp-2 font-medium text-foreground ui-text-base">
+                {preview.title}
+              </div>
               {preview.subtitle ? (
-                <div className="mt-1 truncate text-text-lighter ui-text-sm">{preview.subtitle}</div>
+                <div className="mt-1 truncate text-subtle-foreground ui-text-sm">
+                  {preview.subtitle}
+                </div>
               ) : null}
             </div>
           </div>
@@ -187,14 +191,14 @@ export function GitHubSidebarRow({
             {preview.details.map((detail, index) =>
               detail.value ? (
                 <div key={index} className="contents">
-                  <dt className="text-text-lighter">{detail.label}</dt>
-                  <dd className="min-w-0 truncate text-text">
+                  <dt className="text-subtle-foreground">{detail.label}</dt>
+                  <dd className="min-w-0 truncate text-foreground">
                     {detail.onClick ? (
                       <button
                         type="button"
                         aria-label={detail.actionLabel}
                         className={cn(
-                          "-mx-1 -my-0.5 max-w-full cursor-pointer truncate rounded px-1 py-0.5 text-left hover:bg-hover focus-visible:bg-hover focus-visible:outline-none",
+                          "-mx-1 -my-0.5 max-w-full cursor-pointer truncate rounded px-1 py-0.5 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
                           detail.mono && "font-mono",
                           detail.className,
                         )}
@@ -214,7 +218,7 @@ export function GitHubSidebarRow({
           </dl>
         ) : null}
         {preview.footer ? (
-          <div className="border-border/70 border-t px-3 py-2 text-text-lighter ui-text-sm">
+          <div className="border-border/70 border-t px-3 py-2 text-subtle-foreground ui-text-sm">
             {preview.footer}
           </div>
         ) : null}

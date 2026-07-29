@@ -33,7 +33,7 @@ describe("theme files", () => {
       );
       expect(issues).toContain("themes[0].name must be a non-empty string");
       expect(issues).toContain('themes[0].appearance must be either "dark" or "light"');
-      expect(issues).toContain("themes[0].colors.primary-bg is required");
+      expect(issues).toContain("themes[0].colors.background is required");
     }
   });
 
@@ -56,7 +56,37 @@ describe("theme files", () => {
       name: "Forest Night",
       appearance: "dark",
     });
-    expect(reparsed.themes[0].colors["primary-bg"]).toBe(source.colors["primary-bg"]);
+    expect(reparsed.themes[0].colors.background).toBe(source.colors.background);
     expect(reparsed.themes[0].syntax?.keyword).toBe(source.syntax?.keyword);
+  });
+
+  it("normalizes legacy roles without emitting duplicate Tailwind variables", () => {
+    const legacyTheme = {
+      ...(athasThemes as ThemeFile).themes[0],
+      colors: {
+        "primary-bg": "#101010",
+        "secondary-bg": "#181818",
+        text: "#f5f5f5",
+        "text-light": "#c0c0c0",
+        "text-lighter": "#909090",
+        border: "#303030",
+        hover: "#242424",
+        selected: "#2a2a2a",
+        accent: "#6699ff",
+      },
+    };
+
+    const definition = toThemeDefinition(legacyTheme);
+
+    expect(definition.cssVariables).toMatchObject({
+      "--background": "#101010",
+      "--surface": "#181818",
+      "--foreground": "#f5f5f5",
+      "--accent": "#242424",
+      "--primary": "#6699ff",
+    });
+    expect(Object.keys(definition.cssVariables).some((key) => key.startsWith("--color-"))).toBe(
+      false,
+    );
   });
 });

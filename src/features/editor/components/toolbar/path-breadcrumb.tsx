@@ -54,8 +54,8 @@ export function PathBreadcrumb({
                     className={cn(
                       "min-w-0 whitespace-nowrap",
                       isLast
-                        ? "font-medium text-text hover:text-text"
-                        : "text-text-lighter hover:text-text",
+                        ? "font-medium text-foreground hover:text-foreground"
+                        : "text-subtle-foreground hover:text-foreground",
                     )}
                   >
                     {segment}
@@ -67,7 +67,7 @@ export function PathBreadcrumb({
                 ) : (
                   <span
                     data-slot="breadcrumb-segment"
-                    className="truncate px-1.5 text-text-lighter"
+                    className="truncate px-1.5 text-subtle-foreground"
                   >
                     {segment}
                   </span>

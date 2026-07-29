@@ -53,7 +53,7 @@ function SplitDiffCodePanel({
 
   return (
     <div className="flex min-w-0 flex-1">
-      <div className="w-11 shrink-0 border-border border-r bg-primary-bg">
+      <div className="w-11 shrink-0 border-border border-r bg-background">
         {lines.map((line, index) => {
           const meta = getSplitLineMeta(line, side);
           return (

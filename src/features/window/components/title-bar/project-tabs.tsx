@@ -303,8 +303,8 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
                           "h-(--athas-chrome-control-height) max-w-48 border border-transparent pr-7 pl-2",
                           isRemote &&
                             (tab.isActive
-                              ? "bg-accent/15 text-accent"
-                              : "text-accent/85 hover:text-accent"),
+                              ? "bg-primary/15 text-primary"
+                              : "text-primary/85 hover:text-primary"),
                           isSwitchingProject && "cursor-wait",
                         )}
                         action={
@@ -313,8 +313,8 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
                             variant="ghost"
                             onClick={(event) => handleTabActionsClick(event, tab)}
                             className={cn(
-                              "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
-                              "hover:bg-hover/60 hover:text-text",
+                              "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-subtle-foreground transition",
+                              "hover:bg-accent/60 hover:text-foreground",
                               "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
                             )}
                             tooltip="Project actions"
@@ -350,7 +350,7 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
             type="button"
             variant="ghost"
             onClick={handleAddProject}
-            className="athas-title-project-add-button border border-transparent text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
+            className="athas-title-project-add-button border border-transparent text-subtle-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
             tooltip="Open folder"
             aria-label="Open folder"
             size="icon-xs"

@@ -111,7 +111,7 @@ export function AppUpdateControl() {
             variant="accent"
             className={
               updateError
-                ? "border-error/25 bg-error/10 [&>[data-slot=button-group-separator]]:bg-error/25"
+                ? "border-destructive/25 bg-destructive/10 [&>[data-slot=button-group-separator]]:bg-destructive/25"
                 : undefined
             }
           >
@@ -129,9 +129,9 @@ export function AppUpdateControl() {
               }}
               className={cn(
                 "font-sans ui-text-sm font-medium",
-                updateError && "text-error hover:bg-error/10 hover:text-error",
+                updateError && "text-destructive hover:bg-destructive/10 hover:text-destructive",
                 updateBusy &&
-                  "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
+                  "cursor-wait bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary",
               )}
             >
               {updateBusy ? (
@@ -150,7 +150,11 @@ export function AppUpdateControl() {
               tooltip="Update Options"
               tooltipSide="bottom"
               onClick={() => setIsUpdateMenuOpen((open) => !open)}
-              className={updateError ? "text-error hover:bg-error/10 hover:text-error" : undefined}
+              className={
+                updateError
+                  ? "text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  : undefined
+              }
               aria-label="Update options"
               aria-haspopup="menu"
               aria-expanded={isUpdateMenuOpen}

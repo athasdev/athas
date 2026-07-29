@@ -9,15 +9,15 @@
       "description": "Light variant with carefully chosen colors",
       "appearance": "light",
       "colors": {
-        "primary-bg": "#fdf6e3",
-        "secondary-bg": "#eee8d5",
-        "text": "#657b83",
-        "text-light": "#839496",
-        "text-lighter": "#93a1a1",
+        "background": "#fdf6e3",
+        "surface": "#eee8d5",
+        "foreground": "#657b83",
+        "muted-foreground": "#839496",
+        "subtle-foreground": "#93a1a1",
         "border": "#eee8d5",
-        "hover": "#eee8d5",
+        "accent": "#eee8d5",
         "selected": "#eee8d5",
-        "accent": "#268bd2"
+        "primary": "#268bd2"
       },
       "syntax": {
         "keyword": "#859900",
@@ -44,15 +44,15 @@
       "description": "Dark variant with carefully chosen colors",
       "appearance": "dark",
       "colors": {
-        "primary-bg": "#002b36",
-        "secondary-bg": "#073642",
-        "text": "#839496",
-        "text-light": "#657b83",
-        "text-lighter": "#586e75",
+        "background": "#002b36",
+        "surface": "#073642",
+        "foreground": "#839496",
+        "muted-foreground": "#657b83",
+        "subtle-foreground": "#586e75",
         "border": "#073642",
-        "hover": "#073642",
+        "accent": "#073642",
         "selected": "#073642",
-        "accent": "#268bd2"
+        "primary": "#268bd2"
       },
       "syntax": {
         "keyword": "#859900",

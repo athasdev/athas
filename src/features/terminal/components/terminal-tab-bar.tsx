@@ -198,15 +198,17 @@ const ToolbarContextMenu = ({
 
   return (
     <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-[180px]">
-      <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Terminal Width</div>
+      <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Terminal Width</div>
       <MenuItemsList items={modeItems} onItemSelect={onClose} />
       <div className="my-0.5 border-border/70 border-t" />
-      <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Tab Layout</div>
+      <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Tab Layout</div>
       <MenuItemsList items={layoutItems} onItemSelect={onClose} />
       {currentLayout === "vertical" && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
-          <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Tab Position</div>
+          <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
+            Tab Position
+          </div>
           <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} />
         </>
       )}
@@ -543,7 +545,7 @@ const TerminalTabBar = ({
   const profileMenuItems: MenuItem[] = terminalProfiles.map((profile) => ({
     id: profile.id,
     label: profile.name,
-    icon: <TerminalIcon className="text-text-lighter" />,
+    icon: <TerminalIcon className="text-subtle-foreground" />,
     onClick: () => {
       onNewTerminalWithProfile?.(profile.id);
       closeProfileMenu();
@@ -696,19 +698,19 @@ const TerminalTabBar = ({
       <div
         className={cn(
           "flex min-h-8 items-center justify-between",
-          "border-border border-b bg-secondary-bg px-2 py-1.5",
+          "border-border border-b bg-surface px-2 py-1.5",
         )}
       >
         <div className="flex items-center gap-1.5">
-          <TerminalIcon className="text-text-lighter" />
-          <span className="font-sans ui-text-sm text-text-lighter">No terminals</span>
+          <TerminalIcon className="text-subtle-foreground" />
+          <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-0.5">
             <Button
               onClick={onNewTerminal}
               variant="ghost"
-              className="rounded-[var(--athas-chrome-radius)] text-text-lighter"
+              className="rounded-[var(--athas-chrome-radius)] text-subtle-foreground"
               size="icon-xs"
               commandId="terminal.new"
               tooltip="New Terminal"
@@ -723,7 +725,7 @@ const TerminalTabBar = ({
                   ref={profileMenuButtonRef}
                   onClick={openProfileMenu}
                   variant="ghost"
-                  className="rounded-lg text-text-lighter"
+                  className="rounded-lg text-subtle-foreground"
                   size="icon-xs"
                 >
                   <ChevronDown />
@@ -766,7 +768,7 @@ const TerminalTabBar = ({
                 "min-w-0 flex-1 overflow-hidden",
                 orientation === "vertical"
                   ? "flex flex-col gap-0.5 px-1.5 py-1"
-                  : "flex items-end gap-0.5",
+                  : "flex items-center gap-0.5",
               )}
             >
               {pinnedTerminals.length > 0 && (
@@ -775,7 +777,7 @@ const TerminalTabBar = ({
                     "shrink-0",
                     orientation === "vertical"
                       ? "flex flex-col gap-0.5 pb-0.5"
-                      : "flex items-end gap-0.5 pr-0.5",
+                      : "flex items-center gap-0.5 pr-0.5",
                   )}
                 >
                   {pinnedTerminals.map((terminal) => {
@@ -824,7 +826,7 @@ const TerminalTabBar = ({
                   "scrollbar-hidden min-w-0 flex-1",
                   orientation === "vertical"
                     ? "flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
-                    : "flex items-end gap-0.5 overflow-x-auto overflow-y-hidden",
+                    : "flex items-center gap-0.5 overflow-x-auto overflow-y-hidden",
                 )}
                 data-tab-container
                 onWheel={(e) => {
@@ -889,7 +891,7 @@ const TerminalTabBar = ({
           {orientation === "vertical" && (
             <div
               className={cn(
-                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60",
+                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-primary/40 active:bg-primary/60",
                 tabSidebarPosition === "right" ? "left-0" : "right-0",
               )}
               onMouseDown={(e) => {
@@ -1011,7 +1013,9 @@ const TerminalTabBar = ({
             onClose={closeProfileMenu}
             className="w-[220px]"
           >
-            <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">New Terminal</div>
+            <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
+              New Terminal
+            </div>
             <div className="my-0.5 border-border/70 border-t" />
             <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
           </Dropdown>

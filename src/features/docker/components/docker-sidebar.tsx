@@ -50,6 +50,7 @@ import {
 } from "@/ui/empty";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import Dialog, { showPromptDialog } from "@/ui/dialog";
@@ -82,7 +83,6 @@ import {
   pullDockerRegistryImage,
   pruneDockerResources,
   pushDockerRegistryImage,
-  readDockerEnvFile,
   runDockerComposeAction,
   runDockerContainerAction,
   runDockerImage,
@@ -92,7 +92,6 @@ import {
   startDockerContainerLogStream,
   stopDockerContainerLogStream,
   tagDockerImage,
-  writeDockerEnvFile,
 } from "../services/docker-api";
 import type {
   DockerBuildPreset,
@@ -129,7 +128,7 @@ type DockerSection =
   | "cleanup";
 type DockerLogFilter = "all" | "stdout" | "stderr" | "errors";
 type DockerLogLine = DockerLogEvent & { id: number };
-type DockerDialogMode = "build" | "run" | "env" | null;
+type DockerDialogMode = "build" | "run" | null;
 type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
 type DockerContainerFilter = "all" | "running" | "stopped";
@@ -253,8 +252,8 @@ function DockerUnavailableState({
   return (
     <Empty className="min-h-0 flex-none gap-3 px-4 py-5" role="status">
       <EmptyHeader className="gap-1.5">
-        <EmptyMedia variant="icon" className="size-9 border border-border/70 bg-hover">
-          <WarningCircle className="size-4.5 text-text-lighter" />
+        <EmptyMedia variant="icon" className="size-9 border border-border/70 bg-accent">
+          <WarningCircle className="size-4.5 text-subtle-foreground" />
         </EmptyMedia>
         <EmptyTitle className="ui-text-base">{title ?? fallbackCopy.title}</EmptyTitle>
         <EmptyDescription className="max-w-[34ch]">
@@ -322,15 +321,10 @@ function DockerCapabilityNotice({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "mx-2 mb-1 flex min-w-0 items-start gap-2 rounded-lg bg-hover/70 px-2.5 py-2 text-text-lighter ui-text-sm",
-        className,
-      )}
-    >
-      <WarningCircle className="mt-0.5 size-3.5 shrink-0" />
-      <span className="min-w-0 leading-relaxed">{children}</span>
-    </div>
+    <Alert tone="warning" role="status" className={cn("mx-2 mb-2 w-auto", className)}>
+      <WarningCircle />
+      <AlertDescription>{children}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -413,11 +407,15 @@ function DockerResourceRow({
   const content = (
     <>
       <span className="flex min-w-0 items-center gap-1.5">
-        <span className="min-w-0 flex-1 truncate font-medium text-text ui-text-sm">{title}</span>
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
+          {title}
+        </span>
         {status}
       </span>
       {description ? (
-        <span className="mt-0.5 block truncate text-text-lighter ui-text-sm">{description}</span>
+        <span className="mt-0.5 block truncate text-subtle-foreground ui-text-sm">
+          {description}
+        </span>
       ) : null}
     </>
   );
@@ -425,14 +423,14 @@ function DockerResourceRow({
   return (
     <div
       className={cn(
-        "group/docker-row flex min-h-12 w-full min-w-0 items-center rounded-lg transition-colors hover:bg-hover/70",
-        active && "bg-hover/80",
+        "group/docker-row flex min-h-12 w-full min-w-0 items-center rounded-lg transition-colors hover:bg-accent/70",
+        active && "bg-accent/80",
       )}
     >
       {onClick ? (
         <button
           type="button"
-          className="min-w-0 flex-1 px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+          className="min-w-0 flex-1 px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
           onClick={onClick}
         >
           {content}
@@ -856,6 +854,7 @@ function NetworkRow({ network }: { network: DockerNetwork }) {
 
 export function DockerSidebar() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const [inventory, setInventory] = useState<DockerInventory>(emptyInventory);
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
@@ -917,12 +916,6 @@ export function DockerSidebar() {
     image: "",
     target: "",
   });
-  const [envDraft, setEnvDraft] = useState({
-    path: "",
-    relativePath: "",
-    content: "",
-  });
-
   const loadInventory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -1460,17 +1453,9 @@ export function DockerSidebar() {
   };
 
   const openEnvFile = async (envFile: DockerEnvFile) => {
-    if (!rootFolderPath) return;
-
     setProjectConfigError(null);
     try {
-      const content = await readDockerEnvFile(rootFolderPath, envFile.path);
-      setEnvDraft({
-        path: envFile.path,
-        relativePath: envFile.relativePath,
-        content,
-      });
-      setDialogMode("env");
+      await handleFileSelect(envFile.path, false);
     } catch (readError) {
       setProjectConfigError(readError instanceof Error ? readError.message : String(readError));
     }
@@ -1490,29 +1475,11 @@ export function DockerSidebar() {
 
     setProjectConfigError(null);
     try {
-      const { file, content } = await openDockerEnvFile(rootFolderPath, envPath);
-      setEnvDraft({
-        path: file.path,
-        relativePath: file.relativePath,
-        content,
-      });
+      const { file } = await openDockerEnvFile(rootFolderPath, envPath);
       await loadProjectConfig();
-      setDialogMode("env");
+      await handleFileSelect(file.path, false);
     } catch (openError) {
       setProjectConfigError(openError instanceof Error ? openError.message : String(openError));
-    }
-  };
-
-  const handleSaveEnvFile = async () => {
-    if (!rootFolderPath || !envDraft.path) return;
-
-    setProjectConfigError(null);
-    try {
-      await writeDockerEnvFile(rootFolderPath, envDraft.path, envDraft.content);
-      setDialogMode(null);
-      await loadProjectConfig();
-    } catch (writeError) {
-      setProjectConfigError(writeError instanceof Error ? writeError.message : String(writeError));
     }
   };
 
@@ -1936,28 +1903,34 @@ export function DockerSidebar() {
     const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
     const isVisible = dockerTabSections[activeTab].includes(section);
     const isCollapsed = collapsedSections.has(section);
+    const hasSectionHeader = activeTab === "resources";
 
     return (
-      <section key={section} className={cn("min-w-0 pt-2 first:pt-0", !isVisible && "hidden")}>
-        <SidebarSectionHeader
-          variant="surface"
-          expanded={!isCollapsed}
-          count={filteredCount}
-          onToggle={() =>
-            setCollapsedSections((current) => {
-              const next = new Set(current);
-              if (next.has(section)) {
-                next.delete(section);
-              } else {
-                next.add(section);
-              }
-              return next;
-            })
-          }
-        >
-          {title}
-        </SidebarSectionHeader>
-        {!isCollapsed ? <div className="space-y-0.5">{rows}</div> : null}
+      <section
+        key={section}
+        className={cn("min-w-0", hasSectionHeader && "pt-2 first:pt-0", !isVisible && "hidden")}
+      >
+        {hasSectionHeader ? (
+          <SidebarSectionHeader
+            variant="surface"
+            expanded={!isCollapsed}
+            count={filteredCount}
+            onToggle={() =>
+              setCollapsedSections((current) => {
+                const next = new Set(current);
+                if (next.has(section)) {
+                  next.delete(section);
+                } else {
+                  next.add(section);
+                }
+                return next;
+              })
+            }
+          >
+            {title}
+          </SidebarSectionHeader>
+        ) : null}
+        {!hasSectionHeader || !isCollapsed ? <div className="space-y-0.5">{rows}</div> : null}
       </section>
     );
   };
@@ -2022,6 +1995,7 @@ export function DockerSidebar() {
         <SidebarTabBar
           items={dockerTabs}
           value={activeTab}
+          appearance="grouped"
           onChange={(tab) => setActiveTab(tab as DockerTab)}
         />
 
@@ -2033,7 +2007,7 @@ export function DockerSidebar() {
               onChange={setQuery}
               placeholder="Search Docker"
               aria-label="Search Docker"
-              className="h-8 rounded-lg bg-secondary-bg/45"
+              className="h-8 rounded-lg bg-surface/45"
             />
           </SidebarToolbar>
         ) : null}
@@ -2073,10 +2047,7 @@ export function DockerSidebar() {
           <SidebarEmptyState className="flex-1">Loading Docker Compose...</SidebarEmptyState>
         ) : (
           <>
-            <ScrollArea
-              className="min-h-0 flex-1"
-              contentClassName={cn("space-y-2 py-2", activeTab === "resources" ? "px-2" : "px-1")}
-            >
+            <ScrollArea className="min-h-0 flex-1" contentClassName="space-y-2 px-2 py-2">
               {renderSection(
                 "containers",
                 filteredContainers.length > 0 ? (
@@ -2149,7 +2120,7 @@ export function DockerSidebar() {
                       }
                     />
                     {composeOutput ? (
-                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
                         {composeOutput}
                       </div>
                     ) : null}
@@ -2198,7 +2169,7 @@ export function DockerSidebar() {
                     ) : null}
                     {connectionError ? (
                       <DockerCapabilityNotice>
-                        Project settings remain available. Start Docker to run container actions.
+                        Docker is offline. Project files and presets are still available.
                       </DockerCapabilityNotice>
                     ) : null}
                     {projectConfigItemCount === 0 ? (
@@ -2250,7 +2221,7 @@ export function DockerSidebar() {
                             />
                           }
                         >
-                          Project Docker settings
+                          Workspace
                         </SidebarSectionLabel>
                         {projectConfig.devContainers.length > 0 ? (
                           <div className="space-y-0.5">
@@ -2369,21 +2340,22 @@ export function DockerSidebar() {
                             {projectConfig.envFiles.map((envFile) => (
                               <DockerResourceRow
                                 key={envFile.path}
-                                title={envFile.relativePath}
-                                description={
+                                title={
                                   <>
-                                    {envFile.variableCount} variables
-                                    {envFile.keys.length > 0
-                                      ? ` · ${envFile.keys.slice(0, 3).join(", ")}`
-                                      : ""}
+                                    <FileIcon className="size-3.5 shrink-0 text-subtle-foreground" />
+                                    {envFile.relativePath}
                                   </>
                                 }
+                                description={`${envFile.variableCount} ${
+                                  envFile.variableCount === 1 ? "variable" : "variables"
+                                }`}
+                                onClick={() => void openEnvFile(envFile)}
                                 actions={
                                   <DockerActionMenu
                                     label={`Actions for ${envFile.relativePath}`}
                                     actions={[
                                       {
-                                        label: "Edit",
+                                        label: "Open",
                                         icon: <FileIcon />,
                                         onSelect: () => void openEnvFile(envFile),
                                       },
@@ -2526,7 +2498,7 @@ export function DockerSidebar() {
                 "images",
                 <>
                   <div className="flex items-center justify-between gap-2 px-2 py-1">
-                    <div className="min-w-0 truncate ui-text-sm text-text-lighter">
+                    <div className="min-w-0 truncate ui-text-sm text-subtle-foreground">
                       Build and run local images
                     </div>
                     <Button
@@ -2542,7 +2514,7 @@ export function DockerSidebar() {
                     </Button>
                   </div>
                   {dockerOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
                       {dockerOutput}
                     </div>
                   ) : null}
@@ -2725,7 +2697,7 @@ export function DockerSidebar() {
                     />
                   ) : null}
                   {registryOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
                       {registryOutput}
                     </div>
                   ) : null}
@@ -2820,13 +2792,13 @@ export function DockerSidebar() {
             </ScrollArea>
 
             {activeTab === "resources" && selectedContainer ? (
-              <div className="max-h-72 shrink-0 border-t border-border/70 bg-secondary-bg/35">
+              <div className="max-h-72 shrink-0 border-t border-border/70 bg-surface/35">
                 <div className="flex h-8 items-center justify-between gap-2 px-2">
                   <div className="min-w-0">
-                    <div className="truncate ui-text-sm font-medium text-text">
+                    <div className="truncate ui-text-sm font-medium text-foreground">
                       {selectedContainer.name}
                     </div>
-                    <div className="ui-text-sm text-text-lighter">
+                    <div className="ui-text-sm text-subtle-foreground">
                       {detailTab === "logs"
                         ? logStreamId
                           ? "Streaming logs"
@@ -2875,13 +2847,13 @@ export function DockerSidebar() {
                 {detailTab === "logs" ? (
                   <>
                     <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
-                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-primary-bg px-1.5">
-                        <Search className="size-3.5 shrink-0 text-text-lighter" />
+                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-background px-1.5">
+                        <Search className="size-3.5 shrink-0 text-subtle-foreground" />
                         <input
                           value={logQuery}
                           onChange={(event) => setLogQuery(event.target.value)}
                           placeholder="Search logs"
-                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
+                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-foreground outline-none placeholder:text-subtle-foreground"
                         />
                       </div>
                       {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
@@ -2898,7 +2870,7 @@ export function DockerSidebar() {
                       ))}
                     </div>
                     {logError ? (
-                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
+                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
                         {logError}
                       </div>
                     ) : null}
@@ -2909,14 +2881,16 @@ export function DockerSidebar() {
                             key={entry.id}
                             className={cn(
                               "whitespace-pre-wrap break-words",
-                              entry.stream === "stderr" ? "text-error" : "text-text-lighter",
+                              entry.stream === "stderr"
+                                ? "text-destructive"
+                                : "text-subtle-foreground",
                             )}
                           >
                             {entry.line}
                           </div>
                         ))
                       ) : (
-                        <div className="text-text-lighter">
+                        <div className="text-subtle-foreground">
                           {logLines.length > 0 ? "No matching log lines." : "Waiting for logs."}
                         </div>
                       )}
@@ -2935,7 +2909,7 @@ export function DockerSidebar() {
                       >
                         Up
                       </Button>
-                      <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                      <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-background px-2 py-1 font-mono text-subtle-foreground">
                         {containerPath}
                       </div>
                       <Button
@@ -2950,13 +2924,13 @@ export function DockerSidebar() {
                       </Button>
                     </div>
                     {filesError ? (
-                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
+                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
                         {filesError}
                       </div>
                     ) : null}
                     <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
                       {isFilesLoading ? (
-                        <div className="px-2 py-2 ui-text-sm text-text-lighter">
+                        <div className="px-2 py-2 ui-text-sm text-subtle-foreground">
                           Loading files...
                         </div>
                       ) : containerFiles.length > 0 ? (
@@ -2965,7 +2939,7 @@ export function DockerSidebar() {
                             key={entry.path}
                             role="button"
                             tabIndex={entry.isDirectory ? 0 : -1}
-                            className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-hover"
+                            className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-accent"
                             onClick={() => {
                               if (entry.isDirectory) setContainerPath(entry.path);
                             }}
@@ -2979,18 +2953,20 @@ export function DockerSidebar() {
                           >
                             {entry.isDirectory ? (
                               <FolderIcon
-                                className="size-4 shrink-0 text-text-lighter"
+                                className="size-4 shrink-0 text-subtle-foreground"
                                 weight="duotone"
                               />
                             ) : (
                               <FileIcon
-                                className="size-4 shrink-0 text-text-lighter"
+                                className="size-4 shrink-0 text-subtle-foreground"
                                 weight="duotone"
                               />
                             )}
                             <div className="min-w-0 flex-1">
-                              <div className="truncate ui-text-sm text-text">{entry.name}</div>
-                              <div className="truncate ui-text-sm text-text-lighter">
+                              <div className="truncate ui-text-sm text-foreground">
+                                {entry.name}
+                              </div>
+                              <div className="truncate ui-text-sm text-subtle-foreground">
                                 {entry.isDirectory ? "Directory" : formatFileSize(entry.size)}
                                 {entry.mode ? ` · ${entry.mode}` : ""}
                               </div>
@@ -3026,14 +3002,8 @@ export function DockerSidebar() {
 
       {dialogMode ? (
         <Dialog
-          title={
-            dialogMode === "build"
-              ? "Build Docker Image"
-              : dialogMode === "run"
-                ? "Run Docker Image"
-                : envDraft.relativePath
-          }
-          icon={dialogMode === "build" ? ImageIcon : dialogMode === "run" ? Play : FileIcon}
+          title={dialogMode === "build" ? "Build Docker Image" : "Run Docker Image"}
+          icon={dialogMode === "build" ? ImageIcon : Play}
           onClose={() => setDialogMode(null)}
           size="md"
           footer={
@@ -3057,7 +3027,7 @@ export function DockerSidebar() {
                     Build
                   </Button>
                 </>
-              ) : dialogMode === "run" ? (
+              ) : (
                 <>
                   <Button
                     variant="ghost"
@@ -3073,10 +3043,6 @@ export function DockerSidebar() {
                     Run
                   </Button>
                 </>
-              ) : (
-                <Button onClick={() => void handleSaveEnvFile()} disabled={!envDraft.path}>
-                  Save
-                </Button>
               )}
             </>
           }
@@ -3091,7 +3057,7 @@ export function DockerSidebar() {
           {dialogMode === "build" ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-context" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-context" className="ui-text-sm block text-foreground">
                   Context Path
                 </label>
                 <Input
@@ -3107,7 +3073,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-file" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-file" className="ui-text-sm block text-foreground">
                   Dockerfile
                 </label>
                 <Input
@@ -3123,7 +3089,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-tag" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-tag" className="ui-text-sm block text-foreground">
                   Tag
                 </label>
                 <Input
@@ -3136,7 +3102,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-args" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-args" className="ui-text-sm block text-foreground">
                   Build Args
                 </label>
                 <Textarea
@@ -3153,10 +3119,10 @@ export function DockerSidebar() {
                 />
               </div>
             </div>
-          ) : dialogMode === "run" ? (
+          ) : (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-image" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-image" className="ui-text-sm block text-foreground">
                   Image
                 </label>
                 <Input
@@ -3169,7 +3135,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-name" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-name" className="ui-text-sm block text-foreground">
                   Container Name
                 </label>
                 <Input
@@ -3183,7 +3149,7 @@ export function DockerSidebar() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label htmlFor="docker-run-ports" className="ui-text-sm block text-text">
+                  <label htmlFor="docker-run-ports" className="ui-text-sm block text-foreground">
                     Ports
                   </label>
                   <Textarea
@@ -3197,7 +3163,7 @@ export function DockerSidebar() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="docker-run-volumes" className="ui-text-sm block text-text">
+                  <label htmlFor="docker-run-volumes" className="ui-text-sm block text-foreground">
                     Volumes
                   </label>
                   <Textarea
@@ -3212,7 +3178,7 @@ export function DockerSidebar() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-env" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-env" className="ui-text-sm block text-foreground">
                   Environment
                 </label>
                 <Textarea
@@ -3226,7 +3192,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-foreground">
                   Env Files
                 </label>
                 <Textarea
@@ -3240,7 +3206,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-command" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-command" className="ui-text-sm block text-foreground">
                   Command
                 </label>
                 <Input
@@ -3252,19 +3218,6 @@ export function DockerSidebar() {
                   placeholder="npm start"
                 />
               </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="ui-text-sm rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
-                {envDraft.path}
-              </div>
-              <Textarea
-                value={envDraft.content}
-                onChange={(event) =>
-                  setEnvDraft((current) => ({ ...current, content: event.target.value }))
-                }
-                className="min-h-80 font-mono"
-              />
             </div>
           )}
         </Dialog>

@@ -119,8 +119,8 @@ export function SidebarTreeDisclosure({
   return (
     <span
       className={cn(
-        "mr-0.5 flex size-4 shrink-0 items-center justify-center rounded text-text-lighter transition-colors",
-        visible ? "hover:text-text" : "pointer-events-none text-transparent",
+        "mr-0.5 flex size-4 shrink-0 items-center justify-center rounded text-subtle-foreground transition-colors",
+        visible ? "hover:text-foreground" : "pointer-events-none text-transparent",
         className,
       )}
       onClick={onClick}
@@ -144,5 +144,7 @@ interface SidebarTreeIconProps {
 }
 
 export function SidebarTreeIcon({ icon, className }: SidebarTreeIconProps) {
-  return <span className={cn("relative z-1 shrink-0 text-text-lighter", className)}>{icon}</span>;
+  return (
+    <span className={cn("relative z-1 shrink-0 text-subtle-foreground", className)}>{icon}</span>
+  );
 }

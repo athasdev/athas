@@ -23,14 +23,14 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
   return (
     <Item
       size="xs"
-      className="min-h-11 flex-nowrap px-1.5 py-1 hover:bg-hover focus-within:bg-hover"
+      className="min-h-11 flex-nowrap px-1.5 py-1 hover:bg-accent focus-within:bg-accent"
     >
       <button
         type="button"
         onClick={onRun}
         className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-0.5 text-left outline-none"
       >
-        <ItemMedia className="grid size-6 rounded-md bg-secondary-bg text-text-lighter">
+        <ItemMedia className="grid size-6 rounded-md bg-surface text-subtle-foreground">
           <SourceIcon source={action.source} />
         </ItemMedia>
         <ItemContent>
@@ -54,7 +54,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
               onClick={onEdit}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label={`Edit ${action.name}`}
             >
               <PenIcon />
@@ -66,7 +66,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
               onClick={onDelete}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter hover:text-error"
+              className="text-subtle-foreground hover:text-destructive"
               aria-label={`Delete ${action.name}`}
             >
               <TrashIcon />
@@ -74,7 +74,7 @@ export default function RunActionRow({ action, onRun, onEdit, onDelete }: RunAct
           ) : null}
         </ItemActions>
       ) : (
-        <PlayIcon className="mr-1 shrink-0 text-text-lighter opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
+        <PlayIcon className="mr-1 shrink-0 text-subtle-foreground opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
       )}
     </Item>
   );

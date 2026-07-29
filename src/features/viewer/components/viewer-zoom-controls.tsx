@@ -23,7 +23,7 @@ export function ViewerZoomControls({
       <Button onClick={onZoomOut} variant="ghost" tooltip="Zoom out" size="icon-xs">
         <Minus />
       </Button>
-      <span className="min-w-[50px] px-2 text-center font-sans text-text-lighter ui-text-sm">
+      <span className="min-w-[50px] px-2 text-center font-sans text-subtle-foreground ui-text-sm">
         {Math.round(zoom * 100)}%
       </span>
       <Button onClick={onZoomIn} variant="ghost" tooltip="Zoom in" size="icon-xs">

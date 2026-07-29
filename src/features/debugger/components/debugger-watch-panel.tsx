@@ -129,12 +129,12 @@ export function DebugWatchPanel({
             return (
               <div
                 key={watchExpression.id}
-                className="group rounded-lg border border-border/60 bg-secondary-bg/40 px-2 py-1.5"
+                className="group rounded-lg border border-border/60 bg-surface/40 px-2 py-1.5"
               >
                 <div className="flex items-start gap-2">
                   <button
                     type="button"
-                    className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-text"
+                    className="min-w-0 flex-1 truncate text-left font-mono ui-text-sm text-foreground"
                     onClick={() =>
                       void evaluateExpression(watchExpression.id, watchExpression.expression)
                     }
@@ -151,14 +151,14 @@ export function DebugWatchPanel({
                     <Trash />
                   </Button>
                 </div>
-                <div className="mt-1 truncate font-mono ui-text-sm text-text-lighter">
+                <div className="mt-1 truncate font-mono ui-text-sm text-subtle-foreground">
                   {isPending
                     ? "Evaluating..."
                     : result?.error
                       ? result.error
                       : result?.value || "Not evaluated"}
                   {result?.type && !result.error ? (
-                    <span className="ml-1 text-text-lighter/70">({result.type})</span>
+                    <span className="ml-1 text-subtle-foreground/70">({result.type})</span>
                   ) : null}
                 </div>
               </div>

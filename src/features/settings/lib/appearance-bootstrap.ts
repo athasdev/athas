@@ -4,6 +4,7 @@ import {
   getAthasDefaultSyntaxTokens,
   getAthasDefaultTheme,
 } from "@/extensions/themes/default-theme";
+import { normalizeThemeCssVariables } from "@/extensions/themes/theme-file";
 import {
   DEFAULT_MONO_FONT_FAMILY,
   DEFAULT_UI_FONT_FAMILY,
@@ -66,6 +67,10 @@ function sanitizeVarMap(value: unknown): Record<string, string> {
   return result;
 }
 
+function sanitizeThemeVarMap(value: unknown): Record<string, string> {
+  return normalizeThemeCssVariables(sanitizeVarMap(value));
+}
+
 function isThemeType(value: unknown): value is "light" | "dark" {
   return value === "light" || value === "dark";
 }
@@ -77,7 +82,7 @@ function parseBootstrapCache(raw: unknown): AppearanceBootstrapCache | null {
   if (record.version !== 1) return null;
   if (typeof record.themeId !== "string" || !isThemeType(record.themeType)) return null;
 
-  const cssVariables = sanitizeVarMap(record.cssVariables);
+  const cssVariables = sanitizeThemeVarMap(record.cssVariables);
   const syntaxTokens = sanitizeVarMap(record.syntaxTokens);
 
   const editorFontFamily =
@@ -161,7 +166,7 @@ export function cacheThemeForBootstrap(theme: ThemeDefinition): void {
     version: 1,
     themeId: theme.id,
     themeType: theme.isDark ? "dark" : "light",
-    cssVariables: sanitizeVarMap(theme.cssVariables),
+    cssVariables: sanitizeThemeVarMap(theme.cssVariables),
     syntaxTokens: sanitizeVarMap(theme.syntaxTokens),
     editorFontFamily: existing.editorFontFamily,
     uiFontFamily: existing.uiFontFamily,

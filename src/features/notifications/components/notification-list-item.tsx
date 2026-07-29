@@ -39,7 +39,7 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
         tabIndex={tabIndex}
         size="xs"
         variant={selected ? "muted" : "default"}
-        className="relative h-7 flex-nowrap select-none rounded-lg px-2 py-0 hover:bg-hover/45 focus-visible:bg-hover/45 focus-visible:ring-0"
+        className="relative h-7 flex-nowrap select-none rounded-lg px-2 py-0 hover:bg-accent/45 focus-visible:bg-accent/45 focus-visible:ring-0"
         onClick={onClick}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
@@ -49,7 +49,7 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
           <NotificationIcon type={notification.type} />
         </ItemMedia>
         <ItemContent className="min-w-0 overflow-hidden group-hover/item:pr-7 group-focus-within/item:pr-7">
-          <ItemTitle className="font-sans ui-text-sm block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-normal text-text">
+          <ItemTitle className="font-sans ui-text-sm block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-normal text-foreground">
             {notification.message}
           </ItemTitle>
         </ItemContent>
@@ -60,7 +60,7 @@ export const NotificationListItem = forwardRef<HTMLDivElement, NotificationListI
                 type="button"
                 variant={action.variant === "danger" ? "danger" : "ghost"}
                 size="icon-xs"
-                className="bg-transparent text-text-lighter"
+                className="bg-transparent text-subtle-foreground"
                 aria-label={action.label}
                 onClick={(event) => {
                   event.stopPropagation();

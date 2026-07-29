@@ -201,8 +201,8 @@ export default function LinuxFolderPickerDialog() {
 
       <div className="flex min-h-[300px] flex-col">
         <div className="flex min-h-8 items-center border-border border-b px-3">
-          <span className="ui-text-sm truncate font-medium text-text">{title}</span>
-          <span className="ui-text-sm ml-auto truncate font-mono text-text-lighter">
+          <span className="ui-text-sm truncate font-medium text-foreground">{title}</span>
+          <span className="ui-text-sm ml-auto truncate font-mono text-subtle-foreground">
             {currentPath}
           </span>
         </div>
@@ -237,11 +237,11 @@ export default function LinuxFolderPickerDialog() {
                 onClick={() => navigateToPath(entry.path)}
                 className={cn(
                   "h-8 w-full justify-start gap-2 rounded-none px-3",
-                  "hover:bg-hover focus-visible:bg-hover",
+                  "hover:bg-accent focus-visible:bg-accent",
                 )}
               >
-                <Folder className="shrink-0 text-text-lighter" />
-                <span className="truncate text-text">{entry.name}</span>
+                <Folder className="shrink-0 text-subtle-foreground" />
+                <span className="truncate text-foreground">{entry.name}</span>
               </Button>
             ))}
           </div>

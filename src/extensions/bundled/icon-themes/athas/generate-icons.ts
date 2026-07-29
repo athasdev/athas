@@ -1789,7 +1789,7 @@ function previewHtml() {
       --bg: #11151b;
       --panel: #171d25;
       --panel-2: #1d2530;
-      --text: #ecf1f7;
+      --foreground: #ecf1f7;
       --muted: #96a3b4;
       --line: #2a3442;
     }
@@ -1797,7 +1797,7 @@ function previewHtml() {
     body {
       margin: 0;
       background: var(--bg);
-      color: var(--text);
+      color: var(--foreground);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       line-height: 1.4;
     }
@@ -1846,7 +1846,7 @@ function previewHtml() {
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
-      color: var(--text);
+      color: var(--foreground);
       padding: 0 12px;
       font: inherit;
       font-size: 14px;
@@ -1882,7 +1882,7 @@ function previewHtml() {
     }
     .segmented button.is-active {
       background: var(--panel-2);
-      color: var(--text);
+      color: var(--foreground);
     }
     .preview-workbench {
       display: grid;

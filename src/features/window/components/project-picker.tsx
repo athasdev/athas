@@ -426,7 +426,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
           <NewProjectContent onBack={handleBackToPicker} onClose={onClose} />
         ) : commandStep === "picker" ? (
           <CommandHeader onClose={onClose}>
-            <Search className="size-4 shrink-0 text-text-lighter" />
+            <Search className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
               ref={inputRef}
               value={query}
@@ -441,8 +441,8 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
               <ArrowLeft />
             </CommandHeaderAction>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Server className="shrink-0 text-text-lighter" />
-              <span className="min-w-0 truncate font-sans ui-text-base font-medium text-text">
+              <Server className="shrink-0 text-subtle-foreground" />
+              <span className="min-w-0 truncate font-sans ui-text-base font-medium text-foreground">
                 New Remote Connection
               </span>
             </div>
@@ -475,14 +475,14 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                         ) : folder.missing ? (
                           <WarningCircle className="text-warning" />
                         ) : (
-                          <Folder className="text-text-lighter" />
+                          <Folder className="text-subtle-foreground" />
                         )
                       }
                       title={folder.name}
                       description={folder.path}
                       accessory={
                         <>
-                          {folder.pinned ? <PushPin className="fill-current text-accent" /> : null}
+                          {folder.pinned ? <PushPin className="fill-current text-primary" /> : null}
                           {folder.missing ? (
                             <CommandItemBadge variant="warning">Missing</CommandItemBadge>
                           ) : null}
@@ -522,7 +522,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                         connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : undefined
                       }
                       disabled={!!connectingMap[connection.id]}
-                      icon={<Server className="text-text-lighter" />}
+                      icon={<Server className="text-subtle-foreground" />}
                       title={connection.name}
                       description={
                         <>
@@ -541,7 +541,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                           <span
                             className={cn(
                               "size-2 rounded-full",
-                              connection.isConnected ? "bg-success" : "bg-text-lighter/40",
+                              connection.isConnected ? "bg-success" : "bg-subtle-foreground/40",
                             )}
                           />
                           <span className="sr-only">
@@ -566,7 +566,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       isSelected={selectedIndex === entryIndex}
                       onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleOpenWslDistribution(distribution)}
-                      icon={<Server className="text-text-lighter" />}
+                      icon={<Server className="text-subtle-foreground" />}
                       title={distribution.name}
                       description={
                         <>

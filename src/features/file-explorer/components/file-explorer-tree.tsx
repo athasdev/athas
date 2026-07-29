@@ -69,7 +69,6 @@ import { useFileExplorerContextMenu } from "../hooks/use-file-explorer-context-m
 import { useFileExplorerDragDrop } from "../hooks/use-file-explorer-drag-drop";
 import { useFileExplorerSync } from "../hooks/use-file-explorer-sync";
 import { useFileExplorerVisibleRows } from "../hooks/use-file-explorer-visible-rows";
-import { FILE_TREE_ROW_HEIGHT } from "../lib/file-tree-row";
 import { FileExplorerTreeItem } from "./file-explorer-tree-item";
 import type { FileTreeGuideTarget } from "./file-explorer-tree-item";
 import "../styles/file-explorer-tree.css";
@@ -444,13 +443,14 @@ function FileExplorerTreeComponent({
     !fileTreeSettings.showHiddenFilesInFileTree ||
     !fileTreeSettings.showGitignoredFilesInFileTree ||
     !fileTreeSettings.showGitStatusInFileTree;
-  const { visibleRows, visibleRowIndexByPath, rowVirtualizer } = useFileExplorerVisibleRows({
-    files: displayedFiles,
-    activePath,
-    containerRef,
-    expandedPathsOverride: displayedExpandedPaths,
-    rootFolderPath,
-  });
+  const { rowHeight, visibleRows, visibleRowIndexByPath, rowVirtualizer } =
+    useFileExplorerVisibleRows({
+      files: displayedFiles,
+      activePath,
+      containerRef,
+      expandedPathsOverride: displayedExpandedPaths,
+      rootFolderPath,
+    });
   const keyboardPath = focusedPath || activePath;
   const highlightedPath = hasTreeFocus ? keyboardPath : activePath;
 
@@ -1040,7 +1040,7 @@ function FileExplorerTreeComponent({
       className={cn(
         "relative flex min-h-0 min-w-0 flex-1 select-none flex-col overflow-hidden p-0",
         dragState.dragOverPath === "__ROOT__" &&
-          "border-2! border-dashed! border-accent! bg-accent! bg-opacity-10!",
+          "border-2! border-dashed! border-primary! bg-primary! bg-opacity-10!",
       )}
       onFocusCapture={() => {
         setHasTreeFocus(true);
@@ -1299,7 +1299,7 @@ function FileExplorerTreeComponent({
           style: {
             scrollBehavior: "auto",
             overscrollBehavior: "contain",
-            "--file-tree-row-height": `${FILE_TREE_ROW_HEIGHT}px`,
+            "--file-tree-row-height": `${rowHeight}px`,
           } as React.CSSProperties,
         }}
       >
@@ -1384,6 +1384,8 @@ function FileExplorerTreeComponent({
                         rowId={getFileTreeRowId(row.file.path)}
                         searchQuery={isTreeSearchActive ? treeSearchQuery : undefined}
                         isSearchMatch={treeSearchResult.matchedPaths.has(row.file.path)}
+                        virtualIndex={vi.index}
+                        measureElement={rowVirtualizer.measureElement}
                       />
                     );
                   })}
@@ -1412,7 +1414,7 @@ function FileExplorerTreeComponent({
             </Button>
           }
         >
-          <p className="text-text ui-text-base">{alertDialog.message}</p>
+          <p className="text-foreground ui-text-base">{alertDialog.message}</p>
         </Dialog>
       )}
       {openAllFilesDialog && (
@@ -1443,7 +1445,7 @@ function FileExplorerTreeComponent({
             </>
           }
         >
-          <p className="text-text ui-text-base">
+          <p className="text-foreground ui-text-base">
             {openAllFilesDialog.filePaths.length} files will be opened in tabs. Continue?
           </p>
         </Dialog>
@@ -1476,7 +1478,7 @@ function FileExplorerTreeComponent({
             </>
           }
         >
-          <p className="text-text ui-text-base">
+          <p className="text-foreground ui-text-base">
             {deleteCandidate.isDir
               ? `Are you sure you want to delete the folder "${getPathBaseName(deleteCandidate.path)}" and all its contents? This action cannot be undone.`
               : `Are you sure you want to delete the file "${getPathBaseName(deleteCandidate.path)}"? This action cannot be undone.`}

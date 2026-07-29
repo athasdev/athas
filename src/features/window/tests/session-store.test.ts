@@ -24,9 +24,6 @@ const previousSession: ProjectSession = {
   aiSession: {
     currentChatId: "chat-1",
     selectedAgentId: "codex-cli",
-    isChatHistoryVisible: true,
-    selectedBufferPaths: ["/workspace/old.ts"],
-    selectedFilesPaths: [],
   },
   uiState: {
     isSidebarVisible: true,

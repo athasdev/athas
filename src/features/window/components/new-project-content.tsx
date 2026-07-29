@@ -292,7 +292,7 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
                   isSelected={selectedIndex === index}
                   onMouseEnter={() => setSelectedIndex(index)}
                   onClick={() => chooseSource(option.id)}
-                  icon={<SourceIcon className="text-text-lighter" />}
+                  icon={<SourceIcon className="text-subtle-foreground" />}
                   title={option.label}
                   description={option.description}
                   accessory={<CommandItemBadge>{option.badge}</CommandItemBadge>}
@@ -312,8 +312,8 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
       <>
         <CommandHeader onClose={onClose}>
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <SourceIcon className="shrink-0 text-accent" />
-            <span className="truncate font-sans ui-text-base font-medium text-text">
+            <SourceIcon className="shrink-0 text-primary" />
+            <span className="truncate font-sans ui-text-base font-medium text-foreground">
               {source === "clone" ? "Cloning Repository" : "Creating Project"}
             </span>
           </div>
@@ -345,8 +345,8 @@ export default function NewProjectContent({ onBack, onClose }: NewProjectContent
           <ArrowLeft />
         </CommandHeaderAction>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <SourceIcon className="shrink-0 text-accent" />
-          <span className="truncate font-sans ui-text-base font-medium text-text">
+          <SourceIcon className="shrink-0 text-primary" />
+          <span className="truncate font-sans ui-text-base font-medium text-foreground">
             {selectedSourceOption.label}
           </span>
         </div>

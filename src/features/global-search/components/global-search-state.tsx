@@ -25,7 +25,7 @@ function SearchIntroduction({ title, description }: { title: string; description
   return (
     <Empty className="h-full min-h-[320px] px-6">
       <EmptyHeader>
-        <EmptyMedia variant="icon" className="size-11 border border-border bg-secondary-bg">
+        <EmptyMedia variant="icon" className="size-11 border border-border bg-surface">
           <MagnifyingGlass className="size-6" weight="duotone" />
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
@@ -86,7 +86,7 @@ export function GlobalSearchState({
       <Empty className="min-h-[240px] px-6" role="alert">
         <EmptyHeader>
           <EmptyTitle>Search failed</EmptyTitle>
-          <EmptyDescription className="ui-text-base text-error">{error}</EmptyDescription>
+          <EmptyDescription className="ui-text-base text-destructive">{error}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button type="button" variant="default" onClick={onRetry}>

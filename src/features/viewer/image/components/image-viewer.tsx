@@ -236,7 +236,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
     <ViewerLayout className="select-none">
       <ViewerHeader
         className="absolute inset-x-0 top-0 z-10"
-        icon={<FileIcon className="shrink-0 text-text" />}
+        icon={<FileIcon className="shrink-0 text-foreground" />}
         title={
           <span title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
@@ -329,7 +329,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           <span className="flex items-center gap-1">
             Size: {formatFileSize(currentSize)}
             {imageOperations.hasChanges && originalSize !== currentSize && (
-              <span className="flex items-center gap-0.5 text-accent">
+              <span className="flex items-center gap-0.5 text-primary">
                 (
                 {currentSize < originalSize ? (
                   <ArrowDown className="inline" />

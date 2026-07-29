@@ -141,11 +141,11 @@ export function WebViewerToolbar({
   };
 
   return (
-    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-primary-bg px-2">
+    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-background px-2">
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
         <InputGroup
-          className={`h-6 flex-1 bg-primary-bg ${
-            hasUrlError ? "border-error/60 bg-error/5" : "border-border"
+          className={`h-6 flex-1 bg-background ${
+            hasUrlError ? "border-destructive/60 bg-destructive/5" : "border-border"
           }`}
           aria-invalid={hasUrlError || undefined}
         >
@@ -255,7 +255,9 @@ export function WebViewerToolbar({
               className={dropdownItemClassName("justify-between")}
             >
               <span>Reset zoom</span>
-              <span className="text-text-lighter ui-text-sm">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-subtle-foreground ui-text-sm">
+                {Math.round(zoomLevel * 100)}%
+              </span>
             </Button>
           </div>
         </Dropdown>

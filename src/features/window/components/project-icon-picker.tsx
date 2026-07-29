@@ -112,7 +112,7 @@ const ProjectIconPicker = memo(
                   variant="ghost"
                   onClick={() => handleSelect(icon.path)}
                   className={`group size-12 border ${
-                    currentIcon === icon.path ? "border-accent bg-accent/10" : "border-border/50"
+                    currentIcon === icon.path ? "border-primary bg-primary/10" : "border-border/50"
                   }`}
                   aria-label={`Select ${icon.name} as project icon`}
                   size="icon"

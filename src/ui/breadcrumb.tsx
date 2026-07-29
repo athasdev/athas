@@ -13,7 +13,7 @@ function BreadcrumbList({ className, ...props }: ComponentProps<"ol">) {
     <ol
       data-slot="breadcrumb-list"
       className={cn(
-        "flex flex-wrap items-center gap-1.5 break-words text-text-lighter ui-text-sm",
+        "flex flex-wrap items-center gap-1.5 break-words text-subtle-foreground ui-text-sm",
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ function BreadcrumbLink({ className, render, ...props }: useRender.ComponentProp
     props: mergeProps<"a">(
       {
         className: cn(
-          "rounded-md outline-none transition-colors hover:text-text focus-visible:ring-2 focus-visible:ring-accent/20",
+          "rounded-md outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20",
           className,
         ),
       },
@@ -57,7 +57,7 @@ function BreadcrumbPage({ className, ...props }: ComponentProps<"span">) {
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn("font-medium text-text", className)}
+      className={cn("font-medium text-foreground", className)}
       {...props}
     />
   );
@@ -69,7 +69,7 @@ function BreadcrumbSeparator({ children, className, ...props }: ComponentProps<"
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn("text-text-lighter/70 [&>svg]:size-3.5", className)}
+      className={cn("text-subtle-foreground/70 [&>svg]:size-3.5", className)}
       {...props}
     >
       {children ?? <ChevronRight className="rtl:rotate-180" />}

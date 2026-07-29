@@ -79,10 +79,10 @@ const fileNavigatorSurfaceVariants = cva(
   {
     variants: {
       surface: {
-        sidebar: "border-border/70 border-r bg-secondary-bg/20",
+        sidebar: "border-border/70 border-r bg-surface/20",
         plain: "bg-transparent",
-        inset: "rounded-xl border border-border/70 bg-secondary-bg/20",
-        review: "border-border/60 border-r bg-secondary-bg/10",
+        inset: "rounded-xl border border-border/70 bg-surface/20",
+        review: "border-border/60 border-r bg-surface/10",
       },
     },
     defaultVariants: {
@@ -264,7 +264,11 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
         <SidebarSectionLabel
           style={{ paddingLeft: 8 + depth * 12 }}
           leading={
-            <ThemedFileIcon fileName={node.name} isDir className="shrink-0 text-text-lighter" />
+            <ThemedFileIcon
+              fileName={node.name}
+              isDir
+              className="shrink-0 text-subtle-foreground"
+            />
           }
         >
           {node.name}
@@ -436,7 +440,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
             iconOnly
             wrap={false}
             size="xs"
-            className={cn("shrink-0", surface === "inset" && "bg-primary-bg")}
+            className={cn("shrink-0", surface === "inset" && "bg-background")}
           />
         </SidebarHeader>
       ) : null}
@@ -473,7 +477,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         )}
       </ScrollArea>
       <div
-        className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-accent/20"
+        className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
         onPointerDown={handleResizeStart}
         onKeyDown={handleResizeKeyDown}
         role="separator"

@@ -168,7 +168,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
               <CommandItemRow
                 key={remote.name}
                 as="div"
-                icon={<Globe className="size-4 text-text-lighter" />}
+                icon={<Globe className="size-4 text-subtle-foreground" />}
                 title={remote.name}
                 description={remote.url}
                 contentLayout="stacked"

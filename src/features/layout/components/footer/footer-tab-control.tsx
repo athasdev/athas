@@ -7,16 +7,16 @@ type FooterControlTone = "default" | "accent" | "warning" | "danger";
 
 const footerToneClassNames: Record<FooterControlTone, string> = {
   default: "",
-  accent: "text-accent hover:text-accent",
+  accent: "text-primary hover:text-primary",
   warning: "text-warning hover:text-warning",
-  danger: "text-error hover:bg-error/10 hover:text-error",
+  danger: "text-destructive hover:bg-destructive/10 hover:text-destructive",
 };
 
 export function footerControlClassName(tone: FooterControlTone = "default", busy = false) {
   return cn(
     "font-sans ui-text-chrome font-normal",
     footerToneClassNames[tone],
-    busy && "cursor-wait bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent",
+    busy && "cursor-wait bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary",
   );
 }
 
@@ -25,7 +25,7 @@ export function FooterControlBadge({ children }: { children: ReactNode }) {
     <Badge
       variant="accent"
       size="compact"
-      className="min-h-3 min-w-3 px-0.5 leading-3 text-primary-bg"
+      className="min-h-3 min-w-3 px-0.5 leading-3 text-background"
     >
       {children}
     </Badge>

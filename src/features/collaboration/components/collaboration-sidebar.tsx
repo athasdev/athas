@@ -1079,13 +1079,13 @@ export function CollaborationSidebarView() {
               <>
                 {isCreatingChannel ? (
                   <form
-                    className="mb-1 flex h-8 items-center gap-1 rounded-sm bg-hover/70 px-1.5"
+                    className="mb-1 flex h-8 items-center gap-1 rounded-sm bg-accent/70 px-1.5"
                     onSubmit={(event) => {
                       event.preventDefault();
                       void createChannel(newChannelName);
                     }}
                   >
-                    <Hash className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
+                    <Hash className="size-3.5 shrink-0 text-subtle-foreground" weight="duotone" />
                     <Input
                       autoFocus
                       value={newChannelName}
@@ -1217,20 +1217,20 @@ export function CollaborationSidebarView() {
                   <div key={group.id} className="flex gap-2">
                     <CollaborationAvatar name={group.author} />
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="px-1 text-text-lighter ui-text-sm">{group.author}</div>
+                      <div className="px-1 text-subtle-foreground ui-text-sm">{group.author}</div>
                       <div className="space-y-px">
                         {group.entries.map((entry, index) => (
                           <div
                             key={entry.id}
                             className={cn(
-                              "border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-sm leading-5",
+                              "border border-border/45 bg-surface/45 px-2.5 py-1.5 text-foreground ui-text-sm leading-5",
                               index === 0 && "rounded-t-lg",
                               index === group.entries.length - 1 && "rounded-b-lg",
                               group.entries.length === 1 && "rounded-lg",
                             )}
                           >
                             {entry.kind === "document" ? (
-                              <span className="mb-0.5 flex items-center gap-1.5 text-text-lighter ui-text-sm">
+                              <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground ui-text-sm">
                                 <FileText className="size-3" weight="duotone" />
                                 Document
                               </span>
@@ -1283,7 +1283,7 @@ export function CollaborationSidebarView() {
                   name={openPrivateParticipant.name}
                   online={openPrivateParticipant.online}
                 />
-                <div className="min-w-0 flex-1 truncate text-text ui-text-sm">
+                <div className="min-w-0 flex-1 truncate text-foreground ui-text-sm">
                   {openPrivateParticipant.name}
                 </div>
                 <PresenceStatusDot online={openPrivateParticipant.online} />
@@ -1302,8 +1302,8 @@ export function CollaborationSidebarView() {
                     <div key={entry.id} className="flex gap-2">
                       <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
-                        <div className="px-1 text-text-lighter ui-text-sm">{authorName}</div>
-                        <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-sm leading-5">
+                        <div className="px-1 text-subtle-foreground ui-text-sm">{authorName}</div>
+                        <div className="rounded-lg border border-border/45 bg-surface/45 px-2.5 py-1.5 text-foreground ui-text-sm leading-5">
                           {entry.body}
                         </div>
                       </div>
@@ -1382,7 +1382,7 @@ export function CollaborationSidebarView() {
           filteredParticipants.map((participant) => (
             <SidebarListItem
               key={participant.id}
-              className={cn("min-h-8 ui-text-sm", participant.online && "text-text")}
+              className={cn("min-h-8 ui-text-sm", participant.online && "text-foreground")}
               active={presenceTarget.followingUserId === participant.followableUserId}
               onContextMenu={(event) => participantContextMenu.open(event, participant)}
               onClick={() =>

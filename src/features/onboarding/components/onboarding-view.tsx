@@ -42,9 +42,11 @@ function SettingRow({
   return (
     <div className="flex items-center justify-between gap-5 border-border/70 border-b px-5 py-4 last:border-b-0">
       <div className="min-w-0">
-        <div className="font-sans ui-text-sm font-medium text-text">{title}</div>
+        <div className="font-sans ui-text-sm font-medium text-foreground">{title}</div>
         {description ? (
-          <p className="font-sans ui-text-sm mt-1 max-w-[560px] text-text-light">{description}</p>
+          <p className="font-sans ui-text-sm mt-1 max-w-[560px] text-muted-foreground">
+            {description}
+          </p>
         ) : null}
       </div>
       <div className="shrink-0">{children}</div>
@@ -124,11 +126,13 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
   };
 
   return (
-    <ScrollArea className="h-full w-full bg-primary-bg">
+    <ScrollArea className="h-full w-full bg-background">
       <div className="mx-auto flex w-full max-w-[820px] flex-col px-8 py-10">
         <div className="mb-7">
-          <h1 className="font-sans ui-text-base font-semibold text-text">{viewModel.title}</h1>
-          <p className="font-sans ui-text-sm mt-2 text-text-light">{viewModel.description}</p>
+          <h1 className="font-sans ui-text-base font-semibold text-foreground">
+            {viewModel.title}
+          </h1>
+          <p className="font-sans ui-text-sm mt-2 text-muted-foreground">{viewModel.description}</p>
         </div>
 
         {viewModel.showSettings ? (
@@ -156,7 +160,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
                     href={telemetryLearnMoreUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-link hover:underline"
+                    className="text-primary hover:underline"
                   >
                     Learn more
                   </a>
@@ -187,7 +191,7 @@ export default function OnboardingView({ bufferId, context }: OnboardingViewProp
           <Card className="rounded-lg">
             <CardHeader className="px-5">
               <CardTitle>Your settings are unchanged</CardTitle>
-              <CardDescription className="text-text-light">
+              <CardDescription className="text-muted-foreground">
                 Existing editor, privacy, keyboard, and window preferences remain in place after
                 this update.
               </CardDescription>

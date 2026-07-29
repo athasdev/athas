@@ -27,7 +27,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
           aria-modal="false"
           aria-labelledby="inline-edit-title"
           aria-describedby="inline-edit-description"
-          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-primary-bg shadow-[var(--shadow-popover)]"
+          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-background shadow-[var(--shadow-popover)]"
           style={{
             top: `${zoneTop ?? state.popoverPosition.top}px`,
             left: `${state.popoverPosition.left}px`,
@@ -90,7 +90,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   : "inline-edit-description"
               }
               aria-invalid={state.inlineEditError ? true : undefined}
-              className="font-sans h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-sm placeholder:text-text-lighter/80 focus:bg-transparent"
+              className="font-sans h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-sm placeholder:text-subtle-foreground/80 focus:bg-transparent"
               placeholder={
                 selection && selection.start.offset !== selection.end.offset
                   ? "Edit selection..."
@@ -112,7 +112,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               size="icon-xs"
               onClick={() => void state.handleApplyInlineEdit()}
               disabled={state.isInlineEditRunning}
-              className="text-accent hover:bg-transparent hover:text-accent/80"
+              className="text-primary hover:bg-transparent hover:text-primary/80"
               aria-label={state.isInlineEditRunning ? "Applying inline edit" : "Apply inline edit"}
               tooltip="Apply inline edit"
               shortcut="enter"
@@ -124,7 +124,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               variant="ghost"
               size="icon-xs"
               onClick={() => state.inlineEditToolbarActions.hide()}
-              className="text-text-lighter hover:text-text"
+              className="text-subtle-foreground hover:text-foreground"
               tooltip="Close inline edit"
               shortcut="escape"
             >

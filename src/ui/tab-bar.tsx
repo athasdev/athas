@@ -167,12 +167,13 @@ export interface TabBarTabProps extends Omit<TabProps, "variant"> {
 }
 
 const tabVariants = cva(
-  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 cursor-pointer select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-[var(--athas-chrome-radius)] px-2 text-text-lighter outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover/70 hover:text-text active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-accent/25 focus-visible:ring-offset-1 focus-visible:ring-offset-tab-bar",
+  "group/tab ui-text-chrome relative flex min-h-(--athas-chrome-control-height) shrink-0 cursor-pointer select-none items-center gap-(--athas-chrome-gap-loose) whitespace-nowrap rounded-[var(--athas-chrome-radius)] px-2 text-subtle-foreground outline-none transition-[transform,opacity,color,background-color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/70 hover:text-foreground active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-1 focus-visible:ring-offset-tab-bar",
   {
     variants: {
       variant: {
         default: "border border-transparent",
-        connected: "min-h-(--athas-tab-height) border-0 active:scale-100",
+        connected:
+          "min-h-(--athas-tab-height) rounded-[var(--athas-chrome-radius)] border-0 active:scale-100",
       },
       active: {
         true: "",
@@ -192,22 +193,22 @@ const tabVariants = cva(
       {
         variant: "default",
         active: true,
-        className: "bg-primary-bg/45 text-text",
+        className: "bg-background/45 text-foreground",
       },
       {
         variant: "default",
         active: false,
-        className: "text-text-lighter/90 hover:bg-hover hover:text-text",
+        className: "text-subtle-foreground/90 hover:bg-accent hover:text-foreground",
       },
       {
         variant: "connected",
         active: true,
-        className: "z-10 bg-tab-active text-text shadow-[inset_0_0_0_1px_var(--color-border)]",
+        className: "z-10 bg-accent/90 text-foreground shadow-none",
       },
       {
         variant: "connected",
         active: false,
-        className: "text-text-lighter hover:bg-tab-hover/80 hover:text-text",
+        className: "text-subtle-foreground/85 hover:bg-tab-hover/60 hover:text-foreground",
       },
     ],
   },
@@ -253,7 +254,7 @@ const tabBarSurfaceVariants = cva("relative flex overflow-hidden", {
 const tabBarTabVariants = cva("ui-text-chrome", {
   variants: {
     orientation: {
-      horizontal: "h-(--athas-tab-height) min-w-20 w-fit pl-2 pr-6",
+      horizontal: "h-(--athas-tab-height) min-w-20 max-w-(--athas-tab-max-width) w-fit pl-2 pr-6",
       vertical: "min-h-(--athas-tab-height) w-full max-w-none justify-start rounded-md pl-2 pr-6",
     },
   },

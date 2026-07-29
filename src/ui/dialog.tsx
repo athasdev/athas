@@ -23,7 +23,7 @@ import {
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import { instantTransition, overlayEntrance, quickTransition } from "@/design-system/motion";
+import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 
@@ -52,7 +52,7 @@ interface DialogProps {
 const dialogContentVariants = cva(
   [
     "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
-    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)]",
+    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-dialog)]",
     "focus:outline-none",
   ],
   {
@@ -124,7 +124,7 @@ function DialogContent({
         {showCloseButton ? (
           <DialogPrimitive.Close
             render={<Button variant="ghost" size="icon-xs" />}
-            className="absolute top-2.5 right-2.5 text-text-lighter hover:text-text"
+            className="absolute top-2.5 right-2.5 text-subtle-foreground hover:text-foreground"
             aria-label="Close dialog"
           >
             <X />
@@ -150,7 +150,7 @@ function DialogFooter({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 border-border/70 border-t bg-secondary-bg/55 px-4 py-3 sm:flex-row sm:justify-end",
+        "flex shrink-0 flex-col-reverse gap-2 border-border/70 border-t bg-surface/55 px-4 py-3 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -162,7 +162,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("font-sans ui-text-base font-medium leading-snug text-text", className)}
+      className={cn("font-sans ui-text-base font-medium leading-snug text-foreground", className)}
       {...props}
     />
   );
@@ -172,7 +172,7 @@ function DialogDescription({ className, ...props }: DialogPrimitive.Description.
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("font-sans ui-text-sm leading-normal text-text-lighter", className)}
+      className={cn("font-sans ui-text-sm leading-normal text-subtle-foreground", className)}
       {...props}
     />
   );
@@ -253,13 +253,13 @@ const AppDialog = ({
         >
           <div
             className={cn(
-              "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
+              "flex shrink-0 items-center justify-between bg-background px-4 py-3",
               classNames?.header,
             )}
           >
             <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
-              {Icon && <Icon className="text-text-lighter" />}
-              <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-text">
+              {Icon && <Icon className="text-subtle-foreground" />}
+              <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
                 {title}
               </DialogPrimitive.Title>
             </div>
@@ -267,7 +267,7 @@ const AppDialog = ({
             <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
               {headerActions}
               <DialogPrimitive.Close
-                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]"
+                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-subtle-foreground transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)]"
                 aria-label="Close dialog"
               >
                 <X />
@@ -574,7 +574,7 @@ function PrimitiveDialogHost({
         }}
         className="flex flex-col gap-2"
       >
-        <label className="flex flex-col gap-2 font-sans ui-text-sm text-text">
+        <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
           {dialog.message}
           <Input
             autoFocus

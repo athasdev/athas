@@ -551,9 +551,9 @@ const GitBranchManager = ({
         variant="ghost"
         size={triggerSurface === "footer" ? "xs" : "default"}
         className={cn(
-          "inline-flex max-w-full shrink overflow-hidden px-2 text-text-lighter hover:bg-hover/80",
+          "inline-flex max-w-full shrink overflow-hidden px-2 text-subtle-foreground hover:bg-accent/80",
           triggerSurface === "footer" && "font-medium",
-          isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
+          isDropdownOpen ? "bg-accent/80" : "cursor-pointer",
         )}
         aria-label="Search branches"
       >
@@ -602,7 +602,7 @@ const GitBranchManager = ({
               {createBranchName ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
+                  icon={<Plus className={cn(gitCommandIconClassName, "text-subtle-foreground")} />}
                   title={`Create new branch "${createBranchName}"`}
                   onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
@@ -639,7 +639,7 @@ const GitBranchManager = ({
               {createWorktreePath ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
+                  icon={<Plus className={cn(gitCommandIconClassName, "text-subtle-foreground")} />}
                   title={`Create worktree "${createWorktreePath}"`}
                   onClick={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoadingWorktrees}
@@ -750,7 +750,7 @@ const GitBranchManager = ({
                 </CommandFooterAction>
               ) : null}
               {selectionError ? (
-                <span className="ui-text-sm min-w-0 flex-1 truncate text-error/90">
+                <span className="ui-text-sm min-w-0 flex-1 truncate text-destructive/90">
                   {selectionError}
                 </span>
               ) : null}
@@ -786,7 +786,7 @@ function BranchRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <GitBranchIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <GitBranchIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
         )
       }
       title={branch}
@@ -794,7 +794,10 @@ function BranchRow({
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "min-h-9",
+        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
+      )}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
@@ -854,7 +857,7 @@ function RepositoryRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <FolderOpenIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <FolderOpenIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
         )
       }
       title={getFolderName(repoPath)}
@@ -862,7 +865,10 @@ function RepositoryRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "min-h-9",
+        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
+      )}
       accessory={
         <>
           {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
@@ -893,7 +899,7 @@ function WorktreeRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <NodesIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <NodesIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
         )
       }
       title={getFolderName(worktree.path)}
@@ -906,7 +912,10 @@ function WorktreeRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "min-h-9",
+        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
+      )}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
     />
   );

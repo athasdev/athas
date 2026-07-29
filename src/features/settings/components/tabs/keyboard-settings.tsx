@@ -41,7 +41,7 @@ import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { ToggleGroup } from "@/ui/toggle-group";
-import { quickTransition } from "@/design-system/motion";
+import { quickTransition } from "@/utils/motion";
 import { matchesSearchQuery } from "@/utils/search-match";
 import { TypedConfirmAction } from "../typed-confirm-action";
 import { SettingsView, SettingRow } from "../settings-section";
@@ -396,7 +396,7 @@ export const KeyboardSettings = () => {
               </Button>
             </SettingRow>
             {userOverrideCount > 0 ? (
-              <div className="font-sans ui-text-base px-1 text-text-lighter">
+              <div className="font-sans ui-text-base px-1 text-subtle-foreground">
                 {userOverrideCount} user override{userOverrideCount === 1 ? "" : "s"} currently
                 saved.
               </div>

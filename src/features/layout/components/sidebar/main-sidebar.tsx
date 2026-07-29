@@ -838,10 +838,10 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
             role="separator"
             aria-label="Resize activity rail"
             aria-orientation="vertical"
-            className="group absolute top-0 right-0 z-20 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center hover:bg-accent/8"
+            className="group absolute top-0 right-0 z-20 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center hover:bg-primary/8"
             onMouseDown={handleResizeMouseDown}
           >
-            <div className="h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent" />
+            <div className="h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-primary" />
           </div>
         ) : null}
         {isActivityRailResizing ? <div className="fixed inset-0 z-40 cursor-col-resize" /> : null}

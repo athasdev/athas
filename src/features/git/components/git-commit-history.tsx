@@ -80,8 +80,8 @@ const CommitItem = memo(
           type="button"
           onClick={handleCommitClick}
           className={cn(
-            "ui-text-sm flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-hover/80 focus-visible:bg-hover/80",
-            isSelected && "bg-accent/10",
+            "ui-text-sm flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors hover:bg-accent/80 focus-visible:bg-accent/80",
+            isSelected && "bg-primary/10",
           )}
           draggable={!!repoPath}
           onDragStart={(event) => {
@@ -103,16 +103,16 @@ const CommitItem = memo(
               <span
                 className={cn(
                   "truncate leading-tight",
-                  syncState === "local" ? "text-accent" : "text-text",
+                  syncState === "local" ? "text-primary" : "text-foreground",
                 )}
               >
                 {commit.message}
               </span>
               {syncState === "local" ? (
-                <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                <span className="size-1.5 shrink-0 rounded-full bg-primary" />
               ) : null}
             </span>
-            <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-text-lighter">
+            <span className="ui-text-sm mt-1 flex min-w-0 items-center gap-2 text-subtle-foreground">
               <span className="truncate">{commit.author}</span>
               <span className="shrink-0">{formatRelativeDate(commit.date)}</span>
               <span className="shrink-0 font-mono">{shortHash}</span>
@@ -291,14 +291,14 @@ const GitCommitHistory = ({
       {(ahead > 0 || behind > 0) && (
         <div className="space-y-1 px-2 pb-1">
           {ahead > 0 ? (
-            <div className="ui-text-sm text-text-lighter">
-              <span className="text-accent">{ahead}</span>{" "}
+            <div className="ui-text-sm text-subtle-foreground">
+              <span className="text-primary">{ahead}</span>{" "}
               {`local commit${ahead !== 1 ? "s" : ""} not pushed`}
             </div>
           ) : null}
           {behind > 0 ? (
-            <div className="ui-text-sm text-text-lighter">
-              <span className="text-accent">{behind}</span>{" "}
+            <div className="ui-text-sm text-subtle-foreground">
+              <span className="text-primary">{behind}</span>{" "}
               {`remote commit${behind !== 1 ? "s" : ""} not pulled`}
             </div>
           ) : null}
@@ -328,13 +328,13 @@ const GitCommitHistory = ({
             ))}
 
             {isLoadingMoreCommits && (
-              <div className="flex justify-center px-3 py-1.5 text-text-lighter">
+              <div className="flex justify-center px-3 py-1.5 text-subtle-foreground">
                 <Spinner label="Loading commits" showLabel compact />
               </div>
             )}
 
             {!hasMoreCommits && commits.length > 0 && (
-              <div className="ui-text-sm px-3 py-1.5 text-center text-text-lighter">
+              <div className="ui-text-sm px-3 py-1.5 text-center text-subtle-foreground">
                 end of history
               </div>
             )}

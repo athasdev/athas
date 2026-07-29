@@ -41,25 +41,25 @@ const DEFAULT_COLUMN_WIDTH = 150;
 const ESTIMATED_ROW_HEIGHT = 34;
 
 const COLUMN_ICONS: Record<string, { icon: typeof Hash; color: string }> = {
-  int: { icon: Hash, color: "text-accent" },
-  num: { icon: Hash, color: "text-accent" },
-  text: { icon: Type, color: "text-text-lighter" },
-  varchar: { icon: Type, color: "text-text-lighter" },
-  char: { icon: Type, color: "text-text-lighter" },
-  date: { icon: Calendar, color: "text-accent" },
-  time: { icon: Calendar, color: "text-accent" },
-  blob: { icon: FileText, color: "text-text-lighter" },
-  binary: { icon: FileText, color: "text-text-lighter" },
+  int: { icon: Hash, color: "text-primary" },
+  num: { icon: Hash, color: "text-primary" },
+  text: { icon: Type, color: "text-subtle-foreground" },
+  varchar: { icon: Type, color: "text-subtle-foreground" },
+  char: { icon: Type, color: "text-subtle-foreground" },
+  date: { icon: Calendar, color: "text-primary" },
+  time: { icon: Calendar, color: "text-primary" },
+  blob: { icon: FileText, color: "text-subtle-foreground" },
+  binary: { icon: FileText, color: "text-subtle-foreground" },
 };
 
 function getColumnIcon(type: string, isPrimaryKey: boolean, isForeignKey: boolean) {
-  if (isPrimaryKey) return <Key className="text-text-lighter" />;
-  if (isForeignKey) return <Link className="text-accent" />;
+  if (isPrimaryKey) return <Key className="text-subtle-foreground" />;
+  if (isForeignKey) return <Link className="text-primary" />;
   const lowerType = type.toLowerCase();
   for (const [key, { icon: Icon, color }] of Object.entries(COLUMN_ICONS)) {
     if (lowerType.includes(key)) return <Icon className={color} />;
   }
-  return <Type className="text-text-lighter" />;
+  return <Type className="text-subtle-foreground" />;
 }
 
 interface DataGridProps {
@@ -400,7 +400,7 @@ export default function DataGrid({
   return (
     <div className="font-sans flex min-h-0 flex-1 flex-col">
       <div className="group flex h-9 items-center justify-between border-border/70 border-b px-3">
-        <span className="ui-text-sm text-text-lighter">
+        <span className="ui-text-sm text-subtle-foreground">
           {queryResult.rows.length} {resultLabel}
         </span>
         <Button
@@ -415,7 +415,7 @@ export default function DataGrid({
           disabled={!canCreateRows}
           size="icon-xs"
         >
-          <Plus className="text-text-lighter hover:text-text" />
+          <Plus className="text-subtle-foreground hover:text-foreground" />
         </Button>
       </div>
       <div
@@ -429,7 +429,7 @@ export default function DataGrid({
           <thead className="sticky top-0 z-10">
             <tr>
               <th
-                className="w-10 cursor-pointer border-border/70 border-b bg-secondary-bg px-2 py-1.5 text-left font-normal text-text-lighter hover:bg-hover"
+                className="w-10 cursor-pointer border-border/70 border-b bg-surface px-2 py-1.5 text-left font-normal text-subtle-foreground hover:bg-accent"
                 onClick={handleSelectAllClick}
                 aria-label="Select all visible cells"
               >
@@ -444,25 +444,25 @@ export default function DataGrid({
                 return (
                   <th
                     key={i}
-                    className="group relative cursor-pointer whitespace-nowrap border-border/70 border-b bg-secondary-bg px-2 py-1.5 text-left font-normal transition-colors hover:bg-hover"
+                    className="group relative cursor-pointer whitespace-nowrap border-border/70 border-b bg-surface px-2 py-1.5 text-left font-normal transition-colors hover:bg-accent"
                     style={{ width: colWidth, minWidth: 60 }}
                     onClick={() => canSortColumns && onColumnSort(col)}
                   >
                     <div className="flex flex-col gap-0.5 font-normal">
                       <div className="flex items-center gap-1.5">
                         {info && getColumnIcon(info.type, info.primary_key, foreignKeyMap.has(col))}
-                        <span className="flex min-w-0 items-center gap-1 text-text">
+                        <span className="flex min-w-0 items-center gap-1 text-foreground">
                           {col}
                           {sorted &&
                             (sortDirection === "asc" ? (
-                              <ArrowUp className="text-accent" />
+                              <ArrowUp className="text-primary" />
                             ) : (
-                              <ArrowDown className="text-accent" />
+                              <ArrowDown className="text-primary" />
                             ))}
                         </span>
                         {fk && (
                           <span
-                            className="ui-text-sm text-text-lighter"
+                            className="ui-text-sm text-subtle-foreground"
                             title={`FK: ${fk.to_table}.${fk.to_column}`}
                           >
                             FK
@@ -482,11 +482,11 @@ export default function DataGrid({
                           aria-label={`Filter by ${col}`}
                           size="icon"
                         >
-                          <Filter className="text-text-lighter hover:text-text" />
+                          <Filter className="text-subtle-foreground hover:text-foreground" />
                         </Button>
                       </div>
                       {showColumnTypes && info && (
-                        <div className="ui-text-sm text-text-lighter">
+                        <div className="ui-text-sm text-subtle-foreground">
                           {info.type}
                           {info.primary_key && " PK"}
                           {info.notnull && " NN"}
@@ -495,7 +495,7 @@ export default function DataGrid({
                     </div>
                     {/* Resize handle */}
                     <div
-                      className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-accent/40"
+                      className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/40"
                       onPointerDown={(e) => handleResizeStart(e, col)}
                       onPointerMove={handleResizeMove}
                       onPointerUp={handleResizeEnd}
@@ -522,11 +522,11 @@ export default function DataGrid({
                   key={ri}
                   ref={rowVirtualizer.measureElement}
                   data-index={virtualRow.index}
-                  className="cursor-pointer transition-colors hover:bg-hover/25"
+                  className="cursor-pointer transition-colors hover:bg-accent/25"
                   onContextMenu={(e) => canOpenRowMenu && onRowContextMenu(e, ri)}
                 >
                   <td
-                    className="border-border/40 border-b px-2 py-1.5 text-text-lighter hover:bg-hover"
+                    className="border-border/40 border-b px-2 py-1.5 text-subtle-foreground hover:bg-accent"
                     onClick={(event) => handleRowHeaderClick(ri, event.shiftKey)}
                   >
                     {(currentPage - 1) * pageSize + ri + 1}
@@ -555,11 +555,11 @@ export default function DataGrid({
                       <td
                         key={ci}
                         className={cn(
-                          "max-w-[300px] border-border/50 border-b px-2 py-1.5 font-normal text-text",
-                          canEditCells && !isPK && "cursor-pointer hover:bg-hover",
-                          isPK && "bg-hover/55",
-                          isSelected && "bg-accent/10",
-                          isActive && "outline outline-1 outline-accent/70 outline-offset-[-1px]",
+                          "max-w-[300px] border-border/50 border-b px-2 py-1.5 font-normal text-foreground",
+                          canEditCells && !isPK && "cursor-pointer hover:bg-accent",
+                          isPK && "bg-accent/55",
+                          isSelected && "bg-primary/10",
+                          isActive && "outline outline-1 outline-primary/70 outline-offset-[-1px]",
                         )}
                         style={{ width: getColumnWidth(col), minWidth: 60 }}
                         onClick={(event) => {
@@ -590,7 +590,7 @@ export default function DataGrid({
                               if (e.key === "Escape") setEditing(null);
                             }}
                             onBlur={handleSubmit}
-                            className="w-full rounded-lg border-border/70 bg-secondary-bg/80 ui-text-sm focus:border-accent/60"
+                            className="w-full rounded-lg border-border/70 bg-surface/80 ui-text-sm focus:border-primary/60"
                           />
                         ) : (
                           <CellRenderer

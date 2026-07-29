@@ -185,7 +185,7 @@ export const AdvancedSettings = () => {
                 href={telemetryLearnMoreUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link hover:underline"
+                className="text-primary hover:underline"
               >
                 Learn more
               </a>
@@ -216,7 +216,7 @@ export const AdvancedSettings = () => {
           </div>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="rounded-lg border border-border/70 bg-primary-bg/50">
+          <div className="rounded-lg border border-border/70 bg-background/50">
             {telemetryLog.length === 0 ? (
               <Empty
                 density="compact"
@@ -229,24 +229,24 @@ export const AdvancedSettings = () => {
                 {[...telemetryLog].reverse().map((entry) => (
                   <div
                     key={entry.id}
-                    className="font-sans ui-text-base flex items-center gap-2 border-border/70 px-3 py-2 text-text not-last:border-b"
+                    className="font-sans ui-text-base flex items-center gap-2 border-border/70 px-3 py-2 text-foreground not-last:border-b"
                   >
                     <span className="min-w-0 flex-1 truncate font-medium">{entry.eventType}</span>
                     <span
                       className={
                         entry.status === "failed"
-                          ? "shrink-0 uppercase text-error"
+                          ? "shrink-0 uppercase text-destructive"
                           : entry.status === "sent"
                             ? "shrink-0 uppercase text-success"
-                            : "shrink-0 uppercase text-text-lighter"
+                            : "shrink-0 uppercase text-subtle-foreground"
                       }
                     >
                       {entry.status}
                     </span>
-                    <span className="min-w-0 flex-[1.4] truncate text-text-lighter">
+                    <span className="min-w-0 flex-[1.4] truncate text-subtle-foreground">
                       {entry.error || entry.summary}
                     </span>
-                    <span className="shrink-0 text-text-lightest">
+                    <span className="shrink-0 text-subtle-foreground">
                       {new Date(entry.timestamp).toLocaleString()}
                     </span>
                   </div>

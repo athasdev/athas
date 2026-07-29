@@ -157,7 +157,7 @@ export function PaneResizeHandle({
     >
       <div
         className={`bg-transparent transition-colors ${
-          isDragging ? "bg-accent" : "group-hover:bg-accent"
+          isDragging ? "bg-primary" : "group-hover:bg-primary"
         } ${isHorizontal ? "h-full w-px" : "h-px w-full"}`}
       />
       {isDragging && (

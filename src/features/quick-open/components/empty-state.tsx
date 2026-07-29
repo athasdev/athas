@@ -36,7 +36,7 @@ export const EmptyState = ({
 
   return (
     <CommandEmpty>
-      <div className="font-sans text-text-lighter">
+      <div className="font-sans text-subtle-foreground">
         {isIndexing ? (
           <Spinner label="Indexing project files" showLabel compact />
         ) : isLoadingFiles ? (

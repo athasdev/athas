@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
-import { FILE_TREE_ROW_HEIGHT } from "@/features/file-explorer/lib/file-tree-row";
+import { getFileTreeRowHeight } from "@/features/file-explorer/lib/file-tree-row";
 import {
   buildVisibleFileTreeRows,
   type VisibleFileTreeRow,
@@ -57,15 +57,17 @@ export function useFileExplorerVisibleRows({
   rootFolderPath,
 }: UseFileExplorerVisibleRowsOptions) {
   const expandedPaths = useFileTreeStore((state) => state.expandedPaths);
-  const { autoRevealActiveFile, compactFolders, hideRootFolder, sortOrder } = useSettingsStore(
-    useShallow((state) => ({
-      autoRevealActiveFile: state.settings.autoRevealActiveFileInFileTree,
-      compactFolders: state.settings.compactFoldersInFileTree,
-      hideRootFolder: state.settings.hideRootFolderInFileTree,
-      sortOrder: state.settings.fileTreeSortOrder,
-    })),
-  );
-  const rowHeight = FILE_TREE_ROW_HEIGHT;
+  const { autoRevealActiveFile, compactFolders, hideRootFolder, sortOrder, uiFontSize } =
+    useSettingsStore(
+      useShallow((state) => ({
+        autoRevealActiveFile: state.settings.autoRevealActiveFileInFileTree,
+        compactFolders: state.settings.compactFoldersInFileTree,
+        hideRootFolder: state.settings.hideRootFolderInFileTree,
+        sortOrder: state.settings.fileTreeSortOrder,
+        uiFontSize: state.settings.uiFontSize,
+      })),
+    );
+  const rowHeight = getFileTreeRowHeight(uiFontSize);
 
   const visibleRows = useMemo(() => {
     return buildVisibleFileTreeRows(files, expandedPathsOverride ?? expandedPaths, {
@@ -147,7 +149,7 @@ export function useFileExplorerVisibleRows({
       return;
     }
 
-    rowVirtualizer.scrollToIndex(index, { align: "center" });
+    rowVirtualizer.scrollToIndex(index, { align: "auto" });
     revealedActivePathRef.current = { path: activePath, index, rowHeight };
   }, [
     activePath,
@@ -158,7 +160,7 @@ export function useFileExplorerVisibleRows({
     visibleRowIndexByPath,
   ]);
 
-  return { visibleRows, visibleRowIndexByPath, rowVirtualizer };
+  return { rowHeight, visibleRows, visibleRowIndexByPath, rowVirtualizer };
 }
 
 export type VisibleRow = VisibleFileTreeRow;

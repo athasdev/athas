@@ -363,7 +363,7 @@ const GitCommitPanel = ({
   const hasRemoteChanges = ahead > 0 || behind > 0;
   const isRemoteActionLoading = remoteAction !== null;
   const composerButtonClassName =
-    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-text-lighter shadow-none hover:bg-hover/80 hover:text-text focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
+    "h-6 rounded-md border-transparent bg-transparent px-1.5 ui-text-sm leading-none text-subtle-foreground shadow-none hover:bg-accent/80 hover:text-foreground focus-visible:ring-1 focus-visible:ring-border-strong/35 [&_svg]:size-3";
   const generateModeItems: MenuItem[] = [
     {
       id: "title",
@@ -385,8 +385,8 @@ const GitCommitPanel = ({
         {error && (
           <div
             className={cn(
-              "mx-2 mt-2 flex items-center gap-2 rounded-md border border-error/30",
-              "bg-error/20 px-2 py-1 ui-text-sm text-error",
+              "mx-2 mt-2 flex items-center gap-2 rounded-md border border-destructive/30",
+              "bg-destructive/20 px-2 py-1 ui-text-sm text-destructive",
             )}
           >
             <AlertCircle />
@@ -403,7 +403,7 @@ const GitCommitPanel = ({
           variant="ghost"
           className={cn(
             "max-h-32 min-h-16 w-full resize-none overflow-x-hidden bg-transparent",
-            "font-sans ui-text-sm px-3 pt-3 pb-2 text-text placeholder:text-text-lighter",
+            "font-sans ui-text-sm px-3 pt-3 pb-2 text-foreground placeholder:text-subtle-foreground",
             "focus:outline-none",
           )}
           rows={2}
@@ -413,7 +413,7 @@ const GitCommitPanel = ({
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 pt-1.5">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          <span className="px-1 ui-text-sm text-text-lighter">
+          <span className="px-1 ui-text-sm text-subtle-foreground">
             {stagedFilesCount > 0
               ? `${stagedFilesCount} file${stagedFilesCount !== 1 ? "s" : ""} staged`
               : "No files staged"}
@@ -501,8 +501,8 @@ const GitCommitPanel = ({
             className={cn(
               composerButtonClassName,
               isCommitDisabled
-                ? "cursor-not-allowed text-text-lighter opacity-50"
-                : "text-accent hover:bg-accent/8 hover:text-accent/80",
+                ? "cursor-not-allowed text-subtle-foreground opacity-50"
+                : "text-primary hover:bg-primary/8 hover:text-primary/80",
             )}
           >
             {isCommitting ? "Committing..." : "Commit"}

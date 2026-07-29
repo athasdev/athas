@@ -89,9 +89,9 @@ svg.themed-file-icon {
   color: transparent;
   background-image: linear-gradient(
     90deg,
-    var(--text-lighter) 20%,
-    var(--text) 50%,
-    var(--text-lighter) 80%
+    var(--subtle-foreground) 20%,
+    var(--foreground) 50%,
+    var(--subtle-foreground) 80%
   );
   background-size: 200% 100%;
   background-clip: text;
@@ -118,7 +118,7 @@ html[data-reduce-motion="true"] .drop-indicator {
 }
 
 html[data-reduce-motion="true"] .ui-text-shimmer {
-  color: var(--text-lighter);
+  color: var(--subtle-foreground);
   background: none;
   animation: none;
 }
@@ -140,7 +140,7 @@ html[data-reduce-motion="true"] .ui-text-shimmer {
   }
 
   .ui-text-shimmer {
-    color: var(--text-lighter);
+    color: var(--subtle-foreground);
     background: none;
     animation: none;
   }

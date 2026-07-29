@@ -48,10 +48,10 @@ export function Toaster() {
         descriptionClassName: "font-sans font-normal",
         classNames: {
           toast:
-            "group font-sans rounded-xl border border-border bg-primary-bg text-text font-normal shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "group font-sans rounded-xl border border-border bg-background text-foreground font-normal shadow-[var(--shadow-popover)] backdrop-blur-sm",
           content: "pr-8",
-          title: "font-sans ui-text-sm font-normal leading-5 text-text",
-          description: "font-sans ui-text-sm font-normal leading-5 text-text-light",
+          title: "font-sans ui-text-sm font-normal leading-5 text-foreground",
+          description: "font-sans ui-text-sm font-normal leading-5 text-muted-foreground",
           icon: "mt-0.5",
           success: "border-border",
           info: "border-border",
@@ -59,22 +59,22 @@ export function Toaster() {
           error: "border-border",
           loading: "border-border",
           closeButton:
-            "absolute left-auto right-2 top-2 m-0 opacity-0 transition-[transform,opacity,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:opacity-100 border-none bg-transparent text-text-lighter hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]",
-          actionButton: "font-sans border-none bg-hover text-text hover:bg-border",
-          cancelButton: "font-sans border-none bg-hover text-text hover:bg-border",
+            "absolute left-auto right-2 top-2 m-0 opacity-0 transition-[transform,opacity,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:opacity-100 border-none bg-transparent text-subtle-foreground hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)]",
+          actionButton: "font-sans border-none bg-accent text-foreground hover:bg-border",
+          cancelButton: "font-sans border-none bg-accent text-foreground hover:bg-border",
         },
         actionButtonStyle: {
-          background: "var(--color-hover)",
-          color: "var(--color-text)",
+          background: "var(--accent)",
+          color: "var(--foreground)",
         },
         cancelButtonStyle: {
-          background: "var(--color-hover)",
-          color: "var(--color-text)",
+          background: "var(--accent)",
+          color: "var(--foreground)",
         },
         style: {
-          background: "var(--color-primary-bg)",
-          border: "1px solid var(--color-border)",
-          color: "var(--color-text)",
+          background: "var(--background)",
+          border: "1px solid var(--border)",
+          color: "var(--foreground)",
           fontWeight: "400",
         },
       }}

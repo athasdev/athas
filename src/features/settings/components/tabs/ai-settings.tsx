@@ -575,11 +575,14 @@ export const AISettings = () => {
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={Globe}
-                className={cn("w-56 max-w-full", ollamaStatus === "error" && "border-error/60")}
+                className={cn(
+                  "w-56 max-w-full",
+                  ollamaStatus === "error" && "border-destructive/60",
+                )}
               />
               {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
               {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
-              {ollamaStatus === "error" && <AlertCircle className="text-error" />}
+              {ollamaStatus === "error" && <AlertCircle className="text-destructive" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
                   type="button"
@@ -629,7 +632,7 @@ export const AISettings = () => {
                   onClick={handleRemoveOllamaApiKey}
                   title="Remove saved API key"
                   aria-label="Remove Ollama API key"
-                  className="text-error hover:bg-error/10"
+                  className="text-destructive hover:bg-destructive/10"
                   size="icon-xs"
                 >
                   <Trash2 />
@@ -645,7 +648,7 @@ export const AISettings = () => {
                   href="https://ollama.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-link hover:underline"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
                   Get key <ExternalLink className="size-3" />
                 </a>
@@ -707,7 +710,7 @@ export const AISettings = () => {
                     label: value.name,
                   }))}
                   onChange={(value) =>
-                    useAIChatStore.getState().changeSessionConfigOption(option.id, value)
+                    useAIChatStore.getState().actions.changeSessionConfigOption(option.id, value)
                   }
                   size="md"
                   variant="default"
@@ -949,7 +952,7 @@ export const AISettings = () => {
             onConfirm={async () => {
               setIsClearingChats(true);
               try {
-                await useAIChatStore.getState().clearAllChats();
+                await useAIChatStore.getState().actions.clearAllChats();
                 showToast({ message: "Agent history cleared", type: "success" });
               } finally {
                 setIsClearingChats(false);

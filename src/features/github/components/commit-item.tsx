@@ -71,27 +71,27 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
       className={cn(
         "group flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors",
         canOpenCommit &&
-          "cursor-pointer hover:bg-hover/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+          "cursor-pointer hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
       )}
       aria-label={canOpenCommit ? `Open commit ${shortSha}` : undefined}
     >
       <GitHubAvatar login={avatarLogin} name={authorName} size={32} className="size-6" />
       <div className="min-w-0 flex-1">
-        <p className="ui-text-sm min-w-0 truncate font-medium text-text">
+        <p className="ui-text-sm min-w-0 truncate font-medium text-foreground">
           {commit.messageHeadline}
         </p>
         {bodyPreview ? (
-          <p className="ui-text-sm mt-0.5 line-clamp-1 text-text-lighter">{bodyPreview}</p>
+          <p className="ui-text-sm mt-0.5 line-clamp-1 text-subtle-foreground">{bodyPreview}</p>
         ) : null}
       </div>
-      <div className="ui-text-sm ml-2 flex shrink-0 items-center gap-1.5 text-text-lighter">
-        <span className="hidden max-w-36 truncate font-mono text-text-lighter sm:inline">
+      <div className="ui-text-sm ml-2 flex shrink-0 items-center gap-1.5 text-subtle-foreground">
+        <span className="hidden max-w-36 truncate font-mono text-subtle-foreground sm:inline">
           {authorName}
         </span>
         <span className="hidden sm:inline">&middot;</span>
         <span>{getTimeAgo(commit.authoredDate)}</span>
         <span>&middot;</span>
-        <code className="font-mono text-text-lighter">{shortSha}</code>
+        <code className="font-mono text-subtle-foreground">{shortSha}</code>
         <span className="ml-0.5 flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <Tooltip content="Copy full commit SHA" side="top">
             <Button
@@ -101,7 +101,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
               }}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label="Copy commit SHA"
             >
               <Copy />
@@ -116,7 +116,7 @@ export const CommitItem = memo(({ commit, repoPath }: CommitItemProps) => {
                 }}
                 variant="ghost"
                 size="icon-xs"
-                className="text-text-lighter"
+                className="text-subtle-foreground"
                 aria-label="Open commit in browser"
               >
                 <GithubLogo />

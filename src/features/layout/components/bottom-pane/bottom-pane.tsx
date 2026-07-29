@@ -196,8 +196,8 @@ const BottomPane = () => {
       onMouseDown={handleMouseDown}
       className={cn(
         "group relative flex h-[var(--athas-workbench-gap)] w-full shrink-0 cursor-ns-resize items-center justify-center",
-        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/8",
-        isResizing && "bg-accent/8",
+        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-primary/8",
+        isResizing && "bg-primary/8",
       )}
       role="separator"
       aria-orientation="horizontal"
@@ -205,8 +205,8 @@ const BottomPane = () => {
     >
       <div
         className={cn(
-          "h-px w-full bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",
-          isResizing && "bg-accent",
+          "h-px w-full bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-primary",
+          isResizing && "bg-primary",
         )}
       />
     </div>
@@ -216,8 +216,8 @@ const BottomPane = () => {
     <div
       data-bottom-pane-drop-target
       className={cn(
-        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-primary-bg",
-        isInternalHoverTarget && "ring-2 ring-accent ring-inset",
+        "athas-glass-island relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-background",
+        isInternalHoverTarget && "ring-2 ring-primary ring-inset",
         isFullScreen && "size-full rounded-none border-0 shadow-none ring-0",
         !isFullScreen && "flex-1",
       )}

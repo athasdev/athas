@@ -91,14 +91,14 @@ export function SymbolBreadcrumb({
                     render={
                       <Button onClick={() => openOutlineSymbol(symbol)} variant="ghost" size="xs" />
                     }
-                    className="min-w-0 whitespace-nowrap text-text-lighter hover:text-text"
+                    className="min-w-0 whitespace-nowrap text-subtle-foreground hover:text-foreground"
                   >
                     {symbol.name}
                   </BreadcrumbLink>
                 ) : isLast ? (
                   <BreadcrumbPage className="truncate px-1.5">{symbol.name}</BreadcrumbPage>
                 ) : (
-                  <span className="truncate px-1.5 text-text-lighter">{symbol.name}</span>
+                  <span className="truncate px-1.5 text-subtle-foreground">{symbol.name}</span>
                 )}
               </BreadcrumbItem>
             </Fragment>

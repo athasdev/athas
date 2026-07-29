@@ -13,8 +13,8 @@ export function NotificationIcon({ type }: { type: NotificationEntry["type"] }) 
     case "warning":
       return <WarningCircle className="size-3.5 text-warning" weight="duotone" />;
     case "error":
-      return <XCircle className="size-3.5 text-error" weight="duotone" />;
+      return <XCircle className="size-3.5 text-destructive" weight="duotone" />;
     default:
-      return <Info className="size-3.5 text-accent" weight="duotone" />;
+      return <Info className="size-3.5 text-primary" weight="duotone" />;
   }
 }

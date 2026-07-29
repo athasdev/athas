@@ -28,7 +28,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
 
   if (isLoading) {
     return (
-      <Empty className="h-full rounded-none bg-primary-bg">
+      <Empty className="h-full rounded-none bg-background">
         <EmptyDescription>
           <Spinner label="Loading diff" showLabel />
         </EmptyDescription>
@@ -38,7 +38,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
 
   if (error) {
     return (
-      <Empty className="h-full rounded-none bg-primary-bg" tone="error" role="alert">
+      <Empty className="h-full rounded-none bg-background" tone="error" role="alert">
         <EmptyDescription>{error}</EmptyDescription>
       </Empty>
     );
@@ -46,7 +46,7 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
 
   if (!diff || !filePath) {
     return (
-      <Empty className="h-full rounded-none bg-primary-bg">
+      <Empty className="h-full rounded-none bg-background">
         <EmptyDescription>No diff data available</EmptyDescription>
       </Empty>
     );
@@ -60,14 +60,14 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
 
   if (diff.is_binary) {
     return (
-      <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+      <div className="flex h-full flex-col overflow-hidden bg-background">
         <BinaryDiffViewer fileName={fileName} />
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <GitDiffEditorSurface
         cacheKey={filePath}
         diff={diff}

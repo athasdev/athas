@@ -244,7 +244,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
               onClick={handleCompactMenuToggle}
               variant="ghost"
               size="icon-xs"
-              className={isCompactMenuVisible ? "bg-hover/70 text-text" : undefined}
+              className={isCompactMenuVisible ? "bg-accent/70 text-foreground" : undefined}
               aria-label="Menu"
               aria-expanded={isCompactMenuVisible}
             >
@@ -339,7 +339,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         <ContextMenuTrigger
           onContextMenu={handleTitleBarContextMenu}
           className={cn(
-            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between gap-(--athas-chrome-gap) bg-transparent pr-(--athas-chrome-padding-inline) text-text-lighter",
+            "athas-title-bar font-sans ui-text-chrome relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between gap-(--athas-chrome-gap) bg-transparent pr-(--athas-chrome-padding-inline) text-subtle-foreground",
             isFullscreen ? "pl-2" : "pl-[94px]",
           )}
           data-tauri-drag-region
@@ -365,7 +365,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
         data-tauri-drag-region
         onMouseDown={handleTitleBarMouseDown}
         onContextMenu={handleTitleBarContextMenu}
-        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline) text-text-lighter"
+        className="athas-title-bar font-sans ui-text-chrome relative z-50 flex h-[var(--athas-title-bar-height)] items-center justify-between gap-(--athas-chrome-gap) bg-transparent px-(--athas-chrome-padding-inline) text-subtle-foreground"
       >
         <ChromeGroup data-tauri-drag-region grow>
           <ChromeGroup className="pointer-events-auto">

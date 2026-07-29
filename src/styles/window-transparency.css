@@ -3,55 +3,46 @@
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"]) {
-  --athas-glass-shell-bg: color-mix(in srgb, var(--color-secondary-bg) 12%, transparent);
-  --athas-glass-control-bg: color-mix(in srgb, var(--color-secondary-bg) 20%, transparent);
-  --athas-glass-control-active-bg: color-mix(in srgb, var(--color-hover) 70%, transparent);
-  --athas-glass-control-border: color-mix(in srgb, var(--color-border) 26%, transparent);
-  --athas-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 62%, transparent);
-  --athas-glass-popover-border: color-mix(in srgb, var(--color-border) 50%, transparent);
+  --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 12%, transparent);
+  --athas-glass-control-bg: color-mix(in srgb, var(--surface) 20%, transparent);
+  --athas-glass-control-active-bg: color-mix(in srgb, var(--accent) 70%, transparent);
+  --athas-glass-control-border: color-mix(in srgb, var(--border) 26%, transparent);
+  --athas-glass-popover-bg: color-mix(in srgb, var(--background) 62%, transparent);
+  --athas-glass-popover-border: color-mix(in srgb, var(--border) 50%, transparent);
   --athas-glass-chrome-border: transparent;
-  --athas-glass-chrome-overlay-bg: color-mix(in srgb, var(--color-secondary-bg) 6%, transparent);
-  --athas-chrome-icon-color: color-mix(in srgb, var(--color-text-light) 78%, transparent);
-  --athas-chrome-icon-hover-color: var(--color-text);
-  --athas-chrome-icon-active-color: var(--color-text);
-  --athas-chrome-control-hover-bg: color-mix(in srgb, var(--color-hover) 58%, transparent);
-  --athas-chrome-control-active-bg: color-mix(in srgb, var(--color-hover) 72%, transparent);
+  --athas-glass-chrome-overlay-bg: color-mix(in srgb, var(--surface) 6%, transparent);
+  --athas-chrome-icon-color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
+  --athas-chrome-icon-hover-color: var(--foreground);
+  --athas-chrome-icon-active-color: var(--foreground);
+  --athas-chrome-control-hover-bg: color-mix(in srgb, var(--accent) 58%, transparent);
+  --athas-chrome-control-active-bg: color-mix(in srgb, var(--accent) 72%, transparent);
 }
 
 html:is(.platform-macos, .platform-windows):not(
     [data-window-transparency="disabled"]
   )[data-theme-type="light"] {
-  --athas-glass-shell-bg: color-mix(in srgb, var(--color-secondary-bg) 42%, transparent);
-  --athas-glass-control-bg: color-mix(in srgb, var(--color-primary-bg) 42%, transparent);
-  --athas-glass-control-active-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
-  --athas-glass-control-border: color-mix(in srgb, var(--color-border) 42%, transparent);
-  --athas-glass-popover-bg: color-mix(in srgb, var(--color-primary-bg) 78%, transparent);
-  --athas-glass-popover-border: color-mix(in srgb, var(--color-border) 55%, transparent);
-  --athas-glass-chrome-border: color-mix(in srgb, var(--color-border) 45%, transparent);
-  --athas-glass-chrome-overlay-bg: color-mix(in srgb, var(--color-primary-bg) 10%, transparent);
-  --athas-chrome-icon-color: color-mix(in srgb, var(--color-text) 66%, transparent);
-  --athas-chrome-icon-hover-color: color-mix(
-    in srgb,
-    var(--color-text) 92%,
-    var(--color-accent) 8%
-  );
-  --athas-chrome-icon-active-color: color-mix(
-    in srgb,
-    var(--color-text) 88%,
-    var(--color-accent) 12%
-  );
-  --athas-chrome-control-hover-bg: color-mix(
-    in srgb,
-    var(--color-primary-bg) 62%,
-    transparent
-  );
+  --athas-glass-shell-bg: color-mix(in srgb, var(--surface) 42%, transparent);
+  --athas-glass-control-bg: color-mix(in srgb, var(--background) 42%, transparent);
+  --athas-glass-control-active-bg: color-mix(in srgb, var(--background) 78%, transparent);
+  --athas-glass-control-border: color-mix(in srgb, var(--border) 42%, transparent);
+  --athas-glass-popover-bg: color-mix(in srgb, var(--background) 78%, transparent);
+  --athas-glass-popover-border: color-mix(in srgb, var(--border) 55%, transparent);
+  --athas-glass-chrome-border: color-mix(in srgb, var(--border) 45%, transparent);
+  --athas-glass-chrome-overlay-bg: color-mix(in srgb, var(--background) 10%, transparent);
+  --athas-chrome-icon-color: color-mix(in srgb, var(--foreground) 66%, transparent);
+  --athas-chrome-icon-hover-color: color-mix(in srgb, var(--foreground) 92%, var(--primary) 8%);
+  --athas-chrome-icon-active-color: color-mix(in srgb, var(--foreground) 88%, var(--primary) 12%);
+  --athas-chrome-control-hover-bg: color-mix(in srgb, var(--background) 62%, transparent);
 }
 
 html.platform-macos:not([data-window-transparency="disabled"])[data-theme-type="dark"]
   .athas-sidebar-rail {
-  --athas-sidebar-rail-muted-text: color-mix(in srgb, var(--text-light) 90%, var(--text) 10%);
-  --text-lighter: var(--athas-sidebar-rail-muted-text);
-  --color-text-lighter: var(--athas-sidebar-rail-muted-text);
+  --athas-sidebar-rail-muted-text: color-mix(
+    in srgb,
+    var(--muted-foreground) 90%,
+    var(--foreground) 10%
+  );
+  --subtle-foreground: var(--athas-sidebar-rail-muted-text);
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
@@ -161,12 +152,12 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 }
 
 html[data-window-transparency="disabled"] .window-container {
-  background: var(--color-primary-bg) !important;
+  background: var(--background) !important;
 }
 
 html[data-window-transparency="disabled"] .athas-layout-shell,
 html[data-window-transparency="disabled"] .athas-resizable-pane {
-  background: var(--color-secondary-bg) !important;
+  background: var(--surface) !important;
 }
 
 html.platform-windows [data-slot="menubar-content"],

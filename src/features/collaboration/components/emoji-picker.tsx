@@ -161,9 +161,9 @@ export function EmojiPicker({
       <button
         type="button"
         className={cn(
-          "flex size-8 items-center justify-center rounded-md border border-transparent ui-text-base hover:bg-hover",
-          "focus-visible:border-accent focus-visible:outline-none",
-          selected === emoji && "border-accent/50 bg-hover",
+          "flex size-8 items-center justify-center rounded-md border border-transparent ui-text-base hover:bg-accent",
+          "focus-visible:border-primary focus-visible:outline-none",
+          selected === emoji && "border-primary/50 bg-accent",
         )}
         onClick={() => handleSelect(emoji)}
         aria-label={`Select ${getEmojiLabel(emoji)}`}
@@ -187,7 +187,7 @@ export function EmojiPicker({
 
       {visibleRecentEmojis.length > 0 ? (
         <div className="mt-2">
-          <div className="mb-1 px-1 ui-text-sm text-text-lighter uppercase">Recent</div>
+          <div className="mb-1 px-1 ui-text-sm text-subtle-foreground uppercase">Recent</div>
           <div
             className="grid gap-1"
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
@@ -216,7 +216,7 @@ export function EmojiPicker({
       {onClear ? (
         <button
           type="button"
-          className="mt-2 h-7 w-full rounded-md text-center ui-text-sm text-text-lighter hover:bg-hover hover:text-text"
+          className="mt-2 h-7 w-full rounded-md text-center ui-text-sm text-subtle-foreground hover:bg-accent hover:text-foreground"
           onClick={onClear}
         >
           {clearLabel}

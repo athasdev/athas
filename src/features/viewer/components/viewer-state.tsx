@@ -13,7 +13,7 @@ function ViewerLoadingState({ label, className, ...props }: ViewerLoadingStatePr
     <Empty
       data-viewer-state="loading"
       density="compact"
-      className={cn("size-full rounded-none bg-primary-bg", className)}
+      className={cn("size-full rounded-none bg-background", className)}
       {...props}
     >
       <EmptyDescription>
@@ -33,7 +33,7 @@ function ViewerErrorState({ message, className, ...props }: ViewerErrorStateProp
       data-viewer-state="error"
       tone="error"
       role="alert"
-      className={cn("size-full rounded-none bg-primary-bg px-6", className)}
+      className={cn("size-full rounded-none bg-background px-6", className)}
       {...props}
     >
       <EmptyHeader className="max-w-md">

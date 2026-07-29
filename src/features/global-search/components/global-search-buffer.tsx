@@ -148,7 +148,7 @@ const GlobalSearchBuffer = () => {
         metadata: [
           {
             label: result.total_matches,
-            className: "text-text-lighter",
+            className: "text-subtle-foreground",
           },
         ],
       });
@@ -538,7 +538,7 @@ const GlobalSearchBuffer = () => {
         onExcludeQueryChange={setExcludeQuery}
       />
 
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-primary-bg">
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-background">
         {hasResults && !showInitialBusy ? (
           <GlobalSearchResults
             scrollContainerRef={scrollContainerRef}
@@ -562,7 +562,7 @@ const GlobalSearchBuffer = () => {
             hasMoreResults={hasMoreResults}
           />
         ) : (
-          <ScrollArea className="h-full bg-primary-bg" viewportProps={{ ref: scrollContainerRef }}>
+          <ScrollArea className="h-full bg-background" viewportProps={{ ref: scrollContainerRef }}>
             <GlobalSearchState
               availability={availability}
               query={query}

@@ -38,7 +38,7 @@ function Spinner({
       aria-live="polite"
       aria-label={label}
       className={cn(
-        "inline-flex items-center gap-2 font-sans ui-text-sm text-text-lighter",
+        "inline-flex items-center gap-2 font-sans ui-text-sm text-subtle-foreground",
         className,
       )}
     >

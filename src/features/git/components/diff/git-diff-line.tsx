@@ -35,14 +35,14 @@ const renderWhitespace = (content: string, showWhitespace: boolean) => {
   return content.split("").map((char, i) => {
     if (char === " ") {
       return (
-        <span key={i} className="text-text-lighter opacity-30">
+        <span key={i} className="text-subtle-foreground opacity-30">
           ·
         </span>
       );
     }
     if (char === "\t") {
       return (
-        <span key={i} className="text-text-lighter opacity-30">
+        <span key={i} className="text-subtle-foreground opacity-30">
           →{"   "}
         </span>
       );
@@ -94,8 +94,8 @@ const renderHighlightedContent = (
         <mark
           key={`${key}-match-${rangeIndex}-${highlightStart}`}
           className={cn(
-            "rounded-sm bg-accent/25 text-inherit",
-            highlight.isCurrent && "bg-accent/55 outline outline-1 outline-accent/70",
+            "rounded-sm bg-primary/25 text-inherit",
+            highlight.isCurrent && "bg-primary/55 outline outline-1 outline-primary/70",
           )}
         >
           {renderWhitespace(content.slice(highlightStart, highlightEnd), showWhitespace)}
@@ -245,7 +245,7 @@ const DiffLine = memo(
                 ? getContentColor("added")
                 : diffType === "removed"
                   ? getContentColor("removed")
-                  : "text-text",
+                  : "text-foreground",
             )}
             style={contentStyle}
           >
@@ -285,7 +285,7 @@ const DiffLine = memo(
             <div
               className={cn(
                 "font-mono code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
-                line.line_type === "removed" ? getContentColor("removed") : "text-text",
+                line.line_type === "removed" ? getContentColor("removed") : "text-foreground",
               )}
               style={contentStyle}
             >
@@ -316,7 +316,7 @@ const DiffLine = memo(
             <div
               className={cn(
                 "font-mono code-editor-font-override m-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden px-2.5 py-0.5 antialiased",
-                line.line_type === "added" ? getContentColor("added") : "text-text",
+                line.line_type === "added" ? getContentColor("added") : "text-foreground",
               )}
               style={contentStyle}
             >

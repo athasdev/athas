@@ -95,7 +95,7 @@ const DiffHeader = memo(
           showDefaultActions={false}
           extraLeftContent={
             isMultiFileView ? (
-              <span className="text-text-lighter">
+              <span className="text-subtle-foreground">
                 {totalFiles} file{totalFiles !== 1 ? "s" : ""}
               </span>
             ) : (

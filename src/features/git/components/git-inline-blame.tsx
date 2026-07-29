@@ -85,7 +85,7 @@ export const InlineGitBlame = ({
         }
       >
         <div
-          className={cn("ml-2 flex items-center gap-1 text-text-lighter", className)}
+          className={cn("ml-2 flex items-center gap-1 text-subtle-foreground", className)}
           style={{
             fontSize: `${effectiveFontSize}px`,
             lineHeight: 1,
@@ -113,18 +113,20 @@ export const InlineGitBlame = ({
       >
         <div className="flex max-w-96 flex-col gap-2 p-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate font-medium ui-text-sm text-text">{blameLine.author}</span>
-            <div className="flex shrink-0 items-center gap-1 text-text-lighter ui-text-sm">
+            <span className="truncate font-medium ui-text-sm text-foreground">
+              {blameLine.author}
+            </span>
+            <div className="flex shrink-0 items-center gap-1 text-subtle-foreground ui-text-sm">
               <Clock />
               <span>{formatRelativeTime(blameLine.time)}</span>
             </div>
           </div>
 
-          <pre className="whitespace-pre-wrap break-words text-text-light ui-text-sm leading-relaxed">
+          <pre className="whitespace-pre-wrap break-words text-muted-foreground ui-text-sm leading-relaxed">
             {blameLine.commit.trim()}
           </pre>
 
-          <div className="flex items-center gap-1.5 text-text-lighter ui-text-sm">
+          <div className="flex items-center gap-1.5 text-subtle-foreground ui-text-sm">
             <Button
               type="button"
               variant="ghost"
@@ -134,12 +136,14 @@ export const InlineGitBlame = ({
               size="xs"
             >
               <GitCommit />
-              <span className="font-sans text-text">{blameLine.commit_hash.substring(0, 7)}</span>
+              <span className="font-sans text-foreground">
+                {blameLine.commit_hash.substring(0, 7)}
+              </span>
             </Button>
             <Button
               type="button"
               variant="ghost"
-              className="ml-auto text-text-lighter hover:text-text"
+              className="ml-auto text-subtle-foreground hover:text-foreground"
               onClick={handleCopyCommitHash}
               tooltip="Copy commit hash"
               size="icon-xs"

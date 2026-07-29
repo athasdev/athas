@@ -857,17 +857,17 @@ export function WebViewer({
       />
 
       {(urlError || pageError) && (
-        <div className="ui-text-sm flex h-8 shrink-0 items-center gap-2 border-border border-b bg-error/6 px-3 text-text-light">
-          <AlertCircle className="size-3.5 shrink-0 text-error" />
+        <div className="ui-text-sm flex h-8 shrink-0 items-center gap-2 border-border border-b bg-destructive/6 px-3 text-muted-foreground">
+          <AlertCircle className="size-3.5 shrink-0 text-destructive" />
           <span className="truncate">{urlError ?? pageError}</span>
         </div>
       )}
 
-      <div className="min-h-0 flex-1 bg-primary-bg p-1.5">
-        <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-primary-bg shadow-[var(--shadow-card)]">
+      <div className="min-h-0 flex-1 bg-background p-1.5">
+        <div className="relative h-full overflow-hidden rounded-lg border border-border/70 bg-background shadow-[var(--shadow-card)]">
           <div ref={containerRef} className="absolute inset-px overflow-hidden rounded-[7px]">
             {!currentUrl && !isLoading && (
-              <Empty className="absolute inset-0 bg-primary-bg px-6">
+              <Empty className="absolute inset-0 bg-background px-6">
                 <EmptyHeader>
                   <EmptyTitle>Open a page</EmptyTitle>
                   <EmptyDescription>

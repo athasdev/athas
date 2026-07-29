@@ -13,19 +13,19 @@ function ViewerHeader({ icon, title, detail, actions, className, ...props }: Vie
     <div
       data-slot="viewer-header"
       className={cn(
-        "flex h-10 shrink-0 items-center gap-4 border-border border-b bg-secondary-bg px-4 py-2",
+        "flex h-10 shrink-0 items-center gap-4 border-border border-b bg-surface px-4 py-2",
         className,
       )}
       {...props}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {icon}
-        <div className="min-w-0 flex-1 truncate font-sans font-medium text-text ui-text-sm">
+        <div className="min-w-0 flex-1 truncate font-sans font-medium text-foreground ui-text-sm">
           {title}
         </div>
       </div>
       {detail ? (
-        <div className="shrink-0 font-sans text-text-lighter ui-text-sm">{detail}</div>
+        <div className="shrink-0 font-sans text-subtle-foreground ui-text-sm">{detail}</div>
       ) : null}
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>

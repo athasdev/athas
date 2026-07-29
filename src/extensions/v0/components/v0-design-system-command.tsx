@@ -415,8 +415,10 @@ export function V0DesignSystemCommandContent({
           >
             <CaretLeft />
           </CommandHeaderAction>
-          <Palette className="shrink-0 text-text-lighter" size={15} weight="duotone" />
-          <div className="min-w-0 flex-1 truncate ui-text-base text-text">Add v0 design system</div>
+          <Palette className="shrink-0 text-subtle-foreground" size={15} weight="duotone" />
+          <div className="min-w-0 flex-1 truncate ui-text-base text-foreground">
+            Add v0 design system
+          </div>
         </CommandHeader>
 
         <CommandList>
@@ -444,7 +446,7 @@ export function V0DesignSystemCommandContent({
               placeholder="Notes"
               size="xs"
             />
-            {formError && <div className="ui-text-base text-error">{formError}</div>}
+            {formError && <div className="ui-text-base text-destructive">{formError}</div>}
           </div>
         </CommandList>
 
@@ -468,7 +470,7 @@ export function V0DesignSystemCommandContent({
           <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
             <CaretLeft />
           </CommandHeaderAction>
-          <Palette className="shrink-0 text-text-lighter" size={15} weight="duotone" />
+          <Palette className="shrink-0 text-subtle-foreground" size={15} weight="duotone" />
           <CommandInput
             ref={searchInputRef}
             value={query}
@@ -509,9 +511,9 @@ export function V0DesignSystemCommandContent({
                 className="h-8 gap-2 px-2 py-0"
               >
                 {row.kind === "suggestion" ? (
-                  <Globe className="shrink-0 text-text-lighter" />
+                  <Globe className="shrink-0 text-subtle-foreground" />
                 ) : (
-                  <Palette className="shrink-0 text-text-lighter" />
+                  <Palette className="shrink-0 text-subtle-foreground" />
                 )}
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <CommandItemTitle>{row.name}</CommandItemTitle>
@@ -558,7 +560,7 @@ export function V0DesignSystemCommandContent({
           <Trash />
           <span>Remove selected</span>
         </CommandFooterAction>
-        <span className="ml-auto min-w-0 truncate px-1 ui-text-base text-text-lighter">
+        <span className="ml-auto min-w-0 truncate px-1 ui-text-base text-subtle-foreground">
           {directoryStatus === "loading"
             ? "Loading..."
             : directoryStatus === "error"

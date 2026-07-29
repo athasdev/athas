@@ -37,7 +37,7 @@ export function GitHubTitleBodyForm({
 
   return (
     <form
-      className="w-full space-y-2 rounded-xl border border-border/70 bg-secondary-bg/25 p-2"
+      className="w-full space-y-2 rounded-xl border border-border/70 bg-surface/25 p-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (!canSubmit) return;
@@ -49,13 +49,13 @@ export function GitHubTitleBodyForm({
         onChange={(event) => setDraftTitle(event.target.value)}
         placeholder={titlePlaceholder}
         size="sm"
-        className="bg-primary-bg"
+        className="bg-background"
       />
       <Textarea
         value={draftBody}
         onChange={(event) => setDraftBody(event.target.value)}
         placeholder={bodyPlaceholder}
-        className="min-h-44 resize-y bg-primary-bg"
+        className="min-h-44 resize-y bg-background"
       />
       <div className="flex items-center justify-end gap-1.5">
         <Button type="button" variant="ghost" size="xs" onClick={onCancel} disabled={isSubmitting}>

@@ -119,7 +119,7 @@ const TabBarItem = memo(function TabBarItem({
   return (
     <div ref={tabRef} className="relative">
       {showDropIndicatorBefore ? (
-        <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+        <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
       ) : null}
       <TabBarTab
         role="tab"
@@ -158,7 +158,7 @@ const TabBarItem = memo(function TabBarItem({
               draggable={false}
             >
               {buffer.isPinned ? (
-                <Pin className="pointer-events-none select-none fill-current text-accent" />
+                <Pin className="pointer-events-none select-none fill-current text-primary" />
               ) : (
                 <X className="pointer-events-none select-none" />
               )}
@@ -169,15 +169,15 @@ const TabBarItem = memo(function TabBarItem({
         {showTabIcons ? (
           <div className="grid size-3 shrink-0 place-content-center">
             {buffer.path === "extensions://marketplace" ? (
-              <Package className="text-text-lighter" />
+              <Package className="text-subtle-foreground" />
             ) : buffer.path.startsWith("whats-new://") ? (
-              <Sparkles className="text-accent" />
+              <Sparkles className="text-primary" />
             ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
-              <GitBranch className="text-text-lighter" />
+              <GitBranch className="text-subtle-foreground" />
             ) : buffer.type === "terminal" ? (
-              <Terminal className="text-text-lighter" />
+              <Terminal className="text-subtle-foreground" />
             ) : buffer.type === "agent" ? (
-              <Sparkles className="text-text-lighter" />
+              <Sparkles className="text-subtle-foreground" />
             ) : buffer.type === "webViewer" ? (
               buffer.favicon && !faviconError ? (
                 <img
@@ -187,10 +187,10 @@ const TabBarItem = memo(function TabBarItem({
                   onError={() => setFaviconError(true)}
                 />
               ) : (
-                <Globe className="text-text-lighter" />
+                <Globe className="text-subtle-foreground" />
               )
             ) : buffer.type === "database" ? (
-              <Database className="text-text-lighter" />
+              <Database className="text-subtle-foreground" />
             ) : buffer.type === "pullRequest" ? (
               authorAvatarUrl && !avatarError ? (
                 <img
@@ -201,7 +201,7 @@ const TabBarItem = memo(function TabBarItem({
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <GitPullRequest className="text-text-lighter" />
+                <GitPullRequest className="text-subtle-foreground" />
               )
             ) : buffer.type === "githubIssue" ? (
               authorAvatarUrl && !avatarError ? (
@@ -213,21 +213,21 @@ const TabBarItem = memo(function TabBarItem({
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <MessageSquare className="text-text-lighter" />
+                <MessageSquare className="text-subtle-foreground" />
               )
             ) : buffer.type === "githubAction" ? (
-              <Activity className="text-text-lighter" />
+              <Activity className="text-subtle-foreground" />
             ) : buffer.type === "globalSearch" ? (
-              <Search className="text-text-lighter" />
+              <Search className="text-subtle-foreground" />
             ) : buffer.type === "diagnostics" ? (
-              <WarningCircle className="text-text-lighter" />
+              <WarningCircle className="text-subtle-foreground" />
             ) : buffer.type === "references" ? (
-              <Search className="text-text-lighter" />
+              <Search className="text-subtle-foreground" />
             ) : (
               <ThemedFileIcon
                 fileName={getDiffIconName() ?? buffer.name}
                 isDir={false}
-                className="text-text-lighter"
+                className="text-subtle-foreground"
               />
             )}
           </div>
@@ -253,7 +253,7 @@ const TabBarItem = memo(function TabBarItem({
           <span
             className={cn(
               "font-sans ui-text-chrome min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-              isActive ? "text-text" : "text-text-lighter",
+              isActive ? "text-foreground" : "text-subtle-foreground",
               buffer.isPreview && "italic",
             )}
             title={buffer.path}
@@ -263,7 +263,7 @@ const TabBarItem = memo(function TabBarItem({
         )}
         {buffer.type === "editor" && buffer.isDirty && (
           <div
-            className="size-2 shrink-0 rounded-full bg-accent"
+            className="size-2 shrink-0 rounded-full bg-primary"
             title="Unsaved changes"
             role="img"
             aria-label="Unsaved changes"

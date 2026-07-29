@@ -77,7 +77,9 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
       }}
       active={isActive}
       leading={
-        <MessageSquare className={isOpen ? "size-4 text-success" : "size-4 text-text-lighter"} />
+        <MessageSquare
+          className={isOpen ? "size-4 text-success" : "size-4 text-subtle-foreground"}
+        />
       }
       description={
         <span className="flex min-w-0 items-center gap-1.5 capitalize">

@@ -31,12 +31,12 @@ function athasTerminalColor(name: string): string {
 }
 
 const DEFAULT_THEME: TerminalTheme = {
-  background: athasTerminalColor("primary-bg"),
-  foreground: athasTerminalColor("text"),
-  cursor: athasTerminalColor("accent"),
-  cursorAccent: athasTerminalColor("primary-bg"),
-  selectionBackground: athasTerminalColor("selection-bg"),
-  selectionForeground: athasTerminalColor("text"),
+  background: athasTerminalColor("background"),
+  foreground: athasTerminalColor("foreground"),
+  cursor: athasTerminalColor("primary"),
+  cursorAccent: athasTerminalColor("background"),
+  selectionBackground: athasTerminalColor("selection"),
+  selectionForeground: athasTerminalColor("foreground"),
   black: athasTerminalColor("terminal-black"),
   red: athasTerminalColor("terminal-red"),
   green: athasTerminalColor("terminal-green"),
@@ -127,83 +127,28 @@ export function useTerminalTheme() {
       return defaultValue;
     };
 
-    const bg = getColor(["--primary-bg", "--color-primary-bg"], DEFAULT_THEME.background);
-    const fg = getColor(["--text", "--color-text"], DEFAULT_THEME.foreground);
-    const accent = getColor(["--accent", "--color-accent"], DEFAULT_THEME.cursor);
-    const syntaxKeyword = getColor(
-      ["--syntax-keyword", "--color-syntax-keyword"],
-      DEFAULT_THEME.magenta,
-    );
-    const syntaxString = getColor(
-      ["--syntax-string", "--color-syntax-string"],
-      DEFAULT_THEME.green,
-    );
-    const syntaxNumber = getColor(
-      ["--syntax-number", "--color-syntax-number"],
-      DEFAULT_THEME.yellow,
-    );
-    const syntaxFunction = getColor(
-      ["--syntax-function", "--color-syntax-function"],
-      DEFAULT_THEME.blue,
-    );
-    const syntaxVariable = getColor(
-      ["--syntax-variable", "--color-syntax-variable"],
-      DEFAULT_THEME.red,
-    );
-    const syntaxOperator = getColor(
-      ["--syntax-operator", "--color-syntax-operator"],
-      DEFAULT_THEME.cyan,
-    );
+    const bg = getColor(["--background"], DEFAULT_THEME.background);
+    const fg = getColor(["--foreground"], DEFAULT_THEME.foreground);
+    const accent = getColor(["--primary"], DEFAULT_THEME.cursor);
+    const syntaxKeyword = getColor(["--syntax-keyword"], DEFAULT_THEME.magenta);
+    const syntaxString = getColor(["--syntax-string"], DEFAULT_THEME.green);
+    const syntaxNumber = getColor(["--syntax-number"], DEFAULT_THEME.yellow);
+    const syntaxFunction = getColor(["--syntax-function"], DEFAULT_THEME.blue);
+    const syntaxVariable = getColor(["--syntax-variable"], DEFAULT_THEME.red);
+    const syntaxOperator = getColor(["--syntax-operator"], DEFAULT_THEME.cyan);
 
-    const black = getColor(
-      ["--terminal-black", "--color-terminal-black", "--secondary-bg", "--color-secondary-bg"],
-      DEFAULT_THEME.black,
-    );
-    const red = getColor(
-      ["--terminal-red", "--color-terminal-red", "--syntax-variable", "--color-syntax-variable"],
-      syntaxVariable,
-    );
-    const green = getColor(
-      ["--terminal-green", "--color-terminal-green", "--syntax-string", "--color-syntax-string"],
-      syntaxString,
-    );
+    const black = getColor(["--terminal-black", "--surface"], DEFAULT_THEME.black);
+    const red = getColor(["--terminal-red", "--syntax-variable"], syntaxVariable);
+    const green = getColor(["--terminal-green", "--syntax-string"], syntaxString);
     const yellow = getColor(
-      [
-        "--terminal-yellow",
-        "--color-terminal-yellow",
-        "--syntax-number",
-        "--color-syntax-number",
-        "--syntax-type",
-        "--color-syntax-type",
-      ],
+      ["--terminal-yellow", "--syntax-number", "--syntax-type"],
       syntaxNumber,
     );
-    const blue = getColor(
-      ["--terminal-blue", "--color-terminal-blue", "--syntax-function", "--color-syntax-function"],
-      syntaxFunction,
-    );
-    const magenta = getColor(
-      [
-        "--terminal-magenta",
-        "--color-terminal-magenta",
-        "--syntax-keyword",
-        "--color-syntax-keyword",
-      ],
-      syntaxKeyword,
-    );
-    const cyan = getColor(
-      ["--terminal-cyan", "--color-terminal-cyan", "--syntax-operator", "--color-syntax-operator"],
-      syntaxOperator,
-    );
+    const blue = getColor(["--terminal-blue", "--syntax-function"], syntaxFunction);
+    const magenta = getColor(["--terminal-magenta", "--syntax-keyword"], syntaxKeyword);
+    const cyan = getColor(["--terminal-cyan", "--syntax-operator"], syntaxOperator);
     const white = getColor(
-      [
-        "--terminal-white",
-        "--color-terminal-white",
-        "--text-light",
-        "--color-text-light",
-        "--text",
-        "--color-text",
-      ],
+      ["--terminal-white", "--muted-foreground", "--foreground"],
       DEFAULT_THEME.white,
     );
 
@@ -222,31 +167,14 @@ export function useTerminalTheme() {
       magenta,
       cyan,
       white,
-      brightBlack: getColor(
-        [
-          "--terminal-bright-black",
-          "--color-terminal-bright-black",
-          "--text-lighter",
-          "--color-text-lighter",
-        ],
-        black,
-      ),
-      brightRed: getColor(["--terminal-bright-red", "--color-terminal-bright-red"], red),
-      brightGreen: getColor(["--terminal-bright-green", "--color-terminal-bright-green"], green),
-      brightYellow: getColor(
-        ["--terminal-bright-yellow", "--color-terminal-bright-yellow"],
-        yellow,
-      ),
-      brightBlue: getColor(["--terminal-bright-blue", "--color-terminal-bright-blue"], blue),
-      brightMagenta: getColor(
-        ["--terminal-bright-magenta", "--color-terminal-bright-magenta"],
-        magenta,
-      ),
-      brightCyan: getColor(["--terminal-bright-cyan", "--color-terminal-bright-cyan"], cyan),
-      brightWhite: getColor(
-        ["--terminal-bright-white", "--color-terminal-bright-white", "--text", "--color-text"],
-        white,
-      ),
+      brightBlack: getColor(["--terminal-bright-black", "--subtle-foreground"], black),
+      brightRed: getColor(["--terminal-bright-red"], red),
+      brightGreen: getColor(["--terminal-bright-green"], green),
+      brightYellow: getColor(["--terminal-bright-yellow"], yellow),
+      brightBlue: getColor(["--terminal-bright-blue"], blue),
+      brightMagenta: getColor(["--terminal-bright-magenta"], magenta),
+      brightCyan: getColor(["--terminal-bright-cyan"], cyan),
+      brightWhite: getColor(["--terminal-bright-white", "--foreground"], white),
     };
   }, []);
 

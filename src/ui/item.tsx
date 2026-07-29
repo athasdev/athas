@@ -31,13 +31,13 @@ function ItemSeparator({ className, ...props }: ComponentProps<typeof Separator>
 }
 
 const itemVariants = cva(
-  "group/item flex w-full flex-wrap items-center rounded-lg border font-sans ui-text-sm text-text outline-none transition-colors duration-[var(--app-duration-fast)] focus-visible:border-accent/40 focus-visible:ring-2 focus-visible:ring-accent/20 [a]:hover:bg-hover",
+  "group/item flex w-full flex-wrap items-center rounded-lg border font-sans ui-text-sm text-foreground outline-none transition-colors duration-[var(--app-duration-fast)] focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/20 [a]:hover:bg-accent",
   {
     variants: {
       variant: {
         default: "border-transparent",
         outline: "border-border",
-        muted: "border-transparent bg-secondary-bg/55",
+        muted: "border-transparent bg-surface/55",
       },
       size: {
         default: "gap-2.5 px-3 py-2.5",
@@ -121,7 +121,7 @@ function ItemTitle({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="item-title"
       className={cn(
-        "line-clamp-1 flex w-fit items-center gap-2 font-sans ui-text-sm font-medium leading-snug text-text",
+        "line-clamp-1 flex w-fit items-center gap-2 font-sans ui-text-sm font-medium leading-snug text-foreground",
         className,
       )}
       {...props}
@@ -134,7 +134,7 @@ function ItemDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="item-description"
       className={cn(
-        "line-clamp-2 text-left font-sans ui-text-sm font-normal leading-normal text-text-lighter [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-accent",
+        "line-clamp-2 text-left font-sans ui-text-sm font-normal leading-normal text-subtle-foreground [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
         className,
       )}
       {...props}

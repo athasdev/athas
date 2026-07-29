@@ -142,7 +142,7 @@ export function ResizablePane({
       }
       className={cn(
         "group absolute top-0 z-30 flex h-full w-[var(--athas-workbench-gap)] cursor-col-resize items-center justify-center",
-        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent/8",
+        "transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-primary/8",
       )}
       role="separator"
       aria-orientation="vertical"
@@ -154,8 +154,8 @@ export function ResizablePane({
     >
       <div
         className={cn(
-          "h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-accent",
-          isResizing && "bg-accent",
+          "h-full w-px bg-transparent transition-colors duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] group-hover:bg-primary",
+          isResizing && "bg-primary",
         )}
       />
     </div>
@@ -181,7 +181,7 @@ export function ResizablePane({
       >
         <div
           className={cn(
-            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border/70 border-y bg-primary-bg",
+            "athas-glass-island flex min-h-0 flex-1 flex-col overflow-hidden border-border/70 border-y bg-background",
             position === "left" && "border-l border-r",
             position === "right" && "border-r",
             !hidden && position === "left" && "rounded-l-xl",

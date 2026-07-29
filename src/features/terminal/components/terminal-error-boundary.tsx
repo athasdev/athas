@@ -31,7 +31,7 @@ export class TerminalErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback || (
-          <Empty className="h-full rounded-none bg-primary-bg p-4" tone="error" role="alert">
+          <Empty className="h-full rounded-none bg-background p-4" tone="error" role="alert">
             <EmptyHeader>
               <EmptyTitle>Terminal Error</EmptyTitle>
               <EmptyDescription>

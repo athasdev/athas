@@ -216,7 +216,7 @@ export const IconThemeSelectorContent = ({
                   }
                 }}
                 isSelected={isSelected}
-                icon={<span className="text-text-lighter">{theme.icon || <Palette />}</span>}
+                icon={<span className="text-subtle-foreground">{theme.icon || <Palette />}</span>}
                 title={theme.name}
                 accessory={
                   isCurrent && !isPreviewing ? (

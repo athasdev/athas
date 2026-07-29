@@ -25,12 +25,12 @@ import {
 import { useRedisStore } from "./stores/redis.store";
 
 const TYPE_COLORS: Record<string, string> = {
-  string: "text-accent",
-  list: "text-text",
-  set: "text-text",
-  hash: "text-text",
-  zset: "text-text",
-  stream: "text-text",
+  string: "text-primary",
+  list: "text-foreground",
+  set: "text-foreground",
+  hash: "text-foreground",
+  zset: "text-foreground",
+  stream: "text-foreground",
 };
 
 interface RedisViewerProps {
@@ -85,11 +85,11 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
   }, [actions, store.hasMore, store.isScanningKeys, store.keys.length]);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg/30 text-text">
+    <div className="flex h-full flex-col overflow-hidden bg-surface/30 text-foreground">
       <div className={databaseHeaderClassName()}>
         <div className="flex items-center gap-2">
           <div className={databaseChipClassName()}>
-            <Server className="text-text-lighter" />
+            <Server className="text-subtle-foreground" />
             <span className="font-sans ui-text-sm">{store.fileName}</span>
           </div>
           <div className="ml-auto flex items-center gap-1">
@@ -118,7 +118,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
       <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
         <div className={databasePanelClassName("w-64")}>
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
-            <Search className="text-text-lighter" />
+            <Search className="text-subtle-foreground" />
             <Input
               className="border-0 bg-transparent p-0 focus:border-transparent focus:ring-0"
               placeholder="Pattern (e.g. user:*)"
@@ -156,15 +156,15 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               >
                 <Badge
                   className={cn(
-                    "border-0 bg-secondary-bg/70 px-1.5 font-bold uppercase",
-                    TYPE_COLORS[keyInfo.type] || "text-text-lighter",
+                    "border-0 bg-surface/70 px-1.5 font-bold uppercase",
+                    TYPE_COLORS[keyInfo.type] || "text-subtle-foreground",
                   )}
                 >
                   {keyInfo.type.substring(0, 3)}
                 </Badge>
                 <span className="flex-1 truncate leading-[1.35]">{keyInfo.key}</span>
                 {keyInfo.ttl > 0 && (
-                  <span className="flex items-center gap-0.5 text-text-lighter">
+                  <span className="flex items-center gap-0.5 text-subtle-foreground">
                     <Clock />
                     <span className="ui-text-sm">{keyInfo.ttl}s</span>
                   </span>
@@ -175,13 +175,13 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
               <div
                 ref={loadMoreRef}
                 aria-label="Loading more keys"
-                className="px-2 py-1 text-text-lighter ui-text-sm"
+                className="px-2 py-1 text-subtle-foreground ui-text-sm"
               >
                 {store.isScanningKeys ? "Loading keys..." : "More keys..."}
               </div>
             )}
             {store.isScanningKeys && !store.hasMore && (
-              <div className="px-2 py-1 text-text-lighter ui-text-sm">Loading keys...</div>
+              <div className="px-2 py-1 text-subtle-foreground ui-text-sm">Loading keys...</div>
             )}
           </ScrollArea>
         </div>
@@ -204,13 +204,13 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {!store.isLoading && showInfo && store.serverInfo && (
             <div className="flex-1 overflow-auto p-3">
               <div className={databaseCardClassName("p-3")}>
-                <div className="mb-3 text-text-lighter ui-text-sm uppercase tracking-[0.08em]">
+                <div className="mb-3 text-subtle-foreground ui-text-sm uppercase tracking-[0.08em]">
                   Server Info
                 </div>
                 <div className="space-y-2">
                   {Object.entries(store.serverInfo).map(([key, value]) => (
                     <div key={key} className="flex gap-2 ui-text-sm">
-                      <span className="font-sans min-w-[140px] text-text-lighter">{key}</span>
+                      <span className="font-sans min-w-[140px] text-subtle-foreground">{key}</span>
                       <span className="font-sans">{value}</span>
                     </div>
                   ))}
@@ -222,12 +222,12 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
           {!store.isLoading && !showInfo && store.selectedKey && (
             <div className="flex flex-1 flex-col overflow-hidden">
               <div className="flex items-center gap-2 border-border/60 border-b px-3 py-2">
-                <Key className="text-text-lighter" />
+                <Key className="text-subtle-foreground" />
                 <span className="font-sans font-medium ui-text-sm">{store.selectedKey}</span>
                 <Badge
                   className={cn(
-                    "border-0 bg-secondary-bg/70 px-1.5 font-bold uppercase",
-                    TYPE_COLORS[store.selectedKeyType || ""] || "text-text-lighter",
+                    "border-0 bg-surface/70 px-1.5 font-bold uppercase",
+                    TYPE_COLORS[store.selectedKeyType || ""] || "text-subtle-foreground",
                   )}
                 >
                   {store.selectedKeyType}
@@ -237,7 +237,7 @@ export default function RedisViewer({ connectionId }: RedisViewerProps) {
                   onClick={() => actions.deleteKey(store.selectedKey!)}
                   variant="ghost"
                   size="icon-xs"
-                  className="text-error hover:bg-error/10 hover:text-error"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Delete key"
                 >
                   <Trash2 />

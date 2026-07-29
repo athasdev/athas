@@ -43,13 +43,13 @@ export default function CellRenderer({
           onClick={() => setExpanded(!expanded)}
           variant="ghost"
           size="xs"
-          className="block h-auto max-w-[280px] truncate p-0 text-left font-sans font-normal text-accent"
+          className="block h-auto max-w-[280px] truncate p-0 text-left font-sans font-normal text-primary"
           tooltip="Click to expand JSON"
         >
           {expanded ? value : truncateText(value, 50)}
         </Button>
         {expanded && (
-          <pre className="mt-1 max-h-40 overflow-auto rounded bg-secondary-bg p-2 font-sans ui-text-sm text-text">
+          <pre className="mt-1 max-h-40 overflow-auto rounded bg-surface p-2 font-sans ui-text-sm text-foreground">
             {formatJson(value)}
           </pre>
         )}
@@ -83,7 +83,7 @@ export default function CellRenderer({
         onClick={() => onFkClick(columnName, value)}
         variant="ghost"
         size="xs"
-        className="block h-auto truncate p-0 text-left font-normal text-accent underline decoration-accent/40"
+        className="block h-auto truncate p-0 text-left font-normal text-primary underline decoration-accent/40"
         tooltip={`FK: ${foreignKey.to_table}.${foreignKey.to_column}`}
         onContextMenu={handleContextMenu}
       >
@@ -95,7 +95,7 @@ export default function CellRenderer({
   // Object/array
   if (typeof value === "object") {
     return (
-      <span className="block truncate text-accent" onContextMenu={handleContextMenu}>
+      <span className="block truncate text-primary" onContextMenu={handleContextMenu}>
         {JSON.stringify(value)}
       </span>
     );
@@ -113,7 +113,7 @@ export default function CellRenderer({
           className={cn(
             "block h-auto max-w-[280px] p-0 text-left font-normal",
             expanded ? "whitespace-pre-wrap" : "truncate",
-            isPrimaryKey && "text-text",
+            isPrimaryKey && "text-foreground",
           )}
           tooltip="Click to expand"
         >
@@ -126,7 +126,7 @@ export default function CellRenderer({
   // Default
   return (
     <span
-      className={cn("block truncate font-normal", isPrimaryKey && "text-text")}
+      className={cn("block truncate font-normal", isPrimaryKey && "text-foreground")}
       onContextMenu={handleContextMenu}
     >
       {text}

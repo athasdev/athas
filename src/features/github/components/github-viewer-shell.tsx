@@ -19,7 +19,7 @@ export function GitHubViewerShell({
   contentClassName,
 }: GitHubViewerShellProps) {
   return (
-    <ScrollArea className={cn("h-full bg-primary-bg", className)}>
+    <ScrollArea className={cn("h-full bg-background", className)}>
       <div className="flex min-h-full flex-col">
         {header}
         <div className={cn("min-w-0 px-3 pb-4 sm:px-4", contentClassName)}>{children}</div>
@@ -52,11 +52,11 @@ export function GitHubViewerHeader({
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
             <div className="min-w-0 flex-1">
-              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-text">
+              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-foreground">
                 {title}
               </h1>
               {meta ? (
-                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
                   {meta}
                 </div>
               ) : null}

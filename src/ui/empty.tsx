@@ -52,12 +52,12 @@ function EmptyHeader({ className, ...props }: ComponentProps<"div">) {
 }
 
 const emptyMediaVariants = cva(
-  "mb-1 flex shrink-0 items-center justify-center group-data-[tone=error]/empty:text-error group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "mb-1 flex shrink-0 items-center justify-center group-data-[tone=error]/empty:text-destructive group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "bg-transparent",
-        icon: "size-8 rounded-lg bg-hover text-text [&_svg:not([class*='size-'])]:size-4",
+        icon: "size-8 rounded-lg bg-accent text-foreground [&_svg:not([class*='size-'])]:size-4",
       },
     },
     defaultVariants: {
@@ -86,7 +86,7 @@ function EmptyTitle({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="empty-title"
       className={cn(
-        "font-sans ui-text-base font-medium tracking-tight text-text group-data-[tone=error]/empty:text-error group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning",
+        "font-sans ui-text-base font-medium tracking-tight text-foreground group-data-[tone=error]/empty:text-destructive group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning",
         className,
       )}
       {...props}
@@ -99,7 +99,7 @@ function EmptyDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="empty-description"
       className={cn(
-        "font-sans ui-text-sm leading-relaxed text-text-lighter group-data-[tone=error]/empty:text-error group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-accent",
+        "font-sans ui-text-sm leading-relaxed text-subtle-foreground group-data-[tone=error]/empty:text-destructive group-data-[tone=success]/empty:text-success group-data-[tone=warning]/empty:text-warning [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
         className,
       )}
       {...props}

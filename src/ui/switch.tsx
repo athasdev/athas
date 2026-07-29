@@ -12,9 +12,9 @@ interface SwitchProps {
 
 const switchRootVariants = cva(
   [
-    "group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-border bg-secondary-bg outline-none",
+    "group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-border bg-surface outline-none",
     "transition-[transform,background-color,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
-    "data-checked:border-accent data-checked:bg-accent active:scale-[var(--app-press-scale)]",
+    "data-checked:border-primary data-checked:bg-primary active:scale-[var(--app-press-scale)]",
     "focus-visible:border-border-strong focus-visible:ring-1 focus-visible:ring-border-strong/35",
     "data-disabled:cursor-not-allowed data-disabled:opacity-50",
   ],
@@ -32,7 +32,7 @@ const switchRootVariants = cva(
 );
 
 const switchThumbVariants = cva(
-  "pointer-events-none block rounded-full bg-text shadow-[var(--shadow-card)] transition-[transform,background-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)] group-data-checked/switch:bg-primary-bg",
+  "pointer-events-none block rounded-full bg-foreground shadow-[var(--shadow-card)] transition-[transform,background-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)] group-data-checked/switch:bg-background",
   {
     variants: {
       size: {

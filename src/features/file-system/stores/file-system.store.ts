@@ -279,8 +279,8 @@ const scheduleWorkspaceSessionWrite = (projectPath: string, write: () => void) =
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error || "Unknown error");
 
-const readPersistedAiWorkspaceSession = (buffers: PaneContent[]) =>
-  useAIChatStore.getState().getWorkspaceSessionSnapshot(buffers);
+const readPersistedAiWorkspaceSession = () =>
+  useAIChatStore.getState().actions.getWorkspaceSessionSnapshot();
 
 const recordLocalFileAccess = (
   path: string,
@@ -785,9 +785,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         openLocalWorkspace(options, set, get),
 
       deferActiveProjectSessionPersistence: () => {
-        deferredAiSession = readPersistedAiWorkspaceSession(
-          useBufferStore.getStore(workspaceId).getState().buffers,
-        );
+        deferredAiSession = readPersistedAiWorkspaceSession();
         globalThis.setTimeout(() => get().persistActiveProjectSession(), 0);
       },
 
@@ -799,12 +797,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         }
 
         const { session } = workspaceSessionRepository.load(projectPath);
-        useAIChatStore
-          .getState()
-          .restoreWorkspaceSession(
-            session?.aiSession,
-            useBufferStore.getStore(workspaceId).getState().buffers,
-          );
+        useAIChatStore.getState().actions.restoreWorkspaceSession(session?.aiSession);
       },
 
       resetWorkspace: async () => {
@@ -1097,12 +1090,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         restoreProjectPaneState(projectPath, workspaceId);
 
         if (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId) {
-          useAIChatStore
-            .getState()
-            .restoreWorkspaceSession(
-              session?.aiSession,
-              useBufferStore.getStore(workspaceId).getState().buffers,
-            );
+          useAIChatStore.getState().actions.restoreWorkspaceSession(session?.aiSession);
         }
       },
 
@@ -1123,7 +1111,7 @@ const createFileSystemStore = (workspaceId: string): StoreApi<ScopedFileSystemSt
         const aiSession =
           deferredAiSession ??
           (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId
-            ? readPersistedAiWorkspaceSession(buffers)
+            ? readPersistedAiWorkspaceSession()
             : undefined);
         deferredAiSession = undefined;
         const openPersistedBuffers = buffers

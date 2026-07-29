@@ -59,7 +59,7 @@ describe("syntax token colors", () => {
     expect(syntax.function).toBe("#7cc7ff");
   });
 
-  it("builds raw and tailwind-compatible variables from normalized syntax", () => {
+  it("builds canonical raw variables from normalized syntax", () => {
     const variables = toSyntaxTokenVariables(
       {
         "--syntax-variable": "#ededed",
@@ -70,8 +70,8 @@ describe("syntax token colors", () => {
     );
 
     expect(variables["--syntax-variable"]).toBe("#c8a7db");
-    expect(variables["--color-syntax-variable"]).toBe("#c8a7db");
+    expect(variables["--color-syntax-variable"]).toBeUndefined();
     expect(variables["--syntax-property"]).toBe("#93bde9");
-    expect(variables["--color-syntax-property"]).toBe("#93bde9");
+    expect(variables["--color-syntax-property"]).toBeUndefined();
   });
 });

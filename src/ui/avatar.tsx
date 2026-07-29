@@ -23,7 +23,7 @@ export function Avatar({ name, src, className }: AvatarProps) {
   return (
     <AvatarPrimitive.Root
       className={cn(
-        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary-bg",
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface",
         className,
       )}
       title={label}
@@ -40,7 +40,7 @@ export function Avatar({ name, src, className }: AvatarProps) {
       ) : null}
       <AvatarPrimitive.Fallback
         delay={imageSource ? 150 : 0}
-        className="ui-text-sm flex size-full items-center justify-center font-medium text-text-lighter"
+        className="ui-text-sm flex size-full items-center justify-center font-medium text-subtle-foreground"
       >
         {getAvatarInitials(label)}
       </AvatarPrimitive.Fallback>

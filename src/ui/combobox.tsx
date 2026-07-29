@@ -16,7 +16,7 @@ const comboboxInputGroupVariants = cva(
     variants: {
       variant: {
         default:
-          "rounded-lg border border-border bg-secondary-bg focus-within:border-border-strong focus-within:bg-secondary-bg focus-within:ring-1 focus-within:ring-border-strong/35",
+          "rounded-lg border border-border bg-surface focus-within:border-border-strong focus-within:bg-surface focus-within:ring-1 focus-within:ring-border-strong/35",
         ghost: "rounded-lg border-0 bg-transparent focus-within:ring-0",
       },
     },
@@ -64,7 +64,7 @@ const comboboxInputPaddingVariants = cva("min-w-0 flex-1 bg-transparent outline-
 });
 
 const comboboxIconPositionVariants = cva(
-  "-translate-y-1/2 pointer-events-none absolute top-1/2 text-text-lighter",
+  "-translate-y-1/2 pointer-events-none absolute top-1/2 text-subtle-foreground",
   {
     variants: {
       size: {
@@ -80,11 +80,11 @@ const comboboxIconPositionVariants = cva(
 );
 
 const comboboxItemVariants = cva(
-  "font-sans ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
+  "font-sans ui-text-sm flex min-h-7 w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
   {
     variants: {
       highlighted: {
-        true: "data-highlighted:bg-hover",
+        true: "data-highlighted:bg-accent",
         false: "",
       },
       selected: {
@@ -113,7 +113,7 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)] disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)] disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -128,7 +128,7 @@ function ComboboxClear({ className, children, ...props }: ComboboxPrimitive.Clea
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-text-lighter transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)] disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)] disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -195,7 +195,7 @@ const ComboboxInput = forwardRef<HTMLInputElement, ComboboxInputProps>(function 
         style={inputStyle}
         className={cn(
           comboboxInputPaddingVariants({ size, hasLeftIcon, hasEndActions }),
-          "font-sans text-text placeholder:text-text-lighter disabled:cursor-not-allowed",
+          "font-sans text-foreground placeholder:text-subtle-foreground disabled:cursor-not-allowed",
           inputClassName,
         )}
         {...props}
@@ -241,7 +241,7 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={Boolean(anchor)}
           className={cn(
-            "group/combobox-content relative max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-[240px] origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-secondary-bg/95 text-text shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "group/combobox-content relative max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-[240px] origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-[var(--shadow-popover)] backdrop-blur-sm",
             "transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] [filter:blur(0)] data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]",
             className,
           )}
@@ -276,7 +276,7 @@ function ComboboxActionItem({
       type={type}
       className={cn(
         comboboxItemVariants({ indicator: false }),
-        "cursor-pointer hover:bg-hover active:scale-[var(--app-press-scale)]",
+        "cursor-pointer hover:bg-accent active:scale-[var(--app-press-scale)]",
         className,
       )}
       {...props}
@@ -300,7 +300,7 @@ function ComboboxItem({
     >
       {children}
       {showIndicator ? (
-        <ComboboxPrimitive.ItemIndicator className="pointer-events-none absolute right-2 flex size-4 items-center justify-center text-accent">
+        <ComboboxPrimitive.ItemIndicator className="pointer-events-none absolute right-2 flex size-4 items-center justify-center text-primary">
           <Check className="pointer-events-none size-3.5" />
         </ComboboxPrimitive.ItemIndicator>
       ) : null}
@@ -318,7 +318,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
-      className={cn("font-sans ui-text-sm px-2 py-1 text-text-lighter", className)}
+      className={cn("font-sans ui-text-sm px-2 py-1 text-subtle-foreground", className)}
       {...props}
     />
   );
@@ -333,7 +333,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
       className={cn(
-        "hidden w-full justify-center p-3 text-center text-text-lighter ui-text-sm group-data-empty/combobox-content:flex",
+        "hidden w-full justify-center p-3 text-center text-subtle-foreground ui-text-sm group-data-empty/combobox-content:flex",
         className,
       )}
       {...props}
@@ -376,7 +376,7 @@ function ComboboxChip({
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
       className={cn(
-        "flex h-5 w-fit items-center justify-center gap-1 rounded-full bg-hover px-1.5 text-text ui-text-sm has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
+        "flex h-5 w-fit items-center justify-center gap-1 rounded-full bg-accent px-1.5 text-foreground ui-text-sm has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50",
         className,
       )}
       {...props}
@@ -385,7 +385,7 @@ function ComboboxChip({
       {showRemove ? (
         <ComboboxPrimitive.ChipRemove
           data-slot="combobox-chip-remove"
-          className="-mr-1 inline-flex size-4 items-center justify-center rounded-md text-text-lighter opacity-70 transition-opacity hover:bg-selected hover:text-text hover:opacity-100"
+          className="-mr-1 inline-flex size-4 items-center justify-center rounded-md text-subtle-foreground opacity-70 transition-opacity hover:bg-selected hover:text-foreground hover:opacity-100"
         >
           <X className="pointer-events-none size-3" />
         </ComboboxPrimitive.ChipRemove>

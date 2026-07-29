@@ -55,7 +55,7 @@
 
 /* Punctuation */
 .token-punctuation {
-  color: var(--syntax-punctuation, var(--text));
+  color: var(--syntax-punctuation, var(--foreground));
 }
 
 /* Tags (HTML/XML) */
@@ -70,12 +70,12 @@
 
 /* Default text */
 .token-text {
-  color: var(--text);
+  color: var(--foreground);
 }
 
 /* Identifiers */
 .token-identifier {
-  color: var(--text);
+  color: var(--foreground);
 }
 
 /* Booleans */
@@ -103,7 +103,7 @@
 }
 
 .token-jsx-text {
-  color: var(--text);
+  color: var(--foreground);
 }
 
 /* Markdown */
@@ -138,7 +138,7 @@
 
 .token-markdown-code {
   color: var(--syntax-markdown-code, #c3e88d);
-  background-color: var(--hover, rgba(255, 255, 255, 0.1));
+  background-color: var(--accent, rgba(255, 255, 255, 0.1));
   border-radius: 3px;
   padding: 2px 4px;
 }

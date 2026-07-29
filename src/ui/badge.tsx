@@ -7,12 +7,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary-bg/70 text-text-lighter",
-        muted: "bg-hover/55 text-text-lighter",
-        accent: "bg-accent/10 text-accent",
+        default: "bg-background/70 text-subtle-foreground",
+        muted: "bg-accent/55 text-subtle-foreground",
+        accent: "bg-primary/10 text-primary",
         success: "bg-success/10 text-success",
         warning: "bg-warning/10 text-warning",
-        error: "bg-error/8 text-error",
+        error: "bg-destructive/8 text-destructive",
       },
       size: {
         default: "px-2 py-0.5",

@@ -161,7 +161,7 @@ export function CustomThemeCreatorDialog({
       }
     >
       <div className="space-y-4">
-        <p className="font-sans ui-text-sm text-text-lighter">
+        <p className="font-sans ui-text-sm text-subtle-foreground">
           Start from an installed theme, then edit the generated JSON before saving or installing
           it.
         </p>

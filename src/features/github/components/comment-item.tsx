@@ -21,14 +21,14 @@ export const CommentItem = memo(({ comment, repositoryUrl, repoPath }: CommentIt
       <GitHubAvatar login={authorLogin} size={40} className="size-6" />
       <div className="min-w-0 flex-1">
         <div className="ui-text-sm flex items-center gap-2">
-          <span className="text-text">{authorLogin}</span>
-          <span className="text-text-lighter">{getTimeAgo(comment.createdAt)}</span>
+          <span className="text-foreground">{authorLogin}</span>
+          <span className="text-subtle-foreground">{getTimeAgo(comment.createdAt)}</span>
         </div>
         <div className="mt-1">
           <GitHubMarkdown
             content={comment.body}
             className="github-markdown-pr"
-            contentClassName="ui-text-sm leading-6 text-text-light"
+            contentClassName="ui-text-sm leading-6 text-muted-foreground"
             repositoryUrl={repositoryUrl}
             repoPath={repoPath}
           />

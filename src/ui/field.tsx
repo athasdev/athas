@@ -27,7 +27,7 @@ function FieldLegend({
       data-slot="field-legend"
       data-variant={variant}
       className={cn(
-        "mb-1.5 font-sans font-medium text-text data-[variant=label]:ui-text-sm data-[variant=legend]:ui-text-base",
+        "mb-1.5 font-sans font-medium text-foreground data-[variant=label]:ui-text-sm data-[variant=legend]:ui-text-base",
         className,
       )}
       {...props}
@@ -48,7 +48,7 @@ function FieldGroup({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-const fieldVariants = cva("group/field flex w-full gap-2 data-[invalid=true]:text-error", {
+const fieldVariants = cva("group/field flex w-full gap-2 data-[invalid=true]:text-destructive", {
   variants: {
     orientation: {
       vertical: "flex-col *:w-full [&>.sr-only]:w-auto",
@@ -110,7 +110,7 @@ function FieldTitle({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="field-label"
       className={cn(
-        "flex w-fit items-center gap-2 font-sans ui-text-sm font-medium text-text group-data-[disabled=true]/field:opacity-50",
+        "flex w-fit items-center gap-2 font-sans ui-text-sm font-medium text-foreground group-data-[disabled=true]/field:opacity-50",
         className,
       )}
       {...props}
@@ -123,7 +123,7 @@ function FieldDescription({ className, ...props }: ComponentProps<"p">) {
     <p
       data-slot="field-description"
       className={cn(
-        "text-left font-sans ui-text-sm font-normal leading-normal text-text-lighter last:mt-0 nth-last-2:-mt-1 [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-accent",
+        "text-left font-sans ui-text-sm font-normal leading-normal text-subtle-foreground last:mt-0 nth-last-2:-mt-1 [&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
         className,
       )}
       {...props}
@@ -140,12 +140,12 @@ function FieldSeparator({
     <div
       data-slot="field-separator"
       data-content={Boolean(children)}
-      className={cn("relative -my-2 h-5 font-sans ui-text-sm text-text-lighter", className)}
+      className={cn("relative -my-2 h-5 font-sans ui-text-sm text-subtle-foreground", className)}
       {...props}
     >
       <Separator className="absolute inset-0 top-1/2" />
       {children ? (
-        <span className="relative mx-auto block w-fit bg-primary-bg px-2">{children}</span>
+        <span className="relative mx-auto block w-fit bg-background px-2">{children}</span>
       ) : null}
     </div>
   );
@@ -182,7 +182,7 @@ function FieldError({
     <div
       role="alert"
       data-slot="field-error"
-      className={cn("font-sans ui-text-sm font-normal text-error", className)}
+      className={cn("font-sans ui-text-sm font-normal text-destructive", className)}
       {...props}
     >
       {content}

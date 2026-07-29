@@ -76,7 +76,7 @@ const StashMessageModalContent = ({
           value={message}
           onChange={(event) => setMessage(event.target.value)}
           placeholder={placeholder}
-          className={cn("w-full bg-primary-bg ui-text-sm")}
+          className={cn("w-full bg-background ui-text-sm")}
           onKeyDown={(event) => {
             if (event.key === "Enter") void handleConfirm();
           }}
@@ -86,7 +86,7 @@ const StashMessageModalContent = ({
         <Button
           onClick={onClose}
           variant="ghost"
-          className="text-text-lighter ui-text-sm hover:text-text"
+          className="text-subtle-foreground ui-text-sm hover:text-foreground"
           size="xs"
         >
           Cancel

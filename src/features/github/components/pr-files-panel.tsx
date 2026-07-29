@@ -124,7 +124,7 @@ export const PRFilesPanel = memo(
     }
 
     return (
-      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden bg-primary-bg">
+      <div className="flex min-h-[560px] min-w-0 items-stretch overflow-hidden bg-background">
         {isFileTreeVisible ? (
           <FileNavigatorSidebar
             items={fileTreeItems}
@@ -151,11 +151,11 @@ export const PRFilesPanel = memo(
               >
                 <ListBullets weight="duotone" />
               </Button>
-              <span className="ui-text-sm text-text-lighter">
+              <span className="ui-text-sm text-subtle-foreground">
                 {filteredDiff.length} of {diffFiles.length} files
               </span>
               {diffDebugSummary.errorCount > 0 ? (
-                <span className="ui-text-sm text-error">
+                <span className="ui-text-sm text-destructive">
                   {diffDebugSummary.errorCount} patch errors
                 </span>
               ) : null}
@@ -185,7 +185,7 @@ export const PRFilesPanel = memo(
             </div>
           </div>
 
-          <div className="min-h-[560px] min-w-0 overflow-hidden bg-primary-bg">
+          <div className="min-h-[560px] min-w-0 overflow-hidden bg-background">
             {selectedDiffFile ? (
               <FileDiffView
                 file={selectedDiffFile}

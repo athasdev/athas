@@ -60,6 +60,8 @@ interface FileExplorerTreeItemProps {
   searchQuery?: string;
   isSearchMatch?: boolean;
   rowId?: string;
+  virtualIndex: number;
+  measureElement: React.RefCallback<HTMLDivElement>;
 }
 
 function renderHighlightedLabel(label: string, query: string | undefined) {
@@ -106,6 +108,8 @@ function FileExplorerTreeItemComponent({
   searchQuery,
   isSearchMatch = false,
   rowId,
+  virtualIndex,
+  measureElement,
 }: FileExplorerTreeItemProps) {
   const paddingLeft = FILE_TREE_BASE_INDENT + depth * indentSize;
   const gitStatusDecoration = getGitStatusDecoration(file);
@@ -141,7 +145,12 @@ function FileExplorerTreeItemComponent({
 
   if (file.isEditing || file.isRenaming) {
     return (
-      <div className="file-tree-item w-full" data-depth={depth}>
+      <div
+        ref={measureElement}
+        className="file-tree-item w-full"
+        data-depth={depth}
+        data-index={virtualIndex}
+      >
         {renderTreeGuides()}
         <div
           className={cn(
@@ -157,7 +166,7 @@ function FileExplorerTreeItemComponent({
               fileName={file.isDir ? "folder" : "file"}
               isDir={file.isDir}
               isExpanded={false}
-              className="relative z-[1] shrink-0 text-text-lighter"
+              className="relative z-[1] shrink-0 text-subtle-foreground"
             />
           ) : null}
           <InlineRenameInput
@@ -169,8 +178,8 @@ function FileExplorerTreeItemComponent({
             value={editingValue ?? ""}
             onFocus={(event) => {
               event.currentTarget.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
+                behavior: "auto",
+                block: "nearest",
                 inline: "nearest",
               });
               if (file.isRenaming) {
@@ -193,9 +202,11 @@ function FileExplorerTreeItemComponent({
 
   return (
     <div
+      ref={measureElement}
       className="file-tree-item w-full"
       data-active={isActive ? "true" : undefined}
       data-depth={depth}
+      data-index={virtualIndex}
     >
       {renderTreeGuides()}
       <TreeRow
@@ -213,7 +224,7 @@ function FileExplorerTreeItemComponent({
         }
         className={cn(
           FILE_TREE_ROW_CLASS_NAME,
-          isDragOver && "!border-2 !border-dashed !border-accent !bg-accent !bg-opacity-20",
+          isDragOver && "!border-2 !border-dashed !border-primary !bg-primary !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",
           isCut && "italic opacity-40",
@@ -230,7 +241,7 @@ function FileExplorerTreeItemComponent({
             isDir={file.isDir}
             isExpanded={isExpanded}
             isSymlink={file.isSymlink}
-            className="relative z-1 shrink-0 text-text-lighter"
+            className="relative z-1 shrink-0 text-subtle-foreground"
           />
         ) : null}
         <span
@@ -270,5 +281,7 @@ export const FileExplorerTreeItem = memo(
     prev.getGitStatusDecoration === next.getGitStatusDecoration &&
     prev.searchQuery === next.searchQuery &&
     prev.isSearchMatch === next.isSearchMatch &&
-    prev.rowId === next.rowId,
+    prev.rowId === next.rowId &&
+    prev.virtualIndex === next.virtualIndex &&
+    prev.measureElement === next.measureElement,
 );

@@ -13,18 +13,18 @@ export interface DiffLineVisualState {
   inlineHighlightBackground: string;
 }
 
-const primaryBackground = "var(--color-primary-bg, var(--primary-bg))";
-const gitAdded = "var(--color-git-added, var(--git-added))";
-const gitDeleted = "var(--color-git-deleted, var(--git-deleted))";
-const border = "var(--color-border, var(--border))";
+const primaryBackground = "var(--background)";
+const gitAdded = "var(--git-added)";
+const gitDeleted = "var(--git-deleted)";
+const border = "var(--border)";
 
 const DIFF_LINE_VISUALS: Record<DiffLineVisualType, DiffLineVisualState> = {
   added: {
     lineBackground: "bg-git-added/14",
     gutterBackground: "bg-git-added/18",
-    railClassName: "shadow-[inset_2px_0_0_var(--color-git-added)]",
+    railClassName: "shadow-[inset_2px_0_0_var(--git-added)]",
     gutterTextColor: "text-git-added",
-    contentColor: "text-text",
+    contentColor: "text-foreground",
     inlineBackground: `color-mix(in srgb, ${gitAdded} 16%, ${primaryBackground})`,
     inlineAccent: gitAdded,
     inlineHighlightBackground: `color-mix(in srgb, ${gitAdded} 36%, transparent)`,
@@ -32,19 +32,19 @@ const DIFF_LINE_VISUALS: Record<DiffLineVisualType, DiffLineVisualState> = {
   removed: {
     lineBackground: "bg-git-deleted/14",
     gutterBackground: "bg-git-deleted/18",
-    railClassName: "shadow-[inset_2px_0_0_var(--color-git-deleted)]",
+    railClassName: "shadow-[inset_2px_0_0_var(--git-deleted)]",
     gutterTextColor: "text-git-deleted",
-    contentColor: "text-text",
+    contentColor: "text-foreground",
     inlineBackground: `color-mix(in srgb, ${gitDeleted} 16%, ${primaryBackground})`,
     inlineAccent: gitDeleted,
     inlineHighlightBackground: `color-mix(in srgb, ${gitDeleted} 36%, transparent)`,
   },
   context: {
     lineBackground: "",
-    gutterBackground: "bg-primary-bg",
+    gutterBackground: "bg-background",
     railClassName: "",
-    gutterTextColor: "text-text-lighter",
-    contentColor: "text-text",
+    gutterTextColor: "text-subtle-foreground",
+    contentColor: "text-foreground",
     inlineBackground: primaryBackground,
     inlineAccent: border,
     inlineHighlightBackground: "transparent",

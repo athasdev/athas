@@ -61,7 +61,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         <div className="relative">
           <div
             className={cn(
-              "drop-indicator absolute z-20 bg-accent",
+              "drop-indicator absolute z-20 bg-primary",
               orientation === "vertical"
                 ? "top-0 right-1 left-1 h-0.5"
                 : "top-1 bottom-1 left-0 w-0.5",
@@ -109,7 +109,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
               draggable={false}
             >
               {terminal.isPinned ? (
-                <Pin className="pointer-events-none select-none fill-current text-accent" />
+                <Pin className="pointer-events-none select-none fill-current text-primary" />
               ) : (
                 <X className="pointer-events-none select-none" />
               )}
@@ -140,9 +140,13 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
             className={cn(
               "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
-              isActive ? "text-text" : "text-text-lighter",
+              isActive ? "text-foreground" : "text-subtle-foreground",
             )}
-            title={terminal.currentDirectory}
+            title={
+              terminal.currentDirectory
+                ? `${displayName} — ${terminal.currentDirectory}`
+                : displayName
+            }
           >
             {displayName}
           </span>

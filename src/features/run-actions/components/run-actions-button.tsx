@@ -60,7 +60,7 @@ function RunActionSection({
 
   return (
     <section>
-      <div className="px-2.5 pt-2 pb-1 font-medium text-text-lighter ui-text-sm">{label}</div>
+      <div className="px-2.5 pt-2 pb-1 font-medium text-subtle-foreground ui-text-sm">{label}</div>
       <div className="space-y-0.5 px-1">
         {actions.map((action) => (
           <RunActionRow
@@ -249,11 +249,11 @@ export default function RunActionsButton() {
         closeOnSelect={false}
         className="w-[360px] max-w-[calc(100vw-1rem)] overflow-hidden rounded-xl p-0"
       >
-        <div className="border-border/70 border-b bg-secondary-bg/35 px-3 pt-2.5 pb-2">
+        <div className="border-border/70 border-b bg-surface/35 px-3 pt-2.5 pb-2">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-medium text-text ui-text-sm">Run</div>
-              <div className="truncate text-text-lighter ui-text-sm">{workspaceLabel}</div>
+              <div className="font-medium text-foreground ui-text-sm">Run</div>
+              <div className="truncate text-subtle-foreground ui-text-sm">{workspaceLabel}</div>
             </div>
             <Tooltip content="Rescan project actions" side="left">
               <Button
@@ -274,7 +274,7 @@ export default function RunActionsButton() {
             value={query}
             onChange={setQuery}
             placeholder="Filter actions"
-            className="h-8 bg-primary-bg"
+            className="h-8 bg-background"
             onKeyDown={(event) => {
               if (event.key === "Enter" && firstVisibleAction) {
                 event.preventDefault();
@@ -335,7 +335,7 @@ export default function RunActionsButton() {
             onClick={() => openDialog()}
             className="ui-text-sm h-8 w-full justify-start gap-2"
           >
-            <PlusIcon className="text-text-lighter" />
+            <PlusIcon className="text-subtle-foreground" />
             <span>New custom action</span>
           </Button>
         </div>

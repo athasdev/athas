@@ -59,14 +59,14 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     normalizedConclusion === "timed_out" ||
     normalizedConclusion === "startup_failure"
   ) {
-    return { label: "Failed", icon: XCircle, className: "text-error", animate: false };
+    return { label: "Failed", icon: XCircle, className: "text-destructive", animate: false };
   }
 
   if (normalizedConclusion === "cancelled" || normalizedConclusion === "skipped") {
     return {
       label: normalizedConclusion === "skipped" ? "Skipped" : "Cancelled",
       icon: XCircle,
-      className: "text-text-lighter",
+      className: "text-subtle-foreground",
       animate: false,
     };
   }
@@ -76,7 +76,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     normalizedStatus === "waiting" ||
     normalizedStatus === "requested"
   ) {
-    return { label: "Running", icon: null, className: "text-accent", animate: true };
+    return { label: "Running", icon: null, className: "text-primary", animate: true };
   }
 
   if (normalizedStatus === "queued" || normalizedStatus === "pending") {
@@ -86,7 +86,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   return {
     label: normalizedConclusion || normalizedStatus || "Unknown",
     icon: Activity,
-    className: "text-text-lighter",
+    className: "text-subtle-foreground",
     animate: false,
   };
 };
@@ -627,10 +627,10 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
           <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border/70 border-b pb-3">
             {runSummaryItems.map((item) => (
               <div key={item.label} className="ui-text-sm flex min-w-0 items-baseline gap-1.5">
-                <dt className="shrink-0 text-text-lighter">{item.label}</dt>
+                <dt className="shrink-0 text-subtle-foreground">{item.label}</dt>
                 <dd
                   className={cn(
-                    "min-w-0 truncate text-text",
+                    "min-w-0 truncate text-foreground",
                     item.mono ? "font-mono ui-text-sm" : "ui-text-sm",
                   )}
                 >
@@ -648,8 +648,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                 <section
                   key={`${job.id ?? job.name}-${job.startedAt ?? ""}`}
                   className={cn(
-                    "rounded-xl border border-transparent bg-secondary-bg/20 transition-[background-color,border-color]",
-                    isSelectedJob && "border-border/80 bg-hover/40",
+                    "rounded-xl border border-transparent bg-surface/20 transition-[background-color,border-color]",
+                    isSelectedJob && "border-border/80 bg-accent/40",
                   )}
                 >
                   <Button
@@ -659,7 +659,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                     onClick={() => handleSelectJob(job)}
                     className={cn(
                       "h-auto w-full justify-start rounded-xl px-3 py-2 text-left",
-                      "hover:bg-hover/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70",
+                      "hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/70",
                     )}
                   >
                     <div className="flex min-w-0 items-start gap-2">
@@ -670,12 +670,14 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="ui-text-sm min-w-0 truncate text-text">{job.name}</span>
-                          <span className="ui-text-sm text-text-lighter">
+                          <span className="ui-text-sm min-w-0 truncate text-foreground">
+                            {job.name}
+                          </span>
+                          <span className="ui-text-sm text-subtle-foreground">
                             {getWorkflowRunStatus(job.status, job.conclusion).label}
                           </span>
                         </div>
-                        <div className="ui-text-sm mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                        <div className="ui-text-sm mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
                           {formatDuration(job.startedAt, job.completedAt) ? (
                             <span>{formatDuration(job.startedAt, job.completedAt)}</span>
                           ) : null}
@@ -686,7 +688,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               key={label}
                               variant="default"
                               size="compact"
-                              className="bg-secondary-bg/80"
+                              className="bg-surface/80"
                             >
                               {label}
                             </Badge>
@@ -697,9 +699,9 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                   </Button>
 
                   {isSelectedJob ? (
-                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-primary-bg">
+                    <div className="mx-2 mb-2 flex min-h-64 overflow-hidden rounded-xl border border-border/70 bg-background">
                       <ScrollArea
-                        className="min-h-0 w-64 shrink-0 border-border/70 border-r bg-secondary-bg/20"
+                        className="min-h-0 w-64 shrink-0 border-border/70 border-r bg-surface/20"
                         contentClassName="p-1.5"
                         orientation="both"
                       >
@@ -712,8 +714,8 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                               size="xs"
                               onClick={() => setSelectedStepIndex(index)}
                               className={cn(
-                                "h-auto w-full min-w-0 justify-start gap-2 rounded-lg px-2 py-1.5 text-left ui-text-sm text-text-lighter hover:bg-hover/50 hover:text-text",
-                                selectedStepIndex === index && "bg-selected text-text",
+                                "h-auto w-full min-w-0 justify-start gap-2 rounded-lg px-2 py-1.5 text-left ui-text-sm text-subtle-foreground hover:bg-accent/50 hover:text-foreground",
+                                selectedStepIndex === index && "bg-selected text-foreground",
                               )}
                             >
                               <WorkflowStatusIcon
@@ -737,10 +739,10 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2 border-border/70 border-b px-3 py-2">
                           <div className="min-w-0">
-                            <div className="ui-text-sm truncate text-text">
+                            <div className="ui-text-sm truncate text-foreground">
                               {selectedStep?.name ?? job.name}
                             </div>
-                            <div className="ui-text-sm text-text-lighter">
+                            <div className="ui-text-sm text-subtle-foreground">
                               {selectedStep
                                 ? getWorkflowRunStatus(selectedStep.status, selectedStep.conclusion)
                                     .label
@@ -753,7 +755,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                 value={logSearchQuery}
                                 onChange={(event) => setLogSearchQuery(event.target.value)}
                                 size="xs"
-                                className="w-40 bg-secondary-bg/40"
+                                className="w-40 bg-surface/40"
                                 placeholder="Search logs"
                                 aria-label="Search logs"
                               />
@@ -798,28 +800,28 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
 
                         <div className="max-h-[52vh] overflow-auto p-3">
                           {!areJobLogsDownloadable(job) ? (
-                            <p className="ui-text-sm text-text-lighter">
+                            <p className="ui-text-sm text-subtle-foreground">
                               Logs are available after this job finishes.
                             </p>
                           ) : job.id && loadingJobLogId === job.id && !jobLogs[job.id] ? (
-                            <div className="ui-text-sm flex items-center gap-2 text-text-lighter">
+                            <div className="ui-text-sm flex items-center gap-2 text-subtle-foreground">
                               <Spinner label="Loading logs" showLabel compact />
                             </div>
                           ) : job.id && jobLogErrors[job.id] ? (
                             <div className="space-y-2">
-                              <p className="ui-text-sm text-error">{jobLogErrors[job.id]}</p>
+                              <p className="ui-text-sm text-destructive">{jobLogErrors[job.id]}</p>
                               <Button
                                 type="button"
                                 onClick={() => void loadJobLogs(job.id!, true)}
                                 variant="default"
                                 size="xs"
-                                className="border border-error/40 text-error/90 hover:bg-error/10"
+                                className="border border-destructive/40 text-destructive/90 hover:bg-destructive/10"
                               >
                                 Retry
                               </Button>
                             </div>
                           ) : filteredStepLogs ? (
-                            <pre className="ui-text-sm whitespace-pre-wrap break-words font-mono leading-5 text-text-light">
+                            <pre className="ui-text-sm whitespace-pre-wrap break-words font-mono leading-5 text-muted-foreground">
                               {filteredStepLogs.split(/\r?\n/).map((line, lineIndex, lines) => (
                                 <span key={`${lineIndex}-${line}`}>
                                   {getLogLineSegments(line, logSearchQuery).map(
@@ -827,7 +829,7 @@ const GitHubActionViewer = memo(({ runId, repoPath, bufferId }: GitHubActionView
                                       segment.isMatch ? (
                                         <mark
                                           key={segmentIndex}
-                                          className="rounded bg-warning/20 px-0.5 text-text"
+                                          className="rounded bg-warning/20 px-0.5 text-foreground"
                                         >
                                           {segment.text}
                                         </mark>

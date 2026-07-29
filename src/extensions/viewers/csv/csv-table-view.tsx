@@ -45,8 +45,8 @@ export function TableView({
   return (
     <div className={cn("flex h-full min-h-0 flex-col overflow-hidden", className)}>
       {(actions || columns.length > 0) && (
-        <div className="flex items-center justify-between border-border border-b bg-terniary-bg px-2 py-1.5">
-          <div className="font-sans ui-text-sm text-text-lighter">
+        <div className="flex items-center justify-between border-border border-b bg-surface px-2 py-1.5">
+          <div className="font-sans ui-text-sm text-subtle-foreground">
             {rows.length} rows • {columns.length} columns
           </div>
           <div className="flex items-center gap-1">{actions}</div>
@@ -56,7 +56,7 @@ export function TableView({
         {/* Header */}
         <div
           className={cn(
-            "font-sans ui-text-sm grid w-full gap-0 border-border border-b bg-secondary-bg",
+            "font-sans ui-text-sm grid w-full gap-0 border-border border-b bg-surface",
             stickyHeader && "sticky top-0 isolate z-30",
           )}
           style={{ gridTemplateColumns: gridTemplate, willChange: "transform" }}
@@ -65,7 +65,7 @@ export function TableView({
             <div
               key={i}
               className={cn(
-                "whitespace-nowrap bg-secondary-bg px-2 py-1.5 text-left text-text",
+                "whitespace-nowrap bg-surface px-2 py-1.5 text-left text-foreground",
                 i > 0 && "border-border border-l",
               )}
             >
@@ -83,7 +83,7 @@ export function TableView({
               return (
                 <div
                   key={virtualRow.key}
-                  className="absolute inset-x-0 grid w-full gap-0 hover:bg-hover"
+                  className="absolute inset-x-0 grid w-full gap-0 hover:bg-accent"
                   style={{
                     transform: `translateY(${virtualRow.start}px)`,
                     height: virtualRow.size,
@@ -101,11 +101,11 @@ export function TableView({
                       title={cell === null ? "NULL" : String(cell)}
                     >
                       {cell === null ? (
-                        <span className="text-text-lighter italic">NULL</span>
+                        <span className="text-subtle-foreground italic">NULL</span>
                       ) : typeof cell === "object" ? (
-                        <span className="block truncate text-accent">{JSON.stringify(cell)}</span>
+                        <span className="block truncate text-primary">{JSON.stringify(cell)}</span>
                       ) : (
-                        <span className="block truncate text-text">{String(cell)}</span>
+                        <span className="block truncate text-foreground">{String(cell)}</span>
                       )}
                     </div>
                   ))}
@@ -118,7 +118,7 @@ export function TableView({
             {rows.map((row, rIndex) => (
               <div
                 key={rIndex}
-                className="grid w-full gap-0 hover:bg-hover"
+                className="grid w-full gap-0 hover:bg-accent"
                 style={{ gridTemplateColumns: gridTemplate }}
               >
                 {row.map((cell, cIndex) => (
@@ -132,11 +132,11 @@ export function TableView({
                     title={cell === null ? "NULL" : String(cell)}
                   >
                     {cell === null ? (
-                      <span className="text-text-lighter italic">NULL</span>
+                      <span className="text-subtle-foreground italic">NULL</span>
                     ) : typeof cell === "object" ? (
-                      <span className="block truncate text-accent">{JSON.stringify(cell)}</span>
+                      <span className="block truncate text-primary">{JSON.stringify(cell)}</span>
                     ) : (
-                      <span className="block truncate text-text">{String(cell)}</span>
+                      <span className="block truncate text-foreground">{String(cell)}</span>
                     )}
                   </div>
                 ))}

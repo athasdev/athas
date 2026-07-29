@@ -43,7 +43,7 @@ export function saveChannelIcons(icons: Record<string, string>) {
 }
 
 export function renderChannelIcon(value: string | undefined) {
-  if (!value) return <Hash className="size-3.5 text-text-lighter" weight="duotone" />;
+  if (!value) return <Hash className="size-3.5 text-subtle-foreground" weight="duotone" />;
   if (!value.startsWith("icon:")) return value;
 
   const symbol = CHANNEL_SYMBOL_OPTIONS.find((option) => option.id === value.slice(5));
@@ -66,14 +66,14 @@ export function ChannelIconPicker({
 }) {
   return (
     <div className="w-60 p-1">
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-primary-bg/70 p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-lg bg-background/70 p-1">
         {(["emoji", "icon"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             className={cn(
-              "ui-text-sm h-7 rounded-md capitalize text-text-lighter hover:bg-hover hover:text-text",
-              activeTab === tab && "bg-hover text-text",
+              "ui-text-sm h-7 rounded-md capitalize text-subtle-foreground hover:bg-accent hover:text-foreground",
+              activeTab === tab && "bg-accent text-foreground",
             )}
             onClick={() => onTabChange(tab)}
           >
@@ -95,8 +95,8 @@ export function ChannelIconPicker({
                   <button
                     type="button"
                     className={cn(
-                      "flex size-8 items-center justify-center rounded-md text-text-lighter hover:bg-hover hover:text-text",
-                      selected === value && "bg-hover text-text",
+                      "flex size-8 items-center justify-center rounded-md text-subtle-foreground hover:bg-accent hover:text-foreground",
+                      selected === value && "bg-accent text-foreground",
                     )}
                     onClick={() => onSelect(value)}
                   >
@@ -112,7 +112,7 @@ export function ChannelIconPicker({
       {activeTab === "icon" ? (
         <button
           type="button"
-          className="ui-text-sm mt-2 h-7 w-full rounded-md text-center text-text-lighter hover:bg-hover hover:text-text"
+          className="ui-text-sm mt-2 h-7 w-full rounded-md text-center text-subtle-foreground hover:bg-accent hover:text-foreground"
           onClick={onClear}
         >
           Reset to default

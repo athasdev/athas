@@ -56,7 +56,7 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
     <>
       {showLineNumbers ? (
         <span
-          className="shrink-0 select-none border-border border-r pr-3 text-right text-text-lighter tabular-nums"
+          className="shrink-0 select-none border-border border-r pr-3 text-right text-subtle-foreground tabular-nums"
           style={{ width: `${gutterWidth}px` }}
         >
           {mappedLine ?? ""}
@@ -64,7 +64,7 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
       ) : null}
       <span
         data-search-excerpt-code
-        className="min-w-0 flex-1 overflow-hidden px-4 whitespace-pre text-text"
+        className="min-w-0 flex-1 overflow-hidden px-4 whitespace-pre text-foreground"
       >
         {line.segments.length > 0
           ? line.segments.map((segment) => {
@@ -108,13 +108,13 @@ const SearchExcerptLine = memo(function SearchExcerptLine({
   );
 
   if (mappedLine === null || mappedLine === undefined) {
-    return <div className="flex min-w-0 text-text-lighter">{content}</div>;
+    return <div className="flex min-w-0 text-subtle-foreground">{content}</div>;
   }
 
   return (
     <button
       type="button"
-      className="flex w-full min-w-0 text-left hover:bg-hover/25 focus-visible:bg-hover/35 focus-visible:outline-none"
+      className="flex w-full min-w-0 text-left hover:bg-accent/25 focus-visible:bg-accent/35 focus-visible:outline-none"
       onClick={handleClick}
       aria-label={`Open line ${mappedLine}`}
     >
@@ -161,7 +161,7 @@ export const SearchExcerptCode = memo(function SearchExcerptCode({
 
   return (
     <div
-      className="font-mono code-editor-font-override overflow-hidden border-border border-t bg-primary-bg py-2"
+      className="font-mono code-editor-font-override overflow-hidden border-border border-t bg-background py-2"
       style={surfaceStyle}
     >
       {lines.map((line, lineIndex) => (

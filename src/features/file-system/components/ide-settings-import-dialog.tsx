@@ -287,7 +287,7 @@ export function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportC
                 onClick={() => handleToggleCapability(capability)}
                 title={capability.label}
                 accessory={
-                  <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-accent">
+                  <span className="flex size-4 shrink-0 items-center justify-center rounded border border-border text-primary">
                     {selectedCapabilityIds.includes(capability.id) ? <Check size={12} /> : null}
                   </span>
                 }

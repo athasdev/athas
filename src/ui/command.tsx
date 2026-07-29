@@ -8,7 +8,7 @@ import type React from "react";
 import { useActionsStore } from "@/features/command-palette/stores/action-history.store";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
-import { instantTransition, quickTransition } from "@/design-system/motion";
+import { instantTransition, quickTransition } from "@/utils/motion";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { cn } from "@/utils/cn";
@@ -25,7 +25,7 @@ interface CommandProps {
 const commandInputSelector = "[data-command-input]";
 
 const commandContentVariants = cva(
-  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)] focus:outline-none",
+  "relative z-10 flex max-h-[min(68vh,32rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-dialog)] focus:outline-none",
 );
 
 const commandItemVariants = cva(
@@ -33,8 +33,8 @@ const commandItemVariants = cva(
   {
     variants: {
       selected: {
-        true: "bg-selected text-text",
-        false: "bg-transparent text-text hover:bg-hover",
+        true: "bg-selected text-foreground",
+        false: "bg-transparent text-foreground hover:bg-accent",
       },
       density: {
         default: "ui-text-base mb-1 min-h-8 gap-2.5 rounded-lg px-2.5 py-2 leading-[1.35]",
@@ -51,7 +51,7 @@ const commandItemVariants = cva(
 const commandHeaderContentClassName = "flex items-center gap-2 px-4 py-3";
 
 const commandInputClassName = cva(
-  "font-sans ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-text placeholder-text-lighter outline-none",
+  "font-sans ui-text-base h-7 min-w-0 flex-1 bg-transparent leading-[1.4] text-foreground placeholder-subtle-foreground outline-none",
 );
 
 const commandItemActionVariants = cva(
@@ -76,7 +76,7 @@ export const CommandHeaderAction = (props: CommandHeaderActionProps) => (
   <Button
     variant="ghost"
     size="sm"
-    className="ui-text-base shrink-0 rounded-md px-2 text-text-lighter hover:text-text [&_svg]:size-4"
+    className="ui-text-base shrink-0 rounded-md px-2 text-subtle-foreground hover:text-foreground [&_svg]:size-4"
     {...props}
   />
 );
@@ -88,7 +88,7 @@ type CommandHeaderBadgeProps = React.ComponentProps<typeof Badge>;
 export const CommandHeaderBadge = ({ className, ...props }: CommandHeaderBadgeProps) => (
   <Badge
     className={cn(
-      "h-auto min-h-7 max-w-40 shrink-0 bg-secondary-bg/70 px-2 leading-[1.35] text-text-lighter ui-text-base",
+      "h-auto min-h-7 max-w-40 shrink-0 bg-surface/70 px-2 leading-[1.35] text-subtle-foreground ui-text-base",
       className,
     )}
     {...props}
@@ -266,10 +266,12 @@ export const CommandForm = ({
   onCancel,
 }: CommandFormProps) => (
   <div className="shrink-0 p-2 pb-0">
-    <form data-command-form="" className="rounded-lg bg-secondary-bg/65 p-2.5" onSubmit={onSubmit}>
+    <form data-command-form="" className="rounded-lg bg-surface/65 p-2.5" onSubmit={onSubmit}>
       <div className="mb-2 flex min-w-0 items-center gap-2">
         {icon ? <CommandItemIcon variant="framed">{icon}</CommandItemIcon> : null}
-        <span className="min-w-0 flex-1 truncate font-medium text-text ui-text-sm">{title}</span>
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
+          {title}
+        </span>
         {onCancel ? (
           <Button
             type="button"
@@ -309,7 +311,7 @@ export const CommandFormField = ({
 }: CommandFormFieldProps) => (
   <div className={cn("min-w-0 space-y-1", span === "full" && "col-span-full")}>
     {label ? (
-      <label htmlFor={htmlFor} className="block truncate text-text-lighter ui-text-sm">
+      <label htmlFor={htmlFor} className="block truncate text-subtle-foreground ui-text-sm">
         {label}
       </label>
     ) : null}
@@ -326,7 +328,7 @@ interface CommandFooterProps {
 export const CommandFooter = ({ children }: CommandFooterProps) => (
   <div
     data-command-footer
-    className="sticky bottom-0 border-border border-t bg-primary-bg px-3 py-3"
+    className="sticky bottom-0 border-border border-t bg-background px-3 py-3"
   >
     <div className="flex flex-wrap items-center gap-2">{children}</div>
   </div>
@@ -478,7 +480,7 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
     <Tabs
       value={activeItemId}
       onValueChange={(value) => items.find((item) => item.id === value)?.onSelect()}
-      className={cn("shrink-0 gap-0 bg-primary-bg px-2 pt-2", className)}
+      className={cn("shrink-0 gap-0 bg-background px-2 pt-2", className)}
     >
       <TabsList variant="bare" aria-label={ariaLabel}>
         {items.map((item) => (
@@ -500,7 +502,7 @@ export const CommandTabs = ({ items, ariaLabel, className }: CommandTabsProps) =
 CommandTabs.displayName = "CommandTabs";
 
 export const CommandItemTitle = ({ className, ...props }: React.ComponentProps<"span">) => (
-  <span className={cn("min-w-0 truncate text-text", className)} {...props} />
+  <span className={cn("min-w-0 truncate text-foreground", className)} {...props} />
 );
 
 CommandItemTitle.displayName = "CommandItemTitle";
@@ -512,14 +514,14 @@ export const CommandItemContent = ({ className, ...props }: React.ComponentProps
 CommandItemContent.displayName = "CommandItemContent";
 
 export const CommandItemMeta = ({ className, ...props }: React.ComponentProps<"span">) => (
-  <span className={cn("ml-1.5 min-w-0 truncate text-text-lighter/70", className)} {...props} />
+  <span className={cn("ml-1.5 min-w-0 truncate text-subtle-foreground/70", className)} {...props} />
 );
 
 CommandItemMeta.displayName = "CommandItemMeta";
 
 export const CommandItemDescription = ({ className, ...props }: React.ComponentProps<"span">) => (
   <span
-    className={cn("mt-0.5 block min-w-0 truncate text-text-lighter/70", className)}
+    className={cn("mt-0.5 block min-w-0 truncate text-subtle-foreground/70", className)}
     {...props}
   />
 );
@@ -537,8 +539,8 @@ export const CommandItemIcon = ({
 }: CommandItemIconProps) => (
   <span
     className={cn(
-      "inline-flex size-5 shrink-0 items-center justify-center text-text-lighter",
-      variant === "framed" && "rounded-md border border-border/70 bg-secondary-bg/70",
+      "inline-flex size-5 shrink-0 items-center justify-center text-subtle-foreground",
+      variant === "framed" && "rounded-md border border-border/70 bg-surface/70",
       className,
     )}
     {...props}
@@ -620,7 +622,7 @@ export const CommandItemRow = ({
         <CommandItemDescription
           className={cn(
             contentLayout === "inline" &&
-              "mt-0 flex min-w-0 shrink items-center gap-1.5 text-text-lighter/80",
+              "mt-0 flex min-w-0 shrink items-center gap-1.5 text-subtle-foreground/80",
           )}
         >
           {description}
@@ -710,7 +712,7 @@ CommandFooterAction.displayName = "CommandFooterAction";
 export const CommandEmpty = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="command-empty"
-    className={cn("ui-text-base p-3 text-center leading-[1.35] text-text-lighter", className)}
+    className={cn("ui-text-base p-3 text-center leading-[1.35] text-subtle-foreground", className)}
     {...props}
   />
 );

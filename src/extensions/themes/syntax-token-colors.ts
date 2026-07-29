@@ -97,7 +97,7 @@ function getColorValue(colors: Record<string, string>, key: string): string | un
 }
 
 function isForegroundColor(value: string, colors: Record<string, string>): boolean {
-  const foreground = getColorValue(colors, "text") ?? getColorValue(colors, "foreground");
+  const foreground = getColorValue(colors, "foreground") ?? getColorValue(colors, "text");
   const normalized = normalizeColor(value);
   const text = normalizeColor(foreground);
   if (normalized && text && normalized === text) return true;
@@ -140,7 +140,6 @@ export function toSyntaxTokenVariables(
 
   for (const [key, value] of Object.entries(normalizedSyntax)) {
     variables[`--syntax-${key}`] = value;
-    variables[`--color-syntax-${key}`] = value;
   }
 
   return variables;

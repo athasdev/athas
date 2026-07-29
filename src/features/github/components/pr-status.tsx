@@ -53,9 +53,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (failedCount > 0) {
       return {
-        icon: <XCircle className="text-error" />,
+        icon: <XCircle className="text-destructive" />,
         label: `${failedCount} failed`,
-        tone: "text-error",
+        tone: "text-destructive",
       };
     }
 
@@ -76,9 +76,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
     }
 
     return {
-      icon: <CircleDot className="text-text-lighter" />,
+      icon: <CircleDot className="text-subtle-foreground" />,
       label: `${passedCount}/${checks.length} passed`,
-      tone: "text-text-lighter",
+      tone: "text-subtle-foreground",
     };
   }, [checks]);
 
@@ -99,9 +99,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
         {summary.icon}
         <span className={cn("font-sans ui-text-sm", summary.tone)}>{summary.label}</span>
         {isExpanded ? (
-          <ChevronDown className="text-text-lighter" />
+          <ChevronDown className="text-subtle-foreground" />
         ) : (
-          <ChevronRight className="text-text-lighter" />
+          <ChevronRight className="text-subtle-foreground" />
         )}
       </PopoverTrigger>
       <PopoverContent align="start" className="min-w-[320px] p-1.5">
@@ -115,19 +115,21 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
               }
             }}
             disabled={!check.detailsUrl}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
           >
             {check.conclusion === "SUCCESS" ? (
               <CheckCircle2 className="text-success" />
             ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-              <XCircle className="text-error" />
+              <XCircle className="text-destructive" />
             ) : (
               <Spinner label="Pending check" compact />
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate font-sans ui-text-sm text-text">{check.name ?? "Check"}</p>
+              <p className="truncate font-sans ui-text-sm text-foreground">
+                {check.name ?? "Check"}
+              </p>
               {check.workflowName && (
-                <p className="truncate font-sans ui-text-sm text-text-lighter">
+                <p className="truncate font-sans ui-text-sm text-subtle-foreground">
                   {check.workflowName}
                 </p>
               )}
@@ -220,10 +222,10 @@ export const ReviewRequestsList = memo(({ reviewRequests }: ReviewRequestsProps)
   if (reviewRequests.length === 0) return null;
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
       <User />
       <span>Reviewers</span>
-      <span className="text-text">
+      <span className="text-foreground">
         {reviewRequests.map((reviewer) => `@${reviewer.login}`).join(", ")}
       </span>
     </span>
@@ -241,8 +243,8 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
   if (issues.length === 0) return null;
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
-      <Link2 className="text-text-lighter" />
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
+      <Link2 className="text-subtle-foreground" />
       <span>Linked</span>
       <span className="inline-flex items-center gap-1">
         {issues.map((issue, idx) => (
@@ -251,7 +253,7 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
             href={issue.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-sans ui-text-sm text-accent hover:underline"
+            className="font-sans ui-text-sm text-primary hover:underline"
           >
             #{issue.number}
             {idx < issues.length - 1 && ","}
@@ -301,10 +303,10 @@ export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
   if (assignees.length === 0) return null;
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
       <User />
       <span>Assigned</span>
-      <span className="text-text">
+      <span className="text-foreground">
         {assignees.map((assignee) => `@${assignee.login}`).join(", ")}
       </span>
     </span>

@@ -69,10 +69,10 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
 
   return (
     <>
-      <TableRow className={cn(hasConflict && "bg-error/5 hover:bg-error/10")}>
+      <TableRow className={cn(hasConflict && "bg-destructive/5 hover:bg-destructive/10")}>
         <TableCell className="min-w-0">
-          <div className="font-sans ui-text-sm truncate text-text">{command.title}</div>
-          <div className="font-sans ui-text-sm mt-0.5 truncate text-text-lighter">
+          <div className="font-sans ui-text-sm truncate text-foreground">{command.title}</div>
+          <div className="font-sans ui-text-sm mt-0.5 truncate text-subtle-foreground">
             {command.category} • {command.id}
           </div>
         </TableCell>
@@ -91,19 +91,19 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
               onClick={() => setIsEditing(true)}
               variant="default"
               size="xs"
-              className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-accent"
+              className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-primary"
               aria-label={`Edit keybinding for ${command.title}`}
             >
               {keybinding?.key ? (
                 <KeybindingDisplay binding={keybinding.key} />
               ) : (
-                <span className="text-text-lighter">Not assigned</span>
+                <span className="text-subtle-foreground">Not assigned</span>
               )}
             </Button>
           )}
         </TableCell>
 
-        <TableCell className="truncate text-text-lighter">
+        <TableCell className="truncate text-subtle-foreground">
           {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
         </TableCell>
 
@@ -124,7 +124,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
                 type="button"
                 onClick={handleReset}
                 variant="ghost"
-                className="ui-text-sm text-text-lighter hover:text-text"
+                className="ui-text-sm text-subtle-foreground hover:text-foreground"
                 tooltip="Reset to default"
                 aria-label="Reset to default keybinding"
                 size="xs"
@@ -137,7 +137,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
                 type="button"
                 onClick={handleRemove}
                 variant="ghost"
-                className="ui-text-sm text-text-lighter hover:text-error"
+                className="ui-text-sm text-subtle-foreground hover:text-destructive"
                 tooltip="Remove keybinding"
                 aria-label="Remove keybinding"
                 size="xs"
@@ -150,7 +150,7 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
       </TableRow>
 
       {hasConflict && (
-        <TableRow className="bg-error/5 hover:bg-error/5">
+        <TableRow className="bg-destructive/5 hover:bg-destructive/5">
           <TableCell colSpan={5} className="pt-0">
             <Alert tone="error" className="py-1.5">
               <WarningCircle />

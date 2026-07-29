@@ -47,9 +47,10 @@ export default function RunActionDialog({
       }
     >
       <div className="space-y-4">
-        <div className="rounded-lg bg-secondary-bg/60 px-3 py-2 text-text-lighter ui-text-sm">
-          This action is saved for <span className="font-medium text-text">{workspaceLabel}</span>{" "}
-          and runs in a new terminal.
+        <div className="rounded-lg bg-surface/60 px-3 py-2 text-subtle-foreground ui-text-sm">
+          This action is saved for{" "}
+          <span className="font-medium text-foreground">{workspaceLabel}</span> and runs in a new
+          terminal.
         </div>
 
         <Field>
@@ -91,7 +92,7 @@ export default function RunActionDialog({
           />
           <FieldDescription>
             Leave empty for the project root, or enter a relative path such as{" "}
-            <code className="font-mono text-text-light">apps/web</code>.
+            <code className="font-mono text-muted-foreground">apps/web</code>.
           </FieldDescription>
         </Field>
       </div>

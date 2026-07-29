@@ -197,7 +197,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="font-sans ui-text-sm -mt-3 px-1 text-text-lighter/75">
+      <div className="font-sans ui-text-sm -mt-3 px-1 text-subtle-foreground/75">
         {downloading
           ? `Athas ${appVersion || "..."} · Downloading ${downloadProgress?.percentage ?? 0}%`
           : installing
@@ -217,7 +217,7 @@ export const GeneralSettings = () => {
         />
       ) : null}
 
-      {error && <div className="font-sans ui-text-sm px-3 text-error">{error}</div>}
+      {error && <div className="font-sans ui-text-sm px-3 text-destructive">{error}</div>}
 
       <SettingRow
         label="Terminal Command"
@@ -255,7 +255,7 @@ export const GeneralSettings = () => {
         </div>
       </SettingRow>
 
-      <div className="font-sans ui-text-sm -mt-3 px-1 text-text-lighter/75">
+      <div className="font-sans ui-text-sm -mt-3 px-1 text-subtle-foreground/75">
         {cliChecking
           ? "Checking..."
           : cliInstalled

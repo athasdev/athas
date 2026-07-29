@@ -243,7 +243,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       }
     >
       {installedDbTypes.length === 0 ? (
-        <div className="rounded-lg border border-border bg-secondary-bg/35 px-3 py-2 text-text-lighter ui-text-sm">
+        <div className="rounded-lg border border-border bg-surface/35 px-3 py-2 text-subtle-foreground ui-text-sm">
           Install a database provider from Settings &gt; Extensions to connect to databases.
         </div>
       ) : null}
@@ -371,7 +371,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                 />
                 <FieldLabel
                   htmlFor="db-conn-save-password"
-                  className="cursor-pointer text-text-lighter"
+                  className="cursor-pointer text-subtle-foreground"
                 >
                   Save password securely
                 </FieldLabel>

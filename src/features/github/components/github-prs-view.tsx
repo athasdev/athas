@@ -169,7 +169,7 @@ const PRListItem = memo(
         active={isActive}
         leading={
           <GitPullRequest
-            className={pr.isDraft ? "size-4 text-text-lighter" : "size-4 text-accent"}
+            className={pr.isDraft ? "size-4 text-subtle-foreground" : "size-4 text-primary"}
           />
         }
         description={
