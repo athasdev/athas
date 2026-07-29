@@ -347,7 +347,7 @@ export function SkillsCommand({
     view === "list" || view === "browse" ? (
       <>
         <CommandHeader onClose={handleClose}>
-          <Search className="shrink-0 text-text-lighter" size={14} />
+          <Search className="shrink-0 text-subtle-foreground" size={14} />
           <CommandInput
             ref={inputRef}
             value={query}
@@ -378,7 +378,7 @@ export function SkillsCommand({
               <CommandEmpty>
                 <div className="flex flex-col items-center gap-2 px-4 py-5">
                   <div>No published skills yet</div>
-                  <div className="max-w-[280px] text-text-lighter">
+                  <div className="max-w-[280px] text-subtle-foreground">
                     Published skills will appear here once the Athas skills registry is available.
                   </div>
                 </div>
@@ -494,7 +494,7 @@ export function SkillsCommand({
                           event.stopPropagation();
                           void handleDelete(skill.id);
                         }}
-                        className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
+                        className="opacity-0 hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100"
                         tooltip="Delete skill"
                         aria-label={`Delete ${skill.title}`}
                         size={isComposerAttached ? "icon-xs" : "icon"}
@@ -520,7 +520,7 @@ export function SkillsCommand({
       <>
         <CommandHeader onClose={handleClose}>
           <div className="min-w-0 flex-1">
-            <div className="font-sans ui-text-base truncate text-text">
+            <div className="font-sans ui-text-base truncate text-foreground">
               {editingSkillId ? "Edit skill" : "New skill"}
             </div>
             {(() => {
@@ -528,7 +528,7 @@ export function SkillsCommand({
               if (!editingSkill || editingSkill.source !== "marketplace") return null;
 
               return (
-                <div className="ui-text-base mt-0.5 text-text-lighter">
+                <div className="ui-text-base mt-0.5 text-subtle-foreground">
                   Marketplace skill
                   {hasSkillLocalOverride(editingSkill) ? " with local override" : ""}
                 </div>
@@ -539,7 +539,10 @@ export function SkillsCommand({
 
         <ScrollArea className="flex-1" contentClassName="space-y-3 p-3">
           <div className="space-y-1.5">
-            <label className="font-sans ui-text-base text-text-lighter" htmlFor="ai-skill-title">
+            <label
+              className="font-sans ui-text-base text-subtle-foreground"
+              htmlFor="ai-skill-title"
+            >
               Title
             </label>
             <Input
@@ -554,7 +557,10 @@ export function SkillsCommand({
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-sans ui-text-base text-text-lighter" htmlFor="ai-skill-content">
+            <label
+              className="font-sans ui-text-base text-subtle-foreground"
+              htmlFor="ai-skill-content"
+            >
               Markdown
             </label>
             <Textarea

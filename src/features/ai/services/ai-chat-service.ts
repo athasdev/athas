@@ -1,6 +1,6 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat-store.types";
+import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";

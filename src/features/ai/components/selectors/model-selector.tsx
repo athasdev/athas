@@ -14,11 +14,6 @@ import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Alert, AlertDescription } from "@/ui/alert";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import {
-  chatComposerControlClassName,
-  chatComposerDropdownClassName,
-  chatSettingsSelectorTriggerClassName,
-} from "../input/chat-composer-control-styles";
 
 type SelectorModel = {
   id: string;
@@ -56,7 +51,8 @@ export function ModelSelector({
   const [modelFetchError, setModelFetchError] = useState<string | null>(null);
   const { hasHostedAi } = useProFeature();
   const subscription = useAuthStore((state) => state.subscription);
-  const { dynamicModels, setDynamicModels } = useAIChatStore();
+  const dynamicModels = useAIChatStore((state) => state.dynamicModels);
+  const setDynamicModels = useAIChatStore((state) => state.actions.setDynamicModels);
   const customModelId = useSettingsStore((state) => state.settings.aiCustomModelId);
   const autocompleteCustomModelId = useSettingsStore(
     (state) => state.settings.aiAutocompleteCustomModelId,
@@ -168,7 +164,7 @@ export function ModelSelector({
           label: model.name,
           keywords: [model.id],
           disabled: locked,
-          icon: locked ? <Lock className="text-text-lighter" /> : undefined,
+          icon: locked ? <Lock className="text-subtle-foreground" /> : undefined,
           accessory: model.proOnly ? <ProBadge /> : undefined,
         };
       })}
@@ -187,17 +183,8 @@ export function ModelSelector({
       onOpenChange={onOpenChange}
       tooltip={tooltip}
       className={className}
-      triggerClassName={cn(
-        isComposer
-          ? chatComposerControlClassName("max-w-[176px]")
-          : chatSettingsSelectorTriggerClassName("w-[260px]"),
-        triggerClassName,
-      )}
-      menuClassName={
-        isComposer
-          ? chatComposerDropdownClassName("min-w-0 p-0")
-          : "min-w-0 overflow-hidden rounded-xl p-0"
-      }
+      triggerClassName={cn(isComposer ? "max-w-[176px]" : "w-[260px]", triggerClassName)}
+      menuClassName="min-w-0 p-0"
       menuMinWidth={isComposer ? 260 : 0}
       menuAnimated={!isComposer}
       menuHeader={

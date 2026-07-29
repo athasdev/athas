@@ -5,11 +5,6 @@ import {
 } from "@/features/ai/hooks/use-available-providers";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import {
-  chatComposerControlClassName,
-  chatComposerDropdownClassName,
-  chatSettingsSelectorTriggerClassName,
-} from "../input/chat-composer-control-styles";
 
 interface ProviderSelectorProps {
   providerId: string;
@@ -50,7 +45,7 @@ export function ProviderSelector({
           <ProviderIcon
             providerId={provider.id}
             size={iconSize}
-            className="shrink-0 text-text-lighter"
+            className="shrink-0 text-subtle-foreground"
           />
         ),
       }))}
@@ -66,17 +61,8 @@ export function ProviderSelector({
       onOpenChange={onOpenChange}
       tooltip={tooltip}
       className={className}
-      triggerClassName={cn(
-        isComposer
-          ? chatComposerControlClassName("max-w-[128px]")
-          : chatSettingsSelectorTriggerClassName("w-[220px] gap-2"),
-        triggerClassName,
-      )}
-      menuClassName={
-        isComposer
-          ? chatComposerDropdownClassName("min-w-0 p-0")
-          : "min-w-0 overflow-hidden rounded-xl p-0"
-      }
+      triggerClassName={cn(isComposer ? "max-w-[128px]" : "w-[220px] gap-2", triggerClassName)}
+      menuClassName="min-w-0 p-0"
       menuMinWidth={isComposer ? 220 : 0}
       menuAnimated={!isComposer}
     />

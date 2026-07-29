@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, type RefObject } from "react";
-import type { AIChatState } from "@/features/ai/types/ai-chat-store.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
+import type { SlashCommandState } from "@/features/ai/types/chat-composer.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   CommandEmpty,
@@ -15,7 +15,7 @@ interface SlashCommandDropdownProps {
   anchorRef: RefObject<HTMLElement | null>;
   onSelect: (command: SlashCommand) => void;
   onClose?: () => void;
-  slashCommandState: AIChatState["slashCommandState"];
+  slashCommandState: SlashCommandState;
   availableSlashCommands: SlashCommand[];
   filteredCommands: SlashCommand[];
   onSelectedIndexChange: (index: number) => void;

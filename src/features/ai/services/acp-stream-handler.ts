@@ -132,7 +132,7 @@ export class AcpStreamHandler {
         statusWorkspacePath !== desiredWorkspacePath;
 
       if (status.running) {
-        useAIChatStore.getState().setAcpStatus(status);
+        useAIChatStore.getState().actions.setAcpStatus(status);
         this.activeSessionId = status.sessionId ?? null;
       }
 
@@ -181,12 +181,14 @@ export class AcpStreamHandler {
           throw new Error(`${this.agentId} failed to start`);
         }
 
-        useAIChatStore.getState().setAcpStatus(startStatus);
+        useAIChatStore.getState().actions.setAcpStatus(startStatus);
         this.activeSessionId = startStatus.sessionId ?? null;
 
         if (startStatus.sessionId) {
           if (targetChat) {
-            useAIChatStore.getState().setChatAcpSessionId(targetChat.id, startStatus.sessionId);
+            useAIChatStore
+              .getState()
+              .actions.setChatAcpSessionId(targetChat.id, startStatus.sessionId);
           }
         }
 
@@ -208,12 +210,12 @@ export class AcpStreamHandler {
   }
 
   private getTargetChat() {
-    const store = useAIChatStore.getState();
+    const { actions } = useAIChatStore.getState();
     if (this.chatId) {
-      return store.getChatById(this.chatId);
+      return actions.getChatById(this.chatId);
     }
 
-    return store.getCurrentChat();
+    return actions.getCurrentChat();
   }
 
   private formatStartupError(error: unknown): string {
@@ -360,12 +362,11 @@ export class AcpStreamHandler {
         break;
 
       case "slash_commands_update":
-        // Handle slash commands update
-        useAIChatStore.getState().setAvailableSlashCommands(event.commands);
+        useAIChatStore.getState().actions.setAvailableSlashCommands(event.commands);
         break;
 
       case "config_options_update":
-        useAIChatStore.getState().setSessionConfigOptions(event.configOptions);
+        useAIChatStore.getState().actions.setSessionConfigOptions(event.configOptions);
         break;
 
       case "plan_update":
@@ -406,17 +407,17 @@ export class AcpStreamHandler {
     console.log("Session mode state updated:", event.modeState);
     useAIChatStore
       .getState()
-      .setSessionModeState(event.modeState.currentModeId, event.modeState.availableModes);
+      .actions.setSessionModeState(event.modeState.currentModeId, event.modeState.availableModes);
   }
 
   private handleCurrentModeUpdate(event: Extract<AcpEvent, { type: "current_mode_update" }>): void {
     console.log("Current mode changed:", event.currentModeId);
-    useAIChatStore.getState().setCurrentModeId(event.currentModeId);
+    useAIChatStore.getState().actions.setCurrentModeId(event.currentModeId);
   }
 
   private handleStatusChanged(event: Extract<AcpEvent, { type: "status_changed" }>): void {
     console.log("Agent status changed:", event.status);
-    useAIChatStore.getState().setAcpStatus(event.status);
+    useAIChatStore.getState().actions.setAcpStatus(event.status);
     if (event.status.agentId === this.agentId) {
       this.activeSessionId = event.status.sessionId ?? this.activeSessionId;
     }
@@ -424,7 +425,9 @@ export class AcpStreamHandler {
     if (event.status.running && event.status.sessionId) {
       const targetChat = this.getTargetChat();
       if (targetChat && targetChat.agentId === this.agentId) {
-        useAIChatStore.getState().setChatAcpSessionId(targetChat.id, event.status.sessionId);
+        useAIChatStore
+          .getState()
+          .actions.setChatAcpSessionId(targetChat.id, event.status.sessionId);
       }
     }
 
@@ -459,7 +462,7 @@ export class AcpStreamHandler {
           ? getChatTitleFromSessionInfo(targetChat.title, action.title)
           : null;
         if (targetChat && nextTitle) {
-          useAIChatStore.getState().updateChatTitle(targetChat.id, nextTitle);
+          useAIChatStore.getState().actions.updateChatTitle(targetChat.id, nextTitle);
         }
         break;
       }

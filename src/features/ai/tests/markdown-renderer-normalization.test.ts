@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizePlainTextFence } from "@/features/ai/lib/assistant-markdown";
+import {
+  normalizeImplicitCodeFences,
+  normalizePlainTextFence,
+} from "@/features/ai/lib/assistant-markdown";
 
 describe("assistant markdown normalization", () => {
   it("unwraps prose emitted inside a plain text fence", () => {
@@ -15,5 +18,11 @@ describe("assistant markdown normalization", () => {
     const code = "```ts\nconst answer = 42;\n```";
 
     expect(normalizePlainTextFence(code)).toBe(code);
+  });
+
+  it("wraps implicit language-labeled source code in a fence", () => {
+    expect(normalizeImplicitCodeFences("TypeScript\nconst answer = 42;")).toBe(
+      "```typescript\nconst answer = 42;\n```",
+    );
   });
 });

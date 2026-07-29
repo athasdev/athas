@@ -15,10 +15,6 @@ import { Combobox, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } fr
 import { CommandItemBadge } from "@/ui/command";
 import { cn } from "@/utils/cn";
 import { getDirectoryPath } from "@/utils/path-helpers";
-import {
-  chatComposerDropdownHeaderClassName,
-  chatComposerDropdownListClassName,
-} from "../input/chat-composer-control-styles";
 
 interface AIFileSelectorProps {
   files: FileEntry[];
@@ -165,7 +161,12 @@ export function AIFileSelector({
       autoHighlight
     >
       {showSearchInput && (
-        <div className={cn(chatComposerDropdownHeaderClassName, compact && "px-1.5 py-1.5")}>
+        <div
+          className={cn(
+            "border-border/60 border-b bg-surface/95 px-2 py-2",
+            compact && "px-1.5 py-1.5",
+          )}
+        >
           <ComboboxInput
             ref={searchInputRef}
             placeholder="Search files..."
@@ -181,8 +182,7 @@ export function AIFileSelector({
 
       <ComboboxList
         className={cn(
-          "items-container",
-          chatComposerDropdownListClassName,
+          "items-container min-h-0 flex-1 overflow-y-auto bg-surface/95 p-1.5 [overscroll-behavior:contain]",
           compact && "p-0",
           listClassName,
         )}
@@ -202,7 +202,7 @@ export function AIFileSelector({
                 {showCategoryHeader ? (
                   <div
                     className={cn(
-                      "px-2 font-medium text-text-lighter/75",
+                      "px-2 font-medium text-subtle-foreground/75",
                       compact
                         ? "ui-text-sm pt-1 pb-0.5 leading-normal"
                         : "ui-text-base pt-1.5 pb-1 leading-[1.35]",
@@ -224,9 +224,9 @@ export function AIFileSelector({
                     <ThemedFileIcon fileName={file.name} isDir={false} />
                   </span>
                   <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <span className="truncate text-text">{file.name}</span>
+                    <span className="truncate text-foreground">{file.name}</span>
                     {directoryPath ? (
-                      <span className="truncate text-text-lighter/80">{directoryPath}</span>
+                      <span className="truncate text-subtle-foreground/80">{directoryPath}</span>
                     ) : null}
                   </span>
                   {category === "open" ? (

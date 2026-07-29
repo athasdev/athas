@@ -73,10 +73,10 @@ export function AgentSelector({
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(new Map());
   const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
-  const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
-  const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
+  const getCurrentAgentId = useAIChatStore((state) => state.actions.getCurrentAgentId);
+  const setSelectedAgentId = useAIChatStore((state) => state.actions.setSelectedAgentId);
+  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
+  const changeCurrentChatAgent = useAIChatStore((state) => state.actions.changeCurrentChatAgent);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
@@ -275,10 +275,12 @@ export function AgentSelector({
           }
           className="size-auto"
         >
-          <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
-          <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
+          <ProviderIcon providerId={currentAgentId} size={11} className="text-subtle-foreground" />
+          <span className="max-w-[140px] truncate text-foreground">
+            {currentAgent?.name || "Agent"}
+          </span>
           <ChevronDown
-            className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
+            className={cn("text-subtle-foreground transition-transform", isOpen && "rotate-180")}
           />
         </ComboboxTrigger>
       )}
@@ -290,7 +292,7 @@ export function AgentSelector({
         className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
         style={{ maxHeight: "240px" }}
       >
-        <div className="bg-secondary-bg px-1.5 py-1.5">
+        <div className="bg-surface px-1.5 py-1.5">
           <ComboboxInput
             placeholder="Search agents..."
             variant="ghost"
@@ -312,18 +314,18 @@ export function AgentSelector({
               showIndicator={false}
               className={cn(
                 "group min-h-7 cursor-pointer gap-2 py-1",
-                item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
-                !item.isInstalled && item.id !== "custom" && "text-text-lighter",
+                item.isCurrent && "bg-selected/90 ring-1 ring-primary/10",
+                !item.isInstalled && item.id !== "custom" && "text-subtle-foreground",
               )}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
+                <ProviderIcon providerId={item.id} size={12} className="text-subtle-foreground" />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-left text-text ui-text-sm leading-4">
+                  <div className="truncate text-left text-foreground ui-text-sm leading-4">
                     {item.name}
                   </div>
                   {!item.isInstalled && item.id !== "custom" ? (
-                    <div className="truncate text-left ui-text-sm text-text-lighter leading-3">
+                    <div className="truncate text-left ui-text-sm text-subtle-foreground leading-3">
                       {item.canInstall ? "Not installed" : item.description}
                     </div>
                   ) : null}
@@ -357,8 +359,8 @@ export function AgentSelector({
                     size="icon-xs"
                     className={cn(
                       item.isCurrent
-                        ? "bg-accent/15 text-accent"
-                        : "text-text-lighter hover:bg-secondary-bg hover:text-text",
+                        ? "bg-primary/15 text-primary"
+                        : "text-subtle-foreground hover:bg-surface hover:text-foreground",
                     )}
                     tooltip="Athas Agent settings"
                     aria-label="Open Athas Agent settings"

@@ -2,21 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { performMigrationIfNeeded } from "../lib/chat-migration";
 import { useAIChatStore } from "../stores/ai-chat.store";
 
-/**
- * Hook to initialize AI chat storage
- * - Initializes SQLite database
- * - Migrates from localStorage if needed
- * - Loads chats from database
- */
 export function useChatInitialization() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initRef = useRef(false);
 
-  const initializeDatabase = useAIChatStore((state) => state.initializeDatabase);
-  const loadChatsFromDatabase = useAIChatStore((state) => state.loadChatsFromDatabase);
-  const applyDefaultSettings = useAIChatStore((state) => state.applyDefaultSettings);
+  const initializeDatabase = useAIChatStore((state) => state.actions.initializeDatabase);
+  const loadChatsFromDatabase = useAIChatStore((state) => state.actions.loadChatsFromDatabase);
 
   useEffect(() => {
     // Prevent double initialization in strict mode
@@ -41,9 +34,6 @@ export function useChatInitialization() {
         // Step 3: Load chats from database
         await loadChatsFromDatabase();
 
-        // Step 4: Apply default settings from settings store
-        applyDefaultSettings();
-
         setIsInitialized(true);
       } catch (err) {
         const errorMsg = `Failed to initialize chat storage: ${err}`;
@@ -55,7 +45,7 @@ export function useChatInitialization() {
     }
 
     initialize();
-  }, [initializeDatabase, loadChatsFromDatabase, applyDefaultSettings]);
+  }, [initializeDatabase, loadChatsFromDatabase]);
 
   return { isInitialized, isLoading, error };
 }

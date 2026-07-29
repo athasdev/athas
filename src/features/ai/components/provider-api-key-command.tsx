@@ -71,9 +71,9 @@ function ProviderApiKeyCommandContent({
   const searchRef = useRef<HTMLInputElement>(null);
   const apiKeyInputRef = useRef<HTMLInputElement>(null);
 
-  const saveApiKey = useAIChatStore((state) => state.saveApiKey);
-  const removeApiKey = useAIChatStore((state) => state.removeApiKey);
-  const hasProviderApiKey = useAIChatStore((state) => state.hasProviderApiKey);
+  const saveApiKey = useAIChatStore((state) => state.actions.saveApiKey);
+  const removeApiKey = useAIChatStore((state) => state.actions.removeApiKey);
+  const hasProviderApiKey = useAIChatStore((state) => state.actions.hasProviderApiKey);
 
   const availableProviders = useAvailableProviders();
   const providers = useMemo(
@@ -166,7 +166,7 @@ function ProviderApiKeyCommandContent({
   return (
     <>
       <CommandHeader onClose={onClose}>
-        <Search className="shrink-0 text-text-lighter" size={14} />
+        <Search className="shrink-0 text-subtle-foreground" size={14} />
         <CommandInput
           ref={searchRef}
           value={query}
@@ -199,7 +199,7 @@ function ProviderApiKeyCommandContent({
                     <ProviderIcon
                       providerId={provider.id}
                       size={14}
-                      className="text-text-lighter"
+                      className="text-subtle-foreground"
                     />
                   }
                   title={provider.name}
@@ -223,11 +223,13 @@ function ProviderApiKeyCommandContent({
                 <ProviderIcon
                   providerId={selectedProvider.id}
                   size={16}
-                  className="shrink-0 text-text-lighter"
+                  className="shrink-0 text-subtle-foreground"
                 />
                 <div className="min-w-0">
-                  <div className="truncate ui-text-base text-text">{selectedProvider.name}</div>
-                  <div className="ui-text-base text-text-lighter">
+                  <div className="truncate ui-text-base text-foreground">
+                    {selectedProvider.name}
+                  </div>
+                  <div className="ui-text-base text-subtle-foreground">
                     {hasExistingKey ? "API key saved" : "API key required"}
                   </div>
                 </div>
@@ -260,7 +262,7 @@ function ProviderApiKeyCommandContent({
                 </div>
               )}
               {status === "invalid" && errorMessage && (
-                <div className="flex items-center gap-1.5 text-error ui-text-base">
+                <div className="flex items-center gap-1.5 text-destructive ui-text-base">
                   <WarningCircle />
                   {errorMessage}
                 </div>
@@ -272,7 +274,7 @@ function ProviderApiKeyCommandContent({
                     href={dashboardLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-sans text-text-lighter ui-text-base hover:text-text"
+                    className="font-sans text-subtle-foreground ui-text-base hover:text-foreground"
                   >
                     Open dashboard
                   </a>
@@ -285,7 +287,7 @@ function ProviderApiKeyCommandContent({
                       type="button"
                       variant="ghost"
                       onClick={() => void handleRemove()}
-                      className="text-error hover:bg-error/10 hover:text-error"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash />
                       <span>Remove</span>

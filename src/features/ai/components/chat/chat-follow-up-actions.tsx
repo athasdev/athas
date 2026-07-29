@@ -15,8 +15,7 @@ import {
   WrenchIcon as Wrench,
 } from "@/ui/icons";
 import { memo } from "react";
-import { MessageActions } from "@/features/ai/components/elements/message";
-import { chatFollowUpActionClassName } from "@/features/ai/components/input/chat-composer-control-styles";
+import { MessageActions } from "@/ui/message";
 import type { ChatFollowUpAction } from "@/features/ai/lib/follow-up-actions";
 import { Button } from "@/ui/button";
 
@@ -69,10 +68,9 @@ function FollowUpButton({
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="default"
       size="xs"
       onClick={() => onSelect(action.prompt)}
-      className={chatFollowUpActionClassName()}
       tooltip={action.prompt}
       aria-label={action.label}
     >

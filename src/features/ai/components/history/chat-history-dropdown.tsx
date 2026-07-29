@@ -113,7 +113,7 @@ export default function ChatHistoryDropdown({
   return (
     <Command isVisible={isOpen} onClose={handleClose}>
       <CommandHeader onClose={handleClose}>
-        <Search className="shrink-0 text-text-lighter" size={14} />
+        <Search className="shrink-0 text-subtle-foreground" size={14} />
         <CommandInput
           ref={inputRef}
           value={searchQuery}
@@ -143,20 +143,20 @@ export default function ChatHistoryDropdown({
                 }}
                 onMouseEnter={() => setSelectedIndex(index)}
                 isSelected={isSelected}
-                className={cn("group", isCurrent && !isSelected && "bg-accent/10 text-text")}
+                className={cn("group", isCurrent && !isSelected && "bg-primary/10 text-foreground")}
                 aria-current={isCurrent}
                 icon={
                   isCurrent ? (
-                    <Check className="text-accent" size={14} />
+                    <Check className="text-primary" size={14} />
                   ) : (
                     <ProviderIcon
                       providerId={chat.agentId || "custom"}
                       size={13}
-                      className="text-text-lighter"
+                      className="text-subtle-foreground"
                     />
                   )
                 }
-                title={<span className={cn(isCurrent && "text-accent")}>{chat.title}</span>}
+                title={<span className={cn(isCurrent && "text-primary")}>{chat.title}</span>}
                 accessory={
                   <>
                     {chat.isPinned ? <CommandItemBadge>Pinned</CommandItemBadge> : null}

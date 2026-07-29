@@ -1,6 +1,4 @@
 import { listen } from "@tauri-apps/api/event";
-import "../../styles/ai-chat.css";
-import { KeyIcon as KeyRound } from "@/ui/icons";
 import type React from "react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { appendChatAcpEvent, type ChatAcpEventInput } from "@/features/ai/lib/acp-event-timeline";
@@ -18,18 +16,21 @@ import { requestInlineEdit } from "@/features/editor/services/editor-inline-edit
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { getChatCompletionStream, isAcpAgent } from "@/features/ai/services/ai-chat-service";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { AcpEvent, AcpPermissionOption } from "@/features/ai/types/acp.types";
+import type { AcpEvent } from "@/features/ai/types/acp.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import type { AIChatProps, Message } from "@/features/ai/types/ai-chat.types";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
+import {
+  getFallbackAgentSessionTitle,
+  normalizeAgentSessionTitle,
+} from "@/features/ai/utils/chat-session-title";
+import { getMessageSearchMatches } from "@/features/ai/utils/message-search";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { hasProductCapability } from "@/features/window/lib/product-capabilities";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import Badge from "@/ui/badge";
-import { Button } from "@/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   MessageScroller,
@@ -40,112 +41,10 @@ import {
 import { cn } from "@/utils/cn";
 import { useChatActions, useChatState } from "../../hooks/use-chat-store";
 import AIChatInputBar from "../input/chat-input-bar";
+import { AcpPermissionPrompt, type AcpPermissionRequest } from "./acp-permission-prompt";
 import { AgentShortcuts } from "./agent-shortcuts";
 import { ChatHeader } from "./chat-header";
 import { ChatMessages } from "./chat-messages";
-
-function normalizeAgentSessionTitle(value: string): string | null {
-  const normalized = value
-    .replace(/[`"'“”‘’]/g, "")
-    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!normalized) return null;
-
-  const words = normalized.split(" ").slice(0, 2);
-  const title = words.join(" ").trim();
-  return title || null;
-}
-
-function fallbackAgentSessionTitle(message: string): string {
-  return message.length > 50 ? `${message.substring(0, 50)}...` : message;
-}
-
-function getPermissionSummary(permission: {
-  description: string;
-  permissionType: string;
-  resource: string;
-}) {
-  return (
-    permission.description ||
-    [permission.permissionType, permission.resource].filter(Boolean).join(" ")
-  ).trim();
-}
-
-function getFallbackPermissionOptions(): AcpPermissionOption[] {
-  return [
-    { id: "reject", name: "Deny", kind: "reject_once" },
-    { id: "allow", name: "Allow", kind: "allow_once" },
-  ];
-}
-
-function isPermissionApproval(option: AcpPermissionOption) {
-  return option.kind === "allow_once" || option.kind === "allow_always";
-}
-
-function getPermissionOptionLabel(option: AcpPermissionOption) {
-  switch (option.kind) {
-    case "allow_once":
-      return "Allow";
-    case "allow_always":
-      return "Always";
-    case "reject_once":
-      return "Deny";
-    case "reject_always":
-      return "Never";
-    default:
-      return option.name;
-  }
-}
-
-function getPermissionOptionTooltip(option: AcpPermissionOption) {
-  switch (option.kind) {
-    case "allow_once":
-      return "Allow once";
-    case "allow_always":
-      return "Always allow this request type";
-    case "reject_once":
-      return "Deny once";
-    case "reject_always":
-      return "Always deny this request type";
-    default:
-      return option.name;
-  }
-}
-
-function getPermissionOptionClassName(option: AcpPermissionOption) {
-  switch (option.kind) {
-    case "allow_always":
-      return "border-success/30 bg-success/10 text-success hover:border-success/40 hover:bg-success/15 hover:text-success";
-    case "allow_once":
-      return "border-border/70 bg-hover/50 text-text hover:bg-hover";
-    case "reject_always":
-      return "border-error/35 bg-error/10 text-error hover:border-error/45 hover:bg-error/15 hover:text-error";
-    case "reject_once":
-      return "";
-    default:
-      return "";
-  }
-}
-
-function getMessageSearchMatches(messages: Message[], query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return [];
-
-  return messages.flatMap((message) => {
-    const content = message.content.toLowerCase();
-    const matches: Array<{ messageId: string }> = [];
-    let index = content.indexOf(normalizedQuery);
-
-    while (index !== -1) {
-      matches.push({ messageId: message.id });
-      index = content.indexOf(normalizedQuery, index + normalizedQuery.length);
-    }
-
-    return matches;
-  });
-}
 
 const AIChat = memo(function AIChat({
   className,
@@ -172,15 +71,7 @@ const AIChat = memo(function AIChat({
   const { showToast } = useToast();
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [permissionQueue, setPermissionQueue] = useState<
-    Array<{
-      requestId: string;
-      description: string;
-      permissionType: string;
-      resource: string;
-      options: Extract<AcpEvent, { type: "permission_request" }>["options"];
-    }>
-  >([]);
+  const [permissionQueue, setPermissionQueue] = useState<AcpPermissionRequest[]>([]);
   const [acpEvents, setAcpEvents] = useState<ChatAcpEvent[]>([]);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
@@ -268,39 +159,40 @@ const AIChat = memo(function AIChat({
     const setupAcpStateSync = async () => {
       unlisten = await listen<AcpEvent>("acp-event", ({ payload }) => {
         const store = useAIChatStore.getState();
+        const { actions } = store;
 
         switch (payload.type) {
           case "slash_commands_update":
-            store.setAvailableSlashCommands(payload.commands);
+            actions.setAvailableSlashCommands(payload.commands);
             break;
           case "session_mode_update":
-            store.setSessionModeState(
+            actions.setSessionModeState(
               payload.modeState.currentModeId,
               payload.modeState.availableModes,
             );
             break;
           case "current_mode_update":
-            store.setCurrentModeId(payload.currentModeId);
+            actions.setCurrentModeId(payload.currentModeId);
             break;
           case "config_options_update":
-            store.setSessionConfigOptions(payload.configOptions);
+            actions.setSessionConfigOptions(payload.configOptions);
             break;
           case "session_info_update": {
             const chat =
               store.chats.find((item) => item.acpSessionId === payload.sessionId) ??
-              (store.acpStatus?.sessionId === payload.sessionId ? store.getCurrentChat() : null);
+              (store.acpStatus?.sessionId === payload.sessionId ? actions.getCurrentChat() : null);
             const nextTitle = chat ? getChatTitleFromSessionInfo(chat.title, payload.title) : null;
             if (chat && nextTitle) {
-              store.updateChatTitle(chat.id, nextTitle);
+              actions.updateChatTitle(chat.id, nextTitle);
             }
             break;
           }
           case "status_changed":
-            store.setAcpStatus(payload.status);
+            actions.setAcpStatus(payload.status);
             if (!payload.status.running) {
-              store.setAvailableSlashCommands([]);
-              store.setSessionModeState(null, []);
-              store.setSessionConfigOptions([]);
+              actions.setAvailableSlashCommands([]);
+              actions.setSessionModeState(null, []);
+              actions.setSessionConfigOptions([]);
             }
             break;
           default:
@@ -336,7 +228,7 @@ const AIChat = memo(function AIChat({
 
   const updateInitialAgentSessionTitle = useCallback(
     async (chatId: string, userMessage: string) => {
-      const fallbackTitle = fallbackAgentSessionTitle(userMessage);
+      const fallbackTitle = getFallbackAgentSessionTitle(userMessage);
       chatActions.updateChatTitle(chatId, fallbackTitle);
 
       const authState = useAuthStore.getState();
@@ -369,7 +261,7 @@ const AIChat = memo(function AIChat({
         const generatedTitle = normalizeAgentSessionTitle(editedText);
         if (!generatedTitle) return;
 
-        const currentChat = useAIChatStore.getState().getChatById(chatId);
+        const currentChat = useAIChatStore.getState().actions.getChatById(chatId);
         if (!currentChat) return;
 
         if (currentChat.title === fallbackTitle || currentChat.title === "New Session") {
@@ -474,7 +366,7 @@ const AIChat = memo(function AIChat({
       messageId: string,
       mutate: (currentMessage: Message | undefined) => Partial<Message>,
     ) => {
-      const currentMessages = useAIChatStore.getState().getMessagesForChat(chatId);
+      const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(chatId);
       const currentMessage = currentMessages.find((message) => message.id === messageId);
       chatActions.updateMessage(chatId, messageId, mutate(currentMessage));
     },
@@ -489,7 +381,7 @@ const AIChat = memo(function AIChat({
     const targetChat = effectiveChatId
       ? store.chats.find((chat) => chat.id === effectiveChatId)
       : null;
-    const currentAgentId = targetChat?.agentId ?? store.getCurrentAgentId();
+    const currentAgentId = targetChat?.agentId ?? store.actions.getCurrentAgentId();
     const isAcp = isAcpAgent(currentAgentId);
     const trimmedMessageContent = messageContent.trim();
     // For ACP agents, we don't need an API key.
@@ -508,7 +400,7 @@ const AIChat = memo(function AIChat({
       });
     }
 
-    const existingMessages = useAIChatStore.getState().getMessagesForChat(targetChatId);
+    const existingMessages = useAIChatStore.getState().actions.getMessagesForChat(targetChatId);
     const editedUserMessageIndex = options.editedUserMessageId
       ? existingMessages.findIndex(
           (message) => message.id === options.editedUserMessageId && message.role === "user",
@@ -556,7 +448,7 @@ const AIChat = memo(function AIChat({
     }
     chatActions.addMessage(targetChatId, assistantMessage);
 
-    const currentMessages = useAIChatStore.getState().getMessagesForChat(targetChatId);
+    const currentMessages = useAIChatStore.getState().actions.getMessagesForChat(targetChatId);
     if (currentMessages.length === 2) {
       void updateInitialAgentSessionTitle(targetChatId, userMessage.content);
     }
@@ -693,7 +585,6 @@ details: The ${emptyResponseSource} completed, but no content, tool output, or r
           });
           setIsSurfaceTyping(false);
           setSurfaceStreamingMessageId(null);
-          setAcpEvents((prev) => prev.filter((event) => event.kind !== "thinking"));
           abortControllerRef.current = null;
           processQueuedMessages();
         },
@@ -872,7 +763,8 @@ details: ${errorDetails || mainError}
         },
         (event) => {
           appendAcpEvent({
-            kind: "permission",
+            id: `permission-request-${event.requestId}`,
+            category: "permission",
             label: "Permission requested",
             detail: event.description || `${event.permissionType} ${event.resource}`.trim(),
             state: "info",
@@ -930,7 +822,7 @@ details: ${errorDetails || mainError}
                 : "Session metadata updated.";
               if (event.title) {
                 appendAcpEvent({
-                  kind: "status",
+                  category: "status",
                   label: "Session title updated",
                   detail: event.title,
                   state: "info",
@@ -951,7 +843,7 @@ details: ${errorDetails || mainError}
                   ? event.entries.map((entry) => entry.content).join(" | ")
                   : "No plan steps";
               appendAcpEvent({
-                kind: "plan",
+                category: "plan",
                 label: `Plan updated (${event.entries.length} steps)`,
                 detail: summary,
                 state: "info",
@@ -962,11 +854,11 @@ details: ${errorDetails || mainError}
               break;
             }
             case "status_changed":
-              useAIChatStore.getState().setAcpStatus(event.status);
+              useAIChatStore.getState().actions.setAcpStatus(event.status);
               break; // internal state sync
             case "error":
               appendAcpEvent({
-                kind: "error",
+                category: "error",
                 label: "Agent error",
                 detail: event.error,
                 state: "error",
@@ -1082,12 +974,6 @@ details: ${errorDetails || mainError}
   ]);
 
   const currentPermission = permissionQueue[0];
-  const currentPermissionSummary = currentPermission ? getPermissionSummary(currentPermission) : "";
-  const currentPermissionOptions = currentPermission
-    ? currentPermission.options.length > 0
-      ? currentPermission.options
-      : getFallbackPermissionOptions()
-    : [];
   const isNewSession = (currentChat?.messages.length ?? 0) === 0 && acpEvents.length === 0;
   const useInitialComposer = isNewSession && !currentPermission;
   const handlePermission = async (approved: boolean, optionId?: string) => {
@@ -1095,7 +981,8 @@ details: ${errorDetails || mainError}
     try {
       const option = currentPermission.options.find((item) => item.id === optionId);
       appendAcpEvent({
-        kind: "permission",
+        id: `permission-response-${currentPermission.requestId}`,
+        category: "permission",
         label: "Permission response",
         detail: option?.name || (approved ? "allow" : "deny"),
         state: approved ? "success" : "info",
@@ -1113,7 +1000,10 @@ details: ${errorDetails || mainError}
 
   return (
     <div
-      className={`ai-chat-surface font-sans flex h-full flex-col bg-transparent text-text ui-text-sm ${className || ""}`}
+      className={cn(
+        "font-sans flex h-full select-none flex-col bg-transparent text-foreground selection:bg-selection selection:text-foreground ui-text-sm",
+        className,
+      )}
     >
       <ChatHeader
         chatId={effectiveChatId}
@@ -1215,49 +1105,13 @@ details: ${errorDetails || mainError}
             </MessageScrollerProvider>
           )}
 
-          {currentPermission && (
-            <div className="bg-transparent px-3 pt-2 ui-text-sm">
-              <div className="flex h-9 items-center gap-2 rounded-lg border border-border/70 bg-primary-bg/92 px-2 shadow-[var(--shadow-card)]">
-                <KeyRound className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
-                <div
-                  className="min-w-0 flex-1 truncate text-text"
-                  title={`${currentPermission.permissionType} - ${currentPermission.resource}`}
-                >
-                  <span className="font-medium text-text-light">Permission</span>
-                  <span className="px-1.5 text-text-lighter">/</span>
-                  <span className="font-mono">{currentPermissionSummary}</span>
-                </div>
-                {permissionQueue.length > 1 ? (
-                  <Badge variant="muted" size="compact" className="shrink-0">
-                    +{permissionQueue.length - 1}
-                  </Badge>
-                ) : null}
-                <div className="flex shrink-0 items-center gap-1">
-                  {currentPermissionOptions.map((option) => {
-                    const approved = isPermissionApproval(option);
-                    return (
-                      <Button
-                        key={option.id}
-                        type="button"
-                        variant={approved ? "default" : "danger"}
-                        onClick={() =>
-                          handlePermission(
-                            approved,
-                            currentPermission.options.length > 0 ? option.id : undefined,
-                          )
-                        }
-                        className={cn("h-6 rounded-md px-2", getPermissionOptionClassName(option))}
-                        tooltip={getPermissionOptionTooltip(option)}
-                        tooltipSide="top"
-                      >
-                        {getPermissionOptionLabel(option)}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+          {currentPermission ? (
+            <AcpPermissionPrompt
+              permission={currentPermission}
+              queuedCount={permissionQueue.length - 1}
+              onRespond={handlePermission}
+            />
+          ) : null}
 
           {!useInitialComposer ? (
             <AIChatInputBar

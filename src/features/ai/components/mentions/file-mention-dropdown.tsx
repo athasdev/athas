@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import type { AIChatState } from "@/features/ai/types/ai-chat-store.types";
+import type { MentionState } from "@/features/ai/types/chat-composer.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { FileItem } from "@/features/global-search/types/global-search.types";
@@ -13,7 +13,7 @@ interface FileMentionDropdownProps {
   files: FileEntry[];
   onSelect: (file: FileEntry) => void;
   onVisibleFilesChange?: (files: FileEntry[]) => void;
-  mentionState: AIChatState["mentionState"];
+  mentionState: MentionState;
   onClose: () => void;
   onSelectedIndexChange: (index: number) => void;
 }
@@ -106,7 +106,7 @@ export const FileMentionDropdown = React.memo(function FileMentionDropdown({
           onSelectedIndexChange={onSelectedIndexChange}
           onResultsChange={handleResultsChange}
           showSearchInput={false}
-          listClassName="max-h-full bg-primary-bg"
+          listClassName="max-h-full bg-background"
           compact
         />
       </div>

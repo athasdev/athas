@@ -40,7 +40,7 @@ export function ComposerAttachedPanel({
         aria-label={ariaLabel}
         data-prevent-dialog-escape="true"
         className={cn(
-          "flex min-h-0 w-[var(--anchor-width)] max-w-[calc(100vw-16px)] select-auto flex-col gap-0 overflow-hidden rounded-t-2xl rounded-b-none border border-border/70 border-b-0 bg-primary-bg p-0 shadow-[var(--shadow-card)]",
+          "flex min-h-0 w-[var(--anchor-width)] max-w-[calc(100vw-16px)] select-auto flex-col gap-0 overflow-hidden rounded-t-2xl rounded-b-none border border-border/70 border-b-0 bg-background p-0 shadow-[var(--shadow-card)]",
           className,
         )}
         style={{

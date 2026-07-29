@@ -1,4 +1,6 @@
 import type * as React from "react";
+import { CopyIcon as Copy, type Icon as AppIcon } from "@/ui/icons";
+import { Button, type ButtonProps } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 function MessageGroup({ className, ...props }: React.ComponentProps<"div">) {
@@ -34,7 +36,7 @@ function MessageAvatar({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-avatar"
       className={cn(
-        "flex min-w-8 shrink-0 items-center justify-center self-end overflow-hidden rounded-full bg-secondary-bg group-has-data-[slot=message-footer]/message:-translate-y-8",
+        "flex min-w-8 shrink-0 items-center justify-center self-end overflow-hidden rounded-full bg-surface group-has-data-[slot=message-footer]/message:-translate-y-8",
         className,
       )}
       {...props}
@@ -60,7 +62,7 @@ function MessageHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-header"
       className={cn(
-        "flex max-w-full min-w-0 items-center px-3 font-medium text-text-lighter ui-text-sm group-has-data-[variant=ghost]/message:px-0",
+        "flex max-w-full min-w-0 items-center px-3 font-medium text-subtle-foreground ui-text-sm group-has-data-[variant=ghost]/message:px-0",
         className,
       )}
       {...props}
@@ -73,7 +75,7 @@ function MessageFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="message-footer"
       className={cn(
-        "flex max-w-full min-w-0 items-center gap-1.5 px-3 font-medium text-text-lighter/55 ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end",
+        "flex max-w-full min-w-0 items-center gap-1.5 px-3 font-medium text-subtle-foreground/55 ui-text-sm group-has-data-[variant=ghost]/message:px-0 group-data-[align=end]/message:justify-end",
         className,
       )}
       {...props}
@@ -81,4 +83,66 @@ function MessageFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-export { Message, MessageAvatar, MessageContent, MessageFooter, MessageGroup, MessageHeader };
+function MessageResponse({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="message-response"
+      className={cn(
+        "select-text pr-1 leading-relaxed text-foreground [overflow-wrap:anywhere] *:select-text [&_.select-none]:!select-none [&_[aria-label]]:!select-none [&_[role=button]]:!select-none [&_button]:!select-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function MessageActions({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="message-actions"
+      className={cn(
+        "mt-2 flex flex-wrap items-center gap-1.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function MessageAction({
+  label,
+  tooltip,
+  icon: Icon = Copy,
+  children,
+  ...props
+}: Omit<ButtonProps, "tooltip"> & {
+  label: string;
+  tooltip?: string;
+  icon?: AppIcon;
+  children?: React.ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-xs"
+      tooltip={tooltip ?? label}
+      aria-label={label}
+      {...props}
+    >
+      {children ?? <Icon className="size-3.5" />}
+    </Button>
+  );
+}
+
+export {
+  Message,
+  MessageAction,
+  MessageActions,
+  MessageAvatar,
+  MessageContent,
+  MessageFooter,
+  MessageGroup,
+  MessageHeader,
+  MessageResponse,
+};

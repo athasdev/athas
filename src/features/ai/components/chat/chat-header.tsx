@@ -18,10 +18,9 @@ import {
   paneHeaderClassName,
   paneTitleClassName,
 } from "@/features/panes/components/pane-chrome";
-import { chatMiniIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../stores/ai-chat.store";
-import ChatHistoryDropdown from "../history/sidebar";
+import ChatHistoryDropdown from "../history/chat-history-dropdown";
 import { AgentSelector } from "../selectors/agent-selector";
 
 function EditableChatTitle({
@@ -68,7 +67,7 @@ function EditableChatTitle({
 
   return (
     <span
-      className="block max-w-full cursor-pointer truncate rounded-md px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-hover"
+      className="block max-w-full cursor-pointer truncate rounded-md px-2 py-1 ui-text-sm font-medium transition-colors hover:bg-accent"
       onClick={() => setIsEditing(true)}
       title="Click to rename session"
     >
@@ -111,8 +110,8 @@ export function ChatHeader({
   const workspacePath = useProjectStore((state) => state.rootFolderPath || null);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const [isChatHistoryVisible, setIsChatHistoryVisible] = useState(false);
-  const updateChatTitle = useAIChatStore((state) => state.updateChatTitle);
-  const setChatArchived = useAIChatStore((state) => state.setChatArchived);
+  const updateChatTitle = useAIChatStore((state) => state.actions.updateChatTitle);
+  const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
 
   const { openSettingsDialog } = useUIState();
   const effectiveChatId = chatId ?? currentChatId;
@@ -141,7 +140,7 @@ export function ChatHeader({
   }, [isMessageSearchOpen]);
 
   return (
-    <div className="relative z-[10020] bg-primary-bg">
+    <div className="relative z-[10020] bg-background">
       <div className={paneHeaderClassName()}>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -169,7 +168,6 @@ export function ChatHeader({
             tooltip="Search messages"
             tooltipSide="bottom"
             aria-label="Search messages"
-            className={chatMiniIconButtonClassName()}
           >
             <Search />
           </Button>
@@ -183,7 +181,6 @@ export function ChatHeader({
             tooltip="Agent History"
             tooltipSide="bottom"
             aria-label="Toggle agent history"
-            className={chatMiniIconButtonClassName()}
           >
             <History />
           </Button>
@@ -192,7 +189,6 @@ export function ChatHeader({
             variant="header"
             selectedAgentId={currentAgentId}
             onOpenSettings={() => openSettingsDialog("ai")}
-            triggerClassName={chatMiniIconButtonClassName()}
           />
         </div>
       </div>
@@ -223,10 +219,10 @@ export function ChatHeader({
             size="xs"
             variant="ghost"
             leftIcon={Search}
-            className="h-7 bg-secondary-bg/45"
+            className="h-7 bg-surface/45"
           />
 
-          <span className="min-w-10 shrink-0 text-right text-text-lighter ui-text-sm">
+          <span className="min-w-10 shrink-0 text-right text-subtle-foreground ui-text-sm">
             {messageSearchPosition}
           </span>
 
@@ -238,7 +234,6 @@ export function ChatHeader({
             onClick={onPreviousMessageSearchMatch}
             tooltip="Previous match"
             aria-label="Previous search match"
-            className={chatMiniIconButtonClassName()}
           >
             <ArrowUp />
           </Button>
@@ -250,7 +245,6 @@ export function ChatHeader({
             onClick={onNextMessageSearchMatch}
             tooltip="Next match"
             aria-label="Next search match"
-            className={chatMiniIconButtonClassName()}
           >
             <ArrowDown />
           </Button>
@@ -261,7 +255,6 @@ export function ChatHeader({
             onClick={onCloseMessageSearch}
             tooltip="Close search"
             aria-label="Close message search"
-            className={chatMiniIconButtonClassName()}
           >
             <X />
           </Button>

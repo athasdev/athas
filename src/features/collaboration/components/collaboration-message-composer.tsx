@@ -1,5 +1,4 @@
 import { FilePlusIcon as FilePlus, PaperPlaneTiltIcon as PaperPlaneTilt } from "@/ui/icons";
-import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
 import { Spinner } from "@/ui/spinner";
 import { SidebarComposerBody, SidebarFooter } from "@/ui/sidebar";
@@ -30,7 +29,7 @@ export function CollaborationMessageComposer({
 
   return (
     <SidebarFooter variant="surface" className="mx-0 mb-0">
-      {error ? <div className="ui-text-sm mb-1.5 px-1 text-error">{error}</div> : null}
+      {error ? <div className="ui-text-sm mb-1.5 px-1 text-destructive">{error}</div> : null}
       <SidebarComposerBody variant="plain">
         <Textarea
           value={value}
@@ -52,7 +51,6 @@ export function CollaborationMessageComposer({
           <Button
             type="button"
             variant="ghost"
-            className={chatComposerIconButtonClassName()}
             disabled={disabled || isSending}
             tooltip="Share Documents"
             tooltipSide="top"

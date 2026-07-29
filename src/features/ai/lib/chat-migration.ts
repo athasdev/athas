@@ -12,9 +12,6 @@ const OLD_STORAGE_KEY = "athas-ai-chat-v4";
 interface LegacyStorageState {
   state: {
     chats?: any[];
-    currentChatId?: string;
-    mode?: string;
-    outputStyle?: string;
   };
   version: number;
 }

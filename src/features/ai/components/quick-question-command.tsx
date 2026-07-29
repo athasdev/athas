@@ -181,7 +181,7 @@ export function QuickQuestionCommandContent({
         <CommandHeaderAction type="button" onClick={onBack} aria-label="Back to commands">
           <CaretLeft />
         </CommandHeaderAction>
-        <Sparkles className="shrink-0 text-text-lighter" size={15} weight="duotone" />
+        <Sparkles className="shrink-0 text-subtle-foreground" size={15} weight="duotone" />
         <CommandInput
           ref={inputRef}
           value={question}
@@ -201,15 +201,15 @@ export function QuickQuestionCommandContent({
           </CommandEmpty>
         ) : error ? (
           <CommandEmpty>
-            <span className="text-error">{error}</span>
+            <span className="text-destructive">{error}</span>
           </CommandEmpty>
         ) : answer ? (
           <div className="px-3 py-2">
-            <div className="ui-text-base max-h-48 overflow-y-auto text-text">
+            <div className="ui-text-base max-h-48 overflow-y-auto text-foreground">
               <MarkdownRenderer content={answer} />
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 border-border border-t pt-2">
-              <div className="flex min-w-0 items-center gap-1.5 ui-text-base text-text-lighter">
+              <div className="flex min-w-0 items-center gap-1.5 ui-text-base text-subtle-foreground">
                 <ProviderIcon providerId={aiProviderId} size={11} />
                 <span className="truncate">{modelLabel}</span>
               </div>
@@ -221,7 +221,7 @@ export function QuickQuestionCommandContent({
                 tooltip="Copy answer"
                 size="icon"
               >
-                <Copy className="text-text-lighter" size={12} />
+                <Copy className="text-subtle-foreground" size={12} />
               </Button>
             </div>
           </div>

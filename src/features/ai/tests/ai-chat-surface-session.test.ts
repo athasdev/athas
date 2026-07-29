@@ -22,14 +22,15 @@ describe("AI chat surface sessions", () => {
     useAIChatStore.setState({
       chats: [],
       currentChatId: null,
-      activeAgentChatIds: [],
       pendingAgentLaunchRequest: null,
     });
   });
 
   it("creates an editor-tab session without replacing the sidebar session", () => {
-    const sidebarChatId = useAIChatStore.getState().createNewChat("custom");
-    const tabChatId = useAIChatStore.getState().createNewChat("custom", { activate: false });
+    const sidebarChatId = useAIChatStore.getState().actions.createNewChat("custom");
+    const tabChatId = useAIChatStore
+      .getState()
+      .actions.createNewChat("custom", { activate: false });
 
     expect(tabChatId).not.toBe(sidebarChatId);
     expect(useAIChatStore.getState().currentChatId).toBe(sidebarChatId);
@@ -37,43 +38,45 @@ describe("AI chat surface sessions", () => {
   });
 
   it("ensures a missing tab session without activating it in the sidebar", () => {
-    const sidebarChatId = useAIChatStore.getState().createNewChat("custom");
+    const sidebarChatId = useAIChatStore.getState().actions.createNewChat("custom");
 
-    useAIChatStore.getState().ensureChatSession("tab-session", "custom", { activate: false });
+    useAIChatStore
+      .getState()
+      .actions.ensureChatSession("tab-session", "custom", { activate: false });
 
     expect(useAIChatStore.getState().currentChatId).toBe(sidebarChatId);
-    expect(useAIChatStore.getState().getChatById("tab-session")).toBeDefined();
+    expect(useAIChatStore.getState().actions.getChatById("tab-session")).toBeDefined();
   });
 
   it("pins and unpins a session", () => {
-    const chatId = useAIChatStore.getState().createNewChat("custom");
+    const chatId = useAIChatStore.getState().actions.createNewChat("custom");
 
-    useAIChatStore.getState().setChatPinned(chatId, true);
-    expect(useAIChatStore.getState().getChatById(chatId)?.isPinned).toBe(true);
+    useAIChatStore.getState().actions.setChatPinned(chatId, true);
+    expect(useAIChatStore.getState().actions.getChatById(chatId)?.isPinned).toBe(true);
 
-    useAIChatStore.getState().setChatPinned(chatId, false);
-    expect(useAIChatStore.getState().getChatById(chatId)?.isPinned).toBe(false);
+    useAIChatStore.getState().actions.setChatPinned(chatId, false);
+    expect(useAIChatStore.getState().actions.getChatById(chatId)?.isPinned).toBe(false);
   });
 
   it("archives a session and activates the next available session", () => {
-    const firstChatId = useAIChatStore.getState().createNewChat("custom");
-    const secondChatId = useAIChatStore.getState().createNewChat("custom");
+    const firstChatId = useAIChatStore.getState().actions.createNewChat("custom");
+    const secondChatId = useAIChatStore.getState().actions.createNewChat("custom");
 
-    useAIChatStore.getState().setChatPinned(secondChatId, true);
-    useAIChatStore.getState().setChatArchived(secondChatId, true);
+    useAIChatStore.getState().actions.setChatPinned(secondChatId, true);
+    useAIChatStore.getState().actions.setChatArchived(secondChatId, true);
 
     const state = useAIChatStore.getState();
-    expect(state.getChatById(secondChatId)?.archivedAt).toBeInstanceOf(Date);
-    expect(state.getChatById(secondChatId)?.isPinned).toBe(false);
+    expect(state.actions.getChatById(secondChatId)?.archivedAt).toBeInstanceOf(Date);
+    expect(state.actions.getChatById(secondChatId)?.isPinned).toBe(false);
     expect(state.currentChatId).toBe(firstChatId);
   });
 
   it("restores an archived session without activating it", () => {
-    const chatId = useAIChatStore.getState().createNewChat("custom");
+    const chatId = useAIChatStore.getState().actions.createNewChat("custom");
 
-    useAIChatStore.getState().setChatArchived(chatId, true);
-    useAIChatStore.getState().setChatArchived(chatId, false);
+    useAIChatStore.getState().actions.setChatArchived(chatId, true);
+    useAIChatStore.getState().actions.setChatArchived(chatId, false);
 
-    expect(useAIChatStore.getState().getChatById(chatId)?.archivedAt).toBeNull();
+    expect(useAIChatStore.getState().actions.getChatById(chatId)?.archivedAt).toBeNull();
   });
 });

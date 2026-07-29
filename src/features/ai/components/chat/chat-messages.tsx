@@ -107,8 +107,6 @@ export const ChatMessages = memo(function ChatMessages({
     <MessageScrollerContent aria-busy={messages.some((message) => message.isStreaming)}>
       {timelineItems.map((item) => {
         if (item.type === "acp") {
-          if (item.event.kind === "thinking") return null;
-
           return (
             <MessageScrollerItem key={item.id} messageId={item.id}>
               <AcpInlineEvent event={item.event} />
@@ -160,8 +158,8 @@ export const ChatMessages = memo(function ChatMessages({
               matchesSearch && "transition-colors",
               matchesSearch &&
                 (isActiveSearchMatch
-                  ? "bg-accent/10 ring-1 ring-inset ring-accent/30"
-                  : "bg-accent/5"),
+                  ? "bg-primary/10 ring-1 ring-inset ring-primary/30"
+                  : "bg-primary/5"),
             )}
           >
             <ChatMessage
