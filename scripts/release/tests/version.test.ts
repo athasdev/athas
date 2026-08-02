@@ -3,6 +3,7 @@ import {
   bumpStableBase,
   formatVersion,
   getReleaseCommitMessage,
+  getWindowsMsiVersion,
   parsePrerelease,
   parseVersion,
 } from "../version";
@@ -34,7 +35,14 @@ describe("release versions", () => {
     );
   });
 
+  it("maps stable and preview versions to ordered numeric MSI versions", () => {
+    expect(getWindowsMsiVersion(parseVersion("1.2.3-preview.4"))).toBe("1.2.3004");
+    expect(getWindowsMsiVersion(parseVersion("1.2.3"))).toBe("1.2.3900");
+    expect(getWindowsMsiVersion(parseVersion("1.2.4-preview.1"))).toBe("1.2.4001");
+  });
+
   it("rejects unsupported version formats", () => {
     expect(() => parseVersion("1.2.3-alpha.1")).toThrow("Invalid version format");
+    expect(() => getWindowsMsiVersion(parseVersion("1.2.65"))).toThrow("patch versions up to 64");
   });
 });

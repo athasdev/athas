@@ -6,13 +6,14 @@ source "${script_dir}/cef.sh"
 
 usage() {
   cat <<'EOF'
-Usage: scripts/release/package-linux-native.sh <deb|rpm|appimage|all> [--preview]
+Usage: scripts/release/package-linux-native.sh <deb|rpm|packages|appimage|all> [--preview]
 
-Build experimental native Linux packages for the CEF runtime.
+Build native Linux packages for the CEF runtime.
 
 Examples:
   scripts/release/package-linux-native.sh deb
   scripts/release/package-linux-native.sh rpm
+  scripts/release/package-linux-native.sh packages
   scripts/release/package-linux-native.sh appimage
   scripts/release/package-linux-native.sh all --preview
 EOF
@@ -37,6 +38,9 @@ case "$target" in
     ;;
   rpm)
     bundles="rpm"
+    ;;
+  packages)
+    bundles="deb,rpm"
     ;;
   appimage)
     bundles="appimage"

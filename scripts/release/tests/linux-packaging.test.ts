@@ -33,6 +33,14 @@ describe("Linux release packaging", () => {
     expect(script).toContain("dpkg-deb --root-owner-group");
   });
 
+  it("builds Debian and RPM packages together in the release workflow", () => {
+    const workflow = readRepoFile(".github/workflows/release.yml");
+
+    expect(workflow).toContain("package-linux-native.sh packages");
+    expect(workflow).toContain("release-dist/*.deb");
+    expect(workflow).toContain("release-dist/*.rpm");
+  });
+
   it("does not force software rendering from the AppImage wrapper", () => {
     const script = readRepoFile("src-tauri/appimage-hooks/AppRun.wrapped");
 

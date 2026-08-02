@@ -13,15 +13,15 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function displayAppPrefix(channel) {
+function displayAppPrefix(channel) {
   return channel === "preview" ? "Athas Preview" : "Athas";
 }
 
-export function releaseAssetPrefix(channel) {
+function releaseAssetPrefix(channel) {
   return channel === "preview" ? "Athas.Preview" : "Athas";
 }
 
-export function normalizeReleaseAssetName(name, channel) {
+function normalizeReleaseAssetName(name, channel) {
   if (channel !== "preview") {
     return name;
   }
@@ -93,6 +93,30 @@ export function requiredAssets(version, channel) {
       checksum: true,
     },
     {
+      id: "linux-x64-deb",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_amd64\\.deb$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "linux-arm64-deb",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_arm64\\.deb$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "linux-x64-rpm",
+      pattern: new RegExp(`^${appPrefix}-${escapedVersion}-1\\.x86_64\\.rpm$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "linux-arm64-rpm",
+      pattern: new RegExp(`^${appPrefix}-${escapedVersion}-1\\.aarch64\\.rpm$`),
+      signature: true,
+      checksum: true,
+    },
+    {
       id: "windows-x64-nsis",
       pattern: new RegExp(`^${appPrefix}_${escapedVersion}_x64-setup\\.exe$`),
       signature: true,
@@ -104,6 +128,18 @@ export function requiredAssets(version, channel) {
       signature: true,
       checksum: true,
     },
+    {
+      id: "windows-x64-msi",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_x64_en-US\\.msi$`),
+      signature: true,
+      checksum: true,
+    },
+    {
+      id: "windows-arm64-msi",
+      pattern: new RegExp(`^${appPrefix}_${escapedVersion}_arm64_en-US\\.msi$`),
+      signature: true,
+      checksum: true,
+    },
   ];
 }
 
@@ -111,10 +147,7 @@ export function forbiddenAssetPatterns(version) {
   const escapedVersion = escapeRegExp(version);
   const appPrefix = "Athas(?:[ .]Preview)?";
   return [
-    new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)_en-US\\.msi(?:\\.sig)?$`),
     new RegExp(`^${appPrefix}_${escapedVersion}_(?:amd64|aarch64)\\.AppImage(?:\\.sig)?$`),
-    new RegExp(`^${appPrefix}_${escapedVersion}_(?:amd64|arm64)\\.deb(?:\\.sig)?$`),
-    new RegExp(`^${appPrefix}-${escapedVersion}-1\\.(?:x86_64|aarch64)\\.rpm(?:\\.sig)?$`),
     new RegExp(`^${appPrefix}_${escapedVersion}_(?:x64|arm64)-setup-machine\\.exe(?:\\.sig)?$`),
   ];
 }

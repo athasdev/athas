@@ -1,6 +1,11 @@
 #!/usr/bin/env bun
 import { $ } from "bun";
-import { parsePrerelease, parseStableVersion } from "../version";
+import {
+  getWindowsMsiVersion,
+  parsePrerelease,
+  parseStableVersion,
+  parseVersion,
+} from "../version";
 
 const colors = {
   reset: "\x1b[0m",
@@ -220,6 +225,28 @@ async function main() {
         message: `package.json (${currentVersion}), tauri.conf.json (${tauriVersion}), Cargo.toml (${cargoVersion})`,
       };
     }
+    return { passed: true };
+  });
+
+  await runCheck("Windows MSI version stays in sync", async () => {
+    let expectedWindowsMsiVersion: string;
+    try {
+      expectedWindowsMsiVersion = getWindowsMsiVersion(parseVersion(currentVersion));
+    } catch (error) {
+      return {
+        passed: false,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+
+    const windowsMsiVersion = tauriConfig.bundle?.windows?.wix?.version;
+    if (windowsMsiVersion !== expectedWindowsMsiVersion) {
+      return {
+        passed: false,
+        message: `tauri.conf.json wix.version (${windowsMsiVersion ?? "missing"}) should be ${expectedWindowsMsiVersion}`,
+      };
+    }
+
     return { passed: true };
   });
 

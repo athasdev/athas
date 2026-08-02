@@ -4,6 +4,7 @@ import {
   bumpStableBase,
   formatVersion,
   getReleaseCommitMessage,
+  getWindowsMsiVersion,
   parseVersion,
   sameStableBase,
   type ParsedVersion,
@@ -137,6 +138,10 @@ async function updateTauriConfig(newVersion: string) {
   const configPath = `${process.cwd()}/src-tauri/tauri.conf.json`;
   const config = JSON.parse(await Bun.file(configPath).text());
   config.version = newVersion;
+  config.bundle ??= {};
+  config.bundle.windows ??= {};
+  config.bundle.windows.wix ??= {};
+  config.bundle.windows.wix.version = getWindowsMsiVersion(parseVersion(newVersion));
   await Bun.write(configPath, `${JSON.stringify(config, null, 2)}\n`);
   success(`Updated tauri.conf.json to v${newVersion}`);
 }

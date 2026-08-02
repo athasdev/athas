@@ -87,7 +87,6 @@ jobs:
             artifact: "macos-aarch64"
             os: "macos"
             args: "--target aarch64-apple-darwin"
-            cargo_features: ""
             target: "aarch64-apple-darwin"
             bundle_path: "target/aarch64-apple-darwin/release/bundle"
             timeout_minutes: 60
@@ -96,7 +95,6 @@ jobs:
             artifact: "macos-x86_64"
             os: "macos"
             args: "--target x86_64-apple-darwin"
-            cargo_features: ""
             target: "x86_64-apple-darwin"
             bundle_path: "target/x86_64-apple-darwin/release/bundle"
             timeout_minutes: 60
@@ -105,7 +103,6 @@ jobs:
             artifact: "linux-x86_64"
             os: "linux"
             args: ""
-            cargo_features: "--no-default-features --features linux"
             target: ""
             bundle_path: "target/release/bundle"
             timeout_minutes: 120
@@ -114,7 +111,6 @@ jobs:
             artifact: "linux-aarch64"
             os: "linux"
             args: ""
-            cargo_features: "--no-default-features --features linux"
             target: ""
             bundle_path: "target/release/bundle"
             timeout_minutes: 120
@@ -122,8 +118,7 @@ jobs:
           - platform: "windows-latest"
             artifact: "windows-x86_64"
             os: "windows"
-            args: "--bundles nsis"
-            cargo_features: ""
+            args: "--bundles nsis,msi"
             target: ""
             bundle_path: "target/release/bundle"
             timeout_minutes: 90
@@ -131,8 +126,7 @@ jobs:
           - platform: "windows-latest"
             artifact: "windows-aarch64"
             os: "windows"
-            args: "--target aarch64-pc-windows-msvc --bundles nsis"
-            cargo_features: ""
+            args: "--target aarch64-pc-windows-msvc --bundles nsis,msi"
             target: "aarch64-pc-windows-msvc"
             bundle_path: "target/aarch64-pc-windows-msvc/release/bundle"
             timeout_minutes: 90
@@ -318,7 +312,7 @@ jobs:
         if: matrix.os == 'windows'
         run: node scripts/release/windows/prepare-tauri-signing.mjs
 
-      - name: Build Linux Tauri bundles
+      - name: Build Linux native packages
         if: matrix.os == 'linux'
         shell: bash
         env:
@@ -328,7 +322,7 @@ jobs:
           NO_STRIP: "true"
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
-          cargo tauri build --no-bundle ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--config src-tauri/tauri.preview.conf.json' || '' }} -- ${{ matrix.cargo_features }}
+          bash scripts/release/package-linux-native.sh packages ${{ needs.release-metadata.outputs.is_prerelease == 'true' && '--preview' || '' }}
 
       - name: Build desktop Tauri bundles
         if: matrix.os != 'linux'
@@ -348,16 +342,27 @@ jobs:
           CEF_PATH: ${{ github.workspace }}/.cache/tauri-cef
         run: bash scripts/release/package-linux-tarball.sh "${{ runner.arch }}" release-dist
 
-      - name: Sign Linux tarball (Linux only)
+      - name: Collect Linux native packages (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          find target/release/bundle/deb -maxdepth 1 -type f -name '*.deb' -exec cp {} release-dist/ \;
+          find target/release/bundle/rpm -maxdepth 1 -type f -name '*.rpm' -exec cp {} release-dist/ \;
+          test "$(find release-dist -maxdepth 1 -type f -name '*.deb' | wc -l)" -eq 1
+          test "$(find release-dist -maxdepth 1 -type f -name '*.rpm' | wc -l)" -eq 1
+
+      - name: Sign Linux release assets (Linux only)
         if: matrix.os == 'linux'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for archive in release-dist/*.tar.gz; do
-            bun tauri signer sign "$archive"
-            test -s "${archive}.sig"
+          assets=(release-dist/*.tar.gz release-dist/*.deb release-dist/*.rpm)
+          test "${#assets[@]}" -eq 3
+          for asset in "${assets[@]}"; do
+            bun tauri signer sign "$asset"
+            test -s "${asset}.sig"
           done
 
       - name: Collect Windows user installer (Windows only)
@@ -383,6 +388,7 @@ jobs:
           path: |
             ${{ matrix.bundle_path }}/**/*.dmg
             ${{ matrix.bundle_path }}/**/*.app.tar.gz
+            ${{ matrix.bundle_path }}/**/*.msi
             ${{ matrix.bundle_path }}/**/*.sig
             release-dist/*
           if-no-files-found: error

@@ -11,6 +11,9 @@ export interface ParsedVersion {
   };
 }
 
+const WINDOWS_MSI_PATCH_MULTIPLIER = 1000;
+const WINDOWS_MSI_STABLE_OFFSET = 900;
+
 export function parseVersion(version: string): ParsedVersion {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(preview)\.(\d+))?$/);
   if (!match) {
@@ -71,7 +74,28 @@ export function getReleaseCommitMessage(version: ParsedVersion): string {
   return version.prerelease ? "Prepare preview release" : "Prepare release";
 }
 
-export function getStableBase(version: ParsedVersion): ParsedVersion {
+export function getWindowsMsiVersion(version: ParsedVersion): string {
+  if (version.major > 255 || version.minor > 255) {
+    throw new Error("Windows MSI versions support major and minor values up to 255");
+  }
+
+  if (version.patch > 64) {
+    throw new Error("Windows MSI version mapping supports patch versions up to 64");
+  }
+
+  const baseBuild = version.patch * WINDOWS_MSI_PATCH_MULTIPLIER;
+  if (!version.prerelease) {
+    return `${version.major}.${version.minor}.${baseBuild + WINDOWS_MSI_STABLE_OFFSET}`;
+  }
+
+  if (version.prerelease.number > 899) {
+    throw new Error("Windows MSI version mapping supports preview numbers up to 899");
+  }
+
+  return `${version.major}.${version.minor}.${baseBuild + version.prerelease.number}`;
+}
+
+function getStableBase(version: ParsedVersion): ParsedVersion {
   return {
     major: version.major,
     minor: version.minor,
