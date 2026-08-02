@@ -1,5 +1,4 @@
-import { CheckCircleIcon as CheckCircle2, DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
-import type { ReactNode } from "react";
+import { DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -9,15 +8,7 @@ import {
 } from "@/ui/dropdown";
 import Tooltip from "@/ui/tooltip";
 import type { PullRequestDetails } from "../types/github.types";
-import {
-  AssigneesList,
-  CIStatusIndicator,
-  LabelBadges,
-  LinkedIssuesList,
-  MergeStatusBadge,
-} from "./pr-status";
 import { GitHubViewerHeader } from "./github-viewer-shell";
-import { GitHubAvatar } from "./github-avatar";
 
 interface GitHubPRViewerHeaderProps {
   pr: PullRequestDetails;
@@ -25,9 +16,6 @@ interface GitHubPRViewerHeaderProps {
   changedFilesCount: number;
   additions: number;
   deletions: number;
-  checksSummary: string;
-  reviewerLogins: string[];
-  reviewSummary: string | null;
   isRefreshingDetails: boolean;
   onRefresh: () => void;
   onCheckout: () => void;
@@ -43,27 +31,12 @@ interface GitHubPRViewerHeaderProps {
   onClosePR: () => void;
 }
 
-interface OverviewFieldProps {
-  children: ReactNode;
-}
-
-function OverviewField({ children }: OverviewFieldProps) {
-  return (
-    <div className="font-sans ui-text-sm flex min-w-0 items-center gap-2 text-subtle-foreground">
-      <div className="min-w-0">{children}</div>
-    </div>
-  );
-}
-
 export function GitHubPRViewerHeader({
   pr,
   activeView,
   changedFilesCount,
   additions,
   deletions,
-  checksSummary,
-  reviewerLogins,
-  reviewSummary,
   isRefreshingDetails,
   onRefresh,
   onCheckout,
@@ -83,137 +56,84 @@ export function GitHubPRViewerHeader({
 
   return (
     <GitHubViewerHeader
-      title={pr.title}
-      meta={
-        <>
-          <span>{`athas#${pr.number}`}</span>
-          <span>&middot;</span>
-          <span className="capitalize">{pr.isDraft ? "draft" : pr.state}</span>
-          <span>&middot;</span>
-          <span className="inline-flex max-w-full min-w-0 items-center gap-1 font-mono">
-            <span className="min-w-0 truncate">{pr.baseRef}</span>
-            <span className="shrink-0 text-subtle-foreground">&larr;</span>
-            <span className="min-w-0 truncate">{pr.headRef}</span>
+      title={
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-subtle-foreground">{`PR #${pr.number}`}</span>
+          <span className="text-subtle-foreground/60">&rsaquo;</span>
+          <span className="min-w-0 truncate">{pr.title}</span>
+          <span className="ml-1 hidden shrink-0 items-center gap-1.5 font-mono sm:inline-flex">
+            <span className="text-git-added">+{additions}</span>
+            <span className="text-git-deleted">-{deletions}</span>
           </span>
-        </>
+        </span>
       }
       actions={
-        <>
+        <DropdownMenu>
+          <Tooltip content="Pull request actions" side="bottom">
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Pull request actions"
+                />
+              }
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+          </Tooltip>
+          <DropdownMenuContent>
+            <DropdownMenuItem disabled={isRefreshingDetails} onClick={onRefresh}>
+              {isRefreshingDetails ? "Refreshing..." : "Refresh"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onCheckout}>Checkout branch</DropdownMenuItem>
+            <DropdownMenuItem onClick={onEdit}>Edit pull request</DropdownMenuItem>
+            <DropdownMenuItem disabled={isClosed} onClick={onApprove}>
+              Approve
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={isClosed} onClick={onRequestChanges}>
+              Request changes
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled={isClosed} onClick={onClosePR}>
+              Close pull request
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onOpenInBrowser}>Open on GitHub</DropdownMenuItem>
+            <DropdownMenuItem onClick={onCopyPRLink}>Copy link</DropdownMenuItem>
+            <DropdownMenuItem onClick={onCopyBranchName}>Copy branch name</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+    >
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 rounded-lg bg-surface/60 p-0.5">
+          <Button
+            type="button"
+            onClick={activeView === "files" ? onToggleFilesView : undefined}
+            variant="ghost"
+            active={activeView === "activity"}
+            size="xs"
+          >
+            Overview
+          </Button>
+          <Button
+            type="button"
+            onClick={activeView === "activity" ? onToggleFilesView : undefined}
+            variant="ghost"
+            active={activeView === "files"}
+            size="xs"
+          >
+            {`Files ${changedFilesCount}`}
+          </Button>
+        </div>
+        <div className="flex items-center gap-1">
           <Button onClick={onComment} disabled={isClosed} variant="ghost" size="xs">
             Comment
           </Button>
-          <Button onClick={onMerge} disabled={!canMerge} variant="default" size="xs">
+          <Button onClick={onMerge} disabled={!canMerge} variant="accent" size="xs">
             Merge
           </Button>
-          <DropdownMenu>
-            <Tooltip content="Pull request actions" side="bottom">
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label="Pull request actions"
-                  />
-                }
-              >
-                <MoreHorizontal />
-              </DropdownMenuTrigger>
-            </Tooltip>
-            <DropdownMenuContent>
-              <DropdownMenuItem disabled={isRefreshingDetails} onClick={onRefresh}>
-                {isRefreshingDetails ? "Refreshing..." : "Refresh"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onCheckout}>Checkout branch</DropdownMenuItem>
-              <DropdownMenuItem onClick={onEdit}>Edit pull request</DropdownMenuItem>
-              <DropdownMenuItem disabled={isClosed} onClick={onApprove}>
-                Approve
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={isClosed} onClick={onRequestChanges}>
-                Request changes
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={isClosed} onClick={onClosePR}>
-                Close pull request
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenInBrowser}>Open on GitHub</DropdownMenuItem>
-              <DropdownMenuItem onClick={onCopyPRLink}>Copy link</DropdownMenuItem>
-              <DropdownMenuItem onClick={onCopyBranchName}>Copy branch name</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
-      }
-    >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <OverviewField>
-          <span className="inline-flex min-w-0 items-center gap-2">
-            <GitHubAvatar
-              login={pr.author.login}
-              avatarUrl={pr.author.avatarUrl}
-              size={32}
-              className="size-4"
-            />
-            <span className="truncate text-muted-foreground">{pr.author.login}</span>
-          </span>
-        </OverviewField>
-
-        <Button
-          type="button"
-          onClick={onToggleFilesView}
-          variant="ghost"
-          active={activeView === "files"}
-          className="h-auto min-w-0 px-1.5 py-1 text-left"
-          size="xs"
-        >
-          <span className="text-muted-foreground">{changedFilesCount} files</span>
-          <span className="text-git-added">+{additions}</span>
-          <span className="text-git-deleted">-{deletions}</span>
-        </Button>
-
-        <OverviewField>
-          {pr.statusChecks?.length > 0 ? (
-            <CIStatusIndicator checks={pr.statusChecks} />
-          ) : (
-            <>
-              <CheckCircle2 className="mr-1 inline text-subtle-foreground" />
-              <span className="text-muted-foreground">{checksSummary}</span>
-            </>
-          )}
-        </OverviewField>
-
-        <MergeStatusBadge
-          mergeStateStatus={pr.mergeStateStatus}
-          mergeable={pr.mergeable}
-          reviewDecision={pr.reviewDecision}
-        />
-
-        <OverviewField>
-          {pr.reviewRequests?.length > 0 ? (
-            <span className="inline-flex min-w-0 items-center gap-2">
-              <span className="text-subtle-foreground">
-                {reviewSummary ? `${reviewSummary} · reviewers` : "Reviewers"}
-              </span>
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                {pr.reviewRequests.slice(0, 3).map((reviewer) => (
-                  <GitHubAvatar
-                    key={reviewer.login}
-                    login={reviewer.login}
-                    avatarUrl={reviewer.avatarUrl}
-                    size={32}
-                    className="size-4"
-                  />
-                ))}
-                <span className="truncate text-muted-foreground">{reviewerLogins.join(", ")}</span>
-              </span>
-            </span>
-          ) : (
-            <span className="text-muted-foreground">
-              {reviewSummary ? reviewSummary : "No reviewers"}
-            </span>
-          )}
-        </OverviewField>
-        <AssigneesList assignees={pr.assignees ?? []} />
-        <LinkedIssuesList issues={pr.linkedIssues ?? []} />
-        <LabelBadges labels={pr.labels ?? []} />
+        </div>
       </div>
     </GitHubViewerHeader>
   );

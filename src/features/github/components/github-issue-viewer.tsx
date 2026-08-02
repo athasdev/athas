@@ -1,6 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ChatCircleTextIcon as MessageSquare, DotsThreeIcon as MoreHorizontal } from "@/ui/icons";
+import {
+  ChatCircleTextIcon as MessageSquare,
+  DotOutlineIcon as CircleDot,
+  DotsThreeIcon as MoreHorizontal,
+} from "@/ui/icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
@@ -15,18 +19,16 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
 import type { IssueDetails } from "../types/github.types";
-import {
-  GITHUB_ISSUE_DETAILS_TTL_MS,
-  githubIssueDetailsCache,
-  githubIssueListCache,
-} from "../utils/github-data-cache";
-import { copyToClipboard } from "../utils/github-viewer-utils";
+import { GITHUB_ISSUE_DETAILS_TTL_MS, githubIssueDetailsCache } from "../utils/github-data-cache";
+import { copyToClipboard, getTimeAgo } from "../utils/github-viewer-utils";
 import { CommentItem } from "./comment-item";
 import { GitHubAvatar } from "./github-avatar";
 import GitHubMarkdown from "./github-markdown";
-import { GitHubTitleBodyForm } from "./github-title-body-form";
-import { AssigneesList, LabelBadges } from "./pr-status";
+import { LabelBadges } from "./pr-status";
 import {
+  GitHubDetailLayout,
+  GitHubDetailSection,
+  GitHubDetailSidebar,
   GitHubViewerHeader,
   GitHubViewerLoadingState,
   GitHubViewerShell,
@@ -41,12 +43,11 @@ interface GitHubIssueViewerProps {
 
 const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssueViewerProps) => {
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
+  const openGitHubFormBuffer = useBufferStore.use.actions().openGitHubFormBuffer;
   const buffer = useBufferStore((state) => state.buffers.find((item) => item.id === bufferId));
   const [details, setDetails] = useState<IssueDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [visibleCommentCount, setVisibleCommentCount] = useState(8);
   const repositoryUrl = useMemo(
     () => details?.url.replace(/\/issues\/\d+$/, "") ?? undefined,
@@ -132,7 +133,6 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
 
   useEffect(() => {
     setVisibleCommentCount(8);
-    setIsEditingDetails(false);
   }, [details?.number]);
 
   useEffect(() => {
@@ -182,78 +182,31 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
     void copyToClipboard(details.url, "Issue link copied");
   }, [details?.url]);
 
-  const handleSaveDetails = useCallback(
-    async ({ title, body }: { title: string; body: string }) => {
-      if (!repoPath || !details || !buffer || buffer.type !== "githubIssue") return;
-
-      setIsSavingDetails(true);
-      try {
-        const nextDetails = await invoke<IssueDetails>("github_update_issue", {
-          repoPath,
-          issueNumber,
-          title,
-          body,
-        });
-        const cacheKey = `${repoPath}::${issueNumber}`;
-        githubIssueDetailsCache.set(cacheKey, nextDetails);
-        githubIssueListCache.clear();
-        setDetails(nextDetails);
-        updateBuffer({
-          ...buffer,
-          name: nextDetails.title,
-          url: nextDetails.url,
-        });
-        setIsEditingDetails(false);
-        toast.success(`Updated issue #${issueNumber}`);
-      } catch (nextError) {
-        toast.error(nextError instanceof Error ? nextError.message : "Failed to update issue");
-      } finally {
-        setIsSavingDetails(false);
-      }
-    },
-    [buffer, details, issueNumber, repoPath, updateBuffer],
-  );
-
   return (
     <GitHubViewerShell
       header={
         <GitHubViewerHeader
-          title={details?.title ?? buffer?.name ?? `Issue #${issueNumber}`}
-          meta={
-            <>
-              <span>{`Issue #${issueNumber}`}</span>
-              {details?.author.login ? (
-                <>
-                  <span>&middot;</span>
-                  <span className="inline-flex items-center gap-2">
-                    <GitHubAvatar
-                      login={details.author.login}
-                      avatarUrl={details.author.avatarUrl}
-                      size={32}
-                      className="size-4"
-                    />
-                    <span>{details.author.login}</span>
-                  </span>
-                </>
-              ) : null}
-              {details?.state ? (
-                <>
-                  <span>&middot;</span>
-                  <span className="capitalize">{details.state.toLowerCase()}</span>
-                </>
-              ) : null}
-              {details?.comments.length ? (
-                <>
-                  <span>&middot;</span>
-                  <span>{`${details.comments.length} comments`}</span>
-                </>
-              ) : null}
-            </>
+          title={
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="shrink-0 text-subtle-foreground">{`Issue #${issueNumber}`}</span>
+              <span className="text-subtle-foreground/60">&rsaquo;</span>
+              <span className="min-w-0 truncate">
+                {details?.title ?? buffer?.name ?? "Loading issue"}
+              </span>
+            </span>
           }
           actions={
             <>
               <Button
-                onClick={() => setIsEditingDetails(true)}
+                onClick={() => {
+                  if (!repoPath || !details) return;
+                  openGitHubFormBuffer({
+                    repoPath,
+                    formKind: "issue",
+                    operation: "edit",
+                    resourceNumber: issueNumber,
+                  });
+                }}
                 disabled={!details}
                 variant="ghost"
                 size="xs"
@@ -288,14 +241,7 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               </DropdownMenu>
             </>
           }
-        >
-          {details ? (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <AssigneesList assignees={details.assignees ?? []} />
-              <LabelBadges labels={details.labels ?? []} />
-            </div>
-          ) : null}
-        </GitHubViewerHeader>
+        />
       }
     >
       {error ? (
@@ -306,63 +252,132 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
           tone="error"
         />
       ) : details ? (
-        <div className="w-full space-y-5">
-          {isEditingDetails ? (
-            <GitHubTitleBodyForm
-              title={details.title}
-              body={details.body}
-              titlePlaceholder="Issue title"
-              submitLabel="Save"
-              isSubmitting={isSavingDetails}
-              onCancel={() => setIsEditingDetails(false)}
-              onSubmit={(value) => void handleSaveDetails(value)}
-            />
-          ) : details.body ? (
-            <GitHubMarkdown
-              content={details.body}
-              className="github-markdown-pr w-full"
-              contentClassName="github-markdown-pr-content w-full max-w-none"
-              repositoryUrl={repositoryUrl}
-              repoPath={repoPath}
-            />
-          ) : (
-            <p className="font-sans ui-text-sm italic text-subtle-foreground">
-              No description provided
-            </p>
-          )}
+        <GitHubDetailLayout
+          sidebar={
+            <GitHubDetailSidebar>
+              <GitHubDetailSection label="Status">
+                <div className="flex items-center gap-2">
+                  <CircleDot
+                    className={
+                      details.state.toLowerCase() === "open"
+                        ? "text-success"
+                        : "text-subtle-foreground"
+                    }
+                  />
+                  <span className="capitalize">{details.state.toLowerCase()}</span>
+                </div>
+              </GitHubDetailSection>
 
-          <div className="w-full space-y-1">
-            {details.comments.length > 0 ? (
-              visibleComments.map((comment, index) => (
-                <CommentItem
-                  key={`${comment.author.login}-${comment.createdAt}-${index}`}
-                  comment={comment}
+              <GitHubDetailSection label="Assignees">
+                {details.assignees.length > 0 ? (
+                  <div className="space-y-2">
+                    {details.assignees.map((assignee) => (
+                      <div key={assignee.login} className="flex min-w-0 items-center gap-2">
+                        <GitHubAvatar
+                          login={assignee.login}
+                          avatarUrl={assignee.avatarUrl}
+                          size={32}
+                          className="size-5"
+                        />
+                        <span className="min-w-0 truncate">{assignee.login}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-subtle-foreground">Unassigned</span>
+                )}
+              </GitHubDetailSection>
+
+              <GitHubDetailSection label="Labels">
+                {details.labels.length > 0 ? (
+                  <LabelBadges labels={details.labels} />
+                ) : (
+                  <span className="text-subtle-foreground">No labels</span>
+                )}
+              </GitHubDetailSection>
+
+              <GitHubDetailSection label="Activity">
+                <div className="space-y-1 text-subtle-foreground">
+                  <p>{`${details.comments.length} comments`}</p>
+                  <p>{`Opened ${getTimeAgo(details.createdAt)}`}</p>
+                </div>
+              </GitHubDetailSection>
+            </GitHubDetailSidebar>
+          }
+        >
+          <div className="space-y-8">
+            <section className="space-y-2">
+              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+                {details.title}
+              </h1>
+              <div className="font-sans ui-text-sm flex items-center gap-2 text-subtle-foreground">
+                <GitHubAvatar
+                  login={details.author.login}
+                  avatarUrl={details.author.avatarUrl}
+                  size={32}
+                  className="size-5"
+                />
+                <span className="text-foreground">{details.author.login}</span>
+                <span>&middot;</span>
+                <span>{getTimeAgo(details.createdAt)}</span>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">
+                Description
+              </h2>
+              {details.body ? (
+                <GitHubMarkdown
+                  content={details.body}
+                  className="github-markdown-pr w-full"
+                  contentClassName="github-markdown-pr-content w-full max-w-none"
                   repositoryUrl={repositoryUrl}
                   repoPath={repoPath}
                 />
-              ))
-            ) : (
-              <Empty
-                density="compact"
-                className="min-h-0 flex-none items-start rounded-none px-1 py-2 text-left"
-              >
-                <EmptyDescription className="flex items-center gap-2">
-                  <MessageSquare className="size-4" />
-                  No comments
-                </EmptyDescription>
-              </Empty>
-            )}
-            {details.comments.length > visibleComments.length ? (
-              <div className="px-1 py-2">
-                <Spinner
-                  label={`Loading ${details.comments.length - visibleComments.length} more comments`}
-                  showLabel
-                  compact
-                />
+              ) : (
+                <p className="font-sans ui-text-sm italic text-subtle-foreground">
+                  No description provided
+                </p>
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Activity</h2>
+              <div className="w-full space-y-3">
+                {details.comments.length > 0 ? (
+                  visibleComments.map((comment, index) => (
+                    <CommentItem
+                      key={`${comment.author.login}-${comment.createdAt}-${index}`}
+                      comment={comment}
+                      repositoryUrl={repositoryUrl}
+                      repoPath={repoPath}
+                    />
+                  ))
+                ) : (
+                  <Empty
+                    density="compact"
+                    className="min-h-0 flex-none items-start rounded-lg border border-border/60 bg-surface/25 px-3 py-4 text-left"
+                  >
+                    <EmptyDescription className="flex items-center gap-2">
+                      <MessageSquare className="size-4" />
+                      No comments yet
+                    </EmptyDescription>
+                  </Empty>
+                )}
+                {details.comments.length > visibleComments.length ? (
+                  <div className="px-1 py-2">
+                    <Spinner
+                      label={`Loading ${details.comments.length - visibleComments.length} more comments`}
+                      showLabel
+                      compact
+                    />
+                  </div>
+                ) : null}
               </div>
-            ) : null}
+            </section>
           </div>
-        </div>
+        </GitHubDetailLayout>
       ) : (
         <GitHubViewerLoadingState label="Loading issue" />
       )}

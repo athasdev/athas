@@ -20,7 +20,7 @@ interface DesktopGitHubTokenResponse {
   scopes?: unknown;
 }
 
-export const storeGitHubToken = async (token: string): Promise<void> => {
+const storeGitHubToken = async (token: string): Promise<void> => {
   try {
     await invoke("store_github_token", { token });
   } catch (error) {
@@ -29,7 +29,7 @@ export const storeGitHubToken = async (token: string): Promise<void> => {
   }
 };
 
-export const removeGitHubToken = async (): Promise<void> => {
+const removeGitHubToken = async (): Promise<void> => {
   try {
     await invoke("remove_github_token");
   } catch (error) {

@@ -1,4 +1,4 @@
-export interface PullRequestAuthor {
+interface PullRequestAuthor {
   login: string;
   avatarUrl?: string | null;
 }
@@ -22,7 +22,7 @@ export interface Label {
   color: string;
 }
 
-export interface ReviewRequest {
+interface ReviewRequest {
   login: string;
   avatarUrl?: string | null;
 }
@@ -92,7 +92,7 @@ export interface IssueListItem {
   labels: Label[];
 }
 
-export interface IssueComment {
+interface IssueComment {
   author: PullRequestAuthor;
   body: string;
   createdAt: string;

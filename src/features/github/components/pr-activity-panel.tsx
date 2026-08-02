@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { Commit } from "../types/github-pr-viewer.types";
 import { CommentItem } from "./comment-item";
@@ -31,7 +30,6 @@ interface PRActivityPanelProps {
   activityItems: Array<ActivityItemComment | ActivityItemCommit>;
   isLoadingContent: boolean;
   contentError: string | null;
-  editForm?: ReactNode;
   onRetry: () => void;
 }
 
@@ -42,7 +40,6 @@ export function PRActivityPanel({
   activityItems,
   isLoadingContent,
   contentError,
-  editForm,
   onRetry,
 }: PRActivityPanelProps) {
   const [visibleActivityCount, setVisibleActivityCount] = useState(12);
@@ -86,24 +83,26 @@ export function PRActivityPanel({
   }, [activityItems.length, visibleActivityCount]);
 
   return (
-    <div className="min-w-0 w-full space-y-5">
-      {editForm ? (
-        editForm
-      ) : body ? (
-        <GitHubMarkdown
-          content={body}
-          className="github-markdown-pr w-full"
-          contentClassName="github-markdown-pr-content w-full max-w-none"
-          repositoryUrl={repositoryUrl}
-          repoPath={repoPath}
-        />
-      ) : (
-        <p className="font-sans ui-text-sm italic text-subtle-foreground">
-          No description provided
-        </p>
-      )}
+    <div className="min-w-0 w-full space-y-8">
+      <section className="space-y-3">
+        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Description</h2>
+        {body ? (
+          <GitHubMarkdown
+            content={body}
+            className="github-markdown-pr w-full"
+            contentClassName="github-markdown-pr-content w-full max-w-none"
+            repositoryUrl={repositoryUrl}
+            repoPath={repoPath}
+          />
+        ) : (
+          <p className="font-sans ui-text-sm italic text-subtle-foreground">
+            No description provided
+          </p>
+        )}
+      </section>
 
-      <div className="space-y-2">
+      <section className="space-y-3">
+        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">Activity</h2>
         {isLoadingContent && activityItems.length === 0 ? (
           <GitHubViewerLoadingState label="Loading activity" className="min-h-0" />
         ) : contentError ? (
@@ -117,7 +116,7 @@ export function PRActivityPanel({
         ) : activityItems.length === 0 ? (
           <GitHubViewerState description="No activity" className="min-h-0" />
         ) : (
-          <div className="w-full space-y-1">
+          <div className="w-full space-y-3">
             {visibleActivityItems.map((item) =>
               item.type === "comment" ? (
                 <CommentItem
@@ -137,7 +136,7 @@ export function PRActivityPanel({
             ) : null}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -217,6 +217,14 @@ const TabBarItem = memo(function TabBarItem({
               )
             ) : buffer.type === "githubAction" ? (
               <Activity className="text-subtle-foreground" />
+            ) : buffer.type === "githubForm" ? (
+              buffer.formKind === "pull-request" ? (
+                <GitPullRequest className="text-subtle-foreground" />
+              ) : buffer.formKind === "issue" ? (
+                <MessageSquare className="text-subtle-foreground" />
+              ) : (
+                <Activity className="text-subtle-foreground" />
+              )
             ) : buffer.type === "globalSearch" ? (
               <Search className="text-subtle-foreground" />
             ) : buffer.type === "diagnostics" ? (

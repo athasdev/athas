@@ -1,3 +1,4 @@
+import "../styles/github-viewer.css";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
@@ -19,10 +20,10 @@ export function GitHubViewerShell({
   contentClassName,
 }: GitHubViewerShellProps) {
   return (
-    <ScrollArea className={cn("h-full bg-background", className)}>
+    <ScrollArea className={cn("github-viewer h-full bg-background", className)}>
       <div className="flex min-h-full flex-col">
         {header}
-        <div className={cn("min-w-0 px-3 pb-4 sm:px-4", contentClassName)}>{children}</div>
+        <div className={cn("min-w-0 px-4 pb-8 sm:px-6", contentClassName)}>{children}</div>
       </div>
     </ScrollArea>
   );
@@ -46,17 +47,22 @@ export function GitHubViewerHeader({
   className,
 }: GitHubViewerHeaderProps) {
   return (
-    <div className={cn("shrink-0 px-3 pt-3 pb-2 sm:px-4", className)}>
-      <div className="flex flex-col gap-2.5">
+    <div
+      className={cn(
+        "sticky top-0 z-20 shrink-0 border-border/60 border-b bg-background/92 backdrop-blur-xl",
+        className,
+      )}
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-3 py-2 sm:px-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
             <div className="min-w-0 flex-1">
-              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-foreground">
+              <h1 className="font-sans ui-text-sm min-w-0 truncate leading-6 font-medium text-foreground">
                 {title}
               </h1>
               {meta ? (
-                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
+                <div className="font-sans ui-text-sm flex flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
                   {meta}
                 </div>
               ) : null}
@@ -67,6 +73,43 @@ export function GitHubViewerHeader({
         {children}
       </div>
     </div>
+  );
+}
+
+interface GitHubDetailLayoutProps {
+  children: ReactNode;
+  sidebar?: ReactNode;
+  className?: string;
+}
+
+export function GitHubDetailLayout({ children, sidebar, className }: GitHubDetailLayoutProps) {
+  return (
+    <div className={cn("github-detail-grid pt-6", className)}>
+      <main className="min-w-0">{children}</main>
+      {sidebar ? <aside className="github-detail-sidebar min-w-0">{sidebar}</aside> : null}
+    </div>
+  );
+}
+
+export function GitHubDetailSidebar({ children }: { children: ReactNode }) {
+  return <div className="space-y-6">{children}</div>;
+}
+
+interface GitHubDetailSectionProps {
+  label: ReactNode;
+  children: ReactNode;
+  action?: ReactNode;
+}
+
+export function GitHubDetailSection({ label, children, action }: GitHubDetailSectionProps) {
+  return (
+    <section className="min-w-0 space-y-2">
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <h2 className="font-sans ui-text-sm font-normal text-subtle-foreground">{label}</h2>
+        {action}
+      </div>
+      <div className="font-sans ui-text-sm min-w-0 text-foreground">{children}</div>
+    </section>
   );
 }
 

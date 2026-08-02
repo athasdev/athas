@@ -1035,6 +1035,8 @@ pub fn github_update_issue(
    issue_number: i64,
    title: String,
    body: String,
+   labels: Vec<String>,
+   assignees: Vec<String>,
    github_token: Option<String>,
 ) -> Result<IssueDetails, String> {
    let title = title.trim();
@@ -1049,6 +1051,8 @@ pub fn github_update_issue(
       &serde_json::json!({
          "title": title,
          "body": body.trim(),
+         "labels": labels,
+         "assignees": assignees,
       }),
    )?;
    let comments: Vec<RestComment> = api.get_json_with_query(
@@ -1120,6 +1124,8 @@ pub fn github_update_pull_request(
    pr_number: i64,
    title: String,
    body: String,
+   labels: Vec<String>,
+   assignees: Vec<String>,
    github_token: Option<String>,
 ) -> Result<PullRequestDetails, String> {
    let title = title.trim();
@@ -1129,13 +1135,22 @@ pub fn github_update_pull_request(
 
    let slug = resolve_repo_slug(&repo_path_value)?;
    let api = GitHubApi::new_authenticated(github_token)?;
-   let pr: RestPullRequest = api.patch_json(
+   let _: RestPullRequest = api.patch_json(
       &repo_path(&slug, &format!("pulls/{pr_number}")),
       &serde_json::json!({
          "title": title,
          "body": body.trim(),
       }),
    )?;
+
+   let _: RestIssue = api.patch_json(
+      &repo_path(&slug, &format!("issues/{pr_number}")),
+      &serde_json::json!({
+         "labels": labels,
+         "assignees": assignees,
+      }),
+   )?;
+   let pr: RestPullRequest = api.get_json(&repo_path(&slug, &format!("pulls/{pr_number}")))?;
 
    pr_details_from_current_rest(&api, &slug, pr_number, pr)
 }

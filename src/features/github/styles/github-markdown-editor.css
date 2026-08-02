@@ -1,0 +1,386 @@
+.github-markdown-composer {
+  min-width: 0;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.github-markdown-composer-error {
+  background: color-mix(in srgb, var(--destructive) 6%, transparent);
+  margin-bottom: 8px;
+  border-radius: var(--radius-md);
+  padding: 7px 9px;
+  color: var(--destructive);
+  font-size: var(--ui-text-sm);
+  line-height: 1.45;
+}
+
+.github-markdown-editor {
+  --baseBase: var(--background);
+  --baseBgSubtle: var(--surface);
+  --baseBg: var(--accent);
+  --baseBgHover: var(--accent);
+  --baseBgActive: var(--selected);
+  --baseLine: var(--border);
+  --baseBorder: var(--border);
+  --baseBorderHover: var(--border-strong);
+  --baseSolid: var(--muted);
+  --baseSolidHover: var(--accent);
+  --baseText: var(--subtle-foreground);
+  --baseTextContrast: var(--foreground);
+  --basePageBg: transparent;
+  --accentBase: var(--background);
+  --accentBgSubtle: var(--surface);
+  --accentBg: var(--accent);
+  --accentBgHover: var(--accent);
+  --accentBgActive: var(--selected);
+  --accentLine: var(--border);
+  --accentBorder: var(--border-strong);
+  --accentBorderHover: var(--border-strong);
+  --accentSolid: var(--primary);
+  --accentSolidHover: var(--primary);
+  --accentText: var(--primary);
+  --accentTextContrast: var(--primary-foreground);
+  --font-body: var(--font-sans);
+  --font-mono: var(--font-mono);
+  min-width: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.github-markdown-editor .mdxeditor-toolbar {
+  height: 0;
+  min-height: 0;
+  overflow: visible;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.github-markdown-editor .mdxeditor-root-contenteditable {
+  min-height: var(--github-markdown-editor-min-height);
+  padding: 2px 2px 26px;
+  color: var(--foreground);
+  caret-color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--ui-text-base);
+  line-height: 1.68;
+}
+
+.github-markdown-editor .mdxeditor-root-contenteditable:focus {
+  outline: none;
+}
+
+.github-markdown-editor .mdxeditor-placeholder {
+  top: 2px;
+  color: color-mix(in srgb, var(--subtle-foreground) 78%, transparent);
+  font-family: var(--font-sans);
+  font-size: var(--ui-text-base);
+}
+
+.github-markdown-editor-content > :first-child {
+  margin-top: 0;
+}
+
+.github-markdown-editor-content h1,
+.github-markdown-editor-content h2,
+.github-markdown-editor-content h3 {
+  color: var(--foreground);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.github-markdown-editor-content h1 {
+  margin-block: 1.35em 0.45em;
+  font-size: 1.72em;
+  line-height: 1.25;
+}
+
+.github-markdown-editor-content h2 {
+  margin-block: 1.25em 0.42em;
+  font-size: 1.38em;
+  line-height: 1.3;
+}
+
+.github-markdown-editor-content h3 {
+  margin-block: 1.1em 0.38em;
+  font-size: 1.14em;
+  line-height: 1.35;
+}
+
+.github-markdown-editor-content p,
+.github-markdown-editor-content ul,
+.github-markdown-editor-content ol,
+.github-markdown-editor-content blockquote,
+.github-markdown-editor-content pre,
+.github-markdown-editor-content table {
+  margin-block: 0.65em;
+}
+
+.github-markdown-editor-content ul,
+.github-markdown-editor-content ol {
+  padding-left: 1.55rem;
+}
+
+.github-markdown-editor-content li {
+  margin-block: 0.18em;
+}
+
+.github-markdown-editor-content blockquote {
+  border-left: 2px solid color-mix(in srgb, var(--primary) 50%, var(--border-strong));
+  padding: 0.15em 0 0.15em 0.95rem;
+  color: var(--subtle-foreground);
+}
+
+.github-markdown-editor-content code {
+  border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  padding: 0.08em 0.3em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.github-markdown-editor-content pre {
+  overflow-x: auto;
+  border: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 64%, transparent);
+  padding: 0.85rem 1rem;
+}
+
+.github-markdown-editor-content pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.github-markdown-editor-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+.github-markdown-editor-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-block: 0.9rem;
+  border-radius: var(--radius-lg);
+}
+
+.github-markdown-editor-content hr {
+  height: 1px;
+  margin-block: 1.5rem;
+  border: 0;
+  background: color-mix(in srgb, var(--border-strong) 62%, transparent);
+}
+
+.github-markdown-editor-content table {
+  width: 100%;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.github-markdown-editor-content th,
+.github-markdown-editor-content td {
+  min-width: 7rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 7px 9px;
+  text-align: left;
+}
+
+.github-markdown-editor-content th {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  font-weight: 500;
+}
+
+.github-markdown-editor-content tr:last-child > * {
+  border-bottom: 0;
+}
+
+.github-markdown-editor-content tr > :last-child {
+  border-right: 0;
+}
+
+.github-markdown-editor-content [class*="_codeMirrorWrapper_"] {
+  margin-block: 0.9rem;
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  box-shadow: none;
+}
+
+.github-markdown-editor-content [class*="_codeMirrorToolbar_"] {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+}
+
+.github-markdown-editor-content [class*="_codeMirrorWrapper_"] .cm-editor,
+.github-markdown-editor-content [class*="_codeMirrorWrapper_"] .cm-scroller {
+  min-height: 0;
+  background: transparent;
+}
+
+.github-markdown-editor-content [class*="_codeMirrorWrapper_"] .cm-scroller {
+  padding: 10px 2px 8px;
+  font-family: var(--font-mono);
+  font-size: var(--ui-text-sm);
+  line-height: 1.6;
+}
+
+.github-markdown-editor-content [class*="_codeMirrorWrapper_"] .cm-content {
+  padding-inline: 0;
+  caret-color: var(--foreground);
+}
+
+.github-markdown-editor-content [class*="_codeMirrorWrapper_"] .cm-gutters {
+  display: none;
+}
+
+.github-markdown-floating-toolbar {
+  position: fixed;
+  z-index: 10090;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 72%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  box-shadow: var(--shadow-popover);
+  padding: 3px;
+  color: var(--foreground);
+  backdrop-filter: blur(16px) saturate(1.12);
+  animation: github-markdown-floating-toolbar-in var(--app-duration-fast) var(--app-ease-smooth);
+}
+
+.github-markdown-floating-toolbar[data-placement="above"] {
+  transform: translate(-50%, -100%);
+  transform-origin: bottom center;
+}
+
+.github-markdown-floating-toolbar[data-placement="below"] {
+  transform: translateX(-50%);
+  transform-origin: top center;
+}
+
+.github-markdown-floating-toolbar > div {
+  display: contents;
+}
+
+.github-markdown-floating-toolbar button {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--subtle-foreground);
+  box-shadow: none;
+  transition:
+    background-color var(--app-duration-fast) var(--app-ease-smooth),
+    color var(--app-duration-fast) var(--app-ease-smooth),
+    transform var(--app-duration-fast) var(--app-ease-smooth);
+}
+
+.github-markdown-floating-toolbar button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.github-markdown-floating-toolbar button:active {
+  transform: scale(var(--app-press-scale));
+}
+
+.github-markdown-floating-toolbar button[data-state="on"],
+.github-markdown-floating-toolbar button[aria-pressed="true"] {
+  background: var(--selected);
+  color: var(--foreground);
+}
+
+.github-markdown-slash-anchor {
+  z-index: 10080;
+}
+
+.github-markdown-slash-menu {
+  width: min(338px, calc(100vw - 32px));
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--background) 94%, transparent);
+  box-shadow: var(--shadow-popover);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  backdrop-filter: blur(18px) saturate(1.15);
+  animation: github-markdown-slash-menu-in var(--app-duration-fast) var(--app-ease-smooth);
+  transform-origin: top left;
+}
+
+.github-markdown-slash-group + .github-markdown-slash-group {
+  margin-top: 5px;
+}
+
+.github-markdown-slash-group-label {
+  padding: 5px 7px 3px;
+  color: var(--subtle-foreground);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.github-markdown-slash-command {
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  border-radius: 8px;
+  padding: 5px 7px;
+}
+
+.github-markdown-command-heading-icon {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+
+@keyframes github-markdown-slash-menu-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(-3px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes github-markdown-floating-toolbar-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .github-markdown-slash-menu {
+    animation: none;
+  }
+
+  .github-markdown-floating-toolbar {
+    animation: none;
+  }
+}

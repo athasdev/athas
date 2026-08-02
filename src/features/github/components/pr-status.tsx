@@ -17,7 +17,7 @@ import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
-import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github.types";
+import type { Label, LinkedIssue, StatusCheck } from "../types/github.types";
 
 // CI Status Indicator
 interface CIStatusProps {
@@ -212,27 +212,6 @@ export const MergeStatusBadge = memo(
 );
 
 MergeStatusBadge.displayName = "MergeStatusBadge";
-
-// Review Requests List
-interface ReviewRequestsProps {
-  reviewRequests: ReviewRequest[];
-}
-
-export const ReviewRequestsList = memo(({ reviewRequests }: ReviewRequestsProps) => {
-  if (reviewRequests.length === 0) return null;
-
-  return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
-      <User />
-      <span>Reviewers</span>
-      <span className="text-foreground">
-        {reviewRequests.map((reviewer) => `@${reviewer.login}`).join(", ")}
-      </span>
-    </span>
-  );
-});
-
-ReviewRequestsList.displayName = "ReviewRequestsList";
 
 // Linked Issues
 interface LinkedIssuesProps {

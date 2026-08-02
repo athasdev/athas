@@ -88,6 +88,21 @@ const OnboardingView = lazy(() => import("@/features/onboarding/components/onboa
 const GitHubPRViewer = lazy(() => import("@/features/github/components/github-pr-viewer"));
 const GitHubIssueViewer = lazy(() => import("@/features/github/components/github-issue-viewer"));
 const GitHubActionViewer = lazy(() => import("@/features/github/components/github-action-viewer"));
+const GitHubCreateView = lazy(() =>
+  import("@/features/github/components/github-create-view").then((module) => ({
+    default: module.GitHubCreateView,
+  })),
+);
+const GitHubEditView = lazy(() =>
+  import("@/features/github/components/github-edit-view").then((module) => ({
+    default: module.GitHubEditView,
+  })),
+);
+const GitHubPRActionView = lazy(() =>
+  import("@/features/github/components/github-pr-action-view").then((module) => ({
+    default: module.GitHubPRActionView,
+  })),
+);
 const ImageViewer = lazy(() =>
   import("@/features/viewer/image/components/image-viewer").then((m) => ({
     default: m.ImageViewer,
@@ -953,6 +968,15 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               repoPath={buffer.repoPath}
               bufferId={buffer.id}
             />
+          );
+
+        case "githubForm":
+          return buffer.operation === "action" ? (
+            <GitHubPRActionView buffer={buffer} />
+          ) : buffer.operation === "edit" ? (
+            <GitHubEditView buffer={buffer} />
+          ) : (
+            <GitHubCreateView buffer={buffer} />
           );
 
         case "globalSearch":

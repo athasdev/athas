@@ -157,6 +157,14 @@ interface BufferActions {
     title?: string;
     url?: string;
   }) => string;
+  openGitHubFormBuffer: (options: {
+    repoPath: string;
+    formKind: "pull-request" | "issue" | "action";
+    operation?: "create" | "edit" | "action";
+    actionKind?: "comment" | "approve" | "request-changes" | "merge" | "close";
+    resourceNumber?: number;
+    defaultHead?: string;
+  }) => string;
   openTerminalBuffer: (options?: {
     name?: string;
     shell?: string;
@@ -823,6 +831,32 @@ const createBufferStore = (workspaceId: string) => {
               return newBuffer.id;
             }
 
+            case "githubForm": {
+              const path = `github-form://${spec.operation}/${spec.formKind}/${spec.resourceNumber ?? "new"}/${spec.actionKind ?? "form"}/${encodeURIComponent(spec.repoPath)}`;
+              const existing = buffers.find(
+                (buffer) => buffer.type === "githubForm" && buffer.path === path,
+              );
+              if (existing) {
+                set((state) => {
+                  activateBufferInState(state, existing.id);
+                });
+                syncBufferToPane(existing.id);
+                return existing.id;
+              }
+
+              let newBuffers = closeNewTabInActivePane([...buffers]);
+              newBuffers = applyAutoEviction(newBuffers, maxOpenTabs);
+              const id = generateBufferId(path);
+              const newBuffer = createPaneContent(id, spec);
+
+              set((state) => {
+                state.buffers = [...deactivateBuffers(newBuffers), newBuffer];
+                state.activeBufferId = newBuffer.id;
+              });
+              syncBufferToPane(newBuffer.id);
+              return newBuffer.id;
+            }
+
             case "externalEditor": {
               const existing = getBufferByPath(buffers, spec.path);
               if (existing) {
@@ -1108,6 +1142,25 @@ const createBufferStore = (workspaceId: string) => {
             repoPath,
             name: title,
             url,
+          });
+        },
+
+        openGitHubFormBuffer: ({
+          repoPath,
+          formKind,
+          operation = "create",
+          resourceNumber,
+          defaultHead,
+          actionKind,
+        }): string => {
+          return get().actions.openContent({
+            type: "githubForm",
+            repoPath,
+            formKind,
+            operation,
+            resourceNumber,
+            defaultHead,
+            actionKind,
           });
         },
 

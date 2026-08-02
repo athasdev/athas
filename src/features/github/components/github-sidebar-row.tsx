@@ -9,7 +9,7 @@ export interface GitHubSidebarPreviewBadge {
   tone?: PreviewBadgeTone;
 }
 
-export interface GitHubSidebarPreviewDetail {
+interface GitHubSidebarPreviewDetail {
   label: ReactNode;
   value?: ReactNode;
   mono?: boolean;
@@ -18,7 +18,7 @@ export interface GitHubSidebarPreviewDetail {
   actionLabel?: string;
 }
 
-export interface GitHubSidebarPreview {
+interface GitHubSidebarPreview {
   title: ReactNode;
   subtitle?: ReactNode;
   icon?: ReactNode;

@@ -3,16 +3,14 @@ import { createElement } from "react";
 import type { HighlightToken } from "@/features/editor/types/wasm-parser/wasm-parser.types";
 import type {
   Commit,
+  DiffSectionRef,
   DiffSectionIndex,
   FileDiff,
   FilePatchData,
 } from "../types/github-pr-viewer.types";
 import type { PullRequestFile } from "../types/github.types";
 
-export const EXPAND_ALL_EAGER_PATCH_LIMIT = 10;
-export const EXPANDED_PATCH_BACKGROUND_BATCH = 4;
-
-export function inferFileStatus(additions: number, deletions: number): FileDiff["status"] {
+function inferFileStatus(additions: number, deletions: number): FileDiff["status"] {
   if (additions > 0 && deletions === 0) return "added";
   if (deletions > 0 && additions === 0) return "deleted";
   return "modified";
@@ -35,9 +33,7 @@ export function buildDiffSectionIndex(diffText: string): DiffSectionIndex {
   if (!diffText) return {};
 
   const headerRegex = /^diff --git a\/(.+?) b\/(.+)$/gm;
-  const headers: Array<
-    Pick<import("../types/github-pr-viewer.types").DiffSectionRef, "start" | "oldPath" | "newPath">
-  > = [];
+  const headers: Array<Pick<DiffSectionRef, "start" | "oldPath" | "newPath">> = [];
   for (let match = headerRegex.exec(diffText); match !== null; match = headerRegex.exec(diffText)) {
     headers.push({
       start: match.index,

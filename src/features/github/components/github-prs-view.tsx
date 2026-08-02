@@ -64,7 +64,6 @@ import type {
 } from "../types/github.types";
 import GitHubActionsView from "./github-actions-view";
 import { GitHubAvatar } from "./github-avatar";
-import { GitHubCreateCommand, type GitHubCreateKind } from "./github-create-command";
 import GitHubIssuesView from "./github-issues-view";
 import { GitHubSidebarRow, type GitHubSidebarPreviewBadge } from "./github-sidebar-row";
 import { GitHubSidebarSection as GitHubSidebarListSection } from "./github-sidebar-section";
@@ -233,7 +232,7 @@ const GitHubPRsView = memo(() => {
   } = useGitHubStore.use.actions();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { syncWorkspaceRepositories, setManualRepository } = useRepositoryStore.use.actions();
-  const { openPRBuffer, openGitHubIssueBuffer } = useBufferStore.use.actions();
+  const { openPRBuffer, openGitHubFormBuffer } = useBufferStore.use.actions();
   const showGitHubPullRequests = useSettingsStore((state) => state.settings.showGitHubPullRequests);
   const showGitHubIssues = useSettingsStore((state) => state.settings.showGitHubIssues);
   const showGitHubActions = useSettingsStore((state) => state.settings.showGitHubActions);
@@ -250,7 +249,6 @@ const GitHubPRsView = memo(() => {
   const [searchQuery, setSearchQuery] = useState("");
   const [issueFilter, setIssueFilter] = useState<IssueFilter>("open");
   const [actionFilter, setActionFilter] = useState<WorkflowRunFilter>("all");
-  const [createKind, setCreateKind] = useState<GitHubCreateKind | null>(null);
   const [currentBranch, setCurrentBranch] = useState("");
   const prContextMenu = useDropdownMenu<PullRequest>();
   const sectionContextMenu = useDropdownMenu<null>();
@@ -752,7 +750,13 @@ const GitHubPRsView = memo(() => {
                       : activeSection === "issues"
                         ? "issue"
                         : "action";
-                  setCreateKind(nextKind);
+                  if (effectiveRepoPath) {
+                    openGitHubFormBuffer({
+                      repoPath: effectiveRepoPath,
+                      formKind: nextKind,
+                      defaultHead: currentBranch,
+                    });
+                  }
                 }}
               >
                 <Plus />
@@ -930,51 +934,6 @@ const GitHubPRsView = memo(() => {
           onClose={sectionContextMenu.close}
         />
       </SidebarPanel>
-      <GitHubCreateCommand
-        kind={createKind}
-        repoPath={effectiveRepoPath}
-        defaultHead={currentBranch}
-        onClose={() => setCreateKind(null)}
-        onIssueCreated={(issue) => {
-          githubIssueListCache.clear();
-          setActiveSection("issues");
-          setIssueFilter("open");
-          setSectionRefreshNonce((value) => value + 1);
-          startTransition(() => {
-            openGitHubIssueBuffer({
-              issueNumber: issue.number,
-              repoPath: effectiveRepoPath ?? undefined,
-              title: issue.title,
-              authorAvatarUrl:
-                issue.author.avatarUrl ||
-                `https://github.com/${encodeURIComponent(issue.author.login || "github")}.png?size=32`,
-              url: issue.url,
-            });
-          });
-        }}
-        onPullRequestCreated={(pullRequest) => {
-          setActiveSection("pull-requests");
-          if (effectiveRepoPath) {
-            void fetchPRs(effectiveRepoPath, { force: true });
-          }
-          startTransition(() => {
-            openPRBuffer(pullRequest.number, {
-              title: pullRequest.title,
-              repoPath: effectiveRepoPath ?? undefined,
-              authorAvatarUrl:
-                pullRequest.author.avatarUrl ||
-                `https://github.com/${encodeURIComponent(pullRequest.author.login || "github")}.png?size=32`,
-            });
-          });
-        }}
-        onWorkflowDispatched={() => {
-          if (effectiveRepoPath) {
-            githubActionListCache.clear(effectiveRepoPath);
-          }
-          setActiveSection("actions");
-          setSectionRefreshNonce((value) => value + 1);
-        }}
-      />
     </>
   );
 });

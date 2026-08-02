@@ -1,4 +1,4 @@
-export interface GitHubPullRequestLink {
+interface GitHubPullRequestLink {
   kind: "pullRequest";
   owner: string;
   repo: string;
@@ -6,7 +6,7 @@ export interface GitHubPullRequestLink {
   url: string;
 }
 
-export interface GitHubIssueLink {
+interface GitHubIssueLink {
   kind: "issue";
   owner: string;
   repo: string;
@@ -14,7 +14,7 @@ export interface GitHubIssueLink {
   url: string;
 }
 
-export interface GitHubActionRunLink {
+interface GitHubActionRunLink {
   kind: "actionRun";
   owner: string;
   repo: string;

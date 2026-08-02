@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
@@ -31,10 +30,10 @@ import { useGitHubStore } from "../stores/github.store";
 import { PRActivityPanel } from "./pr-activity-panel";
 import { PRFilesPanel } from "./pr-files-panel";
 import { GitHubPRViewerHeader } from "./github-pr-viewer-header";
-import { GitHubPRActionDialog, type GitHubPRActionKind } from "./github-pr-action-dialog";
-import { GitHubTitleBodyForm } from "./github-title-body-form";
+import { GitHubPRSidebar } from "./github-pr-sidebar";
 import { GitHubAvatar } from "./github-avatar";
 import {
+  GitHubDetailLayout,
   GitHubViewerHeader,
   GitHubViewerLoadingState,
   GitHubViewerShell,
@@ -106,7 +105,8 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
   const detailsError = useGitHubStore.use.detailsError();
   const contentError = useGitHubStore.use.contentError();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
-  const { selectPR, fetchPRContent, fetchPRs, openPRInBrowser, checkoutPR } =
+  const openGitHubFormBuffer = useBufferStore.use.actions().openGitHubFormBuffer;
+  const { selectPR, fetchPRContent, openPRInBrowser, checkoutPR } =
     useGitHubStore.use.actions();
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
@@ -119,10 +119,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     () => parseSelectedFilePathFromPRBufferPath(prBuffer?.path ?? "") ?? null,
   );
   const [isFileTreeVisible, setIsFileTreeVisible] = useState(true);
-  const [isEditingDetails, setIsEditingDetails] = useState(false);
-  const [isSavingDetails, setIsSavingDetails] = useState(false);
-  const [activeAction, setActiveAction] = useState<GitHubPRActionKind | null>(null);
-  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [filePatches, setFilePatches] = useState<Record<string, FilePatchState>>({});
 
   useEffect(() => {
@@ -138,8 +134,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     setFileStatusFilter("all");
     setSelectedFilePath(deepLinkedFilePath ?? null);
     setFilePatches({});
-    setIsEditingDetails(false);
-    setActiveAction(null);
   }, [prNumber, repoPath]);
 
   useEffect(() => {
@@ -299,10 +293,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       .filter((commit): commit is Commit => !!commit);
   }, [selectedPRDetails?.commits]);
 
-  const reviewerLogins = useMemo(() => {
-    return (selectedPRDetails?.reviewRequests ?? []).map((reviewer) => reviewer.login);
-  }, [selectedPRDetails?.reviewRequests]);
-
   const passedChecksCount = useMemo(() => {
     return (selectedPRDetails?.statusChecks ?? []).filter((check) => check.conclusion === "SUCCESS")
       .length;
@@ -407,98 +397,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     }
     void copyToClipboard(selectedPRDetails.headRef, "Branch name copied");
   }, [selectedPRDetails?.headRef]);
-
-  const handleSaveDetails = useCallback(
-    async ({ title, body }: { title: string; body: string }) => {
-      if (!repoPath || !selectedPRDetails || !prBuffer) return;
-
-      setIsSavingDetails(true);
-      try {
-        await invoke("github_update_pull_request", {
-          repoPath,
-          prNumber,
-          title,
-          body,
-        });
-        updateBuffer({
-          ...prBuffer,
-          name: title,
-        });
-        await selectPR(repoPath, prNumber, { force: true });
-        void fetchPRs(repoPath, { force: true });
-        setIsEditingDetails(false);
-        toast.success(`Updated PR #${prNumber}`);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to update pull request");
-      } finally {
-        setIsSavingDetails(false);
-      }
-    },
-    [fetchPRs, prBuffer, prNumber, repoPath, selectPR, selectedPRDetails, updateBuffer],
-  );
-
-  const refreshAfterPRAction = useCallback(
-    async (mode: "comments" | "full" = "full") => {
-      if (!repoPath) return;
-
-      await selectPR(repoPath, prNumber, { force: true });
-      void fetchPRs(repoPath, { force: true });
-      void fetchPRContent(repoPath, prNumber, { force: true, mode });
-    },
-    [fetchPRContent, fetchPRs, prNumber, repoPath, selectPR],
-  );
-
-  const handleSubmitAction = useCallback(
-    async ({ body, method }: { body: string; method?: "merge" | "squash" | "rebase" }) => {
-      if (!repoPath || !activeAction) return;
-
-      setIsSubmittingAction(true);
-      try {
-        if (activeAction === "comment") {
-          await invoke("github_add_pr_comment", { repoPath, prNumber, body });
-          await refreshAfterPRAction("comments");
-          toast.success("Comment added");
-        } else if (activeAction === "approve") {
-          await invoke("github_submit_pr_review", {
-            repoPath,
-            prNumber,
-            event: "APPROVE",
-            body,
-          });
-          await refreshAfterPRAction("comments");
-          toast.success("Pull request approved");
-        } else if (activeAction === "request-changes") {
-          await invoke("github_submit_pr_review", {
-            repoPath,
-            prNumber,
-            event: "REQUEST_CHANGES",
-            body,
-          });
-          await refreshAfterPRAction("comments");
-          toast.success("Changes requested");
-        } else if (activeAction === "merge") {
-          await invoke("github_merge_pull_request", {
-            repoPath,
-            prNumber,
-            method: method ?? "squash",
-          });
-          await refreshAfterPRAction("full");
-          toast.success("Pull request merged");
-        } else if (activeAction === "close") {
-          await invoke("github_close_pull_request", { repoPath, prNumber });
-          await refreshAfterPRAction("full");
-          toast.success("Pull request closed");
-        }
-
-        setActiveAction(null);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Pull request action failed");
-      } finally {
-        setIsSubmittingAction(false);
-      }
-    },
-    [activeAction, prNumber, refreshAfterPRAction, repoPath],
-  );
 
   const handleToggleFilesView = useCallback(() => {
     if (!selectedPRDiff || !selectedPRDetails) {
@@ -643,9 +541,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
           changedFilesCount={changedFilesCount}
           additions={pr.additions}
           deletions={pr.deletions}
-          checksSummary={checksSummary}
-          reviewerLogins={reviewerLogins}
-          reviewSummary={reviewSummary}
           isRefreshingDetails={isRefreshingDetails}
           onRefresh={handleRefresh}
           onCheckout={() => {
@@ -656,31 +551,72 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
           onCopyBranchName={handleCopyBranchName}
           onToggleFilesView={handleToggleFilesView}
           onEdit={() => {
-            setActiveTab("activity");
-            setIsEditingDetails(true);
+            if (!repoPath) return;
+            openGitHubFormBuffer({
+              repoPath,
+              formKind: "pull-request",
+              operation: "edit",
+              resourceNumber: prNumber,
+            });
           }}
-          onComment={() => setActiveAction("comment")}
-          onApprove={() => setActiveAction("approve")}
-          onRequestChanges={() => setActiveAction("request-changes")}
-          onMerge={() => setActiveAction("merge")}
-          onClosePR={() => setActiveAction("close")}
+          onComment={() => {
+            if (repoPath) {
+              openGitHubFormBuffer({
+                repoPath,
+                formKind: "pull-request",
+                operation: "action",
+                resourceNumber: prNumber,
+                actionKind: "comment",
+              });
+            }
+          }}
+          onApprove={() => {
+            if (repoPath) {
+              openGitHubFormBuffer({
+                repoPath,
+                formKind: "pull-request",
+                operation: "action",
+                resourceNumber: prNumber,
+                actionKind: "approve",
+              });
+            }
+          }}
+          onRequestChanges={() => {
+            if (repoPath) {
+              openGitHubFormBuffer({
+                repoPath,
+                formKind: "pull-request",
+                operation: "action",
+                resourceNumber: prNumber,
+                actionKind: "request-changes",
+              });
+            }
+          }}
+          onMerge={() => {
+            if (repoPath) {
+              openGitHubFormBuffer({
+                repoPath,
+                formKind: "pull-request",
+                operation: "action",
+                resourceNumber: prNumber,
+                actionKind: "merge",
+              });
+            }
+          }}
+          onClosePR={() => {
+            if (repoPath) {
+              openGitHubFormBuffer({
+                repoPath,
+                formKind: "pull-request",
+                operation: "action",
+                resourceNumber: prNumber,
+                actionKind: "close",
+              });
+            }
+          }}
         />
       }
     >
-      {activeAction ? (
-        <GitHubPRActionDialog
-          kind={activeAction}
-          prNumber={prNumber}
-          isSubmitting={isSubmittingAction}
-          onClose={() => {
-            if (!isSubmittingAction) {
-              setActiveAction(null);
-            }
-          }}
-          onSubmit={(value) => void handleSubmitAction(value)}
-        />
-      ) : null}
-
       {detailsError && (
         <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-destructive/8 px-1 py-2">
           <p className="font-sans ui-text-sm truncate text-destructive/90">{detailsError}</p>
@@ -696,28 +632,48 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       )}
 
       {activeTab === "activity" && (
-        <PRActivityPanel
-          body={pr.body}
-          repositoryUrl={repositoryUrl}
-          repoPath={repoPath ?? undefined}
-          activityItems={activityItems}
-          isLoadingContent={isLoadingContent}
-          contentError={contentError}
-          editForm={
-            isEditingDetails ? (
-              <GitHubTitleBodyForm
-                title={pr.title}
-                body={pr.body}
-                titlePlaceholder="Pull request title"
-                submitLabel="Save"
-                isSubmitting={isSavingDetails}
-                onCancel={() => setIsEditingDetails(false)}
-                onSubmit={(value) => void handleSaveDetails(value)}
-              />
-            ) : undefined
+        <GitHubDetailLayout
+          sidebar={
+            <GitHubPRSidebar
+              pr={pr}
+              changedFilesCount={changedFilesCount}
+              checksSummary={checksSummary}
+              reviewSummary={reviewSummary}
+              onShowFiles={handleToggleFilesView}
+            />
           }
-          onRetry={handleRefresh}
-        />
+        >
+          <div className="space-y-8">
+            <section className="space-y-2">
+              <h1 className="font-sans text-2xl leading-tight font-semibold tracking-tight text-foreground">
+                {pr.title}
+              </h1>
+              <div className="font-sans ui-text-sm flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
+                <GitHubAvatar
+                  login={pr.author.login}
+                  avatarUrl={pr.author.avatarUrl}
+                  size={32}
+                  className="size-5"
+                />
+                <span className="text-foreground">{pr.author.login}</span>
+                <span>&middot;</span>
+                <span className="font-mono">{pr.baseRef}</span>
+                <span>&larr;</span>
+                <span className="min-w-0 truncate font-mono">{pr.headRef}</span>
+              </div>
+            </section>
+
+            <PRActivityPanel
+              body={pr.body}
+              repositoryUrl={repositoryUrl}
+              repoPath={repoPath ?? undefined}
+              activityItems={activityItems}
+              isLoadingContent={isLoadingContent}
+              contentError={contentError}
+              onRetry={handleRefresh}
+            />
+          </div>
+        </GitHubDetailLayout>
       )}
 
       {activeTab === "files" && (

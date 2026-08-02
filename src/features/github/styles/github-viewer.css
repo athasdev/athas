@@ -1,0 +1,38 @@
+.github-viewer {
+  container-name: github-viewer;
+  container-type: inline-size;
+}
+
+.github-composer-title {
+  font-size: calc(var(--ui-text-base) * 1.5);
+  line-height: 1.3;
+}
+
+.github-composer-title::placeholder {
+  color: color-mix(in srgb, var(--foreground) 52%, transparent);
+}
+
+.github-detail-grid {
+  display: grid;
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  gap: 2rem;
+}
+
+.github-detail-sidebar {
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  padding-top: 1.5rem;
+}
+
+@container github-viewer (min-width: 52rem) {
+  .github-detail-grid {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    gap: 3rem;
+  }
+
+  .github-detail-sidebar {
+    border-top: 0;
+    padding-top: 0;
+  }
+}

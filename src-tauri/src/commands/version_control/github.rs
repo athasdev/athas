@@ -113,10 +113,20 @@ pub async fn github_update_issue(
    issue_number: i64,
    title: String,
    body: String,
+   labels: Vec<String>,
+   assignees: Vec<String>,
 ) -> Result<IssueDetails, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || {
-      athas_github::github_update_issue(repo_path, issue_number, title, body, github_token)
+      athas_github::github_update_issue(
+         repo_path,
+         issue_number,
+         title,
+         body,
+         labels,
+         assignees,
+         github_token,
+      )
    })
    .await
 }
@@ -157,10 +167,20 @@ pub async fn github_update_pull_request(
    pr_number: i64,
    title: String,
    body: String,
+   labels: Vec<String>,
+   assignees: Vec<String>,
 ) -> Result<PullRequestDetails, String> {
    let github_token = get_stored_github_token(&app);
    run_blocking(move || {
-      athas_github::github_update_pull_request(repo_path, pr_number, title, body, github_token)
+      athas_github::github_update_pull_request(
+         repo_path,
+         pr_number,
+         title,
+         body,
+         labels,
+         assignees,
+         github_token,
+      )
    })
    .await
 }
