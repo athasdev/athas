@@ -29,7 +29,7 @@
   },
   "installation": {
     "downloadUrl": "https://athas.dev/extensions/packages/integration/sentry/athas.sentry.tar.gz",
-    "size": 2578,
-    "checksum": "c6e5c3ee6cae17a038c230bfb657020c9fa2730b4bfdc5c5623ff85d2adcf1d5"
+    "size": 9751,
+    "checksum": "035ac1fb0ec787ceb4c6b036f8a38f31e3bbed6a2902b9ec3be54bb3f5228de0"
   }
 }

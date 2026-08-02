@@ -1,4 +1,3 @@
-import { gzipSync } from "node:zlib";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
 
@@ -211,6 +210,39 @@ function writeTarHeader(path: string, size: number, mode: number) {
   return header;
 }
 
+const CRC32_TABLE = Uint32Array.from({ length: 256 }, (_, value) => {
+  let crc = value;
+  for (let bit = 0; bit < 8; bit += 1) {
+    crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+  }
+  return crc >>> 0;
+});
+
+function gzipStored(contents: Buffer): Buffer {
+  const header = Buffer.from([0x1f, 0x8b, 0x08, 0, 0, 0, 0, 0, 0, 0xff]);
+  const blocks: Buffer[] = [];
+
+  for (let offset = 0; offset < contents.length; offset += 0xffff) {
+    const length = Math.min(0xffff, contents.length - offset);
+    const blockHeader = Buffer.alloc(5);
+    blockHeader[0] = offset + length >= contents.length ? 1 : 0;
+    blockHeader.writeUInt16LE(length, 1);
+    blockHeader.writeUInt16LE(~length & 0xffff, 3);
+    blocks.push(blockHeader, contents.subarray(offset, offset + length));
+  }
+
+  let crc = 0xffffffff;
+  for (const byte of contents) {
+    crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+
+  const trailer = Buffer.alloc(8);
+  trailer.writeUInt32LE((crc ^ 0xffffffff) >>> 0, 0);
+  trailer.writeUInt32LE(contents.length >>> 0, 4);
+
+  return Buffer.concat([header, ...blocks, trailer]);
+}
+
 export async function writeStableTarGz(root: string, packagePath: string) {
   const chunks: Buffer[] = [];
 
@@ -228,7 +260,5 @@ export async function writeStableTarGz(root: string, packagePath: string) {
   }
 
   chunks.push(Buffer.alloc(1024, 0));
-  const gzipped = gzipSync(Buffer.concat(chunks), { level: 9 });
-  gzipped[9] = 255;
-  await writeFile(packagePath, gzipped);
+  await writeFile(packagePath, gzipStored(Buffer.concat(chunks)));
 }

@@ -30,7 +30,7 @@
   },
   "installation": {
     "downloadUrl": "https://athas.dev/extensions/packages/integration/gitlab/athas.gitlab.tar.gz",
-    "size": 2905,
-    "checksum": "f1b4406b2fdc37e5e348903dc98734ef4f59ce6dfb16e69d16a25abf33a6e5f5"
+    "size": 11799,
+    "checksum": "29bbc0c5964335fe500df35288b138b1155b1553df8e3e600c1ac373610d1411"
   }
 }
