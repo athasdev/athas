@@ -19,7 +19,7 @@ export interface SavedConnection {
   connection_string?: string;
 }
 
-export interface ActiveConnection {
+interface ActiveConnection {
   id: string;
   name: string;
   db_type: DatabaseType;
@@ -27,7 +27,7 @@ export interface ActiveConnection {
   error?: string;
 }
 
-export interface ConnectionTestResult {
+interface ConnectionTestResult {
   ok: boolean;
   error?: string;
 }

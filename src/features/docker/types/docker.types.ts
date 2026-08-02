@@ -14,7 +14,7 @@ export interface DockerContainer {
   stats?: DockerContainerStats | null;
 }
 
-export interface DockerContainerHealthDetails {
+interface DockerContainerHealthDetails {
   status: string;
   failingStreak: number;
   lastOutput?: string | null;
@@ -23,7 +23,7 @@ export interface DockerContainerHealthDetails {
   lastFinishedAt?: string | null;
 }
 
-export interface DockerContainerStats {
+interface DockerContainerStats {
   cpuPercent: string;
   memoryUsage: string;
   memoryPercent: string;

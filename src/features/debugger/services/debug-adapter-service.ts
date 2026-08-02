@@ -16,7 +16,7 @@ interface DebuggerEventHandlers {
   onSessionEnded?: (payload: DebugSessionEnded) => void;
 }
 
-export async function startDebugAdapterSession(
+async function startDebugAdapterSession(
   launch: DebugAdapterLaunch,
 ): Promise<DebugAdapterSessionInfo> {
   return await invoke<DebugAdapterSessionInfo>("debug_start_session", { launch });
@@ -34,19 +34,8 @@ export async function sendDebugAdapterRequest(
   });
 }
 
-export async function sendDebugAdapterRawMessage(
-  sessionId: string,
-  message: unknown,
-): Promise<void> {
-  await invoke("debug_send_raw_message", { sessionId, message });
-}
-
 export async function stopDebugAdapterSession(sessionId: string): Promise<void> {
   await invoke("debug_stop_session", { sessionId });
-}
-
-export async function listDebugAdapterSessions(): Promise<DebugAdapterSessionInfo[]> {
-  return await invoke<DebugAdapterSessionInfo[]>("debug_list_sessions");
 }
 
 export async function startDebugLaunchSession(

@@ -160,4 +160,4 @@ function getBinaryMetadata(data: Uint8Array, path: string): BinaryMetadata {
 }
 
 export { formatHexPreview, getBinaryFileType, getBinaryMetadata, parseWasmSections };
-export type { BinaryMetadata, WasmMetadata, WasmSection };
+export type { BinaryMetadata };

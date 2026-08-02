@@ -7,7 +7,7 @@ import { getPaneScopeForPaneId } from "./pane-routing";
 import { createPaneBeside } from "./pane-split-actions";
 import { getAllPaneGroups } from "./pane-tree";
 
-export const getShareableSplitBufferId = (bufferId: string | null | undefined) => {
+const getShareableSplitBufferId = (bufferId: string | null | undefined) => {
   if (!bufferId) return undefined;
   const activeBuffer = getBufferById(useBufferStore.getState().buffers, bufferId);
   if (

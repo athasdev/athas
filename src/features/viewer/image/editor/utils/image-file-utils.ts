@@ -53,11 +53,3 @@ export function getDataURLSize(dataURL: string): number {
   // Calculate size: base64 string length * 0.75 (base64 overhead)
   return Math.round((base64.length * 3) / 4);
 }
-
-/**
- * Calculate size reduction percentage
- */
-export function calculateSizeReduction(originalSize: number, newSize: number): number {
-  if (originalSize === 0) return 0;
-  return Math.round(((originalSize - newSize) / originalSize) * 100);
-}

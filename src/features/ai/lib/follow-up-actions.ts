@@ -1,9 +1,9 @@
 import type { Message } from "@/features/ai/types/ai-chat.types";
 
-export const FOLLOW_UP_ACTIONS_START = "[FOLLOW_UP_ACTIONS]";
-export const FOLLOW_UP_ACTIONS_END = "[/FOLLOW_UP_ACTIONS]";
+const FOLLOW_UP_ACTIONS_START = "[FOLLOW_UP_ACTIONS]";
+const FOLLOW_UP_ACTIONS_END = "[/FOLLOW_UP_ACTIONS]";
 
-export const FOLLOW_UP_ACTION_ICONS = [
+const FOLLOW_UP_ACTION_ICONS = [
   "ArrowRight",
   "Bug",
   "CheckCircle",
@@ -20,7 +20,7 @@ export const FOLLOW_UP_ACTION_ICONS = [
   "Wrench",
 ] as const;
 
-export type FollowUpActionIcon = (typeof FOLLOW_UP_ACTION_ICONS)[number];
+type FollowUpActionIcon = (typeof FOLLOW_UP_ACTION_ICONS)[number];
 
 export interface ChatFollowUpAction {
   id: string;

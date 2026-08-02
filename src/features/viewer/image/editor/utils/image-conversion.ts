@@ -1,9 +1,5 @@
 import { DEFAULT_QUALITY, getMimeType } from "../constants/image-formats";
-import type {
-  ConversionOptions,
-  ImageFormat,
-  ImageOperationResult,
-} from "../types/image-operation.types";
+import type { ConversionOptions, ImageOperationResult } from "../types/image-operation.types";
 import { createCanvas, getCanvasBlob, getContext2D, loadImage } from "./canvas-utils";
 
 /**
@@ -36,57 +32,4 @@ export async function convertImageFormat(
       height: img.height,
     },
   };
-}
-
-/**
- * Convert image to PNG (lossless)
- */
-export async function convertToPNG(imageSrc: string): Promise<ImageOperationResult> {
-  return convertImageFormat(imageSrc, { format: "png" });
-}
-
-/**
- * Convert image to JPEG with quality
- */
-export async function convertToJPEG(
-  imageSrc: string,
-  quality: number = 0.9,
-): Promise<ImageOperationResult> {
-  return convertImageFormat(imageSrc, { format: "jpeg", quality });
-}
-
-/**
- * Convert image to WebP with quality
- */
-export async function convertToWebP(
-  imageSrc: string,
-  quality: number = 0.9,
-): Promise<ImageOperationResult> {
-  return convertImageFormat(imageSrc, { format: "webp", quality });
-}
-
-/**
- * Convert image to AVIF with quality
- */
-export async function convertToAVIF(
-  imageSrc: string,
-  quality: number = 0.9,
-): Promise<ImageOperationResult> {
-  return convertImageFormat(imageSrc, { format: "avif", quality });
-}
-
-/**
- * Get the appropriate converter function for a format
- */
-export function getConverterForFormat(format: ImageFormat) {
-  switch (format) {
-    case "png":
-      return convertToPNG;
-    case "jpeg":
-      return convertToJPEG;
-    case "webp":
-      return convertToWebP;
-    case "avif":
-      return convertToAVIF;
-  }
 }

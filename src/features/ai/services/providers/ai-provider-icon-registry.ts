@@ -12,7 +12,7 @@ function emitChange() {
   listeners.forEach((listener) => listener());
 }
 
-export function subscribeToAIProviderIcons(listener: () => void): () => void {
+function subscribeToAIProviderIcons(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -40,7 +40,7 @@ export function unregisterAIProviderIconsByExtension(extensionId: string): void 
   emitChange();
 }
 
-export function getAIProviderIcons(): Map<string, AIProviderIconComponent> {
+function getAIProviderIcons(): Map<string, AIProviderIconComponent> {
   if (!snapshot) {
     snapshot = new Map(icons);
   }

@@ -70,7 +70,7 @@ export interface ProjectUiSession {
   paneState?: ProjectPaneSession | null;
 }
 
-export interface ProjectPaneGroupSession {
+interface ProjectPaneGroupSession {
   id: string;
   type: "group";
   bufferPaths: string[];
@@ -81,7 +81,7 @@ export interface ProjectPaneGroupSession {
   locked?: boolean;
 }
 
-export interface ProjectPaneSplitSession {
+interface ProjectPaneSplitSession {
   id: string;
   type: "split";
   direction: Extract<PaneNode, { type: "split" }>["direction"];

@@ -11,34 +11,10 @@ const paneChipVariants = cva(
   "font-sans ui-text-sm inline-flex h-5 items-center rounded-full border border-border/70 bg-background px-1.5 text-subtle-foreground",
 );
 
-const paneGroupVariants = cva("flex items-center gap-1");
-
-type PaneHeaderProps = React.ComponentProps<"div"> & VariantProps<typeof paneHeaderVariants>;
-
-function PaneHeader({ className, ...props }: PaneHeaderProps) {
-  return (
-    <div data-slot="pane-header" className={cn(paneHeaderVariants({ className }))} {...props} />
-  );
-}
-
-type PaneTitleProps = React.ComponentProps<"span"> & VariantProps<typeof paneTitleVariants>;
-
-function PaneTitle({ className, ...props }: PaneTitleProps) {
-  return (
-    <span data-slot="pane-title" className={cn(paneTitleVariants({ className }))} {...props} />
-  );
-}
-
 type PaneChipProps = React.ComponentProps<"span"> & VariantProps<typeof paneChipVariants>;
 
 function PaneChip({ className, ...props }: PaneChipProps) {
   return <span data-slot="pane-chip" className={cn(paneChipVariants({ className }))} {...props} />;
-}
-
-type PaneGroupProps = React.ComponentProps<"div"> & VariantProps<typeof paneGroupVariants>;
-
-function PaneGroup({ className, ...props }: PaneGroupProps) {
-  return <div data-slot="pane-group" className={cn(paneGroupVariants({ className }))} {...props} />;
 }
 
 export function paneHeaderClassName(className?: string) {
@@ -49,19 +25,11 @@ export function paneTitleClassName(className?: string) {
   return paneTitleVariants({ className });
 }
 
-export function paneChipClassName(className?: string) {
-  return paneChipVariants({ className });
-}
-
-export function paneGroupClassName(className?: string) {
-  return paneGroupVariants({ className });
-}
-
-export function paneIconButtonClassName(className?: string) {
+function paneIconButtonClassName(className?: string) {
   return cn("shrink-0 rounded-md text-subtle-foreground", className);
 }
 
-export type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;
+type PaneIconButtonProps = Omit<ButtonProps, "variant" | "size">;
 
 function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
   return (
@@ -74,4 +42,4 @@ function PaneIconButton({ className, ...props }: PaneIconButtonProps) {
   );
 }
 
-export { PaneChip, PaneGroup, PaneHeader, PaneIconButton, PaneTitle };
+export { PaneChip, PaneIconButton };

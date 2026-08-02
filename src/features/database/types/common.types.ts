@@ -1,6 +1,6 @@
 export type DatabaseObjectKind = "table" | "view" | "materialized_view" | "index" | "subscription";
 
-export type DatabaseCellValue = unknown;
+type DatabaseCellValue = unknown;
 
 export type DatabaseRow = Record<string, DatabaseCellValue>;
 
@@ -51,17 +51,6 @@ export type FilterOperator =
   | "between"
   | "isNull"
   | "isNotNull";
-
-export interface FilteredQueryParams {
-  table: string;
-  filters: ColumnFilter[];
-  search_term?: string;
-  search_columns: string[];
-  sort_column?: string;
-  sort_direction: string;
-  page_size: number;
-  offset: number;
-}
 
 export interface FilteredQueryResult {
   columns: string[];

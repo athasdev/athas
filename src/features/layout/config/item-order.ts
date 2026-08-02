@@ -1,4 +1,3 @@
-export const HEADER_LEADING_ITEM_IDS = ["menu", "sidebar", "updates"] as const;
 export const HEADER_TRAILING_ITEM_IDS = ["run-actions", "ai-chat", "account"] as const;
 export const SIDEBAR_ACTIVITY_ITEM_IDS = [
   "files",
@@ -22,7 +21,6 @@ export const FOOTER_TRAILING_ITEM_IDS = [
   "notifications",
 ] as const;
 
-export type HeaderLeadingItemId = (typeof HEADER_LEADING_ITEM_IDS)[number];
 export type HeaderTrailingItemId = (typeof HEADER_TRAILING_ITEM_IDS)[number];
 export type SidebarActivityItemId = (typeof SIDEBAR_ACTIVITY_ITEM_IDS)[number];
 export type FooterLeadingItemId = (typeof FOOTER_LEADING_ITEM_IDS)[number];

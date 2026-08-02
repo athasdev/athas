@@ -12,7 +12,7 @@ const footerToneClassNames: Record<FooterControlTone, string> = {
   danger: "text-destructive hover:bg-destructive/10 hover:text-destructive",
 };
 
-export function footerControlClassName(tone: FooterControlTone = "default", busy = false) {
+function footerControlClassName(tone: FooterControlTone = "default", busy = false) {
   return cn(
     "font-sans ui-text-chrome font-normal",
     footerToneClassNames[tone],

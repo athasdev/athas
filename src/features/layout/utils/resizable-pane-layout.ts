@@ -1,5 +1,5 @@
 export const MIN_RESPONSIVE_PANE_WIDTH = 50;
-export const MIN_MAIN_CONTENT_WIDTH = 360;
+const MIN_MAIN_CONTENT_WIDTH = 360;
 
 export function getResponsivePaneMaxWidth(viewportWidth: number, reservedWidth: number) {
   return Math.max(

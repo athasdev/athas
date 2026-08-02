@@ -10,12 +10,3 @@ export interface Action {
   commandId?: string;
   action: () => void;
 }
-
-export type ActionCategory =
-  | "View"
-  | "Settings"
-  | "Help"
-  | "File"
-  | "Window"
-  | "Navigation"
-  | "Markdown";

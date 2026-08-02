@@ -5,9 +5,8 @@ import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
 import { TreeRow } from "./tree-row";
 
-export const SIDEBAR_TREE_BASE_INDENT = 10;
-export const SIDEBAR_TREE_INDENT_SIZE = 14;
-export const SIDEBAR_TREE_ICON_SIZE = 14;
+const SIDEBAR_TREE_BASE_INDENT = 10;
+const SIDEBAR_TREE_INDENT_SIZE = 14;
 
 interface SidebarTreeGuidesProps {
   depth: number;
@@ -17,7 +16,7 @@ interface SidebarTreeGuidesProps {
   nextDepth?: number;
 }
 
-export function SidebarTreeGuides({
+function SidebarTreeGuides({
   depth,
   baseIndent = SIDEBAR_TREE_BASE_INDENT,
   indentSize = SIDEBAR_TREE_INDENT_SIZE,

@@ -24,4 +24,3 @@ function ViewerFooter({ children, endContent, className, ...props }: ViewerFoote
 }
 
 export { ViewerFooter };
-export type { ViewerFooterProps };

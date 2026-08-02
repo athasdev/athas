@@ -2,7 +2,7 @@ import type { StateCreator } from "zustand";
 import type { DatabaseObjectKind, DatabaseRow } from "@/features/database/types/common.types";
 import type { DatabaseType } from "@/features/database/types/provider.types";
 
-export interface ContextMenuState {
+interface ContextMenuState {
   folderHeaderContextMenu: { x: number; y: number } | null;
   projectNameMenu: { x: number; y: number } | null;
   databaseTableMenu: {
@@ -21,7 +21,7 @@ export interface ContextMenuState {
   } | null;
 }
 
-export interface ContextMenuActions {
+interface ContextMenuActions {
   setProjectNameMenu: (v: { x: number; y: number } | null) => void;
   setDatabaseTableMenu: (
     v: {

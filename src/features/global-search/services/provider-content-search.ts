@@ -14,7 +14,7 @@ import { createPathFilterPredicate } from "../utils/path-filters";
 const FILE_BATCH_LIMIT = 250;
 const READ_CONCURRENCY = 8;
 
-export function flattenProviderSearchFiles(entries: FileEntry[]): FileEntry[] {
+function flattenProviderSearchFiles(entries: FileEntry[]): FileEntry[] {
   const files: FileEntry[] = [];
   const stack = [...entries].reverse();
 

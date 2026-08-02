@@ -1,7 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
 
-export interface CommandPaletteViewRenderProps {
+interface CommandPaletteViewRenderProps {
   isActive: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -23,7 +23,7 @@ function emitChange() {
   listeners.forEach((listener) => listener());
 }
 
-export function subscribeToCommandPaletteViews(listener: () => void): () => void {
+function subscribeToCommandPaletteViews(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -48,18 +48,12 @@ export function unregisterCommandPaletteViewsByExtension(extensionId: string): v
   emitChange();
 }
 
-export function getCommandPaletteViews(): Map<CommandPaletteViewId, RegisteredCommandPaletteView> {
+function getCommandPaletteViews(): Map<CommandPaletteViewId, RegisteredCommandPaletteView> {
   if (!snapshot) {
     snapshot = new Map(views);
   }
 
   return snapshot;
-}
-
-export function getCommandPaletteView(
-  viewId: CommandPaletteViewId,
-): RegisteredCommandPaletteView | undefined {
-  return getCommandPaletteViews().get(viewId);
 }
 
 export function useCommandPaletteViews(): Map<CommandPaletteViewId, RegisteredCommandPaletteView> {

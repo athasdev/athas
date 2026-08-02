@@ -411,7 +411,7 @@ async function enqueueTelemetryEvent(
   return true;
 }
 
-export async function flushTelemetryQueue(): Promise<boolean> {
+async function flushTelemetryQueue(): Promise<boolean> {
   if (flushInFlight) {
     return flushInFlight;
   }

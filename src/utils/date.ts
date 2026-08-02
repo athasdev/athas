@@ -15,23 +15,6 @@ export const formatRelativeTime = (timestamp: number) => {
 };
 
 /**
- * Format a Unix timestamp (seconds) to a locale date-time string.
- * Returns "YYYY-MM-DD HH:MM" (e.g., "2024-01-20 14:30").
- */
-export const formatDate = (timestamp: number) => {
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(timestamp * 1000)
-    .replace(",", "");
-};
-
-/**
  * Format a date string to a short date format.
  * Returns "Jan 20, 2024" style output.
  */

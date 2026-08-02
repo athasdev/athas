@@ -56,7 +56,7 @@ function isSupportedDeepLinkProtocol(protocol: string) {
   return SUPPORTED_DEEP_LINK_PROTOCOLS.has(protocol);
 }
 
-export type DeepLinkAction =
+type DeepLinkAction =
   | { type: "windowOpen"; request: WindowOpenRequest }
   | { type: "extensionInstall"; extensionId: string }
   | { type: "extensions"; extensionsCategory?: Settings["extensionsActiveTab"] }
@@ -108,7 +108,7 @@ function parseExtensionsCategory(
   return undefined;
 }
 
-export function parseDeepLinkAction(url: string): DeepLinkAction | null {
+function parseDeepLinkAction(url: string): DeepLinkAction | null {
   const parsed = new URL(url);
 
   if (!isSupportedDeepLinkProtocol(parsed.protocol)) {

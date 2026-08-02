@@ -233,5 +233,3 @@ export const IconThemeSelectorContent = ({
 };
 
 IconThemeSelectorContent.displayName = "IconThemeSelectorContent";
-
-export default IconThemeSelectorContent;

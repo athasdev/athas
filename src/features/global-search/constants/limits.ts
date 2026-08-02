@@ -9,4 +9,3 @@ export const CONTENT_SEARCH_RENDER_INCREMENT = 40;
 
 // Debounce delays (ms)
 export const SEARCH_DEBOUNCE_DELAY = 200;
-export const PREVIEW_DEBOUNCE_DELAY = 150;

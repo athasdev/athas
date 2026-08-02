@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSelectors } from "@/utils/zustand-selectors";
 
-export const MAX_NUM_REMEMBERED_ACTIONS = 10;
+const MAX_NUM_REMEMBERED_ACTIONS = 10;
 
 interface ActionsStore {
   lastEnteredActionsStack: string[];

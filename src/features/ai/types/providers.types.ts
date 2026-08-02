@@ -17,33 +17,13 @@ export interface Model {
   proOnly?: boolean;
 }
 
-// CLI Agents that use Agent Client Protocol (ACP)
-export interface AIAgent {
-  id: string;
-  name: string;
-  binaryName: string;
-  description: string;
-  installed?: boolean;
-}
-
-export const AI_AGENTS: AIAgent[] = [];
-
 // Helper to check if a provider ID is an agent
-export const isAgentProvider = (id: string): boolean => {
-  return AI_AGENTS.some((agent) => agent.id === id);
-};
 
 // Get agent by ID
-export const getAgentById = (id: string): AIAgent | undefined => {
-  return AI_AGENTS.find((agent) => agent.id === id);
-};
 
 // Update agent installation status
-export const updateAgentStatus = (agents: Array<{ id: string; installed: boolean }>) => {
-  void agents;
-};
 
-export const AI_PROVIDERS: ModelProvider[] = [
+const AI_PROVIDERS: ModelProvider[] = [
   {
     id: "anthropic",
     name: "Anthropic",
@@ -312,9 +292,6 @@ export const getAvailableProviders = (): ModelProvider[] => {
 };
 
 // Get installed agents only
-export const getInstalledAgents = (): AIAgent[] => {
-  return AI_AGENTS.filter((agent) => agent.installed);
-};
 
 export const getProviderById = (id: string): ModelProvider | undefined => {
   return getAvailableProviders().find((provider) => provider.id === id);

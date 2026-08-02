@@ -25,10 +25,3 @@ export interface ImageOperationResult {
   size: number; // in bytes
   dimensions: ImageDimensions;
 }
-
-export interface ImageMetadata {
-  format: ImageFormat;
-  size: number;
-  dimensions: ImageDimensions;
-  mimeType: string;
-}

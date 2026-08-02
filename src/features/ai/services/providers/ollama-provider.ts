@@ -47,7 +47,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs = OLLAMA_TIMEOUT_MS): Pro
   });
 }
 
-export function normalizeOllamaBaseUrl(url: string): string {
+function normalizeOllamaBaseUrl(url: string): string {
   return url.replace(/\/+$/, "") || DEFAULT_OLLAMA_BASE_URL;
 }
 

@@ -51,7 +51,3 @@ export function useExternalNavigationGuard() {
     };
   }, []);
 }
-
-export const __test__ = {
-  getAnchorTarget,
-};

@@ -44,7 +44,6 @@
 .file-tree-guide {
   position: absolute;
   width: 7px;
-  cursor: pointer;
   opacity: 0.9;
   pointer-events: auto;
   transform: translateX(-3px);

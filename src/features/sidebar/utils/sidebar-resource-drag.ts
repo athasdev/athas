@@ -1,6 +1,6 @@
 import type { GitFile } from "@/features/git/types/git.types";
 
-export const SIDEBAR_RESOURCE_MIME = "application/x-athas-sidebar-resource";
+const SIDEBAR_RESOURCE_MIME = "application/x-athas-sidebar-resource";
 export const SIDEBAR_RESOURCE_DROP_ON_AI_EVENT = "athas-sidebar-resource-drop-on-ai";
 
 export type SidebarDragResource =
@@ -59,7 +59,7 @@ export type SidebarDragResource =
       name: string;
     };
 
-export const getSidebarResourceLabel = (resource: SidebarDragResource): string => {
+const getSidebarResourceLabel = (resource: SidebarDragResource): string => {
   switch (resource.type) {
     case "file":
       return resource.name || resource.path;

@@ -268,18 +268,3 @@ export const parseAndExecuteVimCommand = async (commandInput: string): Promise<b
 };
 
 // Get command suggestions for autocomplete
-export const getVimCommandSuggestions = (input: string): VimCommand[] => {
-  if (!input.trim()) {
-    return vimCommands.slice(0, 10); // Return first 10 commands
-  }
-
-  const lowerInput = input.toLowerCase();
-
-  return vimCommands
-    .filter(
-      (cmd) =>
-        cmd.name.toLowerCase().startsWith(lowerInput) ||
-        cmd.aliases?.some((alias) => alias.toLowerCase().startsWith(lowerInput)),
-    )
-    .slice(0, 10); // Limit to 10 suggestions
-};

@@ -33,4 +33,3 @@ function ViewerHeader({ icon, title, detail, actions, className, ...props }: Vie
 }
 
 export { ViewerHeader };
-export type { ViewerHeaderProps };

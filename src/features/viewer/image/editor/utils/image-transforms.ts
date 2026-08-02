@@ -145,17 +145,3 @@ export async function rotate90CCW(imageSrc: string): Promise<ImageOperationResul
 export async function rotate180(imageSrc: string): Promise<ImageOperationResult> {
   return rotateImage(imageSrc, 180);
 }
-
-/**
- * Flip image horizontally
- */
-export async function flipHorizontal(imageSrc: string): Promise<ImageOperationResult> {
-  return flipImage(imageSrc, "horizontal");
-}
-
-/**
- * Flip image vertically
- */
-export async function flipVertical(imageSrc: string): Promise<ImageOperationResult> {
-  return flipImage(imageSrc, "vertical");
-}

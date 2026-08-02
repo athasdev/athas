@@ -1,4 +1,4 @@
-export const WORKSPACE_TABS_STORAGE_PREFIX = "workspace-tabs-storage-";
+const WORKSPACE_TABS_STORAGE_PREFIX = "workspace-tabs-storage-";
 
 type WorkspaceTabsStorageReader = Pick<Storage, "key" | "length">;
 type WorkspaceTabsStorageWriter = WorkspaceTabsStorageReader & Pick<Storage, "removeItem">;

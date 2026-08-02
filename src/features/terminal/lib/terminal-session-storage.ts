@@ -100,16 +100,3 @@ export const saveWorkspaceTerminalsToStorage = (
     console.error("Failed to save terminals to storage:", error);
   }
 };
-
-export const setTerminalPersistence = (enabled: boolean) => {
-  try {
-    localStorage.setItem(PERSISTENCE_ENABLED_KEY, String(enabled));
-    if (!enabled) {
-      Object.keys(localStorage)
-        .filter((key) => key.startsWith(`${PERSISTENCE_KEY_PREFIX}:`))
-        .forEach((key) => localStorage.removeItem(key));
-    }
-  } catch (error) {
-    console.error("Failed to update persistence setting:", error);
-  }
-};

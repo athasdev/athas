@@ -32,13 +32,6 @@ export function runDockerContainerAction(
   });
 }
 
-export function getDockerContainerLogs(containerId: string, tail = 500): Promise<string> {
-  return invoke<string>("docker_get_container_logs", {
-    containerId,
-    tail,
-  });
-}
-
 export function startDockerContainerLogStream(containerId: string, tail = 300): Promise<string> {
   return invoke<string>("docker_start_container_log_stream", {
     containerId,

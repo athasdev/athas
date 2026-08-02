@@ -11,7 +11,7 @@ export const generateTerminalId = (name: string): string => {
   return `terminal_${name.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
-export const terminalReducer = (state: TerminalState, action: TerminalAction): TerminalState => {
+const terminalReducer = (state: TerminalState, action: TerminalAction): TerminalState => {
   switch (action.type) {
     case "CREATE_TERMINAL": {
       const {

@@ -1995,7 +1995,6 @@ export function DockerSidebar() {
         <SidebarTabBar
           items={dockerTabs}
           value={activeTab}
-          appearance="grouped"
           onChange={(tab) => setActiveTab(tab as DockerTab)}
         />
 

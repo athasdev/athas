@@ -114,15 +114,6 @@ export function isMarketplaceSkillInstalled(skills: AIChatSkill[], marketplaceSk
   );
 }
 
-export function findInstalledMarketplaceSkill(
-  skills: AIChatSkill[],
-  marketplaceSkillId: string,
-): AIChatSkill | undefined {
-  return skills.find(
-    (skill) => skill.sourceId === marketplaceSkillId || skill.id === marketplaceSkillId,
-  );
-}
-
 function getInstalledUpstreamTitle(skill: AIChatSkill) {
   return skill.upstreamTitle ?? skill.title;
 }

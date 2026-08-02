@@ -19,9 +19,7 @@ export interface CliOpenPayload {
 const toPositiveInteger = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 
-export function mapCliOpenPayloadToWindowOpenRequest(
-  payload: CliOpenPayload,
-): WindowOpenRequest | null {
+function mapCliOpenPayloadToWindowOpenRequest(payload: CliOpenPayload): WindowOpenRequest | null {
   switch (payload.kind) {
     case "web":
       if (!payload.url) return null;

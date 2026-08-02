@@ -271,7 +271,7 @@ export function ToolCallGroupDisplay({
   );
 }
 
-export default function ToolCallDisplay({
+function ToolCallDisplay({
   toolName,
   input,
   output,

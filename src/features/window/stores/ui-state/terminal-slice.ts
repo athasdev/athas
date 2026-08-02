@@ -1,11 +1,11 @@
 import type { StateCreator } from "zustand";
 
-export interface TerminalState {
+interface TerminalState {
   terminalFocusRequested: boolean;
   terminalFocusCallback: (() => void) | null;
 }
 
-export interface TerminalActions {
+interface TerminalActions {
   registerTerminalFocus: (callback: () => void) => void;
   requestTerminalFocus: () => void;
   clearTerminalFocus: () => void;

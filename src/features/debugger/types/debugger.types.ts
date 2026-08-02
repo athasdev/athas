@@ -1,6 +1,6 @@
 export type DebuggerRuntime = "bun" | "node" | "python" | "rust" | "go" | "custom";
 
-export type DebugSessionStatus = "idle" | "running" | "paused";
+type DebugSessionStatus = "idle" | "running" | "paused";
 
 export interface DebugBreakpoint {
   id: string;

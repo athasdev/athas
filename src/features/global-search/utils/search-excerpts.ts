@@ -7,7 +7,7 @@ export interface SearchExcerptHighlight {
   itemKey: string;
 }
 
-export interface SearchExcerptMatch {
+interface SearchExcerptMatch {
   itemKey: string;
   filePath: string;
   targetLine: number;

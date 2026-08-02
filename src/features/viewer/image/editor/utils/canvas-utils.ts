@@ -59,17 +59,6 @@ export async function getCanvasBlob(
 }
 
 /**
- * Convert canvas to data URL
- */
-export function getCanvasDataURL(
-  canvas: HTMLCanvasElement,
-  mimeType: string,
-  quality?: number,
-): string {
-  return canvas.toDataURL(mimeType, quality);
-}
-
-/**
  * Get image dimensions from source
  */
 export async function getImageDimensions(src: string): Promise<ImageDimensions> {

@@ -293,5 +293,3 @@ export const ThemeSelectorContent = ({
 };
 
 ThemeSelectorContent.displayName = "ThemeSelectorContent";
-
-export default ThemeSelectorContent;

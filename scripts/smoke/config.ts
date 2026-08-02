@@ -23,7 +23,7 @@ export const smokeTargets: Record<SmokeIdentity, { config?: string; macosAppName
   },
 };
 
-export function getSmokePlatform(platform: NodeJS.Platform): SmokePlatform | null {
+function getSmokePlatform(platform: NodeJS.Platform): SmokePlatform | null {
   switch (platform) {
     case "darwin":
       return "macos";

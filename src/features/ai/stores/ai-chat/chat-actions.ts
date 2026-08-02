@@ -76,7 +76,7 @@ async function syncChatToDatabase(get: GetAIChatStore, chatId: string) {
   }
 }
 
-async function loadChatMessages(set: SetAIChatStore, get: GetAIChatStore, chatId: string) {
+async function loadChatMessages(set: SetAIChatStore, chatId: string) {
   try {
     const fullChat = await loadChatFromDb(chatId);
     set((state) => {
@@ -202,7 +202,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       set((state) => {
         state.currentChatId = chatId;
       });
-      void loadChatMessages(set, get, chatId);
+      void loadChatMessages(set, chatId);
     },
     deleteChat: (chatId) => {
       set((state) => {
@@ -359,7 +359,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
         console.error("Failed to load chats from database:", error);
       }
     },
-    loadChatMessages: (chatId) => loadChatMessages(set, get, chatId),
+    loadChatMessages: (chatId) => loadChatMessages(set, chatId),
     clearAllChats: async () => {
       try {
         await Promise.all(get().chats.map((chat) => deleteChatFromDb(chat.id)));
@@ -386,7 +386,7 @@ export function createChatActions(set: SetAIChatStore, get: GetAIChatStore): Cha
       });
 
       if (snapshot?.currentChatId) {
-        void loadChatMessages(set, get, snapshot.currentChatId);
+        void loadChatMessages(set, snapshot.currentChatId);
       }
     },
     getCurrentChat: () => {

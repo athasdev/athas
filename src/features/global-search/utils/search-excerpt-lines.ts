@@ -2,7 +2,7 @@ import type { Token } from "@/features/editor/utils/html";
 import { splitLines } from "@/features/editor/utils/lines";
 import type { SearchExcerptHighlight } from "./search-excerpts";
 
-export interface SearchExcerptTextSegment {
+interface SearchExcerptTextSegment {
   startColumn: number;
   endColumn: number;
   text: string;

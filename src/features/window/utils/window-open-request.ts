@@ -121,7 +121,7 @@ export function parseWindowOpenUrl(url: URL): WindowOpenRequest | null {
   };
 }
 
-export async function handleWindowOpenRequest(request: WindowOpenRequest) {
+async function handleWindowOpenRequest(request: WindowOpenRequest) {
   const { handleFileSelect, handleOpenFolderByPath, handleOpenRemoteProject } =
     useFileSystemStore.getState();
 
@@ -191,7 +191,7 @@ export async function handleWindowOpenRequest(request: WindowOpenRequest) {
   }
 }
 
-export function createWindowOpenRequestQueue(
+function createWindowOpenRequestQueue(
   handler: WindowOpenRequestHandler,
   onError: (error: unknown) => void = console.error,
 ) {

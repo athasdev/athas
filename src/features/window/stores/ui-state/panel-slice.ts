@@ -4,7 +4,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
 
-export interface PanelState {
+interface PanelState {
   isSidebarVisible: boolean;
   isRightSidebarVisible: boolean;
   isFindVisible: boolean;
@@ -12,7 +12,7 @@ export interface PanelState {
   bottomPaneActiveTab: BottomPaneTab;
 }
 
-export interface PanelActions {
+interface PanelActions {
   setIsSidebarVisible: (v: boolean) => void;
   setIsRightSidebarVisible: (v: boolean) => void;
   setIsFindVisible: (v: boolean) => void;

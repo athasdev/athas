@@ -120,7 +120,7 @@ export function buildTerminalFontFamily(primaryFont: string): string {
  * Load a font and verify it's available for canvas rendering.
  * Returns `true` if the font is ready, `false` if it failed/timed out.
  */
-export async function loadAndVerifyFont(fontFamily: string, fontSize: number): Promise<boolean> {
+async function loadAndVerifyFont(fontFamily: string, fontSize: number): Promise<boolean> {
   const primaryFont = splitFontFamilyList(fontFamily)[0];
   if (!primaryFont) return false;
 

@@ -18,7 +18,7 @@ export interface AIWorkspaceSessionSnapshot {
   selectedAgentId: AgentType;
 }
 
-export interface PendingAgentLaunchRequest {
+interface PendingAgentLaunchRequest {
   chatId: string;
   agentId: AgentType;
   prompt: string;

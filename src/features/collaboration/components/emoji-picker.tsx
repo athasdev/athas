@@ -8,7 +8,7 @@ import { cn } from "@/utils/cn";
 const RECENT_EMOJI_STORAGE_KEY = "athas.ui.emoji-picker.recent";
 const MAX_RECENT_EMOJIS = 8;
 
-export const defaultEmojiPickerOptions = [
+const defaultEmojiPickerOptions = [
   "💬",
   "🛠️",
   "🚀",

@@ -54,14 +54,6 @@ export function normalizeKey(key: string): string {
 }
 
 /**
- * Get platform-specific modifier key name.
- * Returns 'cmd' on Mac, 'ctrl' on Windows/Linux.
- */
-export function getModifierKey(): "cmd" | "ctrl" {
-  return IS_MAC ? "cmd" : "ctrl";
-}
-
-/**
  * Node.js-style platform name used by the extension system.
  * Maps Tauri's "macos"→"darwin", "windows"→"win32", others pass through.
  */
@@ -87,7 +79,7 @@ function detectArch(): string {
   }
 }
 
-export const ARCH: string = detectArch();
+const ARCH: string = detectArch();
 
 /**
  * Platform+architecture identifier for extension CDN packages.

@@ -301,28 +301,6 @@ export function findPaneGroupByBufferId(root: PaneNode, bufferId: string): PaneG
   return findPaneGroupByBufferId(root.children[1], bufferId);
 }
 
-export function findParentSplit(
-  root: PaneNode,
-  childId: string,
-  parent: PaneSplit | null = null,
-): { parent: PaneSplit; childIndex: 0 | 1 } | null {
-  if (root.id === childId) {
-    if (parent) {
-      const childIndex = parent.children[0].id === childId ? 0 : 1;
-      return { parent, childIndex };
-    }
-    return null;
-  }
-
-  if (root.type === "split") {
-    const inFirst = findParentSplit(root.children[0], childId, root);
-    if (inFirst) return inFirst;
-    return findParentSplit(root.children[1], childId, root);
-  }
-
-  return null;
-}
-
 function collectPaneGroups(root: PaneNode, groups: PaneGroup[]) {
   if (root.type === "group") {
     groups.push(root);

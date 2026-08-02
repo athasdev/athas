@@ -8,7 +8,7 @@ export function isRemoteAuthFailure(error: unknown): boolean {
   );
 }
 
-export function getRemoteErrorMessage(error: unknown): string {
+function getRemoteErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
 }

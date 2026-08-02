@@ -33,12 +33,6 @@ export async function connectRemoteConnection(
   toast.success(`Connected to ${connection.name}`);
 }
 
-export async function disconnectRemoteConnection(connection: RemoteConnection): Promise<void> {
-  await invoke("ssh_disconnect", { connectionId: connection.id });
-  await connectionStore.updateConnectionStatus(connection.id, false);
-  toast.info(`Disconnected from ${connection.name}`);
-}
-
 export async function testRemoteConnection(connection: {
   host: string;
   port: number;

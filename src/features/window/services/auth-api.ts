@@ -32,7 +32,7 @@ export interface AuthUser {
 
 export type ProductCapability = "hostedAi" | "settingsSync" | "collaboration" | "enterprisePolicy";
 
-export type ProductCapabilities = Record<ProductCapability, boolean>;
+type ProductCapabilities = Record<ProductCapability, boolean>;
 
 export interface SubscriptionInfo {
   status: "free" | "pro";
@@ -200,7 +200,7 @@ export interface EnterprisePolicy {
   updatedAt: string | null;
 }
 
-export interface CollaborationDocumentUpdatePull {
+interface CollaborationDocumentUpdatePull {
   document: {
     id: number;
     path: string;
@@ -246,37 +246,6 @@ export type CollaborationDocumentStreamEvent =
       error: string;
       status?: number;
     };
-
-export interface CollaborationAdminAnalytics {
-  generatedAt: string;
-  workspace: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-  totals: {
-    members: number;
-    activeMembers: number;
-    pendingInvitations: number;
-    channels: number;
-    projects: number;
-    presenceSessions: number;
-    documents: number;
-    documentUpdates: number;
-    activityEvents: number;
-  };
-  roles: Record<string, number>;
-  memberStatuses: Record<string, number>;
-  updateTypes: Record<string, number>;
-  recentActivity: Array<{
-    id: number;
-    action: string;
-    actorUserId: number | null;
-    targetType: string | null;
-    targetId: string | null;
-    createdAt: string | null;
-  }>;
-}
 
 export interface CloudSettingsSyncSnapshot {
   schemaVersion: number;
@@ -892,36 +861,6 @@ export async function registerCollaborationDocument(input: {
   return payload?.collaboration ?? null;
 }
 
-export async function fetchCollaborationDocumentUpdates(input: {
-  documentId: number;
-  afterVersion?: number;
-  limit?: number;
-}): Promise<CollaborationDocumentUpdatePull> {
-  const params = new URLSearchParams({
-    afterVersion: String(input.afterVersion ?? 0),
-    limit: String(input.limit ?? 100),
-  });
-  const response = await authenticatedFetch(
-    `/api/collaboration/documents/${input.documentId}/updates?${params.toString()}`,
-  );
-
-  const payload = (await response.json().catch(() => null)) as
-    | (CollaborationDocumentUpdatePull & { error?: string })
-    | null;
-
-  if (!response.ok || !payload?.document) {
-    throw new AuthApiError(
-      payload?.error || `Failed to fetch collaboration document updates: ${response.status}`,
-      response.status,
-    );
-  }
-
-  return {
-    document: payload.document,
-    updates: payload.updates ?? [],
-  };
-}
-
 export async function appendCollaborationDocumentUpdate(input: {
   documentId: number;
   clientId: string;
@@ -1077,23 +1016,6 @@ export async function streamCollaborationDocumentUpdates(input: {
 
   const trailingEvent = parseCollaborationSseBlock(buffer.trim());
   if (trailingEvent) await input.onEvent(trailingEvent);
-}
-
-export async function fetchCollaborationAdminAnalytics(): Promise<CollaborationAdminAnalytics> {
-  const response = await authenticatedFetch("/api/collaboration/admin/analytics");
-  const payload = (await response.json().catch(() => null)) as {
-    analytics?: CollaborationAdminAnalytics;
-    error?: string;
-  } | null;
-
-  if (!response.ok || !payload?.analytics) {
-    throw new AuthApiError(
-      payload?.error || `Failed to fetch collaboration analytics: ${response.status}`,
-      response.status,
-    );
-  }
-
-  return payload.analytics;
 }
 
 export async function fetchSettingsSyncSnapshot(

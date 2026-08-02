@@ -1,4 +1,4 @@
-export function isNativeTextInputElement(element: Element | null): boolean {
+function isNativeTextInputElement(element: Element | null): boolean {
   if (!element) return false;
 
   if (typeof HTMLTextAreaElement !== "undefined" && element instanceof HTMLTextAreaElement) {

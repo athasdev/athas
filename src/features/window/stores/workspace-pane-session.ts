@@ -8,7 +8,7 @@ import type {
   ProjectPaneSessionNode,
 } from "@/features/window/stores/session.store";
 
-export const createEmptyPaneNode = (id: string): PaneGroup => ({
+const createEmptyPaneNode = (id: string): PaneGroup => ({
   id,
   type: "group",
   bufferIds: [],

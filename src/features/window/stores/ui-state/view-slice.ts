@@ -5,14 +5,14 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import { workspaceSessionRepository } from "@/features/workspace/persistence/workspace-session-repository";
 import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
 
-export interface ViewState {
+interface ViewState {
   isGitViewActive: boolean;
   isGitHubPRsViewActive: boolean;
   activeSidebarView: SidebarView;
   activeRightSidebarView: SidebarView;
 }
 
-export interface ViewActions {
+interface ViewActions {
   setActiveView: (view: SidebarView) => void;
   setActiveRightSidebarView: (view: SidebarView) => void;
 }

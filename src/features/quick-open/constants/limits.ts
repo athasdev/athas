@@ -6,4 +6,3 @@ export const MAX_OTHER_FILES_SHOWN = 20;
 
 // Debounce delay for search query (ms)
 export const SEARCH_DEBOUNCE_DELAY = 100;
-export const PREVIEW_DEBOUNCE_DELAY = 150;

@@ -9,7 +9,7 @@ import { findPaneGroup } from "../utils/pane-tree";
 import { PaneContainer } from "./pane-container";
 import { PaneNodeRenderer } from "./pane-node-renderer";
 
-export function SplitViewRoot({ activeSurface = true }: { activeSurface?: boolean }) {
+function SplitViewRoot({ activeSurface = true }: { activeSurface?: boolean }) {
   const root = usePaneStore.use.root();
   const fullscreenPaneId = usePaneStore.use.fullscreenPaneId();
   const exitPaneFullscreen = usePaneStore((state) => state.actions.exitPaneFullscreen);

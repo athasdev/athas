@@ -1,14 +1,14 @@
 import type { StateCreator } from "zustand";
 import type { QuickEditSelection } from "@/features/window/stores/ui-state/types/ui-state.types";
 
-export interface QuickEditState {
+interface QuickEditState {
   isQuickEditVisible: boolean;
   quickEditSelection: QuickEditSelection;
 }
 
 // No actions defined yet - can be added when needed
 // biome-ignore lint/complexity/noBannedTypes: Empty type for future actions
-export type QuickEditActions = {};
+type QuickEditActions = {};
 
 export type QuickEditSlice = QuickEditState & QuickEditActions;
 

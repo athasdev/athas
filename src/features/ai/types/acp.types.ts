@@ -25,7 +25,7 @@ export interface AcpAgentStatus {
   agentCapabilities?: AcpAgentCapabilities | null;
 }
 
-export interface AcpAgentCapabilities {
+interface AcpAgentCapabilities {
   loadSession: boolean;
   promptCapabilities: {
     image: boolean;
@@ -40,7 +40,7 @@ export interface AcpAgentCapabilities {
   authCapabilities: unknown;
 }
 
-export interface AcpSessionInfo {
+interface AcpSessionInfo {
   sessionId: string;
   cwd: string;
   title?: string | null;
@@ -53,7 +53,7 @@ export interface AcpSessionList {
   nextCursor?: string | null;
 }
 
-export type AcpContentBlock =
+type AcpContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; data: string; mediaType: string }
   | { type: "audio"; data: string; mediaType: string }
@@ -80,7 +80,7 @@ export type AcpPromptContentBlock =
     };
 
 // Slash command types
-export interface SlashCommandInput {
+interface SlashCommandInput {
   hint: string;
 }
 
@@ -97,7 +97,7 @@ export interface SessionMode {
   description?: string;
 }
 
-export interface SessionConfigOptionValue {
+interface SessionConfigOptionValue {
   id: string;
   name: string;
   description?: string;
@@ -115,30 +115,26 @@ export type SessionConfigOption = {
   };
 };
 
-export interface SessionModeState {
+interface SessionModeState {
   currentModeId: string | null;
   availableModes: SessionMode[];
 }
 
-export type AcpPlanEntryPriority = "high" | "medium" | "low";
-export type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
+type AcpPlanEntryPriority = "high" | "medium" | "low";
+type AcpPlanEntryStatus = "pending" | "in_progress" | "completed";
 
-export interface AcpPlanEntry {
+interface AcpPlanEntry {
   content: string;
   priority: AcpPlanEntryPriority;
   status: AcpPlanEntryStatus;
 }
 
-export interface AcpUsageUpdate {
+interface AcpUsageUpdate {
   used: number;
   size: number;
 }
 
-export type AcpPermissionOptionKind =
-  | "allow_once"
-  | "allow_always"
-  | "reject_once"
-  | "reject_always";
+type AcpPermissionOptionKind = "allow_once" | "allow_always" | "reject_once" | "reject_always";
 
 export interface AcpPermissionOption {
   id: string;
@@ -166,10 +162,10 @@ export interface AcpToolCallLocation {
 }
 
 // Prompt turn types
-export type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
+type StopReason = "end_turn" | "max_tokens" | "max_turn_requests" | "refusal" | "cancelled";
 
 // UI action types that agents can request
-export type UiAction =
+type UiAction =
   | { action: "open_web_viewer"; url: string }
   | { action: "open_terminal"; command: string | null }
   | { action: "set_chat_title"; title: string };

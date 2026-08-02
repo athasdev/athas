@@ -1,6 +1,6 @@
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 
-export const normalizeAiWorkspacePath = (workspacePath: string | null | undefined) =>
+const normalizeAiWorkspacePath = (workspacePath: string | null | undefined) =>
   workspacePath || null;
 
 export const getChatWorkspacePath = (chat: Pick<Chat, "workspacePath">) =>

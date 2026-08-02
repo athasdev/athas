@@ -36,11 +36,6 @@ export function initializeDebuggerEventBridge(): Promise<void> {
   return pendingSubscription;
 }
 
-export function disposeDebuggerEventBridge() {
-  unsubscribeDebuggerEvents?.();
-  unsubscribeDebuggerEvents = null;
-}
-
 async function handleDebugProtocolMessage(payload: DebugProtocolMessage) {
   const message = asRecord(payload.message);
   if (!message) return;

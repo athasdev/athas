@@ -2,7 +2,7 @@ import type { StateCreator } from "zustand";
 import type { CommandPaletteViewId } from "@/features/command-palette/types/view.types";
 import type { SettingsTab } from "./types/ui-state.types";
 
-export interface ModalState {
+interface ModalState {
   isQuickOpenVisible: boolean;
   isCommandPaletteVisible: boolean;
   commandPaletteInitialView: CommandPaletteViewId;
@@ -15,7 +15,7 @@ export interface ModalState {
   settingsInitialTab: SettingsTab | null;
 }
 
-export interface ModalActions {
+interface ModalActions {
   setIsQuickOpenVisible: (v: boolean) => void;
   setIsCommandPaletteVisible: (v: boolean) => void;
   openCommandPaletteView: (view: CommandPaletteViewId) => void;

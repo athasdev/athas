@@ -30,10 +30,3 @@ export function classifySessionConfigOption(
 
   return "other";
 }
-
-export function getPrimarySessionConfigOption(
-  options: SessionConfigOption[],
-  category: SessionConfigOptionCategory,
-): SessionConfigOption | null {
-  return options.find((option) => classifySessionConfigOption(option) === category) ?? null;
-}

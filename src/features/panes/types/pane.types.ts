@@ -21,10 +21,3 @@ export type PaneNode = PaneGroup | PaneSplit;
 
 export type SplitDirection = "horizontal" | "vertical";
 export type SplitPlacement = "before" | "after";
-
-export interface PaneState {
-  root: PaneNode;
-  activePaneId: string;
-  mostRecentActivePaneIds?: string[];
-  fullscreenPaneId?: string | null;
-}

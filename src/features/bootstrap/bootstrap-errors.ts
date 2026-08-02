@@ -4,7 +4,7 @@ interface BootstrapStep {
   name: string;
 }
 
-export function logBootstrapError(step: string, error: unknown) {
+function logBootstrapError(step: string, error: unknown) {
   console.error(`App bootstrap failed during ${step}:`, error);
   void recordCrashReport({
     kind: "bootstrap_error",

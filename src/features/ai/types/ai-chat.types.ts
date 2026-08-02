@@ -1,4 +1,3 @@
-import type React from "react";
 import type {
   AcpToolCallLocation,
   AcpToolCallStatus,
@@ -25,12 +24,12 @@ export interface ToolCall {
   isComplete?: boolean;
 }
 
-export interface ImageContent {
+interface ImageContent {
   data: string;
   mediaType: string;
 }
 
-export interface ResourceContent {
+interface ResourceContent {
   uri: string;
   name: string | null;
 }
@@ -53,22 +52,6 @@ export interface Message {
 // Agent types for AI chat
 export type AgentType = string;
 
-export interface AgentInfo {
-  id: AgentType;
-  name: string;
-  description: string;
-  isAcp: boolean; // true for CLI agents, false for custom (HTTP API)
-}
-
-export const AGENT_OPTIONS: AgentInfo[] = [
-  {
-    id: "custom",
-    name: "Athas Agent",
-    description: "Use Athas Agent settings and provider configuration",
-    isAcp: false,
-  },
-];
-
 export interface Chat {
   id: string;
   title: string;
@@ -85,16 +68,6 @@ export interface Chat {
   archivedAt?: Date | null;
 }
 
-export interface ContextInfo {
-  activeBuffer?: PaneContent & { webViewerContent?: string };
-  openBuffers?: PaneContent[];
-  selectedFiles?: string[];
-  projectRoot?: string;
-  language?: string;
-  providerId?: string;
-  agentId?: AgentType;
-}
-
 export interface AIChatProps {
   className?: string;
   surfaceId: string;
@@ -108,16 +81,6 @@ export interface AIChatProps {
   mode: "chat";
   // Buffer update functions
   onApplyCode?: (code: string) => void;
-}
-
-export interface ChatHistoryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  chats: Chat[];
-  currentChatId: string | null;
-  onSwitchToChat: (chatId: string) => void;
-  onDeleteChat: (chatId: string, event: React.MouseEvent) => void;
-  formatTime: (date: Date) => string;
 }
 
 export interface MarkdownRendererProps {

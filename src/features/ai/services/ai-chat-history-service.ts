@@ -50,12 +50,6 @@ interface ChatWithMessages {
   tool_calls: ToolCallData[];
 }
 
-interface ChatStats {
-  total_chats: number;
-  total_messages: number;
-  total_tool_calls: number;
-}
-
 /**
  * Initialize the chat history database
  * Creates tables and indexes if they don't exist
@@ -247,45 +241,6 @@ export const deleteChatFromDb = async (chatId: string): Promise<void> => {
     await invoke("delete_chat", { chatId });
   } catch (error) {
     console.error(`Error deleting chat ${chatId} from database:`, error);
-    throw error;
-  }
-};
-
-/**
- * Search chats by title or content
- */
-export const searchChatsInDb = async (query: string): Promise<Omit<Chat, "messages">[]> => {
-  try {
-    const chats = (await invoke("search_chats", { query })) as ChatData[];
-    return chats.map((chat) => ({
-      id: chat.id,
-      title: chat.title,
-      messages: [],
-      createdAt: new Date(chat.created_at),
-      lastMessageAt: new Date(chat.last_message_at),
-      agentId: (chat.agent_id || "custom") as AgentType,
-      acpSessionId: chat.acp_session_id,
-      workspacePath: chat.workspace_path,
-      providerId: chat.provider_id,
-      modelId: chat.model_id,
-      branch: chat.branch,
-      isPinned: chat.is_pinned,
-      archivedAt: chat.archived_at ? new Date(chat.archived_at) : null,
-    }));
-  } catch (error) {
-    console.error(`Error searching chats for "${query}":`, error);
-    throw error;
-  }
-};
-
-/**
- * Get chat statistics
- */
-export const getChatStats = async (): Promise<ChatStats> => {
-  try {
-    return (await invoke("get_chat_stats")) as ChatStats;
-  } catch (error) {
-    console.error("Error getting chat stats:", error);
     throw error;
   }
 };

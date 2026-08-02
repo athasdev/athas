@@ -166,7 +166,7 @@ export function parseJustfileRunActions(content: string, workspacePath: string):
   );
 }
 
-export function parseGoRunActions(workspacePath: string): RunActionItem[] {
+function parseGoRunActions(workspacePath: string): RunActionItem[] {
   return [
     createAction("go", "go.mod", "Run", "go run .", workspacePath),
     createAction("go", "go.mod", "Test", "go test ./...", workspacePath),
@@ -212,7 +212,7 @@ export function codeLensesToRunActions(
   }));
 }
 
-export function sortAndDedupeRunActions(actions: RunActionItem[]): RunActionItem[] {
+function sortAndDedupeRunActions(actions: RunActionItem[]): RunActionItem[] {
   const seen = new Set<string>();
   return actions
     .filter((action) => {

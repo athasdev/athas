@@ -22,7 +22,7 @@ function emitChange() {
   listeners.forEach((listener) => listener());
 }
 
-export function subscribeToAIProviderSettingsActions(listener: () => void): () => void {
+function subscribeToAIProviderSettingsActions(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -46,7 +46,7 @@ export function unregisterAIProviderSettingsActionsByExtension(extensionId: stri
   emitChange();
 }
 
-export function getAIProviderSettingsActions(providerId?: string): AIProviderSettingsAction[] {
+function getAIProviderSettingsActions(providerId?: string): AIProviderSettingsAction[] {
   if (!snapshot) {
     snapshot = Array.from(actions.values());
   }
