@@ -1,10 +1,17 @@
-<!-- Start with one short sentence. -->
-<!-- Then use a few short bullets written like "Add ... by @username". -->
-<!-- If this fixes an issue, add "Closes #123" as one of the bullets. -->
+<!-- Briefly describe the problem and the outcome. Keep it concise. -->
 
-.
+<!-- Summarize the visible changes in one or two bullets. -->
 
-- Add ... by @username
-- Fix ... by @username
-- Change ... by @username
-- Validate ... by @username
+- **How to test:**
+
+<!-- Add the shortest set of steps a reviewer can follow. -->
+
+1.
+
+**Screenshots:**
+
+<!-- Add screenshots or a recording for UI changes. Write "Not applicable" otherwise. -->
+
+Not applicable.
+
+<!-- If this fixes an issue, add "Closes #123" below. -->
