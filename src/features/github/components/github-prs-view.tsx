@@ -217,7 +217,11 @@ PRListItem.displayName = "PRListItem";
 
 const GitHubPRsView = memo(() => {
   const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
-  const { prs, isLoading, error, currentFilter, isAuthenticated } = useGitHubStore();
+  const prs = useGitHubStore.use.prs();
+  const isLoading = useGitHubStore.use.isLoading();
+  const error = useGitHubStore.use.error();
+  const currentFilter = useGitHubStore.use.currentFilter();
+  const isAuthenticated = useGitHubStore.use.isAuthenticated();
   const {
     fetchPRs,
     setFilter,
@@ -226,7 +230,7 @@ const GitHubPRsView = memo(() => {
     openPRInBrowser,
     checkoutPR,
     prefetchPR,
-  } = useGitHubStore().actions;
+  } = useGitHubStore.use.actions();
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const { syncWorkspaceRepositories, setManualRepository } = useRepositoryStore.use.actions();
   const { openPRBuffer, openGitHubIssueBuffer } = useBufferStore.use.actions();

@@ -50,10 +50,10 @@ function GitHubAuthState({
 }
 
 export function GitHubAuthStatusMessage() {
-  const githubAccountStatus = useGitHubStore((s) => s.githubAccountStatus);
-  const authError = useGitHubStore((s) => s.authError);
-  const isCheckingAuth = useGitHubStore((s) => s.isCheckingAuth);
-  const checkAuth = useGitHubStore((s) => s.actions.checkAuth);
+  const githubAccountStatus = useGitHubStore.use.githubAccountStatus();
+  const authError = useGitHubStore.use.authError();
+  const isCheckingAuth = useGitHubStore.use.isCheckingAuth();
+  const checkAuth = useGitHubStore.use.actions().checkAuth;
   const isAthasAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isAthasAuthLoading = useAuthStore((s) => s.isLoading);
   const { signIn, isSigningIn } = useDesktopSignIn({

@@ -909,7 +909,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         mentionSpan.setAttribute("contenteditable", "false");
         mentionSpan.title = file.path;
         mentionSpan.className =
-          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-primary/10 px-1.5 py-0.5 leading-[1.35] text-primary align-baseline select-none";
+          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-primary/10 px-1.5 py-0.5 leading-row text-primary align-baseline select-none";
         mentionSpan.textContent = file.name;
         inputRef.current.appendChild(mentionSpan);
 
@@ -984,7 +984,7 @@ const AIChatInputBar = memo(function AIChatInputBar({
         commandSpan.setAttribute("contenteditable", "false");
         commandSpan.title = command.description || `/${command.name}`;
         commandSpan.className =
-          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-accent/70 px-1.5 py-0.5 leading-[1.35] text-foreground align-baseline select-none";
+          "font-sans ui-text-sm inline-flex min-h-6 max-w-[180px] items-center gap-1 truncate rounded-full border-0 bg-accent/70 px-1.5 py-0.5 leading-row text-foreground align-baseline select-none";
         commandSpan.textContent = `/${command.name}`;
         inputRef.current.appendChild(commandSpan);
 

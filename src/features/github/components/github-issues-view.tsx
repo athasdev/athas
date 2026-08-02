@@ -139,8 +139,8 @@ const GitHubIssuesView = memo(
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-    const { isAuthenticated } = useGitHubStore();
-    const { checkAuth } = useGitHubStore().actions;
+    const isAuthenticated = useGitHubStore.use.isAuthenticated();
+    const { checkAuth } = useGitHubStore.use.actions();
     const { openGitHubIssueBuffer } = useBufferStore.use.actions();
     const activeIssueNumber = useBufferStore((state) => {
       const activeBuffer = state.activeBufferId

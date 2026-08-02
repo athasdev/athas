@@ -1,6 +1,7 @@
 @theme inline {
   --font-sans: var(--app-font-family);
   --font-mono: var(--editor-font-family);
+  --leading-row: 1.35;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

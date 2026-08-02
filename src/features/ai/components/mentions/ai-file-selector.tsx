@@ -205,7 +205,7 @@ export function AIFileSelector({
                       "px-2 font-medium text-subtle-foreground/75",
                       compact
                         ? "ui-text-sm pt-1 pb-0.5 leading-normal"
-                        : "ui-text-base pt-1.5 pb-1 leading-[1.35]",
+                        : "ui-text-base pt-1.5 pb-1 leading-row",
                     )}
                   >
                     {categoryLabels[category]}

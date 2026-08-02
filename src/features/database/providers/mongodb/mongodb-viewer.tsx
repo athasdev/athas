@@ -103,7 +103,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 variant="ghost"
                 size="xs"
                 className={cn(
-                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-[1.35]",
+                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-row",
                   store.selectedCollection === col.name && "bg-selected",
                 )}
                 aria-label={`Select collection ${col.name}`}

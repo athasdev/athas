@@ -1,6 +1,5 @@
 import type React from "react";
 import { memo } from "react";
-import { FILE_TREE_ROW_CLASS_NAME } from "@/features/file-explorer/lib/file-tree-row";
 import type { FileTreeGitStatusDecoration } from "@/features/file-explorer/lib/file-tree-git-status";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { InlineRenameInput } from "@/ui/input";
@@ -153,10 +152,7 @@ function FileExplorerTreeItemComponent({
       >
         {renderTreeGuides()}
         <div
-          className={cn(
-            "file-tree-row flex w-full items-center rounded-lg",
-            FILE_TREE_ROW_CLASS_NAME,
-          )}
+          className="file-tree-row flex w-full items-center rounded-lg gap-1.5 px-1.5 py-1 ui-text-sm leading-row"
           style={{
             paddingLeft: `${paddingLeft}px`,
           }}
@@ -223,7 +219,6 @@ function FileExplorerTreeItemComponent({
           file.isSymlink && file.symlinkTarget ? `Symlink to: ${file.symlinkTarget}` : undefined
         }
         className={cn(
-          FILE_TREE_ROW_CLASS_NAME,
           isDragOver && "!border-2 !border-dashed !border-primary !bg-primary !bg-opacity-20",
           isDragging && "cursor-move",
           file.ignored && "opacity-50",

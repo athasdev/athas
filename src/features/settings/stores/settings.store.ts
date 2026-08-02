@@ -24,6 +24,7 @@ import { settingsSearchIndex } from "../config/search-index";
 import type { SearchResult, SearchState } from "../types/search.types";
 import type { Settings } from "../types/settings.types";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 export type { Settings } from "../types/settings.types";
 
@@ -43,7 +44,7 @@ export function initializeSettingsStore(): Promise<Settings> {
   return settingsStoreInitPromise;
 }
 
-export const useSettingsStore = create(
+const useSettingsStoreBase = create(
   immer(
     combine(
       {
@@ -197,5 +198,7 @@ export const useSettingsStore = create(
     ),
   ),
 );
+
+export const useSettingsStore = createSelectors(useSettingsStoreBase);
 
 export { defaultSettings, getDefaultSetting };

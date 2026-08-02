@@ -258,7 +258,7 @@ function ContextSelectorDropdownContent({
           leadingContent={
             filteredContextBuffers.length > 0 ? (
               <>
-                <div className="ui-text-sm px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-subtle-foreground/75">
+                <div className="ui-text-sm px-2 pt-1.5 pb-1 font-medium leading-row text-subtle-foreground/75">
                   Open tabs
                 </div>
                 {filteredContextBuffers.map((buffer) => {

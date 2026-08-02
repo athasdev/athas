@@ -422,7 +422,7 @@ const GitStatusPanel = ({
             <SidebarTreeRow
               depth={depth}
               onClick={() => toggleFolderCollapsed(section, folderNode.fullPath)}
-              className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-[1.35]"
+              className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-row"
               draggable={!!repoPath}
               onDragStart={(event) => {
                 if (!repoPath) return;
@@ -440,7 +440,7 @@ const GitStatusPanel = ({
                 isExpanded={!isCollapsed}
                 className="relative z-1 shrink-0 text-subtle-foreground"
               />
-              <span className="relative z-1 block min-w-0 truncate whitespace-nowrap leading-[1.35]">
+              <span className="relative z-1 block min-w-0 truncate whitespace-nowrap leading-row">
                 {folderNode.name}
               </span>
               <div className="relative z-1 ml-auto shrink-0" onClick={(e) => e.stopPropagation()}>

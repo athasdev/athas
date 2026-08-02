@@ -14,6 +14,7 @@ import {
   syncGitHubTokenFromAccount,
   type GitHubTokenSyncStatus,
 } from "../services/github-token-service";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 const PR_LIST_CACHE_TTL_MS = 5 * 60_000;
 const PR_DETAILS_CACHE_TTL_MS = 120_000;
@@ -217,7 +218,7 @@ async function fetchNormalizedPRDetails(
   return normalizePullRequestDetails(detailsResponse);
 }
 
-export const useGitHubStore = create(
+const useGitHubStoreBase = create(
   combine(initialState, (set, get) => ({
     actions: {
       checkAuth: async (options?: { force?: boolean }) => {
@@ -793,3 +794,5 @@ export const useGitHubStore = create(
     },
   })),
 );
+
+export const useGitHubStore = createSelectors(useGitHubStoreBase);
