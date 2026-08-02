@@ -137,7 +137,7 @@ export function getGeneratedCdnPath(relativePath = ""): string {
 
 function stringifyManifest(manifest: ExtensionManifestRecord): string {
   return JSON.stringify(manifest, null, 2).replace(
-    /\[\n((?: {4}"[^"\n]*",?\n)+) {2}\]/g,
+    /\[\n((?:\s+"[^"\n]*",?\n)+)\s+\]/g,
     (match, contents: string) => {
       const values = contents
         .trim()
