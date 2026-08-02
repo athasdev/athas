@@ -12,6 +12,7 @@ import type {
 interface UIExtensionState {
   extensions: Map<string, UIExtensionRegistration>;
   sidebarViews: Map<string, RegisteredSidebarView>;
+  viewRevisions: Map<string, number>;
   toolbarActions: Map<string, RegisteredToolbarAction>;
   commands: Map<string, RegisteredCommand>;
   activeDialogs: ExtensionDialog[];
@@ -28,6 +29,7 @@ interface UIExtensionActions {
 
   registerSidebarView: (view: RegisteredSidebarView) => void;
   unregisterSidebarView: (viewId: string) => void;
+  invalidateSidebarView: (viewId: string) => void;
 
   registerToolbarAction: (action: RegisteredToolbarAction) => void;
   unregisterToolbarAction: (actionId: string) => void;
@@ -48,6 +50,7 @@ export const useUIExtensionStore = createSelectors(
     immer((set) => ({
       extensions: new Map(),
       sidebarViews: new Map(),
+      viewRevisions: new Map(),
       toolbarActions: new Map(),
       commands: new Map(),
       activeDialogs: [],
@@ -77,12 +80,20 @@ export const useUIExtensionStore = createSelectors(
       registerSidebarView: (view) => {
         set((state) => {
           state.sidebarViews.set(view.id, view);
+          state.viewRevisions.set(view.id, 0);
         });
       },
 
       unregisterSidebarView: (viewId) => {
         set((state) => {
           state.sidebarViews.delete(viewId);
+          state.viewRevisions.delete(viewId);
+        });
+      },
+
+      invalidateSidebarView: (viewId) => {
+        set((state) => {
+          state.viewRevisions.set(viewId, (state.viewRevisions.get(viewId) ?? 0) + 1);
         });
       },
 
@@ -127,6 +138,7 @@ export const useUIExtensionStore = createSelectors(
           for (const [id, view] of state.sidebarViews) {
             if (view.extensionId === extensionId) {
               state.sidebarViews.delete(id);
+              state.viewRevisions.delete(id);
             }
           }
           for (const [id, action] of state.toolbarActions) {

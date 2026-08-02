@@ -4,6 +4,7 @@ import {
   getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
+  getManifestIntegrationContributions,
   getManifestActivationEvents,
   getManifestLanguageContributions,
   matchesLanguageContribution,
@@ -134,6 +135,20 @@ describe("extension contribution normalization", () => {
 
     expect(getManifestAIProviderContributions(manifest).map((provider) => provider.id)).toEqual([
       "v0",
+    ]);
+  });
+
+  it("deduplicates integration contributions across manifest shapes", () => {
+    const manifest = createManifest({
+      categories: ["Integration"],
+      integrations: [{ id: "gitlab", name: "GitLab", kind: "code-host" }],
+      contributes: {
+        integrations: [{ id: "gitlab", name: "GitLab", kind: "code-host" }],
+      },
+    });
+
+    expect(getManifestIntegrationContributions(manifest)).toEqual([
+      { id: "gitlab", name: "GitLab", kind: "code-host" },
     ]);
   });
 });

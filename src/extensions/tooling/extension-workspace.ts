@@ -102,6 +102,11 @@ export function getExtensionCdnPath(folder: string, manifest: ExtensionManifestR
   const agents = getContributionArray(manifest, "agents");
   const themes = getContributionArray(manifest, "themes");
   const icons = getContributionArray(manifest, "icons");
+  const integrations = getContributionArray(manifest, "integrations");
+
+  if (integrations.length > 0 && typeof integrations[0].id === "string") {
+    return `integration/${integrations[0].id}`;
+  }
 
   if (databases.length > 0 && typeof databases[0].id === "string") {
     return `database/${databases[0].id}`;

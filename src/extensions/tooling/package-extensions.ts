@@ -24,8 +24,10 @@ function shouldPackage(manifest: Record<string, unknown>) {
   const isPureAssetExtension =
     getContributionArray(manifest, "themes").length > 0 ||
     getContributionArray(manifest, "icons").length > 0;
+  const isExecutableIntegration =
+    getContributionArray(manifest, "integrations").length > 0 && typeof manifest.main === "string";
 
-  return isPureAssetExtension && !hasNativeSidecar && !isLanguage;
+  return (isPureAssetExtension || isExecutableIntegration) && !hasNativeSidecar && !isLanguage;
 }
 
 async function sha256(path: string) {

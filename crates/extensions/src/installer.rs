@@ -1,6 +1,7 @@
 use super::types::{DownloadInfo, ExtensionMetadata, InstallProgress, InstallStatus};
 use crate::runtime::AthasAppHandle as AppHandle;
 use anyhow::{Context, Result};
+use serde::Deserialize;
 use std::{
    fs,
    path::{Path, PathBuf},
@@ -10,6 +11,15 @@ use tauri::{Emitter, Manager};
 pub struct ExtensionInstaller {
    app_handle: AppHandle,
    extensions_dir: PathBuf,
+}
+
+#[derive(Deserialize)]
+struct InstalledManifest {
+   id: String,
+   name: String,
+   #[serde(rename = "displayName")]
+   display_name: Option<String>,
+   version: String,
 }
 
 fn validate_extension_id(extension_id: &str) -> Result<()> {
@@ -164,13 +174,12 @@ impl ExtensionInstaller {
          },
       );
 
-      let extension_dir = self.extensions_dir.join(extension_id);
-
-      // Remove old version if exists
+      let extension_dir = self
+         .extensions_dir
+         .join(format!(".installing-{extension_id}"));
       if extension_dir.exists() {
          fs::remove_dir_all(&extension_dir)?;
       }
-
       fs::create_dir_all(&extension_dir)?;
 
       // Extract tar.gz
@@ -195,6 +204,35 @@ impl ExtensionInstaller {
       let _ = fs::remove_file(archive_path);
 
       Ok(extension_dir)
+   }
+
+   fn commit_extension(&self, extension_id: &str, staged_dir: &Path) -> Result<()> {
+      let extension_dir = self.extensions_dir.join(extension_id);
+      let backup_dir = self
+         .extensions_dir
+         .join(format!(".previous-{extension_id}"));
+
+      if !extension_dir.exists() && backup_dir.exists() {
+         fs::rename(&backup_dir, &extension_dir)?;
+      } else if backup_dir.exists() {
+         fs::remove_dir_all(&backup_dir)?;
+      }
+
+      if extension_dir.exists() {
+         fs::rename(&extension_dir, &backup_dir)?;
+      }
+
+      if let Err(error) = fs::rename(staged_dir, &extension_dir) {
+         if backup_dir.exists() {
+            let _ = fs::rename(&backup_dir, &extension_dir);
+         }
+         return Err(error.into());
+      }
+
+      if backup_dir.exists() {
+         fs::remove_dir_all(backup_dir)?;
+      }
+      Ok(())
    }
 
    /// Install extension from download info
@@ -224,13 +262,57 @@ impl ExtensionInstaller {
          .await?;
 
       // Extract the extension
-      let _ = self.extract_extension(&extension_id, &archive_path).await?;
+      let staged_dir = self.extract_extension(&extension_id, &archive_path).await?;
+      let manifest_path = staged_dir.join("extension.json");
+      let canonical_staged_dir = staged_dir.canonicalize()?;
+      let canonical_manifest_path = match manifest_path.canonicalize() {
+         Ok(path) if path.starts_with(&canonical_staged_dir) => path,
+         Ok(_) => {
+            fs::remove_dir_all(&staged_dir)?;
+            anyhow::bail!("Extension manifest escaped its package directory");
+         }
+         Err(error) => {
+            fs::remove_dir_all(&staged_dir)?;
+            return Err(error).context("Extension package is missing extension.json");
+         }
+      };
+      let manifest_bytes = match fs::read(&canonical_manifest_path)
+         .with_context(|| format!("Extension package is missing {}", manifest_path.display()))
+      {
+         Ok(bytes) => bytes,
+         Err(error) => {
+            fs::remove_dir_all(&staged_dir)?;
+            return Err(error);
+         }
+      };
+      let manifest_result: Result<InstalledManifest> = serde_json::from_slice(&manifest_bytes)
+         .context("Extension package contains an invalid manifest");
+      let manifest = match manifest_result {
+         Ok(manifest) => manifest,
+         Err(error) => {
+            fs::remove_dir_all(&staged_dir)?;
+            return Err(error);
+         }
+      };
+      if manifest.id != extension_id {
+         fs::remove_dir_all(&staged_dir)?;
+         anyhow::bail!(
+            "Extension manifest id mismatch: expected {}, got {}",
+            extension_id,
+            manifest.id
+         );
+      }
+      if manifest.name.trim().is_empty() || manifest.version.trim().is_empty() {
+         fs::remove_dir_all(&staged_dir)?;
+         anyhow::bail!("Extension manifest name and version must not be empty");
+      }
+      self.commit_extension(&extension_id, &staged_dir)?;
 
       // Save metadata
       let metadata = ExtensionMetadata {
          id: extension_id.clone(),
-         name: extension_id.clone(),
-         version: "1.0.0".to_string(), // TODO: Get from manifest
+         name: manifest.display_name.unwrap_or(manifest.name),
+         version: manifest.version,
          installed_at: chrono::Utc::now().to_rfc3339(),
          enabled: true,
       };

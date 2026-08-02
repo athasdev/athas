@@ -169,6 +169,7 @@ export interface Settings {
     | "snippet"
     | "database"
     | "ai"
+    | "integration"
     | "skill"
     | "agent";
   maxOpenTabs: number;

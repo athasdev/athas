@@ -4,6 +4,7 @@ import type {
   ExtensionManifest,
   AIProviderContribution,
   IconThemeContribution,
+  IntegrationContribution,
   LanguageContribution,
   Snippet,
   SnippetContribution,
@@ -80,6 +81,15 @@ export function getManifestAIProviderContributions(
   manifest: ExtensionManifest,
 ): AIProviderContribution[] {
   return [...(manifest.aiProviders || []), ...(manifest.contributes?.aiProviders || [])];
+}
+
+export function getManifestIntegrationContributions(
+  manifest: ExtensionManifest,
+): IntegrationContribution[] {
+  return uniqueBy(
+    [...(manifest.integrations || []), ...(manifest.contributes?.integrations || [])],
+    (integration) => integration.id,
+  );
 }
 
 export function getManifestThemeContributions(manifest: ExtensionManifest): ThemeContribution[] {

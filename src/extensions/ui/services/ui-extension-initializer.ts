@@ -6,7 +6,7 @@ export async function initializeUIExtensions(): Promise<void> {
   const { availableExtensions, installedExtensions } = useExtensionStore.getState();
 
   const uiExtensions = Array.from(availableExtensions.values()).filter(
-    (ext) => ext.manifest.categories.includes("UI") && installedExtensions.has(ext.manifest.id),
+    (ext) => Boolean(ext.manifest.main) && installedExtensions.has(ext.manifest.id),
   );
 
   const loadPromises = uiExtensions.map((ext) =>

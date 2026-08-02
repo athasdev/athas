@@ -4,6 +4,7 @@ import {
   getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
+  getManifestIntegrationContributions,
 } from "../types/extension-contributions";
 import { getServiceUrls } from "@/config/services";
 
@@ -36,6 +37,7 @@ function toExtensionCategories(rawCategories: string[] | undefined): ExtensionCa
     const normalized = category.trim().toLowerCase();
     if (normalized === "database") return "Database";
     if (normalized === "ai") return "AI";
+    if (normalized === "integration") return "Integration";
     if (normalized === "agent") return "Agent";
     if (normalized === "icon theme" || normalized === "icon-theme" || normalized === "icontheme") {
       return "Icon Theme";
@@ -57,9 +59,11 @@ function isContributionExtension(manifest: ExtensionManifest): boolean {
     manifest.agents?.length ||
     manifest.contributes?.agents?.length ||
     getManifestAIProviderContributions(manifest).length ||
+    getManifestIntegrationContributions(manifest).length ||
     manifest.themes?.length ||
     manifest.contributes?.themes?.length ||
-    getManifestIconContributions(manifest).length,
+    getManifestIconContributions(manifest).length ||
+    Boolean(manifest.main),
   );
 }
 

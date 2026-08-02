@@ -336,6 +336,10 @@ fn main() {
          uninstall_extension_new,
          list_installed_extensions_new,
          get_extension_path,
+         read_extension_entrypoint,
+         get_extension_secret,
+         set_extension_secret,
+         delete_extension_secret,
          // Fuzzy matching commands
          fuzzy_match,
          fff_ensure_workspaces,

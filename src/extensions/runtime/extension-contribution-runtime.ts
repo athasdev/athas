@@ -10,6 +10,7 @@ import type { ThemeDefinition } from "../themes/theme.types";
 import type { ExtensionManifest } from "../types/extension-manifest";
 import { getManifestIconContributions } from "../types/extension-contributions";
 import { isRetiredExtensionId } from "../registry/retired-extensions";
+import { uiExtensionHost } from "../ui/services/ui-extension-host";
 import {
   activateBundledContributionModule,
   deactivateBundledContributionModule,
@@ -214,12 +215,16 @@ export async function activateExtensionContributions(
   }
 
   await activateBundledContributionModule(extensionId, manifest);
+  if (manifest.main) {
+    await uiExtensionHost.loadExtension(manifest, resolvedExtensionPath);
+  }
 }
 
 export async function deactivateExtensionContributions(
   extensionId: string,
   manifest: ExtensionManifest,
 ): Promise<void> {
+  await uiExtensionHost.unloadExtension(extensionId);
   await deactivateBundledContributionModule(extensionId, manifest);
   fallbackThemeIfNeeded(getThemeContributions(manifest));
   fallbackIconThemeIfNeeded(getIconThemeContributions(manifest));

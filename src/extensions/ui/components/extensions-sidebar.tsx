@@ -7,6 +7,7 @@ import {
   DownloadSimpleIcon as Download,
   PackageIcon as Package,
   PaintBrushIcon as PaintBrush,
+  PlugsConnectedIcon as PlugsConnected,
   PlusIcon as Plus,
   RobotIcon as Robot,
   MagnifyingGlassIcon as Search,
@@ -37,6 +38,7 @@ import {
   getManifestAIProviderContributions,
   getManifestDatabaseContributions,
   getManifestIconContributions,
+  getManifestIntegrationContributions,
   getManifestThemeContributions,
 } from "@/extensions/types/extension-contributions";
 import { SkillsCommand } from "@/features/ai/components/skills/skills-command";
@@ -68,7 +70,15 @@ interface UnifiedExtension {
   id: string;
   name: string;
   description: string;
-  category: "language" | "theme" | "icon-theme" | "database" | "ai" | "skill" | "agent";
+  category:
+    | "language"
+    | "theme"
+    | "icon-theme"
+    | "database"
+    | "ai"
+    | "integration"
+    | "skill"
+    | "agent";
   isInstalled: boolean;
   isEnabled: boolean;
   version?: string;
@@ -102,6 +112,7 @@ const FILTER_TABS = [
   { id: "icon-theme", label: "Icon Themes", icon: Package },
   { id: "database", label: "Databases", icon: Database },
   { id: "ai", label: "AI", icon: Sparkles },
+  { id: "integration", label: "Integrations", icon: PlugsConnected },
   { id: "skill", label: "Skills", icon: Brain },
   { id: "agent", label: "Agents", icon: Robot },
 ] as const;
@@ -142,6 +153,8 @@ const SIMPLE_ICON_SLUGS: Record<string, string> = {
   qwen: "qwen",
   "qwen-code": "qwen",
   redis: "redis",
+  sentry: "sentry",
+  gitlab: "gitlab",
   sqlite: "sqlite",
   v0: "v0",
   vercel: "vercel",
@@ -210,6 +223,8 @@ const getCategoryLabel = (category: UnifiedExtension["category"]) => {
       return "Database";
     case "ai":
       return "AI";
+    case "integration":
+      return "Integration";
     case "skill":
       return "Skill";
     case "agent":
@@ -363,6 +378,8 @@ function getCategoryIcon(category: UnifiedExtension["category"]): ReactNode {
       return <Database className={className} weight="duotone" />;
     case "ai":
       return <Sparkles className={className} weight="duotone" />;
+    case "integration":
+      return <PlugsConnected className={className} weight="duotone" />;
     case "skill":
       return <Brain className={className} weight="duotone" />;
     case "agent":
@@ -781,6 +798,32 @@ export const ExtensionsSidebar = () => {
           runtimeIssues: ext.runtimeIssues,
           packageSize: resolvePackageSize(ext.manifest),
           contributionSummary: aiProviderContributions.map((provider) => `provider:${provider.id}`),
+        });
+      }
+
+      const integrationContributions = getManifestIntegrationContributions(ext.manifest);
+      if (integrationContributions.length > 0) {
+        const integration = integrationContributions[0];
+        allExtensions.push({
+          id: ext.manifest.id,
+          name: ext.manifest.displayName,
+          description: ext.manifest.description,
+          category: "integration",
+          isInstalled: ext.isInstalled,
+          isEnabled: ext.isEnabled,
+          version: ext.manifest.version,
+          publisher: ext.manifest.publisher,
+          isMarketplace: true,
+          isBundled: false,
+          icon: resolveManifestIcon(
+            ext.manifest.icon,
+            integration.icon,
+            integration.id,
+            integration.name,
+          ),
+          runtimeIssues: ext.runtimeIssues,
+          packageSize: resolvePackageSize(ext.manifest),
+          contributionSummary: integrationContributions.map((item) => `integration:${item.id}`),
         });
       }
     }

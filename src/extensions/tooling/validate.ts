@@ -4,7 +4,7 @@
 
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import {
   GENERATED_CDN_DIR,
   getContributionArray,
@@ -145,7 +145,8 @@ async function validateInstallPackage(
   const requiresPackage =
     getContributionArray(manifest, "databases").length > 0 ||
     getContributionArray(manifest, "themes").length > 0 ||
-    getContributionArray(manifest, "icons").length > 0;
+    getContributionArray(manifest, "icons").length > 0 ||
+    getContributionArray(manifest, "integrations").length > 0;
 
   if (!requiresPackage) return;
 
@@ -268,7 +269,8 @@ async function validateExtension(folder: string): Promise<void> {
     getContributionArray(manifest, "databases").length +
     getContributionArray(manifest, "agents").length +
     getContributionArray(manifest, "themes").length +
-    getContributionArray(manifest, "icons").length;
+    getContributionArray(manifest, "icons").length +
+    getContributionArray(manifest, "integrations").length;
 
   if (contributionCount === 0) {
     error(folder, "Extension must declare at least one contribution");
@@ -334,6 +336,63 @@ async function validateExtension(folder: string): Promise<void> {
     if (!icon.name) error(folder, `Icon '${icon.id}' missing 'name'`);
     if (!icon.iconDefinitions || typeof icon.iconDefinitions !== "object") {
       error(folder, `Icon '${icon.id}' missing 'iconDefinitions' map`);
+    }
+  }
+
+  const integrations = getContributionArray(manifest, "integrations");
+  for (const integration of integrations) {
+    if (!integration.id) error(folder, "Integration contribution missing 'id'");
+    if (!integration.name) error(folder, `Integration '${integration.id}' missing 'name'`);
+    if (
+      !["code-host", "observability", "project-management", "other"].includes(
+        String(integration.kind),
+      )
+    ) {
+      error(folder, `Integration '${integration.id}' has invalid 'kind'`);
+    }
+  }
+  if (integrations.length > 0) {
+    if (typeof manifest.main !== "string" || manifest.main.length === 0) {
+      error(folder, "Integration extension missing 'main' entrypoint");
+    } else if (
+      isAbsolute(manifest.main) ||
+      manifest.main.split(/[\\/]/).some((segment) => segment === "..")
+    ) {
+      error(folder, "Integration extension 'main' must be a safe relative path");
+    } else if (!(await fileExists(join(extensionDir, manifest.main)))) {
+      error(folder, `Integration entrypoint not found: ${manifest.main}`);
+    }
+
+    const permissions = manifest.permissions;
+    if (!permissions || typeof permissions !== "object" || Array.isArray(permissions)) {
+      error(folder, "Integration extension must declare a 'permissions' object");
+    } else {
+      const permissionRecord = permissions as Record<string, unknown>;
+      const supportedPermissions = new Set(["network", "secrets", "workspace", "openExternal"]);
+      for (const key of Object.keys(permissionRecord)) {
+        if (!supportedPermissions.has(key)) error(folder, `Unsupported permission '${key}'`);
+      }
+      if (
+        permissionRecord.network !== undefined &&
+        (!Array.isArray(permissionRecord.network) ||
+          permissionRecord.network.some(
+            (origin) => typeof origin !== "string" || !/^https?:\/\/[^/]+\/?$/.test(origin),
+          ))
+      ) {
+        error(folder, "Integration 'network' permission must contain HTTP origin patterns");
+      }
+      if (permissionRecord.secrets !== undefined && typeof permissionRecord.secrets !== "boolean") {
+        error(folder, "Integration 'secrets' permission must be boolean");
+      }
+      if (permissionRecord.workspace !== undefined && permissionRecord.workspace !== "read") {
+        error(folder, "Integration 'workspace' permission must be 'read'");
+      }
+      if (
+        permissionRecord.openExternal !== undefined &&
+        typeof permissionRecord.openExternal !== "boolean"
+      ) {
+        error(folder, "Integration 'openExternal' permission must be boolean");
+      }
     }
   }
 

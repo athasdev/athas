@@ -57,6 +57,9 @@ export interface ExtensionManifest {
   // AI provider contributions
   aiProviders?: AIProviderContribution[];
 
+  // External service integrations
+  integrations?: IntegrationContribution[];
+
   // Color theme contributions
   themes?: ThemeContribution[];
 
@@ -101,6 +104,9 @@ export interface ExtensionManifest {
   main?: string;
   browser?: string;
 
+  // Explicit host capabilities granted to executable extension code.
+  permissions?: ExtensionPermissions;
+
   // Runtime capability metadata used by Athas extension packages before they
   // are normalized into concrete LSP/formatter/linter/grammar fields.
   capabilities?: Record<string, unknown>;
@@ -125,6 +131,7 @@ export type ExtensionCategory =
   | "Language"
   | "Database"
   | "AI"
+  | "Integration"
   | "Agent"
   | "Icon Theme"
   | "Linter"
@@ -229,6 +236,23 @@ export interface AIProviderContribution {
   apiKeyUrl?: string;
   apiKeyPlaceholder?: string;
   models: AIProviderModelContribution[];
+}
+
+export type IntegrationKind = "code-host" | "observability" | "project-management" | "other";
+
+export interface IntegrationContribution {
+  id: string;
+  name: string;
+  description?: string;
+  kind: IntegrationKind;
+  icon?: string;
+}
+
+export interface ExtensionPermissions {
+  network?: string[];
+  secrets?: boolean;
+  workspace?: "read";
+  openExternal?: boolean;
 }
 
 export interface ThemeContribution {
@@ -448,12 +472,13 @@ export interface PlatformPackage {
   checksum: string;
 }
 
-interface UIContributions {
+export interface UIContributions {
   languages?: LanguageContribution[];
   databases?: DatabaseProviderContribution[];
   databaseProviders?: DatabaseProviderContribution[];
   agents?: AgentContribution[];
   aiProviders?: AIProviderContribution[];
+  integrations?: IntegrationContribution[];
   grammars?: GrammarConfiguration[];
   snippets?: SnippetContribution[];
   themes?: ThemeContribution[];
@@ -466,7 +491,7 @@ interface UIContributions {
   toolbarActions?: ToolbarActionContribution[];
 }
 
-interface SidebarViewContribution {
+export interface SidebarViewContribution {
   id: string;
   title: string;
   icon: string;

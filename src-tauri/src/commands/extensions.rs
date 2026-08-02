@@ -1,4 +1,7 @@
-use crate::app_runtime::AppHandle;
+use crate::{
+   app_runtime::AppHandle,
+   secure_storage::{get_secret, remove_secret, store_secret},
+};
 use athas_extensions::{DownloadInfo, ExtensionInstaller, ExtensionMetadata};
 use sha2::{Digest, Sha256};
 use std::{
@@ -22,6 +25,38 @@ fn validate_extension_id(extension_id: &str) -> Result<(), String> {
       .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_' || ch == '-')
    {
       return Err("Invalid extension id characters".to_string());
+   }
+   Ok(())
+}
+
+fn validate_extension_key(key: &str) -> Result<(), String> {
+   if key.is_empty() || key.len() > 128 {
+      return Err("Invalid extension key length".to_string());
+   }
+   if !key
+      .chars()
+      .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_' || ch == '-')
+   {
+      return Err("Invalid extension key characters".to_string());
+   }
+   Ok(())
+}
+
+fn extension_secret_key(extension_id: &str, key: &str) -> Result<String, String> {
+   validate_extension_id(extension_id)?;
+   validate_extension_key(key)?;
+   Ok(format!("extension:{extension_id}:{key}"))
+}
+
+fn validate_extension_entrypoint(entrypoint: &str) -> Result<(), String> {
+   let path = Path::new(entrypoint);
+   if entrypoint.is_empty()
+      || path.is_absolute()
+      || path
+         .components()
+         .any(|component| !matches!(component, std::path::Component::Normal(_)))
+   {
+      return Err("Invalid extension entrypoint".to_string());
    }
    Ok(())
 }
@@ -329,10 +364,91 @@ pub fn get_extension_path(app_handle: AppHandle, extension_id: String) -> Result
       .to_string())
 }
 
+#[command]
+pub fn read_extension_entrypoint(
+   app_handle: AppHandle,
+   extension_id: String,
+   entrypoint: String,
+) -> Result<String, String> {
+   validate_extension_id(&extension_id)?;
+   validate_extension_entrypoint(&entrypoint)?;
+
+   let installer = ExtensionInstaller::new(app_handle)
+      .map_err(|e| format!("Failed to create installer: {}", e))?;
+   let extension_dir = installer.get_extension_dir(&extension_id);
+   let entrypoint_path = extension_dir.join(entrypoint);
+   let canonical_extension_dir = extension_dir
+      .canonicalize()
+      .map_err(|e| format!("Failed to resolve extension directory: {e}"))?;
+   let canonical_entrypoint = entrypoint_path
+      .canonicalize()
+      .map_err(|e| format!("Failed to resolve extension entrypoint: {e}"))?;
+   if !canonical_entrypoint.starts_with(&canonical_extension_dir) {
+      return Err("Extension entrypoint escaped its installation directory".to_string());
+   }
+   let metadata = fs::metadata(&canonical_entrypoint)
+      .map_err(|e| format!("Failed to inspect extension entrypoint: {e}"))?;
+   if !metadata.is_file() || metadata.len() > 2 * 1024 * 1024 {
+      return Err("Extension entrypoint must be a file no larger than 2 MB".to_string());
+   }
+
+   fs::read_to_string(canonical_entrypoint)
+      .map_err(|e| format!("Failed to read extension entrypoint: {e}"))
+}
+
+#[command]
+pub fn get_extension_secret(
+   app_handle: AppHandle,
+   extension_id: String,
+   key: String,
+) -> Result<Option<String>, String> {
+   get_secret(&app_handle, &extension_secret_key(&extension_id, &key)?)
+}
+
+#[command]
+pub fn set_extension_secret(
+   app_handle: AppHandle,
+   extension_id: String,
+   key: String,
+   value: String,
+) -> Result<(), String> {
+   store_secret(
+      &app_handle,
+      &extension_secret_key(&extension_id, &key)?,
+      &value,
+   )
+}
+
+#[command]
+pub fn delete_extension_secret(
+   app_handle: AppHandle,
+   extension_id: String,
+   key: String,
+) -> Result<(), String> {
+   remove_secret(&app_handle, &extension_secret_key(&extension_id, &key)?)
+}
+
 #[cfg(test)]
 mod tests {
    use super::*;
    use std::path::Path;
+
+   #[test]
+   fn extension_secret_keys_are_scoped_and_validated() {
+      assert_eq!(
+         extension_secret_key("athas.gitlab", "token").unwrap(),
+         "extension:athas.gitlab:token"
+      );
+      assert!(extension_secret_key("athas.gitlab", "../token").is_err());
+   }
+
+   #[test]
+   fn extension_entrypoints_must_be_relative_files() {
+      assert!(validate_extension_entrypoint("main.js").is_ok());
+      assert!(validate_extension_entrypoint("dist/main.js").is_ok());
+      assert!(validate_extension_entrypoint("../main.js").is_err());
+      assert!(validate_extension_entrypoint("/tmp/main.js").is_err());
+   }
 
    #[test]
    fn test_get_bundled_extensions_path_ends_with_bundled() {
