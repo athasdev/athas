@@ -2,6 +2,7 @@ import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
+import { CODEX_INTEGRATION_ID } from "@/features/ai/integrations/integration-registry";
 import { getFollowUpActionsInstruction } from "@/features/ai/lib/follow-up-actions";
 
 function formatContextPath(path: string, projectRoot?: string) {
@@ -44,6 +45,7 @@ export const buildContextPrompt = (context: ContextInfo): string => {
   const isAcpAgent =
     !!context.agentId &&
     context.agentId !== "custom" &&
+    context.agentId !== CODEX_INTEGRATION_ID &&
     context.agentId !== CLAUDE_CODE_TERMINAL_AGENT_ID;
 
   // For ACP agents, include available extension methods

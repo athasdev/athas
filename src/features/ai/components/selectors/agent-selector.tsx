@@ -1,17 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import {
-  CaretDownIcon as ChevronDown,
-  PlusIcon as Plus,
-  MagnifyingGlassIcon as Search,
-  SlidersHorizontalIcon as Settings2,
-} from "@/ui/icons";
+import { CaretDownIcon as ChevronDown, MagnifyingGlassIcon as Search } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
-import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
-import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AgentType } from "@/features/ai/types/ai-chat.types";
-import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
 import {
@@ -29,7 +21,11 @@ import {
   CLAUDE_CODE_TERMINAL_AGENT_ID,
   CLAUDE_CODE_TERMINAL_OPTION,
 } from "@/features/ai/lib/claude-code";
-import { openClaudeCodeTerminal } from "@/features/ai/lib/claude-code-terminal";
+import {
+  BUILT_IN_AI_INTEGRATIONS,
+  CODEX_INTEGRATION_ID,
+} from "@/features/ai/integrations/integration-registry";
+import { CodexIntegrationService } from "@/features/ai/integrations/codex/codex-integration-service";
 
 const ATHAS_AGENT_OPTION = {
   id: "custom",
@@ -50,46 +46,38 @@ type AgentSelectorItem = {
 };
 
 interface AgentSelectorProps {
-  variant?: "header" | "input";
-  onOpenSettings?: () => void;
-  selectedAgentId?: AgentType;
-  onSelectAgent?: (agentId: AgentType) => void;
+  selectedAgentId: AgentType;
+  onSelectAgent: (agentId: AgentType) => void;
   portalContainer?: Element | DocumentFragment | null;
   triggerClassName?: string;
-  triggerTooltip?: string;
 }
 
 export function AgentSelector({
-  variant = "header",
-  onOpenSettings,
   selectedAgentId,
   onSelectAgent,
   portalContainer,
   triggerClassName,
-  triggerTooltip,
 }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(new Map());
   const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
-  const getCurrentAgentId = useAIChatStore((state) => state.actions.getCurrentAgentId);
-  const setSelectedAgentId = useAIChatStore((state) => state.actions.setSelectedAgentId);
-  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
-  const changeCurrentChatAgent = useAIChatStore((state) => state.actions.changeCurrentChatAgent);
-  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-
-  const currentAgentId = selectedAgentId ?? getCurrentAgentId();
+  const currentAgentId = selectedAgentId;
   const currentAgent =
     currentAgentId === CLAUDE_CODE_TERMINAL_AGENT_ID
       ? CLAUDE_CODE_TERMINAL_OPTION
-      : (agentConfigs.get(currentAgentId) ?? ATHAS_AGENT_OPTION);
+      : (BUILT_IN_AI_INTEGRATIONS.find((item) => item.id === currentAgentId) ??
+        agentConfigs.get(currentAgentId) ??
+        ATHAS_AGENT_OPTION);
 
   const loadInstalledAgents = useCallback(async () => {
     try {
       const detectedAgents = await invoke<AgentConfig[]>("get_available_agents");
+      const codex = await CodexIntegrationService.status().catch(() => null);
       setAgentConfigs(new Map(detectedAgents.map((agent) => [agent.id, agent])));
       const installed = new Set<string>(["custom"]);
+      if (codex?.installed) installed.add(CODEX_INTEGRATION_ID);
       for (const agent of detectedAgents) {
         if (agent.installed) {
           installed.add(agent.id);
@@ -114,7 +102,12 @@ export function AgentSelector({
     const registryAgents = Array.from(agentConfigs.values()).sort((a, b) =>
       a.name.localeCompare(b.name),
     );
-    const availableAgents = [ATHAS_AGENT_OPTION, CLAUDE_CODE_TERMINAL_OPTION, ...registryAgents];
+    const availableAgents = [
+      ATHAS_AGENT_OPTION,
+      ...BUILT_IN_AI_INTEGRATIONS,
+      CLAUDE_CODE_TERMINAL_OPTION,
+      ...registryAgents,
+    ];
     const matchingAgents = availableAgents.filter(
       (agent) =>
         !search ||
@@ -126,6 +119,7 @@ export function AgentSelector({
       const isInstalled = installedAgents.has(agent.id);
       const agentConfig = agentConfigs.get(agent.id);
       const isClaudeCodeTerminal = agent.id === CLAUDE_CODE_TERMINAL_AGENT_ID;
+      const isIntegration = agent.id === CODEX_INTEGRATION_ID;
 
       items.push({
         type: "agent",
@@ -135,7 +129,9 @@ export function AgentSelector({
         isInstalled: isClaudeCodeTerminal || isInstalled,
         isCurrent: agent.id === currentAgentId,
         canInstall:
-          agent.id === "custom" || isClaudeCodeTerminal ? false : (agentConfig?.canInstall ?? true),
+          agent.id === "custom" || isClaudeCodeTerminal || isIntegration
+            ? false
+            : (agentConfig?.canInstall ?? true),
         isInstalling: installingAgentId === agent.id,
       });
     }
@@ -150,61 +146,26 @@ export function AgentSelector({
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
-      if (onSelectAgent) {
+      if (agentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
         closeAgentSelector();
         onSelectAgent(agentId);
         return;
       }
 
-      if (agentId === CLAUDE_CODE_TERMINAL_AGENT_ID) {
-        closeAgentSelector();
-        openClaudeCodeTerminal();
-        return;
-      }
-
-      if (variant !== "header" && agentId === currentAgentId) {
+      if (agentId === currentAgentId) {
         closeAgentSelector();
         return;
       }
 
       closeAgentSelector();
-      setSelectedAgentId(agentId);
-
-      if (currentAgentId !== "custom") {
-        try {
-          await invoke("stop_acp_agent");
-        } catch {
-          // Silent fail
-        }
-      }
-
-      if (variant === "header") {
-        const newChatId = createNewChat(agentId, { activate: false });
-        openAgentBuffer(newChatId);
-        if (agentId !== "custom") {
-          void AcpStreamHandler.warmup(agentId, newChatId).catch((error) => {
-            console.error(`Failed to prepare ${agentId} session:`, error);
-          });
-        }
-      } else {
-        changeCurrentChatAgent(agentId);
-      }
+      onSelectAgent(agentId);
     },
-    [
-      closeAgentSelector,
-      onSelectAgent,
-      variant,
-      currentAgentId,
-      setSelectedAgentId,
-      changeCurrentChatAgent,
-      createNewChat,
-      openAgentBuffer,
-    ],
+    [closeAgentSelector, currentAgentId, onSelectAgent],
   );
 
   const handleInstallAgent = useCallback(
     async (agentId: AgentType, agentName: string) => {
-      if (agentId === "custom" || installingAgentId) return;
+      if (agentId === "custom" || agentId === CODEX_INTEGRATION_ID || installingAgentId) return;
 
       setInstallingAgentId(agentId);
       try {
@@ -253,37 +214,25 @@ export function AgentSelector({
       filter={() => true}
       autoHighlight
     >
-      {variant === "header" ? (
-        <ComboboxTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              tooltip={triggerTooltip ?? "New session"}
-              className={triggerClassName}
-            />
-          }
-          className="size-auto"
-        >
-          <Plus />
-        </ComboboxTrigger>
-      ) : (
-        <ComboboxTrigger
-          render={
-            <Button type="button" variant="ghost" size="sm" className="max-w-[min(220px,100%)]" />
-          }
-          className="size-auto"
-        >
-          <ProviderIcon providerId={currentAgentId} size={11} className="text-subtle-foreground" />
-          <span className="max-w-[140px] truncate text-foreground">
-            {currentAgent?.name || "Agent"}
-          </span>
-          <ChevronDown
-            className={cn("text-subtle-foreground transition-transform", isOpen && "rotate-180")}
+      <ComboboxTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn("max-w-[min(220px,100%)]", triggerClassName)}
           />
-        </ComboboxTrigger>
-      )}
+        }
+        className="size-auto"
+      >
+        <ProviderIcon providerId={currentAgentId} size={11} className="text-subtle-foreground" />
+        <span className="max-w-[140px] truncate text-foreground">
+          {currentAgent?.name || "Agent"}
+        </span>
+        <ChevronDown
+          className={cn("text-subtle-foreground transition-transform", isOpen && "rotate-180")}
+        />
+      </ComboboxTrigger>
 
       <ComboboxContent
         side="bottom"
@@ -294,7 +243,7 @@ export function AgentSelector({
       >
         <div className="bg-surface px-1.5 py-1.5">
           <ComboboxInput
-            placeholder="Search agents..."
+            placeholder="Search agents and integrations..."
             variant="ghost"
             size="xs"
             leftIcon={Search}
@@ -345,27 +294,6 @@ export function AgentSelector({
                     disabled={!item.canInstall || Boolean(installingAgentId)}
                   >
                     {item.isInstalling ? <Spinner label="Installing" compact /> : "Install"}
-                  </Button>
-                ) : null}
-                {item.id === "custom" && onOpenSettings ? (
-                  <Button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      closeAgentSelector();
-                      onOpenSettings();
-                    }}
-                    variant="ghost"
-                    size="icon-xs"
-                    className={cn(
-                      item.isCurrent
-                        ? "bg-primary/15 text-primary"
-                        : "text-subtle-foreground hover:bg-surface hover:text-foreground",
-                    )}
-                    tooltip="Athas Agent settings"
-                    aria-label="Open Athas Agent settings"
-                  >
-                    <Settings2 />
                   </Button>
                 ) : null}
               </div>

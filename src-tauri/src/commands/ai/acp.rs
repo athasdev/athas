@@ -15,11 +15,7 @@ use tokio::sync::Mutex;
 
 pub type AcpBridgeState = Arc<Mutex<AcpAgentBridge>>;
 const AGENT_CATALOG_CACHE_SECONDS: u64 = 300;
-const TERMINAL_ONLY_AGENT_IDS: &[&str] = &["claude-code"];
-const CODEX_AGENT_MANIFEST: &str = include_str!(concat!(
-   env!("CARGO_MANIFEST_DIR"),
-   "/../extensions/official/codex-cli/extension.json"
-));
+const NON_ACP_AGENT_IDS: &[&str] = &["claude-code", "codex-cli", "codex"];
 
 #[derive(Deserialize)]
 pub struct PermissionResponseArgs {
@@ -221,15 +217,6 @@ fn to_agent_config(contribution: MarketplaceAgentContribution) -> AgentConfig {
    agent
 }
 
-fn bundled_agent_fallbacks() -> Vec<AgentConfig> {
-   serde_json::from_str::<MarketplaceExtensionManifest>(CODEX_AGENT_MANIFEST)
-      .map(|manifest| manifest.agents.into_iter().map(to_agent_config).collect())
-      .unwrap_or_else(|error| {
-         log::error!("Failed to parse bundled Codex agent manifest: {}", error);
-         Vec::new()
-      })
-}
-
 fn merge_agent_catalog(
    marketplace_agents: Vec<AgentConfig>,
    fallback_agents: Vec<AgentConfig>,
@@ -274,7 +261,7 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
             manifests
                .into_values()
                .flat_map(|manifest| manifest.agents)
-               .filter(|agent| !TERMINAL_ONLY_AGENT_IDS.contains(&agent.id.as_str()))
+               .filter(|agent| !NON_ACP_AGENT_IDS.contains(&agent.id.as_str()))
                .map(to_agent_config)
                .collect::<Vec<_>>()
          })
@@ -294,7 +281,7 @@ async fn load_marketplace_agents() -> Result<Vec<AgentConfig>, String> {
          Vec::new()
       }
    };
-   let agents = merge_agent_catalog(marketplace_agents, bundled_agent_fallbacks());
+   let agents = merge_agent_catalog(marketplace_agents, Vec::new());
 
    let mut cached = cache
       .lock()

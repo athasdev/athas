@@ -1,5 +1,6 @@
 pub mod acp;
 pub mod chat_history;
+pub mod codex;
 mod runtime;
 
 pub use acp::{
@@ -7,4 +8,8 @@ pub use acp::{
 };
 pub use chat_history::{
    ChatData, ChatHistoryRepository, ChatStats, ChatWithMessages, MessageData, ToolCallData,
+};
+pub use codex::{
+   CodexAppServer, CodexIntegrationStatus, CodexProtocolEvent, CodexRequestDecision,
+   CodexThreadSettings,
 };

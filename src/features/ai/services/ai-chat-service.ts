@@ -32,10 +32,16 @@ import { AcpStreamHandler } from "./acp-stream-handler";
 import { buildContextPrompt, buildSystemPrompt } from "../utils/ai-context-builder";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "../lib/claude-code";
 import { setCustomProviderBaseUrl } from "./providers/ai-provider-registry";
+import { CODEX_INTEGRATION_ID } from "../integrations/integration-registry";
+import { CodexIntegrationService } from "../integrations/codex/codex-integration-service";
 
 // Check if an agent uses ACP (CLI-based) vs HTTP API
 export const isAcpAgent = (agentId: AgentType): boolean => {
-  return agentId !== "custom" && agentId !== CLAUDE_CODE_TERMINAL_AGENT_ID;
+  return (
+    agentId !== "custom" &&
+    agentId !== CODEX_INTEGRATION_ID &&
+    agentId !== CLAUDE_CODE_TERMINAL_AGENT_ID
+  );
 };
 
 function resolveProviderModelPair(providerId: string, modelId: string) {
@@ -154,6 +160,27 @@ export const getChatCompletionStream = async (
   systemPromptOverride?: string,
 ): Promise<void> => {
   try {
+    if (agentId === CODEX_INTEGRATION_ID) {
+      const integration = new CodexIntegrationService(
+        {
+          onChunk,
+          onComplete,
+          onError,
+          onToolUse,
+          onToolComplete,
+          onPermissionRequest,
+          onEvent: onAcpEvent,
+        },
+        chatId,
+      );
+      const contextPrompt = buildContextPrompt(context);
+      await integration.start(
+        contextPrompt ? `${contextPrompt}\n\nUser request:\n${userMessage}` : userMessage,
+        context,
+      );
+      return;
+    }
+
     // Handle ACP-based CLI agents (Gemini CLI, Codex CLI, etc.)
     if (isAcpAgent(agentId)) {
       const handler = new AcpStreamHandler(

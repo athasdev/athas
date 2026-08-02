@@ -57,6 +57,7 @@ import {
   removeProviderApiToken,
   storeProviderApiToken,
 } from "@/features/ai/services/ai-token-service";
+import { CodexSettings } from "@/features/ai/integrations/codex/codex-settings";
 const DEFAULT_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
 
 function resolveAutocompleteDefaultModelId(models: Array<{ id: string; name: string }>): string {
@@ -375,6 +376,7 @@ export const AISettings = () => {
 
   return (
     <SettingsView>
+      <CodexSettings />
       <Section title="Athas Agent">
         <SettingRow
           label="Provider"

@@ -5,7 +5,7 @@ use crate::{
    menu,
    terminal::ManagedTerminalManager as TerminalManager,
 };
-use athas_ai::AcpAgentBridge;
+use athas_ai::{AcpAgentBridge, CodexAppServer};
 use athas_debugger::DebugManager;
 use athas_lsp::LspManager;
 use athas_project::FileWatcher;
@@ -77,6 +77,7 @@ fn register_managed_state(app: &mut tauri::App<AthasRuntime>) {
       terminal_manager,
    )));
    app.manage(acp_bridge);
+   app.manage(CodexAppServer::new(app.handle().clone()));
 
    app.manage(LspManager::new(app.handle().clone()));
    app.manage(DebugManager::new(app.handle().clone()));
@@ -429,6 +430,13 @@ fn handle_menu_event(app_handle: &tauri::AppHandle<AthasRuntime>, event: tauri::
 }
 
 pub(crate) fn shutdown_background_services(app_handle: &tauri::AppHandle<AthasRuntime>) {
+   if let Some(codex) = app_handle.try_state::<CodexAppServer>() {
+      let codex = codex.inner().clone();
+      tauri::async_runtime::block_on(async move {
+         codex.stop().await;
+      });
+   }
+
    if let Some(acp_bridge) = app_handle.try_state::<Arc<Mutex<AcpAgentBridge>>>() {
       let acp_bridge = acp_bridge.inner().clone();
       tauri::async_runtime::block_on(async move {
