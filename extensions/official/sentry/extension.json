@@ -1,0 +1,35 @@
+{
+  "id": "athas.sentry",
+  "name": "sentry",
+  "displayName": "Sentry",
+  "description": "Inspect unresolved Sentry issues for a project without leaving Athas.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "integrations": [
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "description": "Sentry errors and issue activity",
+      "kind": "observability",
+      "icon": "sentry"
+    }
+  ],
+  "main": "main.js",
+  "permissions": {
+    "network": ["https://*", "http://localhost:*", "http://127.0.0.1:*"],
+    "secrets": true,
+    "openExternal": true
+  },
+  "icon": "icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  },
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/packages/integration/sentry/athas.sentry.tar.gz",
+    "size": 2578,
+    "checksum": "c6e5c3ee6cae17a038c230bfb657020c9fa2730b4bfdc5c5623ff85d2adcf1d5"
+  }
+}
