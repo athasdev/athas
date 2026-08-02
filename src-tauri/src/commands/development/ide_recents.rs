@@ -99,11 +99,11 @@ fn collect_code_recent_projects(projects: &mut Vec<IdeRecentProject>, seen: &mut
       };
 
       for path in parse_code_recent_folder_paths(&value) {
-         push_project(projects, seen, &source.id, source.name, path);
+         push_project(projects, seen, source.id, source.name, path);
       }
 
       for path in read_code_profile_workspace_paths(&storage_path) {
-         push_project(projects, seen, &source.id, source.name, path);
+         push_project(projects, seen, source.id, source.name, path);
       }
    }
 }
@@ -127,7 +127,7 @@ fn collect_zed_recent_projects(projects: &mut Vec<IdeRecentProject>, seen: &mut 
       };
 
       for path in paths {
-         push_project(projects, seen, &source.id, source.name, path);
+         push_project(projects, seen, source.id, source.name, path);
       }
    }
 }

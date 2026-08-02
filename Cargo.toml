@@ -25,7 +25,7 @@ tauri = { git = "https://github.com/tauri-apps/tauri", rev = "d3a685323977d5618c
 
 [workspace.lints.clippy]
 uninlined_format_args = "allow"
-new-without-default = "allow"
+new_without_default = "allow"
 
 [profile.release]
 lto = "thin"

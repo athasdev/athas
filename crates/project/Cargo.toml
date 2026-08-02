@@ -9,3 +9,6 @@ log = "0.4"
 notify = "8.1.0"
 notify-debouncer-mini = "0.6.0"
 serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.20"

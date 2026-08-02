@@ -11,6 +11,7 @@
     "check:zustand": "bun scripts/check/zustand-architecture.ts",
     "check:services": "bun scripts/check/service-config.ts",
     "services:check": "bun run check:services",
+    "test:rust": "cargo test --workspace --no-fail-fast",
     "lint": "bunx vp lint .",
     "fix": "bunx vp check --fix",
     "format": "bunx vp fmt --write .",

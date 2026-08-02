@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
-use tauri::menu::{
-   AboutMetadata, HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder,
-   WINDOW_SUBMENU_ID,
-};
+#[cfg(target_os = "macos")]
+use tauri::menu::{AboutMetadata, WINDOW_SUBMENU_ID};
+use tauri::menu::{HELP_SUBMENU_ID, MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
 use tauri_plugin_store::StoreExt;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,7 +48,7 @@ pub async fn toggle_menu_bar(
       }
 
       log::info!("Native menu bar is disabled on this platform");
-      return Ok(());
+      Ok(())
    }
 
    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
@@ -162,6 +161,7 @@ fn build_app_submenu<R: tauri::Runtime>(
       .build()
 }
 
+#[cfg(not(target_os = "linux"))]
 pub fn create_menu<R: tauri::Runtime>(
    app: &tauri::AppHandle<R>,
 ) -> Result<tauri::menu::Menu<R>, tauri::Error> {

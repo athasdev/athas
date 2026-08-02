@@ -178,7 +178,7 @@ pub fn search_files_content(
          .collect();
 
       let search_match = SearchMatch {
-         line_number: grep_match.line_number as usize,
+         line_number: grep_match.line_number,
          line_content,
          column_start: start_end.0,
          column_end: start_end.1,

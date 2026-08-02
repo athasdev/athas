@@ -1158,6 +1158,7 @@ pub fn github_update_issue(
    ))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn github_create_pull_request(
    repo_path_value: String,
    title: String,
