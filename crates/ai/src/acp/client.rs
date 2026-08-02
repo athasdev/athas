@@ -880,13 +880,12 @@ impl AthasAcpClient {
          states.remove(&terminal_id)
       };
 
-      if let Some(state) = removed_state {
-         if let Err(e) = self
+      if let Some(state) = removed_state
+         && let Err(e) = self
             .terminal_manager
             .close_terminal(&state.athas_terminal_id)
-         {
-            log::warn!("Failed to close terminal {}: {}", terminal_id, e);
-         }
+      {
+         log::warn!("Failed to close terminal {}: {}", terminal_id, e);
       }
 
       Ok(acp::ReleaseTerminalResponse::new())

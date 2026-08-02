@@ -1551,6 +1551,7 @@ pub fn github_unlock_issue(
    api.delete_empty(&repo_path(&slug, &format!("issues/{issue_number}/lock")))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn github_create_pull_request(
    repo_path_value: String,
    title: String,

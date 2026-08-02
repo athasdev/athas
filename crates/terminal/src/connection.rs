@@ -395,9 +395,9 @@ impl TerminalConnection {
          Some("pwsh.exe")
       } else if shell_id.eq_ignore_ascii_case("nu") {
          Some("nu.exe")
-      } else if shell_id.eq_ignore_ascii_case("wsl") {
-         Some("wsl.exe")
-      } else if athas_wsl::parse_wsl_shell_id(shell_id).is_some() {
+      } else if shell_id.eq_ignore_ascii_case("wsl")
+         || athas_wsl::parse_wsl_shell_id(shell_id).is_some()
+      {
          Some("wsl.exe")
       } else if shell_id.eq_ignore_ascii_case("bash") {
          Some("bash.exe")

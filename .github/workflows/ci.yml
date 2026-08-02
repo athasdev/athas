@@ -39,7 +39,7 @@ jobs:
 
   rust:
     if: github.repository == 'athasdev/athas'
-    name: Rust — fmt, cargo check
+    name: Rust — fmt, check, clippy, test
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rustfmt
+          components: rustfmt, clippy
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2

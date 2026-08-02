@@ -11,6 +11,7 @@
     "check:ui-contracts": "bun scripts/check/ui-semantic-contracts.ts",
     "check:services": "bun scripts/check/service-config.ts",
     "services:check": "bun run check:services",
+    "test:rust": "cargo test --workspace --no-fail-fast",
     "lint": "vp lint .",
     "fix": "vp check --fix",
     "format": "vp fmt --write .",

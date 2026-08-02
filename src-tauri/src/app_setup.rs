@@ -57,31 +57,29 @@ fn create_initial_linux_window(
    Ok(())
 }
 
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 fn configure_menu(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
    let store = app.store("settings.json")?;
+   store.set("nativeMenuBar", false);
+   let _ = store.save();
+   Ok(())
+}
 
-   #[cfg(any(target_os = "windows", target_os = "linux"))]
-   {
-      store.set("nativeMenuBar", false);
-      let _ = store.save();
-      return Ok(());
-   }
+#[cfg(target_os = "macos")]
+fn configure_menu(app: &mut tauri::App<AthasRuntime>) -> Result<(), Box<dyn std::error::Error>> {
+   let store = app.store("settings.json")?;
+   let native_menu_bar = store
+      .get("nativeMenuBar")
+      .and_then(|v| v.as_bool())
+      .unwrap_or_else(|| {
+         let default = platform() == "macos";
+         store.set("nativeMenuBar", default);
+         default
+      });
 
-   #[cfg(target_os = "macos")]
-   {
-      let native_menu_bar = store
-         .get("nativeMenuBar")
-         .and_then(|v| v.as_bool())
-         .unwrap_or_else(|| {
-            let default = platform() == "macos";
-            store.set("nativeMenuBar", default);
-            default
-         });
-
-      if native_menu_bar {
-         let menu = menu::create_menu(app.handle())?;
-         app.set_menu(menu)?;
-      }
+   if native_menu_bar {
+      let menu = menu::create_menu(app.handle())?;
+      app.set_menu(menu)?;
    }
 
    Ok(())
