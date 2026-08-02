@@ -61,6 +61,19 @@ Body text`,
     expect(html).not.toContain("language-{r setup}");
   });
 
+  it("closes quotes before following fenced code blocks", () => {
+    const html = parseMarkdown("> A focused note.\n\n```ts\nconst ready = true;\n```");
+
+    expect(html).toContain("<blockquote>\n<p>A focused note.</p>\n</blockquote>\n<pre>");
+    expect(html).not.toContain("</pre>\n</blockquote>");
+  });
+
+  it("keeps adjacent list types as separate blocks", () => {
+    const html = parseMarkdown("- First\n- Second\n\n- [x] Done\n- [ ] Next");
+
+    expect(html).toContain('<li>First</li>\n<li>Second</li>\n</ul>\n<ul class="task-list">');
+  });
+
   it("preserves underscores in linked image URLs", () => {
     const source =
       "https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=serde_with&package-manager=cargo";

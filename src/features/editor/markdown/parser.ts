@@ -192,6 +192,28 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
     const line = lines[i];
     const trimmedLine = line.trim();
 
+    if (!inCodeBlock) {
+      if (
+        inUnorderedList &&
+        (trimmedLine === "" || !isUnorderedListLine(line) || isTaskListLine(line))
+      ) {
+        processedLines.push("</ul>");
+        inUnorderedList = false;
+      }
+      if (inTaskList && (trimmedLine === "" || !isTaskListLine(line))) {
+        processedLines.push("</ul>");
+        inTaskList = false;
+      }
+      if (inOrderedList && (trimmedLine === "" || !isOrderedListLine(line))) {
+        processedLines.push("</ol>");
+        inOrderedList = false;
+      }
+      if (inBlockquote && (trimmedLine === "" || !isBlockquoteLine(line))) {
+        processedLines.push("</blockquote>");
+        inBlockquote = false;
+      }
+    }
+
     if (line.match(/^```/)) {
       if (inCodeBlock) {
         const lang = normalizeCodeFenceLanguage(codeBlockLanguage || "plaintext");
@@ -210,23 +232,6 @@ export function parseMarkdown(content: string, options: ParseMarkdownOptions = {
     if (inCodeBlock) {
       codeBlockContent += `${line}\n`;
       continue;
-    }
-
-    if (inUnorderedList && trimmedLine !== "" && !isUnorderedListLine(line)) {
-      processedLines.push("</ul>");
-      inUnorderedList = false;
-    }
-    if (inTaskList && trimmedLine !== "" && !isTaskListLine(line)) {
-      processedLines.push("</ul>");
-      inTaskList = false;
-    }
-    if (inOrderedList && trimmedLine !== "" && !isOrderedListLine(line)) {
-      processedLines.push("</ol>");
-      inOrderedList = false;
-    }
-    if (inBlockquote && trimmedLine !== "" && !isBlockquoteLine(line)) {
-      processedLines.push("</blockquote>");
-      inBlockquote = false;
     }
 
     // Preserve raw HTML blocks (e.g., <details>, <summary>, <table>) as-is
