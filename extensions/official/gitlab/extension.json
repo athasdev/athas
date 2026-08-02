@@ -1,0 +1,36 @@
+{
+  "id": "athas.gitlab",
+  "name": "gitlab",
+  "displayName": "GitLab",
+  "description": "Review merge requests, issues, and pipelines for the current GitLab repository.",
+  "version": "1.0.0",
+  "publisher": "Athas",
+  "categories": ["Integration"],
+  "integrations": [
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "description": "GitLab projects, merge requests, issues, and pipelines",
+      "kind": "code-host",
+      "icon": "gitlab"
+    }
+  ],
+  "main": "main.js",
+  "permissions": {
+    "network": ["https://*", "http://localhost:*", "http://127.0.0.1:*"],
+    "secrets": true,
+    "workspace": "read",
+    "openExternal": true
+  },
+  "icon": "icon.svg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/athasdev/athas"
+  },
+  "installation": {
+    "downloadUrl": "https://athas.dev/extensions/packages/integration/gitlab/athas.gitlab.tar.gz",
+    "size": 2905,
+    "checksum": "f1b4406b2fdc37e5e348903dc98734ef4f59ce6dfb16e69d16a25abf33a6e5f5"
+  }
+}
