@@ -206,60 +206,6 @@ export const getFileDiff = async (
   }
 };
 
-export const getFileDiffAgainstContent = async (
-  repoPath: string,
-  filePath: string,
-  content: string,
-  base: "head" | "index" = "head",
-): Promise<GitDiff | null> => {
-  try {
-    const resolved = await resolveRepositoryForFile(repoPath, filePath);
-    if (!resolved) {
-      return null;
-    }
-
-    const cached = gitDiffCache.get(
-      resolved.repoPath,
-      resolved.filePath,
-      base === "index",
-      content,
-    );
-    if (cached) {
-      return cached;
-    }
-
-    const generation = gitDiffCache.getGeneration(resolved.repoPath);
-    const diff = await tauriInvoke<GitDiff>("git_diff_file_with_content", {
-      repoPath: resolved.repoPath,
-      filePath: resolved.filePath,
-      content,
-      base,
-    });
-
-    if (generation !== gitDiffCache.getGeneration(resolved.repoPath)) {
-      return getFileDiffAgainstContent(resolved.repoPath, resolved.filePath, content, base);
-    }
-
-    if (diff) {
-      gitDiffCache.set(
-        resolved.repoPath,
-        resolved.filePath,
-        base === "index",
-        diff,
-        content,
-        generation,
-      );
-    }
-
-    return diff;
-  } catch (error) {
-    if (!isNotGitRepositoryError(error) && !isNoDiffFoundError(error)) {
-      console.error("Failed to get file diff against content:", error);
-    }
-    return null;
-  }
-};
-
 export const getStatusDiffStats = async (repoPath: string): Promise<GitDiffStat[]> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPath(repoPath);

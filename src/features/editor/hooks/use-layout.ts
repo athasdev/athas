@@ -24,13 +24,6 @@ function measureCharWidth(fontSize: number, fontFamily: string): number {
 }
 
 /**
- * @deprecated Use useEditorLayout instead
- */
-export function useLayout() {
-  return useEditorLayout();
-}
-
-/**
  * Dynamic layout hook that returns actual calculated values
  * Used for accurate positioning in hover, go-to-definition, completions, etc.
  */

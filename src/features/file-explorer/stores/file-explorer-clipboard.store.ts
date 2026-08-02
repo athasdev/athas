@@ -12,7 +12,7 @@ export interface FileClipboardState {
   operation: "copy" | "cut";
 }
 
-export interface PastedEntry {
+interface PastedEntry {
   source_path: string;
   destination_path: string;
   is_dir: boolean;

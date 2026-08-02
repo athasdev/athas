@@ -78,7 +78,7 @@ function syncThemeWithSystem(settings: Settings) {
   removeThemeSyncListener = subscribeSystemThemePreference(handleChange);
 }
 
-export async function applyTheme(theme: Theme) {
+async function applyTheme(theme: Theme) {
   if (typeof window === "undefined") return;
 
   try {
@@ -139,13 +139,11 @@ function syncNativeWindowAppearance(themeType: "light" | "dark") {
   });
 }
 
-export function cacheFontSettings(
-  settings: Pick<Settings, "fontFamily" | "uiFontFamily" | "uiFontSize">,
-) {
+function cacheFontSettings(settings: Pick<Settings, "fontFamily" | "uiFontFamily" | "uiFontSize">) {
   cacheFontsForBootstrap(settings.fontFamily, settings.uiFontFamily, settings.uiFontSize);
 }
 
-export function syncOllamaBaseUrl(baseUrl: string) {
+function syncOllamaBaseUrl(baseUrl: string) {
   if (!baseUrl) {
     return;
   }
@@ -157,7 +155,7 @@ export function syncOllamaBaseUrl(baseUrl: string) {
   );
 }
 
-export function syncCustomProviderBaseUrl(baseUrl: string) {
+function syncCustomProviderBaseUrl(baseUrl: string) {
   void import("@/features/ai/services/providers/ai-provider-registry").then(
     ({ setCustomProviderBaseUrl }) => {
       setCustomProviderBaseUrl(baseUrl);
@@ -170,7 +168,7 @@ export function syncCustomProviderBaseUrl(baseUrl: string) {
  * singleton provider instance so `getModels`, connection checks, and other
  * non-streaming calls can authenticate with Ollama Cloud.
  */
-export async function syncOllamaApiKey() {
+async function syncOllamaApiKey() {
   const [{ setOllamaApiKey }, { getProviderApiToken }] = await Promise.all([
     import("@/features/ai/services/providers/ai-provider-registry"),
     import("@/features/ai/services/ai-token-service"),

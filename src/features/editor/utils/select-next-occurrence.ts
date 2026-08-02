@@ -12,8 +12,6 @@ export interface ResolveNextOccurrenceOptions {
   selectionEnd?: number;
 }
 
-export type OccurrenceDirection = "next" | "previous";
-
 export interface ResolveSelectNextOccurrenceActionOptions {
   content: string;
   cursorOffset: number;

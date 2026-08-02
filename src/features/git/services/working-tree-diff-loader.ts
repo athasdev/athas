@@ -35,7 +35,7 @@ function isBufferLoadCurrent(
   );
 }
 
-export function cancelWorkingTreeDiffLoad(bufferId: string): void {
+function cancelWorkingTreeDiffLoad(bufferId: string): void {
   const controller = activeLoads.get(bufferId);
   controller?.abort();
   activeLoads.delete(bufferId);

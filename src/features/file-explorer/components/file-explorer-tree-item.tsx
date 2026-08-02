@@ -7,7 +7,7 @@ import { TreeRow } from "@/features/sidebar/components/tree-row";
 import { cn } from "@/utils/cn";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 
-export const FILE_TREE_BASE_INDENT = 10;
+const FILE_TREE_BASE_INDENT = 10;
 
 export interface FileTreeGuideTarget {
   path: string;

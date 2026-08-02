@@ -114,18 +114,3 @@ export interface MultiFileDiff {
     label?: string;
   };
 }
-
-export interface MultiFileDiffViewerProps {
-  multiDiff: MultiFileDiff;
-  onClose: () => void;
-}
-
-export interface FileDiffSummary {
-  key: string;
-  fileName: string;
-  filePath: string;
-  status: "added" | "deleted" | "modified" | "renamed";
-  additions: number;
-  deletions: number;
-  shouldAutoCollapse: boolean;
-}

@@ -20,7 +20,7 @@ export interface UpdateInfo {
   date?: string;
 }
 
-export interface DownloadProgress {
+interface DownloadProgress {
   contentLength: number;
   downloaded: number;
   percentage: number;

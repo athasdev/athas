@@ -1,6 +1,6 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
 
-export interface ViewLineSegment {
+interface ViewLineSegment {
   viewLine: number;
   modelLine: number;
   startColumn: number;
@@ -9,17 +9,17 @@ export interface ViewLineSegment {
   height: number;
 }
 
-export interface EditorViewZone {
+interface EditorViewZone {
   id: string;
   afterLine: number;
   height: number;
 }
 
-export interface ResolvedEditorViewZone extends EditorViewZone {
+interface ResolvedEditorViewZone extends EditorViewZone {
   top: number;
 }
 
-export interface ViewPosition {
+interface ViewPosition {
   viewLine: number;
   modelLine: number;
   column: number;
@@ -28,7 +28,7 @@ export interface ViewPosition {
   segment: ViewLineSegment;
 }
 
-export interface EditorResolvedPosition extends ViewPosition {
+interface EditorResolvedPosition extends ViewPosition {
   line: number;
   height: number;
 }
@@ -92,7 +92,7 @@ function appendSegment(
   });
 }
 
-export function getViewZoneHeightBeforeLine(
+function getViewZoneHeightBeforeLine(
   zones: ReadonlyArray<Pick<ResolvedEditorViewZone, "afterLine" | "height">>,
   modelLine: number,
 ): number {

@@ -8,7 +8,7 @@ import { Edit, type Point } from "web-tree-sitter";
 /**
  * Convert a byte offset to a Point (row, column)
  */
-export function offsetToPoint(content: string, offset: number): Point {
+function offsetToPoint(content: string, offset: number): Point {
   let row = 0;
   let column = 0;
 

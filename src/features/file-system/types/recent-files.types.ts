@@ -8,7 +8,7 @@ export interface RecentFile {
   external?: boolean;
 }
 
-export interface RecentFileMetadata {
+interface RecentFileMetadata {
   workspacePath?: string | null;
   external?: boolean;
 }

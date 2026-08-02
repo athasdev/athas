@@ -98,56 +98,9 @@ export function transformContentForFolding(
 }
 
 /**
- * Map a cursor position from virtual content back to actual content
- */
-export function mapVirtualToActualPosition(
-  virtualOffset: number,
-  virtualLines: string[],
-  mapping: LineMapping,
-): { line: number; column: number; offset: number } {
-  // Find which virtual line this offset is on
-  let currentOffset = 0;
-  let virtualLine = 0;
-
-  for (let i = 0; i < virtualLines.length; i++) {
-    const lineLength = virtualLines[i].length + 1; // +1 for newline
-    if (currentOffset + lineLength > virtualOffset) {
-      virtualLine = i;
-      break;
-    }
-    currentOffset += lineLength;
-    if (i === virtualLines.length - 1) {
-      virtualLine = i;
-    }
-  }
-
-  const columnInVirtualLine = virtualOffset - currentOffset;
-  const actualLine = mapping.virtualToActual.get(virtualLine) ?? virtualLine;
-
-  return {
-    line: actualLine,
-    column: columnInVirtualLine,
-    offset: virtualOffset, // This will need to be recalculated with actual content
-  };
-}
-
-/**
- * Map an actual line number to its virtual line number
- * Returns -1 if the line is hidden (inside a fold)
- */
-export function mapActualToVirtualLine(actualLine: number, mapping: LineMapping): number {
-  const virtualLine = mapping.actualToVirtual.get(actualLine);
-  if (virtualLine === undefined) {
-    // Line doesn't exist in mapping, return -1
-    return -1;
-  }
-  return virtualLine;
-}
-
-/**
  * Check if an actual line is visible (not hidden in a fold)
  */
-export function isLineVisible(actualLine: number, mapping: LineMapping): boolean {
+function isLineVisible(actualLine: number, mapping: LineMapping): boolean {
   // A line is visible if it maps to a unique virtual line
   // Hidden lines map to the fold start line's virtual index
   const virtualLine = mapping.actualToVirtual.get(actualLine);
@@ -202,18 +155,6 @@ export function applyVirtualEdit(
   return newActualLines.join("\n");
 }
 
-/**
- * Calculate actual cursor offset from actual line and column
- */
-export function calculateActualOffset(actualLines: string[], line: number, column: number): number {
-  let offset = 0;
-  for (let i = 0; i < line && i < actualLines.length; i++) {
-    offset += actualLines[i].length + 1; // +1 for newline
-  }
-  offset += Math.min(column, actualLines[line]?.length ?? 0);
-  return offset;
-}
-
 function getLineLengthFromOffsets(
   content: string,
   lineOffsets: readonly number[],
@@ -229,24 +170,6 @@ function getLineLengthFromOffsets(
   if (lineEnd > lineStart && content.charCodeAt(lineEnd - 1) === 13) lineEnd--;
 
   return lineEnd - lineStart;
-}
-
-/**
- * Get the actual line numbers that should be displayed in the gutter
- * Returns an array of actual line numbers for each virtual line
- */
-export function getActualLineNumbersForGutter(mapping: LineMapping): number[] {
-  const result: number[] = [];
-  const sortedVirtualLines = Array.from(mapping.virtualToActual.keys()).sort((a, b) => a - b);
-
-  for (const virtualLine of sortedVirtualLines) {
-    const actualLine = mapping.virtualToActual.get(virtualLine);
-    if (actualLine !== undefined) {
-      result.push(actualLine);
-    }
-  }
-
-  return result;
 }
 
 /**

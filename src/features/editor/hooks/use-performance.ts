@@ -4,12 +4,6 @@
 import { useCallback, useRef } from "react";
 import { frontendTrace } from "@/utils/frontend-trace";
 
-export interface PerformanceMetric {
-  name: string;
-  startTime: number;
-  duration: number;
-}
-
 export function usePerformanceMonitor(componentName: string) {
   const markStacksRef = useRef<Map<string, string[]>>(new Map());
   const sequenceRef = useRef(0);
@@ -82,34 +76,4 @@ export function usePerformanceMonitor(componentName: string) {
     startMeasure,
     endMeasure,
   };
-}
-
-export function useThrottledCallback<T extends (...args: any[]) => any>(
-  callback: T,
-  delay: number,
-): T {
-  const lastRun = useRef(0);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  return useCallback(
-    (...args: Parameters<T>) => {
-      const now = Date.now();
-      if (now - lastRun.current >= delay) {
-        lastRun.current = now;
-        callback(...args);
-      } else {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        timeoutRef.current = setTimeout(
-          () => {
-            lastRun.current = Date.now();
-            callback(...args);
-          },
-          delay - (now - lastRun.current),
-        );
-      }
-    },
-    [callback, delay],
-  ) as T;
 }

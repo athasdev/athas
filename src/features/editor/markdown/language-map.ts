@@ -1,4 +1,4 @@
-export const LANGUAGE_ALIASES: Record<string, string> = {
+const LANGUAGE_ALIASES: Record<string, string> = {
   ts: "typescript",
   js: "javascript",
   jsx: "jsx",

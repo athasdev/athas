@@ -37,7 +37,7 @@ export const shouldHideFromFileTree = (name: string): boolean =>
   OS_GENERATED_FILE_PATTERNS.some((pattern) => matchesNamePattern(name, pattern, true));
 
 // Common directories and patterns to ignore for project-wide scans.
-export const IGNORE_PATTERNS: string[] = [
+const IGNORE_PATTERNS: string[] = [
   // Version control
   ".git",
   ".svn",

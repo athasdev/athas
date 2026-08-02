@@ -26,7 +26,7 @@ import type {
  * Tokenize code using a WASM parser with optional incremental parsing support.
  * Returns both tokens and the parse tree for caching.
  */
-export async function tokenizeCodeWithTree(
+async function tokenizeCodeWithTree(
   content: string,
   languageId: string,
   config?: ParserConfig,
@@ -209,26 +209,6 @@ export async function tokenizeCode(
 }
 
 /**
- * Tokenize a specific range of lines
- */
-export async function tokenizeRange(
-  content: string,
-  languageId: string,
-  startLine: number,
-  endLine: number,
-  config?: ParserConfig,
-): Promise<HighlightToken[]> {
-  // For WASM, we parse the full document and filter tokens
-  // Tree-sitter doesn't support partial parsing easily
-  const allTokens = await tokenizeCode(content, languageId, config);
-
-  // Filter tokens within the line range
-  return allTokens.filter((token) => {
-    return token.startPosition.row >= startLine && token.endPosition.row <= endLine;
-  });
-}
-
-/**
  * Tokenize code by line
  * Returns tokens grouped by line number
  */
@@ -251,12 +231,4 @@ export async function tokenizeByLine(
   }
 
   return tokensByLine;
-}
-
-/**
- * Initialize the WASM tokenizer
- */
-export async function initializeWasmTokenizer(): Promise<void> {
-  await wasmParserLoader.initialize();
-  logger.info("WasmTokenizer", "WASM tokenizer initialized");
 }

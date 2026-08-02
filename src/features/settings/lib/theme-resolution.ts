@@ -36,7 +36,7 @@ export function resolveEffectiveTheme(
   return systemTheme === "dark" ? settings.autoThemeDark : settings.autoThemeLight;
 }
 
-export function getThemeColorScheme(themeId: Theme): SystemThemePreference | null {
+function getThemeColorScheme(themeId: Theme): SystemThemePreference | null {
   const registeredTheme = themeRegistry.getTheme(themeId);
   if (registeredTheme) {
     return registeredTheme.isDark ? "dark" : "light";

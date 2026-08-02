@@ -23,7 +23,7 @@ function normalizeRecentFolder(folder: RecentFolder): RecentFolder {
   };
 }
 
-export function sortRecentFolders(folders: RecentFolder[]) {
+function sortRecentFolders(folders: RecentFolder[]) {
   return [...folders].sort((left, right) => {
     if (!!left.pinned !== !!right.pinned) {
       return left.pinned ? -1 : 1;

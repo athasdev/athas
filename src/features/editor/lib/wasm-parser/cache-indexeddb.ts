@@ -23,7 +23,7 @@ export interface ParserCacheEntry {
   sourceUrl: string; // Original download URL
 }
 
-export interface CacheStats {
+interface CacheStats {
   totalSize: number;
   parserCount: number;
   parsers: Array<{

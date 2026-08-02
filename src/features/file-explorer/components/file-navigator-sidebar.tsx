@@ -26,8 +26,8 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import "../styles/file-explorer-tree.css";
 
 export type FileNavigatorViewMode = "flat" | "tree";
-export type FileNavigatorSearchMode = "substring" | "fuzzy";
-export type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
+type FileNavigatorSearchMode = "substring" | "fuzzy";
+type FileNavigatorSurface = "sidebar" | "plain" | "inset" | "review";
 
 const DEFAULT_NAVIGATOR_WIDTH = 224;
 const MIN_NAVIGATOR_WIDTH = 176;

@@ -1,7 +1,7 @@
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
 import { getPaneDropZoneFromRect, type PaneDropZone } from "@/features/panes/utils/pane-drop-zones";
 
-export type InternalDropZone = PaneDropZone;
+type InternalDropZone = PaneDropZone;
 
 export interface InternalTabDragData {
   source?: "pane" | "terminal-panel";
@@ -54,10 +54,6 @@ export function setInternalTabDragHover(point: { x: number; y: number }) {
 
 export function getInternalTabDragHover() {
   return window.__athasInternalTabDragHover ?? { paneId: null, zone: null as InternalDropZone };
-}
-
-export function resolveDropPaneId(point: { x: number; y: number }): string | null {
-  return resolveDropTarget(point).paneId;
 }
 
 export function resolveDropTarget(point: { x: number; y: number }) {

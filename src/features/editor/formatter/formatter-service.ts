@@ -10,7 +10,7 @@ export interface FormatOptions {
   languageId?: string;
 }
 
-export interface FormatRange {
+interface FormatRange {
   start: { line: number; character: number };
   end: { line: number; character: number };
 }

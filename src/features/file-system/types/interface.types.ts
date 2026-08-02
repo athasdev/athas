@@ -1,7 +1,7 @@
 import type { CodeEditorRef } from "@/features/editor/components/code-editor";
 import type { FileEntry } from "./app.types";
 
-export interface WorkspaceFolder {
+interface WorkspaceFolder {
   path: string;
   name: string;
   isPrimary?: boolean;

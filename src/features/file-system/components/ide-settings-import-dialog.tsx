@@ -82,7 +82,7 @@ const IDE_IMPORT_SOURCES: IdeImportSource[] = [
   },
 ];
 
-export function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentProps) {
+function IdeSettingsImportContent({ onClose, onBack }: IdeSettingsImportContentProps) {
   const [projects, setProjects] = useState<ImportableIdeProject[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);

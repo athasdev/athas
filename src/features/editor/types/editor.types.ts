@@ -27,12 +27,6 @@ export interface MultiCursorState {
   primaryCursorId: string; // ID of the primary cursor (synced with textarea)
 }
 
-export interface LineToken {
-  startColumn: number;
-  endColumn: number;
-  className: string;
-}
-
 export interface Decoration {
   range: Range;
   className?: string;

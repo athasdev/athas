@@ -9,7 +9,7 @@ interface BufferIndexes {
 
 const indexCache = new WeakMap<readonly PaneContent[], BufferIndexes>();
 
-export function getBufferIndexes(buffers: readonly PaneContent[]): BufferIndexes {
+function getBufferIndexes(buffers: readonly PaneContent[]): BufferIndexes {
   const cached = indexCache.get(buffers);
   if (cached) return cached;
 

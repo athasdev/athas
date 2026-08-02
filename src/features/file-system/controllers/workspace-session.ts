@@ -127,7 +127,7 @@ export function getEditorWorkspaceScope(
     : "external";
 }
 
-export interface WorkspaceSessionSnapshot {
+interface WorkspaceSessionSnapshot {
   activeBufferPath: string | null;
   buffers: WorkspaceSessionBuffer[];
 }

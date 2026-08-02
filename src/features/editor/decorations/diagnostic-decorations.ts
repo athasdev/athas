@@ -57,16 +57,6 @@ function toVisualLine(line: number, lineMapping?: LineMapping): number | null {
   return lineMapping.virtualToActual.get(visualLine) === line ? visualLine : null;
 }
 
-export function formatDiagnosticMessage(diagnostic: Diagnostic): string {
-  return [
-    diagnostic.message,
-    diagnostic.source ? `Source: ${diagnostic.source}` : "",
-    diagnostic.code ? `Code: ${diagnostic.code}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-}
-
 export function buildDiagnosticDecorations(
   diagnostics: Diagnostic[],
   lines: string[],
@@ -109,20 +99,6 @@ export function buildDiagnosticDecorations(
   }
 
   return decorations;
-}
-
-export function getDiagnosticDecorationsForLine(
-  decorations: DiagnosticDecoration[],
-  line: number,
-): DiagnosticDecoration[] {
-  return decorations
-    .filter((decoration) => decoration.line === line)
-    .sort(
-      (a, b) =>
-        a.startColumn - b.startColumn ||
-        b.endColumn - a.endColumn ||
-        severityRank(b.severity) - severityRank(a.severity),
-    );
 }
 
 export function buildDiagnosticDecorationsByLine(

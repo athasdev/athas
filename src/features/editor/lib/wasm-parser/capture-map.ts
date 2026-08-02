@@ -1,6 +1,6 @@
 import type { HighlightToken } from "../../types/wasm-parser/wasm-parser.types";
 
-export const CAPTURE_TO_CLASS: Record<string, string> = {
+const CAPTURE_TO_CLASS: Record<string, string> = {
   keyword: "token-keyword",
   "keyword.control": "token-keyword",
   "keyword.function": "token-keyword",

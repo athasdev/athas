@@ -71,19 +71,3 @@ export const removeWorktree = async (
     return false;
   }
 };
-
-export const pruneWorktrees = async (repoPath: string): Promise<boolean> => {
-  try {
-    const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
-    await tauriInvoke("git_prune_worktrees", { repoPath: resolvedRepoPath });
-    emitGitChanged({
-      repoPath: resolvedRepoPath,
-      scopes: ["repository", "refs"],
-      source: "prune-worktrees",
-    });
-    return true;
-  } catch (error) {
-    console.error("Failed to prune worktrees:", error);
-    return false;
-  }
-};

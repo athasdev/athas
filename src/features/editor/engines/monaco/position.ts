@@ -14,7 +14,7 @@ export function toEditorPosition(
   };
 }
 
-export function toMonacoPosition(position: Position): Monaco.IPosition {
+function toMonacoPosition(position: Position): Monaco.IPosition {
   return {
     lineNumber: position.line + 1,
     column: position.column + 1,

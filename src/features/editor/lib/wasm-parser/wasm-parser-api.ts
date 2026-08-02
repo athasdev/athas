@@ -5,16 +5,9 @@ import { tokenizerWorkerClient } from "./tokenizer-worker-client";
  * Public API for WASM tokenization functionality
  */
 
-export { parserCache } from "./cache";
-export { convertToEditorToken, convertToEditorTokens } from "./converter";
+export { convertToEditorTokens } from "./converter";
 export { wasmParserLoader } from "./loader";
-export { tokenizeByLine, tokenizeCode, tokenizeRange } from "./tokenizer";
-export type {
-  HighlightToken,
-  LoadedParser,
-  ParseResult,
-  ParserConfig,
-} from "../../types/wasm-parser/wasm-parser.types";
+export { tokenizeCode } from "./tokenizer";
 
 const PRELOAD_LANGUAGE_IDS = [
   "typescript",

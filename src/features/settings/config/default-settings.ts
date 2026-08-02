@@ -2,7 +2,6 @@ import { normalizeUiFontSize, UI_FONT_SIZE_DEFAULT } from "@/features/settings/l
 import {
   DEFAULT_CODE_FONT_SIZE,
   DEFAULT_MONO_FONT_FAMILY,
-  DEFAULT_TERMINAL_FONT_SIZE,
   DEFAULT_UI_FONT_FAMILY,
 } from "@/features/settings/config/typography-defaults";
 import {
@@ -15,10 +14,10 @@ import type { Settings } from "@/features/settings/types/settings.types";
 
 export const DEFAULT_AI_PROVIDER_ID = "anthropic";
 export const DEFAULT_AI_MODEL_ID = "claude-sonnet-4-6";
-export const DEFAULT_AI_CUSTOM_BASE_URL = "";
-export const DEFAULT_AI_CUSTOM_MODEL_ID = "";
+const DEFAULT_AI_CUSTOM_BASE_URL = "";
+const DEFAULT_AI_CUSTOM_MODEL_ID = "";
 export const DEFAULT_AI_AUTOCOMPLETE_MODEL_ID = "mistralai/devstral-small";
-export const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
+const DEFAULT_AI_AUTOCOMPLETE_CUSTOM_BASE_URL = "";
 
 export const defaultSettings: Settings = {
   // General
@@ -48,7 +47,7 @@ export const defaultSettings: Settings = {
   breadcrumbShowSymbols: true,
   // Terminal
   terminalFontFamily: DEFAULT_MONO_FONT_FAMILY,
-  terminalFontSize: DEFAULT_TERMINAL_FONT_SIZE,
+  terminalFontSize: DEFAULT_CODE_FONT_SIZE,
   terminalLineHeight: 1,
   terminalLetterSpacing: 0,
   terminalScrollback: 10000,
@@ -182,7 +181,6 @@ export const defaultSettings: Settings = {
   gitSidebarTabOrder: ["changes", "history"],
   githubSidebarSectionOrder: ["pull-requests", "issues", "actions"],
   enableInlineGitBlame: true,
-  enableGitGutter: true,
   // Telemetry
   telemetry: false,
 };

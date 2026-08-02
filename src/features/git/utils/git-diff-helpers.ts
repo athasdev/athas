@@ -1,12 +1,6 @@
 import type { DiffLineWithIndex, ParsedHunk } from "../types/git-diff.types";
 import type { GitDiff, GitDiffLine, GitHunk } from "../types/git.types";
-import { writeClipboardText } from "@/utils/clipboard";
-export {
-  getDiffLineVisualState,
-  getDiffLineVisualType,
-  type DiffLineVisualState,
-  type DiffLineVisualType,
-} from "./diff-viewer-visuals";
+export { getDiffLineVisualState, getDiffLineVisualType } from "./diff-viewer-visuals";
 
 export interface DiffHunkRange {
   oldStart: number;
@@ -126,8 +120,4 @@ export function countDiffStats(diffs: GitDiff[]): { additions: number; deletions
     }
   }
   return { additions, deletions };
-}
-
-export function copyLineContent(content: string) {
-  void writeClipboardText(content);
 }

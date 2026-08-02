@@ -126,10 +126,3 @@ export function addFileToTree(
   });
   return changed ? result : files;
 }
-
-export function collapseAllFolders(files: FileEntry[]): FileEntry[] {
-  return files.map((file) => ({
-    ...file,
-    children: file.children ? collapseAllFolders(file.children) : undefined,
-  }));
-}

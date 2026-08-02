@@ -1,4 +1,4 @@
-export interface RMarkdownChunkOptions {
+interface RMarkdownChunkOptions {
   label?: string;
   eval?: boolean;
   include?: boolean;

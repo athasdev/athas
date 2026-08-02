@@ -12,7 +12,7 @@ export interface AutoEvictionOptions {
   includePreviews?: boolean;
 }
 
-export function canAutoEvictBuffer(
+function canAutoEvictBuffer(
   buffer: PaneContent,
   { includePreviews = true }: AutoEvictionOptions = {},
 ): boolean {

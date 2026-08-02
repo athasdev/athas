@@ -9,7 +9,7 @@ import type { HighlightToken } from "../../types/wasm-parser/wasm-parser.types";
 /**
  * Convert WASM HighlightToken to editor Token format
  */
-export function convertToEditorToken(highlightToken: HighlightToken): Token {
+function convertToEditorToken(highlightToken: HighlightToken): Token {
   return {
     start: highlightToken.startIndex,
     end: highlightToken.endIndex,

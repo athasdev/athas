@@ -1,4 +1,4 @@
-export function isWordCharCode(charCode: number): boolean {
+function isWordCharCode(charCode: number): boolean {
   return (
     (charCode >= 48 && charCode <= 57) ||
     (charCode >= 65 && charCode <= 90) ||

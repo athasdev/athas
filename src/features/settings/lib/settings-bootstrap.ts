@@ -22,7 +22,7 @@ async function detectInitialTheme() {
   return detectedTheme;
 }
 
-export async function resolveInitialSettings(): Promise<Settings> {
+async function resolveInitialSettings(): Promise<Settings> {
   if (typeof window === "undefined") {
     return defaultSettings;
   }

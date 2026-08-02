@@ -128,7 +128,7 @@ function isEnvFileName(fileName: string): boolean {
   return fileName === ".env" || fileName.startsWith(".env.");
 }
 
-export function normalizeLanguageId(languageId: string): string {
+function normalizeLanguageId(languageId: string): string {
   switch (languageId) {
     case "jsonc":
       return "json";
@@ -143,12 +143,12 @@ export function normalizeLanguageId(languageId: string): string {
   }
 }
 
-export function getLanguageIdFromExtension(extension: string): string | null {
+function getLanguageIdFromExtension(extension: string): string | null {
   const normalized = extension.replace(/^\./, "").toLowerCase();
   return EXTENSION_TO_LANGUAGE[normalized] || null;
 }
 
-export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
   [ANGULAR_TEMPLATE_LANGUAGE_ID]: "Angular Template",
   javascript: "JavaScript",
   javascriptreact: "JSX",

@@ -118,23 +118,6 @@ export async function lintContent(options: LintOptions): Promise<LintResult> {
 }
 
 /**
- * Check if linting is available for a file
- */
-export function isLintingAvailable(filePath: string, languageId?: string): boolean {
-  if (filePath.startsWith("wsl://")) return false;
-
-  const linterConfig = extensionRegistry.getLinterForFile(filePath);
-  if (linterConfig) return true;
-
-  if (languageId) {
-    const langLinterConfig = extensionRegistry.getLinterForLanguage(languageId);
-    return langLinterConfig !== null;
-  }
-
-  return false;
-}
-
-/**
  * Get workspace folder from file path
  */
 function getWorkspaceFolder(filePath: string): string | undefined {

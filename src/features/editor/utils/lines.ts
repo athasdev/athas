@@ -14,10 +14,6 @@ export function calculateLineHeight(
   return Math.ceil(fontSize * lineHeight);
 }
 
-export function calculateLineOffset(lines: string[], lineIndex: number): number {
-  return lines.slice(0, lineIndex).reduce((acc, line) => acc + line.length + 1, 0);
-}
-
 export function isMarkdownFile(filePath: string): boolean {
   return isMarkdownPreviewableFile(filePath);
 }

@@ -137,7 +137,6 @@ type SyncableSettingsKey =
   | "gitSidebarTabOrder"
   | "githubSidebarSectionOrder"
   | "enableInlineGitBlame"
-  | "enableGitGutter"
   | "telemetry";
 
 const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
@@ -262,7 +261,6 @@ const SYNCABLE_SETTINGS_KEYS: SyncableSettingsKey[] = [
   "gitSidebarTabOrder",
   "githubSidebarSectionOrder",
   "enableInlineGitBlame",
-  "enableGitGutter",
   "telemetry",
 ];
 
@@ -330,7 +328,7 @@ function getTimestampMs(value: string | null): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function buildSyncableSettingsSnapshot(settings: Settings): Record<string, unknown> {
+function buildSyncableSettingsSnapshot(settings: Settings): Record<string, unknown> {
   return Object.fromEntries(SYNCABLE_SETTINGS_KEYS.map((key) => [key, settings[key]]));
 }
 

@@ -1,7 +1,7 @@
-export const LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD = 20 * 1024 * 1024;
-export const LARGE_FILE_TOKENIZATION_LINE_THRESHOLD = 300_000;
-export const RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD = 2 * 1024 * 1024;
-export const RESPONSIVE_LARGE_FILE_LINE_THRESHOLD = 50_000;
+const LARGE_FILE_TOKENIZATION_SIZE_THRESHOLD = 20 * 1024 * 1024;
+const LARGE_FILE_TOKENIZATION_LINE_THRESHOLD = 300_000;
+const RESPONSIVE_LARGE_FILE_SIZE_THRESHOLD = 2 * 1024 * 1024;
+const RESPONSIVE_LARGE_FILE_LINE_THRESHOLD = 50_000;
 
 export interface LargeFileCheck {
   contentLength: number;
@@ -252,7 +252,7 @@ export function applyIncrementalLargeEditorModeInfo(
   };
 }
 
-export function buildLineOffsets(content: string): number[] {
+function buildLineOffsets(content: string): number[] {
   const lineOffsets = [0];
   for (let index = 0; index < content.length; index++) {
     if (content.charCodeAt(index) === 10) {

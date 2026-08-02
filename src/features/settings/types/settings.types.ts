@@ -10,15 +10,15 @@ import type {
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
-export type EditorCursorStyle =
+type EditorCursorStyle =
   | "line"
   | "block"
   | "underline"
   | "line-thin"
   | "block-outline"
   | "underline-thin";
-export type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
-export type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
+type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
+type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
 export type TabCloseButtonVisibility = "active" | "hover" | "always";
 export type WindowChromeDensity = "focused" | "comfortable";
 export type FileTreeSortOrder = "folders-first" | "name";
@@ -201,7 +201,6 @@ export interface Settings {
   gitSidebarTabOrder: Array<"changes" | "history">;
   githubSidebarSectionOrder: Array<"pull-requests" | "issues" | "actions">;
   enableInlineGitBlame: boolean;
-  enableGitGutter: boolean;
   // Telemetry
   telemetry: boolean;
 }

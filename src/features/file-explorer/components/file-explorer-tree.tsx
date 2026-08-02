@@ -1490,4 +1490,3 @@ function FileExplorerTreeComponent({
 }
 
 export const FileExplorerTree = memo(FileExplorerTreeComponent);
-export default FileExplorerTree;

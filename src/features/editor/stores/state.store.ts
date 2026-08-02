@@ -2,7 +2,6 @@ import type { RefObject } from "react";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
-import { isDragScrolling } from "@/features/editor/hooks/use-drag-scroll";
 import type {
   Cursor,
   MultiCursorState,
@@ -152,9 +151,6 @@ function rangesEqual(left?: Range, right?: Range): boolean {
 
 const ensureCursorVisible = (position: Position) => {
   if (typeof window === "undefined") return;
-
-  // Skip scroll adjustment during drag selection auto-scroll
-  if (isDragScrolling()) return;
 
   const editorElement = useEditorStateStore.getState().editorRef?.current;
   const scopedTextarea =

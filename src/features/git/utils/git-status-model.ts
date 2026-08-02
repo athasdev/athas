@@ -35,7 +35,7 @@ export interface GitStatusPresentation {
   groupedUntrackedFiles: Record<GitStatusGroup, GitFile[]>;
 }
 
-export const createEmptyGitStatusGroups = (): Record<GitStatusGroup, GitFile[]> => ({
+const createEmptyGitStatusGroups = (): Record<GitStatusGroup, GitFile[]> => ({
   added: [],
   modified: [],
   deleted: [],

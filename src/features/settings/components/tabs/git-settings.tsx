@@ -12,7 +12,6 @@ export const GitSettings = () => {
       compactGitStatusBadges: state.settings.compactGitStatusBadges,
       confirmBeforeDiscard: state.settings.confirmBeforeDiscard,
       coreFeatures: state.settings.coreFeatures,
-      enableGitGutter: state.settings.enableGitGutter,
       enableInlineGitBlame: state.settings.enableInlineGitBlame,
       gitChangesFolderView: state.settings.gitChangesFolderView,
       gitDefaultDiffView: state.settings.gitDefaultDiffView,
@@ -216,19 +215,6 @@ export const GitSettings = () => {
           <Switch
             checked={settings.enableInlineGitBlame}
             onChange={(checked) => updateSetting("enableInlineGitBlame", checked)}
-            size="sm"
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Enable Git Gutter"
-          description="Show added, modified, and deleted indicators in the editor gutter"
-          onReset={() => updateSetting("enableGitGutter", getDefaultSetting("enableGitGutter"))}
-          canReset={settings.enableGitGutter !== getDefaultSetting("enableGitGutter")}
-        >
-          <Switch
-            checked={settings.enableGitGutter}
-            onChange={(checked) => updateSetting("enableGitGutter", checked)}
             size="sm"
           />
         </SettingRow>

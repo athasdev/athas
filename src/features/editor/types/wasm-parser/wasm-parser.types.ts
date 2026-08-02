@@ -27,11 +27,6 @@ export interface LoadedParser {
   languageId: string;
 }
 
-export interface ParseResult {
-  tokens: HighlightToken[];
-  tree: Tree;
-}
-
 /**
  * Options for incremental parsing with Tree-sitter
  */

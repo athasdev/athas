@@ -171,7 +171,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
   const codeLens = useSettingsStore((state) => state.settings.codeLens);
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const vimMode = useSettingsStore((state) => state.settings.vimMode);
-  const enableGitGutter = useSettingsStore((state) => state.settings.enableGitGutter);
   const enableInlineGitBlame = useSettingsStore((state) => state.settings.enableInlineGitBlame);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const minimapShortcut = useCommandShortcut("workbench.toggleMinimap");
@@ -473,14 +472,6 @@ export function EditorStatusActions({ bufferId, editorViewKey }: EditorStatusAct
       checked: vimMode,
       shortcut: null,
       onToggle: () => updateSetting("vimMode", !vimMode),
-      disabled: false,
-    },
-    {
-      id: "git-gutter",
-      label: "Git Gutter",
-      checked: enableGitGutter,
-      shortcut: null,
-      onToggle: () => updateSetting("enableGitGutter", !enableGitGutter),
       disabled: false,
     },
     {

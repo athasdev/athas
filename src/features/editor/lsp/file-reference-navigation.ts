@@ -1,6 +1,6 @@
 import { getDirName, joinPath } from "@/utils/path-helpers";
 
-export interface FileReferenceRange {
+interface FileReferenceRange {
   line: number;
   startColumn: number;
   endColumn: number;

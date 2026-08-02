@@ -75,7 +75,7 @@ export interface EditorSettings {
 }
 
 // Command arguments always include the editor reference
-export interface CommandArgs {
+interface CommandArgs {
   editor: EditorAPI;
   [key: string]: unknown;
 }
@@ -151,7 +151,7 @@ export interface Extension {
   updateSettings?(settings: Record<string, unknown>): void;
 }
 
-export interface LanguageContribution {
+interface LanguageContribution {
   id: string;
   extensions: string[];
   aliases?: string[];
@@ -160,22 +160,22 @@ export interface LanguageContribution {
   configuration?: string;
 }
 
-export interface CommandContribution {
+interface CommandContribution {
   id: string;
   title: string;
   category?: string;
   when?: string;
 }
 
-export interface KeybindingContribution {
+interface KeybindingContribution {
   command: string;
   key: string;
   when?: string;
 }
 
-export type SettingValue = string | number | boolean | unknown[] | Record<string, unknown>;
+type SettingValue = string | number | boolean | unknown[] | Record<string, unknown>;
 
-export interface SettingContribution {
+interface SettingContribution {
   id: string;
   title: string;
   type: "string" | "number" | "boolean" | "array" | "object";
@@ -184,7 +184,7 @@ export interface SettingContribution {
   enum?: SettingValue[];
 }
 
-export interface ThemeContribution {
+interface ThemeContribution {
   id: string;
   label: string;
   path: string;

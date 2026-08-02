@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export type SettingsSyncSource = "cloud" | "local";
-export type SettingsSyncStatus = "disabled" | "idle" | "syncing" | "synced" | "error";
+type SettingsSyncStatus = "disabled" | "idle" | "syncing" | "synced" | "error";
 
 interface SettingsSyncState {
   enabled: boolean;

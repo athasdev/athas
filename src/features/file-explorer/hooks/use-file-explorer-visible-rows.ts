@@ -3,10 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShallow } from "zustand/react/shallow";
 import { fileOpenBenchmark } from "@/features/editor/utils/file-open-benchmark";
 import { getFileTreeRowHeight } from "@/features/file-explorer/lib/file-tree-row";
-import {
-  buildVisibleFileTreeRows,
-  type VisibleFileTreeRow,
-} from "@/features/file-explorer/lib/visible-file-tree-rows";
+import { buildVisibleFileTreeRows } from "@/features/file-explorer/lib/visible-file-tree-rows";
 import { useFileTreeStore } from "@/features/file-explorer/stores/file-explorer-tree.store";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -162,5 +159,3 @@ export function useFileExplorerVisibleRows({
 
   return { rowHeight, visibleRows, visibleRowIndexByPath, rowVirtualizer };
 }
-
-export type VisibleRow = VisibleFileTreeRow;

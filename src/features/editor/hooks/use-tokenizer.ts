@@ -56,7 +56,7 @@ export interface SyntaxTokenSnapshot {
   tokens: Token[];
 }
 
-export function getLanguageId(filePath: string): string | null {
+function getLanguageId(filePath: string): string | null {
   return getLanguageIdFromPath(filePath);
 }
 

@@ -1,37 +1,7 @@
 import { EDITOR_CONSTANTS } from "../config/constants";
 import type { Position } from "../types/editor.types";
 
-export const EDITOR_FONT_METRICS_READY_EVENT = "athas:editor-font-metrics-ready";
-
-/**
- * Calculate cursor position from character offset
- */
-export const calculateCursorPosition = (offset: number, lines: string[]): Position => {
-  let currentOffset = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const lineLength = lines[i].length + (i < lines.length - 1 ? 1 : 0); // +1 for newline
-    if (currentOffset + lineLength > offset) {
-      // Calculate column, but ensure it doesn't exceed the actual line content length
-      const column = Math.min(offset - currentOffset, lines[i].length);
-      return {
-        line: i,
-        column,
-        offset,
-      };
-    }
-    currentOffset += lineLength;
-  }
-
-  return {
-    line: lines.length - 1,
-    column: lines[lines.length - 1].length,
-    offset: lines.reduce(
-      (sum, line, idx) => sum + line.length + (idx < lines.length - 1 ? 1 : 0),
-      0,
-    ),
-  };
-};
+const EDITOR_FONT_METRICS_READY_EVENT = "athas:editor-font-metrics-ready";
 
 export const calculateCursorPositionFromContent = (offset: number, content: string): Position => {
   const clampedOffset = Math.max(0, Math.min(offset, content.length));
@@ -241,7 +211,6 @@ let pendingFontReadyCacheClear = false;
  * Canvas context for measuring text (reused to avoid creating multiple contexts)
  */
 let measureContext: CanvasRenderingContext2D | null = null;
-let renderedMeasureElement: HTMLSpanElement | null = null;
 
 const GENERIC_FONT_FAMILIES = new Set([
   "serif",
@@ -338,7 +307,7 @@ const prewarmCharCache = (fontSize: number, fontFamily: string) => {
 /**
  * Get accurate character width from cache or measure using canvas (much faster than DOM)
  */
-export const getCharWidthCached = (
+const getCharWidthCached = (
   char: string,
   fontSize: number,
   fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
@@ -426,56 +395,10 @@ export const measureTextWidth = (
   tabSize: number = 2,
 ): number => getAccurateCursorX(text, text.length, fontSize, fontFamily, tabSize);
 
-function getRenderedMeasureElement(): HTMLSpanElement | null {
-  if (typeof document === "undefined") return null;
-
-  if (renderedMeasureElement?.isConnected) {
-    return renderedMeasureElement;
-  }
-
-  const element = document.createElement("span");
-  element.setAttribute("aria-hidden", "true");
-  element.style.position = "absolute";
-  element.style.visibility = "hidden";
-  element.style.pointerEvents = "none";
-  element.style.whiteSpace = "pre";
-  element.style.left = "-10000px";
-  element.style.top = "-10000px";
-  element.style.fontKerning = "none";
-  element.style.fontVariantLigatures = "none";
-  element.style.fontFeatureSettings = '"liga" 0, "calt" 0, "tnum" 1';
-  element.style.letterSpacing = "0";
-  element.style.textRendering = "optimizeSpeed";
-  document.body.appendChild(element);
-  renderedMeasureElement = element;
-  return element;
-}
-
-export const measureRenderedTextWidth = (
-  text: string,
-  fontSize: number,
-  fontFamily: string = 'Geist Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
-  tabSize: number = 2,
-): number => {
-  const element = getRenderedMeasureElement();
-  if (!element) return measureTextWidth(text, fontSize, fontFamily, tabSize);
-
-  element.style.fontSize = `${fontSize}px`;
-  element.style.fontFamily = fontFamily;
-  element.style.tabSize = `${Math.max(1, Math.trunc(tabSize))}`;
-  element.textContent = text;
-
-  const width = element.getBoundingClientRect().width;
-  return (
-    Math.round(width * EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER) /
-    EDITOR_CONSTANTS.WIDTH_PRECISION_MULTIPLIER
-  );
-};
-
 /**
  * Clear character width cache (useful when font changes)
  */
-export const clearCharWidthCache = () => {
+const clearCharWidthCache = () => {
   charWidthCache.clear();
   prewarmedFontConfigs.clear();
 };

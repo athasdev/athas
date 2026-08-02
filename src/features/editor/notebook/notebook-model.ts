@@ -39,12 +39,12 @@ export interface NotebookOutput {
   [key: string]: unknown;
 }
 
-export interface ParsedNotebook {
+interface ParsedNotebook {
   ok: true;
   notebook: NotebookDocument;
 }
 
-export interface NotebookParseFailure {
+interface NotebookParseFailure {
   ok: false;
   message: string;
 }

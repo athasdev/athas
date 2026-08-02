@@ -1,6 +1,6 @@
 import { invalidateGitCaches } from "../runtime/git-cache-registry";
 
-export const GIT_CHANGED_EVENT = "athas:git-changed";
+const GIT_CHANGED_EVENT = "athas:git-changed";
 
 export type GitChangeScope =
   | "working-tree"

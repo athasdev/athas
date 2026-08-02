@@ -20,7 +20,7 @@ export interface BracketSelectionRange {
   endOffset: number;
 }
 
-export interface BracketPairRange {
+interface BracketPairRange {
   openOffset: number;
   closeOffset: number;
 }

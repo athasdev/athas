@@ -4,9 +4,6 @@ export const canUseNativeFileSearch = (rootPath: string | null | undefined): roo
   !rootPath?.startsWith("wsl://") &&
   !rootPath?.startsWith("diff://");
 
-export const canUseProviderFileSearch = (rootPath: string | null | undefined): rootPath is string =>
-  typeof rootPath === "string" && rootPath.startsWith("wsl://");
-
 export const getNativeWorkspaceRootPaths = (
   rootFolderPath: string | null | undefined,
   workspaceFolders: readonly ({ path: string } | string)[],

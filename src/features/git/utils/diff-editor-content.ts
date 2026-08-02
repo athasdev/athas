@@ -294,7 +294,7 @@ export function createDiffTokensForEditorContent(content: string): TokenEntry[] 
   return tokens;
 }
 
-export function isDiffAccordionLine(line: string): boolean {
+function isDiffAccordionLine(line: string): boolean {
   return line.startsWith(DIFF_ACCORDION_PREFIX);
 }
 
