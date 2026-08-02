@@ -155,11 +155,6 @@ export function getDatabaseProviderExtensions(): ExtensionManifest[] {
   );
 }
 
-export function getDatabaseProviderExtensionId(providerId: DatabaseProviderId): string {
-  const definition = PROVIDER_DEFINITIONS.find((item) => item.provider.id === providerId);
-  return definition?.extensionId ?? `athas.database.${providerId}`;
-}
-
 export function getDatabaseProviderContribution(
   providerId: DatabaseProviderId,
 ): DatabaseProviderContribution | undefined {

@@ -3,7 +3,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useExtensionStore } from "../registry/extension-store";
 
-export interface ExtensionInstallNeededEvent {
+interface ExtensionInstallNeededEvent {
   extensionId: string;
   extensionName: string;
   filePath: string;

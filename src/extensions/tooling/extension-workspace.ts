@@ -4,7 +4,7 @@ import { basename, join, relative, resolve } from "node:path";
 
 export type ExtensionManifestRecord = Record<string, unknown>;
 
-export const EXTENSION_DOMAIN_ROOT = resolve(import.meta.dirname, "..");
+const EXTENSION_DOMAIN_ROOT = resolve(import.meta.dirname, "..");
 export const ATHAS_ROOT = resolve(EXTENSION_DOMAIN_ROOT, "../..");
 export const EXTENSIONS_ROOT = join(ATHAS_ROOT, "extensions");
 export const GENERATED_CDN_DIR = join(EXTENSIONS_ROOT, "generated", "cdn");

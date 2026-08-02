@@ -19,7 +19,7 @@ export interface UIExtensionGenerationResult {
   };
 }
 
-export class UIExtensionGenerationError extends Error {
+class UIExtensionGenerationError extends Error {
   status: number;
 
   constructor(message: string, status: number) {

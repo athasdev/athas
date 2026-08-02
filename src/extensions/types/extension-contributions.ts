@@ -4,7 +4,6 @@ import type {
   ExtensionManifest,
   AIProviderContribution,
   IconThemeContribution,
-  KeybindingContribution,
   LanguageContribution,
   Snippet,
   SnippetContribution,
@@ -62,18 +61,7 @@ export function getManifestCommandContributions(
   );
 }
 
-export function getManifestKeybindingContributions(
-  manifest: ExtensionManifest,
-): KeybindingContribution[] {
-  return uniqueBy(
-    [...(manifest.keybindings || []), ...(manifest.contributes?.keybindings || [])],
-    (keybinding) => `${keybinding.command}:${keybinding.key}`,
-  );
-}
-
-export function getManifestSnippetContributions(
-  manifest: ExtensionManifest,
-): SnippetContribution[] {
+function getManifestSnippetContributions(manifest: ExtensionManifest): SnippetContribution[] {
   return [...(manifest.snippets || []), ...(manifest.contributes?.snippets || [])];
 }
 

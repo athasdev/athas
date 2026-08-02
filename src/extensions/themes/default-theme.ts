@@ -48,7 +48,7 @@ function buildDefaultTheme(type: AthasDefaultThemeType): AthasDefaultTheme {
   };
 }
 
-export const ATHAS_DEFAULT_THEMES: Record<AthasDefaultThemeType, AthasDefaultTheme> = {
+const ATHAS_DEFAULT_THEMES: Record<AthasDefaultThemeType, AthasDefaultTheme> = {
   dark: buildDefaultTheme("dark"),
   light: buildDefaultTheme("light"),
 };

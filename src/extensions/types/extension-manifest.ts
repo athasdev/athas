@@ -4,7 +4,6 @@
  */
 
 export type Platform = "darwin" | "linux" | "win32";
-export type Architecture = "arm64" | "x64";
 export type PlatformArch =
   | "darwin-arm64"
   | "darwin-x64"
@@ -24,7 +23,7 @@ export type ToolRuntime =
   | "system"
   // Uses a system executable when present, otherwise an Athas-managed binary.
   | "binary";
-export type ExtensionKind = "ui" | "workspace" | "web";
+type ExtensionKind = "ui" | "workspace" | "web";
 
 export interface ExtensionManifest {
   // Core metadata
@@ -176,28 +175,7 @@ export interface LspConfiguration {
   capabilities?: Record<string, any>;
 }
 
-// Extended LSP configuration with platform+arch support for downloadable extensions
-export interface LspConfigurationWithArch {
-  // Server executable paths per platform+arch (relative paths within extension)
-  server: PlatformArchExecutable;
-
-  // Server arguments
-  args?: string[];
-
-  // Environment variables
-  env?: Record<string, string>;
-
-  // Initialization options
-  initializationOptions?: Record<string, unknown>;
-
-  // File extensions this LSP supports
-  fileExtensions: string[];
-
-  // Language IDs this LSP supports
-  languageIds: string[];
-}
-
-export interface PlatformArchExecutable {
+interface PlatformArchExecutable {
   "darwin-arm64"?: string;
   "darwin-x64"?: string;
   "linux-x64"?: string;
@@ -217,7 +195,7 @@ export interface DatabaseProviderContribution {
   sidecar: PlatformArchExecutable;
 }
 
-export interface AgentContribution {
+interface AgentContribution {
   id: string;
   name: string;
   binaryName: string;
@@ -234,7 +212,7 @@ export interface AgentContribution {
   };
 }
 
-export interface AIProviderModelContribution {
+interface AIProviderModelContribution {
   id: string;
   name: string;
   maxTokens: number;
@@ -287,7 +265,7 @@ export interface PlatformExecutable {
   win32?: string; // Windows
 }
 
-export interface GrammarConfiguration {
+interface GrammarConfiguration {
   // Path to tree-sitter grammar WASM
   wasmPath: string;
 
@@ -305,7 +283,7 @@ export interface CommandContribution {
   icon?: string; // Icon for command
 }
 
-export interface KeybindingContribution {
+interface KeybindingContribution {
   command: string; // Command to execute
   key: string; // Key combination (e.g., "ctrl+shift+p")
   when?: string; // Context condition
@@ -339,19 +317,6 @@ export type ExtensionState =
   | "deactivating"
   | "deactivated"
   | "error";
-
-export interface ExtensionError {
-  code: string;
-  message: string;
-  stack?: string;
-}
-
-export interface ExtensionActivationContext {
-  extensionPath: string;
-  storagePath: string;
-  globalStoragePath: string;
-  subscriptions: Array<{ dispose: () => void }>;
-}
 
 export interface FormatterConfiguration {
   // Tool metadata for runtime installation
@@ -443,7 +408,7 @@ export interface Snippet {
   scope?: string;
 }
 
-export interface InstallationMetadata {
+interface InstallationMetadata {
   type?: "download" | "bundled";
 
   // Download URL for the extension package (used when no platform-specific packages)
@@ -483,7 +448,7 @@ export interface PlatformPackage {
   checksum: string;
 }
 
-export interface UIContributions {
+interface UIContributions {
   languages?: LanguageContribution[];
   databases?: DatabaseProviderContribution[];
   databaseProviders?: DatabaseProviderContribution[];
@@ -501,14 +466,14 @@ export interface UIContributions {
   toolbarActions?: ToolbarActionContribution[];
 }
 
-export interface SidebarViewContribution {
+interface SidebarViewContribution {
   id: string;
   title: string;
   icon: string;
   when?: string;
 }
 
-export interface ToolbarActionContribution {
+interface ToolbarActionContribution {
   id: string;
   title: string;
   icon: string;
@@ -517,7 +482,7 @@ export interface ToolbarActionContribution {
   when?: string;
 }
 
-export interface MenuContribution {
+interface MenuContribution {
   id: string;
   items: Array<{ command: string; group?: string; when?: string }>;
 }

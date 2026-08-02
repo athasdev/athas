@@ -32,7 +32,7 @@ export async function loadCustomThemes(): Promise<Theme[]> {
   return parseThemeFile({ name: "Custom themes", themes: storedThemes }).themes;
 }
 
-export async function saveCustomThemes(themes: Theme[]): Promise<void> {
+async function saveCustomThemes(themes: Theme[]): Promise<void> {
   const store = await getCustomThemeStore();
   await store.set(CUSTOM_THEME_STORE_KEY, themes);
   await store.save();

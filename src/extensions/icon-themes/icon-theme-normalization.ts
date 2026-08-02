@@ -1,6 +1,6 @@
 import type { IconThemeDefinition } from "./icon-theme.types";
 
-export function isLegacyAthasIconTheme(theme: IconThemeDefinition) {
+function isLegacyAthasIconTheme(theme: IconThemeDefinition) {
   return (
     theme.id === "athas-icons-dimmed" ||
     theme.id === "athas-icons-light" ||

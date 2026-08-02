@@ -19,7 +19,7 @@ type BackendToolRuntime = Extract<
   "bun" | "node" | "python" | "go" | "rust" | "ruby" | "r" | "system" | "binary"
 >;
 
-export interface BackendToolConfig {
+interface BackendToolConfig {
   name: string;
   command?: string;
   runtime: BackendToolRuntime;

@@ -81,7 +81,7 @@ function createLanguageToolExtension(config: {
 /**
  * Full extension manifests for languages with LSP support
  */
-export const fullExtensions: ExtensionManifest[] = [
+const fullExtensions: ExtensionManifest[] = [
   {
     id: "athas.r",
     name: "R",

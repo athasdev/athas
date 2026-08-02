@@ -9,19 +9,19 @@ import {
 } from "@/features/editor/lib/wasm-parser/cache-indexeddb";
 import { logger } from "@/features/editor/utils/logger";
 
-export interface DownloadProgress {
+interface DownloadProgress {
   loaded: number;
   total: number;
   percentage: number;
 }
 
-export interface InstallOptions {
+interface InstallOptions {
   onProgress?: (progress: DownloadProgress) => void;
   retryCount?: number;
   timeout?: number;
 }
 
-export class ExtensionInstaller {
+class ExtensionInstaller {
   private abortControllers: Map<string, AbortController> = new Map();
 
   /**

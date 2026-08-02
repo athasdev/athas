@@ -2,7 +2,7 @@ import { toSyntaxTokenVariables } from "./syntax-token-colors";
 import type { Theme, ThemeFile } from "./theme-schema";
 import type { ThemeDefinition } from "./theme.types";
 
-export const REQUIRED_THEME_COLOR_KEYS = [
+const REQUIRED_THEME_COLOR_KEYS = [
   "background",
   "surface",
   "foreground",
@@ -119,7 +119,7 @@ function normalizeThemeColorKey(key: string, isLegacyTheme: boolean): string {
     : withoutColorPrefix;
 }
 
-export function normalizeThemeColors(colors: Record<string, string>): Record<string, string> {
+function normalizeThemeColors(colors: Record<string, string>): Record<string, string> {
   const normalized: Record<string, string> = {};
   const isLegacyTheme = Object.keys(colors).some((key) =>
     LEGACY_THEME_SIGNATURE_KEYS.has(themeColorKeyWithoutPrefix(key)),
