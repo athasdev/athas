@@ -42,10 +42,10 @@ export default function ColumnFilters({
   if (filters.length === 0) return null;
 
   return (
-    <div className={databaseCardClassName("mx-3 mb-2 bg-secondary-bg/60 px-3 py-2")}>
+    <div className={databaseCardClassName("mx-3 mb-2 bg-surface/60 px-3 py-2")}>
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="font-sans ui-text-sm text-text-lighter">
+          <span className="font-sans ui-text-sm text-subtle-foreground">
             {filters.length} filter{filters.length !== 1 ? "s" : ""}
           </span>
           {columns.length > 0 && (
@@ -53,7 +53,7 @@ export default function ColumnFilters({
               onClick={() => onAddFilter(columns[0].name)}
               variant="ghost"
               size="xs"
-              className="gap-0.5 text-text-lighter"
+              className="gap-0.5 text-subtle-foreground"
               aria-label="Add filter"
             >
               <Plus />
@@ -64,7 +64,7 @@ export default function ColumnFilters({
         <Button
           onClick={onClear}
           variant="ghost"
-          className="text-text-lighter"
+          className="text-subtle-foreground"
           aria-label="Clear all filters"
           size="xs"
         >
@@ -113,7 +113,7 @@ export default function ColumnFilters({
               onClick={() => onRemove(index)}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter hover:text-error"
+              className="text-subtle-foreground hover:text-destructive"
               aria-label="Remove filter"
             >
               <X />

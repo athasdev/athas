@@ -30,6 +30,7 @@ import { useDiagnosticsStore } from "@/features/diagnostics/stores/diagnostics.s
 import type { Diagnostic } from "@/features/diagnostics/types/diagnostics.types";
 import { InlineEditPopover } from "@/features/editor/inline-edit/inline-edit-popover";
 import { useInlineEdit } from "@/features/editor/inline-edit/use-inline-edit";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useGitBlame } from "@/features/git/hooks/use-git-blame";
 import { keymapRegistry } from "@/features/keymaps/utils/registry";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -37,6 +38,7 @@ import { useVimStore } from "@/features/vim/stores/vim.store";
 import { formatRelativeTime } from "@/utils/date";
 import { frontendTrace } from "@/utils/frontend-trace";
 import { isNativeTextInputTarget } from "@/utils/keyboard/text-input-target";
+import { getRelativePath, pathStartsWithRoot } from "@/utils/path-helpers";
 import EditorContextMenu from "../context-menu/context-menu";
 import { useBufferStore } from "../stores/buffer.store";
 import { useEditorStateStore } from "../stores/state.store";
@@ -156,6 +158,13 @@ export function MonacoEditor({
     renderWhitespace,
     renderIndentGuides,
     highlightOccurrences,
+    editorFontLigatures,
+    editorStickyScroll,
+    editorBracketPairColorization,
+    editorSmoothScrolling,
+    editorScrollBeyondLastLine,
+    editorCursorStyle,
+    editorCursorBlinking,
     themeId,
   } = useMonacoEditorSettings();
   const minimapEnabled = useSettingsStore((state) => state.settings.showMinimap);
@@ -163,6 +172,8 @@ export function MonacoEditor({
   const parameterHints = useSettingsStore((state) => state.settings.parameterHints);
   const semanticTokens = useSettingsStore((state) => state.settings.semanticTokens);
   const inlineGitBlameEnabled = useSettingsStore((state) => state.settings.enableInlineGitBlame);
+  const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
+  const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
   const vimModeEnabled = useSettingsStore((state) => state.settings.vimMode);
   const vimRelativeLineNumbers = useSettingsStore((state) => state.settings.vimRelativeLineNumbers);
   const vimCurrentMode = useVimStore.use.mode();
@@ -180,9 +191,15 @@ export function MonacoEditor({
     filePath ? (state.diagnosticsByFile.get(filePath) ?? EMPTY_DIAGNOSTICS) : EMPTY_DIAGNOSTICS,
   );
 
+  const modelDisplayPath = useMemo(() => {
+    const workspaceRoot = [rootFolderPath, ...workspaceFolders.map((folder) => folder.path)]
+      .filter((path): path is string => Boolean(path && pathStartsWithRoot(filePath, path)))
+      .sort((left, right) => right.length - left.length)[0];
+    return getRelativePath(filePath, workspaceRoot);
+  }, [filePath, rootFolderPath, workspaceFolders]);
   const modelUri = useMemo(
-    () => createModelUri(activeBufferId ?? undefined, filePath),
-    [activeBufferId, filePath],
+    () => createModelUri(activeBufferId ?? undefined, filePath, modelDisplayPath),
+    [activeBufferId, filePath, modelDisplayPath],
   );
 
   latestContentChangeRef.current = onContentChange;
@@ -467,7 +484,11 @@ export function MonacoEditor({
       readOnly: readOnly || isPreviewMode,
       domReadOnly: readOnly || isPreviewMode,
       minimap: { enabled: minimapEnabled },
-      scrollBeyondLastLine: false,
+      fontLigatures: editorFontLigatures,
+      stickyScroll: { enabled: editorStickyScroll },
+      bracketPairColorization: { enabled: editorBracketPairColorization },
+      smoothScrolling: editorSmoothScrolling,
+      scrollBeyondLastLine: editorScrollBeyondLastLine,
       padding: { bottom: getEditorBottomScrollPadding(container.clientHeight) },
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
@@ -482,8 +503,9 @@ export function MonacoEditor({
       suggestOnTriggerCharacters: autoCompletion,
       parameterHints: { enabled: parameterHints },
       theme: defineMonacoTheme(themeId),
-      cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
-      cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
+      cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : editorCursorStyle,
+      cursorBlinking:
+        vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
       contextmenu: false,
       overviewRulerLanes: 0,
       fixedOverflowWidgets: false,
@@ -745,6 +767,13 @@ export function MonacoEditor({
   }, [
     activeBufferId,
     autoCompletion,
+    editorBracketPairColorization,
+    editorCursorBlinking,
+    editorCursorStyle,
+    editorFontLigatures,
+    editorScrollBeyondLastLine,
+    editorSmoothScrolling,
+    editorStickyScroll,
     setContextMenuPosition,
     filePath,
     fontFamily,
@@ -1053,6 +1082,11 @@ export function MonacoEditor({
       domReadOnly: readOnly || isPreviewMode,
       lineNumbers: lineNumbers ? lineNumberFormatter : "off",
       minimap: { enabled: minimapEnabled },
+      fontLigatures: editorFontLigatures,
+      stickyScroll: { enabled: editorStickyScroll },
+      bracketPairColorization: { enabled: editorBracketPairColorization },
+      smoothScrolling: editorSmoothScrolling,
+      scrollBeyondLastLine: editorScrollBeyondLastLine,
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
       guides: {
@@ -1064,8 +1098,9 @@ export function MonacoEditor({
       quickSuggestions: autoCompletion,
       suggestOnTriggerCharacters: autoCompletion,
       parameterHints: { enabled: parameterHints },
-      cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : "line",
-      cursorBlinking: vimModeEnabled && vimCurrentMode === "normal" ? "solid" : "blink",
+      cursorStyle: vimModeEnabled && vimCurrentMode === "normal" ? "block" : editorCursorStyle,
+      cursorBlinking:
+        vimModeEnabled && vimCurrentMode === "normal" ? "solid" : editorCursorBlinking,
       "semanticHighlighting.enabled": semanticTokens,
       scrollbar: {
         vertical: scrollable ? "auto" : "hidden",
@@ -1087,6 +1122,13 @@ export function MonacoEditor({
     };
   }, [
     autoCompletion,
+    editorBracketPairColorization,
+    editorCursorBlinking,
+    editorCursorStyle,
+    editorFontLigatures,
+    editorScrollBeyondLastLine,
+    editorSmoothScrolling,
+    editorStickyScroll,
     fontFamily,
     fontSize,
     highlightOccurrences,
@@ -1304,7 +1346,7 @@ export function MonacoEditor({
   return (
     <>
       <div
-        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-primary-bg ${className ?? ""}`}
+        className={`monaco-editor-shell absolute inset-0 min-h-0 bg-background ${className ?? ""}`}
         style={shellStyle}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}

@@ -16,7 +16,7 @@ import {
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/ui/button";
 import { Dropdown, dropdownItemClassName } from "@/ui/dropdown";
-import Input from "@/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import { readClipboardText, writeClipboardText } from "@/utils/clipboard";
 
 interface WebViewerToolbarProps {
@@ -141,13 +141,16 @@ export function WebViewerToolbar({
   };
 
   return (
-    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-primary-bg px-2">
+    <div className="flex h-8 shrink-0 items-center gap-0.5 border-border border-b bg-background px-2">
       <form onSubmit={onUrlSubmit} className="flex flex-1 items-center">
-        <div className="relative flex flex-1 items-center">
-          <div
-            className={`absolute left-2.5 flex size-4 items-center justify-center ${
-              showFavicon ? "" : securityToneClass
-            }`}
+        <InputGroup
+          className={`h-6 flex-1 bg-background ${
+            hasUrlError ? "border-destructive/60 bg-destructive/5" : "border-border"
+          }`}
+          aria-invalid={hasUrlError || undefined}
+        >
+          <InputGroupAddon
+            className={`pl-2 ${showFavicon ? "" : securityToneClass}`}
             title={securityTooltip}
           >
             {showFavicon ? (
@@ -160,44 +163,39 @@ export function WebViewerToolbar({
             ) : (
               <SecurityIcon className="size-4" />
             )}
-          </div>
-          <Input
+          </InputGroupAddon>
+          <InputGroupInput
             ref={urlInputRef}
             type="text"
             value={inputUrl}
             onChange={(e) => onInputUrlChange(e.target.value)}
             onKeyDown={handleUrlInputKeyDown}
             placeholder="Enter URL..."
-            className={`ui-text-sm h-6 w-full rounded-md pr-16 pl-7 focus:ring-accent/30 ${
-              hasUrlError
-                ? "border-error/60 bg-error/5 focus:border-error"
-                : "border-border bg-primary-bg focus:border-accent"
-            }`}
+            size="xs"
+            className="h-full"
           />
-          <div className="absolute right-1.5 flex items-center gap-1">
-            <Button
+          <InputGroupAddon align="inline-end" className="gap-0.5 pr-1">
+            <InputGroupButton
               type="button"
               variant="ghost"
               onClick={isLoading ? onStopLoading : onRefresh}
-              className="text-text-lighter hover:text-text"
               tooltip={isLoading ? "Stop loading" : "Refresh"}
               size="icon-xs"
             >
               {isLoading ? <X className="size-3.5" /> : <RefreshCw className="size-3.5" />}
-            </Button>
-            <Button
+            </InputGroupButton>
+            <InputGroupButton
               type="button"
               variant="ghost"
               onClick={onCopyUrl}
               disabled={!canCopyUrl}
-              className="text-text-lighter hover:text-text"
               tooltip="Copy URL"
               size="icon-xs"
             >
               {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
-            </Button>
-          </div>
-        </div>
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
       </form>
 
       <div className="mx-1.5 h-4 w-px bg-border" />
@@ -257,7 +255,9 @@ export function WebViewerToolbar({
               className={dropdownItemClassName("justify-between")}
             >
               <span>Reset zoom</span>
-              <span className="text-text-lighter ui-text-sm">{Math.round(zoomLevel * 100)}%</span>
+              <span className="text-subtle-foreground ui-text-sm">
+                {Math.round(zoomLevel * 100)}%
+              </span>
             </Button>
           </div>
         </Dropdown>

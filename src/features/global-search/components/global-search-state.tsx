@@ -1,5 +1,13 @@
 import { MagnifyingGlassIcon as MagnifyingGlass } from "@/ui/icons";
 import { Button } from "@/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/ui/empty";
 import type { ContentSearchAvailability } from "../hooks/use-content-search";
 
 interface GlobalSearchStateProps {
@@ -15,15 +23,15 @@ interface GlobalSearchStateProps {
 
 function SearchIntroduction({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex h-full min-h-[320px] items-center justify-center px-6">
-      <div className="flex max-w-md flex-col items-center text-center">
-        <div className="mb-3 flex size-11 items-center justify-center rounded-lg border border-border bg-secondary-bg text-text-lighter">
+    <Empty className="h-full min-h-[320px] px-6">
+      <EmptyHeader>
+        <EmptyMedia variant="icon" className="size-11 border border-border bg-surface">
           <MagnifyingGlass className="size-6" weight="duotone" />
-        </div>
-        <div className="ui-text-base font-medium text-text">{title}</div>
-        <div className="ui-text-base mt-1 text-text-lighter">{description}</div>
-      </div>
-    </div>
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription className="ui-text-base">{description}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -48,9 +56,11 @@ export function GlobalSearchState({
 
   if (availability === "unsupported") {
     return (
-      <div className="ui-text-base flex min-h-[240px] items-center justify-center px-6 text-center text-text-lighter">
-        Global search is not available for this workspace type.
-      </div>
+      <Empty className="min-h-[240px] px-6">
+        <EmptyDescription className="ui-text-base">
+          Global search is not available for this workspace type.
+        </EmptyDescription>
+      </Empty>
     );
   }
 
@@ -65,39 +75,39 @@ export function GlobalSearchState({
 
   if (showBusy && busyLabel) {
     return (
-      <div
-        className="ui-text-base flex min-h-[240px] items-center justify-center text-center text-text-lighter"
-        role="status"
-        aria-live="polite"
-      >
-        {busyLabel}
-      </div>
+      <Empty className="min-h-[240px]" role="status" aria-live="polite">
+        <EmptyDescription className="ui-text-base">{busyLabel}</EmptyDescription>
+      </Empty>
     );
   }
 
   if (error) {
     return (
-      <div
-        className="ui-text-base flex min-h-[240px] flex-col items-center justify-center gap-3 px-6 text-center text-error"
-        role="alert"
-      >
-        <span>{error}</span>
-        <Button type="button" variant="default" onClick={onRetry}>
-          Try again
-        </Button>
-      </div>
+      <Empty className="min-h-[240px] px-6" role="alert">
+        <EmptyHeader>
+          <EmptyTitle>Search failed</EmptyTitle>
+          <EmptyDescription className="ui-text-base text-destructive">{error}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button type="button" variant="default" onClick={onRetry}>
+            Try again
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
   if (debouncedQuery.trim()) {
     return (
-      <div
-        className="ui-text-base flex min-h-[240px] items-center justify-center text-center text-text-lighter"
-        role="status"
-      >
-        No results found for "{debouncedQuery}"
-        {hasFileFilters ? " with the current file filters" : ""}
-      </div>
+      <Empty className="min-h-[240px]" role="status">
+        <EmptyHeader>
+          <EmptyTitle>No results found</EmptyTitle>
+          <EmptyDescription className="ui-text-base">
+            No results found for "{debouncedQuery}"
+            {hasFileFilters ? " with the current file filters" : ""}
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 

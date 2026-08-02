@@ -1,5 +1,4 @@
 import { MicrophoneIcon as Mic, MonitorIcon as Monitor } from "@/ui/icons";
-import { chatComposerIconButtonClassName } from "@/features/ai/components/input/chat-composer-control-styles";
 import { Button } from "@/ui/button";
 import { SidebarFooter } from "@/ui/sidebar";
 
@@ -27,15 +26,13 @@ export function CollaborationMediaFooter({
   onStopFollowing: () => void;
 }) {
   return (
-    <SidebarFooter surface className="mx-0 mb-0 pb-0">
+    <SidebarFooter variant="surface" className="mx-0 mb-0 pb-0">
       <div className="flex min-w-0 items-center gap-1 px-1 py-1">
         <Button
           type="button"
           variant="ghost"
           active={micState === "active"}
-          className={chatComposerIconButtonClassName(
-            micState === "error" ? "text-error hover:text-error" : undefined,
-          )}
+          className={micState === "error" ? "text-destructive hover:text-destructive" : undefined}
           tooltip={micState === "active" ? "Stop Mic" : "Start Mic"}
           tooltipSide="top"
           onClick={onToggleMic}
@@ -47,9 +44,9 @@ export function CollaborationMediaFooter({
           type="button"
           variant="ghost"
           active={screenState === "active"}
-          className={chatComposerIconButtonClassName(
-            screenState === "error" ? "text-error hover:text-error" : undefined,
-          )}
+          className={
+            screenState === "error" ? "text-destructive hover:text-destructive" : undefined
+          }
           tooltip={screenState === "active" ? "Stop Screen Share" : "Share Screen"}
           tooltipSide="top"
           onClick={onToggleScreenShare}
@@ -58,11 +55,11 @@ export function CollaborationMediaFooter({
           <Monitor />
         </Button>
         <div className="ui-text-sm min-w-0 flex-1 truncate px-1">
-          <span className="font-medium text-text">{workspaceName}</span>
-          <span className="px-1 text-text-lighter">·</span>
-          <span className="text-text-lighter">{onlineCount} online</span>
-          <span className="px-1 text-text-lighter">·</span>
-          <span className="text-text-lighter">{streamStatus}</span>
+          <span className="font-medium text-foreground">{workspaceName}</span>
+          <span className="px-1 text-subtle-foreground">·</span>
+          <span className="text-subtle-foreground">{onlineCount} online</span>
+          <span className="px-1 text-subtle-foreground">·</span>
+          <span className="text-subtle-foreground">{streamStatus}</span>
         </div>
         {isFollowing ? (
           <Button

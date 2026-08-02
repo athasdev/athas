@@ -12,6 +12,7 @@ import type { ThemeDefinition } from "@/extensions/themes/theme.types";
 import { installThemeJson } from "@/features/settings/utils/theme-upload";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/ui/field";
 import { BracketsCurlyIcon } from "@/ui/icons";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
@@ -135,12 +136,13 @@ export function CustomThemeCreatorDialog({
       size="lg"
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose} size="sm">
             Cancel
           </Button>
           <Button
             type="button"
             variant="default"
+            size="sm"
             onClick={() => void handleSave()}
             disabled={isSaving}
           >
@@ -149,6 +151,7 @@ export function CustomThemeCreatorDialog({
           <Button
             type="button"
             variant="accent"
+            size="sm"
             onClick={() => void handleInstall()}
             disabled={isInstalling}
           >
@@ -158,15 +161,16 @@ export function CustomThemeCreatorDialog({
       }
     >
       <div className="space-y-4">
-        <p className="font-sans ui-text-sm text-text-lighter">
+        <p className="font-sans ui-text-sm text-subtle-foreground">
           Start from an installed theme, then edit the generated JSON before saving or installing
           it.
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="space-y-1 font-sans ui-text-sm text-text">
-            <span>Name</span>
+        <FieldGroup className="grid grid-cols-2 gap-3">
+          <Field>
+            <FieldLabel htmlFor="custom-theme-name">Name</FieldLabel>
             <Input
+              id="custom-theme-name"
               value={name}
               onChange={(event) => {
                 const nextName = event.target.value;
@@ -174,26 +178,26 @@ export function CustomThemeCreatorDialog({
                 if (!idEdited) setId(themeIdFromName(nextName));
                 setManualJson(null);
               }}
-              aria-label="Theme name"
             />
-          </label>
-          <label className="space-y-1 font-sans ui-text-sm text-text">
-            <span>ID</span>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="custom-theme-id">ID</FieldLabel>
             <Input
+              id="custom-theme-id"
               value={id}
               onChange={(event) => {
                 setId(event.target.value);
                 setIdEdited(true);
                 setManualJson(null);
               }}
-              aria-label="Theme ID"
             />
-          </label>
-        </div>
+          </Field>
+        </FieldGroup>
 
-        <label className="space-y-1 font-sans ui-text-sm text-text">
-          <span>Base theme</span>
+        <Field>
+          <FieldLabel htmlFor="custom-theme-base">Base theme</FieldLabel>
           <Select
+            id="custom-theme-base"
             value={selectedBaseThemeId}
             options={themeOptions}
             onChange={(value) => {
@@ -202,33 +206,22 @@ export function CustomThemeCreatorDialog({
             }}
             searchable
             searchableTrigger="input"
-            aria-label="Base theme"
           />
-        </label>
+        </Field>
 
-        <label className="space-y-1 font-sans ui-text-sm text-text">
-          <span>Theme JSON</span>
+        <Field data-invalid={issues.length > 0}>
+          <FieldLabel htmlFor="custom-theme-json">Theme JSON</FieldLabel>
           <Textarea
+            id="custom-theme-json"
             value={json}
             onChange={(event) => {
               setManualJson(event.target.value);
               setIssues([]);
             }}
             className="min-h-72 resize-y font-mono"
-            aria-label="Theme JSON"
           />
-        </label>
-
-        {issues.length > 0 ? (
-          <div className="rounded-lg bg-error/10 px-3 py-2 text-error" role="alert">
-            <p className="font-sans ui-text-sm font-medium">Fix these theme file issues:</p>
-            <ul className="mt-1 list-disc space-y-0.5 pl-4 font-sans ui-text-sm">
-              {issues.slice(0, 8).map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+          <FieldError errors={issues.slice(0, 8).map((message) => ({ message }))} />
+        </Field>
       </div>
     </Dialog>
   );

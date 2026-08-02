@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { createContext, useContext, useMemo, useSyncExternalStore } from "react";
 import type { StoreApi, UseBoundStore } from "zustand";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 import { workspaceRuntimeRegistry } from "@/features/workspace/runtime/workspace-runtime-registry";
@@ -8,19 +8,39 @@ export type WorkspaceScopedStore<T> = UseBoundStore<StoreApi<T>> & {
 };
 
 type EqualityFn = (left: unknown, right: unknown) => boolean;
+const subscribeToNothing = () => () => {};
+
+export const WorkspaceStoreScopeContext = createContext<string | null>(null);
+
+export function useWorkspaceStoreScopeId() {
+  return useContext(WorkspaceStoreScopeContext);
+}
+
+export function useActiveWorkspaceId() {
+  return useSyncExternalStore(
+    workspaceRuntimeRegistry.subscribe,
+    workspaceRuntimeRegistry.getActiveWorkspaceId,
+    workspaceRuntimeRegistry.getActiveWorkspaceId,
+  );
+}
 
 export function createWorkspaceScopedStore<T>(
   key: string,
-  factory: () => StoreApi<T>,
+  factory: (workspaceId: string) => StoreApi<T>,
   equalityFn?: EqualityFn,
 ): WorkspaceScopedStore<T> {
   workspaceRuntimeRegistry.registerStore(key, factory);
 
   const useWorkspaceStore = (<U>(selector?: (state: T) => U): U => {
+    const scopedWorkspaceId = useWorkspaceStoreScopeId();
+    const getScopedWorkspaceId = useMemo(
+      () => () => scopedWorkspaceId ?? workspaceRuntimeRegistry.getActiveWorkspaceId(),
+      [scopedWorkspaceId],
+    );
     const workspaceId = useSyncExternalStore(
-      workspaceRuntimeRegistry.subscribe,
-      workspaceRuntimeRegistry.getActiveWorkspaceId,
-      workspaceRuntimeRegistry.getActiveWorkspaceId,
+      scopedWorkspaceId ? subscribeToNothing : workspaceRuntimeRegistry.subscribe,
+      scopedWorkspaceId ? getScopedWorkspaceId : workspaceRuntimeRegistry.getActiveWorkspaceId,
+      scopedWorkspaceId ? getScopedWorkspaceId : workspaceRuntimeRegistry.getActiveWorkspaceId,
     );
     const store = workspaceRuntimeRegistry.getStore<T>(key, workspaceId);
     return useStoreWithEqualityFn(

@@ -4,7 +4,7 @@ import type * as React from "react";
 import { cn } from "@/utils/cn";
 
 const markerVariants = cva(
-  "group/marker relative flex min-h-4 w-full items-center gap-2 text-left font-sans ui-text-sm text-text-lighter outline-none [&_svg:not([class*='size-'])]:size-4 [a]:underline [a]:underline-offset-3 [a]:hover:text-text [button]:cursor-pointer [button]:rounded-md [button]:hover:text-text [button]:focus-visible:ring-2 [button]:focus-visible:ring-accent/20",
+  "group/marker relative flex min-h-4 w-full items-center gap-2 text-left font-sans ui-text-sm text-subtle-foreground outline-none [&_svg:not([class*='size-'])]:size-4 [a]:underline [a]:underline-offset-3 [a]:hover:text-foreground [button]:cursor-pointer [button]:rounded-md [button]:hover:text-foreground [button]:focus-visible:ring-2 [button]:focus-visible:ring-primary/20",
   {
     variants: {
       variant: {
@@ -15,8 +15,8 @@ const markerVariants = cva(
       },
       tone: {
         default: "",
-        accent: "text-accent",
-        error: "text-error",
+        accent: "text-primary",
+        error: "text-destructive",
         success: "text-success",
         warning: "text-warning",
       },
@@ -68,7 +68,7 @@ function MarkerContent({ className, ...props }: React.ComponentProps<"span">) {
     <span
       data-slot="marker-content"
       className={cn(
-        "min-w-0 break-words group-data-[variant=separator]/marker:flex-none group-data-[variant=separator]/marker:text-center *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-text",
+        "min-w-0 break-words group-data-[variant=separator]/marker:flex-none group-data-[variant=separator]/marker:text-center *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className,
       )}
       {...props}

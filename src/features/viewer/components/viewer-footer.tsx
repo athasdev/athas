@@ -10,7 +10,7 @@ function ViewerFooter({ children, endContent, className, ...props }: ViewerFoote
     <div
       data-slot="viewer-footer"
       className={cn(
-        "flex h-9 shrink-0 items-center gap-4 overflow-hidden whitespace-nowrap border-border border-t bg-secondary-bg px-4 py-2 text-text-lighter ui-text-sm",
+        "flex h-9 shrink-0 items-center gap-4 overflow-hidden whitespace-nowrap border-border border-t bg-surface px-4 py-2 text-subtle-foreground ui-text-sm",
         className,
       )}
       {...props}

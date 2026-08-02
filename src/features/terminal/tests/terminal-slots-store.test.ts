@@ -18,18 +18,21 @@ describe("terminal slots store", () => {
       el,
       isActive: false,
       isVisible: true,
+      shell: "cmd",
       onTerminalExit,
     });
 
     useTerminalSlotsStore.getState().update("session-a", {
       isActive: true,
       isVisible: false,
+      shell: "bash",
     });
 
     expect(useTerminalSlotsStore.getState().slots.get("session-a")).toMatchObject({
       el,
       isActive: true,
       isVisible: false,
+      shell: "bash",
       onTerminalExit,
     });
   });

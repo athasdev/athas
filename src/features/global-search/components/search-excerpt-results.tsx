@@ -106,7 +106,7 @@ function SearchExcerptItemComponent({
     <section
       ref={sectionRef}
       data-excerpt-index={index}
-      className="relative isolate min-w-0 max-w-full rounded-xl bg-primary-bg"
+      className="relative isolate min-w-0 max-w-full rounded-xl bg-background"
     >
       <MultibufferFileHeader
         filePath={excerpt.filePath}
@@ -129,7 +129,7 @@ function SearchExcerptItemComponent({
               onClick={handleContextToggle}
               tooltip={isExpanded ? "Collapse context" : "Expand context"}
               aria-label={isExpanded ? "Collapse context" : "Expand context"}
-              className="shrink-0 text-text-lighter"
+              className="shrink-0 text-subtle-foreground"
               size="icon-xs"
             >
               {isExpanded ? <Minus size={14} /> : <Plus size={14} />}

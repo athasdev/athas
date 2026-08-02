@@ -172,7 +172,7 @@ export const SignatureHelpTooltip = ({
       return (
         <span>
           {signature.label.slice(0, start)}
-          <span className="font-bold text-accent">{signature.label.slice(start, end)}</span>
+          <span className="font-bold text-primary">{signature.label.slice(start, end)}</span>
           {signature.label.slice(end)}
         </span>
       );
@@ -186,7 +186,7 @@ export const SignatureHelpTooltip = ({
     return (
       <span>
         {signature.label.slice(0, idx)}
-        <span className="font-bold text-accent">{paramStr}</span>
+        <span className="font-bold text-primary">{paramStr}</span>
         {signature.label.slice(idx + paramStr.length)}
       </span>
     );
@@ -194,13 +194,13 @@ export const SignatureHelpTooltip = ({
 
   return (
     <div
-      className="absolute z-50 max-w-md rounded-md border border-border/70 bg-secondary-bg px-2.5 py-1.5 shadow-[var(--shadow-popover)]"
+      className="absolute z-50 max-w-md rounded-md border border-border/70 bg-surface px-2.5 py-1.5 shadow-[var(--shadow-popover)]"
       style={{
         top: `${Math.max(4, position.top)}px`,
         left: `${Math.max(EDITOR_CONSTANTS.EDITOR_PADDING_LEFT, position.left)}px`,
       }}
     >
-      <div className="font-sans ui-text-sm font-mono text-text">{renderLabel()}</div>
+      <div className="font-sans ui-text-sm font-mono text-foreground">{renderLabel()}</div>
     </div>
   );
 };

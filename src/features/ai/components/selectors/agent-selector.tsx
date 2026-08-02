@@ -5,7 +5,7 @@ import {
   MagnifyingGlassIcon as Search,
   SlidersHorizontalIcon as Settings2,
 } from "@/ui/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { AcpStreamHandler } from "@/features/ai/services/acp-stream-handler";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
@@ -14,9 +14,15 @@ import type { AgentType } from "@/features/ai/types/ai-chat.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Spinner } from "@/ui/spinner";
 import { Button } from "@/ui/button";
-import { Dropdown } from "@/ui/dropdown";
-import Input from "@/ui/input";
-import { ScrollArea } from "@/ui/scroll-area";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/ui/combobox";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import {
@@ -30,6 +36,17 @@ const ATHAS_AGENT_OPTION = {
   name: "Athas Agent",
   description: "Use Athas Agent settings and provider configuration",
   isAcp: false,
+};
+
+type AgentSelectorItem = {
+  type: "agent";
+  id: string;
+  name: string;
+  description: string;
+  isInstalled: boolean;
+  isCurrent: boolean;
+  canInstall: boolean;
+  isInstalling: boolean;
 };
 
 interface AgentSelectorProps {
@@ -53,18 +70,14 @@ export function AgentSelector({
 }: AgentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const [installedAgents, setInstalledAgents] = useState<Set<string>>(new Set(["custom"]));
   const [agentConfigs, setAgentConfigs] = useState<Map<string, AgentConfig>>(new Map());
   const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
-  const setSelectedAgentId = useAIChatStore((state) => state.setSelectedAgentId);
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
-  const changeCurrentChatAgent = useAIChatStore((state) => state.changeCurrentChatAgent);
+  const getCurrentAgentId = useAIChatStore((state) => state.actions.getCurrentAgentId);
+  const setSelectedAgentId = useAIChatStore((state) => state.actions.setSelectedAgentId);
+  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
+  const changeCurrentChatAgent = useAIChatStore((state) => state.actions.changeCurrentChatAgent);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const currentAgentId = selectedAgentId ?? getCurrentAgentId();
   const currentAgent =
@@ -95,16 +108,7 @@ export function AgentSelector({
 
   // Build filtered items list
   const filteredItems = useMemo(() => {
-    const items: Array<{
-      type: "agent";
-      id: string;
-      name: string;
-      description: string;
-      isInstalled?: boolean;
-      isCurrent?: boolean;
-      canInstall?: boolean;
-      isInstalling?: boolean;
-    }> = [];
+    const items: AgentSelectorItem[] = [];
 
     const searchLower = search.toLowerCase();
     const registryAgents = Array.from(agentConfigs.values()).sort((a, b) =>
@@ -139,34 +143,10 @@ export function AgentSelector({
     return items;
   }, [search, installedAgents, currentAgentId, agentConfigs, installingAgentId]);
 
-  const selectableItems = filteredItems;
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const frame = requestAnimationFrame(() => inputRef.current?.focus());
-    return () => cancelAnimationFrame(frame);
-  }, [isOpen]);
-
-  const resetSelection = useCallback(() => {
-    setSelectedIndex(0);
-  }, []);
-
   const closeAgentSelector = useCallback(() => {
     setSearch("");
-    setSelectedIndex(0);
     setIsOpen(false);
   }, []);
-
-  const toggleAgentSelector = useCallback(() => {
-    if (isOpen) {
-      closeAgentSelector();
-      return;
-    }
-    setSearch("");
-    setSelectedIndex(0);
-    setIsOpen(true);
-  }, [closeAgentSelector, isOpen]);
 
   const handleAgentChange = useCallback(
     async (agentId: AgentType) => {
@@ -248,195 +228,151 @@ export function AgentSelector({
     [installingAgentId, loadInstalledAgents],
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!isOpen) return;
-
-      switch (e.key) {
-        case "ArrowDown":
-          e.preventDefault();
-          setSelectedIndex((prev) => Math.min(prev + 1, selectableItems.length - 1));
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-          setSelectedIndex((prev) => Math.max(prev - 1, 0));
-          break;
-        case "Enter":
-          e.preventDefault();
-          if (selectableItems[selectedIndex]) {
-            const item = selectableItems[selectedIndex];
-            if (item.isInstalled || item.id === "custom") {
-              handleAgentChange(item.id as AgentType);
-            } else if (item.canInstall) {
-              void handleInstallAgent(item.id as AgentType, item.name);
-            }
-          }
-          break;
-        case "Escape":
-          e.preventDefault();
-          closeAgentSelector();
-          break;
-      }
-    },
-    [
-      isOpen,
-      selectableItems,
-      selectedIndex,
-      handleAgentChange,
-      handleInstallAgent,
-      closeAgentSelector,
-    ],
-  );
-
-  let selectableIndex = -1;
-
   return (
-    <>
+    <Combobox<AgentSelectorItem>
+      items={filteredItems}
+      value={null}
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        setIsOpen(nextOpen);
+        if (!nextOpen) setSearch("");
+      }}
+      inputValue={search}
+      onInputValueChange={setSearch}
+      onValueChange={(item) => {
+        if (!item) return;
+        if (item.isInstalled || item.id === "custom") {
+          void handleAgentChange(item.id as AgentType);
+        } else if (item.canInstall) {
+          void handleInstallAgent(item.id as AgentType, item.name);
+        }
+      }}
+      itemToStringLabel={(item) => item.name}
+      itemToStringValue={(item) => item.id}
+      isItemEqualToValue={(left, right) => left.id === right.id}
+      filter={() => true}
+      autoHighlight
+    >
       {variant === "header" ? (
-        <Button
-          ref={triggerRef}
-          onClick={toggleAgentSelector}
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          tooltip={triggerTooltip ?? "New session"}
-          className={triggerClassName}
+        <ComboboxTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              tooltip={triggerTooltip ?? "New session"}
+              className={triggerClassName}
+            />
+          }
+          className="size-auto"
         >
           <Plus />
-        </Button>
+        </ComboboxTrigger>
       ) : (
-        <Button
-          ref={triggerRef}
-          onClick={toggleAgentSelector}
-          type="button"
-          variant="ghost"
-          size="xs"
-          className="font-sans flex h-8 max-w-[min(220px,100%)] items-center gap-1.5 rounded-full border border-border bg-secondary-bg/80 px-3 ui-text-sm transition-colors hover:bg-hover"
+        <ComboboxTrigger
+          render={
+            <Button type="button" variant="ghost" size="sm" className="max-w-[min(220px,100%)]" />
+          }
+          className="size-auto"
         >
-          <ProviderIcon providerId={currentAgentId} size={11} className="text-text-lighter" />
-          <span className="max-w-[140px] truncate text-text">{currentAgent?.name || "Agent"}</span>
+          <ProviderIcon providerId={currentAgentId} size={11} className="text-subtle-foreground" />
+          <span className="max-w-[140px] truncate text-foreground">
+            {currentAgent?.name || "Agent"}
+          </span>
           <ChevronDown
-            className={cn("text-text-lighter transition-transform", isOpen && "rotate-180")}
+            className={cn("text-subtle-foreground transition-transform", isOpen && "rotate-180")}
           />
-        </Button>
+        </ComboboxTrigger>
       )}
 
-      <Dropdown
-        isOpen={isOpen}
-        anchorRef={triggerRef}
-        anchorSide="bottom"
-        anchorAlign="end"
-        onClose={closeAgentSelector}
-        portalContainer={portalContainer}
+      <ComboboxContent
+        side="bottom"
+        align="end"
+        portalContainer={portalContainer as HTMLElement | ShadowRoot | null}
         className="flex w-[min(280px,calc(100vw-16px))] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-xl p-0"
         style={{ maxHeight: "240px" }}
       >
-        <div className="bg-secondary-bg px-1.5 py-1.5" onKeyDown={handleKeyDown}>
-          <Input
-            ref={inputRef}
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              resetSelection();
-            }}
-            onKeyDown={handleKeyDown}
+        <div className="bg-surface px-1.5 py-1.5">
+          <ComboboxInput
             placeholder="Search agents..."
             variant="ghost"
             size="xs"
             leftIcon={Search}
+            showTrigger={false}
             className="w-full pr-3"
+            aria-label="Search agents"
+            autoFocus
           />
         </div>
 
-        <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
-          {filteredItems.length === 0 ? (
-            <div className="p-4 text-center text-text-lighter ui-text-sm">No results found</div>
-          ) : (
-            filteredItems.map((item) => {
-              selectableIndex++;
-              const itemIndex = selectableIndex;
-              const isSelected = itemIndex === selectedIndex;
-
-              return (
-                <div
-                  key={item.id}
-                  role="button"
-                  tabIndex={-1}
-                  onMouseEnter={() => setSelectedIndex(itemIndex)}
-                  onClick={() => {
-                    if (item.isInstalled || item.id === "custom") {
-                      void handleAgentChange(item.id as AgentType);
-                      return;
-                    }
-                    if (item.canInstall) {
-                      void handleInstallAgent(item.id as AgentType, item.name);
-                    }
-                  }}
-                  className={cn(
-                    "group flex min-h-7 cursor-pointer items-center gap-2 rounded-lg px-2 py-1 ui-text-sm transition-colors",
-                    isSelected ? "bg-hover/90" : "bg-transparent",
-                    item.isCurrent && "bg-selected/90 ring-1 ring-accent/10",
-                    !item.isInstalled && item.id !== "custom" && "text-text-lighter",
-                  )}
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <ProviderIcon providerId={item.id} size={12} className="text-text-lighter" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-left text-text ui-text-sm leading-4">
-                        {item.name}
-                      </div>
-                      {!item.isInstalled && item.id !== "custom" ? (
-                        <div className="truncate text-left ui-text-sm text-text-lighter leading-3">
-                          {item.canInstall ? "Not installed" : item.description}
-                        </div>
-                      ) : null}
+        <ComboboxList className="min-h-0 flex-1 p-1">
+          <ComboboxEmpty>No results found</ComboboxEmpty>
+          {filteredItems.map((item) => (
+            <ComboboxItem
+              key={item.id}
+              value={item}
+              showIndicator={false}
+              className={cn(
+                "group min-h-7 cursor-pointer gap-2 py-1",
+                item.isCurrent && "bg-selected/90 ring-1 ring-primary/10",
+                !item.isInstalled && item.id !== "custom" && "text-subtle-foreground",
+              )}
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <ProviderIcon providerId={item.id} size={12} className="text-subtle-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-left text-foreground ui-text-sm leading-4">
+                    {item.name}
+                  </div>
+                  {!item.isInstalled && item.id !== "custom" ? (
+                    <div className="truncate text-left ui-text-sm text-subtle-foreground leading-3">
+                      {item.canInstall ? "Not installed" : item.description}
                     </div>
-                  </div>
-                  <div className="flex shrink-0 items-center justify-end gap-1">
-                    {!item.isInstalled && item.id !== "custom" ? (
-                      <Button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleInstallAgent(item.id as AgentType, item.name);
-                        }}
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-2 ui-text-sm"
-                        disabled={!item.canInstall || Boolean(installingAgentId)}
-                      >
-                        {item.isInstalling ? <Spinner label="Installing" compact /> : "Install"}
-                      </Button>
-                    ) : null}
-                    {item.id === "custom" && onOpenSettings ? (
-                      <Button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          closeAgentSelector();
-                          onOpenSettings();
-                        }}
-                        variant="ghost"
-                        size="icon-xs"
-                        className={cn(
-                          item.isCurrent
-                            ? "bg-accent/15 text-accent"
-                            : "text-text-lighter hover:bg-secondary-bg hover:text-text",
-                        )}
-                        tooltip="Athas Agent settings"
-                        aria-label="Open Athas Agent settings"
-                      >
-                        <Settings2 />
-                      </Button>
-                    ) : null}
-                  </div>
+                  ) : null}
                 </div>
-              );
-            })
-          )}
-        </ScrollArea>
-      </Dropdown>
-    </>
+              </div>
+              <div className="flex shrink-0 items-center justify-end gap-1">
+                {!item.isInstalled && item.id !== "custom" ? (
+                  <Button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleInstallAgent(item.id as AgentType, item.name);
+                    }}
+                    variant="ghost"
+                    size="xs"
+                    className="h-6 px-2 ui-text-sm"
+                    disabled={!item.canInstall || Boolean(installingAgentId)}
+                  >
+                    {item.isInstalling ? <Spinner label="Installing" compact /> : "Install"}
+                  </Button>
+                ) : null}
+                {item.id === "custom" && onOpenSettings ? (
+                  <Button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      closeAgentSelector();
+                      onOpenSettings();
+                    }}
+                    variant="ghost"
+                    size="icon-xs"
+                    className={cn(
+                      item.isCurrent
+                        ? "bg-primary/15 text-primary"
+                        : "text-subtle-foreground hover:bg-surface hover:text-foreground",
+                    )}
+                    tooltip="Athas Agent settings"
+                    aria-label="Open Athas Agent settings"
+                  >
+                    <Settings2 />
+                  </Button>
+                ) : null}
+              </div>
+            </ComboboxItem>
+          ))}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   );
 }

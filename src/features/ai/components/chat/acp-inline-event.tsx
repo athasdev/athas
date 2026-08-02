@@ -3,8 +3,6 @@ import {
   CheckCircleIcon as CheckCircle2,
   ClockIcon as Clock3,
   KeyIcon as KeyRound,
-  SparkleIcon as Sparkles,
-  WrenchIcon as Wrench,
 } from "@/ui/icons";
 import type { ChatAcpEvent } from "@/features/ai/types/chat-ui.types";
 import { ChatActivityLine } from "./chat-activity-line";
@@ -14,19 +12,13 @@ interface AcpInlineEventProps {
 }
 
 function getEventIcon(event: ChatAcpEvent) {
-  if (event.kind === "tool") return Wrench;
-  if (event.kind === "permission") return KeyRound;
-  if (event.kind === "thinking") return Sparkles;
+  if (event.category === "permission") return KeyRound;
   if (event.state === "error") return AlertCircle;
   if (event.state === "success") return CheckCircle2;
   return Clock3;
 }
 
 export function AcpInlineEvent({ event }: AcpInlineEventProps) {
-  if (event.kind === "thinking") {
-    return null;
-  }
-
   const Icon = getEventIcon(event);
   const text = event.detail ? `${event.label}: ${event.detail}` : event.label;
   const state =

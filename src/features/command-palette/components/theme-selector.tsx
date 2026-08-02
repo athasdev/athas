@@ -280,7 +280,7 @@ export const ThemeSelectorContent = ({
                   setSelectedIndex(index);
                 }}
                 isSelected={isSelected}
-                icon={<span className="text-text-lighter">{theme.icon || <Moon />}</span>}
+                icon={<span className="text-subtle-foreground">{theme.icon || <Moon />}</span>}
                 title={theme.name}
                 accessory={isCurrent ? <CommandItemBadge>Current</CommandItemBadge> : undefined}
               />

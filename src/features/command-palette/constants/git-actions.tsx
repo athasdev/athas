@@ -19,11 +19,6 @@ interface GitActionsParams {
   setIsSidebarVisible: (v: boolean) => void;
   setActiveView: (view: "files" | "git" | "github-prs") => void;
   showToast: (params: { message: string; type: "success" | "error" | "info" }) => void;
-  gitStore: {
-    actions: {
-      setIsRefreshing: (v: boolean) => void;
-    };
-  };
   gitOperations: {
     stageAllFiles: (path: string) => Promise<boolean>;
     unstageAllFiles: (path: string) => Promise<boolean>;
@@ -43,7 +38,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
     setIsSidebarVisible,
     setActiveView,
     showToast,
-    gitStore,
     gitOperations,
     onClose,
   } = params;
@@ -256,7 +250,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           const success = await gitOperations.stageAllFiles(repoPath);
           if (success) {
             showToast({ message: "All files staged successfully", type: "success" });
-            window.dispatchEvent(new Event("refresh-git-data"));
           } else {
             showToast({ message: "Failed to stage files", type: "error" });
           }
@@ -282,7 +275,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           const success = await gitOperations.unstageAllFiles(repoPath);
           if (success) {
             showToast({ message: "All files unstaged successfully", type: "success" });
-            window.dispatchEvent(new Event("refresh-git-data"));
           } else {
             showToast({ message: "Failed to unstage files", type: "error" });
           }
@@ -316,7 +308,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           const success = await gitOperations.commitChanges(repoPath, message);
           if (success) {
             showToast({ message: "Changes committed successfully", type: "success" });
-            window.dispatchEvent(new Event("refresh-git-data"));
           } else {
             showToast({ message: "Failed to commit changes", type: "error" });
           }
@@ -372,7 +363,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           const result = await gitOperations.pullChanges(repoPath);
           if (result.success) {
             showToast({ message: "Changes pulled successfully", type: "success" });
-            window.dispatchEvent(new Event("refresh-git-data"));
           } else {
             showToast({
               message: result.error || "Failed to pull changes",
@@ -437,7 +427,6 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
           const success = await gitOperations.discardAllChanges(repoPath);
           if (success) {
             showToast({ message: "All changes discarded", type: "success" });
-            window.dispatchEvent(new Event("refresh-git-data"));
           } else {
             showToast({ message: "Failed to discard changes", type: "error" });
           }
@@ -454,16 +443,10 @@ export const createGitActions = (params: GitActionsParams): Action[] => {
       icon: <RefreshCw />,
       category: "Git",
       action: () => {
-        gitStore.actions.setIsRefreshing(true);
         window.dispatchEvent(
           new CustomEvent("athas:git-palette-action", { detail: { type: "refresh" } }),
         );
-        window.dispatchEvent(new Event("refresh-git-data"));
         showToast({ message: "Refreshing Git status...", type: "info" });
-        setTimeout(() => {
-          gitStore.actions.setIsRefreshing(false);
-          showToast({ message: "Git status refreshed", type: "success" });
-        }, 1000);
         onClose();
       },
     },

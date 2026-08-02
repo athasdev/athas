@@ -57,6 +57,10 @@ export function uniqueRecentFolderImports<T extends { path: string }>(folders: T
   return uniqueFolders;
 }
 
+export function removeMissingRecentFolders(folders: RecentFolder[]) {
+  return folders.filter((folder) => !folder.missing);
+}
+
 export function upsertRecentFolder(
   folders: RecentFolder[],
   folderPath: string,

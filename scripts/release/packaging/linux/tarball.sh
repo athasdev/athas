@@ -98,7 +98,6 @@ cef_files=(
   libvk_swiftshader.so
   vk_swiftshader_icd.json
   libvulkan.so.1
-  chrome-sandbox
 )
 
 for file in "${cef_files[@]}"; do

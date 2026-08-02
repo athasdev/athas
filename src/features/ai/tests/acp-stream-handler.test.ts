@@ -16,15 +16,17 @@ vi.mock("@/features/ai/stores/ai-chat.store", () => ({
   useAIChatStore: {
     getState: vi.fn(() => ({
       acpStatus: null,
-      getChatById: vi.fn(),
-      getCurrentChat: vi.fn(),
-      setAcpStatus: vi.fn(),
-      setAvailableSlashCommands: vi.fn(),
-      setChatAcpSessionId: vi.fn(),
-      setCurrentModeId: vi.fn(),
-      setSessionConfigOptions: vi.fn(),
-      setSessionModeState: vi.fn(),
-      updateChatTitle: vi.fn(),
+      actions: {
+        getChatById: vi.fn(),
+        getCurrentChat: vi.fn(),
+        setAcpStatus: vi.fn(),
+        setAvailableSlashCommands: vi.fn(),
+        setChatAcpSessionId: vi.fn(),
+        setCurrentModeId: vi.fn(),
+        setSessionConfigOptions: vi.fn(),
+        setSessionModeState: vi.fn(),
+        updateChatTitle: vi.fn(),
+      },
     })),
   },
 }));

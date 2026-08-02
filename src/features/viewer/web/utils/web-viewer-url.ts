@@ -128,7 +128,7 @@ export function getWebViewerSecurity(url: string): {
       isLocalhost: false,
       isSecure: false,
       tooltip: "Enter a valid URL",
-      toneClass: "text-text-lighter",
+      toneClass: "text-subtle-foreground",
     };
   }
 
@@ -137,7 +137,7 @@ export function getWebViewerSecurity(url: string): {
       isLocalhost: false,
       isSecure: true,
       tooltip: "Local browser page",
-      toneClass: "text-text-lighter",
+      toneClass: "text-subtle-foreground",
     };
   }
 

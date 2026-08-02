@@ -97,19 +97,17 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     );
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });
-  const {
-    selectedPRDetails,
-    selectedPRDiff,
-    selectedPRFiles,
-    selectedPRComments,
-    isLoadingDetails,
-    isLoadingContent,
-    detailsError,
-    contentError,
-  } = useGitHubStore();
+  const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
+  const selectedPRDiff = useGitHubStore.use.selectedPRDiff();
+  const selectedPRFiles = useGitHubStore.use.selectedPRFiles();
+  const selectedPRComments = useGitHubStore.use.selectedPRComments();
+  const isLoadingDetails = useGitHubStore.use.isLoadingDetails();
+  const isLoadingContent = useGitHubStore.use.isLoadingContent();
+  const detailsError = useGitHubStore.use.detailsError();
+  const contentError = useGitHubStore.use.contentError();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const { selectPR, fetchPRContent, fetchPRs, openPRInBrowser, checkoutPR } =
-    useGitHubStore().actions;
+    useGitHubStore.use.actions();
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>(() =>
@@ -373,7 +371,6 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       try {
         await checkoutPR(repoPath, prNumber);
         toast.success(`Checked out PR #${prNumber}`);
-        window.dispatchEvent(new CustomEvent("git-status-updated"));
       } catch (err) {
         console.error("Failed to checkout PR:", err);
         toast.error(err instanceof Error ? err.message : `Failed to checkout PR #${prNumber}`);
@@ -603,7 +600,7 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
                 <Button
                   onClick={handleRefresh}
                   variant="ghost"
-                  className="text-text-lighter"
+                  className="text-subtle-foreground"
                   size="xs"
                 >
                   Retry
@@ -685,12 +682,12 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
       ) : null}
 
       {detailsError && (
-        <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-error/8 px-1 py-2">
-          <p className="font-sans ui-text-sm truncate text-error/90">{detailsError}</p>
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-2 bg-destructive/8 px-1 py-2">
+          <p className="font-sans ui-text-sm truncate text-destructive/90">{detailsError}</p>
           <Button
             onClick={handleRefresh}
             variant="default"
-            className="shrink-0 border border-error/40 text-error/90 hover:bg-error/10"
+            className="shrink-0 border border-destructive/40 text-destructive/90 hover:bg-destructive/10"
             size="xs"
           >
             Retry

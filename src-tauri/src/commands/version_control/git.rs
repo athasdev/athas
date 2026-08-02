@@ -32,6 +32,11 @@ fn restore_provider_path(original_path: &str, backend_path: String) -> String {
 }
 
 #[tauri::command]
+pub async fn git_clone(repository_url: String, destination_path: String) -> Result<(), String> {
+   run_blocking(move || git_backend::git_clone(repository_url, destination_path)).await
+}
+
+#[tauri::command]
 pub async fn git_status(repo_path: String) -> Result<git_backend::GitStatus, String> {
    let started_at = Instant::now();
    let short = short_repo_path(&repo_path);

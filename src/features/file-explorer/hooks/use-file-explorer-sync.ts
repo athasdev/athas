@@ -4,12 +4,14 @@ import { getExplorerTargetPath } from "@/features/file-explorer/utils/file-explo
 
 interface UseFileExplorerSyncOptions {
   activePath?: string;
+  autoRevealActiveFile: boolean;
   updateActivePath?: (path: string) => void;
   revealPathInTree: (path: string) => Promise<void>;
 }
 
 export function useFileExplorerSync({
   activePath,
+  autoRevealActiveFile,
   updateActivePath,
   revealPathInTree,
 }: UseFileExplorerSyncOptions) {
@@ -34,7 +36,7 @@ export function useFileExplorerSync({
   }, [activePath, explorerTargetPath, updateActivePath]);
 
   useEffect(() => {
-    if (!explorerTargetPath) return;
+    if (!autoRevealActiveFile || !explorerTargetPath) return;
     void revealPathInTree(explorerTargetPath);
-  }, [explorerTargetPath, revealPathInTree]);
+  }, [autoRevealActiveFile, explorerTargetPath, revealPathInTree]);
 }

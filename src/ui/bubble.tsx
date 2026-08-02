@@ -17,16 +17,18 @@ const bubbleVariants = cva(
   {
     variants: {
       variant: {
-        default: "*:data-[slot=bubble-content]:bg-accent/15 *:data-[slot=bubble-content]:text-text",
+        default:
+          "*:data-[slot=bubble-content]:bg-primary/15 *:data-[slot=bubble-content]:text-foreground",
         secondary:
-          "*:data-[slot=bubble-content]:bg-secondary-bg *:data-[slot=bubble-content]:text-text [&>[data-slot=bubble-content]:is(button,a):hover]:bg-hover",
-        muted: "*:data-[slot=bubble-content]:bg-hover/70 *:data-[slot=bubble-content]:text-text",
+          "*:data-[slot=bubble-content]:bg-surface *:data-[slot=bubble-content]:text-foreground [&>[data-slot=bubble-content]:is(button,a):hover]:bg-accent",
+        muted:
+          "*:data-[slot=bubble-content]:bg-accent/70 *:data-[slot=bubble-content]:text-foreground",
         outline:
-          "*:data-[slot=bubble-content]:border-border *:data-[slot=bubble-content]:bg-primary-bg",
+          "*:data-[slot=bubble-content]:border-border *:data-[slot=bubble-content]:bg-background",
         ghost:
           "w-full max-w-full *:data-[slot=bubble-content]:w-full *:data-[slot=bubble-content]:rounded-none *:data-[slot=bubble-content]:border-0 *:data-[slot=bubble-content]:bg-transparent *:data-[slot=bubble-content]:p-0",
         destructive:
-          "*:data-[slot=bubble-content]:bg-error/10 *:data-[slot=bubble-content]:text-error",
+          "*:data-[slot=bubble-content]:bg-destructive/10 *:data-[slot=bubble-content]:text-destructive",
       },
     },
     defaultVariants: {

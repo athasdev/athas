@@ -54,13 +54,11 @@ const DiffHunkHeader = memo(
         if (isStaged) {
           const success = await unstageHunk(rootFolderPath, gitHunk);
           if (success) {
-            window.dispatchEvent(new CustomEvent("git-status-changed"));
             onUnstageHunk?.(gitHunk);
           }
         } else {
           const success = await stageHunk(rootFolderPath, gitHunk);
           if (success) {
-            window.dispatchEvent(new CustomEvent("git-status-changed"));
             onStageHunk?.(gitHunk);
           }
         }
@@ -86,26 +84,27 @@ const DiffHunkHeader = memo(
     return (
       <div
         className={cn(
-          "group grid cursor-pointer grid-cols-[2.75rem_minmax(0,1fr)] items-center",
-          "font-mono code-editor-font-override border-border/70 border-b bg-primary-bg text-text-lighter",
+          "group grid cursor-pointer select-none grid-cols-[2.75rem_minmax(0,1fr)] items-center",
+          "font-mono code-editor-font-override border-border/70 border-b bg-background text-subtle-foreground",
         )}
+        data-selection-scope-exclude="true"
         style={headerStyle}
         onClick={onToggleCollapse}
       >
-        <div className="flex items-center justify-center border-border border-r text-text-lighter">
+        <div className="flex items-center justify-center border-border border-r text-subtle-foreground">
           <ArrowsInLineVertical size={iconSize} />
         </div>
 
         <div className="flex min-w-0 items-center gap-1.5 px-2">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="flex size-4 items-center justify-center text-text-lighter">
+            <span className="flex size-4 items-center justify-center text-subtle-foreground">
               {isCollapsed ? <ChevronRight size={iconSize} /> : <ChevronDown size={iconSize} />}
             </span>
-            <span className="shrink-0 whitespace-nowrap font-medium text-text-light">
+            <span className="shrink-0 whitespace-nowrap font-medium text-muted-foreground">
               {hiddenLabel}
             </span>
             {headerInfo?.context ? (
-              <span className="min-w-0 truncate text-text-lighter">{headerInfo.context}</span>
+              <span className="min-w-0 truncate text-subtle-foreground">{headerInfo.context}</span>
             ) : null}
           </div>
 

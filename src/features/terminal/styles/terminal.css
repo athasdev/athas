@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background-color: var(--primary-bg, var(--color-primary-bg));
+  background-color: var(--background);
 }
 
 /* Ensure xterm fills its container */
@@ -16,7 +16,7 @@
   min-width: 0;
   width: 100%;
   height: 100%;
-  background-color: var(--primary-bg, var(--color-primary-bg));
+  background-color: var(--background);
   font-variant-ligatures: none;
   font-feature-settings:
     "liga" 0,
@@ -27,7 +27,7 @@
 .xterm-container .xterm-viewport {
   overflow-y: auto !important;
   overscroll-behavior: none;
-  background-color: var(--primary-bg, var(--color-primary-bg)) !important;
+  background-color: var(--background) !important;
 }
 
 @supports not selector(::-webkit-scrollbar) {
@@ -59,25 +59,13 @@
   min-height: 36px !important;
   border: var(--app-scrollbar-thumb-border) !important;
   border-radius: var(--app-scrollbar-radius) !important;
-  background-color: rgba(120, 120, 120, 0.42) !important;
   background-color: var(--app-scrollbar-thumb) !important;
   background-clip: content-box !important;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(105, 105, 105, 0.62) !important;
   background-color: var(--app-scrollbar-thumb-hover) !important;
   background-clip: content-box !important;
-}
-
-/* Terminal cursor improvements */
-.xterm-container .xterm-cursor-layer {
-  /* Cursor will use theme colors */
-}
-
-/* Better selection styling */
-.xterm-container .xterm-selection-layer {
-  /* Selection will use theme colors */
 }
 
 /* Ensure terminal search stays on top */

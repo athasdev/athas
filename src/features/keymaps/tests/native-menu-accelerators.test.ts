@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
+import { IS_MAC } from "@/utils/platform";
 import { isNativeMenuAccelerator } from "../utils/native-menu-accelerators";
 
 function keyboardEvent(init: Partial<KeyboardEvent>): KeyboardEvent {
@@ -13,16 +14,21 @@ function keyboardEvent(init: Partial<KeyboardEvent>): KeyboardEvent {
   } as KeyboardEvent;
 }
 
+function primaryModifierEvent(init: Partial<KeyboardEvent>): Partial<KeyboardEvent> {
+  return IS_MAC ? { metaKey: true, ...init } : { ctrlKey: true, ...init };
+}
+
 describe("native menu accelerators", () => {
   it("leaves the command palette shortcut in the frontend keymap pipeline", () => {
     expect(
       isNativeMenuAccelerator(
-        keyboardEvent({
-          code: "KeyP",
-          key: "P",
-          metaKey: true,
-          shiftKey: true,
-        }),
+        keyboardEvent(
+          primaryModifierEvent({
+            code: "KeyP",
+            key: "P",
+            shiftKey: true,
+          }),
+        ),
       ),
     ).toBe(false);
   });
@@ -30,34 +36,47 @@ describe("native menu accelerators", () => {
   it("still identifies native file menu accelerators", () => {
     expect(
       isNativeMenuAccelerator(
-        keyboardEvent({
-          code: "KeyS",
-          key: "s",
-          metaKey: true,
-        }),
+        keyboardEvent(
+          primaryModifierEvent({
+            code: "KeyS",
+            key: "s",
+          }),
+        ),
       ),
     ).toBe(true);
     expect(
       isNativeMenuAccelerator(
-        keyboardEvent({
-          altKey: true,
-          code: "KeyS",
-          key: "s",
-          metaKey: true,
-        }),
+        keyboardEvent(
+          primaryModifierEvent({
+            altKey: true,
+            code: "KeyS",
+            key: "s",
+          }),
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isNativeMenuAccelerator(
+        keyboardEvent(
+          primaryModifierEvent({
+            code: "KeyN",
+            key: "N",
+            shiftKey: true,
+          }),
+        ),
       ),
     ).toBe(true);
   });
 
   it("identifies native edit menu accelerators", () => {
     const editAccelerators: Array<Partial<KeyboardEvent>> = [
-      { code: "KeyA", key: "a", metaKey: true },
-      { code: "KeyZ", key: "z", metaKey: true },
-      { code: "KeyZ", key: "Z", metaKey: true, shiftKey: true },
-      { code: "KeyY", key: "y", metaKey: true },
-      { code: "KeyC", key: "c", metaKey: true },
-      { code: "KeyX", key: "x", metaKey: true },
-      { code: "KeyV", key: "v", metaKey: true },
+      primaryModifierEvent({ code: "KeyA", key: "a" }),
+      primaryModifierEvent({ code: "KeyZ", key: "z" }),
+      primaryModifierEvent({ code: "KeyZ", key: "Z", shiftKey: true }),
+      primaryModifierEvent({ code: "KeyY", key: "y" }),
+      primaryModifierEvent({ code: "KeyC", key: "c" }),
+      primaryModifierEvent({ code: "KeyX", key: "x" }),
+      primaryModifierEvent({ code: "KeyV", key: "v" }),
     ];
 
     for (const accelerator of editAccelerators) {

@@ -10,6 +10,18 @@ import type {
 
 export type Theme = string;
 export type RenderWhitespaceMode = "none" | "boundary" | "trailing" | "all";
+export type EditorCursorStyle =
+  | "line"
+  | "block"
+  | "underline"
+  | "line-thin"
+  | "block-outline"
+  | "underline-thin";
+export type EditorCursorBlinking = "blink" | "smooth" | "phase" | "expand" | "solid";
+export type TerminalCursorInactiveStyle = "outline" | "block" | "bar" | "underline" | "none";
+export type TabCloseButtonVisibility = "active" | "hover" | "always";
+export type WindowChromeDensity = "focused" | "comfortable";
+export type FileTreeSortOrder = "folders-first" | "name";
 export type SettingsSection =
   | "account"
   | "general"
@@ -39,6 +51,13 @@ export interface Settings {
   renderIndentGuides: boolean;
   highlightOccurrences: boolean;
   showMinimap: boolean;
+  editorFontLigatures: boolean;
+  editorStickyScroll: boolean;
+  editorBracketPairColorization: boolean;
+  editorSmoothScrolling: boolean;
+  editorScrollBeyondLastLine: boolean;
+  editorCursorStyle: EditorCursorStyle;
+  editorCursorBlinking: EditorCursorBlinking;
   inlayHints: boolean;
   codeLens: boolean;
   semanticTokens: boolean;
@@ -52,11 +71,20 @@ export interface Settings {
   terminalCursorStyle: "block" | "underline" | "bar";
   terminalCursorBlink: boolean;
   terminalCursorWidth: number;
+  terminalCursorInactiveStyle: TerminalCursorInactiveStyle;
+  terminalAltClickMovesCursor: boolean;
+  terminalMacOptionIsMeta: boolean;
+  terminalRightClickSelectsWord: boolean;
   terminalDefaultShellId: string;
   terminalDefaultProfileId: string;
   // UI
   uiFontFamily: string;
   uiFontSize: number;
+  reduceMotion: boolean;
+  showStatusBar: boolean;
+  showTabIcons: boolean;
+  tabCloseButtonVisibility: TabCloseButtonVisibility;
+  windowChromeDensity: WindowChromeDensity;
   // Theme
   theme: Theme;
   iconTheme: string;
@@ -68,6 +96,7 @@ export interface Settings {
   windowTransparency: boolean;
   headerTrailingItemsOrder: HeaderTrailingItemId[];
   sidebarActivityItemsOrder: Array<SidebarActivityItemId | string>;
+  hiddenSidebarActivityItems: string[];
   footerLeadingItemsOrder: FooterLeadingItemId[];
   footerTrailingItemsOrder: FooterTrailingItemId[];
   openFoldersInNewWindow: boolean;
@@ -91,6 +120,11 @@ export interface Settings {
   // Layout
   activityRailExpanded: boolean;
   activityRailWidth: number;
+  showActivityRailProjectSwitcher: boolean;
+  showActivityRailAgentHistory: boolean;
+  showActivityRailTerminals: boolean;
+  showActivityRailProjectIcons: boolean;
+  collapsedActivityRailSections: string[];
   sidebarWidth: number;
   showGitHubPullRequests: boolean;
   showGitHubIssues: boolean;
@@ -140,9 +174,14 @@ export interface Settings {
   maxOpenTabs: number;
   horizontalTabScroll: boolean;
   //// File tree
+  fileTreeSortOrder: FileTreeSortOrder;
   fileTreeIndentSize: number;
   compactFoldersInFileTree: boolean;
   hideRootFolderInFileTree: boolean;
+  autoRevealActiveFileInFileTree: boolean;
+  showFileIconsInFileTree: boolean;
+  showIndentGuidesInFileTree: boolean;
+  confirmBeforeFileDelete: boolean;
   showHiddenFilesInFileTree: boolean;
   showGitignoredFilesInFileTree: boolean;
   hiddenFilePatterns: string[];

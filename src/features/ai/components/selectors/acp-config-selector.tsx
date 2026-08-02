@@ -3,7 +3,6 @@ import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import { chatComposerControlClassName } from "../input/chat-composer-control-styles";
 
 interface AcpConfigSelectorProps {
   option: SessionConfigOption;
@@ -24,7 +23,7 @@ export function AcpConfigSelector({
   open,
   onOpenChange,
 }: AcpConfigSelectorProps) {
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
+  const getCurrentAgentId = useAIChatStore((state) => state.actions.getCurrentAgentId);
   const currentAgentId = getCurrentAgentId();
 
   if (option.kind.type !== "select" || option.kind.options.length === 0) {
@@ -45,10 +44,10 @@ export function AcpConfigSelector({
       open={open}
       onOpenChange={onOpenChange}
       leftIcon={
-        <ProviderIcon providerId={currentAgentId} size={12} className="text-text-lighter" />
+        <ProviderIcon providerId={currentAgentId} size={12} className="text-subtle-foreground" />
       }
       className={cn("w-fit max-w-[160px]", className)}
-      triggerClassName={chatComposerControlClassName("w-fit max-w-[160px]")}
+      triggerClassName="w-fit max-w-[160px]"
       hideChevron
       menuClassName={menuClassName}
       menuMinWidth={menuMinWidth}

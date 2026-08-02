@@ -1,8 +1,11 @@
 import { memo, useMemo } from "react";
 import { useDiffData } from "../../hooks/use-git-diff-data";
+import { Empty, EmptyDescription } from "@/ui/empty";
+import { Spinner } from "@/ui/spinner";
 import type { DiffViewerProps, MultiFileDiff } from "../../types/git-diff.types";
 import GitDiffEditorStack from "./git-diff-editor-stack";
 import GitDiffEditorSurface from "./git-diff-editor-surface";
+import { BinaryDiffViewer } from "./git-diff-binary";
 import ImageDiffViewer from "./git-diff-image";
 
 function isMultiFileDiff(data: unknown): data is MultiFileDiff {
@@ -25,25 +28,27 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="ui-text-sm text-text-lighter">Loading diff...</div>
-      </div>
+      <Empty className="h-full rounded-none bg-background">
+        <EmptyDescription>
+          <Spinner label="Loading diff" showLabel />
+        </EmptyDescription>
+      </Empty>
     );
   }
 
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="text-error ui-text-sm">{error}</div>
-      </div>
+      <Empty className="h-full rounded-none bg-background" tone="error" role="alert">
+        <EmptyDescription>{error}</EmptyDescription>
+      </Empty>
     );
   }
 
   if (!diff || !filePath) {
     return (
-      <div className="flex h-full items-center justify-center bg-primary-bg">
-        <div className="ui-text-sm text-text-lighter">No diff data available</div>
-      </div>
+      <Empty className="h-full rounded-none bg-background">
+        <EmptyDescription>No diff data available</EmptyDescription>
+      </Empty>
     );
   }
 
@@ -53,8 +58,16 @@ const DiffViewer = memo((_props: DiffViewerProps) => {
     return <ImageDiffViewer diff={diff} fileName={fileName} onClose={() => {}} />;
   }
 
+  if (diff.is_binary) {
+    return (
+      <div className="flex h-full flex-col overflow-hidden bg-background">
+        <BinaryDiffViewer fileName={fileName} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <GitDiffEditorSurface
         cacheKey={filePath}
         diff={diff}

@@ -8,6 +8,7 @@ interface FileTreeState {
   expandedFolders: Set<string>;
   selectedFiles: Set<string>;
   expandedPaths: Set<string>;
+  initializedRootPaths: string[];
 }
 
 function normalizeTreePath(path: string): string {
@@ -31,8 +32,20 @@ const createFileTreeStore = () =>
           expandedFolders: new Set<string>(),
           selectedFiles: new Set<string>(),
           expandedPaths: new Set<string>(),
+          initializedRootPaths: [],
         } as FileTreeState,
         (set, get) => ({
+          expandRootOnce: (path: string) => {
+            const state = get();
+            if (state.initializedRootPaths.includes(path)) return;
+
+            set({
+              initializedRootPaths: [...state.initializedRootPaths, path],
+              expandedFolders: new Set([...state.expandedFolders, path]),
+              expandedPaths: new Set([...state.expandedPaths, path]),
+            });
+          },
+
           toggleFolder: (path: string) => {
             set((state) => {
               if (state.expandedFolders.has(path)) {

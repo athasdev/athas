@@ -113,6 +113,11 @@ describe("default keymaps", () => {
     expectKeybinding("editor.paste", "cmd+v", "editorFocus");
   });
 
+  it("keeps chrome actions in the command registry", () => {
+    expectKeybinding("workbench.openSettings", "cmd+,");
+    expectKeybinding("terminal.find", "cmd+f", "terminalFocus");
+  });
+
   it("has registered commands for every default keybinding", () => {
     keymapRegistry.clear();
     registerCommands();
@@ -122,5 +127,15 @@ describe("default keymaps", () => {
       .map((keybinding) => `${keybinding.key} -> ${keybinding.command}`);
 
     expect(missingCommands).toEqual([]);
+  });
+
+  it("binds the new window shortcut to a registered command", () => {
+    keymapRegistry.clear();
+    registerCommands();
+
+    expectKeybinding("workbench.newWindow", "cmd+shift+n");
+    expect(keymapRegistry.getCommand("workbench.newWindow")).toMatchObject({
+      title: "New Window",
+    });
   });
 });

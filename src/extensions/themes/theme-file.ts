@@ -3,16 +3,36 @@ import type { Theme, ThemeFile } from "./theme-schema";
 import type { ThemeDefinition } from "./theme.types";
 
 export const REQUIRED_THEME_COLOR_KEYS = [
+  "background",
+  "surface",
+  "foreground",
+  "muted-foreground",
+  "subtle-foreground",
+  "border",
+  "accent",
+  "selected",
+  "primary",
+] as const;
+
+const LEGACY_THEME_COLOR_KEYS: Readonly<Record<string, string>> = {
+  "primary-bg": "background",
+  "secondary-bg": "surface",
+  text: "foreground",
+  "text-light": "muted-foreground",
+  "text-lighter": "subtle-foreground",
+  hover: "accent",
+  "selection-bg": "selection",
+  accent: "primary",
+  error: "destructive",
+};
+const LEGACY_THEME_SIGNATURE_KEYS = new Set([
   "primary-bg",
   "secondary-bg",
-  "text",
   "text-light",
   "text-lighter",
-  "border",
   "hover",
-  "selected",
-  "accent",
-] as const;
+  "selection-bg",
+]);
 
 const THEME_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 const OPTIONAL_FILE_FIELDS = [
@@ -69,12 +89,7 @@ function optionalString(
   return value.trim();
 }
 
-function stringMap(
-  value: unknown,
-  path: string,
-  issues: string[],
-  requiredKeys: readonly string[] = [],
-): Record<string, string> {
+function stringMap(value: unknown, path: string, issues: string[]): Record<string, string> {
   if (!isRecord(value)) {
     issues.push(`${path} must be an object of color names and CSS color values`);
     return {};
@@ -89,13 +104,47 @@ function stringMap(
     result[key] = entry.trim();
   }
 
-  for (const key of requiredKeys) {
-    if (!result[key]) {
-      issues.push(`${path}.${key} is required`);
+  return result;
+}
+
+function themeColorKeyWithoutPrefix(key: string): string {
+  const withoutPrefix = key.startsWith("--") ? key.slice(2) : key;
+  return withoutPrefix.startsWith("color-") ? withoutPrefix.slice("color-".length) : withoutPrefix;
+}
+
+function normalizeThemeColorKey(key: string, isLegacyTheme: boolean): string {
+  const withoutColorPrefix = themeColorKeyWithoutPrefix(key);
+  return isLegacyTheme
+    ? (LEGACY_THEME_COLOR_KEYS[withoutColorPrefix] ?? withoutColorPrefix)
+    : withoutColorPrefix;
+}
+
+export function normalizeThemeColors(colors: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  const isLegacyTheme = Object.keys(colors).some((key) =>
+    LEGACY_THEME_SIGNATURE_KEYS.has(themeColorKeyWithoutPrefix(key)),
+  );
+
+  for (const [key, value] of Object.entries(colors)) {
+    const normalizedKey = normalizeThemeColorKey(key, isLegacyTheme);
+    const isCanonicalKey = themeColorKeyWithoutPrefix(key) === normalizedKey;
+    if (!(normalizedKey in normalized) || isCanonicalKey) {
+      normalized[normalizedKey] = value;
     }
   }
 
-  return result;
+  return normalized;
+}
+
+export function normalizeThemeCssVariables(
+  variables: Record<string, string>,
+): Record<string, string> {
+  const themeColors = Object.fromEntries(
+    Object.entries(variables).filter(([key]) => key.startsWith("--")),
+  );
+  return Object.fromEntries(
+    Object.entries(normalizeThemeColors(themeColors)).map(([key, value]) => [`--${key}`, value]),
+  );
 }
 
 function parseTheme(value: unknown, index: number, issues: string[]): Theme {
@@ -120,12 +169,19 @@ function parseTheme(value: unknown, index: number, issues: string[]): Theme {
   const syntax =
     value.syntax === undefined ? undefined : stringMap(value.syntax, `${path}.syntax`, issues);
 
+  const colors = normalizeThemeColors(stringMap(value.colors, `${path}.colors`, issues));
+  for (const key of REQUIRED_THEME_COLOR_KEYS) {
+    if (!colors[key]) {
+      issues.push(`${path}.colors.${key} is required`);
+    }
+  }
+
   return {
     id,
     name: requiredString(value, "name", path, issues),
     description: optionalString(value, "description", path, issues),
     appearance: appearance === "light" ? "light" : "dark",
-    colors: stringMap(value.colors, `${path}.colors`, issues, REQUIRED_THEME_COLOR_KEYS),
+    colors,
     syntax,
   };
 }
@@ -181,12 +237,8 @@ export function parseThemeFileJson(content: string): ThemeFile {
 
 export function toThemeDefinition(theme: Theme): ThemeDefinition {
   const cssVariables: Record<string, string> = {};
-  for (const [key, value] of Object.entries(theme.colors)) {
-    const normalizedKey = key.startsWith("--") ? key : `--${key}`;
-    cssVariables[normalizedKey] = value;
-    if (!normalizedKey.startsWith("--color-")) {
-      cssVariables[`--color-${normalizedKey.slice(2)}`] = value;
-    }
+  for (const [key, value] of Object.entries(normalizeThemeColors(theme.colors))) {
+    cssVariables[`--${key}`] = value;
   }
 
   const isDark = theme.appearance === "dark";

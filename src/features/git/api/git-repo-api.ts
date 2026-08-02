@@ -1,8 +1,16 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { readDirectory } from "@/features/file-system/controllers/platform";
 
-const repoDiscoveryCache = new Map<string, string | null>();
+interface RepositoryDiscoveryCacheEntry {
+  discoveredAt: number;
+  repoPath: string | null;
+}
+
+const repoDiscoveryCache = new Map<string, RepositoryDiscoveryCacheEntry>();
 const workspaceRepoDiscoveryCache = new Map<string, { discoveredAt: number; repos: string[] }>();
+const inFlightRepoDiscoveries = new Map<string, Promise<string | null>>();
+const inFlightWorkspaceDiscoveries = new Map<string, Promise<string[]>>();
+let discoveryGeneration = 0;
 
 const NOT_REPO_PATTERNS = [
   "failed to open repository",
@@ -13,6 +21,10 @@ const NOT_REPO_PATTERNS = [
 ];
 
 const WORKSPACE_REPO_CACHE_TTL_MS = 5 * 60_000;
+const REPO_CACHE_TTL_MS = 5 * 60_000;
+const NEGATIVE_REPO_CACHE_TTL_MS = 5_000;
+const MAX_REPO_SCAN_DIRECTORIES = 10_000;
+const MAX_REPO_SCAN_DEPTH = 8;
 const REPO_SCAN_SKIP_DIRS = new Set([
   ".git",
   ".svn",
@@ -128,21 +140,52 @@ export function isNotGitRepositoryError(error: unknown): boolean {
 
 async function discoverRepo(path: string): Promise<string | null> {
   const normalizedPath = normalizePath(path);
-  if (repoDiscoveryCache.has(normalizedPath)) {
-    return repoDiscoveryCache.get(normalizedPath) ?? null;
+  const cached = repoDiscoveryCache.get(normalizedPath);
+  if (cached) {
+    const ttl = cached.repoPath ? REPO_CACHE_TTL_MS : NEGATIVE_REPO_CACHE_TTL_MS;
+    if (Date.now() - cached.discoveredAt < ttl) {
+      return cached.repoPath;
+    }
+    repoDiscoveryCache.delete(normalizedPath);
   }
 
-  try {
-    const discovered = await tauriInvoke<string | null>("git_discover_repo", {
-      path: normalizedPath,
+  const existingRequest = inFlightRepoDiscoveries.get(normalizedPath);
+  if (existingRequest) return existingRequest;
+
+  const generation = discoveryGeneration;
+  const request = tauriInvoke<string | null>("git_discover_repo", {
+    path: normalizedPath,
+  })
+    .then((discovered) => {
+      const repoPath = discovered ? normalizePath(discovered) : null;
+      if (generation === discoveryGeneration) {
+        repoDiscoveryCache.set(normalizedPath, {
+          discoveredAt: Date.now(),
+          repoPath,
+        });
+      }
+      return repoPath;
+    })
+    .catch((error) => {
+      if (isNotGitRepositoryError(error)) {
+        if (generation === discoveryGeneration) {
+          repoDiscoveryCache.set(normalizedPath, {
+            discoveredAt: Date.now(),
+            repoPath: null,
+          });
+        }
+        return null;
+      }
+      throw error;
+    })
+    .finally(() => {
+      if (inFlightRepoDiscoveries.get(normalizedPath) === request) {
+        inFlightRepoDiscoveries.delete(normalizedPath);
+      }
     });
-    const normalizedRepo = discovered ? normalizePath(discovered) : null;
-    repoDiscoveryCache.set(normalizedPath, normalizedRepo);
-    return normalizedRepo;
-  } catch {
-    repoDiscoveryCache.set(normalizedPath, null);
-    return null;
-  }
+
+  inFlightRepoDiscoveries.set(normalizedPath, request);
+  return request;
 }
 
 export async function resolveRepositoryPath(repoPath: string): Promise<string | null> {
@@ -194,8 +237,27 @@ export async function discoverWorkspaceRepositories(
     if (cached && Date.now() - cached.discoveredAt < WORKSPACE_REPO_CACHE_TTL_MS) {
       return cached.repos;
     }
+
+    const existingRequest = inFlightWorkspaceDiscoveries.get(normalizedWorkspacePath);
+    if (existingRequest) {
+      return existingRequest;
+    }
   }
 
+  const generation = discoveryGeneration;
+  const request = scanWorkspaceRepositories(normalizedWorkspacePath, generation).finally(() => {
+    if (inFlightWorkspaceDiscoveries.get(normalizedWorkspacePath) === request) {
+      inFlightWorkspaceDiscoveries.delete(normalizedWorkspacePath);
+    }
+  });
+  inFlightWorkspaceDiscoveries.set(normalizedWorkspacePath, request);
+  return request;
+}
+
+async function scanWorkspaceRepositories(
+  normalizedWorkspacePath: string,
+  generation: number,
+): Promise<string[]> {
   const discoveredRepos = new Set<string>();
   const visitedDirectories = new Set<string>();
   const queue: string[] = [normalizedWorkspacePath];
@@ -207,6 +269,10 @@ export async function discoverWorkspaceRepositories(
   }
 
   while (queueCursor < queue.length) {
+    if (visitedDirectories.size >= MAX_REPO_SCAN_DIRECTORIES) {
+      break;
+    }
+
     const batchEnd = Math.min(queueCursor + 8, queue.length);
     const batch = queue.slice(queueCursor, batchEnd);
     queueCursor = batchEnd;
@@ -248,6 +314,11 @@ export async function discoverWorkspaceRepositories(
         }
 
         const childPath = normalizePath(`${result.directoryPath}/${entry.name}`);
+        const relativeChildPath = toRelativePath(normalizedWorkspacePath, childPath);
+        const childDepth = relativeChildPath.split("/").filter(Boolean).length;
+        if (childDepth > MAX_REPO_SCAN_DEPTH) {
+          continue;
+        }
 
         if (!visitedDirectories.has(childPath)) {
           queue.push(childPath);
@@ -268,15 +339,20 @@ export async function discoverWorkspaceRepositories(
     ];
   }
 
-  workspaceRepoDiscoveryCache.set(normalizedWorkspacePath, {
-    discoveredAt: Date.now(),
-    repos: repositories,
-  });
+  if (generation === discoveryGeneration) {
+    workspaceRepoDiscoveryCache.set(normalizedWorkspacePath, {
+      discoveredAt: Date.now(),
+      repos: repositories,
+    });
+  }
 
   return repositories;
 }
 
 export function clearRepositoryDiscoveryCache(): void {
+  discoveryGeneration += 1;
   repoDiscoveryCache.clear();
   workspaceRepoDiscoveryCache.clear();
+  inFlightRepoDiscoveries.clear();
+  inFlightWorkspaceDiscoveries.clear();
 }

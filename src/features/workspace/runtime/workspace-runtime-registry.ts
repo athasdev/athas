@@ -6,7 +6,7 @@ import {
   type WorkspaceRuntimeStatus,
 } from "@/features/workspace/types/workspace-runtime.types";
 
-type WorkspaceStoreFactory = () => StoreApi<unknown>;
+type WorkspaceStoreFactory = (workspaceId: string) => StoreApi<unknown>;
 type WorkspaceChangeListener = () => void;
 
 const welcomeWorkspace: WorkspaceRuntimeDescriptor = {
@@ -24,7 +24,7 @@ export class WorkspaceRuntimeRegistry {
     this.ensureWorkspace(welcomeWorkspace, "empty");
   }
 
-  registerStore<T>(key: string, factory: () => StoreApi<T>) {
+  registerStore<T>(key: string, factory: (workspaceId: string) => StoreApi<T>) {
     this.storeFactories.set(key, factory as WorkspaceStoreFactory);
   }
 
@@ -118,7 +118,7 @@ export class WorkspaceRuntimeRegistry {
       throw new Error(`Workspace store is not registered: ${key}`);
     }
 
-    const store = factory();
+    const store = factory(workspaceId);
     runtime.stores.set(key, store);
     return store as StoreApi<T>;
   }

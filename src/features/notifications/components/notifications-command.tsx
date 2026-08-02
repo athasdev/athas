@@ -25,6 +25,7 @@ import {
   formatNotificationText,
 } from "@/features/notifications/utils/notification-formatters";
 import { Button } from "@/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
 import Command, {
   CommandEmpty,
   CommandHeader,
@@ -175,7 +176,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         label: item.label,
         icon: item.icon,
         onClick: () => setNotificationFilter(item.value as NotificationFilter),
-        className: notificationFilter === item.value ? "bg-hover text-text" : undefined,
+        className: notificationFilter === item.value ? "bg-accent text-foreground" : undefined,
       })),
     [notificationFilter],
   );
@@ -336,7 +337,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
         >
           <CommandHeader onClose={onClose}>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Search className="size-3.5 shrink-0 text-text-lighter" />
+              <Search className="size-3.5 shrink-0 text-subtle-foreground" />
               <CommandInput
                 ref={searchInputRef}
                 value={searchQuery}
@@ -370,12 +371,19 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
             <CommandList>
               <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                 {groupedNotifications.map((group) => (
-                  <div key={group.label} className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      className="font-sans ui-text-base flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left text-text-lighter transition-colors hover:bg-hover/50 hover:text-text"
-                      aria-expanded={!collapsedNotificationGroups.has(group.label)}
-                      onClick={() => toggleNotificationGroup(group.label)}
+                  <Collapsible
+                    key={group.label}
+                    open={!collapsedNotificationGroups.has(group.label)}
+                    onOpenChange={() => toggleNotificationGroup(group.label)}
+                    className="flex flex-col gap-1"
+                  >
+                    <CollapsibleTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="flex h-6 w-full select-none items-center gap-1 rounded-lg px-2 text-left font-sans ui-text-base text-subtle-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:outline-none"
+                        />
+                      }
                     >
                       <CaretRight
                         className={cn(
@@ -385,8 +393,8 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                       />
                       <span className="min-w-0 flex-1 truncate">{group.label}</span>
                       <CommandItemBadge>{group.notifications.length}</CommandItemBadge>
-                    </button>
-                    {!collapsedNotificationGroups.has(group.label) ? (
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
                       <ItemGroup className="gap-0.5">
                         {group.notifications.map((notification) => (
                           <NotificationListItem
@@ -425,8 +433,8 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                           />
                         ))}
                       </ItemGroup>
-                    ) : null}
-                  </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 ))}
               </div>
             </CommandList>
@@ -477,10 +485,10 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
                   <NotificationIcon type={activeNotification.type} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-sans ui-text-base truncate font-medium text-text">
+                  <div className="font-sans ui-text-base truncate font-medium text-foreground">
                     {activeNotification.message}
                   </div>
-                  <div className="font-sans ui-text-base mt-0.5 flex items-center gap-1 text-text-lighter">
+                  <div className="font-sans ui-text-base mt-0.5 flex items-center gap-1 text-subtle-foreground">
                     <span className="capitalize">{activeNotification.type}</span>
                     <span>-</span>
                     <span>{formatNotificationAge(activeNotification.updatedAt)}</span>
@@ -491,7 +499,7 @@ export function NotificationsCommand({ isVisible, onClose }: NotificationsComman
             <CommandList>
               {activeNotification.description ? (
                 <div className="border-border/70 border-b px-3 py-2">
-                  <pre className="font-sans ui-text-base max-h-40 overflow-auto whitespace-pre-wrap break-words text-text-light">
+                  <pre className="font-sans ui-text-base max-h-40 overflow-auto whitespace-pre-wrap break-words text-muted-foreground">
                     {activeNotification.description}
                   </pre>
                 </div>

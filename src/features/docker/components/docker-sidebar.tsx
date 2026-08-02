@@ -3,31 +3,54 @@ import {
   ArrowFatLineDownIcon as Down,
   ArrowSquareOutIcon as OpenExternal,
   BugIcon as Bug,
-  CubeIcon as ContainerIcon,
   DownloadSimpleIcon as Download,
+  DotsThreeIcon as More,
   FileIcon,
   FolderIcon,
-  HardDrivesIcon as VolumeIcon,
+  FunnelIcon as Filter,
   MagnifyingGlassIcon as Search,
-  NetworkIcon as Network,
   PauseIcon as Pause,
   PlayIcon as Play,
   ArrowsClockwiseIcon as Restart,
   StackIcon as ImageIcon,
   StopIcon as Stop,
+  SlidersHorizontalIcon as Sliders,
   TerminalWindowIcon as Terminal,
   TrashIcon as Trash,
   UploadSimpleIcon as Upload,
+  WarningCircleIcon as WarningCircle,
+  XIcon as X,
 } from "@/ui/icons";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/ui/empty";
 import { useDebuggerStore } from "@/features/debugger/stores/debugger.store";
+import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import Dialog, { showPromptDialog } from "@/ui/dialog";
@@ -35,13 +58,15 @@ import Input from "@/ui/input";
 import Textarea from "@/ui/textarea";
 import {
   SidebarEmptyState,
-  SidebarHeaderIconButton,
-  SidebarListItem,
   SidebarPanel,
-  SidebarSearchFilterRow,
+  SidebarSectionEmptyState,
+  SidebarSectionHeader,
   SidebarSectionLabel,
-  SidebarSectionSwitcher,
+  SidebarTabBar,
+  SidebarTitleBar,
+  SidebarToolbar,
 } from "@/ui/sidebar";
+import { SearchField } from "@/ui/search";
 import { cn } from "@/utils/cn";
 import {
   buildDockerImage,
@@ -58,7 +83,6 @@ import {
   pullDockerRegistryImage,
   pruneDockerResources,
   pushDockerRegistryImage,
-  readDockerEnvFile,
   runDockerComposeAction,
   runDockerContainerAction,
   runDockerImage,
@@ -68,7 +92,6 @@ import {
   startDockerContainerLogStream,
   stopDockerContainerLogStream,
   tagDockerImage,
-  writeDockerEnvFile,
 } from "../services/docker-api";
 import type {
   DockerBuildPreset,
@@ -105,9 +128,10 @@ type DockerSection =
   | "cleanup";
 type DockerLogFilter = "all" | "stdout" | "stderr" | "errors";
 type DockerLogLine = DockerLogEvent & { id: number };
-type DockerDialogMode = "build" | "run" | "env" | null;
+type DockerDialogMode = "build" | "run" | null;
 type DockerDetailTab = "logs" | "files";
 type DockerTab = "resources" | "compose" | "project" | "registry";
+type DockerContainerFilter = "all" | "running" | "stopped";
 
 const maxLogLines = 1_000;
 const dockerTabSections: Record<DockerTab, DockerSection[]> = {
@@ -116,6 +140,12 @@ const dockerTabSections: Record<DockerTab, DockerSection[]> = {
   project: ["project"],
   registry: ["registry"],
 };
+const dockerTabs: Array<{ id: DockerTab; label: string }> = [
+  { id: "resources", label: "Resources" },
+  { id: "compose", label: "Compose" },
+  { id: "project", label: "Project" },
+  { id: "registry", label: "Registry" },
+];
 const emptyComposeProject: DockerComposeProject = {
   workspacePath: null,
   files: [],
@@ -139,6 +169,210 @@ const emptyInventory: DockerInventory = {
   networks: [],
 };
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isDockerConnectionError(message: string) {
+  const normalizedMessage = message.toLowerCase();
+  return [
+    "cannot connect to the docker daemon",
+    "docker cli was not found",
+    "error during connect",
+    "failed to connect",
+    "is the docker daemon running",
+    "permission denied while trying to connect to the docker api",
+    "connection refused",
+  ].some((fragment) => normalizedMessage.includes(fragment));
+}
+
+function getDockerUnavailableCopy(error: string) {
+  if (error.toLowerCase().includes("docker cli was not found")) {
+    return {
+      title: "Docker CLI isn't available",
+      description: "Install Docker or make sure the Docker CLI is available in Athas.",
+    };
+  }
+
+  if (isDockerConnectionError(error)) {
+    return {
+      title: "Docker isn't running",
+      description: "Athas can't connect to the active Docker context.",
+    };
+  }
+
+  return {
+    title: "Docker is unavailable",
+    description: "Athas couldn't load Docker resources.",
+  };
+}
+
+function openDockerConnectionDetailsBuffer(error: string) {
+  const copy = getDockerUnavailableCopy(error);
+  const content = `${copy.title}\n\n${copy.description}\n\nTechnical details\n${error}\n`;
+  const bufferStore = useBufferStore.getState();
+  const bufferId = bufferStore.actions.openContent({
+    type: "editor",
+    path: "docker://connection-details",
+    name: "Docker Connection.log",
+    content,
+    isVirtual: true,
+    readOnly: true,
+    language: "log",
+  });
+  const openedBuffer = useBufferStore.getState().buffers.find((buffer) => buffer.id === bufferId);
+  if (openedBuffer?.type === "editor") {
+    useBufferStore.getState().actions.updateBuffer({
+      ...openedBuffer,
+      content,
+      savedContent: content,
+      isDirty: false,
+      isVirtual: true,
+      readOnly: true,
+      language: "log",
+    });
+  }
+}
+
+function DockerUnavailableState({
+  error,
+  title,
+  description,
+  isRetrying,
+  onRetry,
+}: {
+  error: string;
+  title?: string;
+  description?: string;
+  isRetrying: boolean;
+  onRetry: () => void;
+}) {
+  const fallbackCopy = getDockerUnavailableCopy(error);
+
+  return (
+    <Empty className="min-h-0 flex-none gap-3 px-4 py-5" role="status">
+      <EmptyHeader className="gap-1.5">
+        <EmptyMedia variant="icon" className="size-9 border border-border/70 bg-accent">
+          <WarningCircle className="size-4.5 text-subtle-foreground" />
+        </EmptyMedia>
+        <EmptyTitle className="ui-text-base">{title ?? fallbackCopy.title}</EmptyTitle>
+        <EmptyDescription className="max-w-[34ch]">
+          {description ?? fallbackCopy.description}
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent className="flex-row justify-center gap-1.5">
+        <Button type="button" variant="default" size="sm" disabled={isRetrying} onClick={onRetry}>
+          {isRetrying ? <Spinner compact /> : <Refresh />}
+          Retry
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => openDockerConnectionDetailsBuffer(error)}
+        >
+          <OpenExternal />
+          Details
+        </Button>
+      </EmptyContent>
+    </Empty>
+  );
+}
+
+function DockerInlineError({
+  title,
+  error,
+  onDismiss,
+  className,
+}: {
+  title: string;
+  error: string;
+  onDismiss: () => void;
+  className?: string;
+}) {
+  return (
+    <Alert tone="error" className={cn("min-w-0", className)}>
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription className="min-w-0 select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+        {error}
+      </AlertDescription>
+      <AlertAction>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          tooltip="Dismiss"
+          tooltipSide="left"
+          aria-label={`Dismiss ${title.toLowerCase()}`}
+          onClick={onDismiss}
+        >
+          <X />
+        </Button>
+      </AlertAction>
+    </Alert>
+  );
+}
+
+function DockerCapabilityNotice({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Alert tone="warning" role="status" className={cn("mx-2 mb-2 w-auto", className)}>
+      <WarningCircle />
+      <AlertDescription>{children}</AlertDescription>
+    </Alert>
+  );
+}
+
+interface DockerMenuAction {
+  label: string;
+  icon?: ReactNode;
+  disabled?: boolean;
+  destructive?: boolean;
+  separatorBefore?: boolean;
+  onSelect: () => void;
+}
+
+function DockerActionMenu({ label, actions }: { label: string; actions: DockerMenuAction[] }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip={label}
+            tooltipSide="left"
+            aria-label={label}
+          />
+        }
+      >
+        <More />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {actions.map((action) => (
+          <Fragment key={action.label}>
+            {action.separatorBefore ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuItem
+              variant={action.destructive ? "destructive" : "default"}
+              disabled={action.disabled}
+              onClick={action.onSelect}
+            >
+              {action.icon}
+              {action.label}
+            </DropdownMenuItem>
+          </Fragment>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function getContainerStateVariant(
   container: DockerContainer,
 ): ComponentProps<typeof Badge>["variant"] {
@@ -155,12 +389,62 @@ function includesQuery(values: Array<string | null | undefined>, query: string) 
   return values.some((value) => value?.toLowerCase().includes(query));
 }
 
-function ResourceMeta({ children }: { children: ReactNode }) {
-  return <div className="truncate ui-text-sm text-text-lighter">{children}</div>;
-}
+function DockerResourceRow({
+  title,
+  description,
+  status,
+  active = false,
+  onClick,
+  actions,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  status?: ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  actions?: ReactNode;
+}) {
+  const content = (
+    <>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground ui-text-sm">
+          {title}
+        </span>
+        {status}
+      </span>
+      {description ? (
+        <span className="mt-0.5 block truncate text-subtle-foreground ui-text-sm">
+          {description}
+        </span>
+      ) : null}
+    </>
+  );
 
-function ResourceTitle({ children }: { children: ReactNode }) {
-  return <div className="truncate ui-text-sm text-text">{children}</div>;
+  return (
+    <div
+      className={cn(
+        "group/docker-row flex min-h-12 w-full min-w-0 items-center rounded-lg transition-colors hover:bg-accent/70",
+        active && "bg-accent/80",
+      )}
+    >
+      {onClick ? (
+        <button
+          type="button"
+          className="min-w-0 flex-1 px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+          onClick={onClick}
+        >
+          {content}
+        </button>
+      ) : (
+        <div className="min-w-0 flex-1 px-2.5 py-2">{content}</div>
+      )}
+      {actions ? (
+        <div className="mr-1 shrink-0 opacity-0 transition-opacity group-hover/docker-row:opacity-100 group-focus-within/docker-row:opacity-100">
+          {actions}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function quoteShellArg(value: string) {
@@ -260,128 +544,73 @@ function ContainerActions({
   const isPaused = container.state === "paused";
 
   return (
-    <div className="flex items-center gap-0.5">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || isRunning || isPaused}
-        tooltip="Start"
-        tooltipSide="bottom"
-        aria-label={`Start ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(container, "start");
-        }}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip="Container actions"
+            tooltipSide="left"
+            aria-label={`Actions for ${container.name}`}
+          />
+        }
       >
-        <Play className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || !isRunning}
-        tooltip="Stop"
-        tooltipSide="bottom"
-        aria-label={`Stop ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(container, "stop");
-        }}
-      >
-        <Stop className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || (!isRunning && !isPaused)}
-        tooltip={isPaused ? "Unpause" : "Pause"}
-        tooltipSide="bottom"
-        aria-label={isPaused ? `Unpause ${container.name}` : `Pause ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(container, isPaused ? "unpause" : "pause");
-        }}
-      >
-        {isPaused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy}
-        tooltip="Restart"
-        tooltipSide="bottom"
-        aria-label={`Restart ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(container, "restart");
-        }}
-      >
-        <Restart className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || !isRunning}
-        tooltip="Open shell"
-        tooltipSide="bottom"
-        aria-label={`Open shell in ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenTerminal(container);
-        }}
-      >
-        <Terminal className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || !isRunning}
-        tooltip="Debug in container"
-        tooltipSide="bottom"
-        aria-label={`Debug in ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onDebug(container);
-        }}
-      >
-        <Bug className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || !quickUrl}
-        tooltip="Open service URL"
-        tooltipSide="bottom"
-        aria-label={`Open service URL for ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (quickUrl) onOpenUrl(quickUrl);
-        }}
-      >
-        <OpenExternal className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || isRunning}
-        tooltip="Remove"
-        tooltipSide="bottom"
-        aria-label={`Remove ${container.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(container, "remove");
-        }}
-      >
-        <Trash className="size-3.5" />
-      </Button>
-    </div>
+        <More className="size-3.5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          disabled={busy || isRunning || isPaused}
+          onClick={() => onAction(container, "start")}
+        >
+          <Play />
+          Start
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onAction(container, "stop")}>
+          <Stop />
+          Stop
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={busy || (!isRunning && !isPaused)}
+          onClick={() => onAction(container, isPaused ? "unpause" : "pause")}
+        >
+          {isPaused ? <Play /> : <Pause />}
+          {isPaused ? "Unpause" : "Pause"}
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy} onClick={() => onAction(container, "restart")}>
+          <Restart />
+          Restart
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onOpenTerminal(container)}>
+          <Terminal />
+          Open shell
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onDebug(container)}>
+          <Bug />
+          Debug
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={busy || !quickUrl}
+          onClick={() => {
+            if (quickUrl) onOpenUrl(quickUrl);
+          }}
+        >
+          <OpenExternal />
+          Open service URL
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          disabled={busy || isRunning}
+          onClick={() => onAction(container, "remove")}
+        >
+          <Trash />
+          Remove
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -407,10 +636,22 @@ function ContainerRow({
   const quickUrl = getPublishedTcpUrl(container.ports);
 
   return (
-    <SidebarListItem
+    <DockerResourceRow
       active={selected}
-      leading={<ContainerIcon className="size-4 text-text-lighter" weight="duotone" />}
-      trailing={
+      title={container.name}
+      status={
+        <Badge variant={getContainerStateVariant(container)} size="compact" className="capitalize">
+          {container.health ?? container.state}
+        </Badge>
+      }
+      description={
+        <>
+          {container.image}
+          {container.ports ? ` · ${container.ports}` : ""}
+          {container.size ? ` · ${container.size}` : ""}
+        </>
+      }
+      actions={
         <ContainerActions
           container={container}
           busy={busy}
@@ -422,46 +663,7 @@ function ContainerRow({
         />
       }
       onClick={() => onSelect(container)}
-      contentClassName="overflow-hidden"
-    >
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <ResourceTitle>{container.name}</ResourceTitle>
-          <Badge
-            variant={getContainerStateVariant(container)}
-            size="compact"
-            className="capitalize"
-          >
-            {container.health ?? container.state}
-          </Badge>
-        </div>
-        <ResourceMeta>
-          {container.image}
-          {container.ports ? ` · ${container.ports}` : ""}
-          {container.size ? ` · Size ${container.size}` : ""}
-        </ResourceMeta>
-        {container.healthDetails ? (
-          <ResourceMeta>
-            Health {container.healthDetails.status || container.health}
-            {container.healthDetails.failingStreak > 0
-              ? ` · ${container.healthDetails.failingStreak} failures`
-              : ""}
-            {container.healthDetails.lastExitCode !== null &&
-            container.healthDetails.lastExitCode !== undefined
-              ? ` · exit ${container.healthDetails.lastExitCode}`
-              : ""}
-            {container.healthDetails.lastOutput ? ` · ${container.healthDetails.lastOutput}` : ""}
-          </ResourceMeta>
-        ) : null}
-        {container.stats ? (
-          <ResourceMeta>
-            CPU {container.stats.cpuPercent || "0%"} · Mem {container.stats.memoryUsage || "0B"}
-            {container.stats.memoryPercent ? ` (${container.stats.memoryPercent})` : ""} · Net{" "}
-            {container.stats.networkIo || "0B / 0B"} · I/O {container.stats.blockIo || "0B / 0B"}
-          </ResourceMeta>
-        ) : null}
-      </div>
-    </SidebarListItem>
+    />
   );
 }
 
@@ -481,83 +683,50 @@ function ComposeServiceActions({
   const isRunning = service.state === "running";
 
   return (
-    <div className="flex items-center gap-0.5">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy}
-        tooltip="Start"
-        tooltipSide="bottom"
-        aria-label={`Start ${service.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(service, "up");
-        }}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            tooltip="Service actions"
+            tooltipSide="left"
+            aria-label={`Actions for ${service.name}`}
+          />
+        }
       >
-        <Play className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || !isRunning}
-        tooltip="Stop"
-        tooltipSide="bottom"
-        aria-label={`Stop ${service.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(service, "stop");
-        }}
-      >
-        <Stop className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy}
-        tooltip="Restart"
-        tooltipSide="bottom"
-        aria-label={`Restart ${service.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(service, "restart");
-        }}
-      >
-        <Restart className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy}
-        tooltip="Rebuild"
-        tooltipSide="bottom"
-        aria-label={`Rebuild ${service.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction(service, "rebuild");
-        }}
-      >
-        <ImageIcon className="size-3.5" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-xs"
-        disabled={busy || !quickUrl}
-        tooltip="Open service URL"
-        tooltipSide="bottom"
-        aria-label={`Open service URL for ${service.name}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (quickUrl) onOpenUrl(quickUrl);
-        }}
-      >
-        <OpenExternal className="size-3.5" />
-      </Button>
-    </div>
+        <More className="size-3.5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "up")}>
+          <Play />
+          Start
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy || !isRunning} onClick={() => onAction(service, "stop")}>
+          <Stop />
+          Stop
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "restart")}>
+          <Restart />
+          Restart
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy} onClick={() => onAction(service, "rebuild")}>
+          <ImageIcon />
+          Rebuild
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={busy || !quickUrl}
+          onClick={() => {
+            if (quickUrl) onOpenUrl(quickUrl);
+          }}
+        >
+          <OpenExternal />
+          Open service URL
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -575,9 +744,14 @@ function ComposeServiceRow({
   const quickUrl = getPublishedTcpUrl(service.ports);
 
   return (
-    <SidebarListItem
-      leading={<ImageIcon className="size-4 text-text-lighter" weight="duotone" />}
-      trailing={
+    <DockerResourceRow
+      title={service.name}
+      status={
+        <Badge variant={getComposeServiceVariant(service)} size="compact" className="capitalize">
+          {service.health ?? service.state}
+        </Badge>
+      }
+      actions={
         <ComposeServiceActions
           service={service}
           busy={busy}
@@ -592,14 +766,7 @@ function ComposeServiceRow({
           {service.ports ? ` · ${service.ports}` : ""}
         </>
       }
-    >
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate">{service.name}</span>
-        <Badge variant={getComposeServiceVariant(service)} size="compact" className="capitalize">
-          {service.health ?? service.state}
-        </Badge>
-      </span>
-    </SidebarListItem>
+    />
   );
 }
 
@@ -616,41 +783,36 @@ function ImageRow({
 }) {
   const label = getImageReference(image);
   return (
-    <SidebarListItem
-      leading={<ImageIcon className="size-4 text-text-lighter" weight="duotone" />}
-      trailing={
-        <div className="flex items-center gap-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={busy}
-            tooltip="Run image"
-            tooltipSide="bottom"
-            aria-label={`Run ${label}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onRun(image);
-            }}
+    <DockerResourceRow
+      title={label}
+      actions={
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                tooltip="Image actions"
+                tooltipSide="left"
+                aria-label={`Actions for ${label}`}
+              />
+            }
           >
-            <Play className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={busy}
-            tooltip="Remove image"
-            tooltipSide="bottom"
-            aria-label={`Remove ${label}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemove(image);
-            }}
-          >
-            <Trash className="size-3.5" />
-          </Button>
-        </div>
+            <More className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={busy} onClick={() => onRun(image)}>
+              <Play />
+              Run
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" disabled={busy} onClick={() => onRemove(image)}>
+              <Trash />
+              Remove
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
       description={
         <>
@@ -658,51 +820,49 @@ function ImageRow({
           {image.createdSince ? ` · ${image.createdSince}` : ""}
         </>
       }
-    >
-      {label}
-    </SidebarListItem>
+    />
   );
 }
 
 function VolumeRow({ volume }: { volume: DockerVolume }) {
   return (
-    <SidebarListItem
-      leading={<VolumeIcon className="size-4 text-text-lighter" weight="duotone" />}
+    <DockerResourceRow
+      title={volume.name}
       description={
         <>
           {volume.driver}
           {volume.mountpoint ? ` · ${volume.mountpoint}` : ""}
         </>
       }
-    >
-      {volume.name}
-    </SidebarListItem>
+    />
   );
 }
 
 function NetworkRow({ network }: { network: DockerNetwork }) {
   return (
-    <SidebarListItem
-      leading={<Network className="size-4 text-text-lighter" weight="duotone" />}
+    <DockerResourceRow
+      title={network.name}
       description={
         <>
           {network.driver}
           {network.scope ? ` · ${network.scope}` : ""}
         </>
       }
-    >
-      {network.name}
-    </SidebarListItem>
+    />
   );
 }
 
 export function DockerSidebar() {
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
+  const handleFileSelect = useFileSystemStore((state) => state.handleFileSelect);
   const [inventory, setInventory] = useState<DockerInventory>(emptyInventory);
   const [composeProject, setComposeProject] = useState<DockerComposeProject>(emptyComposeProject);
   const [projectConfig, setProjectConfig] = useState<DockerProjectConfig>(emptyProjectConfig);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<DockerTab>("resources");
+  const [containerFilter, setContainerFilter] = useState<DockerContainerFilter>("all");
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<DockerSection>>(() => new Set());
   const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
   const [logLines, setLogLines] = useState<DockerLogLine[]>([]);
   const [logQuery, setLogQuery] = useState("");
@@ -722,6 +882,7 @@ export function DockerSidebar() {
   const [busyDevContainerPath, setBusyDevContainerPath] = useState<string | null>(null);
   const [busyImageId, setBusyImageId] = useState<string | null>(null);
   const [busyPruneTarget, setBusyPruneTarget] = useState<DockerPruneTarget | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [composeError, setComposeError] = useState<string | null>(null);
   const [projectConfigError, setProjectConfigError] = useState<string | null>(null);
@@ -755,17 +916,12 @@ export function DockerSidebar() {
     image: "",
     target: "",
   });
-  const [envDraft, setEnvDraft] = useState({
-    path: "",
-    relativePath: "",
-    content: "",
-  });
-
   const loadInventory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const nextInventory = await getDockerInventory();
+      setConnectionError(null);
       setInventory(nextInventory);
       setSelectedContainerId((current) => {
         if (current && nextInventory.containers.some((container) => container.id === current)) {
@@ -774,7 +930,7 @@ export function DockerSidebar() {
         return nextInventory.containers[0]?.id ?? null;
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : String(loadError));
+      setConnectionError(getErrorMessage(loadError));
       setInventory(emptyInventory);
       setSelectedContainerId(null);
       setLogLines([]);
@@ -824,10 +980,37 @@ export function DockerSidebar() {
   }, [loadProjectConfig]);
 
   const refreshDocker = useCallback(() => {
-    void loadInventory();
-    void loadComposeProject();
+    if (activeTab === "resources" || activeTab === "registry") {
+      void loadInventory();
+      return;
+    }
+    if (activeTab === "compose") {
+      void loadComposeProject();
+      void loadInventory();
+      return;
+    }
     void loadProjectConfig();
-  }, [loadComposeProject, loadInventory, loadProjectConfig]);
+  }, [activeTab, loadComposeProject, loadInventory, loadProjectConfig]);
+
+  const markDockerUnavailable = useCallback((message: string) => {
+    setConnectionError(message);
+    setError(null);
+    setInventory(emptyInventory);
+    setSelectedContainerId(null);
+    setLogLines([]);
+  }, []);
+
+  const handleDockerFailure = useCallback(
+    (failure: unknown) => {
+      const message = getErrorMessage(failure);
+      if (isDockerConnectionError(message)) {
+        markDockerUnavailable(message);
+        return;
+      }
+      setError(message);
+    },
+    [markDockerUnavailable],
+  );
 
   const selectedContainer = useMemo(
     () => inventory.containers.find((container) => container.id === selectedContainerId) ?? null,
@@ -945,8 +1128,11 @@ export function DockerSidebar() {
   }, [selectedContainer]);
 
   const normalizedQuery = query.trim().toLowerCase();
-  const filteredContainers = inventory.containers.filter((container) =>
-    includesQuery(
+  const filteredContainers = inventory.containers.filter((container) => {
+    if (containerFilter === "running" && container.state !== "running") return false;
+    if (containerFilter === "stopped" && container.state === "running") return false;
+
+    return includesQuery(
       [
         container.name,
         container.image,
@@ -956,8 +1142,8 @@ export function DockerSidebar() {
         container.size,
       ],
       normalizedQuery,
-    ),
-  );
+    );
+  });
   const filteredImages = inventory.images.filter((image) =>
     includesQuery([image.repository, image.tag, image.id, image.size], normalizedQuery),
   );
@@ -1001,7 +1187,7 @@ export function DockerSidebar() {
       await runDockerContainerAction(container.id, action, action === "remove");
       await loadInventory();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : String(actionError));
+      handleDockerFailure(actionError);
     } finally {
       setBusyContainerId(null);
     }
@@ -1034,7 +1220,9 @@ export function DockerSidebar() {
       await loadComposeProject();
       await loadInventory();
     } catch (actionError) {
-      setComposeError(actionError instanceof Error ? actionError.message : String(actionError));
+      const message = getErrorMessage(actionError);
+      if (isDockerConnectionError(message)) markDockerUnavailable(message);
+      setComposeError(message);
     } finally {
       setBusyComposeService(null);
     }
@@ -1109,7 +1297,7 @@ export function DockerSidebar() {
       setDialogMode(null);
       await loadInventory();
     } catch (buildError) {
-      setError(buildError instanceof Error ? buildError.message : String(buildError));
+      handleDockerFailure(buildError);
     } finally {
       setBusyImageId(null);
     }
@@ -1137,7 +1325,7 @@ export function DockerSidebar() {
       setDialogMode(null);
       await loadInventory();
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : String(runError));
+      handleDockerFailure(runError);
     } finally {
       setBusyImageId(null);
     }
@@ -1256,24 +1444,18 @@ export function DockerSidebar() {
       await loadComposeProject();
       await loadInventory();
     } catch (actionError) {
-      setComposeError(actionError instanceof Error ? actionError.message : String(actionError));
+      const message = getErrorMessage(actionError);
+      if (isDockerConnectionError(message)) markDockerUnavailable(message);
+      setComposeError(message);
     } finally {
       setBusyComposeService(null);
     }
   };
 
   const openEnvFile = async (envFile: DockerEnvFile) => {
-    if (!rootFolderPath) return;
-
     setProjectConfigError(null);
     try {
-      const content = await readDockerEnvFile(rootFolderPath, envFile.path);
-      setEnvDraft({
-        path: envFile.path,
-        relativePath: envFile.relativePath,
-        content,
-      });
-      setDialogMode("env");
+      await handleFileSelect(envFile.path, false);
     } catch (readError) {
       setProjectConfigError(readError instanceof Error ? readError.message : String(readError));
     }
@@ -1293,29 +1475,11 @@ export function DockerSidebar() {
 
     setProjectConfigError(null);
     try {
-      const { file, content } = await openDockerEnvFile(rootFolderPath, envPath);
-      setEnvDraft({
-        path: file.path,
-        relativePath: file.relativePath,
-        content,
-      });
+      const { file } = await openDockerEnvFile(rootFolderPath, envPath);
       await loadProjectConfig();
-      setDialogMode("env");
+      await handleFileSelect(file.path, false);
     } catch (openError) {
       setProjectConfigError(openError instanceof Error ? openError.message : String(openError));
-    }
-  };
-
-  const handleSaveEnvFile = async () => {
-    if (!rootFolderPath || !envDraft.path) return;
-
-    setProjectConfigError(null);
-    try {
-      await writeDockerEnvFile(rootFolderPath, envDraft.path, envDraft.content);
-      setDialogMode(null);
-      await loadProjectConfig();
-    } catch (writeError) {
-      setProjectConfigError(writeError instanceof Error ? writeError.message : String(writeError));
     }
   };
 
@@ -1360,7 +1524,9 @@ export function DockerSidebar() {
       await loadInventory();
       await loadComposeProject();
     } catch (openError) {
-      setProjectConfigError(openError instanceof Error ? openError.message : String(openError));
+      const message = getErrorMessage(openError);
+      if (isDockerConnectionError(message)) markDockerUnavailable(message);
+      setProjectConfigError(message);
     } finally {
       setBusyDevContainerPath(null);
     }
@@ -1375,7 +1541,7 @@ export function DockerSidebar() {
       setDockerOutput(output.trim() || `Removed ${getImageReference(image)}.`);
       await loadInventory();
     } catch (removeError) {
-      setError(removeError instanceof Error ? removeError.message : String(removeError));
+      handleDockerFailure(removeError);
     } finally {
       setBusyImageId(null);
     }
@@ -1399,7 +1565,7 @@ export function DockerSidebar() {
       await loadInventory();
       await loadComposeProject();
     } catch (pruneError) {
-      setError(pruneError instanceof Error ? pruneError.message : String(pruneError));
+      handleDockerFailure(pruneError);
     } finally {
       setBusyPruneTarget(null);
     }
@@ -1627,6 +1793,12 @@ export function DockerSidebar() {
     }
   };
 
+  const handleRegistryFailure = (failure: unknown) => {
+    const message = getErrorMessage(failure);
+    if (isDockerConnectionError(message)) markDockerUnavailable(message);
+    setRegistryError(message);
+  };
+
   const handleRegistrySearch = async () => {
     const query = registryQuery.trim();
     if (!query) return;
@@ -1637,7 +1809,7 @@ export function DockerSidebar() {
       const results = await searchDockerRegistry(query, 25);
       setRegistryResults(results);
     } catch (searchError) {
-      setRegistryError(searchError instanceof Error ? searchError.message : String(searchError));
+      handleRegistryFailure(searchError);
       setRegistryResults([]);
     } finally {
       setIsRegistryBusy(false);
@@ -1659,7 +1831,7 @@ export function DockerSidebar() {
       setRegistryOutput(output.trim() || "Docker registry login completed.");
       setRegistryDraft((current) => ({ ...current, password: "" }));
     } catch (loginError) {
-      setRegistryError(loginError instanceof Error ? loginError.message : String(loginError));
+      handleRegistryFailure(loginError);
     } finally {
       setIsRegistryBusy(false);
     }
@@ -1677,7 +1849,7 @@ export function DockerSidebar() {
       setRegistryOutput(output.trim() || `Pulled ${imageName}.`);
       await loadInventory();
     } catch (pullError) {
-      setRegistryError(pullError instanceof Error ? pullError.message : String(pullError));
+      handleRegistryFailure(pullError);
     } finally {
       setIsRegistryBusy(false);
     }
@@ -1694,7 +1866,7 @@ export function DockerSidebar() {
       const output = await pushDockerRegistryImage(imageName);
       setRegistryOutput(output.trim() || `Pushed ${imageName}.`);
     } catch (pushError) {
-      setRegistryError(pushError instanceof Error ? pushError.message : String(pushError));
+      handleRegistryFailure(pushError);
     } finally {
       setIsRegistryBusy(false);
     }
@@ -1713,82 +1885,169 @@ export function DockerSidebar() {
       setRegistryOutput(output.trim() || `Tagged ${source} as ${target}.`);
       await loadInventory();
     } catch (tagError) {
-      setRegistryError(tagError instanceof Error ? tagError.message : String(tagError));
+      handleRegistryFailure(tagError);
     } finally {
       setIsRegistryBusy(false);
     }
   };
 
-  const sectionTabs = useMemo(
-    (): Array<{ id: DockerTab; label: string; icon: ReactNode }> => [
-      {
-        id: "resources",
-        label: "Resources",
-        icon: <ContainerIcon size={16} weight="duotone" />,
-      },
-      { id: "compose", label: "Compose", icon: <Restart size={16} /> },
-      { id: "project", label: "Project", icon: <FolderIcon size={16} weight="duotone" /> },
-      { id: "registry", label: "Registry", icon: <Upload size={16} /> },
-    ],
-    [],
-  );
+  const isDockerDaemonReady = !isLoading && connectionError === null;
+  const isActiveTabLoading =
+    activeTab === "resources" || activeTab === "registry"
+      ? isLoading
+      : activeTab === "compose"
+        ? isComposeLoading
+        : isProjectConfigLoading;
 
-  const renderSection = (section: DockerSection, rows: ReactNode, _filteredCount?: number) => {
+  const renderSection = (section: DockerSection, rows: ReactNode, filteredCount?: number) => {
     const title = section === "cleanup" ? "Cleanup" : section[0].toUpperCase() + section.slice(1);
     const isVisible = dockerTabSections[activeTab].includes(section);
+    const isCollapsed = collapsedSections.has(section);
+    const hasSectionHeader = activeTab === "resources";
 
     return (
-      <div key={section} className={cn("min-w-0", !isVisible && "hidden")}>
-        <SidebarSectionLabel className="px-1 ui-text-sm font-medium text-text">
-          {title}
-        </SidebarSectionLabel>
-        <div className="space-y-0.5">{rows}</div>
-      </div>
+      <section
+        key={section}
+        className={cn("min-w-0", hasSectionHeader && "pt-2 first:pt-0", !isVisible && "hidden")}
+      >
+        {hasSectionHeader ? (
+          <SidebarSectionHeader
+            variant="surface"
+            expanded={!isCollapsed}
+            count={filteredCount}
+            onToggle={() =>
+              setCollapsedSections((current) => {
+                const next = new Set(current);
+                if (next.has(section)) {
+                  next.delete(section);
+                } else {
+                  next.add(section);
+                }
+                return next;
+              })
+            }
+          >
+            {title}
+          </SidebarSectionHeader>
+        ) : null}
+        {!hasSectionHeader || !isCollapsed ? <div className="space-y-0.5">{rows}</div> : null}
+      </section>
     );
   };
 
   return (
     <>
-      <SidebarPanel className="font-sans select-none gap-2 p-2">
-        <SidebarSectionSwitcher
-          items={sectionTabs}
+      <SidebarPanel className="font-sans select-none">
+        <SidebarTitleBar title="Docker">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            active={isFilterVisible || query.length > 0}
+            tooltip="Search and filter"
+            tooltipSide="bottom"
+            aria-label="Search Docker resources"
+            onClick={() => setIsFilterVisible((visible) => !visible)}
+          >
+            <Filter />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  active={containerFilter !== "all"}
+                  tooltip="View options"
+                  tooltipSide="bottom"
+                  aria-label="Docker view options"
+                />
+              }
+            >
+              <Sliders />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup
+                value={containerFilter}
+                onValueChange={(value) => setContainerFilter(value as DockerContainerFilter)}
+              >
+                <DropdownMenuLabel>Containers</DropdownMenuLabel>
+                <DropdownMenuRadioItem value="all" closeOnClick>
+                  All
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="running" closeOnClick>
+                  Running
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="stopped" closeOnClick>
+                  Stopped
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={isActiveTabLoading} onClick={refreshDocker}>
+                {isActiveTabLoading ? <Spinner compact /> : <Refresh />}
+                Refresh
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarTitleBar>
+
+        <SidebarTabBar
+          items={dockerTabs}
           value={activeTab}
+          appearance="grouped"
           onChange={(tab) => setActiveTab(tab as DockerTab)}
         />
 
-        <SidebarSearchFilterRow
-          value={query}
-          onChange={setQuery}
-          searchIcon={Search}
-          placeholder="Search Docker"
-          actions={
-            <SidebarHeaderIconButton
-              onClick={refreshDocker}
-              disabled={isLoading || isComposeLoading || isProjectConfigLoading}
-              tooltip="Refresh"
-              tooltipSide="bottom"
-              aria-label="Refresh Docker resources"
-            >
-              {isLoading || isComposeLoading || isProjectConfigLoading ? (
-                <Spinner compact />
-              ) : (
-                <Refresh />
-              )}
-            </SidebarHeaderIconButton>
-          }
-        />
-
-        {error ? (
-          <div className="border-y border-border/60 bg-error/8 px-2 py-1.5 ui-text-sm text-error">
-            {error}
-          </div>
+        {isFilterVisible || query.length > 0 ? (
+          <SidebarToolbar>
+            <SearchField
+              autoFocus
+              value={query}
+              onChange={setQuery}
+              placeholder="Search Docker"
+              aria-label="Search Docker"
+              className="h-8 rounded-lg bg-surface/45"
+            />
+          </SidebarToolbar>
         ) : null}
 
-        {isLoading ? (
+        {activeTab === "resources" && error && !connectionError ? (
+          <DockerInlineError
+            title="Docker action failed"
+            error={error}
+            onDismiss={() => setError(null)}
+            className="rounded-none border-x-0"
+          />
+        ) : null}
+
+        {activeTab === "resources" && connectionError ? (
+          <DockerUnavailableState
+            error={connectionError}
+            isRetrying={isLoading}
+            onRetry={() => void loadInventory()}
+          />
+        ) : activeTab === "resources" && isLoading ? (
           <SidebarEmptyState className="flex-1">Loading Docker resources...</SidebarEmptyState>
+        ) : activeTab === "compose" && composeError ? (
+          <DockerUnavailableState
+            error={composeError}
+            title={
+              isDockerConnectionError(composeError) ? undefined : "Docker Compose is unavailable"
+            }
+            description={
+              isDockerConnectionError(composeError)
+                ? undefined
+                : "Athas couldn't load Compose services for this project."
+            }
+            isRetrying={isComposeLoading}
+            onRetry={() => void loadComposeProject()}
+          />
+        ) : activeTab === "compose" && isComposeLoading ? (
+          <SidebarEmptyState className="flex-1">Loading Docker Compose...</SidebarEmptyState>
         ) : (
           <>
-            <ScrollArea className="min-h-0 flex-1" contentClassName="space-y-2 p-1">
+            <ScrollArea className="min-h-0 flex-1" contentClassName="space-y-2 px-2 py-2">
               {renderSection(
                 "containers",
                 filteredContainers.length > 0 ? (
@@ -1806,69 +2065,62 @@ export function DockerSidebar() {
                     />
                   ))
                 ) : (
-                  <SidebarSectionLabel>No matching containers</SidebarSectionLabel>
+                  <SidebarSectionEmptyState>No matching containers</SidebarSectionEmptyState>
                 ),
                 filteredContainers.length,
               )}
               {renderSection(
                 "compose",
                 composeError ? (
-                  <SidebarSectionLabel>{composeError}</SidebarSectionLabel>
+                  <SidebarSectionEmptyState tone="error">{composeError}</SidebarSectionEmptyState>
                 ) : !rootFolderPath ? (
-                  <SidebarSectionLabel>
+                  <SidebarSectionEmptyState>
                     Open a workspace to inspect Compose services
-                  </SidebarSectionLabel>
+                  </SidebarSectionEmptyState>
                 ) : composeProject.files.length === 0 ? (
-                  <SidebarSectionLabel>No Compose files in this workspace</SidebarSectionLabel>
+                  <SidebarSectionEmptyState>
+                    No Compose files in this workspace
+                  </SidebarSectionEmptyState>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-2 px-2 py-1">
-                      <div className="min-w-0 truncate ui-text-sm text-text-lighter">
-                        {composeProject.files.map(fileName).join(", ")}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          disabled={busyComposeService !== null || composeEnvFilePaths.length === 0}
-                          tooltip={
-                            composeEnvFilePaths.length === 0
-                              ? "Add a project env file first"
-                              : "Start Compose with project env files"
-                          }
-                          tooltipSide="bottom"
-                          onClick={() => void handleComposeAction(null, "up", composeEnvFilePaths)}
-                        >
-                          <FileIcon className="size-3.5" />
-                          Env Up
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          disabled={busyComposeService !== null}
-                          onClick={() => void handleSaveComposePreset()}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          disabled={busyComposeService !== null}
-                          onClick={() => void handleComposeAction(null, "down")}
-                        >
-                          <Down className="size-3.5" />
-                          Down
-                        </Button>
-                      </div>
-                    </div>
+                    <DockerResourceRow
+                      title="Compose project"
+                      description={composeProject.files.map(fileName).join(", ")}
+                      status={
+                        <Badge variant="muted" size="compact">
+                          {composeProject.services.length} services
+                        </Badge>
+                      }
+                      actions={
+                        <DockerActionMenu
+                          label="Compose project actions"
+                          actions={[
+                            {
+                              label: "Start with env files",
+                              icon: <FileIcon />,
+                              disabled:
+                                busyComposeService !== null || composeEnvFilePaths.length === 0,
+                              onSelect: () =>
+                                void handleComposeAction(null, "up", composeEnvFilePaths),
+                            },
+                            {
+                              label: "Save preset",
+                              disabled: busyComposeService !== null,
+                              onSelect: () => void handleSaveComposePreset(),
+                            },
+                            {
+                              label: "Stop project",
+                              icon: <Down />,
+                              disabled: busyComposeService !== null,
+                              separatorBefore: true,
+                              onSelect: () => void handleComposeAction(null, "down"),
+                            },
+                          ]}
+                        />
+                      }
+                    />
                     {composeOutput ? (
-                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                      <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
                         {composeOutput}
                       </div>
                     ) : null}
@@ -1885,11 +2137,11 @@ export function DockerSidebar() {
                         />
                       ))
                     ) : (
-                      <SidebarSectionLabel>
+                      <SidebarSectionEmptyState>
                         {composeProject.services.length > 0
                           ? "No matching Compose services"
                           : "No Compose services found"}
-                      </SidebarSectionLabel>
+                      </SidebarSectionEmptyState>
                     )}
                   </>
                 ),
@@ -1898,389 +2150,346 @@ export function DockerSidebar() {
               {renderSection(
                 "project",
                 !rootFolderPath ? (
-                  <SidebarSectionLabel>
+                  <SidebarSectionEmptyState>
                     Open a workspace to manage Docker presets
-                  </SidebarSectionLabel>
+                  </SidebarSectionEmptyState>
                 ) : isProjectConfigLoading ? (
-                  <SidebarSectionLabel>Loading project Docker config...</SidebarSectionLabel>
-                ) : projectConfigError ? (
-                  <SidebarSectionLabel>{projectConfigError}</SidebarSectionLabel>
-                ) : projectConfigItemCount === 0 ? (
-                  <div className="space-y-1 px-2 py-1">
-                    <SidebarSectionLabel>
-                      No env files or presets in this workspace
-                    </SidebarSectionLabel>
-                    <div className="flex flex-wrap items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm"
-                        onClick={() => void handleOpenEnvFile()}
-                      >
-                        <FileIcon className="size-3.5" />
-                        Env
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm"
-                        onClick={() => void handleSaveDebugPreset()}
-                      >
-                        <Bug className="size-3.5" />
-                        Save Debug
-                      </Button>
-                    </div>
-                  </div>
+                  <SidebarSectionEmptyState role="status" aria-live="polite">
+                    Loading project Docker config...
+                  </SidebarSectionEmptyState>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-2 px-2 py-1">
-                      <div className="min-w-0 truncate ui-text-sm text-text-lighter">
-                        Project Docker settings
+                    {projectConfigError ? (
+                      <DockerInlineError
+                        title="Project Docker action failed"
+                        error={projectConfigError}
+                        onDismiss={() => setProjectConfigError(null)}
+                        className="mx-2 mb-1 w-auto"
+                      />
+                    ) : null}
+                    {connectionError ? (
+                      <DockerCapabilityNotice>
+                        Docker is offline. Project files and presets are still available.
+                      </DockerCapabilityNotice>
+                    ) : null}
+                    {projectConfigItemCount === 0 ? (
+                      <div className="space-y-1 px-2 py-1">
+                        <SidebarSectionEmptyState className="px-0">
+                          No env files or presets in this workspace
+                        </SidebarSectionEmptyState>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="h-6 px-1.5 ui-text-sm"
+                            onClick={() => void handleOpenEnvFile()}
+                          >
+                            <FileIcon className="size-3.5" />
+                            Env
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="h-6 px-1.5 ui-text-sm"
+                            onClick={() => void handleSaveDebugPreset()}
+                          >
+                            <Bug className="size-3.5" />
+                            Save Debug
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          onClick={() => void handleOpenEnvFile()}
+                    ) : (
+                      <>
+                        <SidebarSectionLabel
+                          trailing={
+                            <DockerActionMenu
+                              label="Project Docker actions"
+                              actions={[
+                                {
+                                  label: "Open env file",
+                                  icon: <FileIcon />,
+                                  onSelect: () => void handleOpenEnvFile(),
+                                },
+                                {
+                                  label: "Save debug preset",
+                                  icon: <Bug />,
+                                  onSelect: () => void handleSaveDebugPreset(),
+                                },
+                              ]}
+                            />
+                          }
                         >
-                          <FileIcon className="size-3.5" />
-                          Env
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          onClick={() => void handleSaveDebugPreset()}
-                        >
-                          <Bug className="size-3.5" />
-                          Save Debug
-                        </Button>
-                      </div>
-                    </div>
-                    {projectConfig.devContainers.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Dev Containers</SidebarSectionLabel>
-                        {projectConfig.devContainers.map((devContainer) => (
-                          <SidebarListItem
-                            key={devContainer.configPath}
-                            leading={
-                              <ContainerIcon
-                                className="size-4 text-text-lighter"
-                                weight="duotone"
-                              />
-                            }
-                            trailing={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="xs"
-                                className="h-6 px-1.5 ui-text-sm"
-                                disabled={
-                                  busyDevContainerPath !== null ||
-                                  devContainer.kind === "unsupported"
+                          Workspace
+                        </SidebarSectionLabel>
+                        {projectConfig.devContainers.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Dev Containers</SidebarSectionLabel>
+                            {projectConfig.devContainers.map((devContainer) => (
+                              <DockerResourceRow
+                                key={devContainer.configPath}
+                                title={devContainer.name}
+                                description={
+                                  <>
+                                    {devContainer.kind}
+                                    {devContainer.service ? ` · ${devContainer.service}` : ""}
+                                    {devContainer.image ? ` · ${devContainer.image}` : ""}
+                                    {` · ${devContainer.relativePath}`}
+                                  </>
                                 }
-                                onClick={() => void handleOpenDevContainer(devContainer)}
-                              >
-                                {busyDevContainerPath === devContainer.configPath ? (
-                                  <Spinner compact />
-                                ) : (
-                                  "Open"
-                                )}
-                              </Button>
-                            }
-                          >
-                            <ResourceTitle>{devContainer.name}</ResourceTitle>
-                            <ResourceMeta>
-                              {devContainer.kind}
-                              {devContainer.service ? ` · ${devContainer.service}` : ""}
-                              {devContainer.image ? ` · ${devContainer.image}` : ""}
-                              {devContainer.forwardPorts.length > 0
-                                ? ` · ports ${devContainer.forwardPorts.join(", ")}`
-                                : ""}
-                            </ResourceMeta>
-                            {devContainer.containerEnv.length > 0 ||
-                            devContainer.workspaceMount ||
-                            devContainer.mounts.length > 0 ||
-                            devContainer.onCreateCommand ||
-                            devContainer.postCreateCommand ||
-                            devContainer.postStartCommand ||
-                            devContainer.postAttachCommand ? (
-                              <ResourceMeta>
-                                {[
-                                  devContainer.containerEnv.length > 0
-                                    ? `${devContainer.containerEnv.length} env`
-                                    : null,
-                                  devContainer.mounts.length > 0
-                                    ? `${devContainer.mounts.length} mounts`
-                                    : null,
-                                  devContainer.workspaceMount ? "workspaceMount" : null,
-                                  devContainer.onCreateCommand ? "onCreate" : null,
-                                  devContainer.postCreateCommand ? "postCreate" : null,
-                                  devContainer.postStartCommand ? "postStart" : null,
-                                  devContainer.postAttachCommand ? "postAttach" : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                              </ResourceMeta>
-                            ) : null}
-                            <ResourceMeta>{devContainer.relativePath}</ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
-                    {projectConfig.workspaceDebugPresets.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Launch configs</SidebarSectionLabel>
-                        {projectConfig.workspaceDebugPresets.map((preset) => (
-                          <SidebarListItem
-                            key={`${preset.source}-${preset.name}`}
-                            leading={<Bug className="size-4 text-text-lighter" weight="duotone" />}
-                            trailing={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="xs"
-                                className="h-6 px-1.5 ui-text-sm"
-                                onClick={() => handleRunDebugPreset(preset)}
-                              >
-                                Run
-                              </Button>
-                            }
-                          >
-                            <ResourceTitle>{preset.name}</ResourceTitle>
-                            <ResourceMeta>
-                              {preset.command}
-                              {preset.workdir ? ` · ${preset.workdir}` : ""}
-                            </ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
-                    {projectConfig.debugPresets.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Debug presets</SidebarSectionLabel>
-                        {projectConfig.debugPresets.map((preset) => (
-                          <SidebarListItem
-                            key={preset.name}
-                            leading={<Bug className="size-4 text-text-lighter" weight="duotone" />}
-                            trailing={
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="xs"
-                                  className="h-6 px-1.5 ui-text-sm"
-                                  onClick={() => handleRunDebugPreset(preset)}
-                                >
-                                  Run
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  tooltip="Delete preset"
-                                  tooltipSide="left"
-                                  aria-label={`Delete ${preset.name}`}
-                                  onClick={() => void handleDeletePreset("debug", preset.name)}
-                                >
-                                  <Trash className="size-3.5" />
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <ResourceTitle>{preset.name}</ResourceTitle>
-                            <ResourceMeta>
-                              {preset.command}
-                              {preset.workdir ? ` · ${preset.workdir}` : ""}
-                            </ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
-                    {projectConfig.envFiles.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Env files</SidebarSectionLabel>
-                        {projectConfig.envFiles.map((envFile) => (
-                          <SidebarListItem
-                            key={envFile.path}
-                            leading={
-                              <FileIcon className="size-4 text-text-lighter" weight="duotone" />
-                            }
-                            trailing={
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="xs"
-                                  className="h-6 px-1.5 ui-text-sm"
-                                  onClick={() => void openEnvFile(envFile)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  tooltip="Delete env file"
-                                  tooltipSide="left"
-                                  aria-label={`Delete ${envFile.relativePath}`}
-                                  onClick={() => void handleDeleteEnvFile(envFile)}
-                                >
-                                  <Trash className="size-3.5" />
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <ResourceTitle>{envFile.relativePath}</ResourceTitle>
-                            <ResourceMeta>
-                              {envFile.variableCount} variables
-                              {envFile.keys.length > 0
-                                ? ` · ${envFile.keys.slice(0, 3).join(", ")}`
-                                : ""}
-                            </ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
-                    {projectConfig.buildPresets.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Build presets</SidebarSectionLabel>
-                        {projectConfig.buildPresets.map((preset) => (
-                          <SidebarListItem
-                            key={preset.name}
-                            leading={
-                              <ImageIcon className="size-4 text-text-lighter" weight="duotone" />
-                            }
-                            trailing={
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="xs"
-                                  className="h-6 px-1.5 ui-text-sm"
-                                  onClick={() => applyBuildPreset(preset)}
-                                >
-                                  Use
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  tooltip="Delete preset"
-                                  tooltipSide="left"
-                                  aria-label={`Delete ${preset.name}`}
-                                  onClick={() => void handleDeletePreset("build", preset.name)}
-                                >
-                                  <Trash className="size-3.5" />
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <ResourceTitle>{preset.name}</ResourceTitle>
-                            <ResourceMeta>{preset.tag || preset.contextPath}</ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
-                    {projectConfig.runPresets.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Run presets</SidebarSectionLabel>
-                        {projectConfig.runPresets.map((preset) => (
-                          <SidebarListItem
-                            key={preset.name}
-                            leading={
-                              <ContainerIcon
-                                className="size-4 text-text-lighter"
-                                weight="duotone"
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${devContainer.name}`}
+                                    actions={[
+                                      {
+                                        label:
+                                          busyDevContainerPath === devContainer.configPath
+                                            ? "Opening..."
+                                            : "Open",
+                                        icon:
+                                          busyDevContainerPath === devContainer.configPath ? (
+                                            <Spinner compact />
+                                          ) : (
+                                            <OpenExternal />
+                                          ),
+                                        disabled:
+                                          !isDockerDaemonReady ||
+                                          busyDevContainerPath !== null ||
+                                          devContainer.kind === "unsupported",
+                                        onSelect: () => void handleOpenDevContainer(devContainer),
+                                      },
+                                    ]}
+                                  />
+                                }
                               />
-                            }
-                            trailing={
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="xs"
-                                  className="h-6 px-1.5 ui-text-sm"
-                                  onClick={() => applyRunPreset(preset)}
-                                >
-                                  Use
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  tooltip="Delete preset"
-                                  tooltipSide="left"
-                                  aria-label={`Delete ${preset.name}`}
-                                  onClick={() => void handleDeletePreset("run", preset.name)}
-                                >
-                                  <Trash className="size-3.5" />
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <ResourceTitle>{preset.name}</ResourceTitle>
-                            <ResourceMeta>
-                              {preset.image}
-                              {preset.envFiles.length > 0 ? " · env file" : ""}
-                            </ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
-                    {projectConfig.composePresets.length > 0 ? (
-                      <div className="space-y-0.5">
-                        <SidebarSectionLabel>Compose presets</SidebarSectionLabel>
-                        {projectConfig.composePresets.map((preset) => (
-                          <SidebarListItem
-                            key={preset.name}
-                            leading={
-                              <Restart className="size-4 text-text-lighter" weight="duotone" />
-                            }
-                            trailing={
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="xs"
-                                  className="h-6 px-1.5 ui-text-sm"
-                                  disabled={busyComposeService !== null}
-                                  onClick={() => void handleRunComposePreset(preset)}
-                                >
-                                  {busyComposeService === `preset:${preset.name}` ? (
-                                    <Spinner compact />
-                                  ) : (
-                                    "Run"
-                                  )}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  tooltip="Delete preset"
-                                  tooltipSide="left"
-                                  aria-label={`Delete ${preset.name}`}
-                                  onClick={() => void handleDeletePreset("compose", preset.name)}
-                                >
-                                  <Trash className="size-3.5" />
-                                </Button>
-                              </div>
-                            }
-                          >
-                            <ResourceTitle>{preset.name}</ResourceTitle>
-                            <ResourceMeta>
-                              {preset.action}
-                              {preset.service ? ` · ${preset.service}` : ""}
-                            </ResourceMeta>
-                          </SidebarListItem>
-                        ))}
-                      </div>
-                    ) : null}
+                            ))}
+                          </div>
+                        ) : null}
+                        {projectConfig.workspaceDebugPresets.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Launch configs</SidebarSectionLabel>
+                            {projectConfig.workspaceDebugPresets.map((preset) => (
+                              <DockerResourceRow
+                                key={`${preset.source}-${preset.name}`}
+                                title={preset.name}
+                                description={
+                                  <>
+                                    {preset.command}
+                                    {preset.workdir ? ` · ${preset.workdir}` : ""}
+                                  </>
+                                }
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${preset.name}`}
+                                    actions={[
+                                      {
+                                        label: "Run",
+                                        icon: <Play />,
+                                        disabled: !isDockerDaemonReady,
+                                        onSelect: () => handleRunDebugPreset(preset),
+                                      },
+                                    ]}
+                                  />
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                        {projectConfig.debugPresets.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Debug presets</SidebarSectionLabel>
+                            {projectConfig.debugPresets.map((preset) => (
+                              <DockerResourceRow
+                                key={preset.name}
+                                title={preset.name}
+                                description={
+                                  <>
+                                    {preset.command}
+                                    {preset.workdir ? ` · ${preset.workdir}` : ""}
+                                  </>
+                                }
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${preset.name}`}
+                                    actions={[
+                                      {
+                                        label: "Run",
+                                        icon: <Play />,
+                                        disabled: !isDockerDaemonReady,
+                                        onSelect: () => handleRunDebugPreset(preset),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        icon: <Trash />,
+                                        destructive: true,
+                                        separatorBefore: true,
+                                        onSelect: () =>
+                                          void handleDeletePreset("debug", preset.name),
+                                      },
+                                    ]}
+                                  />
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                        {projectConfig.envFiles.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Env files</SidebarSectionLabel>
+                            {projectConfig.envFiles.map((envFile) => (
+                              <DockerResourceRow
+                                key={envFile.path}
+                                title={
+                                  <>
+                                    <FileIcon className="size-3.5 shrink-0 text-subtle-foreground" />
+                                    {envFile.relativePath}
+                                  </>
+                                }
+                                description={`${envFile.variableCount} ${
+                                  envFile.variableCount === 1 ? "variable" : "variables"
+                                }`}
+                                onClick={() => void openEnvFile(envFile)}
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${envFile.relativePath}`}
+                                    actions={[
+                                      {
+                                        label: "Open",
+                                        icon: <FileIcon />,
+                                        onSelect: () => void openEnvFile(envFile),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        icon: <Trash />,
+                                        destructive: true,
+                                        separatorBefore: true,
+                                        onSelect: () => void handleDeleteEnvFile(envFile),
+                                      },
+                                    ]}
+                                  />
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                        {projectConfig.buildPresets.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Build presets</SidebarSectionLabel>
+                            {projectConfig.buildPresets.map((preset) => (
+                              <DockerResourceRow
+                                key={preset.name}
+                                title={preset.name}
+                                description={preset.tag || preset.contextPath}
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${preset.name}`}
+                                    actions={[
+                                      {
+                                        label: "Use preset",
+                                        icon: <ImageIcon />,
+                                        onSelect: () => applyBuildPreset(preset),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        icon: <Trash />,
+                                        destructive: true,
+                                        separatorBefore: true,
+                                        onSelect: () =>
+                                          void handleDeletePreset("build", preset.name),
+                                      },
+                                    ]}
+                                  />
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                        {projectConfig.runPresets.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Run presets</SidebarSectionLabel>
+                            {projectConfig.runPresets.map((preset) => (
+                              <DockerResourceRow
+                                key={preset.name}
+                                title={preset.name}
+                                description={
+                                  <>
+                                    {preset.image}
+                                    {preset.envFiles.length > 0 ? " · env file" : ""}
+                                  </>
+                                }
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${preset.name}`}
+                                    actions={[
+                                      {
+                                        label: "Use preset",
+                                        icon: <Play />,
+                                        onSelect: () => applyRunPreset(preset),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        icon: <Trash />,
+                                        destructive: true,
+                                        separatorBefore: true,
+                                        onSelect: () => void handleDeletePreset("run", preset.name),
+                                      },
+                                    ]}
+                                  />
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                        {projectConfig.composePresets.length > 0 ? (
+                          <div className="space-y-0.5">
+                            <SidebarSectionLabel>Compose presets</SidebarSectionLabel>
+                            {projectConfig.composePresets.map((preset) => (
+                              <DockerResourceRow
+                                key={preset.name}
+                                title={preset.name}
+                                description={
+                                  <>
+                                    {preset.action}
+                                    {preset.service ? ` · ${preset.service}` : ""}
+                                  </>
+                                }
+                                actions={
+                                  <DockerActionMenu
+                                    label={`Actions for ${preset.name}`}
+                                    actions={[
+                                      {
+                                        label:
+                                          busyComposeService === `preset:${preset.name}`
+                                            ? "Running..."
+                                            : "Run",
+                                        icon:
+                                          busyComposeService === `preset:${preset.name}` ? (
+                                            <Spinner compact />
+                                          ) : (
+                                            <Play />
+                                          ),
+                                        disabled:
+                                          !isDockerDaemonReady || busyComposeService !== null,
+                                        onSelect: () => void handleRunComposePreset(preset),
+                                      },
+                                      {
+                                        label: "Delete",
+                                        icon: <Trash />,
+                                        destructive: true,
+                                        separatorBefore: true,
+                                        onSelect: () =>
+                                          void handleDeletePreset("compose", preset.name),
+                                      },
+                                    ]}
+                                  />
+                                }
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </>
                 ),
                 projectConfigItemCount,
@@ -2289,7 +2498,7 @@ export function DockerSidebar() {
                 "images",
                 <>
                   <div className="flex items-center justify-between gap-2 px-2 py-1">
-                    <div className="min-w-0 truncate ui-text-sm text-text-lighter">
+                    <div className="min-w-0 truncate ui-text-sm text-subtle-foreground">
                       Build and run local images
                     </div>
                     <Button
@@ -2305,7 +2514,7 @@ export function DockerSidebar() {
                     </Button>
                   </div>
                   {dockerOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
                       {dockerOutput}
                     </div>
                   ) : null}
@@ -2320,7 +2529,7 @@ export function DockerSidebar() {
                       />
                     ))
                   ) : (
-                    <SidebarSectionLabel>No matching images</SidebarSectionLabel>
+                    <SidebarSectionEmptyState>No matching images</SidebarSectionEmptyState>
                   )}
                 </>,
                 filteredImages.length,
@@ -2328,32 +2537,40 @@ export function DockerSidebar() {
               {renderSection(
                 "registry",
                 <>
-                  <div className="space-y-1 px-2 py-1">
-                    <div className="flex items-center gap-1">
-                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-primary-bg px-1.5">
-                        <Search className="size-3.5 shrink-0 text-text-lighter" />
-                        <input
+                  {connectionError ? (
+                    <DockerCapabilityNotice>
+                      Search and login remain available. Start Docker to pull, push, or tag images.
+                    </DockerCapabilityNotice>
+                  ) : null}
+                  <div className="space-y-3 px-2 py-2">
+                    <div className="space-y-1">
+                      <SidebarSectionLabel className="h-5 px-0">Docker Hub</SidebarSectionLabel>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <SearchField
                           value={registryQuery}
-                          onChange={(event) => setRegistryQuery(event.target.value)}
+                          onChange={setRegistryQuery}
                           onKeyDown={(event) => {
                             if (event.key === "Enter") void handleRegistrySearch();
                           }}
-                          placeholder="Search Docker Hub"
-                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
+                          placeholder="Search images"
+                          aria-label="Search Docker Hub"
+                          size="xs"
+                          className="min-w-0 flex-1 rounded-lg"
                         />
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="xs"
+                          disabled={isRegistryBusy || !registryQuery.trim()}
+                          onClick={() => void handleRegistrySearch()}
+                        >
+                          {isRegistryBusy ? <Spinner compact /> : <Search />}
+                          Search
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="h-6 px-1.5 ui-text-sm"
-                        disabled={isRegistryBusy || !registryQuery.trim()}
-                        onClick={() => void handleRegistrySearch()}
-                      >
-                        {isRegistryBusy ? <Spinner compact /> : "Search"}
-                      </Button>
                     </div>
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="space-y-1">
+                      <SidebarSectionLabel className="h-5 px-0">Image actions</SidebarSectionLabel>
                       <Input
                         value={registryDraft.image}
                         onChange={(event) =>
@@ -2362,8 +2579,9 @@ export function DockerSidebar() {
                             image: event.target.value,
                           }))
                         }
-                        placeholder="image:tag"
+                        placeholder="Image, for example nginx:latest"
                         size="xs"
+                        className="w-full rounded-lg"
                       />
                       <Input
                         value={registryDraft.target}
@@ -2373,16 +2591,18 @@ export function DockerSidebar() {
                             target: event.target.value,
                           }))
                         }
-                        placeholder="target tag"
+                        placeholder="Target tag"
                         size="xs"
+                        className="w-full rounded-lg"
                       />
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-wrap items-center gap-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          disabled={isRegistryBusy || !registryDraft.image.trim()}
+                          disabled={
+                            isRegistryBusy || !isDockerDaemonReady || !registryDraft.image.trim()
+                          }
                           onClick={() => void handleRegistryPull(registryDraft.image)}
                         >
                           Pull
@@ -2391,8 +2611,9 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          disabled={isRegistryBusy || !registryDraft.image.trim()}
+                          disabled={
+                            isRegistryBusy || !isDockerDaemonReady || !registryDraft.image.trim()
+                          }
                           onClick={() => void handleRegistryPush()}
                         >
                           Push
@@ -2401,9 +2622,9 @@ export function DockerSidebar() {
                           type="button"
                           variant="ghost"
                           size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
                           disabled={
                             isRegistryBusy ||
+                            !isDockerDaemonReady ||
                             !registryDraft.image.trim() ||
                             !registryDraft.target.trim()
                           }
@@ -2413,7 +2634,8 @@ export function DockerSidebar() {
                         </Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-1">
+                    <div className="space-y-1">
+                      <SidebarSectionLabel className="h-5 px-0">Registry login</SidebarSectionLabel>
                       <Input
                         value={registryDraft.registry}
                         onChange={(event) =>
@@ -2422,8 +2644,9 @@ export function DockerSidebar() {
                             registry: event.target.value,
                           }))
                         }
-                        placeholder="registry"
+                        placeholder="Registry (optional)"
                         size="xs"
+                        className="w-full rounded-lg"
                       />
                       <Input
                         value={registryDraft.username}
@@ -2433,82 +2656,83 @@ export function DockerSidebar() {
                             username: event.target.value,
                           }))
                         }
-                        placeholder="username"
+                        placeholder="Username"
                         size="xs"
+                        className="w-full rounded-lg"
                       />
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={registryDraft.password}
-                          onChange={(event) =>
-                            setRegistryDraft((current) => ({
-                              ...current,
-                              password: event.target.value,
-                            }))
-                          }
-                          type="password"
-                          placeholder="password"
-                          size="xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="h-6 px-1.5 ui-text-sm"
-                          disabled={
-                            isRegistryBusy ||
-                            !registryDraft.username.trim() ||
-                            !registryDraft.password
-                          }
-                          onClick={() => void handleRegistryLogin()}
-                        >
-                          Login
-                        </Button>
-                      </div>
+                      <Input
+                        value={registryDraft.password}
+                        onChange={(event) =>
+                          setRegistryDraft((current) => ({
+                            ...current,
+                            password: event.target.value,
+                          }))
+                        }
+                        type="password"
+                        placeholder="Password"
+                        size="xs"
+                        className="w-full rounded-lg"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={
+                          isRegistryBusy ||
+                          !registryDraft.username.trim() ||
+                          !registryDraft.password
+                        }
+                        onClick={() => void handleRegistryLogin()}
+                      >
+                        Login
+                      </Button>
                     </div>
                   </div>
                   {registryError ? (
-                    <div className="mx-2 mb-1 whitespace-pre-wrap rounded border border-error/30 bg-error/8 px-2 py-1 ui-text-sm text-error">
-                      {registryError}
-                    </div>
+                    <DockerInlineError
+                      title="Registry action failed"
+                      error={registryError}
+                      onDismiss={() => setRegistryError(null)}
+                      className="mx-2 mb-1 w-auto"
+                    />
                   ) : null}
                   {registryOutput ? (
-                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                    <div className="ui-text-sm mx-2 mb-1 max-h-16 overflow-auto whitespace-pre-wrap rounded border border-border/60 bg-background px-2 py-1 font-mono text-subtle-foreground">
                       {registryOutput}
                     </div>
                   ) : null}
                   {registryResults.length > 0 ? (
                     registryResults.map((result) => (
-                      <SidebarListItem
+                      <DockerResourceRow
                         key={result.name}
-                        leading={
-                          <ImageIcon className="size-4 text-text-lighter" weight="duotone" />
+                        title={result.name}
+                        description={
+                          <>
+                            {result.starCount ? `${result.starCount} stars` : "Registry image"}
+                            {result.official === "[OK]" ? " · official" : ""}
+                            {result.automated === "[OK]" ? " · automated" : ""}
+                            {result.description ? ` · ${result.description}` : ""}
+                          </>
                         }
-                        trailing={
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="xs"
-                            className="h-6 px-1.5 ui-text-sm"
-                            disabled={isRegistryBusy}
-                            onClick={() => void handleRegistryPull(result.name)}
-                          >
-                            Pull
-                          </Button>
+                        actions={
+                          <DockerActionMenu
+                            label={`Actions for ${result.name}`}
+                            actions={[
+                              {
+                                label: "Pull",
+                                icon: <Download />,
+                                disabled: isRegistryBusy || !isDockerDaemonReady,
+                                onSelect: () => void handleRegistryPull(result.name),
+                              },
+                            ]}
+                          />
                         }
-                      >
-                        <ResourceTitle>{result.name}</ResourceTitle>
-                        <ResourceMeta>
-                          {result.starCount ? `${result.starCount} stars` : "Registry image"}
-                          {result.official === "[OK]" ? " · official" : ""}
-                          {result.automated === "[OK]" ? " · automated" : ""}
-                        </ResourceMeta>
-                        {result.description ? (
-                          <ResourceMeta>{result.description}</ResourceMeta>
-                        ) : null}
-                      </SidebarListItem>
+                      />
                     ))
                   ) : (
-                    <SidebarSectionLabel>Search, pull, push, tag, or log in</SidebarSectionLabel>
+                    <SidebarSectionEmptyState>
+                      Search Docker Hub to find images
+                    </SidebarSectionEmptyState>
                   )}
                 </>,
                 registryResults.length,
@@ -2550,7 +2774,7 @@ export function DockerSidebar() {
                 filteredVolumes.length > 0 ? (
                   filteredVolumes.map((volume) => <VolumeRow key={volume.name} volume={volume} />)
                 ) : (
-                  <SidebarSectionLabel>No matching volumes</SidebarSectionLabel>
+                  <SidebarSectionEmptyState>No matching volumes</SidebarSectionEmptyState>
                 ),
                 filteredVolumes.length,
               )}
@@ -2561,20 +2785,20 @@ export function DockerSidebar() {
                     <NetworkRow key={network.id} network={network} />
                   ))
                 ) : (
-                  <SidebarSectionLabel>No matching networks</SidebarSectionLabel>
+                  <SidebarSectionEmptyState>No matching networks</SidebarSectionEmptyState>
                 ),
                 filteredNetworks.length,
               )}
             </ScrollArea>
 
             {activeTab === "resources" && selectedContainer ? (
-              <div className="max-h-72 shrink-0 border-t border-border/70 bg-secondary-bg/35">
+              <div className="max-h-72 shrink-0 border-t border-border/70 bg-surface/35">
                 <div className="flex h-8 items-center justify-between gap-2 px-2">
                   <div className="min-w-0">
-                    <div className="truncate ui-text-sm font-medium text-text">
+                    <div className="truncate ui-text-sm font-medium text-foreground">
                       {selectedContainer.name}
                     </div>
-                    <div className="ui-text-sm text-text-lighter">
+                    <div className="ui-text-sm text-subtle-foreground">
                       {detailTab === "logs"
                         ? logStreamId
                           ? "Streaming logs"
@@ -2623,13 +2847,13 @@ export function DockerSidebar() {
                 {detailTab === "logs" ? (
                   <>
                     <div className="flex items-center gap-1 border-t border-border/50 px-2 py-1">
-                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-primary-bg px-1.5">
-                        <Search className="size-3.5 shrink-0 text-text-lighter" />
+                      <div className="flex min-w-0 flex-1 items-center gap-1 rounded border border-border/70 bg-background px-1.5">
+                        <Search className="size-3.5 shrink-0 text-subtle-foreground" />
                         <input
                           value={logQuery}
                           onChange={(event) => setLogQuery(event.target.value)}
                           placeholder="Search logs"
-                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-text outline-none placeholder:text-text-lighter"
+                          className="h-6 min-w-0 flex-1 bg-transparent ui-text-sm text-foreground outline-none placeholder:text-subtle-foreground"
                         />
                       </div>
                       {(["all", "stderr", "errors"] as DockerLogFilter[]).map((filter) => (
@@ -2646,7 +2870,7 @@ export function DockerSidebar() {
                       ))}
                     </div>
                     {logError ? (
-                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
+                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
                         {logError}
                       </div>
                     ) : null}
@@ -2657,14 +2881,16 @@ export function DockerSidebar() {
                             key={entry.id}
                             className={cn(
                               "whitespace-pre-wrap break-words",
-                              entry.stream === "stderr" ? "text-error" : "text-text-lighter",
+                              entry.stream === "stderr"
+                                ? "text-destructive"
+                                : "text-subtle-foreground",
                             )}
                           >
                             {entry.line}
                           </div>
                         ))
                       ) : (
-                        <div className="text-text-lighter">
+                        <div className="text-subtle-foreground">
                           {logLines.length > 0 ? "No matching log lines." : "Waiting for logs."}
                         </div>
                       )}
@@ -2683,7 +2909,7 @@ export function DockerSidebar() {
                       >
                         Up
                       </Button>
-                      <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
+                      <div className="ui-text-sm min-w-0 flex-1 truncate rounded border border-border/70 bg-background px-2 py-1 font-mono text-subtle-foreground">
                         {containerPath}
                       </div>
                       <Button
@@ -2698,13 +2924,13 @@ export function DockerSidebar() {
                       </Button>
                     </div>
                     {filesError ? (
-                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-error">
+                      <div className="border-t border-border/50 px-2 py-1 ui-text-sm text-destructive">
                         {filesError}
                       </div>
                     ) : null}
                     <div className="max-h-44 overflow-auto border-t border-border/50 py-1">
                       {isFilesLoading ? (
-                        <div className="px-2 py-2 ui-text-sm text-text-lighter">
+                        <div className="px-2 py-2 ui-text-sm text-subtle-foreground">
                           Loading files...
                         </div>
                       ) : containerFiles.length > 0 ? (
@@ -2713,7 +2939,7 @@ export function DockerSidebar() {
                             key={entry.path}
                             role="button"
                             tabIndex={entry.isDirectory ? 0 : -1}
-                            className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-hover"
+                            className="flex w-full items-center gap-2 px-2 py-1 text-left hover:bg-accent"
                             onClick={() => {
                               if (entry.isDirectory) setContainerPath(entry.path);
                             }}
@@ -2727,18 +2953,20 @@ export function DockerSidebar() {
                           >
                             {entry.isDirectory ? (
                               <FolderIcon
-                                className="size-4 shrink-0 text-text-lighter"
+                                className="size-4 shrink-0 text-subtle-foreground"
                                 weight="duotone"
                               />
                             ) : (
                               <FileIcon
-                                className="size-4 shrink-0 text-text-lighter"
+                                className="size-4 shrink-0 text-subtle-foreground"
                                 weight="duotone"
                               />
                             )}
                             <div className="min-w-0 flex-1">
-                              <div className="truncate ui-text-sm text-text">{entry.name}</div>
-                              <div className="truncate ui-text-sm text-text-lighter">
+                              <div className="truncate ui-text-sm text-foreground">
+                                {entry.name}
+                              </div>
+                              <div className="truncate ui-text-sm text-subtle-foreground">
                                 {entry.isDirectory ? "Directory" : formatFileSize(entry.size)}
                                 {entry.mode ? ` · ${entry.mode}` : ""}
                               </div>
@@ -2761,9 +2989,7 @@ export function DockerSidebar() {
                           </div>
                         ))
                       ) : (
-                        <div className="px-2 py-2 ui-text-sm text-text-lighter">
-                          No files found.
-                        </div>
+                        <SidebarSectionEmptyState>No files found.</SidebarSectionEmptyState>
                       )}
                     </div>
                   </>
@@ -2776,14 +3002,8 @@ export function DockerSidebar() {
 
       {dialogMode ? (
         <Dialog
-          title={
-            dialogMode === "build"
-              ? "Build Docker Image"
-              : dialogMode === "run"
-                ? "Run Docker Image"
-                : envDraft.relativePath
-          }
-          icon={dialogMode === "build" ? ImageIcon : dialogMode === "run" ? Play : FileIcon}
+          title={dialogMode === "build" ? "Build Docker Image" : "Run Docker Image"}
+          icon={dialogMode === "build" ? ImageIcon : Play}
           onClose={() => setDialogMode(null)}
           size="md"
           footer={
@@ -2800,11 +3020,14 @@ export function DockerSidebar() {
                   >
                     Save Preset
                   </Button>
-                  <Button onClick={handleBuildImage} disabled={!buildDraft.contextPath.trim()}>
+                  <Button
+                    onClick={handleBuildImage}
+                    disabled={!isDockerDaemonReady || !buildDraft.contextPath.trim()}
+                  >
                     Build
                   </Button>
                 </>
-              ) : dialogMode === "run" ? (
+              ) : (
                 <>
                   <Button
                     variant="ghost"
@@ -2813,22 +3036,28 @@ export function DockerSidebar() {
                   >
                     Save Preset
                   </Button>
-                  <Button onClick={handleRunImage} disabled={!runDraft.image.trim()}>
+                  <Button
+                    onClick={handleRunImage}
+                    disabled={!isDockerDaemonReady || !runDraft.image.trim()}
+                  >
                     Run
                   </Button>
                 </>
-              ) : (
-                <Button onClick={() => void handleSaveEnvFile()} disabled={!envDraft.path}>
-                  Save
-                </Button>
               )}
             </>
           }
         >
+          {(dialogMode === "build" || dialogMode === "run") && connectionError ? (
+            <DockerCapabilityNotice className="mx-0 mb-3">
+              Start Docker before{" "}
+              {dialogMode === "build" ? "building this image" : "running this image"}. You can still
+              save these values as a preset.
+            </DockerCapabilityNotice>
+          ) : null}
           {dialogMode === "build" ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-context" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-context" className="ui-text-sm block text-foreground">
                   Context Path
                 </label>
                 <Input
@@ -2844,7 +3073,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-file" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-file" className="ui-text-sm block text-foreground">
                   Dockerfile
                 </label>
                 <Input
@@ -2860,7 +3089,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-tag" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-tag" className="ui-text-sm block text-foreground">
                   Tag
                 </label>
                 <Input
@@ -2873,7 +3102,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-build-args" className="ui-text-sm block text-text">
+                <label htmlFor="docker-build-args" className="ui-text-sm block text-foreground">
                   Build Args
                 </label>
                 <Textarea
@@ -2890,10 +3119,10 @@ export function DockerSidebar() {
                 />
               </div>
             </div>
-          ) : dialogMode === "run" ? (
+          ) : (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-image" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-image" className="ui-text-sm block text-foreground">
                   Image
                 </label>
                 <Input
@@ -2906,7 +3135,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-name" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-name" className="ui-text-sm block text-foreground">
                   Container Name
                 </label>
                 <Input
@@ -2920,7 +3149,7 @@ export function DockerSidebar() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label htmlFor="docker-run-ports" className="ui-text-sm block text-text">
+                  <label htmlFor="docker-run-ports" className="ui-text-sm block text-foreground">
                     Ports
                   </label>
                   <Textarea
@@ -2934,7 +3163,7 @@ export function DockerSidebar() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="docker-run-volumes" className="ui-text-sm block text-text">
+                  <label htmlFor="docker-run-volumes" className="ui-text-sm block text-foreground">
                     Volumes
                   </label>
                   <Textarea
@@ -2949,7 +3178,7 @@ export function DockerSidebar() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-env" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-env" className="ui-text-sm block text-foreground">
                   Environment
                 </label>
                 <Textarea
@@ -2963,7 +3192,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-env-files" className="ui-text-sm block text-foreground">
                   Env Files
                 </label>
                 <Textarea
@@ -2977,7 +3206,7 @@ export function DockerSidebar() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label htmlFor="docker-run-command" className="ui-text-sm block text-text">
+                <label htmlFor="docker-run-command" className="ui-text-sm block text-foreground">
                   Command
                 </label>
                 <Input
@@ -2989,19 +3218,6 @@ export function DockerSidebar() {
                   placeholder="npm start"
                 />
               </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="ui-text-sm rounded border border-border/60 bg-primary-bg px-2 py-1 font-mono text-text-lighter">
-                {envDraft.path}
-              </div>
-              <Textarea
-                value={envDraft.content}
-                onChange={(event) =>
-                  setEnvDraft((current) => ({ ...current, content: event.target.value }))
-                }
-                className="min-h-80 font-mono"
-              />
             </div>
           )}
         </Dialog>

@@ -23,8 +23,8 @@ describe("Athas default themes", () => {
   });
 
   it("builds prefixed CSS and syntax variables from the same defaults", () => {
-    expect(getAthasDefaultCssVariables("dark")["--primary-bg"]).toBe(
-      getAthasDefaultColor("dark", "primary-bg"),
+    expect(getAthasDefaultCssVariables("dark")["--background"]).toBe(
+      getAthasDefaultColor("dark", "background"),
     );
     expect(getAthasDefaultSyntaxTokens("dark")["--syntax-keyword"]).toBe(
       getAthasDefaultSyntaxColor("dark", "keyword"),
@@ -43,20 +43,16 @@ describe("Athas default themes", () => {
     );
   });
 
-  it("exposes theme definitions with both raw and tailwind-compatible variables", () => {
+  it("exposes canonical raw theme variables without runtime aliases", () => {
     const definition = getAthasDefaultTheme("light").definition;
 
-    expect(definition.cssVariables["--primary-bg"]).toBe(
-      getAthasDefaultColor("light", "primary-bg"),
+    expect(definition.cssVariables["--background"]).toBe(
+      getAthasDefaultColor("light", "background"),
     );
-    expect(definition.cssVariables["--color-primary-bg"]).toBe(
-      getAthasDefaultColor("light", "primary-bg"),
-    );
+    expect(definition.cssVariables["--color-background"]).toBeUndefined();
     expect(definition.syntaxTokens?.["--syntax-keyword"]).toBe(
       getAthasDefaultSyntaxColor("light", "keyword"),
     );
-    expect(definition.syntaxTokens?.["--color-syntax-keyword"]).toBe(
-      getAthasDefaultSyntaxColor("light", "keyword"),
-    );
+    expect(definition.syntaxTokens?.["--color-syntax-keyword"]).toBeUndefined();
   });
 });

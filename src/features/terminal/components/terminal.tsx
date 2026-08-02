@@ -50,6 +50,7 @@ interface XtermTerminalProps {
   onReady?: () => void;
   onTerminalRef?: (ref: { focus: () => void; showSearch: () => void; terminal: Terminal }) => void;
   onTerminalExit?: (sessionId: string) => void;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
@@ -62,6 +63,7 @@ export const XtermTerminal = ({
   onReady,
   onTerminalRef,
   onTerminalExit,
+  shell,
   initialCommand,
   workingDirectory,
   remoteConnectionId,
@@ -90,6 +92,18 @@ export const XtermTerminal = ({
   const terminalCursorStyle = useSettingsStore((state) => state.settings.terminalCursorStyle);
   const terminalCursorBlink = useSettingsStore((state) => state.settings.terminalCursorBlink);
   const terminalCursorWidth = useSettingsStore((state) => state.settings.terminalCursorWidth);
+  const terminalCursorInactiveStyle = useSettingsStore(
+    (state) => state.settings.terminalCursorInactiveStyle,
+  );
+  const terminalAltClickMovesCursor = useSettingsStore(
+    (state) => state.settings.terminalAltClickMovesCursor,
+  );
+  const terminalMacOptionIsMeta = useSettingsStore(
+    (state) => state.settings.terminalMacOptionIsMeta,
+  );
+  const terminalRightClickSelectsWord = useSettingsStore(
+    (state) => state.settings.terminalRightClickSelectsWord,
+  );
   const zoomLevel = useZoomStore.use.terminalZoomLevel();
   const rootFolderPath = useProjectStore((state) => state.rootFolderPath);
   const workspaceRootRef = useRef(rootFolderPath);
@@ -207,12 +221,14 @@ export const XtermTerminal = ({
         cursorBlink: terminalCursorBlink,
         cursorStyle: terminalCursorStyle,
         cursorWidth: effectiveTerminalCursorWidth,
+        cursorInactiveStyle: terminalCursorInactiveStyle,
+        altClickMovesCursor: terminalAltClickMovesCursor,
         allowProposedApi: true,
         theme: getTerminalTheme(),
         scrollback: terminalScrollback,
         convertEol: false,
-        macOptionIsMeta: false,
-        rightClickSelectsWord: false,
+        macOptionIsMeta: terminalMacOptionIsMeta,
+        rightClickSelectsWord: terminalRightClickSelectsWord,
         ...getTerminalCompatibilityOptions({ isRemote: terminalIsRemote }),
       });
 
@@ -311,6 +327,7 @@ export const XtermTerminal = ({
       // remounted after a pane split or tab move), reuse the existing
       // connection instead of killing the running process.
       let activeConnectionId: string;
+      let activeRemoteConnectionId = remoteConnectionId || existingSession?.remoteConnectionId;
       if (existingSession?.connectionId) {
         activeConnectionId = existingSession.connectionId;
       } else {
@@ -318,13 +335,13 @@ export const XtermTerminal = ({
           workingDirectory || existingSession?.currentDirectory || rootFolderPath;
         const remoteInfo = targetDirectory ? parseRemotePath(targetDirectory) : null;
         const wslInfo = targetDirectory ? parseWslPath(targetDirectory) : null;
-        const effectiveRemoteConnectionId = remoteConnectionId || remoteInfo?.connectionId;
+        activeRemoteConnectionId = activeRemoteConnectionId || remoteInfo?.connectionId;
         const size = getTerminalSize(terminal);
         const events = createTerminalEventChannel();
 
-        activeConnectionId = effectiveRemoteConnectionId
+        activeConnectionId = activeRemoteConnectionId
           ? await (async () => {
-              const connection = await connectionStore.getConnection(effectiveRemoteConnectionId);
+              const connection = await connectionStore.getConnection(activeRemoteConnectionId);
               if (!connection) {
                 throw new Error("Remote terminal connection not found.");
               }
@@ -344,7 +361,9 @@ export const XtermTerminal = ({
               config: {
                 workingDirectory: targetDirectory || undefined,
                 shell:
-                  existingSession?.shell || (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
+                  shell ||
+                  existingSession?.shell ||
+                  (wslInfo ? getWslShellId(wslInfo.distro) : undefined),
                 wslDistribution: wslInfo?.distro,
                 wslWorkingDirectory: wslInfo?.linuxPath,
                 size,
@@ -357,7 +376,7 @@ export const XtermTerminal = ({
         updateSession(sessionId, {
           connectionId: activeConnectionId,
           currentDirectory: targetDirectory,
-          remoteConnectionId: effectiveRemoteConnectionId,
+          remoteConnectionId: activeRemoteConnectionId,
         });
       }
 
@@ -372,7 +391,11 @@ export const XtermTerminal = ({
 
       window.dispatchEvent(
         new CustomEvent("terminal-ready", {
-          detail: { terminalId: sessionId, connectionId: activeConnectionId },
+          detail: {
+            terminalId: sessionId,
+            connectionId: activeConnectionId,
+            remoteConnectionId: activeRemoteConnectionId,
+          },
         }),
       );
 
@@ -397,15 +420,20 @@ export const XtermTerminal = ({
     pasteIntoTerminal,
     rootFolderPath,
     remoteConnectionId,
+    shell,
     sessionId,
     terminalCursorBlink,
+    terminalCursorInactiveStyle,
     terminalCursorStyle,
     terminalCursorWidth,
+    terminalAltClickMovesCursor,
     terminalFontFamily,
     effectiveTerminalCursorWidth,
     effectiveTerminalFontSize,
     effectiveTerminalLetterSpacing,
     terminalLineHeight,
+    terminalMacOptionIsMeta,
+    terminalRightClickSelectsWord,
     terminalScrollback,
     terminalIsRemote,
     updateSession,
@@ -436,6 +464,10 @@ export const XtermTerminal = ({
       xtermRef.current.options.cursorBlink = terminalCursorBlink;
       xtermRef.current.options.cursorStyle = terminalCursorStyle;
       xtermRef.current.options.cursorWidth = effectiveTerminalCursorWidth;
+      xtermRef.current.options.cursorInactiveStyle = terminalCursorInactiveStyle;
+      xtermRef.current.options.altClickMovesCursor = terminalAltClickMovesCursor;
+      xtermRef.current.options.macOptionIsMeta = terminalMacOptionIsMeta;
+      xtermRef.current.options.rightClickSelectsWord = terminalRightClickSelectsWord;
 
       fitTerminal();
     };
@@ -453,7 +485,11 @@ export const XtermTerminal = ({
     terminalLineHeight,
     terminalScrollback,
     terminalCursorBlink,
+    terminalCursorInactiveStyle,
     terminalCursorStyle,
+    terminalAltClickMovesCursor,
+    terminalMacOptionIsMeta,
+    terminalRightClickSelectsWord,
     fitTerminal,
   ]);
 
@@ -639,9 +675,9 @@ export const XtermTerminal = ({
 
   const getSearchOptions = useCallback((options: TerminalSearchOptions): ISearchOptions => {
     const rootStyles = getComputedStyle(document.documentElement);
-    const selected = rootStyles.getPropertyValue("--color-selected").trim() || "#3b82f6";
-    const accent = rootStyles.getPropertyValue("--color-accent").trim() || "#60a5fa";
-    const border = rootStyles.getPropertyValue("--color-border").trim() || "#4b5563";
+    const selected = rootStyles.getPropertyValue("--selected").trim() || "#3b82f6";
+    const accent = rootStyles.getPropertyValue("--primary").trim() || "#60a5fa";
+    const border = rootStyles.getPropertyValue("--border").trim() || "#4b5563";
 
     return {
       caseSensitive: options.caseSensitive,
@@ -773,7 +809,7 @@ export const XtermTerminal = ({
   );
 
   return (
-    <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex size-full min-w-0 flex-col overflow-hidden bg-background">
       <TerminalSearch
         isVisible={isSearchVisible}
         onSearch={handleSearch}
@@ -789,7 +825,7 @@ export const XtermTerminal = ({
           id={`terminal-${sessionId}`}
           data-terminal-drop-target
           data-terminal-session-id={sessionId}
-          className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-text ${!isActive ? "opacity-60" : ""}`}
+          className={`xterm-container flex h-full min-h-0 min-w-0 flex-1 text-foreground ${!isActive ? "opacity-60" : ""}`}
           onDragOver={handleTerminalDragOver}
           onDrop={handleTerminalFileDrop}
           onMouseDown={() => {

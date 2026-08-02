@@ -49,7 +49,7 @@ interface OverviewFieldProps {
 
 function OverviewField({ children }: OverviewFieldProps) {
   return (
-    <div className="font-sans ui-text-sm flex min-w-0 items-center gap-2 text-text-lighter">
+    <div className="font-sans ui-text-sm flex min-w-0 items-center gap-2 text-subtle-foreground">
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -92,7 +92,7 @@ export function GitHubPRViewerHeader({
           <span>&middot;</span>
           <span className="inline-flex max-w-full min-w-0 items-center gap-1 font-mono">
             <span className="min-w-0 truncate">{pr.baseRef}</span>
-            <span className="shrink-0 text-text-lighter">&larr;</span>
+            <span className="shrink-0 text-subtle-foreground">&larr;</span>
             <span className="min-w-0 truncate">{pr.headRef}</span>
           </span>
         </>
@@ -152,7 +152,7 @@ export function GitHubPRViewerHeader({
               size={32}
               className="size-4"
             />
-            <span className="truncate text-text-light">{pr.author.login}</span>
+            <span className="truncate text-muted-foreground">{pr.author.login}</span>
           </span>
         </OverviewField>
 
@@ -164,7 +164,7 @@ export function GitHubPRViewerHeader({
           className="h-auto min-w-0 px-1.5 py-1 text-left"
           size="xs"
         >
-          <span className="text-text-light">{changedFilesCount} files</span>
+          <span className="text-muted-foreground">{changedFilesCount} files</span>
           <span className="text-git-added">+{additions}</span>
           <span className="text-git-deleted">-{deletions}</span>
         </Button>
@@ -174,8 +174,8 @@ export function GitHubPRViewerHeader({
             <CIStatusIndicator checks={pr.statusChecks} />
           ) : (
             <>
-              <CheckCircle2 className="mr-1 inline text-text-lighter" />
-              <span className="text-text-light">{checksSummary}</span>
+              <CheckCircle2 className="mr-1 inline text-subtle-foreground" />
+              <span className="text-muted-foreground">{checksSummary}</span>
             </>
           )}
         </OverviewField>
@@ -189,7 +189,7 @@ export function GitHubPRViewerHeader({
         <OverviewField>
           {pr.reviewRequests?.length > 0 ? (
             <span className="inline-flex min-w-0 items-center gap-2">
-              <span className="text-text-lighter">
+              <span className="text-subtle-foreground">
                 {reviewSummary ? `${reviewSummary} · reviewers` : "Reviewers"}
               </span>
               <span className="inline-flex min-w-0 items-center gap-1.5">
@@ -202,11 +202,11 @@ export function GitHubPRViewerHeader({
                     className="size-4"
                   />
                 ))}
-                <span className="truncate text-text-light">{reviewerLogins.join(", ")}</span>
+                <span className="truncate text-muted-foreground">{reviewerLogins.join(", ")}</span>
               </span>
             </span>
           ) : (
-            <span className="text-text-light">
+            <span className="text-muted-foreground">
               {reviewSummary ? reviewSummary : "No reviewers"}
             </span>
           )}

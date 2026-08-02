@@ -341,12 +341,13 @@ export function SkillsCommand({
 
   const canSave = title.trim().length > 0;
   const SyncIcon = getSyncIcon(syncEnabled, syncStatus);
+  const isComposerAttached = Boolean(anchorRef);
 
   const panelContent =
     view === "list" || view === "browse" ? (
       <>
         <CommandHeader onClose={handleClose}>
-          <Search className="shrink-0 text-text-lighter" size={14} />
+          <Search className="shrink-0 text-subtle-foreground" size={14} />
           <CommandInput
             ref={inputRef}
             value={query}
@@ -369,17 +370,19 @@ export function SkillsCommand({
           </CommandHeaderAction>
         </CommandHeader>
 
-        <CommandList ref={resultsRef}>
+        <CommandList ref={resultsRef} contentClassName={isComposerAttached ? "p-1.5" : undefined}>
           {view === "browse" ? (
             isLoadingMarketplace ? (
               <CommandEmpty>Loading available skills...</CommandEmpty>
             ) : marketplaceSkills.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-                <CommandEmpty>No published skills yet</CommandEmpty>
-                <div className="ui-text-base max-w-[280px] text-text-lighter">
-                  Published skills will appear here once the Athas skills registry is available.
+              <CommandEmpty>
+                <div className="flex flex-col items-center gap-2 px-4 py-5">
+                  <div>No published skills yet</div>
+                  <div className="max-w-[280px] text-subtle-foreground">
+                    Published skills will appear here once the Athas skills registry is available.
+                  </div>
                 </div>
-              </div>
+              </CommandEmpty>
             ) : filteredMarketplaceSkills.length === 0 ? (
               <CommandEmpty>No available skills match "{query}"</CommandEmpty>
             ) : (
@@ -397,6 +400,7 @@ export function SkillsCommand({
                     }
                     onMouseEnter={() => setSelectedIndex(index)}
                     className="group"
+                    density={isComposerAttached ? "compact" : "default"}
                     title={skill.title}
                     description={
                       <>
@@ -404,13 +408,13 @@ export function SkillsCommand({
                         {skill.author ? <span>by {skill.author}</span> : null}
                       </>
                     }
-                    contentLayout="stacked"
+                    contentLayout={isComposerAttached ? "inline" : "stacked"}
                     accessory={
                       <>
                         {skill.version ? (
                           <CommandItemBadge>v{skill.version}</CommandItemBadge>
                         ) : null}
-                        {skill.tags.slice(0, 3).map((tag) => (
+                        {skill.tags.slice(0, isComposerAttached ? 1 : 3).map((tag) => (
                           <CommandItemBadge key={tag}>{tag}</CommandItemBadge>
                         ))}
                       </>
@@ -420,6 +424,7 @@ export function SkillsCommand({
                         type="button"
                         variant={isInstalled ? "default" : "default"}
                         disabled={isInstalled}
+                        size={isComposerAttached ? "xs" : undefined}
                         onClick={(event) => {
                           event.stopPropagation();
                           if (!isInstalled) {
@@ -452,9 +457,10 @@ export function SkillsCommand({
                   onClick={() => handleSelectSkill(skill)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   className="group"
+                  density={isComposerAttached ? "compact" : "default"}
                   title={skill.title}
                   description={preview}
-                  contentLayout="stacked"
+                  contentLayout={isComposerAttached ? "inline" : "stacked"}
                   accessory={
                     <>
                       {skill.source === "marketplace" ? (
@@ -477,7 +483,7 @@ export function SkillsCommand({
                         className="opacity-0 focus:opacity-100 group-hover:opacity-100"
                         tooltip="Edit skill"
                         aria-label={`Edit ${skill.title}`}
-                        size="icon"
+                        size={isComposerAttached ? "icon-xs" : "icon"}
                       >
                         <PencilSimple size={13} />
                       </Button>
@@ -488,10 +494,10 @@ export function SkillsCommand({
                           event.stopPropagation();
                           void handleDelete(skill.id);
                         }}
-                        className="opacity-0 hover:bg-error/10 hover:text-error focus:opacity-100 group-hover:opacity-100"
+                        className="opacity-0 hover:bg-destructive/10 hover:text-destructive focus:opacity-100 group-hover:opacity-100"
                         tooltip="Delete skill"
                         aria-label={`Delete ${skill.title}`}
-                        size="icon"
+                        size={isComposerAttached ? "icon-xs" : "icon"}
                       >
                         <Trash size={13} />
                       </Button>
@@ -514,7 +520,7 @@ export function SkillsCommand({
       <>
         <CommandHeader onClose={handleClose}>
           <div className="min-w-0 flex-1">
-            <div className="font-sans ui-text-base truncate text-text">
+            <div className="font-sans ui-text-base truncate text-foreground">
               {editingSkillId ? "Edit skill" : "New skill"}
             </div>
             {(() => {
@@ -522,7 +528,7 @@ export function SkillsCommand({
               if (!editingSkill || editingSkill.source !== "marketplace") return null;
 
               return (
-                <div className="ui-text-base mt-0.5 text-text-lighter">
+                <div className="ui-text-base mt-0.5 text-subtle-foreground">
                   Marketplace skill
                   {hasSkillLocalOverride(editingSkill) ? " with local override" : ""}
                 </div>
@@ -533,7 +539,10 @@ export function SkillsCommand({
 
         <ScrollArea className="flex-1" contentClassName="space-y-3 p-3">
           <div className="space-y-1.5">
-            <label className="font-sans ui-text-base text-text-lighter" htmlFor="ai-skill-title">
+            <label
+              className="font-sans ui-text-base text-subtle-foreground"
+              htmlFor="ai-skill-title"
+            >
               Title
             </label>
             <Input
@@ -548,7 +557,10 @@ export function SkillsCommand({
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-sans ui-text-base text-text-lighter" htmlFor="ai-skill-content">
+            <label
+              className="font-sans ui-text-base text-subtle-foreground"
+              htmlFor="ai-skill-content"
+            >
               Markdown
             </label>
             <Textarea
@@ -580,7 +592,7 @@ export function SkillsCommand({
         anchorRef={anchorRef}
         onClose={handleClose}
         ariaLabel="Skills"
-        maxHeight={440}
+        maxHeight={view === "editor" ? 440 : 320}
       >
         {panelContent}
       </ComposerAttachedPanel>

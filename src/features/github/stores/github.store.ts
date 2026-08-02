@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
+import { emitGitChanged } from "@/features/git/events/git-events";
 import type {
   PRFilter,
   PullRequest,
@@ -13,6 +14,7 @@ import {
   syncGitHubTokenFromAccount,
   type GitHubTokenSyncStatus,
 } from "../services/github-token-service";
+import { createSelectors } from "@/utils/zustand-selectors";
 
 const PR_LIST_CACHE_TTL_MS = 5 * 60_000;
 const PR_DETAILS_CACHE_TTL_MS = 120_000;
@@ -216,7 +218,7 @@ async function fetchNormalizedPRDetails(
   return normalizePullRequestDetails(detailsResponse);
 }
 
-export const useGitHubStore = create(
+const useGitHubStoreBase = create(
   combine(initialState, (set, get) => ({
     actions: {
       checkAuth: async (options?: { force?: boolean }) => {
@@ -437,7 +439,11 @@ export const useGitHubStore = create(
       checkoutPR: async (repoPath: string, prNumber: number) => {
         try {
           await invoke("github_checkout_pr", { repoPath, prNumber });
-          window.dispatchEvent(new CustomEvent("git-status-changed"));
+          emitGitChanged({
+            repoPath,
+            scopes: ["working-tree", "history", "refs"],
+            source: "checkout-pull-request",
+          });
         } catch (err) {
           console.error("Failed to checkout PR:", err);
           throw err;
@@ -788,3 +794,5 @@ export const useGitHubStore = create(
     },
   })),
 );
+
+export const useGitHubStore = createSelectors(useGitHubStoreBase);

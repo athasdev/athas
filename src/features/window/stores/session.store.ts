@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
-import type { AIWorkspaceSessionSnapshot } from "@/features/ai/types/ai-chat-store.types";
+import type { AIWorkspaceSessionSnapshot } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import type { PersistedEditorViewState } from "@/features/editor/types/editor-session.types";
 import type { PaneNode } from "@/features/panes/types/pane.types";
 import type { PersistedTerminal } from "@/features/terminal/types/terminal.types";
@@ -25,6 +25,7 @@ interface TerminalBufferSession {
   name: string;
   isPinned: boolean;
   sessionId: string;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
@@ -107,6 +108,7 @@ interface SessionState {
     terminals?: PersistedTerminal[],
     aiSession?: AIWorkspaceSessionSnapshot | null,
     workspaceFolders?: WorkspaceFolderSession[],
+    uiState?: ProjectUiSession,
   ) => void;
   getSession: (projectPath: string) => ProjectSession | null;
   saveUiState: (projectPath: string, uiState: ProjectUiSession) => void;
@@ -123,6 +125,7 @@ export function buildSavedProjectSession({
   terminals,
   aiSession,
   workspaceFolders,
+  uiState,
   now,
 }: {
   previousSession?: ProjectSession;
@@ -132,6 +135,7 @@ export function buildSavedProjectSession({
   terminals?: PersistedTerminal[];
   aiSession?: AIWorkspaceSessionSnapshot | null;
   workspaceFolders?: WorkspaceFolderSession[];
+  uiState?: ProjectUiSession;
   now: number;
 }): ProjectSession {
   return {
@@ -143,7 +147,7 @@ export function buildSavedProjectSession({
     buffers,
     terminals: terminals === undefined ? (previousSession?.terminals ?? []) : terminals,
     aiSession: aiSession === undefined ? (previousSession?.aiSession ?? null) : aiSession,
-    uiState: previousSession?.uiState ?? null,
+    uiState: uiState === undefined ? (previousSession?.uiState ?? null) : uiState,
     lastSaved: now,
   };
 }
@@ -191,6 +195,7 @@ const useSessionStoreBase = create<SessionState>()(
         terminals,
         aiSession,
         workspaceFolders,
+        uiState,
       ) => {
         set((state) => ({
           sessions: {
@@ -203,6 +208,7 @@ const useSessionStoreBase = create<SessionState>()(
               terminals,
               aiSession,
               workspaceFolders,
+              uiState,
               now: Date.now(),
             }),
           },

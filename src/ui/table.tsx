@@ -1,74 +1,93 @@
-import type React from "react";
+import type { ComponentProps } from "react";
 import { cn } from "@/utils/cn";
 
-interface TableProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export function Table({ children, className }: TableProps) {
-  return <div className={cn("flex flex-col", className)}>{children}</div>;
-}
-
-interface TableHeaderProps {
-  children: React.ReactNode;
-  gridCols: string;
-  className?: string;
-}
-
-export function TableHeader({ children, gridCols, className }: TableHeaderProps) {
+function Table({ className, ...props }: ComponentProps<"table">) {
   return (
-    <div
+    <table
+      data-slot="table"
+      className={cn("w-full caption-bottom border-collapse font-sans ui-text-sm", className)}
+      {...props}
+    />
+  );
+}
+
+function TableHeader({ className, ...props }: ComponentProps<"thead">) {
+  return (
+    <thead
+      data-slot="table-header"
       className={cn(
-        "sticky top-0 z-10 grid gap-4 border-border border-b bg-primary-bg px-2 py-2",
+        "sticky top-0 z-10 border-border border-b bg-background [&_tr]:border-b-0",
         className,
       )}
-      style={{ gridTemplateColumns: gridCols }}
-    >
-      {children}
-    </div>
+      {...props}
+    />
   );
 }
 
-interface TableRowProps {
-  children: React.ReactNode;
-  gridCols: string;
-  className?: string;
-  onClick?: () => void;
+function TableBody({ className, ...props }: ComponentProps<"tbody">) {
+  return (
+    <tbody
+      data-slot="table-body"
+      className={cn("[&_tr:last-child]:border-0", className)}
+      {...props}
+    />
+  );
 }
 
-export function TableRow({ children, gridCols, className, onClick }: TableRowProps) {
+function TableFooter({ className, ...props }: ComponentProps<"tfoot">) {
   return (
-    <div
+    <tfoot
+      data-slot="table-footer"
+      className={cn("border-border border-t bg-surface/55 font-medium", className)}
+      {...props}
+    />
+  );
+}
+
+function TableRow({ className, ...props }: ComponentProps<"tr">) {
+  return (
+    <tr
+      data-slot="table-row"
       className={cn(
-        "grid gap-4 border-border border-b px-2 py-2",
-        onClick && "cursor-pointer hover:bg-hover",
+        "border-border border-b transition-colors hover:bg-accent data-[state=selected]:bg-selected",
         className,
       )}
-      style={{ gridTemplateColumns: gridCols }}
-      onClick={onClick}
-    >
-      {children}
-    </div>
+      {...props}
+    />
   );
 }
 
-interface TableCellProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export function TableCell({ children, className }: TableCellProps) {
-  return <div className={cn("flex items-center", className)}>{children}</div>;
-}
-
-interface TableHeadCellProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export function TableHeadCell({ children, className }: TableHeadCellProps) {
+function TableHead({ className, ...props }: ComponentProps<"th">) {
   return (
-    <div className={cn("ui-text-sm font-medium text-text-lighter", className)}>{children}</div>
+    <th
+      data-slot="table-head"
+      className={cn(
+        "h-8 px-1.5 text-left align-middle font-medium text-subtle-foreground whitespace-nowrap",
+        className,
+      )}
+      {...props}
+    />
   );
 }
+
+function TableCell({ className, ...props }: ComponentProps<"td">) {
+  return (
+    <td
+      data-slot="table-cell"
+      className={cn("px-1.5 py-1.5 align-middle text-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+function TableCaption({ className, ...props }: ComponentProps<"caption">) {
+  return (
+    <caption
+      data-slot="table-caption"
+      className={cn("mt-3 text-subtle-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow };

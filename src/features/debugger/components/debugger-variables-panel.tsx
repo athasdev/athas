@@ -83,8 +83,8 @@ export function DebugVariablesPanel({
             <button
               type="button"
               className={cn(
-                "flex min-w-0 items-center gap-1 text-left text-text-lighter",
-                canExpand && "hover:text-text",
+                "flex min-w-0 items-center gap-1 text-left text-subtle-foreground",
+                canExpand && "hover:text-foreground",
               )}
               disabled={!canExpand}
               onClick={() => void toggleVariableExpansion(variable.variablesReference)}
@@ -99,7 +99,7 @@ export function DebugVariablesPanel({
               />
               <span className="truncate">{variable.name}</span>
             </button>
-            <span className="truncate font-mono text-text">
+            <span className="truncate font-mono text-foreground">
               {isLoading ? (
                 <Spinner label="Loading variable" compact />
               ) : (
@@ -125,11 +125,11 @@ export function DebugVariablesPanel({
         return (
           <div key={`${scope.name}-${scope.variablesReference}`}>
             <div className="flex items-center justify-between px-3 py-1.5 ui-text-sm">
-              <span className="font-medium text-text">{scope.name}</span>
-              <span className="ui-text-sm text-text-lighter">{variables.length}</span>
+              <span className="font-medium text-foreground">{scope.name}</span>
+              <span className="ui-text-sm text-subtle-foreground">{variables.length}</span>
             </div>
             {variables.length === 0 ? (
-              <div className="px-6 pb-1.5 ui-text-sm text-text-lighter">Empty</div>
+              <div className="px-6 pb-1.5 ui-text-sm text-subtle-foreground">Empty</div>
             ) : (
               renderVariables(variables, scope.variablesReference)
             )}

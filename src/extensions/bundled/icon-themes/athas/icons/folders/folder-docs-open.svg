@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" role="img" aria-label="Docs Folder Open" shape-rendering="geometricPrecision">
+  <path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="#5C83C8" opacity=".14"/><path d="M1.25 7V5.25c0-1.1.9-2 2-2h4.4l1.7 1.9h7.4c1.1 0 2 .9 2 2v8.5c0 1.1-.9 2-2 2H3.25c-1.1 0-2-.9-2-2Z" fill="none" stroke="#5C83C8" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="#5C83C8" opacity=".25"/><path d="M2 8.1h16l-1.25 7.45a2 2 0 0 1-2 1.7h-9.5a2 2 0 0 1-2-1.7Z" fill="none" stroke="#5C83C8" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.15 9.75h13.7" stroke="#CADBFA" stroke-width="1.15" stroke-linecap="round" opacity=".58"/>
+  <path d="M7 9.4h4.3c1 0 1.7.7 1.7 1.7v4.1H8.7A1.7 1.7 0 0 1 7 13.5z" fill="none" stroke="#CADBFA" stroke-width="1.15"/><path d="M8.7 9.4v5.8M9.8 11.3h2" stroke="#CADBFA" stroke-width="1.05" stroke-linecap="round"/>
+</svg>

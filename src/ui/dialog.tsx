@@ -1,7 +1,18 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import { cva } from "class-variance-authority";
-import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
+import { motion, useReducedMotionConfig } from "motion/react";
+import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/ui/alert-dialog";
 import { Button, type ButtonVariant } from "@/ui/button";
 import {
   InfoIcon as Info,
@@ -12,7 +23,7 @@ import {
 } from "@/ui/icons";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
-import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion-presets";
+import { instantTransition, overlayEntrance, quickTransition } from "@/utils/motion";
 import { resolveEscapeGuard } from "@/utils/keyboard/escape-guard";
 import { cn } from "@/utils/cn";
 
@@ -41,7 +52,7 @@ interface DialogProps {
 const dialogContentVariants = cva(
   [
     "-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-[9999]",
-    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-primary-bg shadow-[var(--shadow-dialog)]",
+    "flex max-h-[90vh] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-[var(--shadow-dialog)]",
     "focus:outline-none",
   ],
   {
@@ -58,7 +69,116 @@ const dialogContentVariants = cva(
   },
 );
 
-const Dialog = ({
+function Dialog(props: DialogPrimitive.Root.Props) {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+}
+
+function DialogTrigger(props: DialogPrimitive.Trigger.Props) {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+}
+
+function DialogPortal(props: DialogPrimitive.Portal.Props) {
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
+}
+
+function DialogClose(props: DialogPrimitive.Close.Props) {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+}
+
+function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
+  return (
+    <DialogPrimitive.Backdrop
+      data-slot="dialog-overlay"
+      className={cn(
+        "fixed inset-0 z-[9998] bg-black/20 transition-opacity duration-[var(--app-duration-fast)] data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function DialogContent({
+  className,
+  children,
+  size = "md",
+  showCloseButton = true,
+  ...props
+}: DialogPrimitive.Popup.Props & {
+  size?: "sm" | "md" | "lg";
+  showCloseButton?: boolean;
+}) {
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Popup
+        data-slot="dialog-content"
+        className={cn(
+          dialogContentVariants({ size }),
+          "transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {showCloseButton ? (
+          <DialogPrimitive.Close
+            render={<Button variant="ghost" size="icon-xs" />}
+            className="absolute top-2.5 right-2.5 text-subtle-foreground hover:text-foreground"
+            aria-label="Close dialog"
+          >
+            <X />
+          </DialogPrimitive.Close>
+        ) : null}
+      </DialogPrimitive.Popup>
+    </DialogPortal>
+  );
+}
+
+function DialogHeader({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn("flex flex-col gap-1.5 px-4 pt-4", className)}
+      {...props}
+    />
+  );
+}
+
+function DialogFooter({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn(
+        "flex shrink-0 flex-col-reverse gap-2 border-border/70 border-t bg-surface/55 px-4 py-3 sm:flex-row sm:justify-end",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
+  return (
+    <DialogPrimitive.Title
+      data-slot="dialog-title"
+      className={cn("font-sans ui-text-base font-medium leading-snug text-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+function DialogDescription({ className, ...props }: DialogPrimitive.Description.Props) {
+  return (
+    <DialogPrimitive.Description
+      data-slot="dialog-description"
+      className={cn("font-sans ui-text-sm leading-normal text-subtle-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+const AppDialog = ({
   children,
   onClose,
   title,
@@ -68,7 +188,7 @@ const Dialog = ({
   size = "md",
   classNames,
 }: DialogProps) => {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionConfig();
   const popupMotion = prefersReducedMotion
     ? {
         initial: false as const,
@@ -133,13 +253,13 @@ const Dialog = ({
         >
           <div
             className={cn(
-              "flex shrink-0 items-center justify-between bg-primary-bg px-4 py-3",
+              "flex shrink-0 items-center justify-between bg-background px-4 py-3",
               classNames?.header,
             )}
           >
             <div className={cn("flex min-w-0 items-center gap-2", classNames?.title)}>
-              {Icon && <Icon className="text-text-lighter" />}
-              <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-text">
+              {Icon && <Icon className="text-subtle-foreground" />}
+              <DialogPrimitive.Title className="min-w-0 font-sans ui-text-base font-medium text-foreground">
                 {title}
               </DialogPrimitive.Title>
             </div>
@@ -147,7 +267,7 @@ const Dialog = ({
             <div className={cn("flex items-center gap-1", classNames?.headerActions)}>
               {headerActions}
               <DialogPrimitive.Close
-                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-text-lighter transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-hover hover:text-text active:scale-[var(--app-press-scale)]"
+                className="flex size-6 shrink-0 items-center justify-center rounded-md border border-transparent text-subtle-foreground transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:border-border/70 hover:bg-accent hover:text-foreground active:scale-[var(--app-press-scale)]"
                 aria-label="Close dialog"
               >
                 <X />
@@ -346,73 +466,92 @@ function PrimitiveDialogHost({
 
   if (dialog.type === "alert") {
     return (
-      <Dialog
-        title={dialog.title}
-        icon={Info}
-        onClose={() => onClose(dialog.resolve)}
-        size="sm"
-        footer={
-          <Button variant="accent" onClick={() => onClose(dialog.resolve)}>
-            OK
-          </Button>
-        }
+      <AlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose(dialog.resolve);
+        }}
       >
-        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
-      </Dialog>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Info />
+            </AlertDialogMedia>
+            <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="grid-cols-1">
+            <AlertDialogAction variant="accent" onClick={() => onClose(dialog.resolve)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
   if (dialog.type === "confirm") {
     return (
-      <Dialog
-        title={dialog.title}
-        icon={Question}
-        onClose={() => onClose(() => dialog.resolve(false))}
-        size="sm"
-        footer={
-          <>
-            <Button variant="default" onClick={() => onClose(() => dialog.resolve(false))}>
-              {dialog.cancelLabel}
-            </Button>
-            <Button variant="accent" onClick={() => onClose(() => dialog.resolve(true))}>
-              {dialog.confirmLabel}
-            </Button>
-          </>
-        }
+      <AlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose(() => dialog.resolve(false));
+        }}
       >
-        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
-      </Dialog>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Question />
+            </AlertDialogMedia>
+            <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{dialog.cancelLabel}</AlertDialogCancel>
+            <AlertDialogAction variant="accent" onClick={() => onClose(() => dialog.resolve(true))}>
+              {dialog.confirmLabel}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
   if (dialog.type === "choice") {
     return (
-      <Dialog
-        title={dialog.title}
-        icon={Warning}
-        onClose={() => onClose(() => dialog.resolve(null))}
-        size="sm"
-        footer={
-          <>
+      <AlertDialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose(() => dialog.resolve(null));
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Warning />
+            </AlertDialogMedia>
+            <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialog.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             {dialog.choices.map((choice) => (
-              <Button
+              <AlertDialogAction
                 key={choice.value}
                 variant={choice.variant ?? "default"}
                 onClick={() => onClose(() => dialog.resolve(choice.value))}
               >
                 {choice.label}
-              </Button>
+              </AlertDialogAction>
             ))}
-          </>
-        }
-      >
-        <div className="whitespace-pre-wrap ui-text-sm text-text">{dialog.message}</div>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
   return (
-    <Dialog
+    <AppDialog
       title={dialog.title}
       icon={Warning}
       onClose={() => onClose(() => dialog.resolve(null))}
@@ -435,7 +574,7 @@ function PrimitiveDialogHost({
         }}
         className="flex flex-col gap-2"
       >
-        <label className="flex flex-col gap-2 font-sans ui-text-sm text-text">
+        <label className="flex flex-col gap-2 font-sans ui-text-sm text-foreground">
           {dialog.message}
           <Input
             autoFocus
@@ -445,8 +584,21 @@ function PrimitiveDialogHost({
           />
         </label>
       </form>
-    </Dialog>
+    </AppDialog>
   );
 }
 
-export default Dialog;
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+};
+
+export default AppDialog;

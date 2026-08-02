@@ -9,15 +9,15 @@
       "description": "Maximum contrast light theme for accessibility",
       "appearance": "light",
       "colors": {
-        "primary-bg": "#ffffff",
-        "secondary-bg": "#f5f5f5",
-        "text": "#000000",
-        "text-light": "#333333",
-        "text-lighter": "#666666",
+        "background": "#ffffff",
+        "surface": "#f5f5f5",
+        "foreground": "#000000",
+        "muted-foreground": "#333333",
+        "subtle-foreground": "#666666",
         "border": "#cccccc",
-        "hover": "#e5e5e5",
+        "accent": "#e5e5e5",
         "selected": "#e5e5e5",
-        "accent": "#0066cc"
+        "primary": "#0066cc"
       },
       "syntax": {
         "keyword": "#0000ff",
@@ -44,15 +44,15 @@
       "description": "Maximum contrast dark theme for accessibility",
       "appearance": "dark",
       "colors": {
-        "primary-bg": "#000000",
-        "secondary-bg": "#1a1a1a",
-        "text": "#ffffff",
-        "text-light": "#cccccc",
-        "text-lighter": "#999999",
+        "background": "#000000",
+        "surface": "#1a1a1a",
+        "foreground": "#ffffff",
+        "muted-foreground": "#cccccc",
+        "subtle-foreground": "#999999",
         "border": "#666666",
-        "hover": "#333333",
+        "accent": "#333333",
         "selected": "#333333",
-        "accent": "#66ccff"
+        "primary": "#66ccff"
       },
       "syntax": {
         "keyword": "#66ccff",
@@ -79,15 +79,15 @@
       "description": "Pure black and white theme for minimal distraction",
       "appearance": "dark",
       "colors": {
-        "primary-bg": "#000000",
-        "secondary-bg": "#111111",
-        "text": "#ffffff",
-        "text-light": "#cccccc",
-        "text-lighter": "#888888",
+        "background": "#000000",
+        "surface": "#111111",
+        "foreground": "#ffffff",
+        "muted-foreground": "#cccccc",
+        "subtle-foreground": "#888888",
         "border": "#444444",
-        "hover": "#222222",
+        "accent": "#222222",
         "selected": "#222222",
-        "accent": "#ffffff"
+        "primary": "#ffffff"
       },
       "syntax": {
         "keyword": "#ffffff",

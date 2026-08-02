@@ -175,7 +175,7 @@ export function ImageContextMenu({
             label: "Save",
             icon: <Save />,
             disabled: isProcessing,
-            className: "text-accent",
+            className: "text-primary",
             onClick: onSave,
           },
         ]

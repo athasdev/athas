@@ -33,6 +33,7 @@ import { useProjectStore } from "@/features/window/stores/project.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyContent, EmptyDescription } from "@/ui/empty";
 import {
   PaneChip,
   PaneIconButton,
@@ -108,24 +109,24 @@ const SEVERITY_LABEL: Record<Diagnostic["severity"], string> = {
 };
 
 const SEVERITY_TEXT_CLASS: Record<Diagnostic["severity"], string> = {
-  error: "text-error",
+  error: "text-destructive",
   warning: "text-warning",
   info: "text-info",
 };
 
 const CONTROL_PILL_BASE =
-  "font-sans ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-primary-bg px-2.5 text-text-lighter transition-colors hover:bg-hover hover:text-text";
+  "font-sans ui-text-sm inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground";
 
 const getSeverityIcon = (severity: Diagnostic["severity"], size = 11) => {
   switch (severity) {
     case "error":
-      return <AlertCircle size={size} className="text-error" />;
+      return <AlertCircle size={size} className="text-destructive" />;
     case "warning":
       return <AlertTriangle size={size} className="text-warning" />;
     case "info":
       return <Info size={size} className="text-info" />;
     default:
-      return <Info size={size} className="text-text-lighter" />;
+      return <Info size={size} className="text-subtle-foreground" />;
   }
 };
 
@@ -747,12 +748,12 @@ const DiagnosticsPane = ({
   const problemSummary = `${visibleProblemCount} problem${visibleProblemCount === 1 ? "" : "s"}`;
   const problemSummaryTone =
     visibleBySeverity.error > 0
-      ? "text-error"
+      ? "text-destructive"
       : visibleBySeverity.warning > 0
         ? "text-warning"
         : visibleBySeverity.info > 0
           ? "text-info"
-          : "text-text-lighter";
+          : "text-subtle-foreground";
 
   const filterContextMenuItems = useMemo<MenuItem[]>(() => {
     if (!filterContextMenu.data) return [];
@@ -877,7 +878,7 @@ const DiagnosticsPane = ({
   if (!isVisible) return null;
 
   const content = (
-    <div className="flex h-full min-h-0 flex-col bg-primary-bg">
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <div
         className={paneHeaderClassName()}
         onContextMenu={(e) => {
@@ -893,7 +894,9 @@ const DiagnosticsPane = ({
               <PaneIconButton
                 type="button"
                 onClick={() => setIsFileNavigatorVisible((visible) => !visible)}
-                className={cn(isFileNavigatorVisible && "border-border/70 bg-hover text-text")}
+                className={cn(
+                  isFileNavigatorVisible && "border-border/70 bg-accent text-foreground",
+                )}
                 tooltip={isFileNavigatorVisible ? "Hide files" : "Show files"}
                 aria-label={isFileNavigatorVisible ? "Hide files" : "Show files"}
               >
@@ -912,7 +915,7 @@ const DiagnosticsPane = ({
                 });
               }}
               className={cn(
-                (isSearchVisible || hasSearch) && "border-border/70 bg-hover text-text",
+                (isSearchVisible || hasSearch) && "border-border/70 bg-accent text-foreground",
               )}
               tooltip="Search problems"
             >
@@ -924,7 +927,7 @@ const DiagnosticsPane = ({
               onClick={(event) => {
                 filterContextMenu.open(event, "filters");
               }}
-              className={cn("relative", hasFilterSettings && "text-accent")}
+              className={cn("relative", hasFilterSettings && "text-primary")}
               tooltip="Filter problems"
             >
               <Filter />
@@ -987,7 +990,7 @@ const DiagnosticsPane = ({
                     onClick={(event) => {
                       filterContextMenu.open(event, "filters");
                     }}
-                    className={cn("relative", hasFilterSettings && "text-accent")}
+                    className={cn("relative", hasFilterSettings && "text-primary")}
                     tooltip="Filter problems"
                   >
                     <Filter />
@@ -1027,24 +1030,26 @@ const DiagnosticsPane = ({
 
         <ScrollArea className="min-h-0 flex-1" contentClassName="px-1.5 py-1.5">
           {diagnostics.length === 0 ? (
-            <div className="ui-text-sm flex h-full items-center justify-center text-text-lighter">
-              No problems detected
-            </div>
+            <Empty density="compact" className="h-full rounded-none">
+              <EmptyDescription>No problems detected</EmptyDescription>
+            </Empty>
           ) : filteredDiagnostics.length === 0 ? (
-            <div className="ui-text-sm flex h-full flex-col items-center justify-center gap-1 text-text-lighter">
-              <p>No problems match the current filters</p>
+            <Empty density="compact" className="h-full rounded-none">
+              <EmptyDescription>No problems match the current filters</EmptyDescription>
               {hasFilters && (
-                <Button
-                  type="button"
-                  onClick={resetFilters}
-                  variant="ghost"
-                  className={CONTROL_PILL_BASE}
-                  size="xs"
-                >
-                  Reset filters
-                </Button>
+                <EmptyContent>
+                  <Button
+                    type="button"
+                    onClick={resetFilters}
+                    variant="ghost"
+                    className={CONTROL_PILL_BASE}
+                    size="xs"
+                  >
+                    Reset filters
+                  </Button>
+                </EmptyContent>
               )}
-            </div>
+            </Empty>
           ) : (
             <div className="space-y-1.5">
               {groupedDiagnostics.map((group) => {
@@ -1054,28 +1059,28 @@ const DiagnosticsPane = ({
                 return (
                   <section
                     key={group.id}
-                    className="overflow-hidden rounded-xl border border-border/60 bg-secondary-bg/40"
+                    className="overflow-hidden rounded-xl border border-border/60 bg-surface/40"
                   >
                     {hasGroupHeader && (
                       <Button
                         type="button"
                         variant="ghost"
                         onClick={() => toggleGroupCollapse(group.id)}
-                        className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-primary-bg/70 px-2 py-1 text-left hover:bg-hover"
+                        className="h-auto w-full justify-start gap-1.5 rounded-none border-border/60 border-b bg-background/70 px-2 py-1 text-left hover:bg-accent"
                       >
                         {isCollapsed ? (
-                          <ChevronRight className="text-text-lighter" />
+                          <ChevronRight className="text-subtle-foreground" />
                         ) : (
-                          <ChevronDown className="text-text-lighter" />
+                          <ChevronDown className="text-subtle-foreground" />
                         )}
 
                         {group.severity ? (
                           getSeverityIcon(group.severity)
                         ) : (
-                          <Info className="text-text-lighter" />
+                          <Info className="text-subtle-foreground" />
                         )}
 
-                        <span className="font-sans ui-text-sm flex-1 truncate font-medium text-text">
+                        <span className="font-sans ui-text-sm flex-1 truncate font-medium text-foreground">
                           {preferences.groupBy === "file" ? getFileName(group.label) : group.label}
                         </span>
 
@@ -1106,7 +1111,7 @@ const DiagnosticsPane = ({
                                   onDiagnosticClick?.(diagnostic);
                                 }
                               }}
-                              className="group cursor-pointer px-2 py-1.5 transition-colors hover:bg-hover"
+                              className="group cursor-pointer px-2 py-1.5 transition-colors hover:bg-accent"
                             >
                               <div className="flex items-center gap-1.5">
                                 <span className="shrink-0">
@@ -1119,7 +1124,7 @@ const DiagnosticsPane = ({
                                     preferences.wrapMessages
                                       ? "whitespace-pre-wrap break-words leading-snug"
                                       : "truncate",
-                                    diagnostic.severity === "error" && "text-error",
+                                    diagnostic.severity === "error" && "text-destructive",
                                     diagnostic.severity === "warning" && "text-warning",
                                     diagnostic.severity === "info" && "text-info",
                                   )}
@@ -1136,7 +1141,7 @@ const DiagnosticsPane = ({
                                 {description && (
                                   <div
                                     className={cn(
-                                      "ui-text-sm mb-1 text-text-lighter/90 leading-snug",
+                                      "ui-text-sm mb-1 text-subtle-foreground/90 leading-snug",
                                       preferences.wrapMessages
                                         ? "whitespace-pre-wrap break-words"
                                         : "truncate",
@@ -1147,7 +1152,7 @@ const DiagnosticsPane = ({
                                 )}
 
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="ui-text-sm max-w-[420px] truncate text-text-lighter/75">
+                                  <span className="ui-text-sm max-w-[420px] truncate text-subtle-foreground/75">
                                     {diagnostic.filePath}
                                   </span>
 
@@ -1196,7 +1201,7 @@ const DiagnosticsPane = ({
     return content;
   }
 
-  return <div className="flex h-44 flex-col border-border border-t bg-primary-bg">{content}</div>;
+  return <div className="flex h-44 flex-col border-border border-t bg-background">{content}</div>;
 };
 
 export default DiagnosticsPane;

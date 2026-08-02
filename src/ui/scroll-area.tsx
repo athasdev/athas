@@ -37,7 +37,7 @@ function ScrollArea({
         ref={viewportRef}
         data-slot="scroll-area-viewport"
         className={cn(
-          "size-full min-h-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-accent/20",
+          "size-full min-h-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
           viewportClassName,
         )}
         style={{

@@ -11,9 +11,11 @@ import {
   getAllTerminalProfiles,
 } from "@/features/terminal/utils/terminal-profiles";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
+import { Field, FieldDescription, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
 import NumberInput from "@/ui/number-input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import Textarea from "@/ui/textarea";
@@ -106,7 +108,7 @@ export const TerminalSettings = () => {
   }, [allProfiles, settings.terminalDefaultProfileId, updateSetting]);
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section
         title="Launch"
         description="Choose which shell and profile new terminal tabs should use by default."
@@ -170,7 +172,7 @@ export const TerminalSettings = () => {
       >
         <div className="space-y-3 px-1">
           <div className="flex items-center justify-between">
-            <div className="font-sans ui-text-base text-text-lighter">
+            <div className="font-sans ui-text-base text-subtle-foreground">
               Built-in profiles are generated from detected shells. Custom profiles appear in the
               terminal toolbar profile picker.
             </div>
@@ -183,6 +185,7 @@ export const TerminalSettings = () => {
                   startupCommands: [],
                 })
               }
+              size="sm"
             >
               <Plus className="mr-1" />
               Add Profile
@@ -190,19 +193,23 @@ export const TerminalSettings = () => {
           </div>
 
           {profiles.length === 0 ? (
-            <div className="font-sans ui-text-base rounded-lg border border-dashed border-border/70 bg-secondary-bg/50 px-3 py-3 text-text-lighter">
-              No custom terminal profiles yet.
-            </div>
+            <Empty className="min-h-24 border border-border/70 bg-surface/50 px-3 py-3">
+              <EmptyDescription className="ui-text-base">
+                No custom terminal profiles yet.
+              </EmptyDescription>
+            </Empty>
           ) : (
             profiles.map((profile) => (
               <div
                 key={profile.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-secondary-bg/60 p-3"
+                className="space-y-3 rounded-lg border border-border/70 bg-surface/60 p-3"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="font-sans ui-text-base mb-1 text-text">{profile.name}</div>
-                    <div className="font-sans ui-text-base text-text-lighter">
+                    <div className="font-sans ui-text-base mb-1 text-foreground">
+                      {profile.name}
+                    </div>
+                    <div className="font-sans ui-text-base text-subtle-foreground">
                       Visible in the terminal profile picker.
                     </div>
                   </div>
@@ -210,16 +217,17 @@ export const TerminalSettings = () => {
                     variant="danger"
                     onClick={() => profileActions.deleteProfile(profile.id)}
                     aria-label={`Delete ${profile.name}`}
-                    size="icon"
+                    size="icon-sm"
                   >
                     <Trash2 />
                   </Button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <label className="font-sans ui-text-base text-text">Name</label>
+                  <Field>
+                    <FieldLabel htmlFor={`terminal-profile-name-${profile.id}`}>Name</FieldLabel>
                     <Input
+                      id={`terminal-profile-name-${profile.id}`}
                       value={profile.name}
                       onChange={(event) =>
                         profileActions.updateProfile(profile.id, {
@@ -229,10 +237,11 @@ export const TerminalSettings = () => {
                       placeholder="My Profile"
                       size="md"
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="font-sans ui-text-base text-text">Shell</label>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={`terminal-profile-shell-${profile.id}`}>Shell</FieldLabel>
                     <Select
+                      id={`terminal-profile-shell-${profile.id}`}
                       value={profile.shell || DEFAULT_SHELL_OPTION_VALUE}
                       options={shellOptions}
                       onChange={(value) =>
@@ -246,12 +255,15 @@ export const TerminalSettings = () => {
                       searchable
                       searchableTrigger="input"
                     />
-                  </div>
+                  </Field>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-sans ui-text-base text-text">Startup Directory</label>
+                <Field>
+                  <FieldLabel htmlFor={`terminal-profile-directory-${profile.id}`}>
+                    Startup Directory
+                  </FieldLabel>
                   <Input
+                    id={`terminal-profile-directory-${profile.id}`}
                     value={profile.startupDirectory || ""}
                     onChange={(event) =>
                       profileActions.updateProfile(profile.id, {
@@ -261,11 +273,17 @@ export const TerminalSettings = () => {
                     placeholder="Leave empty to use the current workspace directory"
                     size="md"
                   />
-                </div>
+                  <FieldDescription>
+                    Leave empty to use the current workspace directory.
+                  </FieldDescription>
+                </Field>
 
-                <div className="space-y-1.5">
-                  <label className="font-sans ui-text-base text-text">Startup Commands</label>
+                <Field>
+                  <FieldLabel htmlFor={`terminal-profile-commands-${profile.id}`}>
+                    Startup Commands
+                  </FieldLabel>
                   <Textarea
+                    id={`terminal-profile-commands-${profile.id}`}
                     value={(profile.startupCommands || []).join("\n")}
                     onChange={(event) =>
                       profileActions.updateProfile(profile.id, {
@@ -279,7 +297,8 @@ export const TerminalSettings = () => {
                     rows={3}
                     size="md"
                   />
-                </div>
+                  <FieldDescription>Enter one command per line.</FieldDescription>
+                </Field>
               </div>
             ))
           )}
@@ -308,7 +327,7 @@ export const TerminalSettings = () => {
               placeholder="Select font..."
             />
             <Tooltip content={FONT_HELP_TEXT} side="left">
-              <Info className="size-4 cursor-help text-text-lighter transition-colors hover:text-text" />
+              <Info className="size-4 cursor-help text-subtle-foreground transition-colors hover:text-foreground" />
             </Tooltip>
           </div>
         </SettingRow>
@@ -387,6 +406,67 @@ export const TerminalSettings = () => {
         </SettingRow>
       </Section>
 
+      <Section title="Interaction">
+        <SettingRow
+          label="Alt Click Moves Cursor"
+          description="Move the shell prompt cursor to the clicked position when supported"
+          onReset={() =>
+            updateSetting(
+              "terminalAltClickMovesCursor",
+              getDefaultSetting("terminalAltClickMovesCursor"),
+            )
+          }
+          canReset={
+            settings.terminalAltClickMovesCursor !==
+            getDefaultSetting("terminalAltClickMovesCursor")
+          }
+        >
+          <Switch
+            checked={settings.terminalAltClickMovesCursor}
+            onChange={(checked) => updateSetting("terminalAltClickMovesCursor", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Option as Meta"
+          description="Treat the Option key as Meta in terminal applications on macOS"
+          onReset={() =>
+            updateSetting("terminalMacOptionIsMeta", getDefaultSetting("terminalMacOptionIsMeta"))
+          }
+          canReset={
+            settings.terminalMacOptionIsMeta !== getDefaultSetting("terminalMacOptionIsMeta")
+          }
+        >
+          <Switch
+            checked={settings.terminalMacOptionIsMeta}
+            onChange={(checked) => updateSetting("terminalMacOptionIsMeta", checked)}
+            size="sm"
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Right Click Selects Word"
+          description="Select the word under the pointer before opening the context menu"
+          onReset={() =>
+            updateSetting(
+              "terminalRightClickSelectsWord",
+              getDefaultSetting("terminalRightClickSelectsWord"),
+            )
+          }
+          canReset={
+            settings.terminalRightClickSelectsWord !==
+            getDefaultSetting("terminalRightClickSelectsWord")
+          }
+        >
+          <Switch
+            checked={settings.terminalRightClickSelectsWord}
+            onChange={(checked) => updateSetting("terminalRightClickSelectsWord", checked)}
+            size="sm"
+          />
+        </SettingRow>
+      </Section>
+
       <Section title="Cursor">
         <SettingRow
           label="Cursor Style"
@@ -446,7 +526,42 @@ export const TerminalSettings = () => {
             size="md"
           />
         </SettingRow>
+
+        <SettingRow
+          label="Inactive Cursor Style"
+          description="Appearance of the terminal cursor when the terminal is not focused"
+          onReset={() =>
+            updateSetting(
+              "terminalCursorInactiveStyle",
+              getDefaultSetting("terminalCursorInactiveStyle"),
+            )
+          }
+          canReset={
+            settings.terminalCursorInactiveStyle !==
+            getDefaultSetting("terminalCursorInactiveStyle")
+          }
+        >
+          <Select
+            value={settings.terminalCursorInactiveStyle}
+            options={[
+              { value: "outline", label: "Outline" },
+              { value: "block", label: "Block" },
+              { value: "bar", label: "Bar" },
+              { value: "underline", label: "Underline" },
+              { value: "none", label: "Hidden" },
+            ]}
+            onChange={(value) =>
+              updateSetting(
+                "terminalCursorInactiveStyle",
+                value as typeof settings.terminalCursorInactiveStyle,
+              )
+            }
+            className={SETTINGS_CONTROL_WIDTHS.default}
+            size="md"
+            variant="default"
+          />
+        </SettingRow>
       </Section>
-    </div>
+    </SettingsView>
   );
 };

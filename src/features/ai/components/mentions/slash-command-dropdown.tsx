@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, type RefObject } from "react";
-import type { AIChatState } from "@/features/ai/types/ai-chat-store.types";
 import type { SlashCommand } from "@/features/ai/types/acp.types";
+import type { SlashCommandState } from "@/features/ai/types/chat-composer.types";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import {
   CommandEmpty,
@@ -15,7 +15,7 @@ interface SlashCommandDropdownProps {
   anchorRef: RefObject<HTMLElement | null>;
   onSelect: (command: SlashCommand) => void;
   onClose?: () => void;
-  slashCommandState: AIChatState["slashCommandState"];
+  slashCommandState: SlashCommandState;
   availableSlashCommands: SlashCommand[];
   filteredCommands: SlashCommand[];
   onSelectedIndexChange: (index: number) => void;
@@ -84,10 +84,15 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
       anchorRef={anchorRef}
       onClose={closeSlashCommands}
       ariaLabel="Slash command suggestions"
-      maxHeight={320}
+      maxHeight={240}
     >
       {filteredCommands.length > 0 ? (
-        <CommandList ref={listRef} role="listbox" aria-label="Slash command suggestions">
+        <CommandList
+          ref={listRef}
+          role="listbox"
+          aria-label="Slash command suggestions"
+          contentClassName="p-1.5"
+        >
           {filteredCommands.map((command, index) => (
             <CommandItemRow
               key={command.name}
@@ -100,9 +105,11 @@ export const SlashCommandDropdown = React.memo(function SlashCommandDropdown({
               aria-selected={index === selectedIndex}
               tabIndex={index === selectedIndex ? 0 : -1}
               icon={<span>/</span>}
+              iconClassName="size-4"
               title={command.name}
               description={command.description}
-              contentLayout="stacked"
+              density="compact"
+              contentClassName="[&>span:first-child]:shrink-0"
               accessory={
                 command.input?.hint ? (
                   <CommandItemBadge>{command.input.hint}</CommandItemBadge>

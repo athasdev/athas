@@ -62,7 +62,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     return {
       label: "Failed",
       icon: XCircle,
-      className: "text-error",
+      className: "text-destructive",
       animate: false,
     };
   }
@@ -71,7 +71,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     return {
       label: normalizedConclusion === "skipped" ? "Skipped" : "Cancelled",
       icon: XCircle,
-      className: "text-text-lighter",
+      className: "text-subtle-foreground",
       animate: false,
     };
   }
@@ -84,7 +84,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
     return {
       label: "Running",
       icon: null,
-      className: "text-accent",
+      className: "text-primary",
       animate: true,
     };
   }
@@ -101,7 +101,7 @@ const getWorkflowRunStatus = (status?: string | null, conclusion?: string | null
   return {
     label: normalizedConclusion || normalizedStatus || "Unknown",
     icon: Activity,
-    className: "text-text-lighter",
+    className: "text-subtle-foreground",
     animate: false,
   };
 };
@@ -252,8 +252,8 @@ const GitHubActionsView = memo(
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-    const { isAuthenticated } = useGitHubStore();
-    const { checkAuth } = useGitHubStore().actions;
+    const isAuthenticated = useGitHubStore.use.isAuthenticated();
+    const { checkAuth } = useGitHubStore.use.actions();
     const { openGitHubActionBuffer } = useBufferStore.use.actions();
     const activeRunId = useBufferStore((state) => {
       const activeBuffer = state.activeBufferId
@@ -436,7 +436,7 @@ const GitHubActionsView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
           {error ? (
             <GitHubSidebarState
               icon={<AlertCircle className="size-4" />}
@@ -444,9 +444,10 @@ const GitHubActionsView = memo(
               tone="error"
             />
           ) : isLoading && deferredRuns.length === 0 ? (
-            <div className="flex items-center justify-center p-4">
-              <Spinner label="Loading workflow runs" showLabel compact />
-            </div>
+            <GitHubSidebarState
+              icon={<Spinner label="Loading workflow runs" compact />}
+              title="Loading workflow runs"
+            />
           ) : deferredRuns.length === 0 ? (
             <GitHubSidebarState icon={<Activity className="size-4" />} title="No workflow runs" />
           ) : filteredRuns.length === 0 ? (

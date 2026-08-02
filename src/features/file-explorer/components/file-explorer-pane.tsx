@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { useSidebarStore } from "@/features/layout/stores/sidebar.store";
+import { SidebarPanel } from "@/ui/sidebar";
 import { Spinner } from "@/ui/spinner";
 import { FileExplorerTree } from "./file-explorer-tree";
 
@@ -27,7 +28,7 @@ function FileExplorerPaneComponent() {
   const updateActivePath = useSidebarStore.use.updateActivePath?.();
 
   return (
-    <div className="relative h-full">
+    <SidebarPanel className="relative">
       {(!isFileTreeLoading || isSwitchingProject) && (
         <FileExplorerTree
           files={files}
@@ -50,12 +51,12 @@ function FileExplorerPaneComponent() {
 
       {isFileTreeLoading && !isSwitchingProject && (
         <div className="pointer-events-none absolute inset-0 flex items-start justify-center p-3">
-          <div className="rounded-full border border-border/60 bg-secondary-bg/92 px-3 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
+          <div className="rounded-full border border-border/60 bg-surface/92 px-3 py-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
             <Spinner label="Loading files" showLabel className="ui-text-sm" />
           </div>
         </div>
       )}
-    </div>
+    </SidebarPanel>
   );
 }
 

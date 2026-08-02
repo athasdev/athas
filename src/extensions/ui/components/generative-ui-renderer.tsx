@@ -1,6 +1,9 @@
 import type { GenerativeUIAction, GenerativeUIComponent } from "../types/generative-ui";
 import { ProGate } from "./pro-gate";
 import { Button } from "@/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/ui/card";
+import { Item, ItemTitle } from "@/ui/item";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { cn } from "@/utils/cn";
 
 interface GenerativeUIRendererProps {
@@ -42,27 +45,26 @@ function RenderComponent({ component }: { component: GenerativeUIComponent }) {
   switch (type) {
     case "card":
       return (
-        <div className="rounded-lg border border-border bg-secondary-bg/50 p-3">
-          {typeof props.title === "string" && (
-            <h3 className="mb-1 font-medium ui-text-sm text-text">{props.title}</h3>
-          )}
-          {typeof props.description === "string" && (
-            <p className="text-text-lighter ui-text-sm">{props.description}</p>
-          )}
-          {renderedChildren}
-          {renderedActions}
-        </div>
+        <Card size="sm">
+          {typeof props.title === "string" || typeof props.description === "string" ? (
+            <CardHeader>
+              {typeof props.title === "string" ? <CardTitle>{props.title}</CardTitle> : null}
+              {typeof props.description === "string" ? (
+                <CardDescription>{props.description}</CardDescription>
+              ) : null}
+            </CardHeader>
+          ) : null}
+          {renderedChildren ? <CardContent>{renderedChildren}</CardContent> : null}
+          {renderedActions ? <CardFooter>{renderedActions}</CardFooter> : null}
+        </Card>
       );
     case "list":
       return (
         <div className="space-y-1">
           {(props.items as string[] | undefined)?.map((item, i) => (
-            <div
-              key={`item-${i}`}
-              className="rounded-md px-2 py-1 text-text ui-text-sm hover:bg-hover"
-            >
-              {item}
-            </div>
+            <Item key={`item-${i}`} size="xs">
+              <ItemTitle className="font-normal">{item}</ItemTitle>
+            </Item>
           ))}
           {renderedChildren}
           {renderedActions}
@@ -73,33 +75,26 @@ function RenderComponent({ component }: { component: GenerativeUIComponent }) {
       const rows = (props.rows as string[][]) ?? [];
       return (
         <div className="overflow-x-auto">
-          <table className="w-full ui-text-sm">
+          <Table>
             {headers.length > 0 && (
-              <thead>
-                <tr className="border-border border-b">
+              <TableHeader className="static">
+                <TableRow>
                   {headers.map((h, i) => (
-                    <th
-                      key={`h-${i}`}
-                      className="px-2 py-1 text-left font-medium text-text-lighter"
-                    >
-                      {h}
-                    </th>
+                    <TableHead key={`h-${i}`}>{h}</TableHead>
                   ))}
-                </tr>
-              </thead>
+                </TableRow>
+              </TableHeader>
             )}
-            <tbody>
+            <TableBody>
               {rows.map((row, ri) => (
-                <tr key={`r-${ri}`} className="border-border/50 border-b last:border-0">
+                <TableRow key={`r-${ri}`} className="border-border/50">
                   {row.map((cell, ci) => (
-                    <td key={`c-${ri}-${ci}`} className="px-2 py-1 text-text">
-                      {cell}
-                    </td>
+                    <TableCell key={`c-${ri}-${ci}`}>{cell}</TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {renderedActions}
         </div>
       );

@@ -141,7 +141,7 @@ export function injectLinkStyles(sessionId: string, containerId: string): void {
   const style = document.createElement("style");
   style.id = styleId;
   const accentColor = getComputedStyle(document.documentElement)
-    .getPropertyValue("--color-accent")
+    .getPropertyValue("--primary")
     .trim();
 
   style.textContent = `

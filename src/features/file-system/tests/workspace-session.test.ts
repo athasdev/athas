@@ -6,6 +6,7 @@ import {
   isLocalFileInWorkspace,
   isWorkspaceFolderPath,
   normalizeWorkspaceFolders,
+  selectRestoredWorkspaceFolders,
 } from "../controllers/workspace-session";
 
 describe("buildWorkspaceRestorePlan", () => {
@@ -57,6 +58,7 @@ describe("buildWorkspaceRestorePlan", () => {
           name: "Claude Code",
           isPinned: false,
           sessionId: "terminal-tab-1",
+          shell: "bash",
           workingDirectory: "/next",
           initialCommand: "claude",
         },
@@ -70,6 +72,7 @@ describe("buildWorkspaceRestorePlan", () => {
       name: "Claude Code",
       isPinned: false,
       sessionId: "terminal-tab-1",
+      shell: "bash",
       workingDirectory: "/next",
       initialCommand: "claude",
     });
@@ -118,6 +121,23 @@ describe("workspace file scope", () => {
         { path: "/docs", name: "docs" },
       ]),
     ).toBe(true);
+  });
+
+  it("drops saved workspace folders that could not be restored", () => {
+    expect(
+      selectRestoredWorkspaceFolders(
+        "/workspace",
+        [
+          { path: "/workspace", name: "workspace", isPrimary: true },
+          { path: "/available", name: "available" },
+          { path: "/missing", name: "missing" },
+        ],
+        ["/available"],
+      ),
+    ).toEqual([
+      { path: "/workspace", name: "workspace", isPrimary: true },
+      { path: "/available", name: "available", isPrimary: false },
+    ]);
   });
 });
 

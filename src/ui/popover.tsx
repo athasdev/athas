@@ -1,17 +1,18 @@
 import { cva } from "class-variance-authority";
-import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotionConfig, type Transition } from "motion/react";
 import {
   type CSSProperties,
+  type ComponentProps,
   type ReactNode,
   type RefObject,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { instantTransition, overlayEntrance } from "@/utils/motion-presets";
+import { instantTransition, overlayEntrance } from "@/utils/motion";
 import { cn } from "@/utils/cn";
 
 const popoverContentVariants = cva(
-  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
+  "pointer-events-auto fixed z-[10070] min-w-[240px] max-w-[min(480px,calc(100vw-16px))] select-none overflow-y-auto rounded-xl border border-border bg-surface/95 p-1 shadow-[var(--shadow-popover)] backdrop-blur-sm [overscroll-behavior:contain]",
 );
 
 function containScrollChain(event: ReactWheelEvent<HTMLDivElement>) {
@@ -57,7 +58,7 @@ interface PopoverContentProps {
   transition?: Transition;
 }
 
-export function PopoverContent({
+export function FloatingPopoverContent({
   isOpen,
   contentRef,
   children,
@@ -70,7 +71,7 @@ export function PopoverContent({
   exit = overlayEntrance.exit,
   transition = overlayEntrance.transition,
 }: PopoverContentProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionConfig();
 
   if (typeof document === "undefined") return null;
 
@@ -95,3 +96,85 @@ export function PopoverContent({
 
   return createPortal(<AnimatePresence>{node}</AnimatePresence>, portalContainer ?? document.body);
 }
+
+function Popover(props: PopoverPrimitive.Root.Props) {
+  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+}
+
+function PopoverTrigger(props: PopoverPrimitive.Trigger.Props) {
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+}
+
+function PopoverContent({
+  className,
+  align = "center",
+  alignOffset = 0,
+  side = "bottom",
+  sideOffset = 6,
+  collisionPadding = 8,
+  anchor,
+  portalContainer,
+  ...props
+}: PopoverPrimitive.Popup.Props &
+  Pick<
+    PopoverPrimitive.Positioner.Props,
+    "align" | "alignOffset" | "anchor" | "collisionPadding" | "side" | "sideOffset"
+  > & {
+    portalContainer?: HTMLElement | ShadowRoot | null;
+  }) {
+  return (
+    <PopoverPrimitive.Portal data-slot="popover-portal" container={portalContainer}>
+      <PopoverPrimitive.Positioner
+        align={align}
+        alignOffset={alignOffset}
+        anchor={anchor}
+        side={side}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        className="isolate z-[10070]"
+      >
+        <PopoverPrimitive.Popup
+          data-slot="popover-content"
+          className={cn(
+            "z-[10070] flex w-72 origin-[var(--transform-origin)] flex-col gap-2.5 rounded-xl border border-border bg-surface/95 p-2.5 font-sans ui-text-sm text-foreground shadow-[var(--shadow-popover)] outline-none backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
+            className,
+          )}
+          {...props}
+        />
+      </PopoverPrimitive.Positioner>
+    </PopoverPrimitive.Portal>
+  );
+}
+
+function PopoverHeader({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="popover-header"
+      className={cn("flex flex-col gap-0.5 font-sans ui-text-sm", className)}
+      {...props}
+    />
+  );
+}
+
+function PopoverTitle({ className, ...props }: PopoverPrimitive.Title.Props) {
+  return (
+    <PopoverPrimitive.Title
+      data-slot="popover-title"
+      className={cn("font-medium text-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+function PopoverDescription({ className, ...props }: PopoverPrimitive.Description.Props) {
+  return (
+    <PopoverPrimitive.Description
+      data-slot="popover-description"
+      className={cn("text-subtle-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger };
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";

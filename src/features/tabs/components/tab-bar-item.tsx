@@ -17,9 +17,11 @@ import { memo, useCallback, useEffect, useState } from "react";
 import type { RefCallback } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
+import { shouldShowTabCloseButton } from "@/features/settings/lib/ui-preferences";
+import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabBarTab } from "@/ui/tabs";
+import { TabBarTab } from "@/ui/tab-bar";
 import { getBaseName } from "@/utils/path-helpers";
 import { cn } from "@/utils/cn";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
@@ -69,6 +71,15 @@ const TabBarItem = memo(function TabBarItem({
 }: TabBarItemProps) {
   const [faviconError, setFaviconError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const showTabIcons = useSettingsStore((state) => state.settings.showTabIcons);
+  const tabCloseButtonVisibility = useSettingsStore(
+    (state) => state.settings.tabCloseButtonVisibility,
+  );
+  const showCloseButton = shouldShowTabCloseButton(
+    tabCloseButtonVisibility,
+    isActive,
+    buffer.isPinned,
+  );
   const authorAvatarUrl =
     buffer.type === "pullRequest" || buffer.type === "githubIssue"
       ? buffer.authorAvatarUrl
@@ -108,7 +119,7 @@ const TabBarItem = memo(function TabBarItem({
   return (
     <div ref={tabRef} className="relative">
       {showDropIndicatorBefore ? (
-        <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-accent" />
+        <div className="drop-indicator absolute top-1 bottom-1 left-0 z-20 w-0.5 bg-primary" />
       ) : null}
       <TabBarTab
         role="tab"
@@ -139,17 +150,15 @@ const TabBarItem = memo(function TabBarItem({
               }}
               className={cn(
                 "-translate-y-1/2 absolute top-1/2 right-1 transition-opacity",
-                buffer.isPinned || isActive
-                  ? "opacity-100"
-                  : "opacity-0 group-hover/tab:opacity-100",
+                showCloseButton ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
               )}
               tooltip={buffer.isPinned ? "Unpin tab" : "Close"}
-              shortcut={buffer.isPinned ? undefined : "mod+w"}
+              commandId={buffer.isPinned ? undefined : "file.close"}
               tabIndex={-1}
               draggable={false}
             >
               {buffer.isPinned ? (
-                <Pin className="pointer-events-none select-none fill-current text-accent" />
+                <Pin className="pointer-events-none select-none fill-current text-primary" />
               ) : (
                 <X className="pointer-events-none select-none" />
               )}
@@ -157,70 +166,72 @@ const TabBarItem = memo(function TabBarItem({
           ) : null
         }
       >
-        <div className="grid size-3 shrink-0 place-content-center">
-          {buffer.path === "extensions://marketplace" ? (
-            <Package className="text-text-lighter" />
-          ) : buffer.path.startsWith("whats-new://") ? (
-            <Sparkles className="text-accent" />
-          ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
-            <GitBranch className="text-text-lighter" />
-          ) : buffer.type === "terminal" ? (
-            <Terminal className="text-text-lighter" />
-          ) : buffer.type === "agent" ? (
-            <Sparkles className="text-text-lighter" />
-          ) : buffer.type === "webViewer" ? (
-            buffer.favicon && !faviconError ? (
-              <img
-                src={buffer.favicon}
-                alt=""
-                className="size-3 object-contain"
-                onError={() => setFaviconError(true)}
-              />
+        {showTabIcons ? (
+          <div className="grid size-3 shrink-0 place-content-center">
+            {buffer.path === "extensions://marketplace" ? (
+              <Package className="text-subtle-foreground" />
+            ) : buffer.path.startsWith("whats-new://") ? (
+              <Sparkles className="text-primary" />
+            ) : buffer.type === "diff" && isMultiFileDiff(buffer.diffData) ? (
+              <GitBranch className="text-subtle-foreground" />
+            ) : buffer.type === "terminal" ? (
+              <Terminal className="text-subtle-foreground" />
+            ) : buffer.type === "agent" ? (
+              <Sparkles className="text-subtle-foreground" />
+            ) : buffer.type === "webViewer" ? (
+              buffer.favicon && !faviconError ? (
+                <img
+                  src={buffer.favicon}
+                  alt=""
+                  className="size-3 object-contain"
+                  onError={() => setFaviconError(true)}
+                />
+              ) : (
+                <Globe className="text-subtle-foreground" />
+              )
+            ) : buffer.type === "database" ? (
+              <Database className="text-subtle-foreground" />
+            ) : buffer.type === "pullRequest" ? (
+              authorAvatarUrl && !avatarError ? (
+                <img
+                  src={authorAvatarUrl}
+                  alt=""
+                  className="size-3 rounded-full object-cover"
+                  loading="lazy"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <GitPullRequest className="text-subtle-foreground" />
+              )
+            ) : buffer.type === "githubIssue" ? (
+              authorAvatarUrl && !avatarError ? (
+                <img
+                  src={authorAvatarUrl}
+                  alt=""
+                  className="size-3 rounded-full object-cover"
+                  loading="lazy"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <MessageSquare className="text-subtle-foreground" />
+              )
+            ) : buffer.type === "githubAction" ? (
+              <Activity className="text-subtle-foreground" />
+            ) : buffer.type === "globalSearch" ? (
+              <Search className="text-subtle-foreground" />
+            ) : buffer.type === "diagnostics" ? (
+              <WarningCircle className="text-subtle-foreground" />
+            ) : buffer.type === "references" ? (
+              <Search className="text-subtle-foreground" />
             ) : (
-              <Globe className="text-text-lighter" />
-            )
-          ) : buffer.type === "database" ? (
-            <Database className="text-text-lighter" />
-          ) : buffer.type === "pullRequest" ? (
-            authorAvatarUrl && !avatarError ? (
-              <img
-                src={authorAvatarUrl}
-                alt=""
-                className="size-3 rounded-full object-cover"
-                loading="lazy"
-                onError={() => setAvatarError(true)}
+              <ThemedFileIcon
+                fileName={getDiffIconName() ?? buffer.name}
+                isDir={false}
+                className="text-subtle-foreground"
               />
-            ) : (
-              <GitPullRequest className="text-text-lighter" />
-            )
-          ) : buffer.type === "githubIssue" ? (
-            authorAvatarUrl && !avatarError ? (
-              <img
-                src={authorAvatarUrl}
-                alt=""
-                className="size-3 rounded-full object-cover"
-                loading="lazy"
-                onError={() => setAvatarError(true)}
-              />
-            ) : (
-              <MessageSquare className="text-text-lighter" />
-            )
-          ) : buffer.type === "githubAction" ? (
-            <Activity className="text-text-lighter" />
-          ) : buffer.type === "globalSearch" ? (
-            <Search className="text-text-lighter" />
-          ) : buffer.type === "diagnostics" ? (
-            <WarningCircle className="text-text-lighter" />
-          ) : buffer.type === "references" ? (
-            <Search className="text-text-lighter" />
-          ) : (
-            <ThemedFileIcon
-              fileName={getDiffIconName() ?? buffer.name}
-              isDir={false}
-              className="text-text-lighter"
-            />
-          )}
-        </div>
+            )}
+          </div>
+        ) : null}
         {isEditing ? (
           <InlineRenameInput
             value={editingName}
@@ -241,8 +252,8 @@ const TabBarItem = memo(function TabBarItem({
         ) : (
           <span
             className={cn(
-              "font-sans ui-text-sm min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-              isActive ? "text-text" : "text-text-lighter",
+              "font-sans ui-text-chrome min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
+              isActive ? "text-foreground" : "text-subtle-foreground",
               buffer.isPreview && "italic",
             )}
             title={buffer.path}
@@ -252,7 +263,7 @@ const TabBarItem = memo(function TabBarItem({
         )}
         {buffer.type === "editor" && buffer.isDirty && (
           <div
-            className="size-2 shrink-0 rounded-full bg-accent"
+            className="size-2 shrink-0 rounded-full bg-primary"
             title="Unsaved changes"
             role="img"
             aria-label="Unsaved changes"

@@ -74,9 +74,9 @@ function DebugBreakpointIndicatorsComponent({
             className={
               hasBreakpoint
                 ? enabled
-                  ? "size-2.5 rounded-full bg-error"
-                  : "size-2.5 rounded-full border border-error"
-                : "size-2.5 rounded-full bg-text-lighter/0 transition-colors group-hover:bg-text-lighter/30"
+                  ? "size-2.5 rounded-full bg-destructive"
+                  : "size-2.5 rounded-full border border-destructive"
+                : "size-2.5 rounded-full bg-subtle-foreground/0 transition-colors group-hover:bg-subtle-foreground/30"
             }
           />
         </button>,

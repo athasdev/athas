@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { useGitBlameStore } from "../stores/git-blame.store";
+import { isGitChangeRelevant, subscribeToGitChanges } from "../events/git-events";
+import { getGitBlameCacheKey, useGitBlameStore } from "../stores/git-blame.store";
 import type { GitBlameLine } from "../types/git.types";
 
 const BLAME_REFRESH_DELAY_MS = 500;
@@ -10,9 +11,11 @@ export function useGitBlame(filePath: string | undefined, content: string) {
   const loadBlameForFile = useGitBlameStore((state) => state.actions.loadBlameForFile);
   const clearBlameForFile = useGitBlameStore((state) => state.actions.clearBlameForFile);
   const blameRevision = useGitBlameStore((state) => state.revision);
+  const cacheKey =
+    filePath && rootFolderPath ? getGitBlameCacheKey(rootFolderPath, filePath) : null;
   const blameData = useGitBlameStore((state) =>
-    filePath && state.blameContent.get(filePath) === content
-      ? state.blameData.get(filePath)
+    cacheKey && state.blameContent.get(cacheKey) === content
+      ? state.blameData.get(cacheKey)
       : undefined,
   );
   useEffect(() => {
@@ -28,20 +31,13 @@ export function useGitBlame(filePath: string | undefined, content: string) {
   useEffect(() => {
     if (!filePath) return;
 
-    const handleGitStatusUpdate = (event: Event) => {
-      const updatedFilePath = (event as CustomEvent<{ filePath?: string }>).detail?.filePath;
-      if (updatedFilePath && updatedFilePath !== filePath) return;
-
+    const unsubscribe = subscribeToGitChanges((change) => {
+      if (!isGitChangeRelevant(change, rootFolderPath, filePath)) return;
       clearBlameForFile(filePath);
-    };
+    });
 
-    window.addEventListener("git-status-updated", handleGitStatusUpdate);
-    window.addEventListener("git-status-changed", handleGitStatusUpdate);
-    return () => {
-      window.removeEventListener("git-status-updated", handleGitStatusUpdate);
-      window.removeEventListener("git-status-changed", handleGitStatusUpdate);
-    };
-  }, [clearBlameForFile, filePath]);
+    return unsubscribe;
+  }, [clearBlameForFile, filePath, rootFolderPath]);
 
   const getBlameForLine = useCallback(
     (lineNumber: number): GitBlameLine | null => {

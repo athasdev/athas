@@ -35,7 +35,7 @@ export default function SqlHistoryList({
   return (
     <div className={cn(databaseCardClassName(), compact && "mx-2 mb-2")}>
       <div className="flex items-center justify-between p-2">
-        <div className="px-2 py-1 font-sans ui-text-sm text-text-lighter uppercase">
+        <div className="px-2 py-1 font-sans ui-text-sm text-subtle-foreground uppercase">
           {title} ({queries.length})
         </div>
         <Button
@@ -43,7 +43,7 @@ export default function SqlHistoryList({
           onClick={onClear}
           variant="ghost"
           size="icon-xs"
-          className="text-text-lighter hover:text-text"
+          className="text-subtle-foreground hover:text-foreground"
           aria-label="Clear recent queries"
           tooltip="Clear recent queries"
         >
@@ -56,7 +56,7 @@ export default function SqlHistoryList({
           return (
             <div
               key={query}
-              className="group mx-1 flex items-center gap-1 rounded-lg hover:bg-hover"
+              className="group mx-1 flex items-center gap-1 rounded-lg hover:bg-accent"
             >
               <Button
                 type="button"
@@ -82,7 +82,7 @@ export default function SqlHistoryList({
                   }}
                   variant="ghost"
                   size="icon-xs"
-                  className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
+                  className="shrink-0 text-subtle-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                   aria-label={`Run query from history: ${preview}`}
                   tooltip="Run query"
                 >
@@ -97,7 +97,7 @@ export default function SqlHistoryList({
                 }}
                 variant="ghost"
                 size="icon-xs"
-                className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
+                className="shrink-0 text-subtle-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label={`Copy query from history: ${preview}`}
                 tooltip="Copy query"
               >
@@ -111,7 +111,7 @@ export default function SqlHistoryList({
                 }}
                 variant="ghost"
                 size="icon-xs"
-                className="shrink-0 text-text-lighter opacity-0 hover:text-text focus-visible:opacity-100 group-hover:opacity-100"
+                className="shrink-0 text-subtle-foreground opacity-0 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
                 aria-label={`Remove query from history: ${preview}`}
                 tooltip="Remove from history"
               >

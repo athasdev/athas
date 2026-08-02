@@ -48,7 +48,7 @@ export function ImageEditorToolbar({
   currentFileName,
 }: ImageEditorToolbarProps) {
   const menuItemClass = cn(
-    "font-sans h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-text ui-text-sm",
+    "font-sans h-auto w-full justify-start gap-2 rounded-lg px-3 py-2 text-left text-foreground ui-text-sm",
   );
 
   const [showEditMenu, setShowEditMenu] = useState(false);
@@ -98,7 +98,7 @@ export function ImageEditorToolbar({
             <div
               className={cn(
                 "absolute top-full left-0 z-50 mt-1",
-                "w-48 rounded border border-border bg-secondary-bg shadow-[var(--shadow-popover)]",
+                "w-48 rounded border border-border bg-surface shadow-[var(--shadow-popover)]",
               )}
             >
               <div className="py-1">
@@ -193,7 +193,7 @@ export function ImageEditorToolbar({
             <div
               className={cn(
                 "absolute top-full left-0 z-50 mt-1",
-                "w-40 rounded border border-border bg-secondary-bg shadow-[var(--shadow-popover)]",
+                "w-40 rounded border border-border bg-surface shadow-[var(--shadow-popover)]",
               )}
             >
               <div className="py-1">
@@ -264,7 +264,7 @@ export function ImageEditorToolbar({
           variant="ghost"
           disabled={isProcessing}
           tooltip="Save changes"
-          className="text-accent"
+          className="text-primary"
           size="icon-xs"
         >
           <Save />

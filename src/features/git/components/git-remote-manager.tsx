@@ -3,7 +3,7 @@ import {
   PlusIcon as Plus,
   TrashIcon as Trash2,
 } from "@/ui/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CommandEmpty,
   CommandForm,
@@ -33,10 +33,17 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const [newRemoteName, setNewRemoteName] = useState("");
   const [newRemoteUrl, setNewRemoteUrl] = useState("");
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
+  const loadRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      loadRequestIdRef.current += 1;
+      return;
+    }
     void loadRemotes();
+    return () => {
+      loadRequestIdRef.current += 1;
+    };
   }, [isOpen, repoPath]);
 
   const handleClose = () => {
@@ -54,11 +61,17 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
   const loadRemotes = async () => {
     if (!repoPath) return;
 
+    const requestId = ++loadRequestIdRef.current;
     setIsLoading(true);
     try {
-      setRemotes(await getRemotes(repoPath));
+      const nextRemotes = await getRemotes(repoPath);
+      if (requestId === loadRequestIdRef.current) {
+        setRemotes(nextRemotes);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -155,7 +168,7 @@ const GitRemoteManager = ({ isOpen, onClose, repoPath, onRefresh }: GitRemoteMan
               <CommandItemRow
                 key={remote.name}
                 as="div"
-                icon={<Globe className="size-4 text-text-lighter" />}
+                icon={<Globe className="size-4 text-subtle-foreground" />}
                 title={remote.name}
                 description={remote.url}
                 contentLayout="stacked"

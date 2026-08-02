@@ -3,6 +3,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { getFileDiff } from "../api/git-diff-api";
+import { isGitChangeRelevant, subscribeToGitChanges } from "../events/git-events";
 import type { MultiFileDiff } from "../types/git-diff.types";
 import type { GitDiff } from "../types/git.types";
 import { getDiffBufferFilePath } from "../utils/diff-buffer-path";
@@ -127,22 +128,20 @@ export const useDiffData = (): UseDiffDataReturn => {
   ]);
 
   useEffect(() => {
-    const handleGitStatusChanged = async () => {
+    const unsubscribe = subscribeToGitChanges((change) => {
       if (!isWorkingTreeFileDiff || !rootFolderPath || !filePath || !activeBuffer) return;
+      if (!isGitChangeRelevant(change, rootFolderPath, filePath)) return;
 
       if (isRefreshing.current) return;
 
       setTimeout(() => {
         if (!isRefreshing.current) {
-          refresh();
+          void refresh();
         }
       }, 50);
-    };
+    });
 
-    window.addEventListener("git-status-changed", handleGitStatusChanged);
-    return () => {
-      window.removeEventListener("git-status-changed", handleGitStatusChanged);
-    };
+    return unsubscribe;
   }, [refresh, rootFolderPath, filePath, activeBuffer, isWorkingTreeFileDiff]);
 
   return {

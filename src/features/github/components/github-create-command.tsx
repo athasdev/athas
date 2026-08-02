@@ -18,7 +18,7 @@ import Command, {
   CommandList,
 } from "@/ui/command";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Textarea from "@/ui/textarea";
@@ -383,7 +383,7 @@ ${statusSummary}`;
     <Command isVisible onClose={onClose} title={titleByKind[kind]} className="max-h-[540px]">
       <CommandHeader onClose={mode === "form" ? onClose : closePicker}>
         {mode === "form" ? (
-          <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-text">
+          <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-foreground">
             {titleByKind[kind]}
           </span>
         ) : (
@@ -425,7 +425,7 @@ ${statusSummary}`;
                     closePicker();
                   }}
                   title={workflow.name || workflow.path}
-                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                  accessory={selected ? <Check className="size-3.5 text-primary" /> : null}
                 />
               );
             })
@@ -462,7 +462,7 @@ ${statusSummary}`;
                     />
                   }
                   title={label.name}
-                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                  accessory={selected ? <Check className="size-3.5 text-primary" /> : null}
                 />
               );
             })
@@ -493,7 +493,7 @@ ${statusSummary}`;
                     closePicker();
                   }}
                   title={branch}
-                  accessory={selected ? <Check className="size-3.5 text-accent" /> : null}
+                  accessory={selected ? <Check className="size-3.5 text-primary" /> : null}
                 />
               );
             })
@@ -564,18 +564,18 @@ ${statusSummary}`;
                   />
                 </div>
                 {kind === "pull-request" ? (
-                  <label className="flex items-center gap-2 px-1 font-sans ui-text-base text-text-lighter">
+                  <label className="flex items-center gap-2 px-1 font-sans ui-text-base text-subtle-foreground">
                     <Checkbox
                       checked={draft}
-                      onChange={setDraft}
-                      ariaLabel="Create as draft pull request"
+                      onCheckedChange={setDraft}
+                      aria-label="Create as draft pull request"
                     />
                     Draft
                   </label>
                 ) : null}
               </>
             )}
-            {error ? <div className="ui-text-base text-error">{error}</div> : null}
+            {error ? <div className="ui-text-base text-destructive">{error}</div> : null}
           </div>
         </CommandList>
       )}
@@ -587,7 +587,7 @@ ${statusSummary}`;
           </CommandFooterAction>
         ) : (
           <>
-            <span className="min-w-0 flex-1 truncate px-1 ui-text-base text-text-lighter">
+            <span className="min-w-0 flex-1 truncate px-1 ui-text-base text-subtle-foreground">
               {mode === "form" ? repoPath : titleByKind[kind]}
             </span>
             {kind !== "action" ? (
@@ -634,12 +634,12 @@ function FieldButton({
       variant="default"
       size="xs"
       onClick={onClick}
-      className={cn(
-        "h-8 min-w-0 justify-start gap-2 bg-secondary-bg px-2 text-left hover:bg-hover",
-      )}
+      className={cn("h-8 min-w-0 justify-start gap-2 bg-surface px-2 text-left hover:bg-accent")}
     >
-      <span className="shrink-0 font-sans ui-text-base text-text-lighter">{label}</span>
-      <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-text">{value}</span>
+      <span className="shrink-0 font-sans ui-text-base text-subtle-foreground">{label}</span>
+      <span className="min-w-0 flex-1 truncate font-sans ui-text-base text-foreground">
+        {value}
+      </span>
     </Button>
   );
 }

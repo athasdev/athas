@@ -1,23 +1,24 @@
-import { cva } from "class-variance-authority";
-import {
-  CheckIcon as Check,
-  CaretDownIcon as ChevronDown,
-  MagnifyingGlassIcon as Search,
-} from "@/ui/icons";
-import type {
-  AriaAttributes,
-  ComponentType,
-  KeyboardEvent,
-  ReactNode,
-  RefObject,
-  WheelEvent,
-} from "react";
-import { forwardRef, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
+import { useMemo, useRef, useState } from "react";
 import { buttonVariants } from "@/ui/button";
-import { controlIconSizes } from "@/utils/control-variants";
-import { Dropdown } from "@/ui/dropdown";
-import Input from "@/ui/input";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/ui/combobox";
+import {
+  CaretDownIcon as ChevronDown,
+  CheckIcon as Check,
+  MagnifyingGlassIcon as Search,
+  type Icon as AppIcon,
+} from "@/ui/icons";
 import Tooltip from "@/ui/tooltip";
+import { controlIconSizes } from "@/utils/control-variants";
 import { cn } from "@/utils/cn";
 import { matchesSearchQuery } from "@/utils/search-match";
 
@@ -25,6 +26,9 @@ export interface SelectOption {
   value: string;
   label: string;
   icon?: ReactNode;
+  accessory?: ReactNode;
+  disabled?: boolean;
+  keywords?: string[];
 }
 
 export interface SelectProps {
@@ -35,6 +39,7 @@ export interface SelectProps {
   className?: string;
   triggerClassName?: string;
   menuClassName?: string;
+  menuHeader?: ReactNode;
   menuMinWidth?: number;
   menuAnimated?: boolean;
   disabled?: boolean;
@@ -42,6 +47,9 @@ export interface SelectProps {
   variant?: "default" | "ghost";
   searchable?: boolean;
   searchableTrigger?: "menu" | "input";
+  allowCustomValue?: boolean;
+  customValueLabel?: (value: string) => string;
+  emptyLabel?: string;
   openDirection?: "up" | "down" | "auto";
   leftIcon?: ReactNode | ComponentType<{ size?: number; className?: string }>;
   id?: string;
@@ -51,221 +59,428 @@ export interface SelectProps {
   tooltip?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  "aria-label"?: AriaAttributes["aria-label"];
+  "aria-label"?: string;
 }
 
-const selectTriggerVariants = cva(
-  "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
-  {
-    variants: {
-      size: {
-        xs: "ui-text-sm",
-        sm: "ui-text-sm",
-        md: "ui-text-base",
-      },
-      withIcon: {
-        true: "",
-        false: "",
-      },
-    },
-    defaultVariants: {
-      size: "sm",
-      withIcon: false,
-    },
-  },
-);
+const selectItemClassName =
+  "font-sans ui-text-sm relative flex min-h-7 w-full cursor-default select-none items-center gap-2 rounded-lg px-2 py-1.5 text-left text-foreground outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] data-[highlighted]:bg-accent data-[selected]:bg-selected/70 disabled:pointer-events-none disabled:opacity-50";
 
-const selectContentVariants = cva(
-  "z-[10070] max-h-96 min-w-0 overflow-hidden rounded-xl border border-border bg-secondary-bg/95 p-1 shadow-[var(--shadow-popover)] transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
-);
+const selectPopupClassName =
+  "max-h-[var(--available-height)] w-[var(--anchor-width)] max-w-[var(--available-width)] min-w-36 origin-[var(--transform-origin)] overflow-hidden rounded-xl border border-border bg-surface/95 text-foreground shadow-[var(--shadow-popover)] backdrop-blur-sm transition-[opacity,transform,filter] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] [filter:blur(0)] data-[ending-style]:opacity-0 data-[ending-style]:[filter:blur(2px)] data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0 data-[starting-style]:[filter:blur(2px)]";
 
-const selectItemVariants = cva(
-  "font-sans flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-text outline-none transition-[transform,background-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-hover active:scale-[var(--app-press-scale)]",
-  {
-    variants: {
-      size: {
-        xs: "ui-text-sm",
-        sm: "ui-text-sm",
-        md: "ui-text-base",
-      },
-    },
-    defaultVariants: {
-      size: "sm",
-    },
-  },
-);
-
-const selectSearchInputVariants = cva(
-  "font-sans w-full border-none bg-transparent py-1 pr-3 pl-7 text-text placeholder-text-lighter outline-none",
-  {
-    variants: {
-      size: {
-        xs: "ui-text-sm",
-        sm: "ui-text-sm",
-        md: "ui-text-base",
-      },
-    },
-    defaultVariants: {
-      size: "sm",
-    },
-  },
-);
-
-const iconSizes = {
-  xs: controlIconSizes.xs,
-  sm: controlIconSizes.sm,
-  md: controlIconSizes.md,
+const selectTriggerSizeClassName = {
+  xs: "ui-text-sm",
+  sm: "ui-text-sm",
+  md: "ui-text-base",
 };
 
-function filterSelectOptions(options: SelectOption[], searchQuery: string) {
-  return options.filter((option) => matchesSearchQuery(searchQuery, [option.label, option.value]));
+function isIconComponent(
+  icon: SelectProps["leftIcon"],
+): icon is ComponentType<{ size?: number; className?: string }> {
+  return (
+    typeof icon === "function" || (typeof icon === "object" && icon !== null && "render" in icon)
+  );
 }
 
-function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "md"): ReactNode {
+function renderTriggerIcon(icon: SelectProps["leftIcon"], size: "xs" | "sm" | "md") {
   if (!icon) return null;
-
-  if (
-    typeof icon === "function" ||
-    (typeof icon === "object" && icon !== null && "render" in icon)
-  ) {
-    const Icon = icon as ComponentType<{ size?: number; className?: string }>;
-    return <Icon size={size === "md" ? 14 : 12} className="shrink-0 text-current" />;
+  if (!isIconComponent(icon)) {
+    return <span className="shrink-0 text-current">{icon}</span>;
   }
 
-  return <span className="shrink-0 text-current">{icon}</span>;
+  const Icon = icon;
+  return <Icon size={controlIconSizes[size]} className="shrink-0 text-current" />;
 }
 
-function SelectSearchField({
+function getButtonSize(size: "xs" | "sm" | "md", iconOnly: boolean) {
+  if (iconOnly) {
+    if (size === "md") return "icon" as const;
+    return size === "sm" ? ("icon-sm" as const) : ("icon-xs" as const);
+  }
+
+  return size === "md" ? ("default" as const) : size;
+}
+
+function SelectTriggerContent({
+  selectedOption,
+  placeholder,
   value,
-  onChange,
-  inputRef,
-  onKeyDown,
+  leftIcon,
   size,
+  iconOnly,
+  hideChevron,
 }: {
+  selectedOption: SelectOption | undefined;
+  placeholder: string;
   value: string;
-  onChange: (value: string) => void;
-  inputRef: RefObject<HTMLInputElement | null>;
-  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  leftIcon: SelectProps["leftIcon"];
   size: "xs" | "sm" | "md";
+  iconOnly: boolean;
+  hideChevron: boolean;
 }) {
-  const searchInputId = useId();
+  const triggerIcon = renderTriggerIcon(leftIcon, size);
 
   return (
-    <div className="border-border/60 border-b px-1.5 pb-1.5 pt-0.5">
-      <div className="relative">
-        <Search
-          className="-translate-y-1/2 absolute top-1/2 left-1.5 text-text-lighter"
-          size={12}
-        />
-        <input
-          id={searchInputId}
-          ref={inputRef}
-          data-prevent-dialog-escape="true"
-          type="text"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="Search..."
-          aria-label="Search options"
-          className={selectSearchInputVariants({ size })}
-          onKeyDown={(event) => {
-            event.stopPropagation();
-            onKeyDown?.(event);
-          }}
-          onKeyDownCapture={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SelectEmptyState({ size }: { size: "xs" | "sm" | "md" }) {
-  return (
-    <div
-      className={cn(
-        "font-sans p-3 text-center text-text-lighter",
-        size === "md" ? "ui-text-base" : "ui-text-sm",
+    <>
+      {iconOnly ? (
+        <>
+          {triggerIcon ?? selectedOption?.icon ?? null}
+          <span data-select-label="true" className="sr-only">
+            {selectedOption?.label || value || placeholder}
+          </span>
+        </>
+      ) : (
+        <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+          {triggerIcon}
+          {selectedOption?.icon ? (
+            <span className="size-3 shrink-0 text-subtle-foreground">{selectedOption.icon}</span>
+          ) : null}
+          <span data-select-label="true" className="block min-w-0 flex-1 truncate text-left">
+            {selectedOption?.label || value || placeholder}
+          </span>
+        </span>
       )}
-    >
-      No matching options
-    </div>
-  );
-}
-
-function getFilteredOptions(options: SelectOption[], searchable: boolean, searchQuery: string) {
-  return searchable ? filterSelectOptions(options, searchQuery) : options;
-}
-
-function getAnchorWidth(anchor: HTMLElement | null, minimumWidth = 0) {
-  if (!anchor) return undefined;
-  const width = anchor.getBoundingClientRect().width;
-  return Number.isFinite(width) ? Math.max(minimumWidth, Math.round(width)) : undefined;
-}
-
-function getInputTriggerText(
-  open: boolean,
-  searchableTrigger: "menu" | "input",
-  searchQuery: string,
-  selectedOption: SelectOption | undefined,
-  value: string,
-) {
-  if (open && searchableTrigger === "input") {
-    return searchQuery;
-  }
-
-  return selectedOption?.label || value || "";
-}
-
-const InputTriggerOptionRow = forwardRef<
-  HTMLButtonElement,
-  {
-    option: SelectOption;
-    optionId: string;
-    isHovered: boolean;
-    isSelected: boolean;
-    onMouseEnter: () => void;
-    onSelect: () => void;
-    size: "xs" | "sm" | "md";
-  }
->(function InputTriggerOptionRow(
-  { option, optionId, isHovered, isSelected, onMouseEnter, onSelect, size },
-  ref,
-) {
-  return (
-    <button
-      ref={ref}
-      id={optionId}
-      type="button"
-      role="option"
-      aria-selected={isSelected}
-      onMouseEnter={onMouseEnter}
-      onPointerMove={onMouseEnter}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onSelect}
-      className={cn(
-        selectItemVariants({ size }),
-        isHovered && "bg-hover",
-        isSelected && "bg-selected/70 text-text",
-      )}
-    >
-      {option.icon ? (
-        <span className="size-3 shrink-0 text-text-lighter">{option.icon}</span>
+      {!hideChevron ? (
+        <ChevronDown size={controlIconSizes[size]} className="shrink-0 text-subtle-foreground" />
       ) : null}
-      <span className="flex-1 truncate">{option.label}</span>
-      {isSelected ? <Check className="ml-auto shrink-0 text-accent" /> : null}
-    </button>
+    </>
   );
-});
+}
 
-export default function Select({
+function wrapTooltip(node: ReactElement, tooltip: string | undefined) {
+  return tooltip ? (
+    <Tooltip content={tooltip} triggerClassName="min-w-0">
+      {node}
+    </Tooltip>
+  ) : (
+    node
+  );
+}
+
+function PlainSelect({
   value,
   options,
   onChange,
+  placeholder,
+  className,
+  triggerClassName,
+  menuClassName,
+  menuHeader,
+  menuMinWidth,
+  menuAnimated,
+  disabled,
+  size,
+  variant,
+  openDirection,
+  leftIcon,
+  id,
+  title,
+  hideChevron,
+  iconOnly,
+  tooltip,
+  open,
+  onOpenChange,
+  ariaLabel,
+}: SelectProps & {
+  placeholder: string;
+  size: "xs" | "sm" | "md";
+  variant: "default" | "ghost";
+  menuAnimated: boolean;
+  hideChevron: boolean;
+  iconOnly: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  ariaLabel: string;
+}) {
+  const selectedOption = options.find((option) => option.value === value);
+  const popupStyle = menuMinWidth
+    ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
+    : undefined;
+  const node = (
+    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+      <SelectPrimitive.Root
+        value={value || null}
+        onValueChange={(nextValue) => {
+          if (nextValue != null) onChange(nextValue);
+        }}
+        open={open}
+        onOpenChange={(nextOpen) => onOpenChange(nextOpen)}
+        disabled={disabled}
+        modal={false}
+      >
+        <SelectPrimitive.Trigger
+          id={id}
+          title={title}
+          data-setting-primary-control="true"
+          data-prevent-dialog-escape={open ? "true" : undefined}
+          aria-label={ariaLabel}
+          className={cn(
+            buttonVariants({ variant, size: getButtonSize(size, iconOnly) }),
+            !iconOnly &&
+              "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
+            !iconOnly && selectTriggerSizeClassName[size],
+            triggerClassName,
+          )}
+        >
+          <SelectTriggerContent
+            selectedOption={selectedOption}
+            placeholder={placeholder}
+            value={value}
+            leftIcon={leftIcon}
+            size={size}
+            iconOnly={iconOnly}
+            hideChevron={hideChevron}
+          />
+        </SelectPrimitive.Trigger>
+        <SelectPrimitive.Portal>
+          <SelectPrimitive.Positioner
+            side={openDirection === "up" ? "top" : openDirection === "auto" ? undefined : "bottom"}
+            sideOffset={6}
+            align="start"
+            alignItemWithTrigger={false}
+            collisionPadding={8}
+            className="isolate z-[10070]"
+          >
+            <SelectPrimitive.Popup
+              data-prevent-dialog-escape="true"
+              style={popupStyle}
+              className={cn(
+                selectPopupClassName,
+                !menuAnimated && "duration-0 data-[ending-style]:transform-none",
+                menuClassName,
+              )}
+            >
+              {menuHeader}
+              <SelectPrimitive.List className="custom-scrollbar-thin max-h-96 overflow-y-auto overscroll-contain p-1">
+                {options.map((option) => (
+                  <SelectPrimitive.Item
+                    key={option.value}
+                    value={option.value}
+                    label={option.label}
+                    disabled={option.disabled}
+                    className={selectItemClassName}
+                  >
+                    {option.icon ? (
+                      <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>
+                    ) : null}
+                    <SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">
+                      {option.label}
+                    </SelectPrimitive.ItemText>
+                    {option.accessory}
+                    <SelectPrimitive.ItemIndicator className="ml-auto flex size-4 shrink-0 items-center justify-center text-primary">
+                      <Check />
+                    </SelectPrimitive.ItemIndicator>
+                  </SelectPrimitive.Item>
+                ))}
+              </SelectPrimitive.List>
+            </SelectPrimitive.Popup>
+          </SelectPrimitive.Positioner>
+        </SelectPrimitive.Portal>
+      </SelectPrimitive.Root>
+    </div>
+  );
+
+  return wrapTooltip(node, tooltip);
+}
+
+function SearchableSelect({
+  value,
+  options,
+  onChange,
+  placeholder,
+  className,
+  triggerClassName,
+  menuClassName,
+  menuHeader,
+  menuMinWidth,
+  menuAnimated,
+  disabled,
+  size,
+  variant,
+  searchableTrigger,
+  openDirection,
+  leftIcon,
+  id,
+  title,
+  hideChevron,
+  iconOnly,
+  tooltip,
+  open,
+  onOpenChange,
+  ariaLabel,
+  allowCustomValue = false,
+  customValueLabel = (customValue) => `Use ${customValue}`,
+  emptyLabel = "No matching options",
+}: SelectProps & {
+  placeholder: string;
+  size: "xs" | "sm" | "md";
+  variant: "default" | "ghost";
+  searchableTrigger: "menu" | "input";
+  menuAnimated: boolean;
+  hideChevron: boolean;
+  iconOnly: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  ariaLabel: string;
+}) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const resolvedOptions = useMemo(() => {
+    const customValue = query.trim();
+    if (
+      !allowCustomValue ||
+      !customValue ||
+      options.some((option) => option.value === customValue)
+    ) {
+      return options;
+    }
+
+    return [
+      ...options,
+      {
+        value: customValue,
+        label: customValueLabel(customValue),
+        keywords: [customValue],
+      },
+    ];
+  }, [allowCustomValue, customValueLabel, options, query]);
+  const selectedOption = resolvedOptions.find((option) => option.value === value) ?? null;
+  const componentIcon = isIconComponent(leftIcon) ? (leftIcon as AppIcon) : undefined;
+  const popupStyle = menuMinWidth
+    ? ({ minWidth: menuMinWidth } satisfies CSSProperties)
+    : undefined;
+  const filter = useMemo(
+    () => (option: SelectOption, query: string) =>
+      matchesSearchQuery(query, [option.label, option.value, ...(option.keywords ?? [])]),
+    [],
+  );
+
+  const list = (
+    <>
+      <ComboboxEmpty>{emptyLabel}</ComboboxEmpty>
+      <ComboboxList>
+        {(option: SelectOption) => (
+          <ComboboxItem key={option.value} value={option} disabled={option.disabled}>
+            {option.icon ? (
+              <span className="size-3 shrink-0 text-subtle-foreground">{option.icon}</span>
+            ) : null}
+            <span className="min-w-0 flex-1 truncate">{option.label}</span>
+            {option.accessory}
+          </ComboboxItem>
+        )}
+      </ComboboxList>
+    </>
+  );
+
+  const root = (
+    <Combobox<SelectOption>
+      items={resolvedOptions}
+      value={selectedOption}
+      onValueChange={(option) => {
+        if (option) onChange(option.value);
+      }}
+      itemToStringLabel={(option) => option.label}
+      itemToStringValue={(option) => option.value}
+      isItemEqualToValue={(left, right) => left.value === right.value}
+      filter={filter}
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setQuery("");
+        onOpenChange(nextOpen);
+      }}
+      inputValue={query}
+      onInputValueChange={setQuery}
+      disabled={disabled}
+      autoHighlight
+      modal={false}
+    >
+      {searchableTrigger === "input" ? (
+        <div className={cn("min-w-0 w-36", className)}>
+          <ComboboxInput
+            id={id}
+            title={title}
+            data-setting-primary-control="true"
+            data-prevent-dialog-escape={open ? "true" : undefined}
+            aria-label={ariaLabel}
+            placeholder={selectedOption?.label || placeholder}
+            leftIcon={componentIcon}
+            size={size}
+            variant={variant}
+            className={cn("w-full", triggerClassName)}
+            inputClassName="font-normal"
+            showTrigger={!hideChevron}
+          />
+        </div>
+      ) : (
+        <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
+          <ComboboxPrimitive.Trigger
+            id={id}
+            title={title}
+            data-setting-primary-control="true"
+            data-prevent-dialog-escape={open ? "true" : undefined}
+            aria-label={ariaLabel}
+            className={cn(
+              buttonVariants({ variant, size: getButtonSize(size, iconOnly) }),
+              !iconOnly &&
+                "font-sans inline-flex w-full min-w-0 items-center justify-between gap-2 whitespace-nowrap text-left font-normal",
+              !iconOnly && selectTriggerSizeClassName[size],
+              triggerClassName,
+            )}
+          >
+            <SelectTriggerContent
+              selectedOption={selectedOption ?? undefined}
+              placeholder={placeholder}
+              value={value}
+              leftIcon={leftIcon}
+              size={size}
+              iconOnly={iconOnly}
+              hideChevron={hideChevron}
+            />
+          </ComboboxPrimitive.Trigger>
+        </div>
+      )}
+      <ComboboxContent
+        side={openDirection === "up" ? "top" : "bottom"}
+        sideOffset={6}
+        align="start"
+        initialFocus={searchableTrigger === "menu" ? searchInputRef : undefined}
+        data-prevent-dialog-escape="true"
+        style={popupStyle}
+        className={cn(
+          "z-[10070]",
+          !menuAnimated && "duration-0 data-[ending-style]:transform-none",
+          menuClassName,
+        )}
+      >
+        {searchableTrigger === "menu" ? (
+          <div className="border-border/60 border-b p-1.5">
+            <ComboboxInput
+              ref={searchInputRef}
+              leftIcon={Search}
+              size={size}
+              variant="ghost"
+              placeholder="Search..."
+              aria-label="Search options"
+              showTrigger={false}
+              className="border-0"
+            />
+          </div>
+        ) : null}
+        {menuHeader}
+        {list}
+      </ComboboxContent>
+    </Combobox>
+  );
+
+  return wrapTooltip(root, tooltip);
+}
+
+export default function Select({
   placeholder = "Select...",
   className = "",
   triggerClassName = "",
   menuClassName = "",
+  menuHeader,
   menuMinWidth = 0,
   menuAnimated = true,
   disabled = false,
@@ -273,451 +488,49 @@ export default function Select({
   variant = "ghost",
   searchable = false,
   searchableTrigger = "menu",
+  allowCustomValue = false,
+  customValueLabel,
+  emptyLabel = "No matching options",
   openDirection = "down",
-  leftIcon,
-  id,
-  title,
   hideChevron = false,
   iconOnly = false,
-  tooltip,
   open: openProp,
   onOpenChange,
   "aria-label": ariaLabel,
+  ...props
 }: SelectProps) {
-  const selectId = useId();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [hoveredIndex, setHoveredIndex] = useState(0);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const listboxRef = useRef<HTMLDivElement>(null);
-  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const openedByFocusRef = useRef(false);
-  const canOpen = options.length > 0;
+  const canOpen =
+    props.options.length > 0 || Boolean(menuHeader) || (searchable && allowCustomValue);
   const open = (openProp ?? uncontrolledOpen) && canOpen;
-
   const handleOpenChange = (nextOpen: boolean) => {
-    const resolvedNextOpen = nextOpen && canOpen;
-    if (openProp === undefined) {
-      setUncontrolledOpen(resolvedNextOpen);
-    }
-    onOpenChange?.(resolvedNextOpen);
+    const resolvedOpen = nextOpen && canOpen;
+    if (openProp === undefined) setUncontrolledOpen(resolvedOpen);
+    onOpenChange?.(resolvedOpen);
   };
-
-  const selectedOption = options.find((option) => option.value === value);
-  const filteredOptions = useMemo(
-    () => getFilteredOptions(options, searchable, searchQuery),
-    [options, searchable, searchQuery],
-  );
-  const triggerIcon = renderTriggerIcon(leftIcon, size);
-  const triggerText = useMemo(
-    () => getInputTriggerText(open, searchableTrigger, searchQuery, selectedOption, value),
-    [open, searchableTrigger, searchQuery, selectedOption, value],
-  );
-  const buttonSize = iconOnly
-    ? size === "md"
-      ? "icon"
-      : size === "sm"
-        ? "icon-sm"
-        : "icon-xs"
-    : size === "md"
-      ? "default"
-      : size;
-  const resolvedTriggerClassName = cn(
-    buttonVariants({ variant, size: buttonSize }),
-    !iconOnly && selectTriggerVariants({ size, withIcon: Boolean(triggerIcon) }),
-    !iconOnly && "justify-between text-left",
+  const sharedProps = {
+    ...props,
+    placeholder,
+    className,
     triggerClassName,
-  );
-
-  useEffect(() => {
-    if (open && searchable && searchableTrigger === "menu") {
-      window.requestAnimationFrame(() => searchInputRef.current?.focus());
-      return;
-    }
-
-    if (!open) {
-      setSearchQuery("");
-      setHoveredIndex(0);
-    }
-  }, [open, searchable, searchableTrigger]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const selectedIndex =
-      searchQuery.length === 0 ? filteredOptions.findIndex((option) => option.value === value) : -1;
-
-    setHoveredIndex(selectedIndex >= 0 ? selectedIndex : 0);
-  }, [filteredOptions, open, searchQuery, value]);
-
-  useEffect(() => {
-    if (!open || hoveredIndex < 0) return;
-    optionRefs.current[hoveredIndex]?.scrollIntoView({ block: "nearest" });
-  }, [hoveredIndex, open]);
-
-  const handleListWheel = (event: WheelEvent<HTMLDivElement>) => {
-    const listElement = event.currentTarget;
-    if (listElement.scrollHeight <= listElement.clientHeight) return;
-
-    listElement.scrollTop += event.deltaY;
-    event.preventDefault();
-    event.stopPropagation();
+    menuClassName,
+    menuHeader,
+    menuMinWidth,
+    menuAnimated,
+    disabled,
+    size,
+    variant,
+    searchableTrigger,
+    allowCustomValue,
+    customValueLabel,
+    emptyLabel,
+    openDirection,
+    hideChevron,
+    iconOnly,
+    open,
+    onOpenChange: handleOpenChange,
+    ariaLabel: ariaLabel ?? placeholder,
   };
 
-  const listboxId = `${selectId}-listbox`;
-  const activeOptionId =
-    hoveredIndex >= 0 && hoveredIndex < filteredOptions.length
-      ? `${selectId}-option-${hoveredIndex}`
-      : undefined;
-
-  if (searchable && searchableTrigger === "input") {
-    const selectNode = (
-      <div className={cn("min-w-0 w-36", className)}>
-        <Input
-          ref={searchInputRef}
-          data-setting-primary-control="true"
-          data-state={open ? "open" : "closed"}
-          data-prevent-dialog-escape={open ? "true" : undefined}
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-autocomplete="list"
-          aria-activedescendant={open ? activeOptionId : undefined}
-          id={id}
-          title={title}
-          value={triggerText}
-          onFocus={() => {
-            if (!open) {
-              openedByFocusRef.current = true;
-              handleOpenChange(true);
-            }
-          }}
-          onClick={() => {
-            if (openedByFocusRef.current) {
-              openedByFocusRef.current = false;
-              return;
-            }
-
-            if (!open) {
-              handleOpenChange(true);
-            }
-          }}
-          onChange={(event) => {
-            setSearchQuery(event.target.value);
-            if (!open) handleOpenChange(true);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              if (open) {
-                handleOpenChange(false);
-              } else {
-                searchInputRef.current?.blur();
-              }
-              openedByFocusRef.current = false;
-              return;
-            }
-
-            if (
-              !open &&
-              (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ")
-            ) {
-              event.preventDefault();
-              handleOpenChange(true);
-              return;
-            }
-
-            if (filteredOptions.length === 0) return;
-
-            switch (event.key) {
-              case "ArrowDown":
-                event.preventDefault();
-                setHoveredIndex((prev) => Math.min(prev + 1, filteredOptions.length - 1));
-                break;
-              case "ArrowUp":
-                event.preventDefault();
-                setHoveredIndex((prev) => Math.max(prev - 1, 0));
-                break;
-              case "Home":
-                event.preventDefault();
-                setHoveredIndex(0);
-                break;
-              case "End":
-                event.preventDefault();
-                setHoveredIndex(filteredOptions.length - 1);
-                break;
-              case "Enter":
-                event.preventDefault();
-                if (filteredOptions[hoveredIndex]) {
-                  onChange(filteredOptions[hoveredIndex].value);
-                  handleOpenChange(false);
-                  openedByFocusRef.current = false;
-                }
-                break;
-              default:
-                break;
-            }
-          }}
-          readOnly={!open}
-          disabled={disabled}
-          leftIcon={
-            typeof leftIcon === "function" ||
-            (typeof leftIcon === "object" && leftIcon !== null && "render" in leftIcon)
-              ? (leftIcon as never)
-              : undefined
-          }
-          rightIcon={ChevronDown}
-          size={size}
-          variant={variant}
-          containerClassName="min-w-0 w-full"
-          className={cn("min-w-0 font-normal text-text", triggerClassName)}
-          placeholder={open ? "Search..." : selectedOption?.label || placeholder}
-          aria-label={ariaLabel ?? placeholder}
-        />
-
-        <Dropdown
-          isOpen={open}
-          anchorRef={searchInputRef}
-          anchorAlign="start"
-          onClose={() => handleOpenChange(false)}
-          className={cn("min-w-0 overflow-hidden rounded-xl p-0", menuClassName)}
-          menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
-          style={{ width: getAnchorWidth(searchInputRef.current, menuMinWidth) }}
-          animated={menuAnimated}
-        >
-          <div
-            ref={listboxRef}
-            id={listboxId}
-            role="listbox"
-            className="max-h-80 overflow-y-auto p-1"
-            onWheel={handleListWheel}
-          >
-            {filteredOptions.length === 0 ? (
-              <SelectEmptyState size={size} />
-            ) : (
-              <div className="space-y-1">
-                {filteredOptions.map((option, index) => (
-                  <InputTriggerOptionRow
-                    key={option.value}
-                    ref={(element) => {
-                      optionRefs.current[index] = element;
-                    }}
-                    option={option}
-                    optionId={`${selectId}-option-${index}`}
-                    isHovered={index === hoveredIndex}
-                    isSelected={option.value === value}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onSelect={() => {
-                      onChange(option.value);
-                      handleOpenChange(false);
-                      openedByFocusRef.current = false;
-                    }}
-                    size={size}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </Dropdown>
-      </div>
-    );
-
-    return tooltip ? (
-      <Tooltip content={tooltip} triggerClassName="min-w-0">
-        {selectNode}
-      </Tooltip>
-    ) : (
-      selectNode
-    );
-  }
-
-  const selectNode = (
-    <div className={cn(iconOnly ? "w-fit" : "min-w-0 w-36", className)}>
-      <button
-        ref={triggerRef}
-        data-setting-primary-control="true"
-        data-state={open ? "open" : "closed"}
-        data-prevent-dialog-escape={open ? "true" : undefined}
-        role="combobox"
-        id={id}
-        title={title}
-        type="button"
-        disabled={disabled}
-        className={resolvedTriggerClassName}
-        aria-label={ariaLabel ?? placeholder}
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-activedescendant={open ? activeOptionId : undefined}
-        aria-haspopup="listbox"
-        onClick={() => handleOpenChange(!open)}
-        onKeyDown={(event) => {
-          if (!open && (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ")) {
-            event.preventDefault();
-            handleOpenChange(true);
-            return;
-          }
-
-          if (event.key === "Escape") {
-            event.preventDefault();
-            if (open) {
-              handleOpenChange(false);
-            } else {
-              triggerRef.current?.blur();
-            }
-            return;
-          }
-
-          if (!open || filteredOptions.length === 0) return;
-
-          switch (event.key) {
-            case "ArrowDown":
-              event.preventDefault();
-              setHoveredIndex((prev) => Math.min(prev + 1, filteredOptions.length - 1));
-              break;
-            case "ArrowUp":
-              event.preventDefault();
-              setHoveredIndex((prev) => Math.max(prev - 1, 0));
-              break;
-            case "Enter":
-              event.preventDefault();
-              if (filteredOptions[hoveredIndex]) {
-                onChange(filteredOptions[hoveredIndex].value);
-                handleOpenChange(false);
-              }
-              break;
-            default:
-              break;
-          }
-        }}
-      >
-        {iconOnly ? (
-          <>
-            {triggerIcon ?? selectedOption?.icon ?? null}
-            <span data-select-label="true" className="sr-only">
-              {selectedOption?.label || value || placeholder}
-            </span>
-          </>
-        ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-            {triggerIcon}
-            {selectedOption?.icon && (
-              <span className="size-3 shrink-0 text-text-lighter">{selectedOption.icon}</span>
-            )}
-            <span data-select-label="true" className="block min-w-0 flex-1 truncate text-left">
-              {selectedOption?.label || value || placeholder}
-            </span>
-          </span>
-        )}
-        {!hideChevron && (
-          <ChevronDown size={iconSizes[size]} className="shrink-0 text-text-lighter" />
-        )}
-      </button>
-
-      <Dropdown
-        isOpen={open}
-        anchorRef={triggerRef as RefObject<HTMLElement | null>}
-        anchorSide={openDirection === "up" ? "top" : "bottom"}
-        onClose={() => handleOpenChange(false)}
-        className={cn(selectContentVariants(), menuClassName)}
-        menuClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
-        style={{ width: getAnchorWidth(triggerRef.current, menuMinWidth) }}
-        animated={menuAnimated}
-      >
-        {searchable && (
-          <SelectSearchField
-            value={searchQuery}
-            onChange={setSearchQuery}
-            inputRef={searchInputRef}
-            size={size}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                handleOpenChange(false);
-                return;
-              }
-
-              if (filteredOptions.length === 0) return;
-
-              switch (event.key) {
-                case "ArrowDown":
-                  event.preventDefault();
-                  setHoveredIndex((prev) => Math.min(prev + 1, filteredOptions.length - 1));
-                  break;
-                case "ArrowUp":
-                  event.preventDefault();
-                  setHoveredIndex((prev) => Math.max(prev - 1, 0));
-                  break;
-                case "Enter":
-                  event.preventDefault();
-                  if (filteredOptions[hoveredIndex]) {
-                    onChange(filteredOptions[hoveredIndex].value);
-                    handleOpenChange(false);
-                  }
-                  break;
-                default:
-                  break;
-              }
-            }}
-          />
-        )}
-
-        <div
-          ref={listboxRef}
-          id={listboxId}
-          role="listbox"
-          className="max-h-96 overflow-y-auto p-1"
-          onWheel={handleListWheel}
-        >
-          {filteredOptions.length === 0 ? (
-            <SelectEmptyState size={size} />
-          ) : (
-            <div className="space-y-1">
-              {filteredOptions.map((option, index) => {
-                const isHovered = index === hoveredIndex;
-                const isSelected = option.value === value;
-
-                return (
-                  <button
-                    key={option.value}
-                    ref={(element) => {
-                      optionRefs.current[index] = element;
-                    }}
-                    id={`${selectId}-option-${index}`}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onClick={() => {
-                      onChange(option.value);
-                      handleOpenChange(false);
-                    }}
-                    className={cn(
-                      selectItemVariants({ size }),
-                      isHovered && "bg-hover",
-                      isSelected && "bg-selected/70 text-text",
-                    )}
-                  >
-                    {option.icon && (
-                      <span className="size-3 shrink-0 text-text-lighter">{option.icon}</span>
-                    )}
-                    <span className="flex-1 truncate">{option.label}</span>
-                    {isSelected ? <Check className="ml-auto shrink-0 text-accent" /> : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </Dropdown>
-    </div>
-  );
-
-  return tooltip ? (
-    <Tooltip content={tooltip} triggerClassName="min-w-0">
-      {selectNode}
-    </Tooltip>
-  ) : (
-    selectNode
-  );
+  return searchable ? <SearchableSelect {...sharedProps} /> : <PlainSelect {...sharedProps} />;
 }

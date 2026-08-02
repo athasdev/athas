@@ -3,13 +3,16 @@ import { listen } from "@tauri-apps/api/event";
 import {
   ArrowLeftIcon as ArrowLeft,
   FolderIcon as Folder,
+  FolderOpenIcon as FolderOpen,
   PushPinIcon as PushPin,
   HardDrivesIcon as Server,
+  MagnifyingGlassIcon as Search,
+  PlusIcon as Plus,
   WarningCircleIcon as WarningCircle,
+  XIcon as X,
 } from "@/ui/icons";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
 import { memo, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IdeSettingsImportContent } from "@/features/file-system/components/ide-settings-import-dialog";
 import { useRecentFoldersStore } from "@/features/file-system/stores/recent-folders.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { RecentFolder } from "@/features/file-system/types/recent-folders.types";
@@ -34,6 +37,7 @@ import Command, {
   CommandHeader,
   CommandHeaderAction,
   CommandInput,
+  CommandItemAction,
   CommandItemBadge,
   CommandItemRow,
   CommandList,
@@ -43,6 +47,7 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/utils/cn";
 import { connectionStore } from "@/features/remote/stores/remote-connection.store";
+import NewProjectContent from "./new-project-content";
 
 interface ProjectPickerProps {
   isOpen: boolean;
@@ -67,9 +72,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const [wslDistributions, setWslDistributions] = useState<WslDistribution[]>([]);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [commandStep, setCommandStep] = useState<"picker" | "addRemote" | "importSettings">(
-    "picker",
-  );
+  const [commandStep, setCommandStep] = useState<"picker" | "newProject" | "addRemote">("picker");
   const [remoteFormData, setRemoteFormData] = useState<RemoteConnectionFormData>(
     createRemoteConnectionFormData,
   );
@@ -90,6 +93,8 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
 
   const recentFolders = useRecentFoldersStore((state) => state.recentFolders);
   const openRecentFolder = useRecentFoldersStore((state) => state.openRecentFolder);
+  const removeFromRecents = useRecentFoldersStore((state) => state.removeFromRecents);
+  const removeMissingFromRecents = useRecentFoldersStore((state) => state.removeMissingFromRecents);
   const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const handleOpenWslProject = useFileSystemStore((state) => state.handleOpenWslProject);
   const projectTabs = useWorkspaceTabsStore.use.projectTabs();
@@ -168,8 +173,8 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
     await handleOpenFolder();
   };
 
-  const handleImportSettingsClick = () => {
-    setCommandStep("importSettings");
+  const handleNewProjectClick = () => {
+    setCommandStep("newProject");
   };
 
   const resetRemoteForm = () => {
@@ -194,6 +199,19 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   const handleRecentFolderClick = async (folder: RecentFolder) => {
     onClose();
     await openRecentFolder(folder.path);
+  };
+
+  const handleRemoveRecentFolder = (folder: RecentFolder) => {
+    removeFromRecents(folder.path);
+    toast.success(`Removed "${folder.name}" from recent projects.`);
+  };
+
+  const handleRemoveMissingRecentFolders = () => {
+    const missingCount = recentFolders.filter((folder) => folder.missing).length;
+    removeMissingFromRecents();
+    toast.success(
+      `Removed ${missingCount} missing project${missingCount === 1 ? "" : "s"} from recents.`,
+    );
   };
 
   const handleConnect = async (connectionId: string, providedPassword?: string) => {
@@ -318,6 +336,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
   };
 
   const normalizedQuery = query.trim().toLowerCase();
+  const missingRecentFolderCount = recentFolders.filter((folder) => folder.missing).length;
   const filteredRecentFolders = useMemo(() => {
     if (!normalizedQuery) return recentFolders;
     return recentFolders.filter((folder) =>
@@ -397,16 +416,17 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
         title={
           commandStep === "addRemote"
             ? "New Remote Connection"
-            : commandStep === "importSettings"
-              ? "Import Settings"
+            : commandStep === "newProject"
+              ? "New Project"
               : "Open Project"
         }
         autoFocus={commandStep === "picker"}
       >
-        {commandStep === "importSettings" ? (
-          <IdeSettingsImportContent onClose={onClose} onBack={handleBackToPicker} />
+        {commandStep === "newProject" ? (
+          <NewProjectContent onBack={handleBackToPicker} onClose={onClose} />
         ) : commandStep === "picker" ? (
           <CommandHeader onClose={onClose}>
+            <Search className="size-4 shrink-0 text-subtle-foreground" />
             <CommandInput
               ref={inputRef}
               value={query}
@@ -421,18 +441,18 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
               <ArrowLeft />
             </CommandHeaderAction>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <Server className="shrink-0 text-text-lighter" />
-              <span className="min-w-0 truncate font-sans ui-text-base font-medium text-text">
+              <Server className="shrink-0 text-subtle-foreground" />
+              <span className="min-w-0 truncate font-sans ui-text-base font-medium text-foreground">
                 New Remote Connection
               </span>
             </div>
           </CommandHeader>
         )}
 
-        {commandStep === "importSettings" ? null : commandStep === "picker" ? (
+        {commandStep === "newProject" ? null : commandStep === "picker" ? (
           <CommandList>
             {filteredRecentFolders.length > 0 ? (
-              <div className="p-0">
+              <div className="space-y-0.5">
                 {filteredRecentFolders.map((folder) => {
                   const matchingTab = projectTabs.find((t) => t.path === folder.path);
                   const iconPath = folder.customIcon ?? matchingTab?.customIcon;
@@ -441,10 +461,10 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                   return (
                     <CommandItemRow
                       key={folder.path}
+                      as="div"
                       isSelected={selectedIndex === entryIndex}
                       onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleRecentFolderClick(folder)}
-                      className={folder.missing ? "text-text-lighter" : undefined}
                       icon={
                         iconPath ? (
                           <img
@@ -455,16 +475,31 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                         ) : folder.missing ? (
                           <WarningCircle className="text-warning" />
                         ) : (
-                          <Folder className="text-text-lighter" />
+                          <Folder className="text-subtle-foreground" />
                         )
                       }
                       title={folder.name}
                       description={folder.path}
                       accessory={
                         <>
-                          {folder.pinned ? <PushPin className="fill-current text-accent" /> : null}
-                          {folder.missing ? <CommandItemBadge>Missing</CommandItemBadge> : null}
+                          {folder.pinned ? <PushPin className="fill-current text-primary" /> : null}
+                          {folder.missing ? (
+                            <CommandItemBadge variant="warning">Missing</CommandItemBadge>
+                          ) : null}
                         </>
+                      }
+                      action={
+                        <CommandItemAction
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleRemoveRecentFolder(folder);
+                          }}
+                          tooltip="Remove from recent projects"
+                          aria-label={`Remove ${folder.name} from recent projects`}
+                        >
+                          <X />
+                        </CommandItemAction>
                       }
                     />
                   );
@@ -473,7 +508,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             ) : null}
 
             {filteredConnections.length > 0 ? (
-              <div className="p-0">
+              <div className="space-y-0.5">
                 {filteredConnections.map((connection) => {
                   const entryIndex = getEntryIndex(`remote:${connection.id}`);
 
@@ -487,7 +522,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                         connectingMap[connection.id] ? "cursor-not-allowed opacity-70" : undefined
                       }
                       disabled={!!connectingMap[connection.id]}
-                      icon={<Server className="text-text-lighter" />}
+                      icon={<Server className="text-subtle-foreground" />}
                       title={connection.name}
                       description={
                         <>
@@ -506,7 +541,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                           <span
                             className={cn(
                               "size-2 rounded-full",
-                              connection.isConnected ? "bg-success" : "bg-text-lighter/40",
+                              connection.isConnected ? "bg-success" : "bg-subtle-foreground/40",
                             )}
                           />
                           <span className="sr-only">
@@ -521,7 +556,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
             ) : null}
 
             {filteredWslDistributions.length > 0 ? (
-              <div className="p-0">
+              <div className="space-y-0.5">
                 {filteredWslDistributions.map((distribution) => {
                   const entryIndex = getEntryIndex(`wsl:${distribution.name}`);
 
@@ -531,7 +566,7 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
                       isSelected={selectedIndex === entryIndex}
                       onMouseEnter={() => setSelectedIndex(entryIndex)}
                       onClick={() => handleOpenWslDistribution(distribution)}
-                      icon={<Server className="text-text-lighter" />}
+                      icon={<Server className="text-subtle-foreground" />}
                       title={distribution.name}
                       description={
                         <>
@@ -582,17 +617,26 @@ const ProjectPicker = memo(({ isOpen, onClose }: ProjectPickerProps) => {
           </CommandList>
         )}
 
-        {commandStep === "importSettings" ? null : commandStep === "picker" ? (
+        {commandStep === "newProject" ? null : commandStep === "picker" ? (
           <CommandFooter>
             <CommandFooterAction onClick={() => void handleOpenFolderClick()}>
+              <FolderOpen />
               Open Folder
             </CommandFooterAction>
-            <CommandFooterAction onClick={handleImportSettingsClick}>
-              Import Settings
+            <CommandFooterAction onClick={handleNewProjectClick}>
+              <Plus />
+              New Project
             </CommandFooterAction>
             <CommandFooterAction onClick={handleAddRemoteConnectionClick}>
+              <Plus />
               Add Remote
             </CommandFooterAction>
+            {missingRecentFolderCount > 0 ? (
+              <CommandFooterAction onClick={handleRemoveMissingRecentFolders}>
+                <X />
+                Remove Missing
+              </CommandFooterAction>
+            ) : null}
           </CommandFooter>
         ) : (
           <CommandFooter>

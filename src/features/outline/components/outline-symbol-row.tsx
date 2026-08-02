@@ -47,11 +47,11 @@ function OutlineSymbolIcon({ kind, className = "size-3.5" }: { kind: string; cla
           case "module":
           case "namespace":
           case "package":
-            return <Package className={`${className} text-text-lighter`} />;
+            return <Package className={`${className} text-subtle-foreground`} />;
           case "type-parameter":
             return <TextT className={`${className} text-symbol-type-parameter`} />;
           default:
-            return <Code className={`${className} text-text-lighter`} />;
+            return <Code className={`${className} text-subtle-foreground`} />;
         }
       })()}
     </IconContext.Provider>
@@ -113,9 +113,11 @@ export const OutlineSymbolRow = forwardRef<HTMLButtonElement, OutlineSymbolRowPr
 
         <SidebarTreeIcon icon={<OutlineSymbolIcon kind={symbol.kind} />} />
         <span className="ml-1.5 min-w-0 flex-1 truncate">
-          <span className="ui-text-sm text-text">{symbol.name}</span>
+          <span className="ui-text-sm text-foreground">{symbol.name}</span>
           {symbol.detail ? (
-            <span className="ml-1.5 ui-text-sm text-text-lighter opacity-70">{symbol.detail}</span>
+            <span className="ml-1.5 ui-text-sm text-subtle-foreground opacity-70">
+              {symbol.detail}
+            </span>
           ) : null}
         </span>
       </SidebarTreeRow>

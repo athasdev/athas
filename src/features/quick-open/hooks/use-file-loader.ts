@@ -1,9 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fffScanStatus } from "@/features/file-search/lib/file-search-api";
+import {
+  type FffIndexedFile,
+  fffListFiles,
+  fffScanStatus,
+} from "@/features/file-search/lib/file-search-api";
 import { getNativeWorkspaceRootPaths } from "@/features/file-search/utils/file-search-paths";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import type { FileItem } from "../types/quick-open.types";
 import { shouldIgnoreFile } from "../utils/file-filtering";
+
+const toQuickOpenFiles = (files: readonly Pick<FffIndexedFile, "name" | "path">[]): FileItem[] =>
+  files
+    .filter((file) => !shouldIgnoreFile(file.path))
+    .map((file) => ({
+      name: file.name,
+      path: file.path,
+      isDir: false,
+    }));
 
 export const useFileLoader = (isVisible: boolean) => {
   const getAllProjectFiles = useFileSystemStore((state) => state.getAllProjectFiles);
@@ -26,53 +39,77 @@ export const useFileLoader = (isVisible: boolean) => {
     if (!isVisible) return;
 
     const isAlreadyLoaded = loadedForRootRef.current === workspaceKey;
-    if (isAlreadyLoaded && files.length > 0) return;
-
     let cancelled = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const loadFiles = async () => {
+    const pollNativeIndex = async () => {
       try {
-        setIsLoadingFiles(true);
-        setIsIndexing(true);
-
-        const allFiles = await getAllProjectFiles();
-        const filteredFiles = allFiles
-          .filter((file) => !file.isDir && !shouldIgnoreFile(file.path))
-          .map((file) => ({
-            name: file.name,
-            path: file.path,
-            isDir: file.isDir,
-          }));
-
+        const status = await fffScanStatus(nativeRootPaths);
         if (cancelled) return;
-        loadedForRootRef.current = workspaceKey;
-        setFiles(filteredFiles);
 
-        if (nativeRootPaths.length > 0) {
-          const status = await fffScanStatus(nativeRootPaths);
-          if (cancelled) return;
-          setIsIndexing(status.is_scanning);
-          if (status.is_scanning) {
-            pollTimer = setTimeout(loadFiles, 150);
-          }
+        const indexedFiles = await fffListFiles(nativeRootPaths);
+        if (cancelled) return;
+        setFiles(toQuickOpenFiles(indexedFiles));
+        setIsIndexing(status.is_scanning);
+
+        if (status.is_scanning) {
+          pollTimer = setTimeout(() => void pollNativeIndex(), 150);
         }
       } catch (error) {
-        console.error("Failed to load project files:", error);
-      } finally {
-        setIsLoadingFiles(false);
-        if (nativeRootPaths.length === 0) {
-          setIsIndexing(false);
-        }
+        if (cancelled) return;
+        console.error("Failed to read project index:", error);
+        setIsIndexing(false);
       }
     };
 
-    void loadFiles();
-    return () => {
+    const loadFiles = async () => {
+      if (loadedForRootRef.current !== workspaceKey) {
+        setFiles([]);
+      }
+      setIsLoadingFiles(true);
+      setIsIndexing(nativeRootPaths.length > 0);
+
+      try {
+        const allFiles = await getAllProjectFiles();
+        if (cancelled) return;
+        loadedForRootRef.current = workspaceKey;
+        setFiles(toQuickOpenFiles(allFiles.filter((file) => !file.isDir)));
+
+        if (nativeRootPaths.length > 0) {
+          await pollNativeIndex();
+        } else {
+          setIsIndexing(false);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to load project files:", error);
+        setIsIndexing(false);
+      } finally {
+        if (!cancelled) setIsLoadingFiles(false);
+      }
+    };
+
+    const cleanup = () => {
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
+
+    if (isAlreadyLoaded) {
+      if (nativeRootPaths.length > 0) {
+        void pollNativeIndex();
+      }
+      return cleanup;
+    }
+
+    void loadFiles();
+    return cleanup;
   }, [getAllProjectFiles, isVisible, nativeRootPaths, workspaceKey]);
 
-  return { files, isLoadingFiles, isIndexing, rootFolderPath };
+  return {
+    files,
+    hasLoadedFiles: loadedForRootRef.current === workspaceKey,
+    isLoadingFiles,
+    isIndexing,
+    rootFolderPath,
+  };
 };

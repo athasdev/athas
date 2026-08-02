@@ -77,7 +77,9 @@ const IssueRow = memo(({ issue, isActive, onSelect, onPrefetch, repoPath }: Issu
       }}
       active={isActive}
       leading={
-        <MessageSquare className={isOpen ? "size-4 text-success" : "size-4 text-text-lighter"} />
+        <MessageSquare
+          className={isOpen ? "size-4 text-success" : "size-4 text-subtle-foreground"}
+        />
       }
       description={
         <span className="flex min-w-0 items-center gap-1.5 capitalize">
@@ -137,8 +139,8 @@ const GitHubIssuesView = memo(
     const rootFolderPath = useFileSystemStore.use.rootFolderPath?.();
     const activeRepoPath = useRepositoryStore.use.activeRepoPath();
     const repoPath = activeRepoPath ?? rootFolderPath ?? null;
-    const { isAuthenticated } = useGitHubStore();
-    const { checkAuth } = useGitHubStore().actions;
+    const isAuthenticated = useGitHubStore.use.isAuthenticated();
+    const { checkAuth } = useGitHubStore.use.actions();
     const { openGitHubIssueBuffer } = useBufferStore.use.actions();
     const activeIssueNumber = useBufferStore((state) => {
       const activeBuffer = state.activeBufferId
@@ -303,7 +305,7 @@ const GitHubIssuesView = memo(
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ScrollArea className="min-h-0 flex-1" contentClassName="p-1">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="px-2 py-2">
           {error ? (
             <GitHubSidebarState
               icon={<AlertCircle className="size-4" />}
@@ -311,9 +313,10 @@ const GitHubIssuesView = memo(
               tone="error"
             />
           ) : isLoading && deferredIssues.length === 0 ? (
-            <div className="flex items-center justify-center p-4">
-              <Spinner label="Loading issues" showLabel compact />
-            </div>
+            <GitHubSidebarState
+              icon={<Spinner label="Loading issues" compact />}
+              title="Loading issues"
+            />
           ) : deferredIssues.length === 0 ? (
             <GitHubSidebarState icon={<MessageSquare className="size-4" />} title="No issues" />
           ) : filteredIssues.length === 0 ? (

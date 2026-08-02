@@ -16,8 +16,10 @@ interface GitState {
   isRefreshing: boolean;
   currentRepoPath: string | null;
   currentWorkspaceRepoPath: string | null;
+  workspaceGitStatusUpdatedAt: number;
 
   actions: {
+    prepareRepositoryLoad: (repoPath: string) => void;
     loadFreshGitData: (data: {
       gitStatus: GitStatus | null;
       commits: GitCommit[];
@@ -27,9 +29,10 @@ interface GitState {
     }) => void;
     refreshGitData: (data: {
       gitStatus: GitStatus | null;
-      branches: string[];
+      branches?: string[];
+      commits?: GitCommit[];
       repoPath: string;
-    }) => Promise<void>;
+    }) => void;
     refreshWorkspaceGitStatus: (repoPath: string) => Promise<void>;
     loadMoreCommits: (repoPath: string) => Promise<void>;
     setGitStatus: (status: GitStatus | null) => void;
@@ -45,7 +48,7 @@ interface GitState {
 
 const COMMITS_PER_PAGE = 50;
 
-const createGitStore = () =>
+export const createGitStore = () =>
   createStore<GitState>()((set, get) => ({
     gitStatus: null,
     workspaceGitStatus: null,
@@ -58,9 +61,29 @@ const createGitStore = () =>
     isRefreshing: false,
     currentRepoPath: null,
     currentWorkspaceRepoPath: null,
+    workspaceGitStatusUpdatedAt: 0,
 
     actions: {
+      prepareRepositoryLoad: (repoPath) => {
+        const state = get();
+        if (state.currentRepoPath === repoPath) return;
+
+        set({
+          gitStatus: null,
+          commits: [],
+          branches: [],
+          stashes: [],
+          hasMoreCommits: true,
+          isLoadingMoreCommits: false,
+          currentRepoPath: repoPath,
+        });
+      },
+
       loadFreshGitData: ({ gitStatus, commits, branches, stashes, repoPath }) => {
+        if (get().currentRepoPath !== repoPath) {
+          return;
+        }
+
         set({
           gitStatus,
           commits,
@@ -71,32 +94,21 @@ const createGitStore = () =>
         });
       },
 
-      refreshGitData: async ({ gitStatus, branches, repoPath }) => {
-        const { currentRepoPath, commits: existingCommits } = get();
-
-        if (currentRepoPath !== repoPath || existingCommits.length === 0) {
-          set({ gitStatus, branches });
+      refreshGitData: ({ gitStatus, branches, commits, repoPath }) => {
+        if (get().currentRepoPath !== repoPath) {
           return;
         }
 
-        const latestCommits = await getGitLog(repoPath, 50, 0);
-
-        if (latestCommits.length > 0) {
-          const existingHashSet = new Set(existingCommits.map((c) => c.hash));
-          const newCommits = latestCommits.filter((c) => !existingHashSet.has(c.hash));
-
-          if (newCommits.length > 0) {
-            set({
-              gitStatus,
-              branches,
-              commits: [...newCommits, ...existingCommits],
-            });
-          } else {
-            set({ gitStatus, branches });
-          }
-        } else {
-          set({ gitStatus, branches });
-        }
+        set({
+          gitStatus,
+          ...(branches ? { branches } : {}),
+          ...(commits
+            ? {
+                commits,
+                hasMoreCommits: commits.length >= COMMITS_PER_PAGE,
+              }
+            : {}),
+        });
       },
 
       refreshWorkspaceGitStatus: async (repoPath) => {
@@ -108,18 +120,22 @@ const createGitStore = () =>
 
         set({
           workspaceGitStatus: status,
+          workspaceGitStatusUpdatedAt: Date.now(),
         });
       },
 
       loadMoreCommits: async (repoPath) => {
-        const { commits, hasMoreCommits, isLoadingMoreCommits } = get();
+        const { commits, currentRepoPath, hasMoreCommits, isLoadingMoreCommits } = get();
 
-        if (!hasMoreCommits || isLoadingMoreCommits) return;
+        if (currentRepoPath !== repoPath || !hasMoreCommits || isLoadingMoreCommits) return;
 
         set({ isLoadingMoreCommits: true });
 
         try {
           const newCommits = await getGitLog(repoPath, COMMITS_PER_PAGE, commits.length);
+          if (get().currentRepoPath !== repoPath) {
+            return;
+          }
 
           const existingHashSet = new Set(commits.map((c) => c.hash));
           const uniqueNewCommits = newCommits.filter((c) => !existingHashSet.has(c.hash));
@@ -142,6 +158,7 @@ const createGitStore = () =>
         set({
           workspaceGitStatus: status,
           currentWorkspaceRepoPath: repoPath,
+          workspaceGitStatusUpdatedAt: Date.now(),
         }),
       setCommits: (commits) => set({ commits }),
       setBranches: (branches) => set({ branches }),
@@ -162,6 +179,7 @@ const createGitStore = () =>
           currentRepoPath: null,
           currentWorkspaceRepoPath: null,
           workspaceGitStatus: null,
+          workspaceGitStatusUpdatedAt: 0,
         }),
     },
   }));

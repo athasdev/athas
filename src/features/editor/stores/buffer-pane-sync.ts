@@ -5,8 +5,14 @@ import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
 import { resolveWritablePaneForBuffer } from "@/features/panes/utils/pane-routing";
 import { createPaneBeside } from "@/features/panes/utils/pane-split-actions";
 
-export const getWritablePaneForBuffer = (bufferId?: string): PaneGroup | null => {
-  const paneStore = usePaneStore.getState();
+const getPaneState = (workspaceId?: string) =>
+  workspaceId ? usePaneStore.getStore(workspaceId).getState() : usePaneStore.getState();
+
+export const getWritablePaneForBuffer = (
+  bufferId?: string,
+  workspaceId?: string,
+): PaneGroup | null => {
+  const paneStore = getPaneState(workspaceId);
   const activePane = paneStore.actions.getActivePane();
   if (!activePane) return null;
 
@@ -19,31 +25,35 @@ export const getWritablePaneForBuffer = (bufferId?: string): PaneGroup | null =>
   });
   if (writablePane) return writablePane;
 
-  const newPaneId = createPaneBeside(activePane.id, "horizontal");
+  const newPaneId = createPaneBeside(activePane.id, "horizontal", "after", undefined, workspaceId);
   return newPaneId ? paneStore.actions.getPaneById(newPaneId) : activePane;
 };
 
-export const syncBufferToPane = (bufferId: string) => {
-  const targetPane = getWritablePaneForBuffer(bufferId);
+export const syncBufferToPane = (bufferId: string, workspaceId?: string) => {
+  const targetPane = getWritablePaneForBuffer(bufferId, workspaceId);
   if (!targetPane) return;
 
-  ensureBufferInPane(targetPane.id, bufferId, true);
+  ensureBufferInPane(targetPane.id, bufferId, true, workspaceId);
 };
 
-export const syncAndFocusBufferInPane = (bufferId: string) => {
-  const paneStore = usePaneStore.getState();
+export const syncAndFocusBufferInPane = (bufferId: string, workspaceId?: string) => {
+  const paneStore = getPaneState(workspaceId);
   const paneWithBuffer = paneStore.actions.getPaneByBufferId(bufferId);
 
   if (paneWithBuffer) {
-    ensureBufferInPane(paneWithBuffer.id, bufferId, true);
+    ensureBufferInPane(paneWithBuffer.id, bufferId, true, workspaceId);
     return;
   }
 
-  syncBufferToPane(bufferId);
+  syncBufferToPane(bufferId, workspaceId);
 };
 
-export const syncPanePreviewForBuffer = (bufferId: string, isPreview: boolean) => {
-  const paneStore = usePaneStore.getState();
+export const syncPanePreviewForBuffer = (
+  bufferId: string,
+  isPreview: boolean,
+  workspaceId?: string,
+) => {
+  const paneStore = getPaneState(workspaceId);
   if (!isPreview) {
     paneStore.actions.clearPreviewBufferEverywhere(bufferId);
     return;
@@ -55,8 +65,12 @@ export const syncPanePreviewForBuffer = (bufferId: string, isPreview: boolean) =
   }
 };
 
-export const removeBufferFromPanes = (bufferId: string, preserveEmptyPane = false) => {
-  const paneStore = usePaneStore.getState();
+export const removeBufferFromPanes = (
+  bufferId: string,
+  preserveEmptyPane = false,
+  workspaceId?: string,
+) => {
+  const paneStore = getPaneState(workspaceId);
   for (const pane of paneStore.actions.getAllPaneGroups()) {
     if (pane.bufferIds.includes(bufferId)) {
       paneStore.actions.removeBufferFromPane(pane.id, bufferId, preserveEmptyPane);
@@ -64,8 +78,11 @@ export const removeBufferFromPanes = (bufferId: string, preserveEmptyPane = fals
   }
 };
 
-export const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] => {
-  const paneStore = usePaneStore.getState();
+export const closeNewTabInActivePane = (
+  buffers: PaneContent[],
+  workspaceId?: string,
+): PaneContent[] => {
+  const paneStore = getPaneState(workspaceId);
   const activePane = paneStore.actions.getActivePane();
   const paneBufferIds = activePane?.bufferIds ?? [];
   const newTabBuffer = buffers.find((buffer) => {
@@ -76,6 +93,6 @@ export const closeNewTabInActivePane = (buffers: PaneContent[]): PaneContent[] =
     return buffers;
   }
 
-  removeBufferFromPanes(newTabBuffer.id, true);
+  removeBufferFromPanes(newTabBuffer.id, true, workspaceId);
   return buffers.filter((buffer) => buffer.id !== newTabBuffer.id);
 };

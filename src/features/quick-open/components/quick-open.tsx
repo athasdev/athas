@@ -1,4 +1,5 @@
 import Command, {
+  CommandEmpty,
   CommandHeader,
   CommandHeaderBadge,
   CommandInput,
@@ -89,11 +90,9 @@ const QuickOpen = () => {
       <CommandList ref={scrollContainerRef}>
         {isSymbolMode ? (
           symbols.length === 0 ? (
-            <div className="flex items-center justify-center p-4 text-text-lighter">
-              <span className="font-sans ui-text-base">
-                {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
-              </span>
-            </div>
+            <CommandEmpty>
+              {isLoadingSymbols ? "Loading symbols..." : "No symbols found"}
+            </CommandEmpty>
           ) : (
             symbols.map((symbol, index) => (
               <SymbolListItem
@@ -109,11 +108,9 @@ const QuickOpen = () => {
           )
         ) : isWorkspaceSymbolMode ? (
           workspaceSymbols.length === 0 ? (
-            <div className="flex items-center justify-center p-4 text-text-lighter">
-              <span className="font-sans ui-text-base">
-                {isLoadingWorkspaceSymbols ? "Loading symbols..." : "No symbols found"}
-              </span>
-            </div>
+            <CommandEmpty>
+              {isLoadingWorkspaceSymbols ? "Loading symbols..." : "No symbols found"}
+            </CommandEmpty>
           ) : (
             workspaceSymbols.map((symbol, index) => (
               <SymbolListItem

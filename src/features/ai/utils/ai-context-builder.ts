@@ -1,4 +1,4 @@
-import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat-store.types";
+import type { ChatMode, OutputStyle } from "@/features/ai/types/ai-chat.types";
 import type { ContextInfo } from "@/features/ai/types/ai-context.types";
 import { hasTextContent, type PaneContent } from "@/features/panes/types/pane-content.types";
 import { CLAUDE_CODE_TERMINAL_AGENT_ID } from "@/features/ai/lib/claude-code";
@@ -188,7 +188,6 @@ export const buildContextPrompt = (context: ContextInfo): string => {
   return contextPrompt;
 };
 
-// Build system prompt for AI providers with mode and output style support
 export const buildSystemPrompt = (
   contextPrompt: string,
   mode: ChatMode = "chat",
@@ -237,7 +236,6 @@ CHAT MODE: You are in interactive Chat Mode where you can:
 - Provide direct implementation solutions`;
   }
 
-  // Output style modifications
   if (outputStyle === "explanatory") {
     basePrompt += `
 

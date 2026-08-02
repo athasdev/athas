@@ -5,12 +5,14 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useExtensionStore } from "@/extensions/registry/extension-store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
+import { Field, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
+import { Marker, MarkerContent } from "@/ui/marker";
 import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
-import { Tab, TabsList } from "@/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { normalizeDatabaseError } from "../../lib/database-errors";
 import type { DatabaseType } from "../../types/provider.types";
 import { PROVIDER_REGISTRY } from "../../providers/provider-registry";
@@ -43,16 +45,6 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<boolean | null>(null);
   const connectionFeedbackVersionRef = useRef(0);
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) onClose();
-    };
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [isOpen, onClose]);
 
   const installedDbTypes = getInstalledDatabaseTypes(availableExtensions);
 
@@ -251,7 +243,7 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
       }
     >
       {installedDbTypes.length === 0 ? (
-        <div className="rounded-lg border border-border bg-secondary-bg/35 px-3 py-2 text-text-lighter ui-text-sm">
+        <div className="rounded-lg border border-border bg-surface/35 px-3 py-2 text-subtle-foreground ui-text-sm">
           Install a database provider from Settings &gt; Extensions to connect to databases.
         </div>
       ) : null}
@@ -268,38 +260,21 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
         menuClassName="z-[10040]"
       />
 
-      <TabsList variant="default" className="grid grid-cols-2">
-        <Tab
-          role="tab"
-          aria-selected={mode === "form"}
-          aria-label="Form mode"
-          isActive={mode === "form"}
-          size="sm"
-          variant="default"
-          onClick={() => handleModeChange("form")}
-        >
-          Form
-        </Tab>
-        <Tab
-          role="tab"
-          aria-selected={mode === "string"}
-          aria-label="Connection string mode"
-          isActive={mode === "string"}
-          size="sm"
-          variant="default"
-          onClick={() => !isFileBased && handleModeChange("string")}
-          className={isFileBased ? "pointer-events-none opacity-50" : undefined}
-        >
-          Connection String
-        </Tab>
-      </TabsList>
+      <Tabs value={mode} onValueChange={(value) => handleModeChange(value as "form" | "string")}>
+        <TabsList variant="default" className="grid w-full grid-cols-2">
+          <TabsTrigger value="form" aria-label="Form mode">
+            Form
+          </TabsTrigger>
+          <TabsTrigger value="string" aria-label="Connection string mode" disabled={isFileBased}>
+            Connection String
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {mode === "form" ? (
         <div className="space-y-3">
-          <div className="space-y-1">
-            <label htmlFor="db-conn-name" className="font-sans block ui-text-sm text-text">
-              Connection Name
-            </label>
+          <Field>
+            <FieldLabel htmlFor="db-conn-name">Connection Name</FieldLabel>
             <Input
               id="db-conn-name"
               className="w-full"
@@ -307,13 +282,11 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
               value={name}
               onChange={(e) => updateConnectionField(setName, e.target.value)}
             />
-          </div>
+          </Field>
 
           {isFileBased ? (
-            <div className="space-y-1">
-              <label htmlFor="db-conn-file" className="font-sans block ui-text-sm text-text">
-                Database File
-              </label>
+            <Field>
+              <FieldLabel htmlFor="db-conn-file">Database File</FieldLabel>
               <div className="flex gap-2">
                 <Input
                   id="db-conn-file"
@@ -333,25 +306,21 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                   Browse
                 </Button>
               </div>
-            </div>
+            </Field>
           ) : (
             <>
               <div className="flex gap-3">
-                <div className="flex-1 space-y-1">
-                  <label htmlFor="db-conn-host" className="font-sans block ui-text-sm text-text">
-                    Host
-                  </label>
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="db-conn-host">Host</FieldLabel>
                   <Input
                     id="db-conn-host"
                     className="w-full"
                     value={host}
                     onChange={(e) => updateConnectionField(setHost, e.target.value)}
                   />
-                </div>
-                <div className="w-24 space-y-1">
-                  <label htmlFor="db-conn-port" className="font-sans block ui-text-sm text-text">
-                    Port
-                  </label>
+                </Field>
+                <Field className="w-24">
+                  <FieldLabel htmlFor="db-conn-port">Port</FieldLabel>
                   <Input
                     id="db-conn-port"
                     type="number"
@@ -359,46 +328,31 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     value={port}
                     onChange={(e) => updateConnectionField(setPort, Number(e.target.value))}
                   />
-                </div>
+                </Field>
               </div>
               {dbType !== "redis" && (
-                <div className="space-y-1">
-                  <label
-                    htmlFor="db-conn-database"
-                    className="font-sans block ui-text-sm text-text"
-                  >
-                    Database
-                  </label>
+                <Field>
+                  <FieldLabel htmlFor="db-conn-database">Database</FieldLabel>
                   <Input
                     id="db-conn-database"
                     className="w-full"
                     value={database}
                     onChange={(e) => updateConnectionField(setDatabase, e.target.value)}
                   />
-                </div>
+                </Field>
               )}
               <div className="flex gap-3">
-                <div className="flex-1 space-y-1">
-                  <label
-                    htmlFor="db-conn-username"
-                    className="font-sans block ui-text-sm text-text"
-                  >
-                    Username
-                  </label>
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="db-conn-username">Username</FieldLabel>
                   <Input
                     id="db-conn-username"
                     className="w-full"
                     value={username}
                     onChange={(e) => updateConnectionField(setUsername, e.target.value)}
                   />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <label
-                    htmlFor="db-conn-password"
-                    className="font-sans block ui-text-sm text-text"
-                  >
-                    Password
-                  </label>
+                </Field>
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="db-conn-password">Password</FieldLabel>
                   <Input
                     id="db-conn-password"
                     type="password"
@@ -406,27 +360,28 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
                     value={password}
                     onChange={(e) => updateConnectionField(setPassword, e.target.value)}
                   />
-                </div>
+                </Field>
               </div>
-              <label htmlFor="db-conn-save-password" className="flex items-center gap-2">
+              <Field orientation="horizontal">
                 <Checkbox
                   id="db-conn-save-password"
                   checked={saveCredential}
-                  onChange={(checked) => updateConnectionField(setSaveCredential, checked)}
-                  ariaLabel="Save password securely"
+                  onCheckedChange={(checked) => updateConnectionField(setSaveCredential, checked)}
+                  aria-label="Save password securely"
                 />
-                <span className="font-sans text-text-lighter ui-text-sm">
+                <FieldLabel
+                  htmlFor="db-conn-save-password"
+                  className="cursor-pointer text-subtle-foreground"
+                >
                   Save password securely
-                </span>
-              </label>
+                </FieldLabel>
+              </Field>
             </>
           )}
         </div>
       ) : (
-        <div className="space-y-1">
-          <label htmlFor="db-conn-string" className="font-sans block ui-text-sm text-text">
-            Connection String
-          </label>
+        <Field>
+          <FieldLabel htmlFor="db-conn-string">Connection String</FieldLabel>
           <Input
             id="db-conn-string"
             className="w-full"
@@ -434,19 +389,19 @@ export function ConnectionDialog({ isOpen, onClose }: ConnectionDialogProps) {
             value={connectionString}
             onChange={(e) => updateConnectionField(setConnectionString, e.target.value)}
           />
-        </div>
+        </Field>
       )}
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
-          {error}
-        </div>
+        <Marker tone="error">
+          <MarkerContent>{error}</MarkerContent>
+        </Marker>
       )}
 
       {testResult === true && (
-        <div className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-success ui-text-sm">
-          Connection test successful
-        </div>
+        <Marker tone="success">
+          <MarkerContent>Connection test successful</MarkerContent>
+        </Marker>
       )}
     </Dialog>
   );

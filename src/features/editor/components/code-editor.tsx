@@ -626,7 +626,7 @@ const CodeEditor = ({
   }, [currentMatchIndex, enableInteractiveServices, searchMatches, searchNavigationRevision]);
 
   if (!activeBuffer) {
-    return <div className="flex flex-1 items-center justify-center text-text"></div>;
+    return <div className="flex flex-1 items-center justify-center text-foreground"></div>;
   }
 
   return (
@@ -700,7 +700,7 @@ const CodeEditor = ({
           )}
 
           {/* Main editor - absolute positioned to fill container */}
-          <div className="absolute inset-0 bg-primary-bg">
+          <div className="absolute inset-0 bg-background">
             {showMarkdownPreview ? (
               <MarkdownPreview />
             ) : showHtmlPreview ? (

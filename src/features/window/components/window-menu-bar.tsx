@@ -6,6 +6,7 @@ import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useRegisteredThemes } from "@/extensions/themes/use-registered-themes";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { createAppWindow } from "@/features/window/utils/create-app-window";
 import {
   Menubar,
   MenubarContent,
@@ -24,13 +25,23 @@ interface Props {
   activeMenu: string | null;
   setActiveMenu: React.Dispatch<React.SetStateAction<string | null>>;
   compactFloating?: boolean;
+  onCompactClose?: () => void;
 }
 
-const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: Props) => {
+const WindowMenuBar = ({
+  activeMenu,
+  setActiveMenu,
+  compactFloating = false,
+  onCompactClose,
+}: Props) => {
   const compactMenuBar = useSettingsStore((state) => state.settings.compactMenuBar);
   const themes = useRegisteredThemes();
   const menuWindowRaiseRef = useRef<{ restoreTo: boolean } | null>(null);
   const shouldRaiseWindowForMenu = (IS_WINDOWS || IS_LINUX) && Boolean(activeMenu);
+  const closeMenu = useCallback(() => {
+    setActiveMenu(null);
+    onCompactClose?.();
+  }, [onCompactClose, setActiveMenu]);
 
   useEffect(() => {
     let disposed = false;
@@ -89,15 +100,15 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     (event: string, payload?: unknown) => {
       const currentWindow = getCurrentWebviewWindow();
       void currentWindow.emitTo(currentWindow.label, event, payload);
-      setActiveMenu(null);
+      closeMenu();
     },
-    [setActiveMenu],
+    [closeMenu],
   );
 
   const handleOpenWebInspector = useCallback(() => {
     void invoke("reopen_current_webview_devtools");
-    setActiveMenu(null);
-  }, [setActiveMenu]);
+    closeMenu();
+  }, [closeMenu]);
 
   const handleCommand = useCallback(
     (commandId: string) => {
@@ -106,6 +117,11 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
     [handleClickEmit],
   );
 
+  const handleNewWindow = useCallback(() => {
+    void createAppWindow();
+    closeMenu();
+  }, [closeMenu]);
+
   const menus = useMemo(
     () => ({
       File: (
@@ -113,7 +129,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
           <MenubarItem shortcut="mod+n" onClick={() => handleCommand("workbench.newTab")}>
             New Tab
           </MenubarItem>
-          <MenubarItem shortcut="mod+shift+n" onClick={() => handleClickEmit("menu_new_window")}>
+          <MenubarItem shortcut="mod+shift+n" onClick={handleNewWindow}>
             New Window
           </MenubarItem>
           <MenubarItem onClick={() => handleClickEmit("menu_new_file")}>New File</MenubarItem>
@@ -433,7 +449,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             shortcut="alt+f9"
             onClick={async () => {
               await getCurrentWindow().minimize();
-              setActiveMenu(null);
+              closeMenu();
             }}
           >
             Minimize
@@ -442,7 +458,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
             shortcut="alt+f10"
             onClick={async () => {
               await getCurrentWindow().maximize();
-              setActiveMenu(null);
+              closeMenu();
             }}
           >
             Maximize
@@ -462,7 +478,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
               const window = getCurrentWindow();
               const isFull = await window.isFullscreen();
               await window.setFullscreen(!isFull);
-              setActiveMenu(null);
+              closeMenu();
             }}
           >
             Toggle Fullscreen
@@ -491,15 +507,13 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         </MenubarContent>
       ),
     }),
-    [handleClickEmit, handleCommand, setActiveMenu, themes],
+    [closeMenu, handleClickEmit, handleCommand, handleNewWindow, themes],
   );
-
-  if (compactMenuBar && !activeMenu) return null;
 
   return (
     <div
       className={cn(
-        "z-[10030] flex flex-col",
+        "z-[100000] flex flex-col",
         compactMenuBar && compactFloating && "absolute top-full left-0 mt-1",
         compactMenuBar && !compactFloating && "absolute inset-0",
       )}
@@ -510,7 +524,7 @@ const WindowMenuBar = ({ activeMenu, setActiveMenu, compactFloating = false }: P
         className={cn(
           compactMenuBar &&
             compactFloating &&
-            "rounded-2xl border border-border bg-primary-bg/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
+            "rounded-2xl border border-border bg-background/95 px-1 py-1 shadow-[var(--shadow-popover)] backdrop-blur-sm",
           compactMenuBar &&
             !compactFloating &&
             "h-full rounded-none border-none bg-transparent px-2 py-0",

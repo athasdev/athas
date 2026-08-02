@@ -22,9 +22,14 @@ import {
   type SidebarDragResource,
 } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import {
+  useActiveWorkspaceId,
+  useWorkspaceStoreScopeId,
+} from "@/features/workspace/stores/create-workspace-scoped-store";
 import TabBar from "@/features/tabs/components/tab-bar";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import Badge from "@/ui/badge";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import {
   clearInternalTabDragData,
   getInternalTabDragData,
@@ -201,33 +206,33 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
   const previewLines = summary.split("\n").slice(0, 12);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="pointer-events-none flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-secondary-bg/80 px-2 py-4 ui-text-sm leading-5 text-text-lighter">
+        <div className="flex w-12 shrink-0 flex-col items-end gap-1 border-r border-border/60 bg-surface/80 px-2 py-4 ui-text-sm leading-5 text-subtle-foreground">
           {previewLines.map((_, index) => (
             <span key={`${buffer.id}-line-${index + 1}`}>{index + 1}</span>
           ))}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-sm leading-5 text-text-lighter">
+          <pre className="h-full overflow-hidden whitespace-pre-wrap break-words ui-text-sm leading-5 text-subtle-foreground">
             {summary}
           </pre>
         </div>
       </div>
 
-      <div className="border-t border-border/60 bg-secondary-bg/80 px-4 py-2">
-        <div className="truncate ui-text-sm font-medium text-text">
+      <div className="border-t border-border/60 bg-surface/80 px-4 py-2">
+        <div className="truncate ui-text-sm font-medium text-foreground">
           {buffer.type === "diff" ? formatDiffBufferLabel(buffer.name, buffer.path) : buffer.name}
         </div>
-        <div className="truncate ui-text-sm text-text-lighter">{buffer.path}</div>
+        <div className="truncate ui-text-sm text-subtle-foreground">{buffer.path}</div>
       </div>
     </div>
   );
 }
 
 function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
-  const selectedPRDetails = useGitHubStore((state) => state.selectedPRDetails);
-  const selectedPRComments = useGitHubStore((state) => state.selectedPRComments);
+  const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
+  const selectedPRComments = useGitHubStore.use.selectedPRComments();
   const details = selectedPRDetails?.number === buffer.prNumber ? selectedPRDetails : null;
   const fileCount = details ? details.changedFiles : null;
   const commentCount = details ? selectedPRComments.length : null;
@@ -235,8 +240,8 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
   const authorLogin = details ? details.author.login : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-primary-bg">
-      <div className="shrink-0 bg-secondary-bg/60 px-3 py-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+      <div className="shrink-0 bg-surface/60 px-3 py-3">
         <div className="flex min-w-0 items-start gap-2">
           <div className="mt-0.5 size-4 shrink-0 rounded-[4px] bg-success/80" />
           <div className="min-w-0 flex-1">
@@ -244,10 +249,12 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
               <Badge size="compact" className="font-mono">
                 #{buffer.prNumber ?? "--"}
               </Badge>
-              <div className="min-w-0 truncate font-medium ui-text-sm text-text">{buffer.name}</div>
+              <div className="min-w-0 truncate font-medium ui-text-sm text-foreground">
+                {buffer.name}
+              </div>
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-sm text-text-lighter">
-              <span className="font-medium text-text-light">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ui-text-sm text-subtle-foreground">
+              <span className="font-medium text-muted-foreground">
                 {authorLogin ? `@${authorLogin}` : "Pull request"}
               </span>
               <span>{fileCount ?? "--"} files</span>
@@ -262,15 +269,15 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
           </div>
         </div>
       </div>
-      <div className="min-h-0 flex-1 bg-primary-bg/40 px-3 py-3">
-        <div className="rounded-lg bg-secondary-bg/35 px-3 py-2">
-          <div className="line-clamp-5 ui-text-sm leading-6 text-text-lighter">
+      <div className="min-h-0 flex-1 bg-background/40 px-3 py-3">
+        <div className="rounded-lg bg-surface/35 px-3 py-2">
+          <div className="line-clamp-5 ui-text-sm leading-6 text-subtle-foreground">
             {details?.body?.trim()
               ? details.body
               : "Activate this card to inspect the full pull request description, changed files, comments, review state, and checkout actions."}
           </div>
         </div>
-        <div className="mt-3 rounded-lg bg-secondary-bg/35 px-3 py-2 ui-text-sm text-text-lighter">
+        <div className="mt-3 rounded-lg bg-surface/35 px-3 py-2 ui-text-sm text-subtle-foreground">
           {buffer.path}
         </div>
       </div>
@@ -280,14 +287,14 @@ function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
 
 function WebViewerDisabledState() {
   return (
-    <div className="flex size-full items-center justify-center bg-primary-bg px-6">
-      <div className="max-w-sm text-center">
-        <div className="font-medium ui-text-sm text-text">Web Viewer is disabled</div>
-        <div className="mt-1 ui-text-sm text-text-lighter">
+    <Empty className="size-full rounded-none bg-background px-6">
+      <EmptyHeader>
+        <EmptyTitle>Web Viewer is disabled</EmptyTitle>
+        <EmptyDescription>
           Enable it in Settings &gt; Features to open URLs in embedded editor tabs.
-        </div>
-      </div>
-    </div>
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 
@@ -316,7 +323,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
   const carouselViewportRef = useRef<HTMLDivElement>(null);
   const lastCarouselBufferIdRef = useRef<string | null>(null);
   const suppressAutoCenterRef = useRef(false);
-  const isActivePane = pane.id === activePaneId;
+  const workspaceScopeId = useWorkspaceStoreScopeId();
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const isWorkspaceSurfaceActive = !workspaceScopeId || workspaceScopeId === activeWorkspaceId;
+  const isActivePane = pane.id === activePaneId && isWorkspaceSurfaceActive;
 
   const { activeBuffer, paneBuffers } = useBufferStore(
     useShallow((state) => {
@@ -408,6 +418,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       fileDragData: { path: string; name: string; isDir: boolean },
       point: { x: number; y: number },
     ) => {
+      if (!isWorkspaceSurfaceActive) return;
       if (fileDragData.isDir) return;
       if (!handleFileOpen) return;
 
@@ -432,11 +443,12 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         delete window.__fileDragData;
       }
     },
-    [handleFileOpen, pane.id],
+    [handleFileOpen, isWorkspaceSurfaceActive, pane.id],
   );
 
   const openSidebarResourceInPane = useCallback(
     async (resource: SidebarDragResource, point: { x: number; y: number }) => {
+      if (!isWorkspaceSurfaceActive) return;
       const opensBuffer =
         !(resource.type === "file" && resource.isDir) && resource.type !== "git-worktree";
       const target = resolveDropTarget(point);
@@ -459,7 +471,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         console.error("Failed to open sidebar resource from drop:", error);
       }
     },
-    [pane.id],
+    [isWorkspaceSurfaceActive, pane.id],
   );
 
   const getCarouselWidthBounds = useCallback(() => {
@@ -554,9 +566,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       if (!rootFolderPath) return;
       try {
         const success = await stageHunk(rootFolderPath, hunk);
-        if (success) {
-          window.dispatchEvent(new CustomEvent("git-status-changed"));
-        }
+        if (!success) return;
       } catch (error) {
         console.error("Error staging hunk:", error);
       }
@@ -569,9 +579,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       if (!rootFolderPath) return;
       try {
         const success = await unstageHunk(rootFolderPath, hunk);
-        if (success) {
-          window.dispatchEvent(new CustomEvent("git-status-changed"));
-        }
+        if (!success) return;
       } catch (error) {
         console.error("Error unstaging hunk:", error);
       }
@@ -587,6 +595,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
   // Listen for file tree drops on this pane
   useEffect(() => {
+    if (!isWorkspaceSurfaceActive) {
+      return;
+    }
+
     const syncHover = () => {
       const hover = getInternalTabDragHover();
       setInternalHoverZone(hover.paneId === pane.id ? hover.zone : null);
@@ -594,9 +606,13 @@ export function PaneContainer({ pane }: PaneContainerProps) {
 
     window.addEventListener("athas-internal-tab-drag-hover", syncHover);
     return () => window.removeEventListener("athas-internal-tab-drag-hover", syncHover);
-  }, [pane.id]);
+  }, [isWorkspaceSurfaceActive, pane.id]);
 
   useEffect(() => {
+    if (!isWorkspaceSurfaceActive) {
+      return;
+    }
+
     const handleFileTreeDrop = async (e: CustomEvent) => {
       const fileDragData = window.__fileDragData;
       if (!fileDragData) return;
@@ -614,7 +630,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         handleFileTreeDrop as unknown as EventListener,
       );
     };
-  }, [openFileTreeDropInPane]);
+  }, [isWorkspaceSurfaceActive, openFileTreeDropInPane]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -668,6 +684,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       let source: string | undefined;
       let terminalId: string | undefined;
       let terminalName: string | undefined;
+      let shell: string | undefined;
       let initialCommand: string | undefined;
       let currentDirectory: string | undefined;
       let remoteConnectionId: string | undefined;
@@ -678,6 +695,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         source = tabData.source;
         terminalId = tabData.terminalId;
         terminalName = tabData.name;
+        shell = tabData.shell;
         initialCommand = tabData.initialCommand;
         currentDirectory = tabData.currentDirectory;
         remoteConnectionId = tabData.remoteConnectionId;
@@ -692,6 +710,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
           const newBufferId = openTerminalBuffer({
             sessionId: terminalId,
             name: terminalName,
+            shell,
             command: initialCommand,
             workingDirectory: currentDirectory,
             remoteConnectionId,
@@ -720,6 +739,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
         const newBufferId = openTerminalBuffer({
           sessionId: terminalId,
           name: terminalName,
+          shell,
           command: initialCommand,
           workingDirectory: currentDirectory,
           remoteConnectionId,
@@ -893,6 +913,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
               sessionId={buffer.sessionId}
               bufferId={buffer.id}
               paneId={pane.id}
+              shell={buffer.shell}
               initialCommand={buffer.initialCommand}
               workingDirectory={buffer.workingDirectory}
               remoteConnectionId={buffer.remoteConnectionId}
@@ -974,9 +995,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
             const connectionId = buffer.connectionId;
             if (!connectionId) {
               return (
-                <div className="flex h-full items-center justify-center text-text-lighter ui-text-sm">
-                  Missing database connection
-                </div>
+                <Empty className="h-full rounded-none" tone="error" role="alert">
+                  <EmptyDescription>Missing database connection</EmptyDescription>
+                </Empty>
               );
             }
             viewerProps = { connectionId };
@@ -1029,9 +1050,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       ref={containerRef}
       data-pane-container
       data-pane-id={pane.id}
-      className={`relative flex size-full flex-col overflow-hidden bg-primary-bg ${
-        isActivePane ? "ring-1 ring-accent/30" : ""
-      } ${isDragOver || internalHoverZone ? "ring-2 ring-accent" : ""}`}
+      className={`relative flex size-full flex-col overflow-hidden bg-background ${
+        isActivePane ? "ring-1 ring-primary/30" : ""
+      } ${isDragOver || internalHoverZone ? "ring-2 ring-primary" : ""}`}
       onMouseDownCapture={handlePaneMouseDownCapture}
       onClick={handlePaneClick}
       onMouseUp={handleMouseUp}
@@ -1040,7 +1061,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
       onDrop={handleDrop}
     >
       {(isDragOver || internalHoverZone) && !isTabDragOver && !internalHoverZone && (
-        <div className="pointer-events-none absolute inset-0 z-40 bg-accent/10" />
+        <div className="pointer-events-none absolute inset-0 z-40 bg-primary/10" />
       )}
       <SplitDropOverlay
         visible={isTabDragOver || !!internalHoverZone}
@@ -1076,9 +1097,9 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                     className={cn(
                       "relative h-full shrink-0 overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
                       isActiveBuffer
-                        ? "border-accent/50 bg-primary-bg shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
-                        : "border-border/70 bg-primary-bg hover:border-border/90",
-                      isDropTarget && "border-accent shadow-[0_0_0_1px_rgba(99,102,241,0.25)]",
+                        ? "border-primary/50 bg-background shadow-[0_0_0_1px_rgba(99,102,241,0.15)]"
+                        : "border-border/70 bg-background hover:border-border/90",
+                      isDropTarget && "border-primary shadow-[0_0_0_1px_rgba(99,102,241,0.25)]",
                       draggedCarouselBufferId === buffer.id && "opacity-70",
                       isCarouselResizing && "transition-none",
                     )}
@@ -1133,8 +1154,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                             sessionId={buffer.sessionId}
                             bufferId={buffer.id}
                             paneId={pane.id}
+                            shell={buffer.shell}
                             initialCommand={buffer.initialCommand}
                             workingDirectory={buffer.workingDirectory}
+                            remoteConnectionId={buffer.remoteConnectionId}
                             isActive={isActivePane && isActiveBuffer}
                             isVisible={true}
                           />
@@ -1164,7 +1187,7 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                       )}
                     </div>
                     <div
-                      className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-accent/20"
+                      className="absolute top-0 right-0 z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
                       onMouseDown={handleCarouselResizeStart}
                       role="separator"
                       aria-orientation="vertical"
@@ -1200,8 +1223,10 @@ export function PaneContainer({ pane }: PaneContainerProps) {
                           sessionId={b.sessionId}
                           bufferId={b.id}
                           paneId={pane.id}
+                          shell={b.shell}
                           initialCommand={b.initialCommand}
                           workingDirectory={b.workingDirectory}
+                          remoteConnectionId={b.remoteConnectionId}
                           isActive={isActive && isActivePane}
                           isVisible={isActive}
                         />

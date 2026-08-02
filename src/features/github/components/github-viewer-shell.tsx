@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Button } from "@/ui/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -17,7 +19,7 @@ export function GitHubViewerShell({
   contentClassName,
 }: GitHubViewerShellProps) {
   return (
-    <ScrollArea className={cn("h-full bg-primary-bg", className)}>
+    <ScrollArea className={cn("h-full bg-background", className)}>
       <div className="flex min-h-full flex-col">
         {header}
         <div className={cn("min-w-0 px-3 pb-4 sm:px-4", contentClassName)}>{children}</div>
@@ -50,11 +52,11 @@ export function GitHubViewerHeader({
           <div className="flex min-w-0 flex-1 items-start gap-3">
             {leading ? <div className="mt-0.5 shrink-0">{leading}</div> : null}
             <div className="min-w-0 flex-1">
-              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-text">
+              <h1 className="font-sans ui-text-base min-w-0 leading-tight font-semibold text-foreground">
                 {title}
               </h1>
               {meta ? (
-                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-text-lighter">
+                <div className="font-sans ui-text-sm mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-subtle-foreground">
                   {meta}
                 </div>
               ) : null}
@@ -70,12 +72,54 @@ export function GitHubViewerHeader({
 
 interface GitHubViewerLoadingStateProps {
   label: string;
+  className?: string;
 }
 
-export function GitHubViewerLoadingState({ label }: GitHubViewerLoadingStateProps) {
+export function GitHubViewerLoadingState({ label, className }: GitHubViewerLoadingStateProps) {
   return (
-    <div className="flex min-h-32 items-center justify-center p-8">
-      <Spinner label={label} showLabel compact />
-    </div>
+    <Empty density="compact" className={cn("min-h-32 rounded-none p-8", className)}>
+      <EmptyDescription>
+        <Spinner label={label} showLabel compact />
+      </EmptyDescription>
+    </Empty>
+  );
+}
+
+interface GitHubViewerStateProps {
+  title?: ReactNode;
+  description?: ReactNode;
+  actionLabel?: ReactNode;
+  onAction?: () => void;
+  tone?: "neutral" | "error";
+  className?: string;
+}
+
+export function GitHubViewerState({
+  title,
+  description,
+  actionLabel,
+  onAction,
+  tone = "neutral",
+  className,
+}: GitHubViewerStateProps) {
+  return (
+    <Empty
+      density="compact"
+      tone={tone}
+      className={cn("min-h-32 rounded-none p-8", className)}
+      role={tone === "error" ? "alert" : "status"}
+    >
+      <EmptyHeader>
+        {title ? <EmptyTitle>{title}</EmptyTitle> : null}
+        {description ? <EmptyDescription>{description}</EmptyDescription> : null}
+      </EmptyHeader>
+      {actionLabel && onAction ? (
+        <EmptyContent>
+          <Button type="button" variant="default" size="xs" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        </EmptyContent>
+      ) : null}
+    </Empty>
   );
 }

@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
 import { writeSidebarResourceDragData } from "@/features/sidebar/utils/sidebar-resource-drag";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import { SidebarTreeRow } from "@/features/sidebar/components/sidebar-tree";
 import { cn } from "@/utils/cn";
 import type { GitFile } from "../../types/git.types";
@@ -49,7 +49,7 @@ export const GitFileItem = ({
     <SidebarTreeRow
       depth={indentLevel}
       className={cn(
-        "group grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-[1.35]",
+        "group grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-row",
         className,
       )}
       onClick={onClick}
@@ -67,9 +67,9 @@ export const GitFileItem = ({
         });
       }}
     >
-      <span className="relative z-1 flex size-3.5 shrink-0 items-center justify-center overflow-hidden text-text-lighter">
+      <span className="relative z-1 flex size-3.5 shrink-0 items-center justify-center overflow-hidden text-subtle-foreground">
         {showFileIcon ? (
-          <ThemedFileIcon fileName={fileName} isDir={false} className="text-text-lighter" />
+          <ThemedFileIcon fileName={fileName} isDir={false} className="text-subtle-foreground" />
         ) : null}
       </span>
       <div
@@ -78,15 +78,15 @@ export const GitFileItem = ({
       >
         <span
           className={cn(
-            "block min-w-0 truncate whitespace-nowrap leading-[1.35]",
+            "block min-w-0 truncate whitespace-nowrap leading-row",
             showDirectory ? "shrink-0 basis-auto max-w-[45%]" : "flex-1",
-            "text-text",
+            "text-foreground",
           )}
         >
           {fileName}
         </span>
         {showDirectory && directory && (
-          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-[1.35] text-text-lighter/80">
+          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-row text-subtle-foreground/80">
             {directory}
           </span>
         )}
@@ -95,7 +95,7 @@ export const GitFileItem = ({
         {hasDiffStats && (
           <div
             className={cn(
-              "flex w-[5.25rem] shrink-0 items-center justify-end overflow-hidden leading-[1.35] tabular-nums",
+              "flex max-w-[4.75rem] shrink-0 items-center justify-end overflow-hidden leading-row tabular-nums",
               compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >
@@ -114,7 +114,7 @@ export const GitFileItem = ({
         >
           <Checkbox
             checked={file.staged}
-            onChange={(checked) => {
+            onCheckedChange={(checked) => {
               if (checked) {
                 onStage?.();
                 return;
@@ -122,7 +122,7 @@ export const GitFileItem = ({
               onUnstage?.();
             }}
             disabled={disabled}
-            ariaLabel={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
+            aria-label={file.staged ? `Unstage ${fileName}` : `Stage ${fileName}`}
           />
         </div>
       </div>

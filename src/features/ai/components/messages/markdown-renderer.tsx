@@ -13,130 +13,21 @@ import {
   isExternalMarkdownLink,
   resolveWorkspaceFileLink,
 } from "@/features/ai/lib/workspace-file-links";
-import { normalizePlainTextFence } from "@/features/ai/lib/assistant-markdown";
+import {
+  normalizeImplicitCodeFences,
+  normalizePlainTextFence,
+} from "@/features/ai/lib/assistant-markdown";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import {
   type CodeHighlightSegment,
   getCodeHighlightSegments,
 } from "@/features/editor/markdown/code-highlight";
-import {
-  normalizeCodeFenceLanguage,
-  normalizeLanguage,
-} from "@/features/editor/markdown/language-map";
+import { normalizeCodeFenceLanguage } from "@/features/editor/markdown/language-map";
 import { Button } from "@/ui/button";
 import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 import { writeClipboardText } from "@/utils/clipboard";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-
-const LANGUAGE_HINTS = new Set([
-  "bash",
-  "c",
-  "cpp",
-  "csharp",
-  "css",
-  "dart",
-  "diff",
-  "docker",
-  "elixir",
-  "erlang",
-  "go",
-  "graphql",
-  "haskell",
-  "html",
-  "java",
-  "javascript",
-  "json",
-  "jsx",
-  "kotlin",
-  "lua",
-  "makefile",
-  "markdown",
-  "markup",
-  "nginx",
-  "objectivec",
-  "perl",
-  "php",
-  "python",
-  "r",
-  "ruby",
-  "rust",
-  "scala",
-  "scss",
-  "shell",
-  "sql",
-  "swift",
-  "toml",
-  "tsx",
-  "typescript",
-  "vim",
-  "xml",
-  "yaml",
-]);
-
-const CODE_LINE_PATTERN =
-  /[{}()[\];]|=>|::|->|:=|==|!=|<=|>=|&&|\|\||^\s{2,}\S|^(let|const|var|fn|def|class|import|export|if|for|while|match|return|use|pub|impl|SELECT|FROM|INSERT|UPDATE|DELETE)\b/i;
-
-function stripQuoteWrappers(line: string): string {
-  const trimmed = line.trim();
-  return trimmed
-    .replace(/^(["'`“”‘’])+/, "")
-    .replace(/(["'`“”‘’])+$/, "")
-    .replace(/[:;,]$/, "")
-    .trim();
-}
-
-function extractLanguageHint(line: string): string | null {
-  const candidate = stripQuoteWrappers(line);
-  if (!/^[A-Za-z][A-Za-z0-9+#._-]{0,19}$/.test(candidate)) return null;
-
-  const normalized = normalizeLanguage(candidate);
-  if (!LANGUAGE_HINTS.has(normalized)) return null;
-  return normalized;
-}
-
-function isLikelyCodeLine(line: string): boolean {
-  const trimmed = line.trim();
-  if (!trimmed) return false;
-  if (/^(#{1,6}\s|[-*+]\s|\d+\.\s|>)/.test(trimmed)) return false;
-  return CODE_LINE_PATTERN.test(line);
-}
-
-function normalizeImplicitCodeFences(text: string): string {
-  const lines = text.split("\n");
-  const output: string[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const languageHint = extractLanguageHint(lines[i]);
-    const nextLine = lines[i + 1];
-
-    if (!languageHint || nextLine === undefined || !isLikelyCodeLine(nextLine)) {
-      output.push(lines[i]);
-      continue;
-    }
-
-    output.push(`\`\`\`${languageHint}`);
-    i += 1;
-
-    while (i < lines.length) {
-      const current = lines[i];
-      const trimmed = current.trim();
-      if (!trimmed || trimmed === '"' || trimmed === "'") {
-        break;
-      }
-      output.push(current);
-      i += 1;
-    }
-
-    output.push("```");
-
-    if (i < lines.length && lines[i].trim() === "") {
-      output.push("");
-    }
-  }
-
-  return output.join("\n");
-}
 
 function inferCodeLanguage(code: string): string {
   const trimmed = code.trim();
@@ -260,10 +151,10 @@ function CodeBlock({
 
   return (
     <div className="group relative my-2">
-      <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-secondary-bg p-2">
+      <pre className="font-mono max-w-full overflow-x-auto rounded border border-border bg-surface p-2">
         <div className="mb-1 flex items-center justify-between">
           {languageLabel && (
-            <div className="font-mono text-text-lighter ui-text-sm">{languageLabel}</div>
+            <div className="font-mono text-subtle-foreground ui-text-sm">{languageLabel}</div>
           )}
           {code.trim() && (
             <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
@@ -275,7 +166,7 @@ function CodeBlock({
                 tooltip="Copy code"
                 size="icon"
               >
-                <Copy className="text-text-lighter" size={12} />
+                <Copy className="text-subtle-foreground" size={12} />
               </Button>
               {onApplyCode && (
                 <Button
@@ -291,7 +182,7 @@ function CodeBlock({
             </div>
           )}
         </div>
-        <code className="font-mono block whitespace-pre-wrap break-all text-text ui-text-sm">
+        <code className="font-mono block whitespace-pre-wrap break-all text-foreground ui-text-sm">
           {renderedCode}
         </code>
       </pre>
@@ -304,10 +195,12 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRestartingSession, setIsRestartingSession] = useState(false);
   const openTerminalBuffer = useBufferStore((state) => state.actions.openTerminalBuffer);
-  const setChatAcpSessionId = useAIChatStore((state) => state.setChatAcpSessionId);
-  const setAvailableSlashCommands = useAIChatStore((state) => state.setAvailableSlashCommands);
-  const setSessionModeState = useAIChatStore((state) => state.setSessionModeState);
-  const setSessionConfigOptions = useAIChatStore((state) => state.setSessionConfigOptions);
+  const setChatAcpSessionId = useAIChatStore((state) => state.actions.setChatAcpSessionId);
+  const setAvailableSlashCommands = useAIChatStore(
+    (state) => state.actions.setAvailableSlashCommands,
+  );
+  const setSessionModeState = useAIChatStore((state) => state.actions.setSessionModeState);
+  const setSessionConfigOptions = useAIChatStore((state) => state.actions.setSessionConfigOptions);
 
   const lines = errorData.split("\n");
   const title =
@@ -384,20 +277,22 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
       <MarkerContent className="flex min-w-0 flex-col gap-1">
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="font-medium">{summary}</span>
-          {code ? <span className="text-error/70">({code})</span> : null}
+          {code ? <span className="text-destructive/70">({code})</span> : null}
           {normalizedDetails ? (
             <Button
               type="button"
               variant="ghost"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="h-auto px-0 text-error/70 hover:bg-transparent hover:text-error"
+              className="h-auto px-0 text-destructive/70 hover:bg-transparent hover:text-destructive"
             >
               {isExpanded ? <ChevronDown /> : <ChevronRight />}
               {isExpanded ? "Hide details" : "Details"}
             </Button>
           ) : null}
         </span>
-        {message && message !== summary ? <span className="text-error/80">{message}</span> : null}
+        {message && message !== summary ? (
+          <span className="text-destructive/80">{message}</span>
+        ) : null}
         {isAuthRequired && (
           <span className="flex flex-wrap items-center gap-2">
             <Button
@@ -436,11 +331,13 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
                 Open Terminal
               </Button>
             )}
-            <span className="text-error/70">Complete login in the agent CLI, then retry.</span>
+            <span className="text-destructive/70">
+              Complete login in the agent CLI, then retry.
+            </span>
           </span>
         )}
         {normalizedDetails && isExpanded && (
-          <pre className="max-w-full overflow-x-auto rounded-md bg-error/8 p-2 font-mono text-error/90 ui-text-sm">
+          <pre className="max-w-full overflow-x-auto rounded-md bg-destructive/8 p-2 font-mono text-destructive/90 ui-text-sm">
             {(() => {
               try {
                 const parsed = JSON.parse(normalizedDetails);
@@ -458,12 +355,12 @@ function ErrorBlock({ errorData, chatId }: { errorData: string; chatId?: string 
 
 // Header classes scaled for sidebar context
 const headerClasses: Record<number, string> = {
-  1: "mt-3 mb-1.5 font-semibold ui-text-sm text-text",
-  2: "ui-text-sm mt-2.5 mb-1 font-semibold text-text",
-  3: "mt-2 mb-1 font-semibold text-text ui-text-sm",
-  4: "mt-2 mb-0.5 font-medium text-text ui-text-sm",
-  5: "mt-1.5 mb-0.5 font-medium text-text-light ui-text-sm",
-  6: "mt-1.5 mb-0.5 font-medium text-text-lighter ui-text-sm",
+  1: "mt-3 mb-1.5 font-semibold ui-text-sm text-foreground",
+  2: "ui-text-sm mt-2.5 mb-1 font-semibold text-foreground",
+  3: "mt-2 mb-1 font-semibold text-foreground ui-text-sm",
+  4: "mt-2 mb-0.5 font-medium text-foreground ui-text-sm",
+  5: "mt-1.5 mb-0.5 font-medium text-muted-foreground ui-text-sm",
+  6: "mt-1.5 mb-0.5 font-medium text-subtle-foreground ui-text-sm",
 };
 
 function renderHeader(level: number, text: string, key: string): React.ReactNode {
@@ -519,9 +416,9 @@ type MarkdownTable = {
 };
 
 const INLINE_CODE_CLASS_NAME =
-  "font-mono inline whitespace-break-spaces rounded bg-secondary-bg/80 px-1 py-0 text-[0.95em] leading-[inherit] text-text align-baseline";
+  "font-mono inline whitespace-break-spaces rounded bg-surface/80 px-1 py-0 text-[0.95em] leading-[inherit] text-foreground align-baseline";
 const INLINE_LINK_CLASS_NAME =
-  "inline cursor-pointer break-words font-[inherit] leading-[inherit] text-accent hover:underline";
+  "inline cursor-pointer break-words font-[inherit] leading-[inherit] text-primary hover:underline";
 
 function splitMarkdownTableRow(line: string): string[] {
   let value = line.trim();
@@ -629,7 +526,7 @@ function renderTable(table: MarkdownTable, key: string): React.ReactNode {
             {table.headers.map((header, index) => (
               <th
                 key={index}
-                className={`bg-secondary-bg px-2 py-1.5 font-medium text-text ${getTableAlignmentClass(table.alignments[index])}`}
+                className={`bg-surface px-2 py-1.5 font-medium text-foreground ${getTableAlignmentClass(table.alignments[index])}`}
               >
                 {renderInlineFormatting(header)}
               </th>
@@ -642,7 +539,7 @@ function renderTable(table: MarkdownTable, key: string): React.ReactNode {
               {row.map((cell, cellIndex) => (
                 <td
                   key={cellIndex}
-                  className={`px-2 py-1.5 text-text-light align-top ${getTableAlignmentClass(table.alignments[cellIndex])}`}
+                  className={`px-2 py-1.5 text-muted-foreground align-top ${getTableAlignmentClass(table.alignments[cellIndex])}`}
                 >
                   {renderInlineFormatting(cell)}
                 </td>
@@ -696,7 +593,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       elements.push(
         <del
           key={getInlineKey("strike", strikeMatch[0])}
-          className="text-text-lighter line-through"
+          className="text-subtle-foreground line-through"
         >
           {strikeMatch[1]}
         </del>,
@@ -833,7 +730,7 @@ function renderContent(
             className="my-2 ml-5 list-decimal space-y-0.5"
           >
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="pl-1 text-text">
+              <li key={idx} className="pl-1 text-foreground">
                 {renderInlineFormatting(item)}
               </li>
             ))}
@@ -846,7 +743,7 @@ function renderContent(
             className="my-2 ml-5 list-disc space-y-0.5"
           >
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="pl-1 text-text">
+              <li key={idx} className="pl-1 text-foreground">
                 {renderInlineFormatting(item)}
               </li>
             ))}
@@ -934,7 +831,7 @@ function renderContent(
       elements.push(
         <blockquote
           key={`quote-${i}-${quoteContent.length}`}
-          className="my-2 border-border border-l-2 pl-3 text-text-light italic"
+          className="my-2 border-border border-l-2 pl-3 text-muted-foreground italic"
         >
           {renderInlineFormatting(quoteContent)}
         </blockquote>,

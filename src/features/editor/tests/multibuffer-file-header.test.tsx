@@ -13,7 +13,7 @@ describe("MultibufferFileHeader", () => {
       />,
     );
 
-    expect(markup).toMatch(/<button[^>]*class="[^"]*text-text/);
+    expect(markup).toMatch(/<button[^>]*class="[^"]*text-foreground/);
     expect(markup).toContain("font-sans");
     expect(markup).not.toContain("font-mono");
     expect(markup).not.toContain("font-family");

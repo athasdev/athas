@@ -1,4 +1,5 @@
-import { create } from "zustand";
+import { createStore } from "zustand/vanilla";
+import { createWorkspaceScopedStore } from "@/features/workspace/stores/create-workspace-scoped-store";
 import { createSelectors } from "@/utils/zustand-selectors";
 
 interface SidebarState {
@@ -6,11 +7,14 @@ interface SidebarState {
   updateActivePath: (path: string) => void;
 }
 
-const useSidebarStoreBase = create<SidebarState>()((set) => ({
-  activePath: undefined,
-  updateActivePath: (path: string) => {
-    set({ activePath: path });
-  },
-}));
+const createSidebarStore = () =>
+  createStore<SidebarState>()((set) => ({
+    activePath: undefined,
+    updateActivePath: (path: string) => {
+      set({ activePath: path });
+    },
+  }));
 
-export const useSidebarStore = createSelectors(useSidebarStoreBase);
+export const useSidebarStore = createSelectors(
+  createWorkspaceScopedStore("sidebar", createSidebarStore),
+);

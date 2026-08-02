@@ -8,6 +8,7 @@ class ThemeRegistry implements ThemeRegistryAPI {
   private registryCallbacks = new Set<() => void>();
   private isReady = false;
   private readyCallbacks = new Set<() => void>();
+  private appliedVariableKeys = new Set<string>();
   private version = 0;
 
   registerTheme(theme: ThemeDefinition, source?: ThemeSource): void {
@@ -77,17 +78,21 @@ class ThemeRegistry implements ThemeRegistryAPI {
     // Apply CSS variables to document root
     const root = document.documentElement;
 
-    // Apply CSS variables
-    Object.entries(theme.cssVariables).forEach(([key, value]) => {
+    const nextVariables = {
+      ...theme.cssVariables,
+      ...theme.syntaxTokens,
+    };
+
+    for (const key of this.appliedVariableKeys) {
+      if (!(key in nextVariables)) {
+        root.style.removeProperty(key);
+      }
+    }
+
+    Object.entries(nextVariables).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
-
-    // Apply syntax token variables if defined
-    if (theme.syntaxTokens) {
-      Object.entries(theme.syntaxTokens).forEach(([key, value]) => {
-        root.style.setProperty(key, value);
-      });
-    }
+    this.appliedVariableKeys = new Set(Object.keys(nextVariables));
 
     // Set data attribute for the current theme
     root.setAttribute("data-theme", id);

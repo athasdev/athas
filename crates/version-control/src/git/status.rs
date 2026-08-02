@@ -20,8 +20,8 @@ fn _git_status(repo_path: String) -> Result<GitStatus> {
       .recurse_untracked_dirs(false)
       .include_ignored(false)
       .include_unmodified(false)
-      .renames_head_to_index(false)
-      .renames_index_to_workdir(false);
+      .renames_head_to_index(true)
+      .renames_index_to_workdir(true);
 
    let statuses = repo
       .statuses(Some(&mut status_opts))
@@ -165,6 +165,8 @@ pub fn git_discover_repo(path: String) -> Result<Option<String>, String> {
 #[cfg(test)]
 mod tests {
    use super::*;
+   use git2::{IndexAddOption, Signature};
+   use std::path::Path;
 
    #[test]
    fn current_branch_name_uses_unborn_head_name_for_empty_repositories() {
@@ -175,5 +177,47 @@ mod tests {
 
       assert_ne!(branch, "unknown");
       assert!(!branch.is_empty());
+   }
+
+   #[test]
+   fn staged_renames_are_reported_as_a_single_renamed_file() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let repo = Repository::init(temp_dir.path()).expect("repo init");
+      fs::write(temp_dir.path().join("before.txt"), "same content\n").expect("write file");
+
+      let tree_id = {
+         let mut index = repo.index().expect("index");
+         index
+            .add_all(["before.txt"], IndexAddOption::DEFAULT, None)
+            .expect("stage initial file");
+         index.write().expect("write index");
+         index.write_tree().expect("write tree")
+      };
+      let tree = repo.find_tree(tree_id).expect("tree");
+      let signature = Signature::now("Athas Test", "athas@example.com").expect("signature");
+      repo
+         .commit(Some("HEAD"), &signature, &signature, "initial", &tree, &[])
+         .expect("commit");
+      drop(tree);
+
+      fs::rename(
+         temp_dir.path().join("before.txt"),
+         temp_dir.path().join("after.txt"),
+      )
+      .expect("rename file");
+      let mut index = repo.index().expect("index");
+      index
+         .remove_path(Path::new("before.txt"))
+         .expect("remove old path");
+      index
+         .add_path(Path::new("after.txt"))
+         .expect("add new path");
+      index.write().expect("write renamed index");
+
+      let status = _git_status(temp_dir.path().to_string_lossy().into_owned()).expect("status");
+
+      assert_eq!(status.files.len(), 1);
+      assert!(status.files[0].staged);
+      assert!(matches!(status.files[0].status, FileStatus::Renamed));
    }
 }

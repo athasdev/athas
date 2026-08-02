@@ -53,6 +53,7 @@ import type { AgentConfig } from "@/features/ai/types/acp.types";
 import type { AIChatSkill, MarketplaceSkill } from "@/features/ai/types/skills.types";
 import { useToast } from "@/features/layout/contexts/toast-context";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
+import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
@@ -349,7 +350,7 @@ function resolveManifestIcon(
 }
 
 function getCategoryIcon(category: UnifiedExtension["category"]): ReactNode {
-  const className = "size-4 text-text-lighter";
+  const className = "size-4 text-subtle-foreground";
 
   switch (category) {
     case "language":
@@ -396,7 +397,7 @@ function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
     <span
       className={cn(
         "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border/60",
-        showImageIcon ? "bg-white/95" : "bg-primary-bg",
+        showImageIcon ? "bg-white/95" : "bg-background",
       )}
     >
       {showImageIcon ? (
@@ -408,7 +409,7 @@ function ExtensionIcon({ extension }: { extension: UnifiedExtension }) {
           onError={() => setFailedImageIcon(true)}
         />
       ) : showNamedIcon && icon ? (
-        <DynamicIcon name={icon} className="size-5 text-text-lighter" />
+        <DynamicIcon name={icon} className="size-5 text-subtle-foreground" />
       ) : (
         getCategoryIcon(extension.category)
       )}
@@ -441,7 +442,7 @@ const ExtensionRow = ({
   const isUnavailableAgent =
     extension.category === "agent" && !extension.isInstalled && extension.canInstall === false;
   const actionContent = isInstalling ? (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center text-accent">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center text-primary">
       <Spinner label="Installing" compact />
     </span>
   ) : hasRuntimeIssue && onUpdate ? (
@@ -453,7 +454,7 @@ const ExtensionRow = ({
       variant="default"
       tooltip="Reinstall"
       size="icon"
-      className="text-error"
+      className="text-destructive"
     >
       <WarningCircle className="size-4" weight="duotone" />
     </Button>
@@ -475,7 +476,7 @@ const ExtensionRow = ({
     </Button>
   ) : extension.isInstalled ? (
     <span
-      className="flex h-8 w-8 shrink-0 items-center justify-center text-text-lighter"
+      className="flex h-8 w-8 shrink-0 items-center justify-center text-subtle-foreground"
       aria-label={extension.isBundled ? "Built-in" : "Installed"}
     >
       <Check className="size-4" weight="bold" />
@@ -497,9 +498,9 @@ const ExtensionRow = ({
   return (
     <div
       className={cn(
-        "group flex min-h-16 min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 text-left text-text-lighter transition-colors",
-        "hover:bg-hover/70 hover:text-text focus-within:bg-hover/70",
-        selected && "bg-hover/80 text-text",
+        "group flex min-h-16 min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 text-left text-subtle-foreground transition-colors",
+        "hover:bg-accent/70 hover:text-foreground focus-within:bg-accent/70",
+        selected && "bg-accent/80 text-foreground",
       )}
       onClick={onSelect}
       onContextMenu={(event) => onContextMenu(event, extension)}
@@ -515,9 +516,9 @@ const ExtensionRow = ({
     >
       <ExtensionIcon extension={extension} />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-text ui-text-sm">{extension.name}</div>
+        <div className="truncate font-medium text-foreground ui-text-sm">{extension.name}</div>
         {extension.description ? (
-          <div className="mt-0.5 truncate text-text-lighter ui-text-sm">
+          <div className="mt-0.5 truncate text-subtle-foreground ui-text-sm">
             {extension.description}
           </div>
         ) : null}
@@ -1365,7 +1366,7 @@ export const ExtensionsSidebar = () => {
       items.push({
         id: "built-in",
         label: "Built-in",
-        icon: <Check className="size-3.5 text-accent" />,
+        icon: <Check className="size-3.5 text-primary" />,
         disabled: true,
         onClick: () => {},
       });
@@ -1378,7 +1379,7 @@ export const ExtensionsSidebar = () => {
           items.push({
             id: "activate",
             label: "Activate",
-            icon: <Check className="size-3.5 text-accent" weight="bold" />,
+            icon: <Check className="size-3.5 text-primary" weight="bold" />,
             disabled: isInstalling,
             onClick: () => {
               void handleActivateExtension(extension);
@@ -1415,7 +1416,7 @@ export const ExtensionsSidebar = () => {
               id: `use-${option.id}`,
               label: isCurrent ? `Current: ${option.name}` : `Use ${option.name}`,
               icon: (
-                <Check className="size-3.5 text-accent" weight={isCurrent ? "bold" : "regular"} />
+                <Check className="size-3.5 text-primary" weight={isCurrent ? "bold" : "regular"} />
               ),
               disabled: isCurrent || isInstalling,
               onClick: () => {
@@ -1427,7 +1428,7 @@ export const ExtensionsSidebar = () => {
           items.push({
             id: extension.isActive ? "active" : "use",
             label: extension.isActive ? "Current" : "Use",
-            icon: <Check className="size-3.5 text-accent" weight="bold" />,
+            icon: <Check className="size-3.5 text-primary" weight="bold" />,
             disabled: extension.isActive || isInstalling,
             onClick: () => {
               void handleUseAppearance(extension);
@@ -1441,7 +1442,7 @@ export const ExtensionsSidebar = () => {
           icon: extension.isEnabled ? (
             <XCircle className="size-3.5" weight="duotone" />
           ) : (
-            <Check className="size-3.5 text-accent" weight="bold" />
+            <Check className="size-3.5 text-primary" weight="bold" />
           ),
           disabled: isInstalling,
           onClick: () => {
@@ -1495,7 +1496,7 @@ export const ExtensionsSidebar = () => {
         label: primaryActionLabel,
         icon: <Trash className="size-3.5" weight="duotone" />,
         disabled: isInstalling,
-        className: "text-error hover:text-error",
+        className: "text-destructive hover:text-destructive",
         onClick: () => {
           void handleToggle(extension);
         },
@@ -1506,7 +1507,7 @@ export const ExtensionsSidebar = () => {
         label: "Uninstall",
         icon: <Trash className="size-3.5" weight="duotone" />,
         disabled: isInstalling,
-        className: "text-error hover:text-error",
+        className: "text-destructive hover:text-destructive",
         onClick: () => {
           void handleUninstall(extension);
         },
@@ -1517,22 +1518,22 @@ export const ExtensionsSidebar = () => {
   }, [extensionContextMenu.data, extensionsWithUpdates, installingAgentIds, availableExtensions]);
 
   return (
-    <div className="font-sans flex h-full min-h-0 flex-col bg-primary-bg">
+    <div className="font-sans flex h-full min-h-0 flex-col bg-background">
       <div className="shrink-0 border-border/70 border-b px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Package className="size-5 text-text-lighter" weight="duotone" />
-              <h1 className="font-semibold text-text ui-text-lg">Extensions</h1>
+              <Package className="size-5 text-subtle-foreground" weight="duotone" />
+              <h1 className="font-semibold text-foreground ui-text-lg">Extensions</h1>
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 ui-text-sm text-text-lighter">
+            <div className="mt-1 flex flex-wrap items-center gap-2 ui-text-sm text-subtle-foreground">
               <span>{extensions.length} available</span>
               <span>·</span>
               <span>{installedCount} installed</span>
               {updateCount > 0 ? (
                 <>
                   <span>·</span>
-                  <span className="text-accent">
+                  <span className="text-primary">
                     {updateCount} update{updateCount === 1 ? "" : "s"}
                   </span>
                 </>
@@ -1550,7 +1551,7 @@ export const ExtensionsSidebar = () => {
               placeholder="Search extensions"
               size="md"
               containerClassName="min-w-0 flex-1 sm:w-80 sm:flex-none"
-              className="h-9 bg-secondary-bg/45"
+              className="h-9 bg-surface/45"
             />
             {settings.extensionsActiveTab === "skill" ? (
               <Button variant="default" size="xs" onClick={() => setIsSkillsCommandOpen(true)}>
@@ -1576,7 +1577,7 @@ export const ExtensionsSidebar = () => {
                 size="xs"
                 className={cn(
                   "group h-8 shrink-0 gap-1.5 px-2.5",
-                  active ? "bg-selected text-text" : "text-text-lighter",
+                  active ? "bg-selected text-foreground" : "text-subtle-foreground",
                 )}
                 onClick={() => void updateSetting("extensionsActiveTab", tab.id as ExtensionTabId)}
               >
@@ -1638,7 +1639,7 @@ export const ExtensionsSidebar = () => {
         </ScrollArea>
 
         <ScrollArea
-          className="hidden min-h-0 bg-secondary-bg/25 lg:block"
+          className="hidden min-h-0 bg-surface/25 lg:block"
           contentClassName="p-5"
           render={<aside />}
         >
@@ -1647,10 +1648,10 @@ export const ExtensionsSidebar = () => {
               <div className="flex items-start gap-3">
                 <ExtensionIcon extension={selectedExtension} />
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate font-semibold text-text ui-text-xl">
+                  <h2 className="truncate font-semibold text-foreground ui-text-xl">
                     {selectedExtension.name}
                   </h2>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-text-lighter ui-text-sm">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-subtle-foreground ui-text-sm">
                     {selectedExtension.publisher ? (
                       <span>By {selectedExtension.publisher}</span>
                     ) : null}
@@ -1691,21 +1692,21 @@ export const ExtensionsSidebar = () => {
               </div>
 
               {selectedExtension.description ? (
-                <p className="leading-6 text-text-lighter ui-text-base">
+                <p className="leading-6 text-subtle-foreground ui-text-base">
                   {selectedExtension.description}
                 </p>
               ) : null}
 
               {selectedExtension.runtimeIssues?.length ? (
-                <div className="rounded-lg border border-error/25 bg-error/8 p-3 text-error ui-text-sm">
-                  {selectedExtension.runtimeIssues[0]?.message}
-                </div>
+                <Alert tone="error">
+                  <AlertDescription>{selectedExtension.runtimeIssues[0]?.message}</AlertDescription>
+                </Alert>
               ) : null}
 
               {isAppearanceExtension(selectedExtension) &&
               selectedExtension.appearanceOptions?.length ? (
                 <div className="border-border/70 border-t pt-4">
-                  <div className="mb-2 font-medium text-text ui-text-sm">
+                  <div className="mb-2 font-medium text-foreground ui-text-sm">
                     {selectedExtension.category === "theme" ? "Themes" : "Icon themes"}
                   </div>
                   <div className="space-y-2">
@@ -1719,14 +1720,14 @@ export const ExtensionsSidebar = () => {
                       return (
                         <div
                           key={option.id}
-                          className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-primary-bg px-3 py-2"
+                          className="flex min-w-0 items-center gap-3 rounded-lg border border-border/65 bg-background px-3 py-2"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-text ui-text-sm">
+                            <div className="truncate font-medium text-foreground ui-text-sm">
                               {option.name}
                             </div>
                             {option.description ? (
-                              <div className="mt-0.5 line-clamp-1 text-text-lighter ui-text-sm">
+                              <div className="mt-0.5 line-clamp-1 text-subtle-foreground ui-text-sm">
                                 {option.description}
                               </div>
                             ) : null}
@@ -1772,7 +1773,7 @@ export const ExtensionsSidebar = () => {
                       selectedExtension.isInstalled &&
                       (selectedExtension.category === "agent" ||
                         selectedExtension.category === "skill")
-                        ? "text-text-lighter hover:text-error"
+                        ? "text-subtle-foreground hover:text-destructive"
                         : undefined
                     }
                     onClick={() => void handleToggle(selectedExtension)}
@@ -1806,7 +1807,7 @@ export const ExtensionsSidebar = () => {
                 selectedExtension.category !== "skill" ? (
                   <Button
                     variant="ghost"
-                    className="text-text-lighter hover:text-error"
+                    className="text-subtle-foreground hover:text-destructive"
                     onClick={() => void handleUninstall(selectedExtension)}
                     disabled={isExtensionInstalling(selectedExtension)}
                   >
@@ -1827,7 +1828,7 @@ export const ExtensionsSidebar = () => {
                 {canDeactivateAppearanceExtension(selectedExtension) ? (
                   <Button
                     variant="ghost"
-                    className="text-text-lighter"
+                    className="text-subtle-foreground"
                     onClick={() => void handleDeactivateExtension(selectedExtension)}
                   >
                     <XCircle />
@@ -1846,7 +1847,7 @@ export const ExtensionsSidebar = () => {
               </div>
 
               <div className="border-border/70 border-t pt-4">
-                <div className="mb-2 font-medium text-text ui-text-sm">Contributions</div>
+                <div className="mb-2 font-medium text-foreground ui-text-sm">Contributions</div>
                 <div className="flex flex-wrap gap-1.5">
                   {(selectedExtension.contributionSummary?.length
                     ? selectedExtension.contributionSummary

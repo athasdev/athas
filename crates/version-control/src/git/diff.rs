@@ -1,12 +1,15 @@
 use crate::git::{DiffLineType, GitDiff, GitDiffLine, GitDiffStat, get_blob_base64, is_image_file};
 use anyhow::Result;
 use base64::{Engine as _, engine::general_purpose};
-use git2::{Diff, DiffFormat, Oid, Repository, Tree};
-use std::{collections::HashMap, path::Path};
+use git2::{Blob, Diff, DiffDelta, DiffFormat, Oid, Patch, Repository, Tree};
+use std::{
+   collections::HashMap,
+   io::Read,
+   path::{Path, PathBuf},
+};
 
 const LARGE_DIFF_LINE_THRESHOLD: usize = 20_000;
 const MAX_RAW_PATCH_BYTES: usize = 2 * 1024 * 1024;
-const MAX_CONTENT_DIFF_CELLS: usize = 5_000_000;
 
 #[derive(Default)]
 pub struct ParsedDiffLines {
@@ -273,6 +276,35 @@ fn count_line_stats(lines: &[GitDiffLine]) -> (usize, usize) {
    (additions, deletions)
 }
 
+fn path_looks_binary(path: PathBuf) -> bool {
+   let Ok(mut file) = std::fs::File::open(path) else {
+      return false;
+   };
+   let mut sample = [0_u8; 8_000];
+   let Ok(bytes_read) = file.read(&mut sample) else {
+      return false;
+   };
+
+   sample[..bytes_read].contains(&0)
+}
+
+fn delta_is_binary(repo: &Repository, delta: &DiffDelta<'_>) -> bool {
+   if delta.old_file().is_binary() || delta.new_file().is_binary() {
+      return true;
+   }
+
+   for oid in [delta.old_file().id(), delta.new_file().id()] {
+      if !oid.is_zero() && repo.find_blob(oid).is_ok_and(|blob| blob.is_binary()) {
+         return true;
+      }
+   }
+
+   repo
+      .workdir()
+      .zip(delta.new_file().path())
+      .is_some_and(|(workdir, path)| path_looks_binary(workdir.join(path)))
+}
+
 fn collect_diff_stats(
    diff: &mut Diff,
    staged: bool,
@@ -351,15 +383,11 @@ pub fn git_diff_file(
       Repository::open(&repo_path).map_err(|e| format!("Failed to open repository: {e}"))?;
    let is_image = is_image_file(&file_path);
 
-   let head = repo
+   let head_tree = repo
       .head()
-      .map_err(|e| format!("Failed to get HEAD: {e}"))?;
-   let head_commit = head
-      .peel_to_commit()
-      .map_err(|e| format!("Failed to peel to commit: {e}"))?;
-   let head_tree = head_commit
-      .tree()
-      .map_err(|e| format!("Failed to get HEAD tree: {e}"))?;
+      .ok()
+      .and_then(|head| head.peel_to_commit().ok())
+      .and_then(|commit| commit.tree().ok());
 
    let mut diff_opts = git2::DiffOptions::new();
    diff_opts.pathspec(&file_path);
@@ -368,7 +396,7 @@ pub fn git_diff_file(
       let index = repo
          .index()
          .map_err(|e| format!("Failed to get index: {e}"))?;
-      repo.diff_tree_to_index(Some(&head_tree), Some(&index), Some(&mut diff_opts))
+      repo.diff_tree_to_index(head_tree.as_ref(), Some(&index), Some(&mut diff_opts))
    } else {
       let index = repo
          .index()
@@ -391,7 +419,11 @@ pub fn git_diff_file(
          let index = repo
             .index()
             .map_err(|e| format!("Failed to get index: {e}"))?;
-         repo.diff_tree_to_index(Some(&head_tree), Some(&index), Some(&mut broader_diff_opts))
+         repo.diff_tree_to_index(
+            head_tree.as_ref(),
+            Some(&index),
+            Some(&mut broader_diff_opts),
+         )
       } else {
          let index = repo
             .index()
@@ -418,6 +450,7 @@ pub fn git_diff_file(
                let is_new = delta.status() == git2::Delta::Added;
                let is_deleted = delta.status() == git2::Delta::Deleted;
                let is_renamed = delta.status() == git2::Delta::Renamed;
+               let is_binary = is_image || delta_is_binary(&repo, &delta);
 
                let old_path = delta_old_path;
                let new_path = delta_new_path;
@@ -465,7 +498,7 @@ pub fn git_diff_file(
                      }
                   }
                   lines = Vec::new();
-               } else {
+               } else if !is_binary {
                   let mut single_file_opts = git2::DiffOptions::new();
                   let target_path = if is_deleted {
                      old_path.as_deref().unwrap_or(&file_path)
@@ -479,16 +512,16 @@ pub fn git_diff_file(
                         .index()
                         .map_err(|e| format!("Failed to get index: {e}"))?;
                      repo.diff_tree_to_index(
-                        Some(&head_tree),
+                        head_tree.as_ref(),
                         Some(&index),
                         Some(&mut single_file_opts),
                      )
                   } else {
-                     repo.diff_tree_to_workdir(Some(&head_tree), Some(&mut single_file_opts))
+                     repo.diff_tree_to_workdir(head_tree.as_ref(), Some(&mut single_file_opts))
                   };
 
                   if let Ok(mut single_diff) = single_diff_result {
-                     let parsed = parse_diff_to_lines(&mut single_diff).unwrap_or_default();
+                     let parsed = parse_diff_to_lines(&mut single_diff)?;
                      is_truncated = parsed.is_truncated;
                      lines = parsed.lines;
                   }
@@ -503,7 +536,7 @@ pub fn git_diff_file(
                   is_new,
                   is_deleted,
                   is_renamed,
-                  is_binary: is_image,
+                  is_binary,
                   is_image,
                   old_blob_base64,
                   new_blob_base64,
@@ -527,6 +560,7 @@ pub fn git_diff_file(
    let is_new = delta.status() == git2::Delta::Added;
    let is_deleted = delta.status() == git2::Delta::Deleted;
    let is_renamed = delta.status() == git2::Delta::Renamed;
+   let is_binary = is_image || delta_is_binary(&repo, delta);
 
    let old_path = delta
       .old_file()
@@ -587,7 +621,7 @@ pub fn git_diff_file(
       }
 
       lines = Vec::new();
-   } else {
+   } else if !is_binary {
       let parsed = parse_diff_to_lines(&mut diff)?;
       is_truncated = parsed.is_truncated;
       lines = parsed.lines;
@@ -602,7 +636,7 @@ pub fn git_diff_file(
       is_new,
       is_deleted,
       is_renamed,
-      is_binary: is_image,
+      is_binary,
       is_image,
       old_blob_base64,
       new_blob_base64,
@@ -614,137 +648,89 @@ pub fn git_diff_file(
    })
 }
 
-fn create_diff_lines(old_lines: &[&str], new_lines: &[&str]) -> Vec<GitDiffLine> {
-   let mut result = Vec::new();
+fn parse_content_patch(patch: &Patch<'_>) -> Result<ParsedDiffLines, String> {
+   let mut lines = Vec::new();
 
-   if old_lines.len().saturating_mul(new_lines.len()) > MAX_CONTENT_DIFF_CELLS {
-      result.push(GitDiffLine {
+   for hunk_index in 0..patch.num_hunks() {
+      let (hunk, line_count) = patch.hunk(hunk_index).map_err(|error| error.to_string())?;
+      lines.push(GitDiffLine {
          line_type: DiffLineType::Header,
-         content: format!(
-            "Athas skipped inline diffing for this buffer after {} x {} lines to keep the editor \
-             responsive.",
-            old_lines.len(),
-            new_lines.len()
-         ),
+         content: String::from_utf8_lossy(hunk.header())
+            .trim_end_matches('\n')
+            .to_string(),
          old_line_number: None,
          new_line_number: None,
       });
-      return result;
-   }
 
-   let lcs = longest_common_subsequence(old_lines, new_lines);
-   let mut old_idx = 0;
-   let mut new_idx = 0;
-   let mut old_line_num = 1u32;
-   let mut new_line_num = 1u32;
+      for line_index in 0..line_count {
+         if lines.len() >= LARGE_DIFF_LINE_THRESHOLD {
+            lines.push(GitDiffLine {
+               line_type: DiffLineType::Header,
+               content: format!(
+                  "Athas truncated this diff after {LARGE_DIFF_LINE_THRESHOLD} lines to keep the \
+                   editor responsive."
+               ),
+               old_line_number: None,
+               new_line_number: None,
+            });
+            return Ok(ParsedDiffLines {
+               lines,
+               is_truncated: true,
+            });
+         }
 
-   for &(lcs_old_idx, lcs_new_idx) in &lcs {
-      // Add removed lines before this LCS point
-      while old_idx < lcs_old_idx {
-         result.push(GitDiffLine {
-            line_type: DiffLineType::Removed,
-            content: old_lines[old_idx].to_string(),
-            old_line_number: Some(old_line_num),
-            new_line_number: None,
+         let line = patch
+            .line_in_hunk(hunk_index, line_index)
+            .map_err(|error| error.to_string())?;
+         let line_type = match line.origin() {
+            '+' => DiffLineType::Added,
+            '-' => DiffLineType::Removed,
+            ' ' => DiffLineType::Context,
+            _ => continue,
+         };
+         lines.push(GitDiffLine {
+            line_type,
+            content: String::from_utf8_lossy(line.content())
+               .trim_end_matches('\n')
+               .to_string(),
+            old_line_number: line.old_lineno(),
+            new_line_number: line.new_lineno(),
          });
-         old_idx += 1;
-         old_line_num += 1;
-      }
-
-      // Add added lines before this LCS point
-      while new_idx < lcs_new_idx {
-         result.push(GitDiffLine {
-            line_type: DiffLineType::Added,
-            content: new_lines[new_idx].to_string(),
-            old_line_number: None,
-            new_line_number: Some(new_line_num),
-         });
-         new_idx += 1;
-         new_line_num += 1;
-      }
-
-      // Add the common line
-      if old_idx < old_lines.len() && new_idx < new_lines.len() {
-         result.push(GitDiffLine {
-            line_type: DiffLineType::Context,
-            content: old_lines[old_idx].to_string(),
-            old_line_number: Some(old_line_num),
-            new_line_number: Some(new_line_num),
-         });
-         old_idx += 1;
-         new_idx += 1;
-         old_line_num += 1;
-         new_line_num += 1;
       }
    }
 
-   // Add remaining removed lines
-   while old_idx < old_lines.len() {
-      result.push(GitDiffLine {
-         line_type: DiffLineType::Removed,
-         content: old_lines[old_idx].to_string(),
-         old_line_number: Some(old_line_num),
-         new_line_number: None,
-      });
-      old_idx += 1;
-      old_line_num += 1;
-   }
-
-   // Add remaining added lines
-   while new_idx < new_lines.len() {
-      result.push(GitDiffLine {
-         line_type: DiffLineType::Added,
-         content: new_lines[new_idx].to_string(),
-         old_line_number: None,
-         new_line_number: Some(new_line_num),
-      });
-      new_idx += 1;
-      new_line_num += 1;
-   }
-
-   result
+   Ok(ParsedDiffLines {
+      lines,
+      is_truncated: false,
+   })
 }
 
-fn longest_common_subsequence(old_lines: &[&str], new_lines: &[&str]) -> Vec<(usize, usize)> {
-   let old_len = old_lines.len();
-   let new_len = new_lines.len();
-
-   if old_len == 0 || new_len == 0 {
-      return Vec::new();
+fn diff_blob_against_content(
+   blob: Option<&Blob<'_>>,
+   file_path: &Path,
+   content: &[u8],
+) -> Result<ParsedDiffLines, String> {
+   let mut options = git2::DiffOptions::new();
+   options.context_lines(3);
+   let patch = match blob {
+      Some(blob) => Patch::from_blob_and_buffer(
+         blob,
+         Some(file_path),
+         content,
+         Some(file_path),
+         Some(&mut options),
+      ),
+      None => Patch::from_buffers(
+         &[],
+         Some(file_path),
+         content,
+         Some(file_path),
+         Some(&mut options),
+      ),
    }
+   .map_err(|error| format!("Failed to diff editor content: {error}"))?;
 
-   // Create LCS table
-   let mut lcs_table = vec![vec![0; new_len + 1]; old_len + 1];
-
-   for i in 1..=old_len {
-      for j in 1..=new_len {
-         if old_lines[i - 1] == new_lines[j - 1] {
-            lcs_table[i][j] = lcs_table[i - 1][j - 1] + 1;
-         } else {
-            lcs_table[i][j] = std::cmp::max(lcs_table[i - 1][j], lcs_table[i][j - 1]);
-         }
-      }
-   }
-
-   // Backtrack to find the actual LCS
-   let mut result = Vec::new();
-   let mut i = old_len;
-   let mut j = new_len;
-
-   while i > 0 && j > 0 {
-      if old_lines[i - 1] == new_lines[j - 1] {
-         result.push((i - 1, j - 1));
-         i -= 1;
-         j -= 1;
-      } else if lcs_table[i - 1][j] > lcs_table[i][j - 1] {
-         i -= 1;
-      } else {
-         j -= 1;
-      }
-   }
-
-   result.reverse();
-   result
+   parse_content_patch(&patch)
 }
 
 pub fn git_diff_file_with_content(
@@ -769,33 +755,37 @@ pub fn git_diff_file_with_content(
          None => None, // File not in index, treat as new
       }
    } else {
-      // Get blob from HEAD
-      let head = repo
+      repo
          .head()
-         .map_err(|e| format!("Failed to get HEAD: {e}"))?;
-      let head_commit = head
-         .peel_to_commit()
-         .map_err(|e| format!("Failed to peel to commit: {e}"))?;
-      let head_tree = head_commit
-         .tree()
-         .map_err(|e| format!("Failed to get HEAD tree: {e}"))?;
-
-      match head_tree.get_path(Path::new(&file_path)) {
-         Ok(entry) => Some(entry.id()),
-         Err(_) => None, // File not in HEAD, treat as new
-      }
+         .ok()
+         .and_then(|head| head.peel_to_commit().ok())
+         .and_then(|commit| commit.tree().ok())
+         .and_then(|tree| {
+            tree
+               .get_path(Path::new(&file_path))
+               .ok()
+               .map(|entry| entry.id())
+         })
    };
 
    let is_new = base_blob_id.is_none();
    let is_deleted = content.is_empty() && !is_new;
    let is_renamed = false; // Can't detect renames with this method
 
+   let base_blob = base_blob_id
+      .map(|blob_id| {
+         repo
+            .find_blob(blob_id)
+            .map_err(|e| format!("Failed to find blob: {e}"))
+      })
+      .transpose()?;
+   let is_binary = is_image || base_blob.as_ref().is_some_and(|blob| blob.is_binary());
    let mut old_blob_base64 = None;
    let mut new_blob_base64 = None;
    let mut lines = Vec::new();
+   let mut is_truncated = false;
 
-   if is_image {
-      // Handle binary/image files
+   if is_binary {
       if let Some(blob_id) = base_blob_id {
          old_blob_base64 = get_blob_base64(&repo, Some(blob_id), &file_path);
       }
@@ -803,41 +793,15 @@ pub fn git_diff_file_with_content(
          new_blob_base64 = Some(general_purpose::STANDARD.encode(content.as_bytes()));
       }
    } else {
-      // Handle text files - create diff between blob and buffer
-      if let Some(blob_id) = base_blob_id {
-         let blob = repo
-            .find_blob(blob_id)
-            .map_err(|e| format!("Failed to find blob: {e}"))?;
-
-         // Create a diff between the blob and the content buffer
-         // Create a proper diff between blob content and buffer content
-         let old_content = blob.content();
-
-         // Create a proper diff between blob content and buffer content
-         let old_content_str = std::str::from_utf8(old_content).unwrap_or("");
-         let old_lines: Vec<&str> = old_content_str.lines().collect();
-         let new_lines: Vec<&str> = content.lines().collect();
-
-         lines = create_diff_lines(&old_lines, &new_lines);
-      } else if !content.is_empty() {
-         // New file
-         for (index, line) in content.lines().enumerate() {
-            lines.push(GitDiffLine {
-               line_type: DiffLineType::Added,
-               content: line.to_string(),
-               old_line_number: None,
-               new_line_number: Some(index as u32 + 1),
-            });
-         }
-      }
+      let parsed = diff_blob_against_content(
+         base_blob.as_ref(),
+         Path::new(&file_path),
+         content.as_bytes(),
+      )?;
+      lines = parsed.lines;
+      is_truncated = parsed.is_truncated;
    }
 
-   let is_truncated = lines.iter().any(|line| {
-      matches!(line.line_type, DiffLineType::Header)
-         && line
-            .content
-            .starts_with("Athas skipped inline diffing for this buffer")
-   });
    let (additions, deletions) = count_line_stats(&lines);
 
    Ok(GitDiff {
@@ -847,7 +811,7 @@ pub fn git_diff_file_with_content(
       is_new,
       is_deleted,
       is_renamed,
-      is_binary: is_image,
+      is_binary,
       is_image,
       old_blob_base64,
       new_blob_base64,
@@ -890,120 +854,12 @@ pub fn git_commit_diff(
    } else {
       None
    };
-   let mut diff_opts = git2::DiffOptions::new();
-   if let Some(path) = &file_path {
-      diff_opts.pathspec(path);
-   }
-   let diff = repo
-      .diff_tree_to_tree(
-         parent_tree.as_ref(),
-         Some(&commit_tree),
-         Some(&mut diff_opts),
-      )
-      .map_err(|e| format!("Failed to create commit diff: {e}"))?;
-   let mut diff = diff;
-   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff).unwrap_or_default();
-   let mut results: Vec<GitDiff> = Vec::new();
-   for delta in diff.deltas() {
-      let old_path = delta
-         .old_file()
-         .path()
-         .map(|p| p.to_string_lossy().into_owned());
-      let new_path = delta
-         .new_file()
-         .path()
-         .map(|p| p.to_string_lossy().into_owned());
-      let file_path = if delta.status() == git2::Delta::Deleted {
-         old_path.clone().unwrap_or_default()
-      } else {
-         new_path
-            .clone()
-            .unwrap_or_else(|| old_path.clone().unwrap_or_default())
-      };
-      let is_image = is_image_file(&file_path);
-      let mut is_binary = false;
-      let mut old_blob_base64 = None;
-      let mut new_blob_base64 = None;
-      let is_new = delta.status() == git2::Delta::Added;
-      let is_deleted = delta.status() == git2::Delta::Deleted;
-      let is_renamed = delta.status() == git2::Delta::Renamed;
-      let mut raw_patch = None;
-      let mut additions = 0;
-      let mut deletions = 0;
-      let mut is_truncated = false;
-      let lines = if is_image {
-         is_binary = true;
-         let old_oid = delta.old_file().id();
-         let new_oid = delta.new_file().id();
-         if is_new {
-            new_blob_base64 =
-               get_blob_base64(&repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
-         } else if is_deleted {
-            if let Some(parent_tree) = &parent_tree {
-               let old_blob_oid = old_path
-                  .as_ref()
-                  .and_then(|p| parent_tree.get_path(Path::new(p)).ok().map(|e| e.id()));
-               old_blob_base64 =
-                  get_blob_base64(&repo, old_blob_oid, old_path.as_deref().unwrap_or(""));
-            } else {
-               old_blob_base64 =
-                  get_blob_base64(&repo, Some(old_oid), old_path.as_deref().unwrap_or(""));
-            }
-         } else if is_renamed {
-            if let Some(parent_tree) = &parent_tree {
-               let old_blob_oid = old_path
-                  .as_ref()
-                  .and_then(|p| parent_tree.get_path(Path::new(p)).ok().map(|e| e.id()));
-               old_blob_base64 =
-                  get_blob_base64(&repo, old_blob_oid, old_path.as_deref().unwrap_or(""));
-            } else {
-               old_blob_base64 =
-                  get_blob_base64(&repo, Some(old_oid), old_path.as_deref().unwrap_or(""));
-            }
-            new_blob_base64 =
-               get_blob_base64(&repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
-         } else {
-            if let Some(parent_tree) = &parent_tree {
-               let old_blob_oid = old_path
-                  .as_ref()
-                  .and_then(|p| parent_tree.get_path(Path::new(p)).ok().map(|e| e.id()));
-               old_blob_base64 =
-                  get_blob_base64(&repo, old_blob_oid, old_path.as_deref().unwrap_or(""));
-            } else {
-               old_blob_base64 =
-                  get_blob_base64(&repo, Some(old_oid), old_path.as_deref().unwrap_or(""));
-            }
-            new_blob_base64 =
-               get_blob_base64(&repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
-         }
-         Vec::new()
-      } else {
-         let parsed = diff_entries_by_file.remove(&file_path).unwrap_or_default();
-         raw_patch = parsed.raw_patch;
-         additions = parsed.additions;
-         deletions = parsed.deletions;
-         is_truncated = parsed.is_truncated;
-         parsed.lines
-      };
-      results.push(GitDiff {
-         file_path: file_path.clone(),
-         old_path: old_path.clone(),
-         new_path: new_path.clone(),
-         is_new,
-         is_deleted,
-         is_renamed,
-         is_binary,
-         is_image,
-         old_blob_base64,
-         new_blob_base64,
-         lines,
-         raw_patch,
-         additions: Some(additions),
-         deletions: Some(deletions),
-         is_truncated: is_truncated.then_some(true),
-      });
-   }
-   Ok(results)
+   git_diff_between_trees(
+      &repo,
+      parent_tree.as_ref(),
+      Some(&commit_tree),
+      file_path.as_deref(),
+   )
 }
 
 pub fn git_ref_diff(
@@ -1030,18 +886,23 @@ pub fn git_ref_diff(
       .tree()
       .map_err(|e| format!("Failed to get target tree: {e}"))?;
 
-   git_diff_between_trees(&repo, Some(&base_tree), Some(&target_tree))
+   git_diff_between_trees(&repo, Some(&base_tree), Some(&target_tree), None)
 }
 
 fn git_diff_between_trees(
    repo: &Repository,
    base_tree: Option<&Tree<'_>>,
    target_tree: Option<&Tree<'_>>,
+   file_path: Option<&str>,
 ) -> Result<Vec<GitDiff>, String> {
+   let mut options = git2::DiffOptions::new();
+   if let Some(file_path) = file_path {
+      options.pathspec(file_path);
+   }
    let mut diff = repo
-      .diff_tree_to_tree(base_tree, target_tree, None)
-      .map_err(|e| format!("Failed to create ref diff: {e}"))?;
-   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff).unwrap_or_default();
+      .diff_tree_to_tree(base_tree, target_tree, Some(&mut options))
+      .map_err(|e| format!("Failed to create tree diff: {e}"))?;
+   let mut diff_entries_by_file = parse_diff_to_file_entries(&mut diff)?;
    let mut results: Vec<GitDiff> = Vec::new();
 
    for delta in diff.deltas() {
@@ -1061,7 +922,7 @@ fn git_diff_between_trees(
             .unwrap_or_else(|| old_path.clone().unwrap_or_default())
       };
       let is_image = is_image_file(&file_path);
-      let mut is_binary = false;
+      let is_binary = is_image || delta_is_binary(repo, &delta);
       let mut old_blob_base64 = None;
       let mut new_blob_base64 = None;
       let is_new = delta.status() == git2::Delta::Added;
@@ -1072,7 +933,6 @@ fn git_diff_between_trees(
       let mut deletions = 0;
       let mut is_truncated = false;
       let lines = if is_image {
-         is_binary = true;
          let old_oid = delta.old_file().id();
          let new_oid = delta.new_file().id();
          if is_new {
@@ -1117,6 +977,8 @@ fn git_diff_between_trees(
                get_blob_base64(repo, Some(new_oid), new_path.as_deref().unwrap_or(""));
          }
          Vec::new()
+      } else if is_binary {
+         Vec::new()
       } else {
          let parsed = diff_entries_by_file.remove(&file_path).unwrap_or_default();
          raw_patch = parsed.raw_patch;
@@ -1146,4 +1008,127 @@ fn git_diff_between_trees(
    }
 
    Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+   use git2::IndexAddOption;
+   use std::fs;
+
+   #[test]
+   fn content_diff_handles_large_similar_buffers_without_quadratic_table() {
+      let old_content = (0..5_000)
+         .map(|index| format!("line {index}\n"))
+         .collect::<String>();
+      let mut new_content = old_content.clone();
+      new_content.push_str("new final line\n");
+
+      let parsed = diff_blob_against_content(None, Path::new("large.txt"), new_content.as_bytes())
+         .expect("content diff");
+
+      assert!(!parsed.is_truncated);
+      assert!(parsed.lines.iter().any(|line| {
+         matches!(line.line_type, DiffLineType::Added) && line.content == "new final line"
+      }));
+   }
+
+   #[test]
+   fn content_diff_preserves_changed_line_numbers() {
+      let patch = Patch::from_buffers(
+         b"first\nold\nthird\n",
+         Some(Path::new("example.txt")),
+         b"first\nnew\nthird\n",
+         Some(Path::new("example.txt")),
+         None,
+      )
+      .expect("patch");
+      let parsed = parse_content_patch(&patch).expect("parsed patch");
+
+      let removed = parsed
+         .lines
+         .iter()
+         .find(|line| matches!(line.line_type, DiffLineType::Removed))
+         .expect("removed line");
+      let added = parsed
+         .lines
+         .iter()
+         .find(|line| matches!(line.line_type, DiffLineType::Added))
+         .expect("added line");
+
+      assert_eq!(removed.old_line_number, Some(2));
+      assert_eq!(added.new_line_number, Some(2));
+   }
+
+   #[test]
+   fn staged_diff_works_before_the_first_commit() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let repo = Repository::init(temp_dir.path()).expect("repo init");
+      fs::write(temp_dir.path().join("first.txt"), "first\n").expect("write file");
+      let mut index = repo.index().expect("index");
+      index
+         .add_all(["first.txt"], IndexAddOption::DEFAULT, None)
+         .expect("stage file");
+      index.write().expect("write index");
+
+      let diff = git_diff_file(
+         temp_dir.path().to_string_lossy().into_owned(),
+         "first.txt".to_string(),
+         true,
+      )
+      .expect("staged diff");
+
+      assert!(diff.is_new);
+      assert!(
+         diff.lines.iter().any(|line| {
+            matches!(line.line_type, DiffLineType::Added) && line.content == "first"
+         })
+      );
+   }
+
+   #[test]
+   fn staged_non_image_binary_diff_is_reported_without_text_lines() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let repo = Repository::init(temp_dir.path()).expect("repo init");
+      fs::write(
+         temp_dir.path().join("payload.bin"),
+         [0_u8, 159, 146, 150, 1, 2, 3],
+      )
+      .expect("write binary file");
+      let mut index = repo.index().expect("index");
+      index
+         .add_all(["payload.bin"], IndexAddOption::DEFAULT, None)
+         .expect("stage file");
+      index.write().expect("write index");
+
+      let diff = git_diff_file(
+         temp_dir.path().to_string_lossy().into_owned(),
+         "payload.bin".to_string(),
+         true,
+      )
+      .expect("staged binary diff");
+
+      assert!(diff.is_binary);
+      assert!(!diff.is_image);
+      assert!(diff.lines.is_empty());
+      assert_eq!(diff.additions, Some(0));
+      assert_eq!(diff.deletions, Some(0));
+   }
+
+   #[test]
+   fn editor_content_diff_works_before_the_first_commit() {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      Repository::init(temp_dir.path()).expect("repo init");
+
+      let diff = git_diff_file_with_content(
+         temp_dir.path().to_string_lossy().into_owned(),
+         "first.txt".to_string(),
+         "first\n".to_string(),
+         "head".to_string(),
+      )
+      .expect("editor content diff");
+
+      assert!(diff.is_new);
+      assert_eq!(diff.additions, Some(1));
+   }
 }

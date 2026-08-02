@@ -457,14 +457,15 @@ const TerminalContainer = ({
       const customEvent = event as CustomEvent<{
         terminalId: string;
         connectionId: string;
+        remoteConnectionId?: string;
       }>;
-      const { terminalId, connectionId } = customEvent.detail;
+      const { terminalId, connectionId, remoteConnectionId } = customEvent.detail;
 
       const pendingCommand = pendingCommandsRef.current.get(terminalId);
       if (pendingCommand && connectionId) {
         // Small delay to ensure shell prompt is ready
         setTimeout(() => {
-          invoke("terminal_write", {
+          invoke(remoteConnectionId ? "remote_terminal_write" : "terminal_write", {
             id: connectionId,
             input: { kind: "text", data: pendingCommand },
           }).catch(() => {});
@@ -592,7 +593,7 @@ const TerminalContainer = ({
   };
 
   const terminalSessions = (
-    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary-bg">
+    <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       {(() => {
         return (
           <div className="flex h-full min-h-0 flex-col">
@@ -664,7 +665,7 @@ const TerminalContainer = ({
 
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-primary-bg",
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background",
             isVertical &&
               (tabSidebarPosition === "left"
                 ? "rounded-tl-lg border-border/60 border-t border-l"

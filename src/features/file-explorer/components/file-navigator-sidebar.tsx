@@ -1,8 +1,4 @@
-import {
-  ListBulletsIcon as ListBullets,
-  MagnifyingGlassIcon as Search,
-  TreeStructureIcon as TreeStructure,
-} from "@/ui/icons";
+import { ListBulletsIcon as ListBullets, TreeStructureIcon as TreeStructure } from "@/ui/icons";
 import {
   memo,
   type KeyboardEvent,
@@ -16,13 +12,14 @@ import {
 import { cva } from "class-variance-authority";
 import { fuzzyScore } from "@/features/quick-open/utils/fuzzy-search";
 import {
-  SidebarHeaderIconButton,
+  SidebarHeader,
+  SidebarHeaderSearch,
   SidebarListItem,
-  SidebarSearchFilterRow,
+  SidebarSectionEmptyState,
   SidebarSectionLabel,
 } from "@/ui/sidebar";
+import { ToggleGroup } from "@/ui/toggle-group";
 import { cn } from "@/utils/cn";
-import { ResizeHandleEffect } from "@/features/layout/components/resize-handle-effect";
 import { ScrollArea } from "@/ui/scroll-area";
 import { getBaseName, getDirName, normalizePath } from "@/utils/path-helpers";
 import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
@@ -82,10 +79,10 @@ const fileNavigatorSurfaceVariants = cva(
   {
     variants: {
       surface: {
-        sidebar: "border-border/70 border-r bg-secondary-bg/20",
+        sidebar: "border-border/70 border-r bg-surface/20",
         plain: "bg-transparent",
-        inset: "rounded-xl border border-border/70 bg-secondary-bg/20",
-        review: "border-border/60 border-r bg-secondary-bg/10",
+        inset: "rounded-xl border border-border/70 bg-surface/20",
+        review: "border-border/60 border-r bg-surface/10",
       },
     },
     defaultVariants: {
@@ -267,7 +264,11 @@ const FileNavigatorNodeRow = memo(function FileNavigatorNodeRow({
         <SidebarSectionLabel
           style={{ paddingLeft: 8 + depth * 12 }}
           leading={
-            <ThemedFileIcon fileName={node.name} isDir className="shrink-0 text-text-lighter" />
+            <ThemedFileIcon
+              fileName={node.name}
+              isDir
+              className="shrink-0 text-subtle-foreground"
+            />
           }
         >
           {node.name}
@@ -419,50 +420,29 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
       aria-label={ariaLabel}
     >
       {onViewModeChange ? (
-        <SidebarSearchFilterRow
-          value={searchQuery}
-          onChange={setSearchQuery}
-          searchIcon={Search}
-          placeholder="Search"
-          searchAriaLabel="Search files"
-          searchContainerClassName="file-explorer-search-field"
+        <SidebarHeader
+          variant="search"
           className={cn(surface === "plain" ? "px-1" : "border-border/60 border-b")}
-          actions={
-            <div
-              className={cn(
-                "inline-flex shrink-0 rounded p-0.5",
-                surface === "inset" ? "bg-primary-bg" : "bg-transparent",
-              )}
-            >
-              <SidebarHeaderIconButton
-                className={cn(
-                  "file-navigator-view-mode-button rounded",
-                  viewMode === "flat" && "bg-selected text-text",
-                )}
-                onClick={() => onViewModeChange("flat")}
-                aria-label="Show flat file list"
-                aria-pressed={viewMode === "flat"}
-                tooltip="Flat list"
-                tooltipSide="bottom"
-              >
-                <ListBullets />
-              </SidebarHeaderIconButton>
-              <SidebarHeaderIconButton
-                className={cn(
-                  "file-navigator-view-mode-button rounded",
-                  viewMode === "tree" && "bg-selected text-text",
-                )}
-                onClick={() => onViewModeChange("tree")}
-                aria-label="Show file tree"
-                aria-pressed={viewMode === "tree"}
-                tooltip="File tree"
-                tooltipSide="bottom"
-              >
-                <TreeStructure />
-              </SidebarHeaderIconButton>
-            </div>
-          }
-        />
+        >
+          <SidebarHeaderSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            aria-label="Search files"
+          />
+          <ToggleGroup
+            value={viewMode}
+            onValueChange={onViewModeChange}
+            ariaLabel="File navigator view"
+            options={[
+              { value: "flat", label: "Flat list", icon: <ListBullets /> },
+              { value: "tree", label: "File tree", icon: <TreeStructure /> },
+            ]}
+            iconOnly
+            wrap={false}
+            size="xs"
+            className={cn("shrink-0", surface === "inset" && "bg-background")}
+          />
+        </SidebarHeader>
       ) : null}
 
       <ScrollArea className="min-h-0 flex-1" contentClassName="p-1" orientation="both">
@@ -472,7 +452,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
           </SidebarSectionLabel>
         ) : null}
         {filteredItems.length === 0 ? (
-          <SidebarSectionLabel>No files match</SidebarSectionLabel>
+          <SidebarSectionEmptyState>No files match</SidebarSectionEmptyState>
         ) : viewMode === "flat" ? (
           flatItems.map((item) => (
             <FileNavigatorFlatRow
@@ -497,7 +477,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         )}
       </ScrollArea>
       <div
-        className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-accent/20"
+        className="absolute top-0 right-[-4px] z-20 h-full w-2 cursor-col-resize transition-colors hover:bg-primary/20"
         onPointerDown={handleResizeStart}
         onKeyDown={handleResizeKeyDown}
         role="separator"
@@ -507,9 +487,7 @@ export const FileNavigatorSidebar = memo(function FileNavigatorSidebar({
         aria-valuemax={MAX_NAVIGATOR_WIDTH}
         aria-valuenow={Math.round(width)}
         tabIndex={0}
-      >
-        <ResizeHandleEffect active={isResizing} orientation="vertical" />
-      </div>
+      />
       {isResizing ? (
         <div className="pointer-events-none fixed inset-0 z-10 cursor-col-resize" />
       ) : null}

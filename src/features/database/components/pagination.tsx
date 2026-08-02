@@ -49,7 +49,7 @@ export default function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between border-border border-t bg-secondary-bg px-3 py-2">
+    <div className="flex items-center justify-between border-border border-t bg-surface px-3 py-2">
       <div className="flex items-center gap-2">
         <Select
           value={pageSize.toString()}
@@ -65,7 +65,7 @@ export default function Pagination({
           size="xs"
           className="min-w-16"
         />
-        <span className="font-sans ui-text-sm text-text-lighter">per page</span>
+        <span className="font-sans ui-text-sm text-subtle-foreground">per page</span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -74,7 +74,7 @@ export default function Pagination({
           disabled={currentPage === 1}
           variant="ghost"
           size="icon-xs"
-          className="text-text-lighter hover:text-text disabled:opacity-50"
+          className="text-subtle-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Previous page"
           tooltip="Previous page"
         >
@@ -94,7 +94,7 @@ export default function Pagination({
             aria-label="Current page"
             className="font-sans ui-text-sm h-6 w-12 px-1 py-0 text-center"
           />
-          <span className="font-sans ui-text-sm text-text-lighter">/ {totalPages}</span>
+          <span className="font-sans ui-text-sm text-subtle-foreground">/ {totalPages}</span>
         </form>
 
         <Button
@@ -102,7 +102,7 @@ export default function Pagination({
           disabled={currentPage === totalPages}
           variant="ghost"
           size="icon-xs"
-          className="text-text-lighter hover:text-text disabled:opacity-50"
+          className="text-subtle-foreground hover:text-foreground disabled:opacity-50"
           aria-label="Next page"
           tooltip="Next page"
         >

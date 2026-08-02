@@ -20,7 +20,9 @@ import {
 import { paginateQueryResult } from "../../lib/query-result-pagination";
 import { writeDatabaseClipboardText } from "../../utils/clipboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Spinner } from "@/ui/spinner";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import type { DatabaseObjectKind, ViewMode } from "../../types/common.types";
 import type { DatabaseType } from "../../types/provider.types";
 import type { SqlDatabaseActions, SqlDatabaseState } from "./stores/create-sql.store";
@@ -162,7 +164,7 @@ export default function SqlDatabaseViewer({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg text-text">
+    <div className="flex h-full flex-col overflow-hidden bg-surface text-foreground">
       <TableToolbar
         fileName={store.fileName}
         dbInfo={store.dbInfo}
@@ -231,7 +233,7 @@ export default function SqlDatabaseViewer({
           onClearHistory={actions.clearSqlHistory}
         />
 
-        <div className={databasePanelClassName("flex-1 border border-border/70 bg-primary-bg")}>
+        <div className={databasePanelClassName("flex-1 border border-border/70 bg-background")}>
           <QueryBar
             searchTerm={canMutateRows ? store.searchTerm : ""}
             setSearchTerm={actions.setSearchTerm}
@@ -260,15 +262,17 @@ export default function SqlDatabaseViewer({
           )}
 
           {store.error && (
-            <div className="mx-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 font-sans ui-text-sm text-error">
-              {store.error}
-            </div>
+            <Alert tone="error" className="mx-3 mb-2 w-auto">
+              <AlertDescription>{store.error}</AlertDescription>
+            </Alert>
           )}
 
           {isBusy && (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <Spinner label="Loading" showLabel />
-            </div>
+            <Empty>
+              <EmptyDescription>
+                <Spinner label="Loading" showLabel />
+              </EmptyDescription>
+            </Empty>
           )}
 
           {!isBusy && viewMode === "data" && visibleQueryResult && (

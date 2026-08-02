@@ -11,6 +11,7 @@ import {
 } from "@/features/editor/lsp/workspace-edit";
 import { extensionRegistry } from "@/extensions/registry/extension-registry";
 import { MONACO_HIGHLIGHT_LANGUAGE_IDS } from "./language";
+import { filePathFromAthasModelUri } from "./model-uri";
 
 let providersRegistered = false;
 
@@ -23,10 +24,7 @@ function filePathFromModel(model: Monaco.editor.ITextModel): string {
     return decodeURIComponent(model.uri.path);
   }
 
-  const [, _bufferId, ...pathParts] = model.uri.path.split("/");
-  const decodedPath = decodeURIComponent(pathParts.join("/"));
-  if (/^[A-Za-z]:\//.test(decodedPath)) return decodedPath;
-  return decodedPath.startsWith("/") ? decodedPath : `/${decodedPath}`;
+  return filePathFromAthasModelUri(model.uri.path, model.uri.query);
 }
 
 function toMonacoRange(range: {

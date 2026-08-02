@@ -30,32 +30,32 @@
   border-radius: 6px;
   border-color: transparent;
   background: transparent;
-  color: var(--color-text-lighter, var(--color-text));
+  color: var(--subtle-foreground, var(--foreground));
   box-shadow: none;
 }
 
 [data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-close-button] {
   background: transparent;
   border-color: transparent;
-  color: var(--color-text-lighter, var(--color-text));
+  color: var(--subtle-foreground, var(--foreground));
 }
 
 [data-sonner-toaster][data-sonner-theme="light"] [data-sonner-toast] [data-close-button] {
   background: transparent;
   border-color: transparent;
-  color: var(--color-text-lighter, var(--color-text));
+  color: var(--subtle-foreground, var(--foreground));
 }
 
 [data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-close-button]:hover {
-  background: var(--color-hover);
+  background: var(--accent);
   border-color: transparent;
-  color: var(--color-text);
+  color: var(--foreground);
 }
 
 [data-sonner-toaster][data-sonner-theme="light"] [data-sonner-toast] [data-close-button]:hover {
-  background: var(--color-hover);
+  background: var(--accent);
   border-color: transparent;
-  color: var(--color-text);
+  color: var(--foreground);
 }
 
 [data-rich-colors="true"][data-sonner-toast][data-type="success"] [data-close-button],
@@ -64,14 +64,14 @@
 [data-rich-colors="true"][data-sonner-toast][data-type="error"] [data-close-button] {
   background: transparent;
   border-color: transparent;
-  color: var(--color-text-lighter, var(--color-text));
+  color: var(--subtle-foreground, var(--foreground));
 }
 
 [data-rich-colors="true"][data-sonner-toast][data-type="success"] [data-close-button]:hover,
 [data-rich-colors="true"][data-sonner-toast][data-type="info"] [data-close-button]:hover,
 [data-rich-colors="true"][data-sonner-toast][data-type="warning"] [data-close-button]:hover,
 [data-rich-colors="true"][data-sonner-toast][data-type="error"] [data-close-button]:hover {
-  background: var(--color-hover);
+  background: var(--accent);
   border-color: transparent;
-  color: var(--color-text);
+  color: var(--foreground);
 }

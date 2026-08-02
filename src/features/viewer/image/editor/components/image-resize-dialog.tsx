@@ -1,10 +1,10 @@
 import { ImageIcon as Image } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
+import { Field, FieldLabel } from "@/ui/field";
 import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
 
 interface ImageResizeDialogProps {
   isOpen: boolean;
@@ -72,50 +72,42 @@ export function ImageResizeDialog({
         </>
       }
     >
-      {/* Width Input */}
-      <div>
-        <label htmlFor="width" className="mb-1 block text-text-lighter ui-text-sm">
-          Width (px)
-        </label>
+      <Field>
+        <FieldLabel htmlFor="width">Width (px)</FieldLabel>
         <Input
           id="width"
           type="number"
           value={width}
           onChange={(e) => handleWidthChange(Number.parseInt(e.target.value) || 0)}
-          className={cn("w-full bg-primary-bg ui-text-sm focus:border-accent focus:ring-accent/20")}
+          className="w-full bg-background"
           min={1}
         />
-      </div>
+      </Field>
 
-      {/* Height Input */}
-      <div>
-        <label htmlFor="height" className="mb-1 block text-text-lighter ui-text-sm">
-          Height (px)
-        </label>
+      <Field>
+        <FieldLabel htmlFor="height">Height (px)</FieldLabel>
         <Input
           id="height"
           type="number"
           value={height}
           onChange={(e) => handleHeightChange(Number.parseInt(e.target.value) || 0)}
-          className={cn("w-full bg-primary-bg ui-text-sm focus:border-accent focus:ring-accent/20")}
+          className="w-full bg-background"
           min={1}
         />
-      </div>
+      </Field>
 
-      {/* Maintain Aspect Ratio Checkbox */}
-      <div className="flex items-center gap-2">
+      <Field orientation="horizontal">
         <Checkbox
           id="maintainAspectRatio"
           checked={maintainAspectRatio}
-          onChange={setMaintainAspectRatio}
+          onCheckedChange={setMaintainAspectRatio}
         />
-        <label htmlFor="maintainAspectRatio" className="cursor-pointer text-text ui-text-sm">
+        <FieldLabel htmlFor="maintainAspectRatio" className="cursor-pointer">
           Maintain aspect ratio
-        </label>
-      </div>
+        </FieldLabel>
+      </Field>
 
-      {/* Info */}
-      <div className="ui-text-sm text-text-lighter">
+      <div className="ui-text-sm text-subtle-foreground">
         Original: {currentWidth} × {currentHeight}px
       </div>
     </Dialog>

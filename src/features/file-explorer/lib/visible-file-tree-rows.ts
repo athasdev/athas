@@ -1,4 +1,5 @@
 import type { FileEntry } from "@/features/file-system/types/app.types";
+import type { FileTreeSortOrder } from "@/features/settings/types/settings.types";
 import { getBaseName, getRelativePath, joinPath, pathStartsWithRoot } from "@/utils/path-helpers";
 
 export interface VisibleFileTreeRow {
@@ -12,6 +13,7 @@ export interface VisibleFileTreeRow {
 export interface BuildVisibleFileTreeRowsOptions {
   compactFolders?: boolean;
   hiddenRootPath?: string;
+  sortOrder?: FileTreeSortOrder;
 }
 
 export interface FilterFileTreeForSearchResult {
@@ -131,6 +133,19 @@ function getCompactFolderChild(item: FileEntry): FileEntry | null {
   return child;
 }
 
+function sortFileTreeEntriesForDisplay(
+  entries: readonly FileEntry[],
+  sortOrder: FileTreeSortOrder,
+): FileEntry[] {
+  return [...entries].sort((left, right) => {
+    if (sortOrder === "folders-first" && left.isDir !== right.isDir) {
+      return left.isDir ? -1 : 1;
+    }
+
+    return left.name.toLowerCase().localeCompare(right.name.toLowerCase());
+  });
+}
+
 export function buildVisibleFileTreeRows(
   files: FileEntry[],
   expandedPaths: ReadonlySet<string>,
@@ -139,17 +154,25 @@ export function buildVisibleFileTreeRows(
   const rows: VisibleFileTreeRow[] = [];
   const compactFolders = options.compactFolders === true;
   const hiddenRootPath = options.hiddenRootPath;
+  const sortOrder = options.sortOrder ?? "folders-first";
   const rootItems =
     hiddenRootPath && files.length === 1 && files[0]?.path === hiddenRootPath && files[0]?.isDir
       ? (files[0].children ?? [])
       : files;
+  const preserveWorkspaceRootOrder =
+    rootItems === files && files.length > 1 && files.every((item) => item.isDir);
 
   const walk = (
     items: FileEntry[],
     depth: number,
     guideAncestors: Array<VisibleFileTreeRow | null>,
   ) => {
-    for (const item of items) {
+    const displayItems =
+      depth === 0 && preserveWorkspaceRootOrder
+        ? items
+        : sortFileTreeEntriesForDisplay(items, sortOrder);
+
+    for (const item of displayItems) {
       let rowFile = item;
       const displayNameParts = [item.name];
 

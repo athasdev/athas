@@ -5,7 +5,7 @@ import {
 } from "@/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { memo, useCallback, useState } from "react";
-import { MessageAction, MessageResponse } from "@/features/ai/components/elements/message";
+import { MessageAction, MessageResponse } from "@/ui/message";
 import type { PlanStep } from "@/features/ai/lib/plan-parser";
 import { hasPlanBlock, parsePlan } from "@/features/ai/lib/plan-parser";
 import type { Message as AIMessage } from "@/features/ai/types/ai-chat.types";
@@ -63,7 +63,7 @@ function HighlightedPlainText({ text, query }: { text: string; query: string }) 
         if (part.toLowerCase() !== trimmedQuery.toLowerCase()) return part;
 
         return (
-          <mark key={`${part}-${index}`} className="rounded bg-accent/25 px-0.5 text-inherit">
+          <mark key={`${part}-${index}`} className="rounded bg-primary/25 px-0.5 text-inherit">
             {part}
           </mark>
         );
@@ -160,7 +160,7 @@ export const ChatMessage = memo(function ChatMessage({
                   </div>
                 </form>
               ) : (
-                <div className="ai-chat-message-content whitespace-pre-wrap break-words">
+                <div className="select-text whitespace-pre-wrap break-words">
                   <HighlightedPlainText text={message.content} query={searchQuery} />
                 </div>
               )}
@@ -172,7 +172,7 @@ export const ChatMessage = memo(function ChatMessage({
               <MessageAction
                 onClick={() => void copyText(message.content)}
                 label="Copy prompt"
-                className="hover:bg-transparent hover:text-text-lighter"
+                className="hover:bg-transparent hover:text-subtle-foreground"
               >
                 <CopySimple className="size-3.5" />
               </MessageAction>
@@ -180,7 +180,7 @@ export const ChatMessage = memo(function ChatMessage({
                 <MessageAction
                   onClick={startEditing}
                   label="Edit prompt"
-                  className="hover:bg-transparent hover:text-text-lighter"
+                  className="hover:bg-transparent hover:text-subtle-foreground"
                 >
                   <PencilSimple className="size-3.5" />
                 </MessageAction>
@@ -299,7 +299,7 @@ export const ChatMessage = memo(function ChatMessage({
             <MessageAction
               onClick={() => void copyText(message.content)}
               label="Copy response"
-              className="hover:bg-transparent hover:text-text-lighter"
+              className="hover:bg-transparent hover:text-subtle-foreground"
             >
               <CopySimple className="size-3.5" />
             </MessageAction>

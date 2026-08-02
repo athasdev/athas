@@ -1,25 +1,16 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   CaretLeftIcon as CaretLeft,
-  CheckIcon as Check,
   ChatCircleTextIcon as ChatCircleText,
   FileTextIcon as FileText,
   FolderIcon as Folder,
+  FunnelIcon as Funnel,
   HashIcon as Hash,
   MicrophoneIcon as Mic,
   MonitorIcon as Monitor,
-  MagnifyingGlassIcon as Search,
   UsersThreeIcon as UsersThree,
 } from "@/ui/icons";
-import {
-  type ReactNode,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   addCollaborationNoteFile,
   addCollaborationNoteFolder,
@@ -44,19 +35,30 @@ import {
 } from "@/features/window/services/auth-api";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { Button } from "@/ui/button";
-import { Dropdown, useDropdownMenu, type MenuItem } from "@/ui/dropdown";
+import {
+  Dropdown,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+  useDropdownMenu,
+  type MenuItem,
+} from "@/ui/dropdown";
 import Input, { InlineRenameInput } from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import {
   SidebarEmptyActionState,
   SidebarHeader,
+  SidebarHeaderIconButton,
+  SidebarHeaderSearch,
   SidebarListEditor,
   SidebarListItem,
   SidebarPanel,
-  SidebarSearchFilterRow,
   SidebarSectionHeader,
   SidebarSectionPager,
-  SidebarSectionSwitcher,
+  SidebarTabBar,
+  SidebarTitleBar,
 } from "@/ui/sidebar";
 import { toast } from "sonner";
 import Tooltip from "@/ui/tooltip";
@@ -98,22 +100,18 @@ type CollaborationFilterOption<T extends string> = {
 const COLLABORATION_TABS: Array<{
   id: CollaborationSidebarTab;
   label: string;
-  icon: ReactNode;
 }> = [
   {
     id: "channels",
     label: "Channels",
-    icon: <ChatCircleText size={16} weight="duotone" />,
   },
   {
     id: "people",
     label: "People",
-    icon: <UsersThree size={16} weight="duotone" />,
   },
   {
     id: "notes",
     label: "Notes",
-    icon: <FileText size={16} weight="duotone" />,
   },
 ];
 
@@ -137,28 +135,6 @@ const NOTE_FILTER_OPTIONS: Array<CollaborationFilterOption<CollaborationNotesFil
   { id: "secrets", label: "Secrets" },
   { id: "all", label: "All" },
 ];
-
-function createCollaborationFilterMenuItems<T extends string>({
-  activeId,
-  onClose,
-  onSelect,
-  options,
-}: {
-  activeId: T;
-  onClose: () => void;
-  onSelect: (id: T) => void;
-  options: Array<CollaborationFilterOption<T>>;
-}): MenuItem[] {
-  return options.map((item) => ({
-    id: item.id,
-    label: item.label,
-    keybinding: activeId === item.id ? <Check className="size-3.5 text-accent" /> : null,
-    onClick: () => {
-      onSelect(item.id);
-      onClose();
-    },
-  }));
-}
 
 function stopMediaStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => {
@@ -204,9 +180,6 @@ export function CollaborationSidebarView() {
   const [notesFilter, setNotesFilter] = useState<CollaborationNotesFilter>("notes");
   const [isChannelsSectionCollapsed, setIsChannelsSectionCollapsed] = useState(false);
   const [isPrivateChatsSectionCollapsed, setIsPrivateChatsSectionCollapsed] = useState(false);
-  const [isChannelFilterOpen, setIsChannelFilterOpen] = useState(false);
-  const [isPeopleFilterOpen, setIsPeopleFilterOpen] = useState(false);
-  const [isNotesFilterOpen, setIsNotesFilterOpen] = useState(false);
   const [channelIconPickerTab, setChannelIconPickerTab] = useState<"emoji" | "icon">("emoji");
   const [channelIcons, setChannelIcons] = useState<Record<string, string>>(loadChannelIcons);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
@@ -617,12 +590,7 @@ export function CollaborationSidebarView() {
   if (!model) {
     return (
       <SidebarPanel>
-        <SidebarHeader>
-          <div className="font-sans flex items-center gap-2 text-text ui-text-sm">
-            <UsersThree weight="duotone" />
-            Collaboration
-          </div>
-        </SidebarHeader>
+        <SidebarTitleBar title="Collaboration" />
         <SidebarEmptyActionState
           className="h-full"
           message="Teams workspace is not available for this account."
@@ -1057,25 +1025,6 @@ export function CollaborationSidebarView() {
       : []),
   ];
 
-  const channelFilterMenuItems = createCollaborationFilterMenuItems({
-    activeId: channelFilter,
-    onClose: () => setIsChannelFilterOpen(false),
-    onSelect: setChannelFilter,
-    options: CHANNEL_FILTER_OPTIONS,
-  });
-  const peopleFilterMenuItems = createCollaborationFilterMenuItems({
-    activeId: peopleFilter,
-    onClose: () => setIsPeopleFilterOpen(false),
-    onSelect: setPeopleFilter,
-    options: PEOPLE_FILTER_OPTIONS,
-  });
-  const notesFilterMenuItems = createCollaborationFilterMenuItems({
-    activeId: notesFilter,
-    onClose: () => setIsNotesFilterOpen(false),
-    onSelect: setNotesFilter,
-    options: NOTE_FILTER_OPTIONS,
-  });
-
   const channelsContent = (
     <div className="h-full min-h-0 overflow-hidden">
       {openConversation === null ? (
@@ -1084,20 +1033,42 @@ export function CollaborationSidebarView() {
           contentClassName="px-1 py-1"
           viewportProps={{ onContextMenu: (event) => channelsContextMenu.open(event) }}
         >
-          <SidebarSearchFilterRow
-            value={channelSearchQuery}
-            onChange={setChannelSearchQuery}
-            searchIcon={Search}
-            filterOpen={isChannelFilterOpen}
-            onFilterOpenChange={setIsChannelFilterOpen}
-            filterItems={channelFilterMenuItems}
-            filterActive={channelFilter !== "all"}
-            filterTooltip="Filter Channels"
-            filterAriaLabel="Filter channels"
-            filterMenuClassName="min-w-32"
-          />
+          <SidebarHeader variant="search">
+            <SidebarHeaderSearch
+              value={channelSearchQuery}
+              onChange={setChannelSearchQuery}
+              aria-label="Search channels"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarHeaderIconButton
+                    active={channelFilter !== "all"}
+                    tooltip="Filter channels"
+                    tooltipSide="bottom"
+                    aria-label="Filter channels"
+                  />
+                }
+              >
+                <Funnel />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuRadioGroup
+                  value={channelFilter}
+                  onValueChange={(filter) => setChannelFilter(filter as CollaborationChannelFilter)}
+                >
+                  {CHANNEL_FILTER_OPTIONS.map((option) => (
+                    <DropdownMenuRadioItem key={option.id} value={option.id} closeOnClick>
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarHeader>
           <div className="space-y-px">
             <SidebarSectionHeader
+              variant="surface"
               expanded={!isChannelsSectionCollapsed}
               count={filteredChannels.length}
               onToggle={() => setIsChannelsSectionCollapsed((collapsed) => !collapsed)}
@@ -1108,13 +1079,13 @@ export function CollaborationSidebarView() {
               <>
                 {isCreatingChannel ? (
                   <form
-                    className="mb-1 flex h-8 items-center gap-1 rounded-sm bg-hover/70 px-1.5"
+                    className="mb-1 flex h-8 items-center gap-1 rounded-sm bg-accent/70 px-1.5"
                     onSubmit={(event) => {
                       event.preventDefault();
                       void createChannel(newChannelName);
                     }}
                   >
-                    <Hash className="size-3.5 shrink-0 text-text-lighter" weight="duotone" />
+                    <Hash className="size-3.5 shrink-0 text-subtle-foreground" weight="duotone" />
                     <Input
                       autoFocus
                       value={newChannelName}
@@ -1168,6 +1139,7 @@ export function CollaborationSidebarView() {
             ) : null}
             {channelFilter === "all" ? (
               <SidebarSectionHeader
+                variant="surface"
                 className="mt-2"
                 expanded={!isPrivateChatsSectionCollapsed}
                 count={filteredPrivateChatParticipants.length}
@@ -1245,20 +1217,20 @@ export function CollaborationSidebarView() {
                   <div key={group.id} className="flex gap-2">
                     <CollaborationAvatar name={group.author} />
                     <div className="min-w-0 flex-1 space-y-1">
-                      <div className="px-1 text-text-lighter ui-text-sm">{group.author}</div>
+                      <div className="px-1 text-subtle-foreground ui-text-sm">{group.author}</div>
                       <div className="space-y-px">
                         {group.entries.map((entry, index) => (
                           <div
                             key={entry.id}
                             className={cn(
-                              "border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-sm leading-5",
+                              "border border-border/45 bg-surface/45 px-2.5 py-1.5 text-foreground ui-text-sm leading-5",
                               index === 0 && "rounded-t-lg",
                               index === group.entries.length - 1 && "rounded-b-lg",
                               group.entries.length === 1 && "rounded-lg",
                             )}
                           >
                             {entry.kind === "document" ? (
-                              <span className="mb-0.5 flex items-center gap-1.5 text-text-lighter ui-text-sm">
+                              <span className="mb-0.5 flex items-center gap-1.5 text-subtle-foreground ui-text-sm">
                                 <FileText className="size-3" weight="duotone" />
                                 Document
                               </span>
@@ -1311,7 +1283,7 @@ export function CollaborationSidebarView() {
                   name={openPrivateParticipant.name}
                   online={openPrivateParticipant.online}
                 />
-                <div className="min-w-0 flex-1 truncate text-text ui-text-sm">
+                <div className="min-w-0 flex-1 truncate text-foreground ui-text-sm">
                   {openPrivateParticipant.name}
                 </div>
                 <PresenceStatusDot online={openPrivateParticipant.online} />
@@ -1330,8 +1302,8 @@ export function CollaborationSidebarView() {
                     <div key={entry.id} className="flex gap-2">
                       <CollaborationAvatar name={authorName} />
                       <div className="min-w-0 flex-1 space-y-1">
-                        <div className="px-1 text-text-lighter ui-text-sm">{authorName}</div>
-                        <div className="rounded-lg border border-border/45 bg-secondary-bg/45 px-2.5 py-1.5 text-text ui-text-sm leading-5">
+                        <div className="px-1 text-subtle-foreground ui-text-sm">{authorName}</div>
+                        <div className="rounded-lg border border-border/45 bg-surface/45 px-2.5 py-1.5 text-foreground ui-text-sm leading-5">
                           {entry.body}
                         </div>
                       </div>
@@ -1364,18 +1336,39 @@ export function CollaborationSidebarView() {
 
   const peopleContent = (
     <ScrollArea className="h-full" contentClassName="px-1 py-1">
-      <SidebarSearchFilterRow
-        value={peopleSearchQuery}
-        onChange={setPeopleSearchQuery}
-        searchIcon={Search}
-        filterOpen={isPeopleFilterOpen}
-        onFilterOpenChange={setIsPeopleFilterOpen}
-        filterItems={peopleFilterMenuItems}
-        filterActive={peopleFilter !== "all"}
-        filterTooltip="Filter People"
-        filterAriaLabel="Filter people"
-        filterMenuClassName="min-w-32"
-      />
+      <SidebarHeader variant="search">
+        <SidebarHeaderSearch
+          value={peopleSearchQuery}
+          onChange={setPeopleSearchQuery}
+          aria-label="Search people"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarHeaderIconButton
+                active={peopleFilter !== "all"}
+                tooltip="Filter people"
+                tooltipSide="bottom"
+                aria-label="Filter people"
+              />
+            }
+          >
+            <Funnel />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup
+              value={peopleFilter}
+              onValueChange={(filter) => setPeopleFilter(filter as CollaborationPeopleFilter)}
+            >
+              {PEOPLE_FILTER_OPTIONS.map((option) => (
+                <DropdownMenuRadioItem key={option.id} value={option.id} closeOnClick>
+                  {option.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarHeader>
       {remoteShares.length > 0 ? (
         <div className="mb-1 space-y-1.5">
           {remoteShares.map((share) => (
@@ -1389,7 +1382,7 @@ export function CollaborationSidebarView() {
           filteredParticipants.map((participant) => (
             <SidebarListItem
               key={participant.id}
-              className={cn("min-h-8 ui-text-sm", participant.online && "text-text")}
+              className={cn("min-h-8 ui-text-sm", participant.online && "text-foreground")}
               active={presenceTarget.followingUserId === participant.followableUserId}
               onContextMenu={(event) => participantContextMenu.open(event, participant)}
               onClick={() =>
@@ -1441,18 +1434,39 @@ export function CollaborationSidebarView() {
       contentClassName="px-1 py-1"
       viewportProps={{ onContextMenu: (event) => notesContextMenu.open(event) }}
     >
-      <SidebarSearchFilterRow
-        value={notesSearchQuery}
-        onChange={setNotesSearchQuery}
-        searchIcon={Search}
-        filterOpen={isNotesFilterOpen}
-        onFilterOpenChange={setIsNotesFilterOpen}
-        filterItems={notesFilterMenuItems}
-        filterActive={notesFilter !== "notes"}
-        filterTooltip="Filter Notes"
-        filterAriaLabel="Filter notes"
-        filterMenuClassName="min-w-32"
-      />
+      <SidebarHeader variant="search">
+        <SidebarHeaderSearch
+          value={notesSearchQuery}
+          onChange={setNotesSearchQuery}
+          aria-label="Search notes"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarHeaderIconButton
+                active={notesFilter !== "notes"}
+                tooltip="Filter notes"
+                tooltipSide="bottom"
+                aria-label="Filter notes"
+              />
+            }
+          >
+            <Funnel />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuRadioGroup
+              value={notesFilter}
+              onValueChange={(filter) => setNotesFilter(filter as CollaborationNotesFilter)}
+            >
+              {NOTE_FILTER_OPTIONS.map((option) => (
+                <DropdownMenuRadioItem key={option.id} value={option.id} closeOnClick>
+                  {option.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarHeader>
       <div className="space-y-px">
         {filteredNoteItems.map((item) => {
           if (renamingNotePath === item.path) {
@@ -1545,14 +1559,14 @@ export function CollaborationSidebarView() {
   );
 
   return (
-    <SidebarPanel className="gap-1 p-1">
-      <SidebarHeader className="relative z-[10020] bg-transparent p-0 backdrop-blur-none">
-        <SidebarSectionSwitcher
-          items={COLLABORATION_TABS}
-          value={activeTab}
-          onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
-        />
-      </SidebarHeader>
+    <SidebarPanel>
+      <SidebarTitleBar title="Collaboration" />
+      <SidebarTabBar
+        className="relative z-[10020]"
+        items={COLLABORATION_TABS}
+        value={activeTab}
+        onChange={(tab) => selectTab(tab as CollaborationSidebarTab)}
+      />
 
       <SidebarSectionPager
         className="flex-1"

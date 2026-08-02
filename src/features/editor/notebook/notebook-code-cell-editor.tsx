@@ -44,6 +44,13 @@ export function NotebookCodeCellEditor({
     renderWhitespace,
     renderIndentGuides,
     highlightOccurrences,
+    editorFontLigatures,
+    editorStickyScroll,
+    editorBracketPairColorization,
+    editorSmoothScrolling,
+    editorScrollBeyondLastLine,
+    editorCursorStyle,
+    editorCursorBlinking,
     themeId,
   } = useMonacoEditorSettings();
   const monacoLanguage = toMonacoLanguageId(language);
@@ -68,7 +75,13 @@ export function NotebookCodeCellEditor({
       tabSize,
       insertSpaces: true,
       minimap: { enabled: false },
-      scrollBeyondLastLine: false,
+      fontLigatures: editorFontLigatures,
+      stickyScroll: { enabled: editorStickyScroll },
+      bracketPairColorization: { enabled: editorBracketPairColorization },
+      smoothScrolling: editorSmoothScrolling,
+      scrollBeyondLastLine: editorScrollBeyondLastLine,
+      cursorStyle: editorCursorStyle,
+      cursorBlinking: editorCursorBlinking,
       lineNumbers: lineNumbers ? "on" : "off",
       glyphMargin: false,
       folding: false,
@@ -121,6 +134,13 @@ export function NotebookCodeCellEditor({
   }, [
     fontFamily,
     fontSize,
+    editorBracketPairColorization,
+    editorCursorBlinking,
+    editorCursorStyle,
+    editorFontLigatures,
+    editorScrollBeyondLastLine,
+    editorSmoothScrolling,
+    editorStickyScroll,
     highlightOccurrences,
     id,
     lineHeight,
@@ -155,6 +175,13 @@ export function NotebookCodeCellEditor({
       lineHeight,
       lineNumbers: lineNumbers ? "on" : "off",
       tabSize,
+      fontLigatures: editorFontLigatures,
+      stickyScroll: { enabled: editorStickyScroll },
+      bracketPairColorization: { enabled: editorBracketPairColorization },
+      smoothScrolling: editorSmoothScrolling,
+      scrollBeyondLastLine: editorScrollBeyondLastLine,
+      cursorStyle: editorCursorStyle,
+      cursorBlinking: editorCursorBlinking,
       renderWhitespace: renderWhitespace === "none" ? "none" : renderWhitespace,
       wordWrap: wordWrap ? "on" : "off",
       guides: {
@@ -169,6 +196,13 @@ export function NotebookCodeCellEditor({
   }, [
     fontFamily,
     fontSize,
+    editorBracketPairColorization,
+    editorCursorBlinking,
+    editorCursorStyle,
+    editorFontLigatures,
+    editorScrollBeyondLastLine,
+    editorSmoothScrolling,
+    editorStickyScroll,
     highlightOccurrences,
     lineHeight,
     lineNumbers,
@@ -212,7 +246,7 @@ export function NotebookCodeCellEditor({
   } as CSSProperties;
 
   return (
-    <div className="monaco-editor-shell overflow-hidden bg-primary-bg" style={shellStyle}>
+    <div className="monaco-editor-shell overflow-hidden bg-background" style={shellStyle}>
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );

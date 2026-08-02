@@ -1,5 +1,14 @@
 import { describe, expect, test } from "vite-plus/test";
 import { isVirtualRowFullyVisible } from "../hooks/use-file-explorer-visible-rows";
+import { getFileTreeRowHeight } from "../lib/file-tree-row";
+
+describe("getFileTreeRowHeight", () => {
+  test("tracks the configured UI font size", () => {
+    expect(getFileTreeRowHeight(10)).toBe(23.5);
+    expect(getFileTreeRowHeight(15)).toBe(30.25);
+    expect(getFileTreeRowHeight(24)).toBe(42.4);
+  });
+});
 
 describe("isVirtualRowFullyVisible", () => {
   test("returns true when the virtual row is inside the current viewport", () => {

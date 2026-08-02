@@ -14,6 +14,7 @@ import {
 } from "../types/extension-contributions";
 import { activateExtensionContributions } from "../runtime/extension-contribution-runtime";
 import type { BundledExtension } from "../types/extension-manifest";
+import { runExtensionLoadBatch } from "./extension-load-orchestrator";
 
 /**
  * Create a minimal editor API for extension initialization
@@ -264,15 +265,16 @@ class ExtensionLoader {
     // Load all extensions from registry
     const extensions = extensionRegistry.getAllExtensions();
 
-    const results = await Promise.allSettled(extensions.map((ext) => this.loadExtension(ext)));
+    const results = await runExtensionLoadBatch(extensions, (extension) =>
+      this.loadExtension(extension),
+    );
 
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (result.status === "rejected") {
+    for (const result of results) {
+      if (result.status === "failed") {
         logger.error(
           "ExtensionLoader",
-          `Failed to load extension ${extensions[i].manifest.displayName}:`,
-          result.reason,
+          `Failed to load extension ${result.error.displayName}:`,
+          result.error.reason,
         );
       }
     }

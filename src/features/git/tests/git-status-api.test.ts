@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { clearRepositoryDiscoveryCache } from "../api/git-repo-api";
 import { getGitStatus } from "../api/git-status-api";
+import { invalidateGitCaches } from "../runtime/git-cache-registry";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -34,11 +35,10 @@ describe("git status api", () => {
     const first = getGitStatus("/workspace/project");
     const second = getGitStatus("/workspace/project");
 
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(mockInvoke).toHaveBeenCalledTimes(3);
-    expect(mockInvoke).toHaveBeenCalledWith("git_status", { repoPath: "/workspace" });
+    await vi.waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("git_status", { repoPath: "/workspace" });
+    });
+    expect(mockInvoke.mock.calls.filter(([command]) => command === "git_status")).toHaveLength(1);
 
     resolveStatus?.({
       branch: "main",
@@ -64,5 +64,35 @@ describe("git status api", () => {
         untracked_files: [],
       },
     ]);
+  });
+
+  it("retries when a repository changes during an in-flight status request", async () => {
+    let resolveFirst: ((status: unknown) => void) | undefined;
+    let resolveSecond: ((status: unknown) => void) | undefined;
+    const firstStatus = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondStatus = new Promise((resolve) => {
+      resolveSecond = resolve;
+    });
+    let statusRequestCount = 0;
+
+    mockInvoke.mockImplementation((command) => {
+      if (command === "git_discover_repo") return Promise.resolve("/workspace");
+      if (command === "git_status") {
+        statusRequestCount += 1;
+        return statusRequestCount === 1 ? firstStatus : secondStatus;
+      }
+      return Promise.resolve(null);
+    });
+
+    const request = getGitStatus("/workspace");
+    await vi.waitFor(() => expect(statusRequestCount).toBe(1));
+    invalidateGitCaches({ repoPath: "/workspace" });
+    resolveFirst?.({ branch: "old", files: [] });
+    await vi.waitFor(() => expect(statusRequestCount).toBe(2));
+    resolveSecond?.({ branch: "new", files: [] });
+
+    await expect(request).resolves.toEqual({ branch: "new", files: [] });
   });
 });

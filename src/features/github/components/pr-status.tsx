@@ -14,6 +14,7 @@ import { memo, useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import type { Label, LinkedIssue, ReviewRequest, StatusCheck } from "../types/github.types";
@@ -52,9 +53,9 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
 
     if (failedCount > 0) {
       return {
-        icon: <XCircle className="text-error" />,
+        icon: <XCircle className="text-destructive" />,
         label: `${failedCount} failed`,
-        tone: "text-error",
+        tone: "text-destructive",
       };
     }
 
@@ -75,70 +76,71 @@ export const CIStatusIndicator = memo(({ checks }: CIStatusProps) => {
     }
 
     return {
-      icon: <CircleDot className="text-text-lighter" />,
+      icon: <CircleDot className="text-subtle-foreground" />,
       label: `${passedCount}/${checks.length} passed`,
-      tone: "text-text-lighter",
+      tone: "text-subtle-foreground",
     };
   }, [checks]);
 
   if (!summary) return null;
 
   return (
-    <div className="relative inline-flex shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="ui-text-sm h-auto min-w-0 px-1.5 py-1 text-left"
-        aria-expanded={isExpanded}
+    <Popover open={isExpanded} onOpenChange={setIsExpanded}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="h-auto min-w-0 px-1.5 py-1 text-left ui-text-sm"
+          />
+        }
       >
         {summary.icon}
         <span className={cn("font-sans ui-text-sm", summary.tone)}>{summary.label}</span>
         {isExpanded ? (
-          <ChevronDown className="text-text-lighter" />
+          <ChevronDown className="text-subtle-foreground" />
         ) : (
-          <ChevronRight className="text-text-lighter" />
+          <ChevronRight className="text-subtle-foreground" />
         )}
-      </Button>
-
-      {isExpanded && (
-        <div className="absolute top-full left-0 z-50 mt-1.5 min-w-[320px] rounded-xl border border-border/70 bg-secondary-bg/95 p-1.5 shadow-[var(--shadow-popover)] backdrop-blur-sm">
-          {checks.map((check, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => {
-                if (check.detailsUrl) {
-                  void openUrl(check.detailsUrl);
-                }
-              }}
-              disabled={!check.detailsUrl}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-text transition-colors hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
-            >
-              {check.conclusion === "SUCCESS" ? (
-                <CheckCircle2 className="text-success" />
-              ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
-                <XCircle className="text-error" />
-              ) : (
-                <Spinner label="Pending check" compact />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="min-w-[320px] p-1.5">
+        {checks.map((check, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => {
+              if (check.detailsUrl) {
+                void openUrl(check.detailsUrl);
+              }
+            }}
+            disabled={!check.detailsUrl}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent"
+          >
+            {check.conclusion === "SUCCESS" ? (
+              <CheckCircle2 className="text-success" />
+            ) : check.conclusion === "FAILURE" || check.conclusion === "ERROR" ? (
+              <XCircle className="text-destructive" />
+            ) : (
+              <Spinner label="Pending check" compact />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-sans ui-text-sm text-foreground">
+                {check.name ?? "Check"}
+              </p>
+              {check.workflowName && (
+                <p className="truncate font-sans ui-text-sm text-subtle-foreground">
+                  {check.workflowName}
+                </p>
               )}
-              <div className="min-w-0 flex-1">
-                <p className="font-sans ui-text-sm truncate text-text">{check.name ?? "Check"}</p>
-                {check.workflowName && (
-                  <p className="font-sans ui-text-sm truncate text-text-lighter">
-                    {check.workflowName}
-                  </p>
-                )}
-              </div>
-              <Badge variant={getCheckBadgeVariant(check)} size="compact" className="capitalize">
-                {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
-              </Badge>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+            </div>
+            <Badge variant={getCheckBadgeVariant(check)} size="compact" className="capitalize">
+              {(check.conclusion ?? check.status ?? "pending").toLowerCase()}
+            </Badge>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 });
 
@@ -220,10 +222,10 @@ export const ReviewRequestsList = memo(({ reviewRequests }: ReviewRequestsProps)
   if (reviewRequests.length === 0) return null;
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
       <User />
       <span>Reviewers</span>
-      <span className="text-text">
+      <span className="text-foreground">
         {reviewRequests.map((reviewer) => `@${reviewer.login}`).join(", ")}
       </span>
     </span>
@@ -241,8 +243,8 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
   if (issues.length === 0) return null;
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
-      <Link2 className="text-text-lighter" />
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
+      <Link2 className="text-subtle-foreground" />
       <span>Linked</span>
       <span className="inline-flex items-center gap-1">
         {issues.map((issue, idx) => (
@@ -251,7 +253,7 @@ export const LinkedIssuesList = memo(({ issues }: LinkedIssuesProps) => {
             href={issue.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-sans ui-text-sm text-accent hover:underline"
+            className="font-sans ui-text-sm text-primary hover:underline"
           >
             #{issue.number}
             {idx < issues.length - 1 && ","}
@@ -301,10 +303,10 @@ export const AssigneesList = memo(({ assignees }: AssigneesProps) => {
   if (assignees.length === 0) return null;
 
   return (
-    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-text-lighter">
+    <span className="font-sans ui-text-sm inline-flex shrink-0 items-center gap-1 text-subtle-foreground">
       <User />
       <span>Assigned</span>
-      <span className="text-text">
+      <span className="text-foreground">
         {assignees.map((assignee) => `@${assignee.login}`).join(", ")}
       </span>
     </span>

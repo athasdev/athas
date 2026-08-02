@@ -6,7 +6,6 @@ import type {
   DockerContainerAction,
   DockerContainerFileEntry,
   DockerDevContainerOpenResult,
-  DockerEnvFile,
   DockerEnvFileContent,
   DockerImageAction,
   DockerInventory,
@@ -212,13 +211,6 @@ export function saveDockerProjectConfig(
   });
 }
 
-export function readDockerEnvFile(workspacePath: string, path: string): Promise<string> {
-  return invoke<string>("docker_read_env_file", {
-    workspacePath,
-    path,
-  });
-}
-
 export function openDockerEnvFile(
   workspacePath: string,
   path: string,
@@ -226,18 +218,6 @@ export function openDockerEnvFile(
   return invoke<DockerEnvFileContent>("docker_open_env_file", {
     workspacePath,
     path,
-  });
-}
-
-export function writeDockerEnvFile(
-  workspacePath: string,
-  path: string,
-  content: string,
-): Promise<DockerEnvFile> {
-  return invoke<DockerEnvFile>("docker_write_env_file", {
-    workspacePath,
-    path,
-    content,
   });
 }
 

@@ -11,6 +11,11 @@ pub struct ChatData {
    pub agent_id: Option<String>,
    pub acp_session_id: Option<String>,
    pub workspace_path: Option<String>,
+   pub provider_id: Option<String>,
+   pub model_id: Option<String>,
+   pub branch: Option<String>,
+   pub is_pinned: bool,
+   pub archived_at: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -71,7 +76,12 @@ impl ChatHistoryRepository {
                last_message_at INTEGER NOT NULL,
                agent_id TEXT DEFAULT 'custom',
                acp_session_id TEXT,
-               workspace_path TEXT
+               workspace_path TEXT,
+               provider_id TEXT,
+               model_id TEXT,
+               branch TEXT,
+               is_pinned BOOLEAN DEFAULT 0,
+               archived_at INTEGER
            )",
             [],
          )
@@ -83,6 +93,14 @@ impl ChatHistoryRepository {
       );
       let _ = conn.execute("ALTER TABLE chats ADD COLUMN acp_session_id TEXT", []);
       let _ = conn.execute("ALTER TABLE chats ADD COLUMN workspace_path TEXT", []);
+      let _ = conn.execute("ALTER TABLE chats ADD COLUMN provider_id TEXT", []);
+      let _ = conn.execute("ALTER TABLE chats ADD COLUMN model_id TEXT", []);
+      let _ = conn.execute("ALTER TABLE chats ADD COLUMN branch TEXT", []);
+      let _ = conn.execute(
+         "ALTER TABLE chats ADD COLUMN is_pinned BOOLEAN DEFAULT 0",
+         [],
+      );
+      let _ = conn.execute("ALTER TABLE chats ADD COLUMN archived_at INTEGER", []);
 
       conn
          .execute(
@@ -156,7 +174,8 @@ impl ChatHistoryRepository {
 
       match conn.execute(
          "INSERT OR REPLACE INTO chats (id, title, created_at, last_message_at, agent_id, \
-          acp_session_id, workspace_path) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+          acp_session_id, workspace_path, provider_id, model_id, branch, is_pinned, archived_at) \
+          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
          params![
             chat.id,
             chat.title,
@@ -164,7 +183,12 @@ impl ChatHistoryRepository {
             chat.last_message_at,
             chat.agent_id.unwrap_or_else(|| "custom".to_string()),
             chat.acp_session_id,
-            chat.workspace_path
+            chat.workspace_path,
+            chat.provider_id,
+            chat.model_id,
+            chat.branch,
+            chat.is_pinned,
+            chat.archived_at
          ],
       ) {
          Ok(_) => {}
@@ -239,7 +263,8 @@ impl ChatHistoryRepository {
       let mut stmt = conn
          .prepare(
             "SELECT id, title, created_at, last_message_at, agent_id, acp_session_id, \
-             workspace_path FROM chats ORDER BY last_message_at DESC",
+             workspace_path, provider_id, model_id, branch, is_pinned, archived_at FROM chats \
+             ORDER BY is_pinned DESC, last_message_at DESC",
          )
          .map_err(|e| format!("Failed to prepare query: {}", e))?;
 
@@ -250,13 +275,39 @@ impl ChatHistoryRepository {
          .map_err(|e| format!("Failed to collect chats: {}", e))
    }
 
+   pub fn update_chat_metadata(&self, chat: ChatData) -> Result<(), String> {
+      let conn = self.open_connection()?;
+      conn
+         .execute(
+            "UPDATE chats SET title = ?2, last_message_at = ?3, agent_id = ?4, acp_session_id = \
+             ?5, workspace_path = ?6, provider_id = ?7, model_id = ?8, branch = ?9, is_pinned = \
+             ?10, archived_at = ?11 WHERE id = ?1",
+            params![
+               chat.id,
+               chat.title,
+               chat.last_message_at,
+               chat.agent_id.unwrap_or_else(|| "custom".to_string()),
+               chat.acp_session_id,
+               chat.workspace_path,
+               chat.provider_id,
+               chat.model_id,
+               chat.branch,
+               chat.is_pinned,
+               chat.archived_at
+            ],
+         )
+         .map_err(|e| format!("Failed to update chat metadata: {}", e))?;
+      Ok(())
+   }
+
    pub fn load_chat(&self, chat_id: &str) -> Result<ChatWithMessages, String> {
       let conn = self.open_connection()?;
 
       let mut stmt = conn
          .prepare(
             "SELECT id, title, created_at, last_message_at, agent_id, acp_session_id, \
-             workspace_path FROM chats WHERE id = ?1",
+             workspace_path, provider_id, model_id, branch, is_pinned, archived_at FROM chats \
+             WHERE id = ?1",
          )
          .map_err(|e| format!("Failed to prepare chat query: {}", e))?;
 
@@ -313,7 +364,8 @@ impl ChatHistoryRepository {
       let mut stmt = conn
          .prepare(
             "SELECT DISTINCT c.id, c.title, c.created_at, c.last_message_at, c.agent_id, \
-             c.acp_session_id, c.workspace_path
+             c.acp_session_id, c.workspace_path, c.provider_id, c.model_id, c.branch, \
+             c.is_pinned, c.archived_at
              FROM chats c
                 LEFT JOIN messages m ON c.id = m.chat_id
                 WHERE c.title LIKE ?1 OR m.content LIKE ?1
@@ -413,5 +465,10 @@ fn map_chat_row(row: &rusqlite::Row<'_>) -> SqliteResult<ChatData> {
       agent_id: row.get(4)?,
       acp_session_id: row.get(5)?,
       workspace_path: row.get(6)?,
+      provider_id: row.get(7)?,
+      model_id: row.get(8)?,
+      branch: row.get(9)?,
+      is_pinned: row.get(10)?,
+      archived_at: row.get(11)?,
    })
 }

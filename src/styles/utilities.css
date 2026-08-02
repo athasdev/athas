@@ -26,6 +26,14 @@ html[data-window-resize-dragging] * {
   font-size: var(--ui-text-sm);
 }
 
+.ui-text-caption {
+  font-size: var(--ui-text-caption);
+}
+
+.ui-text-chrome {
+  font-size: var(--ui-text-chrome);
+}
+
 .ui-text-base {
   font-size: var(--ui-text-base);
 }
@@ -81,13 +89,38 @@ svg.themed-file-icon {
   color: transparent;
   background-image: linear-gradient(
     90deg,
-    var(--text-lighter) 20%,
-    var(--text) 50%,
-    var(--text-lighter) 80%
+    var(--subtle-foreground) 20%,
+    var(--foreground) 50%,
+    var(--subtle-foreground) 80%
   );
   background-size: 200% 100%;
   background-clip: text;
   animation: textShimmer 2s linear infinite;
+}
+
+html[data-status-bar="hidden"] {
+  --athas-footer-height: 0rem;
+}
+
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 1ms !important;
+  transition-delay: 0ms !important;
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+html[data-reduce-motion="true"] .drop-indicator {
+  animation: none;
+}
+
+html[data-reduce-motion="true"] .ui-text-shimmer {
+  color: var(--subtle-foreground);
+  background: none;
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -107,7 +140,7 @@ svg.themed-file-icon {
   }
 
   .ui-text-shimmer {
-    color: var(--text-lighter);
+    color: var(--subtle-foreground);
     background: none;
     animation: none;
   }

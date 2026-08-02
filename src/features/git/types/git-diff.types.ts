@@ -64,6 +64,14 @@ export interface DiffLineProps {
   lineHeight: number;
   tabSize: number;
   tokens?: HighlightToken[];
+  searchHighlights?: DiffSearchHighlight[];
+  searchLineIndex?: number;
+}
+
+export interface DiffSearchHighlight {
+  start: number;
+  end: number;
+  isCurrent: boolean;
 }
 
 export interface TextDiffViewerProps {
@@ -75,6 +83,7 @@ export interface TextDiffViewerProps {
   onUnstageHunk?: (hunk: GitHunk) => void;
   isInMultiFileView?: boolean;
   isEmbeddedInScrollView?: boolean;
+  searchHighlights?: Map<number, DiffSearchHighlight[]>;
 }
 
 export interface ImageDiffViewerProps {

@@ -377,7 +377,7 @@ export const ExternalEditorTerminal = ({
   }, [scheduleFit]);
 
   return (
-    <div className="flex size-full flex-col bg-primary-bg">
+    <div className="flex size-full flex-col bg-background">
       <div
         ref={terminalRef}
         className={cn("xterm-container size-full flex-1", "focus:outline-none")}

@@ -12,6 +12,7 @@ import { useResizeObserver } from "@/features/panes/hooks/use-resize-observer";
 import { ViewerFooter } from "@/features/viewer/components/viewer-footer";
 import { ViewerHeader } from "@/features/viewer/components/viewer-header";
 import { ViewerLayout } from "@/features/viewer/components/viewer-layout";
+import { ViewerLoadingState } from "@/features/viewer/components/viewer-state";
 import { ImageEditorToolbar } from "@/features/viewer/image/editor/components/image-editor-toolbar";
 import { ImageResizeDialog } from "@/features/viewer/image/editor/components/image-resize-dialog";
 import { useImageOperations } from "@/features/viewer/image/editor/hooks/use-image-operations";
@@ -23,7 +24,6 @@ import {
 import { ViewerZoomControls } from "@/features/viewer/components/viewer-zoom-controls";
 import { useViewerZoom } from "@/features/viewer/hooks/use-viewer-zoom";
 import { Button } from "@/ui/button";
-import { Spinner } from "@/ui/spinner";
 import UnsavedChangesDialog from "@/features/window/components/unsaved-changes-dialog";
 import { cn } from "@/utils/cn";
 import { formatFileSize } from "@/utils/format-file-size";
@@ -236,7 +236,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
     <ViewerLayout className="select-none">
       <ViewerHeader
         className="absolute inset-x-0 top-0 z-10"
-        icon={<FileIcon className="shrink-0 text-text" />}
+        icon={<FileIcon className="shrink-0 text-foreground" />}
         title={
           <span title={fileName}>
             {fileName} {fileExt && <>• {fileExt}</>}
@@ -308,9 +308,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
             draggable={false}
           />
         ) : (
-          <div className="flex items-center justify-center p-8 ui-text-sm text-text-lighter">
-            <Spinner label="Loading image" showLabel />
-          </div>
+          <ViewerLoadingState label="Loading image" className="p-8" />
         )}
       </div>
 
@@ -331,7 +329,7 @@ export function ImageViewer({ filePath, fileName, bufferId, onClose }: ImageView
           <span className="flex items-center gap-1">
             Size: {formatFileSize(currentSize)}
             {imageOperations.hasChanges && originalSize !== currentSize && (
-              <span className="flex items-center gap-0.5 text-accent">
+              <span className="flex items-center gap-0.5 text-primary">
                 (
                 {currentSize < originalSize ? (
                   <ArrowDown className="inline" />

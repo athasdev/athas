@@ -19,6 +19,11 @@ interface SwitchWorkspaceRuntimeOptions {
   onActivate?: (workspaceId: string) => void;
 }
 
+interface PrepareWorkspaceRuntimeOptions {
+  descriptor: WorkspaceRuntimeDescriptor;
+  initialize: (workspaceId: string, path: string, name: string) => Promise<boolean>;
+}
+
 interface CloseWorkspaceRuntimeOptions {
   dispose?: (path: string) => Promise<void>;
   persist?: () => void;
@@ -29,6 +34,63 @@ interface CloseWorkspaceRuntimeOptions {
 const activateDescriptor = (descriptor: WorkspaceRuntimeDescriptor) => {
   useWorkspaceTabsStore.getState().setActiveProjectTab(descriptor.id);
   workspaceRuntimeRegistry.activateWorkspace(descriptor, "opening");
+};
+
+const pendingWorkspaceInitializations = new Map<string, Promise<boolean>>();
+
+const initializeWorkspaceRuntime = (
+  descriptor: WorkspaceRuntimeDescriptor,
+  initialize: (workspaceId: string, path: string, name: string) => Promise<boolean>,
+) => {
+  const existingInitialization = pendingWorkspaceInitializations.get(descriptor.id);
+  if (existingInitialization) {
+    return existingInitialization;
+  }
+
+  workspaceRuntimeRegistry.ensureWorkspace(descriptor, "opening");
+  const initialization = (async () => {
+    try {
+      const initialized = await initialize(descriptor.id, descriptor.path ?? "", descriptor.name);
+      if (!initialized) {
+        throw new Error(`Failed to initialize workspace "${descriptor.name}".`);
+      }
+
+      workspaceRuntimeRegistry.updateWorkspaceStatus(descriptor.id, "ready");
+      return true;
+    } catch (error) {
+      workspaceRuntimeRegistry.updateWorkspaceStatus(
+        descriptor.id,
+        "error",
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    } finally {
+      pendingWorkspaceInitializations.delete(descriptor.id);
+    }
+  })();
+
+  pendingWorkspaceInitializations.set(descriptor.id, initialization);
+  return initialization;
+};
+
+const resumeWorkspaceInBackground = (
+  workspaceId: string,
+  path: string,
+  resume: SwitchWorkspaceRuntimeOptions["resume"],
+) => {
+  if (!resume) {
+    return;
+  }
+
+  globalThis.setTimeout(() => {
+    if (workspaceRuntimeRegistry.getActiveWorkspaceId() !== workspaceId) {
+      return;
+    }
+
+    void resume(workspaceId, path).catch((error) => {
+      console.warn(`Failed to resume workspace services for "${path}":`, error);
+    });
+  }, 0);
 };
 
 const restorePreviousWorkspace = (workspaceId: string | undefined) => {
@@ -126,31 +188,34 @@ export async function switchWorkspaceRuntime(
   activateDescriptor({ id: tab.id, name: tab.name, path: tab.path });
   onActivate?.(workspaceId);
 
-  try {
-    if (workspaceRuntimeRegistry.isWorkspaceReady(workspaceId)) {
-      await resume?.(workspaceId, tab.path);
-      return true;
-    }
-
-    const initialized = await initialize(workspaceId, tab.path, tab.name);
-    if (!initialized) {
-      throw new Error(`Failed to initialize workspace "${tab.name}".`);
-    }
-
-    workspaceRuntimeRegistry.updateWorkspaceStatus(workspaceId, "ready");
+  if (workspaceRuntimeRegistry.isWorkspaceReady(workspaceId)) {
+    resumeWorkspaceInBackground(workspaceId, tab.path, resume);
     return true;
-  } catch (error) {
-    const shouldRestorePrevious = workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId;
-    workspaceRuntimeRegistry.updateWorkspaceStatus(
-      workspaceId,
-      "error",
-      error instanceof Error ? error.message : String(error),
-    );
-    if (shouldRestorePrevious) {
-      restorePreviousWorkspace(previousWorkspaceId);
-    }
-    return false;
   }
+
+  const initialized = await initializeWorkspaceRuntime(
+    { id: tab.id, name: tab.name, path: tab.path },
+    initialize,
+  );
+  if (initialized) {
+    return true;
+  }
+
+  if (workspaceRuntimeRegistry.getActiveWorkspaceId() === workspaceId) {
+    restorePreviousWorkspace(previousWorkspaceId);
+  }
+  return false;
+}
+
+export async function prepareWorkspaceRuntime({
+  descriptor,
+  initialize,
+}: PrepareWorkspaceRuntimeOptions) {
+  if (workspaceRuntimeRegistry.isWorkspaceReady(descriptor.id)) {
+    return true;
+  }
+
+  return await initializeWorkspaceRuntime(descriptor, initialize);
 }
 
 export async function closeWorkspaceRuntime(

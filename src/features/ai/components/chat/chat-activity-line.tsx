@@ -7,10 +7,10 @@ import { cn } from "@/utils/cn";
 type ActivityState = "running" | "success" | "error" | "info";
 
 const stateClassNames: Record<ActivityState, string> = {
-  running: "text-accent",
+  running: "text-primary",
   success: "text-success",
-  error: "text-error",
-  info: "text-text-lighter/60",
+  error: "text-destructive",
+  info: "text-subtle-foreground/60",
 };
 
 interface ChatActivityLineProps {
@@ -62,7 +62,7 @@ export function ChatActivityLine({
         {actions ? <span className="shrink-0">{actions}</span> : null}
       </div>
       {canExpand && isExpanded ? (
-        <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-text-lighter/55">
+        <pre className="mt-1 max-h-64 overflow-auto whitespace-pre-wrap pl-6 font-mono ui-text-sm text-subtle-foreground/55">
           {children}
         </pre>
       ) : null}

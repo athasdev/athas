@@ -5,7 +5,7 @@ function ViewerLayout({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="viewer-layout"
-      className={cn("relative size-full min-h-0 overflow-hidden bg-primary-bg", className)}
+      className={cn("relative size-full min-h-0 overflow-hidden bg-background", className)}
       {...props}
     />
   );

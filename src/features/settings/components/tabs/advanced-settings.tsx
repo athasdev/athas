@@ -15,8 +15,9 @@ import {
 } from "@/features/telemetry/services/telemetry";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Switch from "@/ui/switch";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 import { getServiceUrls } from "@/config/services";
 
 const telemetryDescription =
@@ -128,7 +129,7 @@ export const AdvancedSettings = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Features" description="Toggle application features on or off">
         {coreFeaturesList.map((feature: CoreFeature) => (
           <SettingRow
@@ -158,7 +159,7 @@ export const AdvancedSettings = () => {
       </Section>
       <Section title="Data">
         <SettingRow label="Export Settings" description="Save all app settings to a JSON file.">
-          <Button variant="default" onClick={() => void handleExportSettings()}>
+          <Button variant="default" onClick={() => void handleExportSettings()} size="sm">
             Export
           </Button>
         </SettingRow>
@@ -166,7 +167,7 @@ export const AdvancedSettings = () => {
           label="Import Settings"
           description="Restore app settings from an Athas settings JSON file."
         >
-          <Button variant="default" onClick={handleImportSettings} size="xs">
+          <Button variant="default" onClick={handleImportSettings} size="sm">
             Import
           </Button>
         </SettingRow>
@@ -184,7 +185,7 @@ export const AdvancedSettings = () => {
                 href={telemetryLearnMoreUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link hover:underline"
+                className="text-primary hover:underline"
               >
                 Learn more
               </a>
@@ -202,43 +203,50 @@ export const AdvancedSettings = () => {
           description="Inspect the local queue and recent telemetry delivery results."
         >
           <div className="flex gap-2">
-            <Button variant="default" onClick={() => setShowTelemetryLog((value) => !value)}>
+            <Button
+              variant="default"
+              onClick={() => setShowTelemetryLog((value) => !value)}
+              size="sm"
+            >
               {showTelemetryLog ? "Hide Log" : "Open Log"}
             </Button>
-            <Button variant="default" onClick={handleClearTelemetryLog} size="xs">
+            <Button variant="default" onClick={handleClearTelemetryLog} size="sm">
               Clear
             </Button>
           </div>
         </SettingRow>
         {showTelemetryLog && (
-          <div className="rounded-lg border border-border/70 bg-primary-bg/50">
+          <div className="rounded-lg border border-border/70 bg-background/50">
             {telemetryLog.length === 0 ? (
-              <p className="font-sans ui-text-base px-3 py-2 text-text-lighter">
-                No telemetry entries yet.
-              </p>
+              <Empty
+                density="compact"
+                className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left"
+              >
+                <EmptyDescription>No telemetry entries yet.</EmptyDescription>
+              </Empty>
             ) : (
               <div className="max-h-72 overflow-y-auto">
                 {[...telemetryLog].reverse().map((entry) => (
                   <div
                     key={entry.id}
-                    className="font-sans ui-text-base flex items-center gap-2 border-border/70 px-3 py-2 text-text not-last:border-b"
+                    className="font-sans ui-text-base flex items-center gap-2 border-border/70 px-3 py-2 text-foreground not-last:border-b"
                   >
                     <span className="min-w-0 flex-1 truncate font-medium">{entry.eventType}</span>
                     <span
                       className={
                         entry.status === "failed"
-                          ? "shrink-0 uppercase text-error"
+                          ? "shrink-0 uppercase text-destructive"
                           : entry.status === "sent"
                             ? "shrink-0 uppercase text-success"
-                            : "shrink-0 uppercase text-text-lighter"
+                            : "shrink-0 uppercase text-subtle-foreground"
                       }
                     >
                       {entry.status}
                     </span>
-                    <span className="min-w-0 flex-[1.4] truncate text-text-lighter">
+                    <span className="min-w-0 flex-[1.4] truncate text-subtle-foreground">
                       {entry.error || entry.summary}
                     </span>
-                    <span className="shrink-0 text-text-lightest">
+                    <span className="shrink-0 text-subtle-foreground">
                       {new Date(entry.timestamp).toLocaleString()}
                     </span>
                   </div>
@@ -248,6 +256,6 @@ export const AdvancedSettings = () => {
           </div>
         )}
       </Section>
-    </div>
+    </SettingsView>
   );
 };

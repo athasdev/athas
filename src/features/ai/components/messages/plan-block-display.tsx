@@ -39,10 +39,10 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
         </div>
       )}
 
-      <div className="my-2 rounded-2xl border border-accent/20 bg-accent/5">
-        <div className="flex items-center gap-1.5 border-accent/20 border-b px-3 py-2">
-          <ListChecks className="text-accent" />
-          <span className="font-medium text-accent ui-text-sm">
+      <div className="my-2 rounded-2xl border border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-1.5 border-primary/20 border-b px-3 py-2">
+          <ListChecks className="text-primary" />
+          <span className="font-medium text-primary ui-text-sm">
             Plan ({plan.steps.length} {plan.steps.length === 1 ? "step" : "steps"})
           </span>
         </div>
@@ -54,14 +54,14 @@ export const PlanBlockDisplay = memo(function PlanBlockDisplay({
         </div>
 
         {!isStreaming && onExecuteStep && (
-          <div className="border-accent/20 border-t px-3 py-2">
+          <div className="border-primary/20 border-t px-3 py-2">
             <Button
               type="button"
               variant="ghost"
               onClick={handleExecutePlan}
               className={cn(
-                "gap-1.5 rounded-full border border-accent/30",
-                "bg-accent/20 text-accent hover:bg-accent/30",
+                "gap-1.5 rounded-full border border-primary/30",
+                "bg-primary/20 text-primary hover:bg-primary/30",
               )}
               size="xs"
             >

@@ -10,7 +10,9 @@ import {
   TrashIcon as Trash2,
 } from "@/ui/icons";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
 import Input from "@/ui/input";
 import { Spinner } from "@/ui/spinner";
 import Select from "@/ui/select";
@@ -60,27 +62,27 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-secondary-bg/30 text-text">
+    <div className="flex h-full flex-col overflow-hidden bg-surface/30 text-foreground">
       <div className={databaseHeaderClassName()}>
         <div className="flex items-center gap-2">
           <div className={databaseChipClassName()}>
-            <Database className="text-text-lighter" />
+            <Database className="text-subtle-foreground" />
             <span className="font-sans ui-text-sm">{store.fileName}</span>
           </div>
           {store.selectedDatabase && (
             <>
-              <span className="text-text-lighter ui-text-sm">Database</span>
+              <span className="text-subtle-foreground ui-text-sm">Database</span>
               <Select
                 value={store.selectedDatabase}
                 onChange={actions.selectDatabase}
                 options={store.databases.map((db) => ({ value: db, label: db }))}
                 aria-label="Select database"
                 size="xs"
-                className="rounded-full border-border/70 bg-secondary-bg/70 px-2.5 focus:border-accent/60 focus:ring-accent/30"
+                className="rounded-full border-border/70 bg-surface/70 px-2.5 focus:border-primary/60 focus:ring-primary/30"
               />
             </>
           )}
-          <div className="ml-auto flex items-center gap-1 text-text-lighter ui-text-sm">
+          <div className="ml-auto flex items-center gap-1 text-subtle-foreground ui-text-sm">
             <Layers />
             <span>{store.collections.length} collections</span>
           </div>
@@ -90,8 +92,8 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
       <div className="flex min-h-0 flex-1 gap-2 p-2 pt-1.5">
         <div className={databasePanelClassName("w-56")}>
           <div className="flex items-center gap-1.5 border-border/60 border-b px-3 py-2">
-            <Layers className="text-text-lighter" />
-            <span className="font-sans text-text-lighter ui-text-sm">Collections</span>
+            <Layers className="text-subtle-foreground" />
+            <span className="font-sans text-subtle-foreground ui-text-sm">Collections</span>
           </div>
           <ScrollArea className="flex-1" contentClassName="space-y-0.5 p-1.5">
             {store.collections.map((col) => (
@@ -101,7 +103,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                 variant="ghost"
                 size="xs"
                 className={cn(
-                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-[1.35]",
+                  "block h-auto w-full justify-start rounded-lg px-2 py-1 text-left ui-text-sm leading-row",
                   store.selectedCollection === col.name && "bg-selected",
                 )}
                 aria-label={`Select collection ${col.name}`}
@@ -143,7 +145,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               onClick={handleResetQuery}
               variant="ghost"
               size="xs"
-              className="px-2 py-1 text-text-lighter"
+              className="px-2 py-1 text-subtle-foreground"
               aria-label="Reset query"
             >
               Reset
@@ -152,7 +154,7 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
               onClick={() => actions.refresh()}
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
               aria-label="Refresh"
             >
               <RefreshCw />
@@ -160,36 +162,38 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           </div>
 
           {!store.isLoading && !store.selectedCollection && (
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className={databaseCardClassName("px-5 py-4 text-center")}>
-                <div className="ui-text-sm">Select a collection</div>
-                <div className="mt-1 text-text-lighter ui-text-sm">
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>Select a collection</EmptyTitle>
+                <EmptyDescription>
                   Choose a collection from the sidebar to browse documents.
-                </div>
-              </div>
-            </div>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
 
           {store.error && (
-            <div className="mx-3 mt-3 mb-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-error ui-text-sm">
-              {store.error}
-            </div>
+            <Alert tone="error" className="mx-3 mt-3 mb-2 w-auto">
+              <AlertDescription>{store.error}</AlertDescription>
+            </Alert>
           )}
 
           {store.isLoading && (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <Spinner label="Loading" showLabel />
-            </div>
+            <Empty>
+              <EmptyDescription>
+                <Spinner label="Loading" showLabel />
+              </EmptyDescription>
+            </Empty>
           )}
 
           {!store.isLoading && store.documents.length > 0 && (
             <div className="custom-scrollbar flex-1 overflow-auto p-3">
               <div className="mb-3 flex items-center justify-between">
-                <div className="text-text-lighter ui-text-sm">
+                <div className="text-subtle-foreground ui-text-sm">
                   {store.totalCount} document{store.totalCount === 1 ? "" : "s"}
                 </div>
                 {store.selectedCollection && (
-                  <div className={databaseChipClassName("text-text-lighter ui-text-sm")}>
+                  <div className={databaseChipClassName("text-subtle-foreground ui-text-sm")}>
                     {store.selectedCollection}
                   </div>
                 )}
@@ -210,21 +214,21 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                       )}
                     >
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <div className="truncate text-text-lighter ui-text-sm">
+                        <div className="truncate text-subtle-foreground ui-text-sm">
                           Document {displayIndex}
                         </div>
                         <Button
                           onClick={() => actions.deleteDocument(id)}
                           variant="ghost"
                           size="icon-xs"
-                          className="text-error opacity-0 transition-[opacity,background-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-error/10 group-hover:opacity-100"
+                          className="text-destructive opacity-0 transition-[opacity,background-color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:bg-destructive/10 group-hover:opacity-100"
                           aria-label={`Delete document ${id}`}
                         >
                           <Trash2 />
                         </Button>
                       </div>
                       <pre
-                        className={databaseCodeBlockClassName("overflow-x-auto bg-primary-bg/70")}
+                        className={databaseCodeBlockClassName("overflow-x-auto bg-background/70")}
                       >
                         {JSON.stringify(doc, null, 2)}
                       </pre>
@@ -236,14 +240,14 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
           )}
 
           {!store.isLoading && store.documents.length === 0 && store.selectedCollection && (
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className={databaseCardClassName("px-5 py-4 text-center")}>
-                <div className="ui-text-sm">No documents found</div>
-                <div className="mt-1 text-text-lighter ui-text-sm">
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No documents found</EmptyTitle>
+                <EmptyDescription>
                   The current filter returned an empty result set.
-                </div>
-              </div>
-            </div>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
 
           {!store.isLoading && store.totalPages > 1 && (
@@ -263,10 +267,10 @@ export default function MongoDBViewer({ connectionId }: MongoDBViewerProps) {
                   size="xs"
                   className="min-w-16"
                 />
-                <span className="font-sans text-text-lighter ui-text-sm">per page</span>
+                <span className="font-sans text-subtle-foreground ui-text-sm">per page</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="mr-2 font-sans text-text-lighter ui-text-sm">
+                <span className="mr-2 font-sans text-subtle-foreground ui-text-sm">
                   Page {store.currentPage} of {store.totalPages}
                 </span>
                 <Button

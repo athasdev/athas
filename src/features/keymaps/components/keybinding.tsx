@@ -21,13 +21,13 @@ export default function Keybinding({ keys, binding, className }: KeybindingProps
     <KbdGroup className={className}>
       {chords.map((chord, chordIndex) => (
         <Fragment key={`${chord.join("-")}-${chordIndex}`}>
-          {chordIndex > 0 ? <span className="text-text-lighter/75">then</span> : null}
+          {chordIndex > 0 ? <span className="text-subtle-foreground/75">then</span> : null}
           {IS_MAC ? (
             <Kbd>{chord.join("")}</Kbd>
           ) : (
             chord.map((key, keyIndex) => (
               <Fragment key={`${key}-${keyIndex}`}>
-                {keyIndex > 0 ? <span className="text-text-lighter/75">+</span> : null}
+                {keyIndex > 0 ? <span className="text-subtle-foreground/75">+</span> : null}
                 <Kbd>{key}</Kbd>
               </Fragment>
             ))

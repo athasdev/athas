@@ -1,14 +1,9 @@
 import { memo, useMemo } from "react";
 import { FadersHorizontalIcon as FadersHorizontal } from "@/ui/icons";
 import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
-import type { ChatMode } from "@/features/ai/types/ai-chat-store.types";
-import type { AgentType } from "@/features/ai/types/ai-chat.types";
+import type { AgentType, ChatMode } from "@/features/ai/types/ai-chat.types";
 import Select from "@/ui/select";
 import { cn } from "@/utils/cn";
-import {
-  chatComposerControlClassName,
-  chatComposerIconButtonClassName,
-} from "../input/chat-composer-control-styles";
 
 interface ModeSelectorProps {
   className?: string;
@@ -31,12 +26,12 @@ export const ModeSelector = memo(function ModeSelector({
   agentId,
 }: ModeSelectorProps) {
   const mode = useAIChatStore((state) => state.mode);
-  const setMode = useAIChatStore((state) => state.setMode);
+  const setMode = useAIChatStore((state) => state.actions.setMode);
   const currentChatId = useAIChatStore((state) => state.currentChatId);
   const chats = useAIChatStore((state) => state.chats);
   const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
   const sessionModeState = useAIChatStore((state) => state.sessionModeState);
-  const changeSessionMode = useAIChatStore((state) => state.changeSessionMode);
+  const changeSessionMode = useAIChatStore((state) => state.actions.changeSessionMode);
 
   const currentAgentId =
     agentId ?? chats.find((chat) => chat.id === currentChatId)?.agentId ?? selectedAgentId;
@@ -92,11 +87,7 @@ export const ModeSelector = memo(function ModeSelector({
       onOpenChange={onOpenChange}
       leftIcon={iconOnly ? <FadersHorizontal size={13} className="text-current" /> : undefined}
       className={cn(iconOnly ? "w-fit" : "w-fit max-w-[108px]", className)}
-      triggerClassName={
-        iconOnly
-          ? chatComposerIconButtonClassName()
-          : chatComposerControlClassName("w-fit max-w-[108px]")
-      }
+      triggerClassName={iconOnly ? undefined : "w-fit max-w-[108px]"}
       menuClassName="!min-w-0 w-max max-w-[160px]"
       menuAnimated={false}
       hideChevron

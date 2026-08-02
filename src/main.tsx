@@ -1,4 +1,3 @@
-import "./utils/tauri-console-filter";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 import { scan } from "react-scan";

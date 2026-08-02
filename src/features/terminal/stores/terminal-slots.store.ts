@@ -5,6 +5,7 @@ export interface TerminalSlotProps {
   el: HTMLDivElement;
   isActive: boolean;
   isVisible: boolean;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;

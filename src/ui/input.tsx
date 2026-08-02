@@ -21,7 +21,7 @@ const inputVariants = cva(
   [
     "w-full disabled:cursor-not-allowed disabled:opacity-50",
     "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-    "placeholder:text-text-lighter",
+    "placeholder:text-subtle-foreground",
   ],
   {
     variants: {
@@ -71,8 +71,8 @@ const inlineRenameInputVariants = cva("font-sans ui-text-sm", {
       field: "",
     },
     tone: {
-      default: "text-text",
-      muted: "text-text-lighter focus:text-text",
+      default: "text-foreground",
+      muted: "text-subtle-foreground focus:text-foreground",
     },
     width: {
       full: "w-full",
@@ -157,7 +157,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <div className={cn("relative", containerClassName)}>
       {LeftIcon && (
         <LeftIcon
-          className={cn("-translate-y-1/2 absolute top-1/2 text-text-lighter", iconPositions[size])}
+          className={cn(
+            "-translate-y-1/2 absolute top-1/2 text-subtle-foreground",
+            iconPositions[size],
+          )}
           size={iconSizes[size]}
         />
       )}
@@ -177,7 +180,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       {RightIcon && (
         <RightIcon
           className={cn(
-            "-translate-y-1/2 absolute top-1/2 text-text-lighter",
+            "-translate-y-1/2 absolute top-1/2 text-subtle-foreground",
             iconPositionsRight[size],
           )}
           size={iconSizes[size]}

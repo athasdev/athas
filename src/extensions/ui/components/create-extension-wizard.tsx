@@ -11,7 +11,10 @@ import {
 } from "@/ui/icons";
 import { createElement, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Badge from "@/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
 import { Button } from "@/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { useDesktopSignIn } from "@/features/window/hooks/use-desktop-sign-in";
 import { useProFeature } from "../hooks/use-pro-feature";
@@ -236,7 +239,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   flexDirection: "column",
                   gap: `${gap}px`,
                   padding: `${padding}px`,
-                  color: "var(--color-text)",
+                  color: "var(--foreground)",
                   ...style,
                   fontSize: GENERATED_UI_FONT_SIZE,
                 },
@@ -267,7 +270,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   alignItems: align,
                   justifyContent: justify,
                   gap: `${gap}px`,
-                  color: "var(--color-text)",
+                  color: "var(--foreground)",
                   ...style,
                   fontSize: GENERATED_UI_FONT_SIZE,
                 },
@@ -286,11 +289,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               {
                 className: "font-sans",
                 style: {
-                  border: "1px solid var(--color-border)",
-                  background: "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
+                  border: "1px solid var(--border)",
+                  background: "color-mix(in srgb, var(--surface) 92%, transparent)",
                   borderRadius: "12px",
                   padding: `${padding}px`,
-                  color: "var(--color-text)",
+                  color: "var(--foreground)",
                   ...style,
                   fontSize: GENERATED_UI_FONT_SIZE,
                 },
@@ -308,10 +311,10 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             const { children, tone = "default", weight = 400, style } = config;
             const color =
               tone === "muted"
-                ? "var(--color-text-lighter)"
+                ? "var(--subtle-foreground)"
                 : tone === "accent"
-                  ? "var(--color-accent)"
-                  : "var(--color-text)";
+                  ? "var(--primary)"
+                  : "var(--foreground)";
 
             return createElement(
               "div",
@@ -337,20 +340,20 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             const palette =
               tone === "accent"
                 ? {
-                    color: "var(--color-accent)",
-                    background: "color-mix(in srgb, var(--color-accent) 14%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--color-accent) 28%, transparent)",
+                    color: "var(--primary)",
+                    background: "color-mix(in srgb, var(--primary) 14%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--primary) 28%, transparent)",
                   }
                 : tone === "muted"
                   ? {
-                      color: "var(--color-text-lighter)",
-                      background: "color-mix(in srgb, var(--color-secondary-bg) 72%, transparent)",
-                      border: "1px solid var(--color-border)",
+                      color: "var(--subtle-foreground)",
+                      background: "color-mix(in srgb, var(--surface) 72%, transparent)",
+                      border: "1px solid var(--border)",
                     }
                   : {
-                      color: "var(--color-text)",
-                      background: "color-mix(in srgb, var(--color-secondary-bg) 72%, transparent)",
-                      border: "1px solid var(--color-border)",
+                      color: "var(--foreground)",
+                      background: "color-mix(in srgb, var(--surface) 72%, transparent)",
+                      border: "1px solid var(--border)",
                     };
 
             return createElement(
@@ -402,9 +405,9 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 width: "100%",
                 height: "30px",
                 borderRadius: "10px",
-                border: "1px solid var(--color-border)",
-                background: "var(--color-secondary-bg)",
-                color: "var(--color-text)",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
+                color: "var(--foreground)",
                 padding: "0 10px",
                 outline: "none",
                 ...style,
@@ -427,13 +430,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   display: "flex",
                   flexDirection: "column",
                   gap: "4px",
-                  border: "1px solid var(--color-border)",
+                  border: "1px solid var(--border)",
                   borderRadius: "12px",
                   padding: "10px 12px",
                   background:
                     tone === "accent"
-                      ? "color-mix(in srgb, var(--color-accent) 10%, var(--color-secondary-bg))"
-                      : "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
+                      ? "color-mix(in srgb, var(--primary) 10%, var(--surface))"
+                      : "color-mix(in srgb, var(--surface) 92%, transparent)",
                   ...style,
                 },
               },
@@ -441,7 +444,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 "div",
                 {
                   style: {
-                    color: "var(--color-text-lighter)",
+                    color: "var(--subtle-foreground)",
                     fontSize: GENERATED_UI_FONT_SIZE,
                     lineHeight: 1.4,
                   },
@@ -452,7 +455,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 "div",
                 {
                   style: {
-                    color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
+                    color: tone === "accent" ? "var(--primary)" : "var(--foreground)",
                     fontSize: GENERATED_UI_FONT_SIZE,
                     fontWeight: 600,
                     lineHeight: 1.2,
@@ -488,7 +491,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   "div",
                   {
                     style: {
-                      color: "var(--color-text)",
+                      color: "var(--foreground)",
                       fontSize: GENERATED_UI_FONT_SIZE,
                       fontWeight: 600,
                     },
@@ -500,7 +503,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       "div",
                       {
                         style: {
-                          color: "var(--color-text-lighter)",
+                          color: "var(--subtle-foreground)",
                           fontSize: GENERATED_UI_FONT_SIZE,
                           lineHeight: 1.45,
                         },
@@ -529,13 +532,13 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: "12px",
-                  border: "1px solid var(--color-border)",
+                  border: "1px solid var(--border)",
                   borderRadius: "10px",
                   padding: "10px 12px",
                   background:
                     tone === "accent"
-                      ? "color-mix(in srgb, var(--color-accent) 8%, var(--color-secondary-bg))"
-                      : "color-mix(in srgb, var(--color-secondary-bg) 88%, transparent)",
+                      ? "color-mix(in srgb, var(--primary) 8%, var(--surface))"
+                      : "color-mix(in srgb, var(--surface) 88%, transparent)",
                   ...style,
                 },
               },
@@ -546,7 +549,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   "div",
                   {
                     style: {
-                      color: "var(--color-text)",
+                      color: "var(--foreground)",
                       fontSize: GENERATED_UI_FONT_SIZE,
                       fontWeight: 500,
                     },
@@ -558,7 +561,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                       "div",
                       {
                         style: {
-                          color: "var(--color-text-lighter)",
+                          color: "var(--subtle-foreground)",
                           fontSize: GENERATED_UI_FONT_SIZE,
                           lineHeight: 1.4,
                         },
@@ -582,14 +585,14 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               {
                 className: "font-sans",
                 style: {
-                  border: "1px dashed var(--color-border)",
+                  border: "1px dashed var(--border)",
                   borderRadius: "12px",
                   padding: "16px",
                   display: "flex",
                   flexDirection: "column",
                   gap: "8px",
                   alignItems: "flex-start",
-                  background: "color-mix(in srgb, var(--color-secondary-bg) 70%, transparent)",
+                  background: "color-mix(in srgb, var(--surface) 70%, transparent)",
                   ...style,
                 },
               },
@@ -597,7 +600,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                 "div",
                 {
                   style: {
-                    color: "var(--color-text)",
+                    color: "var(--foreground)",
                     fontSize: GENERATED_UI_FONT_SIZE,
                     fontWeight: 600,
                   },
@@ -609,7 +612,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                     "div",
                     {
                       style: {
-                        color: "var(--color-text-lighter)",
+                        color: "var(--subtle-foreground)",
                         fontSize: GENERATED_UI_FONT_SIZE,
                         lineHeight: 1.45,
                       },
@@ -625,7 +628,7 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
               style: {
                 height: "1px",
                 width: "100%",
-                background: "var(--color-border)",
+                background: "var(--border)",
               },
             });
           },
@@ -656,8 +659,8 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       <div className="flex h-full flex-col">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Puzzle className="size-4 text-accent" />
-            <h3 className="font-medium ui-text-sm text-text">Create UI Extension</h3>
+            <Puzzle className="size-4 text-primary" />
+            <h3 className="font-medium ui-text-sm text-foreground">Create UI Extension</h3>
           </div>
           <Badge variant="muted" size="compact">
             Hosted
@@ -665,19 +668,21 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex flex-1 flex-col justify-center gap-4">
-          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
-            <p className="font-medium ui-text-sm text-text">{title}</p>
-            <p className="mt-1 text-text-lighter ui-text-sm">{description}</p>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+          </Card>
 
-          <div className="grid gap-2 ui-text-sm text-text-lighter">
-            <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
+          <div className="grid gap-2 ui-text-sm text-subtle-foreground">
+            <div className="rounded-lg border border-border/50 bg-background/30 p-3">
               Sidebar views for custom tools and dashboards
             </div>
-            <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
+            <div className="rounded-lg border border-border/50 bg-background/30 p-3">
               Toolbar actions for file and editor workflows
             </div>
-            <div className="rounded-lg border border-border/50 bg-primary-bg/30 p-3">
+            <div className="rounded-lg border border-border/50 bg-background/30 p-3">
               Commands for quick actions in the command palette
             </div>
           </div>
@@ -734,8 +739,8 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
             </Button>
           )}
           <div className="flex items-center gap-2">
-            <Puzzle className="size-4 text-accent" />
-            <h3 className="font-medium ui-text-sm text-text">
+            <Puzzle className="size-4 text-primary" />
+            <h3 className="font-medium ui-text-sm text-foreground">
               {step === "type" && "Create UI Extension"}
               {step === "describe" && "Describe your extension"}
               {step === "generating" && "Generating extension"}
@@ -750,28 +755,30 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
       {step === "type" && (
         <div className="flex flex-col gap-3">
-          <div className="rounded-xl border border-border/60 bg-secondary-bg/40 p-4">
-            <p className="font-medium ui-text-sm text-text">Build a UI extension from a prompt</p>
-            <p className="mt-1 text-text-lighter ui-text-sm">
-              Choose where it should live, describe the workflow, then install it directly into
-              Athas.
-            </p>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Build a UI extension from a prompt</CardTitle>
+              <CardDescription>
+                Choose where it should live, describe the workflow, then install it directly into
+                Athas.
+              </CardDescription>
+            </CardHeader>
+          </Card>
           {CONTRIBUTION_OPTIONS.map((option) => (
             <button
               key={option.id}
               type="button"
               onClick={() => handleSelectType(option.id)}
-              className="flex items-center gap-3 rounded-xl border border-border/60 bg-secondary-bg/40 p-3 text-left transition-colors hover:border-border-strong hover:bg-hover"
+              className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface/40 p-3 text-left transition-colors hover:border-border-strong hover:bg-accent"
             >
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-bg/60">
-                <option.icon className="size-4 text-text" />
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background/60">
+                <option.icon className="size-4 text-foreground" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium ui-text-sm text-text">{option.label}</p>
-                <p className="text-text-lighter ui-text-sm">{option.description}</p>
+                <p className="font-medium ui-text-sm text-foreground">{option.label}</p>
+                <p className="text-subtle-foreground ui-text-sm">{option.description}</p>
               </div>
-              <ArrowRight className="ml-auto size-4 text-text-lighter" />
+              <ArrowRight className="ml-auto size-4 text-subtle-foreground" />
             </button>
           ))}
         </div>
@@ -779,11 +786,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
 
       {step === "describe" && (
         <div className="flex flex-1 flex-col gap-3">
-          <div className="rounded-lg border border-border/60 bg-secondary-bg/30 p-3">
-            <p className="font-medium ui-text-sm text-text">
+          <div className="rounded-lg border border-border/60 bg-surface/30 p-3">
+            <p className="font-medium ui-text-sm text-foreground">
               {CONTRIBUTION_OPTIONS.find((o) => o.id === selectedType)?.label}
             </p>
-            <p className="mt-1 text-text-lighter ui-text-sm">
+            <p className="mt-1 text-subtle-foreground ui-text-sm">
               Describe what it should show, what actions it should support, and how the user should
               interact with it.
             </p>
@@ -798,11 +805,11 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
                   ? "e.g., A toolbar button that summarizes the current file and opens the result in a side panel."
                   : "e.g., A command that generates a changelog draft from the current git diff."
             }
-            className="min-h-[120px] flex-1 resize-none rounded-lg border border-border bg-secondary-bg px-3 py-2 ui-text-sm text-text placeholder:text-text-lighter/60 transition-[border-color,box-shadow,background-color] focus:border-border-strong focus:bg-secondary-bg focus:outline-none focus:ring-1 focus:ring-border-strong/35"
+            className="min-h-[120px] flex-1 resize-none rounded-lg border border-border bg-surface px-3 py-2 ui-text-sm text-foreground placeholder:text-subtle-foreground/60 transition-[border-color,box-shadow,background-color] focus:border-border-strong focus:bg-surface focus:outline-none focus:ring-1 focus:ring-border-strong/35"
             autoFocus
           />
           <div className="flex items-center justify-between gap-3">
-            <p className="text-text-lighter ui-text-sm">
+            <p className="text-subtle-foreground ui-text-sm">
               Hosted generation. No user API key required.
             </p>
             <Button
@@ -820,43 +827,48 @@ export function CreateExtensionWizard({ onClose }: { onClose: () => void }) {
       )}
 
       {step === "generating" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <Spinner label="Generating" showLabel />
-          <p className="min-h-4 text-center text-text-lighter ui-text-sm">
+        <Empty className="rounded-none" role="status" aria-live="polite">
+          <EmptyDescription>
+            <Spinner label="Generating" showLabel role={undefined} />
+          </EmptyDescription>
+          <EmptyDescription className="min-h-4">
             {GENERATING_MESSAGES[generationMessageIndex]}
-          </p>
-        </div>
+          </EmptyDescription>
+        </Empty>
       )}
 
       {step === "done" && (
         <div className="flex flex-1 flex-col gap-3">
           {error ? (
-            <div className="rounded-lg border border-error/30 bg-error/10 p-3">
-              <p className="text-error ui-text-sm">{error}</p>
-            </div>
+            <Alert tone="error">
+              <AlertTitle>Extension generation failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : generatedExtension ? (
             <>
-              <div className="rounded-lg border border-border/60 bg-secondary-bg/40 p-3">
+              <div className="rounded-lg border border-border/60 bg-surface/40 p-3">
                 <div className="mb-1 flex items-center gap-2">
                   <Check className="size-4 text-success" />
-                  <span className="font-medium ui-text-sm text-text">
+                  <span className="font-medium ui-text-sm text-foreground">
                     {generatedExtension.name}
                   </span>
                 </div>
-                <p className="text-text-lighter ui-text-sm">{generatedExtension.description}</p>
+                <p className="text-subtle-foreground ui-text-sm">
+                  {generatedExtension.description}
+                </p>
               </div>
 
               {isInstalled ? (
-                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3">
+                <Alert tone="success" role="status">
                   <Check className="size-4 text-success" />
-                  <p className="text-success ui-text-sm">
+                  <AlertDescription>
                     Extension installed and active.
                     {generatedExtension.contributionType === "sidebar" &&
                       " Check the sidebar for your new view."}
                     {generatedExtension.contributionType === "toolbar" &&
                       " Check the editor toolbar for your new action."}
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <div className="flex gap-2">
                   <Button onClick={handleInstall} variant="accent" className="gap-1.5" size="xs">

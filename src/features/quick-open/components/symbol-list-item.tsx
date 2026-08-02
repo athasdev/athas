@@ -51,7 +51,7 @@ export const SymbolListItem = ({
   searchQuery,
   showFilePath = false,
 }: SymbolListItemProps) => {
-  const icon = SYMBOL_ICONS[symbol.kind] || <Code2 size={14} className="text-text-lighter" />;
+  const icon = SYMBOL_ICONS[symbol.kind] || <Code2 size={14} className="text-subtle-foreground" />;
   const fileBaseName = showFilePath ? symbol.filePath.split(/[/\\]/).pop() : undefined;
 
   return (

@@ -142,6 +142,8 @@ const GitBranchManager = ({
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const commandInputRef = useRef<HTMLInputElement>(null);
+  const branchLoadRequestIdRef = useRef(0);
+  const worktreeLoadRequestIdRef = useRef(0);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
   const workspaceRootPath = useRepositoryStore.use.workspaceRootPath();
   const availableRepoPaths = useRepositoryStore.use.availableRepoPaths();
@@ -190,9 +192,12 @@ const GitBranchManager = ({
   const loadBranches = useCallback(async () => {
     if (!repoPath) return;
 
+    const requestId = ++branchLoadRequestIdRef.current;
     try {
       const branchList = await getBranches(repoPath);
-      setBranches(branchList);
+      if (requestId === branchLoadRequestIdRef.current) {
+        setBranches(branchList);
+      }
     } catch (error) {
       console.error("Failed to load branches:", error);
     }
@@ -201,13 +206,26 @@ const GitBranchManager = ({
   const loadWorktrees = useCallback(async () => {
     if (!repoPath) return;
 
+    const requestId = ++worktreeLoadRequestIdRef.current;
     setIsLoadingWorktrees(true);
     try {
       const nextWorktrees = await getWorktrees(repoPath);
-      setWorktrees(nextWorktrees);
+      if (requestId === worktreeLoadRequestIdRef.current) {
+        setWorktrees(nextWorktrees);
+      }
     } finally {
-      setIsLoadingWorktrees(false);
+      if (requestId === worktreeLoadRequestIdRef.current) {
+        setIsLoadingWorktrees(false);
+      }
     }
+  }, [repoPath]);
+
+  useEffect(() => {
+    branchLoadRequestIdRef.current += 1;
+    worktreeLoadRequestIdRef.current += 1;
+    setBranches([]);
+    setWorktrees([]);
+    setIsLoadingWorktrees(false);
   }, [repoPath]);
 
   useEffect(() => {
@@ -222,13 +240,11 @@ const GitBranchManager = ({
       if (!paletteTarget || !repoPath) return;
       setActiveTab("branches");
       setIsDropdownOpen(true);
-      void loadBranches();
-      void loadWorktrees();
     };
 
     window.addEventListener(openEventName, handleOpenFromPalette);
     return () => window.removeEventListener(openEventName, handleOpenFromPalette);
-  }, [openEventName, paletteTarget, repoPath, loadBranches, loadWorktrees]);
+  }, [openEventName, paletteTarget, repoPath]);
 
   useEffect(() => {
     if (!isDropdownOpen) {
@@ -535,9 +551,9 @@ const GitBranchManager = ({
         variant="ghost"
         size={triggerSurface === "footer" ? "xs" : "default"}
         className={cn(
-          "inline-flex max-w-full shrink overflow-hidden px-2 text-text-lighter hover:bg-hover/80",
+          "inline-flex max-w-full shrink overflow-hidden px-2 text-subtle-foreground hover:bg-accent/80",
           triggerSurface === "footer" && "font-medium",
-          isDropdownOpen ? "bg-hover/80" : "cursor-pointer",
+          isDropdownOpen ? "bg-accent/80" : "cursor-pointer",
         )}
         aria-label="Search branches"
       >
@@ -586,7 +602,7 @@ const GitBranchManager = ({
               {createBranchName ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
+                  icon={<Plus className={cn(gitCommandIconClassName, "text-subtle-foreground")} />}
                   title={`Create new branch "${createBranchName}"`}
                   onClick={() => void handleCreateBranch(createBranchName)}
                   disabled={isLoading}
@@ -623,7 +639,7 @@ const GitBranchManager = ({
               {createWorktreePath ? (
                 <CommandItemRow
                   as="div"
-                  icon={<Plus className={cn(gitCommandIconClassName, "text-text-lighter")} />}
+                  icon={<Plus className={cn(gitCommandIconClassName, "text-subtle-foreground")} />}
                   title={`Create worktree "${createWorktreePath}"`}
                   onClick={() => void handleCreateWorktree(createWorktreePath)}
                   disabled={isLoadingWorktrees}
@@ -734,7 +750,7 @@ const GitBranchManager = ({
                 </CommandFooterAction>
               ) : null}
               {selectionError ? (
-                <span className="ui-text-sm min-w-0 flex-1 truncate text-error/90">
+                <span className="ui-text-sm min-w-0 flex-1 truncate text-destructive/90">
                   {selectionError}
                 </span>
               ) : null}
@@ -770,7 +786,7 @@ function BranchRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <GitBranchIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <GitBranchIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
         )
       }
       title={branch}
@@ -778,7 +794,10 @@ function BranchRow({
       disabled={isLoading}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "min-h-9",
+        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
+      )}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
       action={
         !isCurrent ? (
@@ -838,7 +857,7 @@ function RepositoryRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <FolderOpenIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <FolderOpenIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
         )
       }
       title={getFolderName(repoPath)}
@@ -846,7 +865,10 @@ function RepositoryRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "min-h-9",
+        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
+      )}
       accessory={
         <>
           {isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
@@ -877,7 +899,7 @@ function WorktreeRow({
         isCurrent ? (
           <Check className={cn(gitCommandIconClassName, "text-success")} />
         ) : (
-          <NodesIcon className={cn(gitCommandIconClassName, "text-text-lighter")} />
+          <NodesIcon className={cn(gitCommandIconClassName, "text-subtle-foreground")} />
         )
       }
       title={getFolderName(worktree.path)}
@@ -890,7 +912,10 @@ function WorktreeRow({
       isSelected={isSelected}
       onMouseEnter={onMouseEnter}
       onClick={onSelect}
-      className={cn("min-h-9", isCurrent ? "text-text" : "text-text-lighter hover:text-text")}
+      className={cn(
+        "min-h-9",
+        isCurrent ? "text-foreground" : "text-subtle-foreground hover:text-foreground",
+      )}
       accessory={isCurrent ? <CommandItemBadge variant="success">current</CommandItemBadge> : null}
     />
   );

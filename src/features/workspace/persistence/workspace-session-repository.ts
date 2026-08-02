@@ -1,4 +1,4 @@
-import type { AIWorkspaceSessionSnapshot } from "@/features/ai/types/ai-chat-store.types";
+import type { AIWorkspaceSessionSnapshot } from "@/features/ai/stores/ai-chat/ai-chat-store.types";
 import {
   buildTerminalRestorePayload,
   isTerminalPersistenceEnabled,
@@ -20,6 +20,7 @@ interface SaveWorkspaceSessionInput {
   terminals?: PersistedTerminal[];
   aiSession?: AIWorkspaceSessionSnapshot | null;
   workspaceFolders?: WorkspaceFolderSession[];
+  uiState?: ProjectUiSession;
 }
 
 export const workspaceSessionRepository = {
@@ -44,10 +45,19 @@ export const workspaceSessionRepository = {
     terminals,
     aiSession,
     workspaceFolders,
+    uiState,
   }: SaveWorkspaceSessionInput) {
     useSessionStore
       .getState()
-      .saveSession(projectPath, buffers, activeBufferPath, terminals, aiSession, workspaceFolders);
+      .saveSession(
+        projectPath,
+        buffers,
+        activeBufferPath,
+        terminals,
+        aiSession,
+        workspaceFolders,
+        uiState,
+      );
   },
 
   loadUi(projectPath: string | undefined) {

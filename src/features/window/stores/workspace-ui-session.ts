@@ -9,10 +9,14 @@ import {
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import { DEFAULT_PROJECT_UI_STATE } from "@/features/window/stores/workspace-ui-defaults";
 
-export const getCurrentProjectUiState = (): ProjectUiSession => {
-  const uiState = useUIState.getState();
-  const buffers = useBufferStore.getState().buffers;
-  const paneState = usePaneStore.getState();
+export const getCurrentProjectUiState = (workspaceId?: string): ProjectUiSession => {
+  const uiState = workspaceId ? useUIState.getStore(workspaceId).getState() : useUIState.getState();
+  const buffers = workspaceId
+    ? useBufferStore.getStore(workspaceId).getState().buffers
+    : useBufferStore.getState().buffers;
+  const paneState = workspaceId
+    ? usePaneStore.getStore(workspaceId).getState()
+    : usePaneStore.getState();
 
   return {
     isSidebarVisible: uiState.isSidebarVisible,
@@ -23,12 +27,15 @@ export const getCurrentProjectUiState = (): ProjectUiSession => {
   };
 };
 
-export const persistCurrentProjectUiState = (projectPath: string | undefined) => {
+export const persistCurrentProjectUiState = (
+  projectPath: string | undefined,
+  workspaceId?: string,
+) => {
   if (!projectPath) {
     return;
   }
 
-  workspaceSessionRepository.saveUi(projectPath, getCurrentProjectUiState());
+  workspaceSessionRepository.saveUi(projectPath, getCurrentProjectUiState(workspaceId));
 };
 
 export const restoreProjectUiState = (projectPath: string | undefined, workspaceId?: string) => {

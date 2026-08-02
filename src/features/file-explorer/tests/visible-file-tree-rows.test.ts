@@ -127,6 +127,25 @@ describe("buildVisibleFileTreeRows", () => {
     expect(rows.map((row) => row.depth)).toEqual([0, 0]);
   });
 
+  test("sorts folders first by default and can mix entries by name", () => {
+    const entries = [
+      { name: "beta.ts", path: "/beta.ts", isDir: false },
+      { name: "zeta", path: "/zeta", isDir: true, children: [] },
+      { name: "alpha.ts", path: "/alpha.ts", isDir: false },
+    ];
+
+    expect(buildVisibleFileTreeRows(entries, new Set()).map((row) => row.file.name)).toEqual([
+      "zeta",
+      "alpha.ts",
+      "beta.ts",
+    ]);
+    expect(
+      buildVisibleFileTreeRows(entries, new Set(), { sortOrder: "name" }).map(
+        (row) => row.file.name,
+      ),
+    ).toEqual(["alpha.ts", "beta.ts", "zeta"]);
+  });
+
   test("stops compacting at the collapsed folder", () => {
     const rows = buildVisibleFileTreeRows(tree, new Set(["/root", "/root/src"]), {
       compactFolders: true,

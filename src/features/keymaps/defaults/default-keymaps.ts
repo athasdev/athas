@@ -20,6 +20,11 @@ export const defaultKeymaps: Keybinding[] = [
     when: "!terminalFocus",
   },
   {
+    key: "cmd+shift+n",
+    command: "workbench.newWindow",
+    source: "default",
+  },
+  {
     key: "cmd+s",
     command: "file.save",
     source: "default",
@@ -116,6 +121,12 @@ export const defaultKeymaps: Keybinding[] = [
   {
     key: "cmd+t",
     command: "terminal.new",
+    source: "default",
+    when: "terminalFocus",
+  },
+  {
+    key: "cmd+f",
+    command: "terminal.find",
     source: "default",
     when: "terminalFocus",
   },
@@ -444,6 +455,7 @@ export const defaultKeymaps: Keybinding[] = [
   },
 
   // Window Operations
+  { key: "cmd+,", command: "workbench.openSettings", source: "default" },
   { key: "F11", command: "window.toggleFullscreen", source: "default" },
   {
     key: "cmd+ctrl+f",

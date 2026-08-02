@@ -1,6 +1,7 @@
 import { CaretDownIcon as ChevronDown, CaretRightIcon as ChevronRight } from "@/ui/icons";
 import { memo } from "react";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { Spinner } from "@/ui/spinner";
 import { cn } from "@/utils/cn";
 import { usePRDiffHighlighting } from "../hooks/use-pr-diff-highlighting";
@@ -38,13 +39,15 @@ export const FileDiffView = memo(
     const tokenMap = usePRDiffHighlighting(isExpanded ? fileLines : [], file.path);
 
     return (
-      <div className="min-w-0 overflow-hidden bg-primary-bg">
+      <div className="min-w-0 overflow-hidden bg-background">
         {isStatic ? (
           <div className="flex min-h-9 items-center gap-2 border-border/60 border-b px-3 py-1.5">
             <div className="min-w-0 flex-1">
-              <div className="ui-text-sm truncate text-text">{file.path}</div>
+              <div className="ui-text-sm truncate text-foreground">{file.path}</div>
               {file.oldPath && (
-                <div className="ui-text-sm truncate text-text-lighter">from {file.oldPath}</div>
+                <div className="ui-text-sm truncate text-subtle-foreground">
+                  from {file.oldPath}
+                </div>
               )}
             </div>
             <span className={cn("ui-text-sm shrink-0 capitalize", statusColors[file.status])}>
@@ -56,7 +59,7 @@ export const FileDiffView = memo(
               onClick={() => onOpenFile(file.path)}
               variant="ghost"
               size="xs"
-              className="text-text-lighter"
+              className="text-subtle-foreground"
             >
               Open
             </Button>
@@ -66,19 +69,21 @@ export const FileDiffView = memo(
             type="button"
             variant="ghost"
             onClick={onToggle}
-            className="h-auto w-full justify-start rounded-none px-2.5 py-2 text-left hover:bg-hover/60"
+            className="h-auto w-full justify-start rounded-none px-2.5 py-2 text-left hover:bg-accent/60"
             aria-label={`${isExpanded ? "Collapse" : "Expand"} diff for ${file.path}`}
             size="xs"
           >
             {isExpanded ? (
-              <ChevronDown className="text-text-lighter" />
+              <ChevronDown className="text-subtle-foreground" />
             ) : (
-              <ChevronRight className="text-text-lighter" />
+              <ChevronRight className="text-subtle-foreground" />
             )}
             <div className="min-w-0 flex-1">
-              <div className="ui-text-sm truncate text-text">{file.path}</div>
+              <div className="ui-text-sm truncate text-foreground">{file.path}</div>
               {file.oldPath && (
-                <div className="ui-text-sm truncate text-text-lighter">from {file.oldPath}</div>
+                <div className="ui-text-sm truncate text-subtle-foreground">
+                  from {file.oldPath}
+                </div>
               )}
             </div>
             <span className={cn("ui-text-sm shrink-0 capitalize", statusColors[file.status])}>
@@ -89,18 +94,27 @@ export const FileDiffView = memo(
           </Button>
         )}
         {isExpanded && (
-          <div className="bg-primary-bg">
+          <div className="bg-background">
             <div className="max-h-[540px] overflow-auto">
               {isLoadingPatch ? (
-                <div className="flex items-center justify-center py-6">
-                  <Spinner label="Loading file diff" showLabel compact />
-                </div>
+                <Empty density="compact" className="min-h-0 flex-none rounded-none py-6">
+                  <EmptyDescription>
+                    <Spinner label="Loading file diff" showLabel compact />
+                  </EmptyDescription>
+                </Empty>
               ) : patchError ? (
-                <div className="ui-text-sm px-3 py-4 text-center text-error">{patchError}</div>
+                <Empty
+                  density="compact"
+                  className="min-h-0 flex-none rounded-none px-3 py-4"
+                  tone="error"
+                  role="alert"
+                >
+                  <EmptyDescription>{patchError}</EmptyDescription>
+                </Empty>
               ) : fileLines.length === 0 ? (
-                <div className="ui-text-sm px-3 py-4 text-center text-text-lighter">
-                  No diff hunks available for this file.
-                </div>
+                <Empty density="compact" className="min-h-0 flex-none rounded-none px-3 py-4">
+                  <EmptyDescription>No diff hunks available for this file.</EmptyDescription>
+                </Empty>
               ) : (
                 fileLines.map((line, index) => (
                   <DiffLineDisplay

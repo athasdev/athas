@@ -10,13 +10,20 @@ const mocks = vi.hoisted(() => ({
   toastInfo: vi.fn(),
 }));
 
-vi.mock("@/features/file-system/stores/file-system.store", () => ({
-  useFileSystemStore: {
+vi.mock("@/features/file-system/stores/file-system.store", () => {
+  const store = {
     getState: () => ({
       handleFileSelect: mocks.handleFileSelect,
     }),
-  },
-}));
+  };
+
+  return {
+    useFileSystemStore: {
+      ...store,
+      getStore: () => store,
+    },
+  };
+});
 
 vi.mock("@/features/editor/lsp/lsp-client", () => ({
   LspClient: {

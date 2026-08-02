@@ -3,8 +3,13 @@ import { useSelectionScope } from "@/features/editor/hooks/use-selection-scope";
 import { calculateLineHeight } from "@/features/editor/utils/lines";
 import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useZoomStore } from "@/features/window/stores/zoom.store";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { useDiffHighlighting } from "../../hooks/use-git-diff-highlight";
-import type { ParsedHunk, TextDiffViewerProps } from "../../types/git-diff.types";
+import type {
+  DiffSearchHighlight,
+  ParsedHunk,
+  TextDiffViewerProps,
+} from "../../types/git-diff.types";
 import { DIFF_HIGHLIGHT_LINE_THRESHOLD } from "../../utils/diff-viewer-scale";
 import { getSkippedUnchangedLineCount, groupLinesIntoHunks } from "../../utils/git-diff-helpers";
 import DiffHunkHeader from "./git-diff-hunk-header";
@@ -26,6 +31,7 @@ function SplitDiffCodePanel({
   fontSize,
   lineHeight,
   tabSize,
+  searchHighlights,
 }: {
   side: "left" | "right";
   lines: ParsedHunk["lines"];
@@ -34,6 +40,7 @@ function SplitDiffCodePanel({
   fontSize: number;
   lineHeight: number;
   tabSize: number;
+  searchHighlights?: Map<number, DiffSearchHighlight[]>;
 }) {
   const contentStyle = {
     fontSize: `${fontSize}px`,
@@ -46,7 +53,7 @@ function SplitDiffCodePanel({
 
   return (
     <div className="flex min-w-0 flex-1">
-      <div className="w-11 shrink-0 border-border border-r bg-primary-bg">
+      <div className="w-11 shrink-0 border-border border-r bg-background">
         {lines.map((line, index) => {
           const meta = getSplitLineMeta(line, side);
           return (
@@ -57,6 +64,7 @@ function SplitDiffCodePanel({
                 fontSize: `${fontSize}px`,
                 lineHeight: `${lineHeight}px`,
               }}
+              data-selection-scope-exclude="true"
             >
               {meta.isVisible ? meta.gutterNumber : ""}
             </div>
@@ -74,10 +82,16 @@ function SplitDiffCodePanel({
                 key={`${side}-code-${index}`}
                 className={`px-2.5 py-0.5 ${getLineBackground(meta.diffType)}`}
                 style={contentStyle}
+                data-diff-search-line={line.diffIndex}
               >
                 <span className={meta.isVisible ? getContentColor(meta.diffType) : undefined}>
                   {meta.isVisible
-                    ? renderDiffLineContent(line.content, tokens, showWhitespace)
+                    ? renderDiffLineContent(
+                        line.content,
+                        tokens,
+                        showWhitespace,
+                        searchHighlights?.get(line.diffIndex),
+                      )
                     : ""}
                 </span>
               </div>
@@ -99,6 +113,7 @@ const TextDiffViewer = memo(
     onUnstageHunk,
     isInMultiFileView = false,
     isEmbeddedInScrollView = false,
+    searchHighlights,
   }: TextDiffViewerProps) => {
     const selectionScopeRef = useRef<HTMLDivElement>(null);
     const editorFontSize = useEditorSettingsStore.use.fontSize();
@@ -133,9 +148,9 @@ const TextDiffViewer = memo(
 
     if (diff.lines.length === 0) {
       return (
-        <div className="flex items-center justify-center py-8 text-text-lighter ui-text-sm">
-          No changes in this file
-        </div>
+        <Empty density="compact" className="min-h-0 flex-none rounded-none py-8">
+          <EmptyDescription>No changes in this file</EmptyDescription>
+        </Empty>
       );
     }
 
@@ -178,6 +193,7 @@ const TextDiffViewer = memo(
                         fontSize={fontSize}
                         lineHeight={lineHeight}
                         tabSize={tabSize}
+                        searchHighlights={searchHighlights}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -189,6 +205,7 @@ const TextDiffViewer = memo(
                         fontSize={fontSize}
                         lineHeight={lineHeight}
                         tabSize={tabSize}
+                        searchHighlights={searchHighlights}
                       />
                     </div>
                   </div>
@@ -252,6 +269,8 @@ const TextDiffViewer = memo(
                       lineHeight={lineHeight}
                       tabSize={tabSize}
                       tokens={tokenMap.get(line.diffIndex)}
+                      searchHighlights={searchHighlights?.get(line.diffIndex)}
+                      searchLineIndex={line.diffIndex}
                     />
                   ))}
               </div>

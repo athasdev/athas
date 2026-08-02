@@ -67,7 +67,7 @@ export function GlobalSearchResults({
         className="my-2 ml-2 h-auto self-stretch"
       />
       <ScrollArea
-        className="min-h-0 flex-1 bg-primary-bg"
+        className="min-h-0 flex-1 bg-background"
         contentClassName="px-2 pb-2"
         orientation="both"
         viewportProps={{
@@ -86,7 +86,10 @@ export function GlobalSearchResults({
           />
         </div>
         {hasMore ? (
-          <div ref={loadMoreRef} className="ui-text-sm px-3 py-3 text-center text-text-lighter">
+          <div
+            ref={loadMoreRef}
+            className="ui-text-sm px-3 py-3 text-center text-subtle-foreground"
+          >
             {isLoadingMore
               ? "Loading more results"
               : `Showing ${displayedCount} of ${hasMoreResults ? `${totalMatches}+` : totalMatches} results`}

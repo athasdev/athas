@@ -53,6 +53,70 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("fileTreeIndentSize", 13.6)).toBe(14);
   });
 
+  it("falls back from unsupported file tree sort orders", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      fileTreeSortOrder: "missing" as never,
+    });
+
+    expect(normalized.fileTreeSortOrder).toBe("folders-first");
+    expect(normalizeSettingValue("fileTreeSortOrder", "name")).toBe("name");
+  });
+
+  it("falls back from unsupported editor and terminal cursor modes", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      editorCursorStyle: "missing" as never,
+      editorCursorBlinking: "missing" as never,
+      terminalCursorInactiveStyle: "missing" as never,
+    });
+
+    expect(normalized.editorCursorStyle).toBe("line");
+    expect(normalized.editorCursorBlinking).toBe("blink");
+    expect(normalized.terminalCursorInactiveStyle).toBe("outline");
+    expect(normalizeSettingValue("editorCursorStyle", "block")).toBe("block");
+    expect(normalizeSettingValue("editorCursorBlinking", "solid")).toBe("solid");
+    expect(normalizeSettingValue("terminalCursorInactiveStyle", "none")).toBe("none");
+  });
+
+  it("normalizes tab controls and layout widths", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      tabCloseButtonVisibility: "missing" as never,
+      windowChromeDensity: "missing" as never,
+      activityRailWidth: 400,
+      sidebarWidth: 100,
+    });
+
+    expect(normalized.tabCloseButtonVisibility).toBe("active");
+    expect(normalized.windowChromeDensity).toBe("focused");
+    expect(normalized.activityRailWidth).toBe(320);
+    expect(normalized.sidebarWidth).toBe(140);
+    expect(normalizeSettingValue("tabCloseButtonVisibility", "hover")).toBe("hover");
+    expect(normalizeSettingValue("windowChromeDensity", "comfortable")).toBe("comfortable");
+    expect(normalizeSettingValue("activityRailWidth", 120)).toBe(140);
+    expect(normalizeSettingValue("sidebarWidth", 900)).toBe(600);
+  });
+
+  it("normalizes hidden activity sidebar items", () => {
+    const normalized = normalizeSettings({
+      ...getDefaultSettingsSnapshot(),
+      hiddenSidebarActivityItems: ["search", "", "search", "extension.example"] as string[],
+    });
+
+    expect(normalized.hiddenSidebarActivityItems).toEqual(["search", "extension.example"]);
+    expect(
+      normalizeSettingValue("hiddenSidebarActivityItems", [
+        "git",
+        "git",
+        42,
+      ] as unknown as string[]),
+    ).toEqual(["git"]);
+    expect(
+      normalizeSettingValue("collapsedActivityRailSections", ["agents", "", "agents", "terminals"]),
+    ).toEqual(["agents", "terminals"]);
+  });
+
   it("drops legacy editor engine settings", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
@@ -112,16 +176,18 @@ describe("settings normalization", () => {
     expect(normalizeSettingValue("iconTheme", "athas-file-icons")).toBe("athas-icons");
   });
 
-  it("drops the legacy Athas editor feature flag", () => {
+  it("drops retired core feature flags", () => {
     const normalized = normalizeSettings({
       ...getDefaultSettingsSnapshot(),
       coreFeatures: {
         ...getDefaultSettingsSnapshot().coreFeatures,
         athasEditorEngine: true,
+        energyEdge: true,
       },
     } as never);
 
     expect("athasEditorEngine" in normalized.coreFeatures).toBe(false);
+    expect("energyEdge" in normalized.coreFeatures).toBe(false);
   });
 
   it("removes legacy worktrees from git sidebar settings", () => {

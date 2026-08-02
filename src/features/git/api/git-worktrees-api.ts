@@ -1,5 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import type { GitWorktree } from "../types/git.types";
+import { emitGitChanged } from "../events/git-events";
+import { runGitRead } from "../runtime/git-read-coordinator";
 import {
   isNotGitRepositoryError,
   resolveRepositoryPath,
@@ -13,7 +15,9 @@ export const getWorktrees = async (repoPath: string): Promise<GitWorktree[]> => 
       return [];
     }
 
-    return await tauriInvoke<GitWorktree[]>("git_get_worktrees", { repoPath: resolvedRepoPath });
+    return await runGitRead(resolvedRepoPath, "worktrees", () =>
+      tauriInvoke<GitWorktree[]>("git_get_worktrees", { repoPath: resolvedRepoPath }),
+    );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get worktrees:", error);
@@ -36,6 +40,11 @@ export const addWorktree = async (
       branch,
       createBranch,
     });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["repository", "refs"],
+      source: "add-worktree",
+    });
     return true;
   } catch (error) {
     console.error("Failed to add worktree:", error);
@@ -51,6 +60,11 @@ export const removeWorktree = async (
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_remove_worktree", { repoPath: resolvedRepoPath, path, force });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["repository", "refs"],
+      source: "remove-worktree",
+    });
     return true;
   } catch (error) {
     console.error("Failed to remove worktree:", error);
@@ -62,6 +76,11 @@ export const pruneWorktrees = async (repoPath: string): Promise<boolean> => {
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_prune_worktrees", { repoPath: resolvedRepoPath });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["repository", "refs"],
+      source: "prune-worktrees",
+    });
     return true;
   } catch (error) {
     console.error("Failed to prune worktrees:", error);

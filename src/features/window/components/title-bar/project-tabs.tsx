@@ -1,8 +1,12 @@
+import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
+import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { useUIState } from "@/features/window/stores/ui-state.store";
 import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.store";
@@ -20,7 +24,7 @@ import {
   WindowExpandIcon,
   XIcon,
 } from "@/ui/icons";
-import { Tabs } from "@/ui/tabs";
+import { SortableTab, Tab, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { writeClipboardText } from "@/utils/clipboard";
 import { cn } from "@/utils/cn";
 import ProjectIconPicker from "../project-icon-picker";
@@ -40,6 +44,8 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
   const [iconPickerTab, setIconPickerTab] = useState<ProjectTab | null>(null);
   const contextMenu = useDropdownMenu<ProjectTab>();
+  const projectTabIds = projectTabs.map((tab) => tab.id);
+  const { getClickCapture, releaseClickSuppression, suppressNextClick } = useTabDragClickGuard();
 
   const handleTabClick = useCallback(
     async (tab: ProjectTab) => {
@@ -49,13 +55,62 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     [isSwitchingProject, switchToProject],
   );
 
+  const commitProjectOrder = useCallback(
+    (orderedIds: string[]) => {
+      const currentIds = projectTabs.map((tab) => tab.id);
+      orderedIds.forEach((tabId, targetIndex) => {
+        const currentIndex = currentIds.indexOf(tabId);
+        if (currentIndex === -1 || currentIndex === targetIndex) return;
+
+        reorderProjectTabs(currentIndex, targetIndex);
+        currentIds.splice(currentIndex, 1);
+        currentIds.splice(targetIndex, 0, tabId);
+      });
+    },
+    [projectTabs, reorderProjectTabs],
+  );
+
   const handleTabKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>, tab: ProjectTab) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        void handleTabClick(tab);
+        return;
+      }
+
+      const currentIndex = projectTabs.findIndex((project) => project.id === tab.id);
+      if (currentIndex < 0) return;
+      const nextIndex = getChromeNavigationIndex(
+        event.key,
+        currentIndex,
+        projectTabs.length,
+        "horizontal",
+      );
+      if (nextIndex === null) return;
+
+      if (event.shiftKey && !disableReorder && nextIndex !== currentIndex) {
+        event.preventDefault();
+        commitProjectOrder(arrayMove(projectTabIds, currentIndex, nextIndex));
+        requestAnimationFrame(() => {
+          const tabElements = event.currentTarget
+            .closest("[data-title-bar-project-tabs='true']")
+            ?.querySelectorAll<HTMLElement>("[role='tab']");
+          tabElements?.[nextIndex]?.focus();
+        });
+        return;
+      }
+
+      const nextTab = projectTabs[nextIndex];
+      if (!nextTab) return;
+
       event.preventDefault();
-      void handleTabClick(tab);
+      const tabElements = event.currentTarget
+        .closest("[data-title-bar-project-tabs='true']")
+        ?.querySelectorAll<HTMLElement>("[role='tab']");
+      tabElements?.[nextIndex]?.focus();
+      void handleTabClick(nextTab);
     },
-    [handleTabClick],
+    [commitProjectOrder, disableReorder, handleTabClick, projectTabIds, projectTabs],
   );
 
   const handleAddProject = () => {
@@ -188,59 +243,21 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
     [projectTabs, closeProject, closeProjectsSequentially],
   );
 
-  const projectTabItems = useMemo(
-    () =>
-      projectTabs.map((tab) => {
-        const isRemote = isRemoteProjectTab(tab);
+  const handleDragStart = (event: DragStartEvent) => {
+    suppressNextClick(event.active.id);
+  };
 
-        return {
-          id: tab.id,
-          role: "tab" as const,
-          tabIndex: 0,
-          title: tab.path,
-          isActive: tab.isActive,
-          onClick: () => void handleTabClick(tab),
-          onContextMenu: (event: MouseEvent<HTMLDivElement>) => contextMenu.open(event, tab),
-          onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => handleTabKeyDown(event, tab),
-          icon: tab.customIcon ? (
-            <img
-              src={convertFileSrc(tab.customIcon)}
-              alt=""
-              className="size-(--app-ui-font-size) shrink-0 rounded-md object-contain"
-            />
-          ) : isRemote ? (
-            <RemoteIcon />
-          ) : (
-            <FolderIcon />
-          ),
-          label: <span className="max-w-32 truncate">{tab.name}</span>,
-          className: cn(
-            "ui-text-sm border border-transparent px-6",
-            isRemote &&
-              (tab.isActive ? "bg-accent/15 text-accent" : "text-accent/85 hover:text-accent"),
-            isSwitchingProject && "cursor-wait",
-          ),
-          action: (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={(event) => handleTabActionsClick(event, tab)}
-              className={cn(
-                "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-text-lighter transition",
-                "hover:bg-hover/60 hover:text-text",
-                "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
-              )}
-              tooltip="Project actions"
-              aria-label="Project actions"
-              size="icon-xs"
-            >
-              <CaretDownIcon />
-            </Button>
-          ),
-        };
-      }),
-    [contextMenu, handleTabClick, handleTabKeyDown, isSwitchingProject, projectTabs],
-  );
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (event.over && event.active.id !== event.over.id) {
+      const oldIndex = projectTabIds.indexOf(String(event.active.id));
+      const newIndex = projectTabIds.indexOf(String(event.over.id));
+      if (oldIndex >= 0 && newIndex >= 0) {
+        commitProjectOrder(arrayMove(projectTabIds, oldIndex, newIndex));
+      }
+    }
+
+    releaseClickSuppression();
+  };
 
   if (projectTabs.length === 0) {
     return null;
@@ -249,33 +266,91 @@ const ProjectTabs = ({ disableReorder = false }: ProjectTabsProps) => {
   return (
     <>
       <div className="group flex min-w-0 items-center">
-        <Tabs
-          items={projectTabItems}
-          size="xs"
-          variant="segmented"
-          labelPosition="start"
-          reorderable={!disableReorder}
-          onReorder={(orderedIds) => {
-            const currentIds = projectTabs.map((tab) => tab.id);
-            orderedIds.forEach((tabId, targetIndex) => {
-              const currentIndex = currentIds.indexOf(tabId);
-              if (currentIndex === -1 || currentIndex === targetIndex) {
-                return;
-              }
+        <TabDndContext
+          modifiers={[restrictToHorizontalAxis]}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={releaseClickSuppression}
+        >
+          <SortableContext items={projectTabIds} strategy={horizontalListSortingStrategy}>
+            <div
+              role="tablist"
+              aria-label="Open projects"
+              className="athas-title-project-tabs-list scrollbar-hidden flex min-w-0 items-center gap-(--athas-chrome-gap-tight) overflow-x-auto overflow-y-hidden bg-transparent [overscroll-behavior-x:contain]"
+            >
+              {projectTabs.map((tab) => {
+                const isRemote = isRemoteProjectTab(tab);
 
-              reorderProjectTabs(currentIndex, targetIndex);
-              currentIds.splice(currentIndex, 1);
-              currentIds.splice(targetIndex, 0, tabId);
-            });
-          }}
-          className="athas-title-project-tabs-list scrollbar-hidden min-w-0 overflow-x-auto overflow-y-hidden [overscroll-behavior-x:contain]"
-        />
+                return (
+                  <SortableTab
+                    key={tab.id}
+                    id={tab.id}
+                    disabled={disableReorder}
+                    onClickCapture={getClickCapture(tab.id)}
+                  >
+                    {({ isDragging }) => (
+                      <Tab
+                        role="tab"
+                        tabIndex={tab.isActive ? 0 : -1}
+                        aria-selected={tab.isActive}
+                        aria-label={`${tab.name}, ${tab.path}`}
+                        isActive={tab.isActive}
+                        isDragged={isDragging}
+                        onClick={() => void handleTabClick(tab)}
+                        onContextMenu={(event) => contextMenu.open(event, tab)}
+                        onKeyDown={(event) => handleTabKeyDown(event, tab)}
+                        className={cn(
+                          "h-(--athas-chrome-control-height) max-w-48 border border-transparent pr-7 pl-2",
+                          isRemote &&
+                            (tab.isActive
+                              ? "bg-primary/15 text-primary"
+                              : "text-primary/85 hover:text-primary"),
+                          isSwitchingProject && "cursor-wait",
+                        )}
+                        action={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={(event) => handleTabActionsClick(event, tab)}
+                            className={cn(
+                              "close-button -translate-y-1/2 absolute top-1/2 right-0.5 z-10 rounded-none border-0 text-subtle-foreground transition",
+                              "hover:bg-accent/60 hover:text-foreground",
+                              "opacity-0 group-hover/tab:opacity-100 group-focus-within/tab:opacity-100",
+                            )}
+                            tooltip="Project actions"
+                            aria-label="Project actions"
+                            size="icon-xs"
+                          >
+                            <CaretDownIcon />
+                          </Button>
+                        }
+                      >
+                        {tab.customIcon ? (
+                          <img
+                            src={convertFileSrc(tab.customIcon)}
+                            alt=""
+                            className="size-(--ui-text-chrome) shrink-0 rounded-md object-contain"
+                          />
+                        ) : isRemote ? (
+                          <RemoteIcon />
+                        ) : (
+                          <FolderIcon />
+                        )}
+                        <span className="max-w-32 truncate">{tab.name}</span>
+                      </Tab>
+                    )}
+                  </SortableTab>
+                );
+              })}
+            </div>
+          </SortableContext>
+        </TabDndContext>
         <div className="ml-1 flex h-6 w-7 shrink-0 items-center">
           <Button
             type="button"
             variant="ghost"
             onClick={handleAddProject}
-            className="athas-title-project-add-button border border-transparent text-text-lighter transition-colors hover:bg-hover/60 hover:text-text"
+            className="athas-title-project-add-button border border-transparent text-subtle-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
             tooltip="Open folder"
             aria-label="Open folder"
             size="icon-xs"

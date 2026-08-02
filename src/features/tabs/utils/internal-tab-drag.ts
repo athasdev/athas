@@ -9,6 +9,7 @@ export interface InternalTabDragData {
   paneId?: string;
   terminalId?: string;
   name?: string;
+  shell?: string;
   initialCommand?: string;
   currentDirectory?: string;
   remoteConnectionId?: string;

@@ -9,6 +9,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+REQUIRED_BUN_VERSION="1.3.14"
 
 print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
@@ -133,11 +134,11 @@ install_tauri_cli() {
 }
 
 install_bun() {
-    if command_exists bun; then
+    if command_exists bun && version_at_least "$(bun --version)" "$REQUIRED_BUN_VERSION"; then
         print_success "Bun is already installed (v$(bun --version))"
     else
-        print_status "Installing Bun..."
-        curl -fsSL https://bun.sh/install | bash
+        print_status "Installing Bun v$REQUIRED_BUN_VERSION..."
+        curl -fsSL https://bun.com/install | bash -s "bun-v$REQUIRED_BUN_VERSION"
         export PATH="$HOME/.bun/bin:$PATH"
         print_success "Bun installation completed"
     fi

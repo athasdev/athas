@@ -1,5 +1,4 @@
 import {
-  DatabaseIcon as Database,
   EyeIcon as Eye,
   HashIcon as Hash,
   PlusIcon as Plus,
@@ -7,11 +6,11 @@ import {
   TableIcon as Table,
 } from "@/ui/icons";
 import {
-  SidebarHeader,
   SidebarHeaderIconButton,
   SidebarListItem,
   SidebarPanel,
   SidebarSectionLabel,
+  SidebarTitleBar,
 } from "@/ui/sidebar";
 import { ScrollArea } from "@/ui/scroll-area";
 import { cn } from "@/utils/cn";
@@ -55,14 +54,7 @@ export default function TableSidebar({
 
   return (
     <SidebarPanel className="w-64 overflow-hidden">
-      <SidebarHeader className="group h-9 justify-between border-b border-border/60 px-2">
-        <SidebarSectionLabel
-          className="h-auto flex-1 px-0 ui-text-sm"
-          leading={<Database />}
-          trailing={`(${tables.length})`}
-        >
-          Objects
-        </SidebarSectionLabel>
+      <SidebarTitleBar title={`Objects (${tables.length})`} className="group">
         <SidebarHeaderIconButton
           onClick={onCreateTable}
           className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
@@ -72,7 +64,7 @@ export default function TableSidebar({
         >
           <Plus />
         </SidebarHeaderIconButton>
-      </SidebarHeader>
+      </SidebarTitleBar>
       <ScrollArea className="flex-1" contentClassName="space-y-1 p-2">
         {objectGroups.map((group, index) => {
           const Icon = groupIcon[group.kind];

@@ -1,22 +1,10 @@
-/* Enable proper mouse wheel scrolling with horizontal overflow */
 .file-tree-container {
-  overflow-y: auto !important;
-  overflow-x: auto !important;
-  height: 100% !important;
-  position: relative !important;
-  overscroll-behavior: none !important;
-  -webkit-overflow-scrolling: auto !important;
-  scroll-behavior: auto !important;
-  pointer-events: auto !important;
-}
-
-/* Apply UI font family to file tree */
-.file-tree-container {
+  container-type: inline-size;
   font-family: var(--app-font-family);
 }
 
 /* Ensure file tree content wrapper stretches to full scrollable area */
-.file-tree-container > .file-tree-scroll-body {
+.file-tree-container .file-tree-scroll-body {
   width: max-content !important;
   min-width: 100% !important;
 }
@@ -45,24 +33,28 @@
 
 .file-tree-container .file-tree-item button.bg-selected,
 .file-tree-container .file-tree-item button.bg-selected:hover {
-  border-color: color-mix(in srgb, var(--color-border) 78%, transparent) !important;
+  border-color: transparent !important;
   background-color: transparent !important;
 }
 
 .file-tree-container .file-tree-item button:focus-visible {
-  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-border)) !important;
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border)) !important;
 }
 
 .file-tree-item {
   position: relative;
-  --file-tree-hover-bg: color-mix(in srgb, var(--color-hover) 68%, transparent);
+  --file-tree-hover-bg: color-mix(in srgb, var(--accent) 68%, transparent);
   --file-tree-guide-icon-offset: 7px;
-  --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
+  --tree-guide-color: color-mix(in srgb, var(--subtle-foreground) 18%, transparent);
 }
 
 .file-tree-item::before {
-  position: absolute;
-  inset: 0;
+  position: sticky;
+  left: 4px;
+  display: block;
+  width: calc(100cqw - 8px);
+  height: var(--file-tree-row-height);
+  margin-bottom: calc(var(--file-tree-row-height) * -1);
   z-index: 0;
   border-radius: var(--radius-lg);
   background-color: transparent;
@@ -75,7 +67,8 @@
 }
 
 .file-tree-item[data-active="true"]::before {
-  background-color: var(--color-selected);
+  background-color: var(--selected);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 78%, transparent);
 }
 
 .file-tree-row {
@@ -83,24 +76,8 @@
   z-index: 2;
 }
 
-.file-navigator-view-mode-button svg {
-  width: var(--ui-text-sm);
-  height: var(--ui-text-sm);
-}
-
-.file-explorer-search-field svg {
-  left: 0.625rem;
-  width: var(--ui-text-sm);
-  height: var(--ui-text-sm);
-}
-
 .file-explorer-base-text,
 .file-explorer-base-text * {
-  font-size: var(--ui-text-sm);
-}
-
-.file-tree-context-menu [role="menuitem"],
-.file-tree-context-menu [role="menuitem"] * {
   font-size: var(--ui-text-sm);
 }
 
@@ -110,13 +87,13 @@
 
 .file-tree-search-highlight {
   border-radius: var(--radius-md);
-  background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  background-color: color-mix(in srgb, var(--primary) 30%, transparent);
   color: inherit;
   padding: 0 1px;
 }
 
 .file-tree-search-match:not(.bg-selected) {
-  background-color: color-mix(in srgb, var(--color-accent) 7%, transparent) !important;
+  background-color: color-mix(in srgb, var(--primary) 7%, transparent) !important;
 }
 
 .file-tree-guides {

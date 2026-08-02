@@ -12,7 +12,7 @@ import { Button } from "@/ui/button";
 import { cn } from "@/utils/cn";
 
 const shortcutIcons = [Sparkles, Search, Terminal, BookOpen];
-const shortcutIconClassNames = ["text-accent", "text-success", "text-warning", "text-error"];
+const shortcutIconClassNames = ["text-primary", "text-success", "text-warning", "text-destructive"];
 const builtinShortcuts: AIChatSkill[] = [
   {
     id: "builtin-plan-implementation",

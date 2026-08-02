@@ -5,13 +5,17 @@ use crate::{
 };
 use anyhow::{Result, anyhow};
 use portable_pty::{Child, CommandBuilder, PtyPair, PtySize};
+#[cfg(not(target_os = "windows"))]
+use std::sync::OnceLock;
 use std::{
    collections::HashMap,
    io::{Read, Write},
    path::Path,
-   sync::{Arc, Mutex, OnceLock},
+   sync::{Arc, Mutex},
    thread,
 };
+
+#[cfg(not(target_os = "windows"))]
 static USER_ENVIRONMENT_CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
 
 pub struct TerminalConnection {
@@ -209,7 +213,10 @@ impl TerminalConnection {
             .unwrap_or(env!("CARGO_PKG_VERSION")),
       );
       if let Some(shell_path) = shell_path {
-         cmd.env("SHELL", shell_path);
+         cmd.env("SHELL", &shell_path);
+         if cfg!(target_os = "windows") && Self::is_git_bash_shell(selected_shell_id, &shell_path) {
+            cmd.env("CHERE_INVOKING", "1");
+         }
       }
       cmd.env("CLICOLOR", "1");
 
@@ -305,6 +312,10 @@ impl TerminalConnection {
          return Self::wsl_startup_args(config, shell_id);
       }
 
+      if Self::is_git_bash_shell(shell_id, shell_path) {
+         return vec!["--login".to_string(), "-i".to_string()];
+      }
+
       Vec::new()
    }
 
@@ -359,6 +370,12 @@ impl TerminalConnection {
          || Self::executable_name(shell_path).is_some_and(|name| {
             name.eq_ignore_ascii_case("powershell.exe") || name.eq_ignore_ascii_case("pwsh.exe")
          })
+   }
+
+   fn is_git_bash_shell(shell_id: Option<&str>, shell_path: &str) -> bool {
+      shell_id.is_some_and(|id| id.eq_ignore_ascii_case("bash"))
+         || Self::executable_name(shell_path)
+            .is_some_and(|name| name.eq_ignore_ascii_case("bash.exe"))
    }
 
    fn executable_name(path: &str) -> Option<&str> {
@@ -682,14 +699,35 @@ mod tests {
          ),
          Vec::<String>::new()
       );
+   }
+
+   #[test]
+   fn git_bash_startup_args_use_login_interactive_shell() {
       assert_eq!(
          TerminalConnection::shell_startup_args(
             &config_with_env(HashMap::new()),
             Some("bash"),
-            "bash.exe"
+            r"C:\Program Files\Git\bin\bash.exe"
          ),
-         Vec::<String>::new()
+         vec!["--login".to_string(), "-i".to_string()]
       );
+   }
+
+   #[cfg(target_os = "windows")]
+   #[test]
+   fn git_bash_preserves_requested_working_directory() {
+      let mut config = config_with_env(HashMap::new());
+      config.command = None;
+      config.shell = Some("bash".to_string());
+      let working_directory = std::env::temp_dir().join("athas-git-bash-terminal-test");
+      std::fs::create_dir_all(&working_directory).unwrap();
+      config.working_directory = Some(working_directory.to_string_lossy().into_owned());
+
+      let cmd = TerminalConnection::build_command(&config).unwrap();
+
+      assert_eq!(cmd.get_env("CHERE_INVOKING"), Some(OsStr::new("1")));
+
+      std::fs::remove_dir_all(working_directory).unwrap();
    }
 
    #[test]

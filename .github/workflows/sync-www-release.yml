@@ -1,0 +1,26 @@
+name: Sync stable release to www
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger www release synchronization
+        env:
+          GH_TOKEN: ${{ secrets.WWW_REPO_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          jq -n \
+            --arg tag "$RELEASE_TAG" \
+            '{event_type: "athas-stable-release", client_payload: {tag: $tag}}' \
+            | gh api \
+                --method POST \
+                repos/athasdev/www/dispatches \
+                --input -

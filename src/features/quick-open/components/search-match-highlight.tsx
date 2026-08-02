@@ -33,7 +33,7 @@ export function SearchMatchHighlight({ text, query }: SearchMatchHighlightProps)
     <>
       {parts.map((part, index) => (
         <Fragment key={`${part.text}-${index}`}>
-          {part.matched ? <span className="font-medium text-accent">{part.text}</span> : part.text}
+          {part.matched ? <span className="font-medium text-primary">{part.text}</span> : part.text}
         </Fragment>
       ))}
     </>

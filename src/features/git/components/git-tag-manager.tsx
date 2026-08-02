@@ -12,10 +12,11 @@ import {
   UploadIcon as Upload,
   XIcon as X,
 } from "@/ui/icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
+import { Collapsible, CollapsibleContent } from "@/ui/collapsible";
 import {
   CommandEmpty,
   CommandForm,
@@ -71,11 +72,21 @@ const GitTagManager = ({
   const [selectedRemote, setSelectedRemote] = useState("origin");
   const [expandedTagName, setExpandedTagName] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Set<string>>(new Set());
+  const tagLoadRequestIdRef = useRef(0);
+  const remoteLoadRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      tagLoadRequestIdRef.current += 1;
+      remoteLoadRequestIdRef.current += 1;
+      return;
+    }
     void loadTags();
     void loadRemotes();
+    return () => {
+      tagLoadRequestIdRef.current += 1;
+      remoteLoadRequestIdRef.current += 1;
+    };
   }, [isOpen, repoPath]);
 
   const resetTransientState = () => {
@@ -108,18 +119,26 @@ const GitTagManager = ({
   const loadTags = async () => {
     if (!repoPath) return;
 
+    const requestId = ++tagLoadRequestIdRef.current;
     setIsLoading(true);
     try {
-      setTags(await getTags(repoPath));
+      const nextTags = await getTags(repoPath);
+      if (requestId === tagLoadRequestIdRef.current) {
+        setTags(nextTags);
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === tagLoadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const loadRemotes = async () => {
     if (!repoPath) return;
 
+    const requestId = ++remoteLoadRequestIdRef.current;
     const remoteList = await getRemotes(repoPath);
+    if (requestId !== remoteLoadRequestIdRef.current) return;
     setRemotes(remoteList);
     if (remoteList.length > 0 && !remoteList.some((remote) => remote.name === selectedRemote)) {
       setSelectedRemote(remoteList[0].name);
@@ -302,8 +321,8 @@ const GitTagManager = ({
             />
           </CommandFormField>
           <CommandFormField span="full">
-            <label className="inline-flex items-center gap-2 text-text-lighter ui-text-sm">
-              <Checkbox checked={newTagSigned} onChange={setNewTagSigned} />
+            <label className="inline-flex items-center gap-2 text-subtle-foreground ui-text-sm">
+              <Checkbox checked={newTagSigned} onCheckedChange={setNewTagSigned} />
               Sign tag
             </label>
           </CommandFormField>
@@ -329,12 +348,17 @@ const GitTagManager = ({
               setExpandedTagName((current) => (current === tag.name ? null : tag.name));
 
             return (
-              <div key={tag.name} className="group/tag">
+              <Collapsible
+                key={tag.name}
+                open={isExpanded}
+                onOpenChange={(open) => setExpandedTagName(open ? tag.name : null)}
+                className="group/tag"
+              >
                 <CommandItemRow
                   as="div"
                   onClick={toggleTagDetails}
                   aria-expanded={isExpanded}
-                  icon={<Tag className="size-4 text-text-lighter" />}
+                  icon={<Tag className="size-4 text-subtle-foreground" />}
                   iconVariant="framed"
                   title={tag.name}
                   description={tag.message}
@@ -343,9 +367,9 @@ const GitTagManager = ({
                   accessory={
                     <>
                       {isExpanded ? (
-                        <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+                        <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
                       ) : (
-                        <CaretRight className="size-3.5 shrink-0 text-text-lighter" />
+                        <CaretRight className="size-3.5 shrink-0 text-subtle-foreground" />
                       )}
                       <CommandItemBadge>
                         <GitCommit className="size-3.5" />
@@ -369,7 +393,7 @@ const GitTagManager = ({
                         }}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-text-lighter"
+                        className="text-subtle-foreground"
                         tooltip="Copy tag name"
                         aria-label={`Copy ${tag.name}`}
                       >
@@ -383,7 +407,7 @@ const GitTagManager = ({
                         }}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-text-lighter"
+                        className="text-subtle-foreground"
                         tooltip="Copy commit SHA"
                         aria-label={`Copy commit ${shortCommit}`}
                       >
@@ -404,7 +428,7 @@ const GitTagManager = ({
                         disabled={!previousTag}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-text-lighter disabled:opacity-50"
+                        className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Compare with previous tag"
                         aria-label={`Compare ${tag.name} with previous tag`}
                       >
@@ -419,7 +443,7 @@ const GitTagManager = ({
                         }}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-text-lighter"
+                        className="text-subtle-foreground"
                         tooltip="Compare with HEAD"
                         aria-label={`Compare ${tag.name} with HEAD`}
                       >
@@ -434,7 +458,7 @@ const GitTagManager = ({
                         disabled={actionLoading.has(`checkout:${tag.name}`)}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-text-lighter disabled:opacity-50"
+                        className="text-subtle-foreground disabled:opacity-50"
                         tooltip="Checkout tag"
                         aria-label={`Checkout ${tag.name}`}
                       >
@@ -452,7 +476,7 @@ const GitTagManager = ({
                         disabled={!selectedRemoteName || actionLoading.has(`Push tag:${tag.name}`)}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-text-lighter disabled:opacity-50"
+                        className="text-subtle-foreground disabled:opacity-50"
                         tooltip={
                           selectedRemoteName ? `Push tag to ${selectedRemoteName}` : "No remote"
                         }
@@ -480,7 +504,7 @@ const GitTagManager = ({
                         }
                         variant="ghost"
                         size="icon-xs"
-                        className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip={
                           selectedRemoteName ? `Delete tag from ${selectedRemoteName}` : "No remote"
                         }
@@ -497,7 +521,7 @@ const GitTagManager = ({
                         disabled={isActionLoading}
                         variant="ghost"
                         size="icon-xs"
-                        className="text-error hover:bg-error/10 hover:text-error disabled:opacity-50"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                         tooltip="Delete tag"
                         aria-label={`Delete ${tag.name}`}
                       >
@@ -506,18 +530,20 @@ const GitTagManager = ({
                     </div>
                   }
                 />
-                {isExpanded ? (
+                <CollapsibleContent>
                   <div className="border-border/50 border-t px-2.5 py-2">
                     <div className="grid gap-1.5 pl-9">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="ui-text-base w-14 shrink-0 text-text-lighter">Commit</span>
+                        <span className="ui-text-base w-14 shrink-0 text-subtle-foreground">
+                          Commit
+                        </span>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             void handleCopy(tag.commit, "Commit SHA");
                           }}
-                          className="font-sans ui-text-base min-w-0 truncate text-text hover:text-accent"
+                          className="font-sans ui-text-base min-w-0 truncate text-foreground hover:text-primary"
                           title={tag.commit}
                         >
                           {tag.commit}
@@ -525,32 +551,36 @@ const GitTagManager = ({
                       </div>
                       {tag.date ? (
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="ui-text-base w-14 shrink-0 text-text-lighter">Date</span>
-                          <span className="ui-text-base truncate text-text">
+                          <span className="ui-text-base w-14 shrink-0 text-subtle-foreground">
+                            Date
+                          </span>
+                          <span className="ui-text-base truncate text-foreground">
                             {formatShortDate(tag.date)}
                           </span>
                         </div>
                       ) : null}
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="ui-text-base w-14 shrink-0 text-text-lighter">Type</span>
+                        <span className="ui-text-base w-14 shrink-0 text-subtle-foreground">
+                          Type
+                        </span>
                         <Badge variant="muted" size="compact" className="ui-text-base">
                           {tag.is_annotated ? "Annotated" : "Lightweight"}
                         </Badge>
                       </div>
                       {tag.message ? (
                         <div className="flex min-w-0 items-start gap-2">
-                          <span className="ui-text-base w-14 shrink-0 text-text-lighter">
+                          <span className="ui-text-base w-14 shrink-0 text-subtle-foreground">
                             Message
                           </span>
-                          <span className="ui-text-base min-w-0 break-words text-text">
+                          <span className="ui-text-base min-w-0 break-words text-foreground">
                             {tag.message}
                           </span>
                         </div>
                       ) : null}
                     </div>
                   </div>
-                ) : null}
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
             );
           })
         )}

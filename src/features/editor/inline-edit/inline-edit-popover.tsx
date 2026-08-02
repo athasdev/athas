@@ -1,5 +1,6 @@
 import { ArrowBendDownLeftIcon as CornerDownLeft, XIcon as X } from "@/ui/icons";
 import { forwardRef } from "react";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
 import type { Range } from "@/features/editor/types/editor.types";
@@ -26,7 +27,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
           aria-modal="false"
           aria-labelledby="inline-edit-title"
           aria-describedby="inline-edit-description"
-          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-primary-bg shadow-[var(--shadow-popover)]"
+          className="pointer-events-auto absolute overflow-hidden rounded-md border border-border/70 bg-background shadow-[var(--shadow-popover)]"
           style={{
             top: `${zoneTop ?? state.popoverPosition.top}px`,
             left: `${state.popoverPosition.left}px`,
@@ -89,7 +90,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
                   : "inline-edit-description"
               }
               aria-invalid={state.inlineEditError ? true : undefined}
-              className="font-sans h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-sm placeholder:text-text-lighter/80 focus:bg-transparent"
+              className="font-sans h-7 min-w-0 flex-1 bg-transparent px-0 ui-text-sm placeholder:text-subtle-foreground/80 focus:bg-transparent"
               placeholder={
                 selection && selection.start.offset !== selection.end.offset
                   ? "Edit selection..."
@@ -111,7 +112,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               size="icon-xs"
               onClick={() => void state.handleApplyInlineEdit()}
               disabled={state.isInlineEditRunning}
-              className="text-accent hover:bg-transparent hover:text-accent/80"
+              className="text-primary hover:bg-transparent hover:text-primary/80"
               aria-label={state.isInlineEditRunning ? "Applying inline edit" : "Apply inline edit"}
               tooltip="Apply inline edit"
               shortcut="enter"
@@ -123,7 +124,7 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
               variant="ghost"
               size="icon-xs"
               onClick={() => state.inlineEditToolbarActions.hide()}
-              className="text-text-lighter hover:text-text"
+              className="text-subtle-foreground hover:text-foreground"
               tooltip="Close inline edit"
               shortcut="escape"
             >
@@ -131,14 +132,14 @@ export const InlineEditPopover = forwardRef<HTMLDivElement, InlineEditPopoverPro
             </Button>
           </div>
           {state.inlineEditError && (
-            <div
+            <Alert
               id="inline-edit-error"
-              role="alert"
               aria-live="assertive"
-              className="font-sans border-t border-border/50 bg-error/10 px-2 py-1 ui-text-sm text-error"
+              tone="error"
+              className="rounded-none border-x-0 border-b-0 py-1"
             >
-              {state.inlineEditError}
-            </div>
+              <AlertDescription>{state.inlineEditError}</AlertDescription>
+            </Alert>
           )}
         </div>
       </div>

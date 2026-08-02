@@ -9,15 +9,15 @@
       "description": "Clean arctic theme with north-bluish colors",
       "appearance": "dark",
       "colors": {
-        "primary-bg": "#2e3440",
-        "secondary-bg": "#3b4252",
-        "text": "#eceff4",
-        "text-light": "#d8dee9",
-        "text-lighter": "#81a1c1",
+        "background": "#2e3440",
+        "surface": "#3b4252",
+        "foreground": "#eceff4",
+        "muted-foreground": "#d8dee9",
+        "subtle-foreground": "#81a1c1",
         "border": "#4c566a",
-        "hover": "#434c5e",
+        "accent": "#434c5e",
         "selected": "#4c566a",
-        "accent": "#88c0d0"
+        "primary": "#88c0d0"
       },
       "syntax": {
         "keyword": "#81a1c1",
@@ -44,15 +44,15 @@
       "description": "Nord variant with aurora-inspired accent colors",
       "appearance": "dark",
       "colors": {
-        "primary-bg": "#2e3440",
-        "secondary-bg": "#3b4252",
-        "text": "#eceff4",
-        "text-light": "#d8dee9",
-        "text-lighter": "#81a1c1",
+        "background": "#2e3440",
+        "surface": "#3b4252",
+        "foreground": "#eceff4",
+        "muted-foreground": "#d8dee9",
+        "subtle-foreground": "#81a1c1",
         "border": "#4c566a",
-        "hover": "#434c5e",
+        "accent": "#434c5e",
         "selected": "#4c566a",
-        "accent": "#bf616a"
+        "primary": "#bf616a"
       },
       "syntax": {
         "keyword": "#bf616a",

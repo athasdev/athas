@@ -1,6 +1,7 @@
 import { Range as MonacoRange, Uri } from "monaco-editor";
 import type * as Monaco from "monaco-editor";
 import type { Position, Range } from "../../types/editor.types";
+import { createAthasModelUriParts } from "./model-uri";
 
 export function toEditorPosition(
   model: Monaco.editor.ITextModel,
@@ -64,10 +65,12 @@ export function toMonacoRange(model: Monaco.editor.ITextModel, range: Range): Mo
   return new MonacoRange(start.lineNumber, start.column, end.lineNumber, end.column);
 }
 
-export function createModelUri(bufferId: string | undefined, filePath: string): Monaco.Uri {
-  const sanitizedPath = filePath.replace(/^\/+/, "");
-  const path = sanitizedPath.length > 0 ? sanitizedPath : `${bufferId ?? "untitled"}.txt`;
-  return Uri.parse(`athas://editor/${encodeURIComponent(bufferId ?? path)}/${path}`);
+export function createModelUri(
+  bufferId: string | undefined,
+  filePath: string,
+  displayPath?: string,
+): Monaco.Uri {
+  return Uri.from(createAthasModelUriParts(bufferId, filePath, displayPath));
 }
 
 export function buildLineOffsets(content: string): number[] {

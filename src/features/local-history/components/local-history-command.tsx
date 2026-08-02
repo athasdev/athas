@@ -10,6 +10,7 @@ import {
 } from "@/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { emitGitChanged } from "@/features/git/events/git-events";
 import { readFile, writeFile } from "@/features/file-system/controllers/platform";
 import {
   deleteLocalHistoryEntry,
@@ -293,9 +294,11 @@ export function LocalHistoryCommandContent({
           bufferStore.actions.markBufferDirty(openBuffer.id, false);
         }
 
-        window.dispatchEvent(
-          new CustomEvent("git-status-updated", { detail: { filePath: targetPath } }),
-        );
+        emitGitChanged({
+          filePath: targetPath,
+          scopes: ["working-tree"],
+          source: "restore-local-history",
+        });
         toast.success("Snapshot restored");
         onClose();
       } catch (error) {
@@ -380,10 +383,12 @@ export function LocalHistoryCommandContent({
         <CommandHeaderAction aria-label="Back" onClick={onBack}>
           <ArrowLeft />
         </CommandHeaderAction>
-        <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
+        <ClockCounterClockwise className="size-4 shrink-0 text-subtle-foreground" />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-sans ui-text-base text-text">Local History: {fileName}</div>
-          <div className="truncate font-sans ui-text-base text-text-lighter">{targetPath}</div>
+          <div className="truncate font-sans ui-text-base text-foreground">
+            Local History: {fileName}
+          </div>
+          <div className="truncate font-sans ui-text-base text-subtle-foreground">{targetPath}</div>
         </div>
         <CommandHeaderAction
           aria-label="Create local history entry"
@@ -419,11 +424,13 @@ export function LocalHistoryCommandContent({
               onClick={() => void openSnapshot(entry)}
               onMouseEnter={() => setSelectedIndex(index)}
               className={cn(
-                "mb-1 flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-hover",
-                index === selectedIndex ? "bg-selected text-text" : "bg-transparent text-text",
+                "mb-1 flex min-h-12 w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent",
+                index === selectedIndex
+                  ? "bg-selected text-foreground"
+                  : "bg-transparent text-foreground",
               )}
             >
-              <ClockCounterClockwise className="size-4 shrink-0 text-text-lighter" />
+              <ClockCounterClockwise className="size-4 shrink-0 text-subtle-foreground" />
               <div className="min-w-0 flex-1">
                 {renamingEntryId === entry.id ? (
                   <InlineRenameInput
@@ -441,11 +448,11 @@ export function LocalHistoryCommandContent({
                     placeholder="Entry name"
                   />
                 ) : (
-                  <div className="truncate font-sans ui-text-base text-text">
+                  <div className="truncate font-sans ui-text-base text-foreground">
                     {getEntryTitle(entry)}
                   </div>
                 )}
-                <div className="truncate font-sans ui-text-base text-text-lighter">
+                <div className="truncate font-sans ui-text-base text-subtle-foreground">
                   {formatRelativeDate(new Date(entry.created_at))} ·{" "}
                   {formatSnapshotSize(entry.size)}
                   {entry.reason ? ` · ${entry.reason}` : ""}

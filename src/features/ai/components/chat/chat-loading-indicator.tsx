@@ -21,7 +21,7 @@ export function ChatLoadingIndicator({
       aria-label={showLabel ? undefined : label}
       className={cn(compact && "w-fit", className)}
     >
-      <MarkerIcon className="text-accent">
+      <MarkerIcon className="text-primary">
         <Spinner />
       </MarkerIcon>
       {showLabel ? <MarkerContent className="ui-text-shimmer">{label}</MarkerContent> : null}

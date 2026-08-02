@@ -6,6 +6,7 @@ import {
 } from "@/ui/icons";
 import { memo, useCallback, useState } from "react";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import { cn } from "@/utils/cn";
 import type { ImageContainerProps, ImageDiffViewerProps } from "../../types/git-diff.types";
 import { getFileStatus, getImgSrc } from "../../utils/git-diff-helpers";
@@ -36,7 +37,9 @@ const ImageContainer = memo(({ label, labelColor, base64, alt, zoom }: ImageCont
           style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
         />
       ) : (
-        <div className="text-text-lighter ui-text-sm italic">No image</div>
+        <Empty density="compact" className="bg-transparent p-0">
+          <EmptyDescription className="italic">No image</EmptyDescription>
+        </Empty>
       )}
     </div>
   </div>
@@ -60,7 +63,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
   const hasNewImage = !!diff.new_blob_base64;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-primary-bg">
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <DiffHeader
         fileName={fileName}
         diff={diff}
@@ -70,19 +73,19 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
         onClose={onClose}
       />
 
-      <div className="flex items-center justify-center gap-2 border-border border-b bg-secondary-bg py-1">
+      <div className="flex items-center justify-center gap-2 border-border border-b bg-surface py-1">
         <Button
           onClick={handleZoomOut}
           disabled={zoom <= MIN_ZOOM}
           variant="ghost"
-          className="text-text-lighter disabled:opacity-50"
+          className="text-subtle-foreground disabled:opacity-50"
           tooltip="Zoom out"
           aria-label="Zoom out"
           size="icon-xs"
         >
           <ZoomOut />
         </Button>
-        <span className="font-sans w-12 text-center text-text-lighter ui-text-sm">
+        <span className="font-sans w-12 text-center text-subtle-foreground ui-text-sm">
           {Math.round(zoom * 100)}%
         </span>
         <Button
@@ -90,7 +93,7 @@ const ImageDiffViewer = memo(({ diff, fileName, onClose, commitHash }: ImageDiff
           disabled={zoom >= MAX_ZOOM}
           variant="ghost"
           size="icon-xs"
-          className="text-text-lighter disabled:opacity-50"
+          className="text-subtle-foreground disabled:opacity-50"
           tooltip="Zoom in"
           aria-label="Zoom in"
         >

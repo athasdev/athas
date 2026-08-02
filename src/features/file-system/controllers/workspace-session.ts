@@ -14,6 +14,7 @@ export interface WorkspaceSessionBuffer {
   history?: string[];
   historyIndex?: number;
   sessionId?: string;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
@@ -82,6 +83,20 @@ export function normalizeWorkspaceFolders(
   }));
 }
 
+export function selectRestoredWorkspaceFolders(
+  rootFolderPath: string,
+  workspaceFolders: WorkspaceFolderSession[],
+  restoredFolderPaths: readonly string[],
+): WorkspaceFolderSession[] {
+  const restoredPaths = new Set(
+    [rootFolderPath, ...restoredFolderPaths].map(normalizeWorkspacePath),
+  );
+
+  return normalizeWorkspaceFolders(rootFolderPath, workspaceFolders).filter((folder) =>
+    restoredPaths.has(normalizeWorkspacePath(folder.path)),
+  );
+}
+
 export function isWorkspaceFolderPath(
   path: string,
   rootFolderPath: string | undefined,
@@ -119,13 +134,8 @@ export interface WorkspaceSessionSnapshot {
 
 export interface WorkspaceRestorePlan {
   activeBufferPath: string | null;
-  initialBuffer: WorkspaceSessionBuffer | null;
-  remainingBuffers: WorkspaceSessionBuffer[];
-}
-
-export interface WorkspaceRestoreBatch {
-  buffersToRestore: WorkspaceSessionBuffer[];
-  deferredBuffers: WorkspaceSessionBuffer[];
+  initialBuffer: BufferSession | null;
+  remainingBuffers: BufferSession[];
 }
 
 type WorkspaceRestoreSession = Pick<WorkspaceSessionSnapshot, "activeBufferPath"> & {
@@ -174,10 +184,10 @@ export const buildWorkspaceRestorePlan = (
   };
 };
 
-export const buildWorkspaceRestoreBatch = (
-  candidateBuffers: WorkspaceSessionBuffer[],
+export const buildWorkspaceRestoreBatch = <T extends WorkspaceSessionBuffer>(
+  candidateBuffers: T[],
   restoreLimit: number,
-): WorkspaceRestoreBatch => {
+): { buffersToRestore: T[]; deferredBuffers: T[] } => {
   if (restoreLimit <= 0) {
     return {
       buffersToRestore: [],

@@ -85,14 +85,14 @@ export function ScrollDebugOverlay() {
 
   return (
     <div
-      className="fixed right-4 bottom-4 rounded border border-border bg-primary-bg p-3 font-mono text-text ui-text-sm shadow-[var(--shadow-popover)]"
+      className="fixed right-4 bottom-4 rounded border border-border bg-background p-3 font-mono text-foreground ui-text-sm shadow-[var(--shadow-popover)]"
       style={{
         zIndex: 9999,
         backdropFilter: "blur(8px)",
         backgroundColor: "rgba(0, 0, 0, 0.85)",
       }}
     >
-      <div className="mb-2 font-bold text-accent">Scroll Debug</div>
+      <div className="mb-2 font-bold text-primary">Scroll Debug</div>
       <div className="space-y-1">
         <div>
           ScrollTop: <span className="text-info">{metrics.scrollTop.toFixed(0)}px</span>
@@ -113,7 +113,7 @@ export function ScrollDebugOverlay() {
           Update Rate: <span className="text-warning">{metrics.fps} FPS</span>
         </div>
       </div>
-      <div className="mt-2 border-border border-t pt-2 text-text-lighter">
+      <div className="mt-2 border-border border-t pt-2 text-subtle-foreground">
         Disable: localStorage.removeItem(&apos;debug-scroll&apos;)
       </div>
     </div>

@@ -1,4 +1,6 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { emitGitChanged } from "../events/git-events";
+import { runGitRead } from "../runtime/git-read-coordinator";
 import {
   isNotGitRepositoryError,
   resolveRepositoryPath,
@@ -18,8 +20,9 @@ export const getBranches = async (repoPath: string): Promise<string[]> => {
       return [];
     }
 
-    const branches = await tauriInvoke<string[]>("git_branches", { repoPath: resolvedRepoPath });
-    return branches;
+    return await runGitRead(resolvedRepoPath, "branches", () =>
+      tauriInvoke<string[]>("git_branches", { repoPath: resolvedRepoPath }),
+    );
   } catch (error) {
     if (!isNotGitRepositoryError(error)) {
       console.error("Failed to get branches:", error);
@@ -38,6 +41,13 @@ export const checkoutBranch = async (
       repoPath: resolvedRepoPath,
       branchName,
     });
+    if (result.success) {
+      emitGitChanged({
+        repoPath: resolvedRepoPath,
+        scopes: ["working-tree", "history", "refs"],
+        source: "checkout-branch",
+      });
+    }
     return result;
   } catch (error) {
     console.error("Failed to checkout branch:", error);
@@ -61,6 +71,11 @@ export const createBranch = async (
       branchName,
       fromBranch,
     });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["refs"],
+      source: "create-branch",
+    });
     return true;
   } catch (error) {
     console.error("Failed to create branch:", error);
@@ -72,6 +87,11 @@ export const deleteBranch = async (repoPath: string, branchName: string): Promis
   try {
     const resolvedRepoPath = await resolveRepositoryPathOrThrow(repoPath);
     await tauriInvoke("git_delete_branch", { repoPath: resolvedRepoPath, branchName });
+    emitGitChanged({
+      repoPath: resolvedRepoPath,
+      scopes: ["refs"],
+      source: "delete-branch",
+    });
     return true;
   } catch (error) {
     console.error("Failed to delete branch:", error);

@@ -16,6 +16,11 @@ interface ChatData {
   agent_id: string | null;
   acp_session_id: string | null;
   workspace_path: string | null;
+  provider_id: string | null;
+  model_id: string | null;
+  branch: string | null;
+  is_pinned: boolean;
+  archived_at: number | null;
 }
 
 interface MessageData {
@@ -80,6 +85,11 @@ function chatToData(chat: Chat): {
     agent_id: chat.agentId,
     acp_session_id: chat.acpSessionId || null,
     workspace_path: chat.workspacePath || null,
+    provider_id: chat.providerId || null,
+    model_id: chat.modelId || null,
+    branch: chat.branch || null,
+    is_pinned: chat.isPinned || false,
+    archived_at: chat.archivedAt?.getTime() ?? null,
   };
 
   const messages: MessageData[] = chat.messages.map((msg) => ({
@@ -156,6 +166,11 @@ function dataToChat(data: ChatWithMessages): Chat {
     agentId: (data.chat.agent_id || "custom") as AgentType,
     acpSessionId: data.chat.acp_session_id,
     workspacePath: data.chat.workspace_path,
+    providerId: data.chat.provider_id,
+    modelId: data.chat.model_id,
+    branch: data.chat.branch,
+    isPinned: data.chat.is_pinned,
+    archivedAt: data.chat.archived_at ? new Date(data.chat.archived_at) : null,
   };
 }
 
@@ -168,6 +183,16 @@ export const saveChatToDb = async (chat: Chat): Promise<void> => {
     await invoke("save_chat", { chat: chatData, messages, toolCalls: tool_calls });
   } catch (error) {
     console.error("Error saving chat to database:", error);
+    throw error;
+  }
+};
+
+export const saveChatMetadataToDb = async (chat: Chat): Promise<void> => {
+  try {
+    const { chat: chatData } = chatToData(chat);
+    await invoke("update_chat_metadata", { chat: chatData });
+  } catch (error) {
+    console.error(`Error updating chat metadata for ${chat.id}:`, error);
     throw error;
   }
 };
@@ -187,6 +212,11 @@ export const loadAllChatsFromDb = async (): Promise<Omit<Chat, "messages">[]> =>
       agentId: (chat.agent_id || "custom") as AgentType,
       acpSessionId: chat.acp_session_id,
       workspacePath: chat.workspace_path,
+      providerId: chat.provider_id,
+      modelId: chat.model_id,
+      branch: chat.branch,
+      isPinned: chat.is_pinned,
+      archivedAt: chat.archived_at ? new Date(chat.archived_at) : null,
     }));
   } catch (error) {
     console.error("Error loading chats from database:", error);
@@ -236,6 +266,11 @@ export const searchChatsInDb = async (query: string): Promise<Omit<Chat, "messag
       agentId: (chat.agent_id || "custom") as AgentType,
       acpSessionId: chat.acp_session_id,
       workspacePath: chat.workspace_path,
+      providerId: chat.provider_id,
+      modelId: chat.model_id,
+      branch: chat.branch,
+      isPinned: chat.is_pinned,
+      archivedAt: chat.archived_at ? new Date(chat.archived_at) : null,
     }));
   } catch (error) {
     console.error(`Error searching chats for "${query}":`, error);

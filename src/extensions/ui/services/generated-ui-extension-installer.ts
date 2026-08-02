@@ -85,7 +85,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             if (typeof content === "string") {
               return createElement("div", {
                 dangerouslySetInnerHTML: { __html: content },
-                className: "font-sans ui-text-sm h-full overflow-auto text-text",
+                className: "font-sans ui-text-sm h-full overflow-auto text-foreground",
               });
             }
 
@@ -193,7 +193,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               flexDirection: "column",
               gap: `${gap}px`,
               padding: `${padding}px`,
-              color: "var(--color-text)",
+              color: "var(--foreground)",
               ...style,
               fontSize: GENERATED_UI_FONT_SIZE,
             },
@@ -218,7 +218,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               alignItems: align,
               justifyContent: justify,
               gap: `${gap}px`,
-              color: "var(--color-text)",
+              color: "var(--foreground)",
               ...style,
               fontSize: GENERATED_UI_FONT_SIZE,
             },
@@ -233,11 +233,11 @@ function createGeneratedExtensionAPI(extensionId: string) {
           {
             className: "font-sans",
             style: {
-              border: "1px solid var(--color-border)",
-              background: "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
+              border: "1px solid var(--border)",
+              background: "color-mix(in srgb, var(--surface) 92%, transparent)",
               borderRadius: "12px",
               padding: `${padding}px`,
-              color: "var(--color-text)",
+              color: "var(--foreground)",
               ...style,
               fontSize: GENERATED_UI_FONT_SIZE,
             },
@@ -255,10 +255,10 @@ function createGeneratedExtensionAPI(extensionId: string) {
         const { children, tone = "default", weight = 400, style } = config;
         const color =
           tone === "muted"
-            ? "var(--color-text-lighter)"
+            ? "var(--subtle-foreground)"
             : tone === "accent"
-              ? "var(--color-accent)"
-              : "var(--color-text)";
+              ? "var(--primary)"
+              : "var(--foreground)";
 
         return createElement(
           "div",
@@ -280,14 +280,14 @@ function createGeneratedExtensionAPI(extensionId: string) {
         const palette =
           tone === "accent"
             ? {
-                color: "var(--color-accent)",
-                background: "color-mix(in srgb, var(--color-accent) 14%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--color-accent) 28%, transparent)",
+                color: "var(--primary)",
+                background: "color-mix(in srgb, var(--primary) 14%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--primary) 28%, transparent)",
               }
             : {
-                color: tone === "muted" ? "var(--color-text-lighter)" : "var(--color-text)",
-                background: "color-mix(in srgb, var(--color-secondary-bg) 72%, transparent)",
-                border: "1px solid var(--color-border)",
+                color: tone === "muted" ? "var(--subtle-foreground)" : "var(--foreground)",
+                background: "color-mix(in srgb, var(--surface) 72%, transparent)",
+                border: "1px solid var(--border)",
               };
 
         return createElement(
@@ -334,9 +334,9 @@ function createGeneratedExtensionAPI(extensionId: string) {
             width: "100%",
             height: "30px",
             borderRadius: "10px",
-            border: "1px solid var(--color-border)",
-            background: "var(--color-secondary-bg)",
-            color: "var(--color-text)",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
+            color: "var(--foreground)",
             padding: "0 10px",
             outline: "none",
             ...style,
@@ -359,13 +359,13 @@ function createGeneratedExtensionAPI(extensionId: string) {
               display: "flex",
               flexDirection: "column",
               gap: "4px",
-              border: "1px solid var(--color-border)",
+              border: "1px solid var(--border)",
               borderRadius: "12px",
               padding: "10px 12px",
               background:
                 tone === "accent"
-                  ? "color-mix(in srgb, var(--color-accent) 10%, var(--color-secondary-bg))"
-                  : "color-mix(in srgb, var(--color-secondary-bg) 92%, transparent)",
+                  ? "color-mix(in srgb, var(--primary) 10%, var(--surface))"
+                  : "color-mix(in srgb, var(--surface) 92%, transparent)",
               ...style,
             },
           },
@@ -373,7 +373,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             "div",
             {
               style: {
-                color: "var(--color-text-lighter)",
+                color: "var(--subtle-foreground)",
                 fontSize: GENERATED_UI_FONT_SIZE,
                 lineHeight: 1.4,
               },
@@ -384,7 +384,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             "div",
             {
               style: {
-                color: tone === "accent" ? "var(--color-accent)" : "var(--color-text)",
+                color: tone === "accent" ? "var(--primary)" : "var(--foreground)",
                 fontSize: GENERATED_UI_FONT_SIZE,
                 fontWeight: 600,
                 lineHeight: 1.2,
@@ -420,7 +420,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               "div",
               {
                 style: {
-                  color: "var(--color-text)",
+                  color: "var(--foreground)",
                   fontSize: GENERATED_UI_FONT_SIZE,
                   fontWeight: 600,
                 },
@@ -432,7 +432,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
                   "div",
                   {
                     style: {
-                      color: "var(--color-text-lighter)",
+                      color: "var(--subtle-foreground)",
                       fontSize: GENERATED_UI_FONT_SIZE,
                       lineHeight: 1.45,
                     },
@@ -461,13 +461,13 @@ function createGeneratedExtensionAPI(extensionId: string) {
               alignItems: "center",
               justifyContent: "space-between",
               gap: "12px",
-              border: "1px solid var(--color-border)",
+              border: "1px solid var(--border)",
               borderRadius: "10px",
               padding: "10px 12px",
               background:
                 tone === "accent"
-                  ? "color-mix(in srgb, var(--color-accent) 8%, var(--color-secondary-bg))"
-                  : "color-mix(in srgb, var(--color-secondary-bg) 88%, transparent)",
+                  ? "color-mix(in srgb, var(--primary) 8%, var(--surface))"
+                  : "color-mix(in srgb, var(--surface) 88%, transparent)",
               ...style,
             },
           },
@@ -478,7 +478,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
               "div",
               {
                 style: {
-                  color: "var(--color-text)",
+                  color: "var(--foreground)",
                   fontSize: GENERATED_UI_FONT_SIZE,
                   fontWeight: 500,
                 },
@@ -490,7 +490,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
                   "div",
                   {
                     style: {
-                      color: "var(--color-text-lighter)",
+                      color: "var(--subtle-foreground)",
                       fontSize: GENERATED_UI_FONT_SIZE,
                       lineHeight: 1.4,
                     },
@@ -514,14 +514,14 @@ function createGeneratedExtensionAPI(extensionId: string) {
           {
             className: "font-sans",
             style: {
-              border: "1px dashed var(--color-border)",
+              border: "1px dashed var(--border)",
               borderRadius: "12px",
               padding: "16px",
               display: "flex",
               flexDirection: "column",
               gap: "8px",
               alignItems: "flex-start",
-              background: "color-mix(in srgb, var(--color-secondary-bg) 70%, transparent)",
+              background: "color-mix(in srgb, var(--surface) 70%, transparent)",
               ...style,
             },
           },
@@ -529,7 +529,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
             "div",
             {
               style: {
-                color: "var(--color-text)",
+                color: "var(--foreground)",
                 fontSize: GENERATED_UI_FONT_SIZE,
                 fontWeight: 600,
               },
@@ -541,7 +541,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
                 "div",
                 {
                   style: {
-                    color: "var(--color-text-lighter)",
+                    color: "var(--subtle-foreground)",
                     fontSize: GENERATED_UI_FONT_SIZE,
                     lineHeight: 1.45,
                   },
@@ -554,7 +554,7 @@ function createGeneratedExtensionAPI(extensionId: string) {
       },
       divider() {
         return createElement("div", {
-          style: { height: "1px", width: "100%", background: "var(--color-border)" },
+          style: { height: "1px", width: "100%", background: "var(--border)" },
         });
       },
     },

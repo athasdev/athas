@@ -2,9 +2,9 @@
   position: relative;
   width: 100% !important;
   min-width: 100% !important;
-  --file-tree-hover-bg: color-mix(in srgb, var(--color-hover) 68%, transparent);
+  --file-tree-hover-bg: color-mix(in srgb, var(--accent) 68%, transparent);
   --file-tree-guide-icon-offset: 7px;
-  --tree-guide-color: color-mix(in srgb, var(--color-text-lighter) 18%, transparent);
+  --tree-guide-color: color-mix(in srgb, var(--subtle-foreground) 18%, transparent);
 }
 
 .file-tree-item::before {
@@ -22,7 +22,7 @@
 }
 
 .file-tree-item[data-active="true"]::before {
-  background-color: var(--color-selected);
+  background-color: var(--selected);
 }
 
 .file-tree-row {

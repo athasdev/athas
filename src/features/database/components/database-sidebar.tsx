@@ -13,7 +13,7 @@ import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import { extractDroppedFilePaths } from "@/features/file-system/utils/file-system-dropped-paths";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import {
   CommandEmpty,
   CommandFooter,
@@ -430,7 +430,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
 
   return (
     <div
-      className="relative flex min-h-0 flex-1 flex-col bg-primary-bg"
+      className="relative flex min-h-0 flex-1 flex-col bg-background"
       onDrop={(event) => void handleDrop(event)}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -472,8 +472,8 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
             <button
               type="button"
               className={cn(
-                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-secondary-bg/35 px-3 py-4 text-center text-text-lighter transition-colors hover:border-accent/50 hover:bg-accent/5",
-                isDraggingFile && "border-accent bg-accent/10 text-text",
+                "flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-surface/35 px-3 py-4 text-center text-subtle-foreground transition-colors hover:border-primary/50 hover:bg-primary/5",
+                isDraggingFile && "border-primary bg-primary/10 text-foreground",
               )}
               onClick={() => void chooseDatabaseFile(selectedDbType)}
             >
@@ -489,7 +489,7 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               value={name}
               onChange={setName}
               placeholder={`${PROVIDER_REGISTRY[selectedDbType].label} connection`}
-              className="h-7 rounded-md bg-secondary-bg px-2"
+              className="h-7 rounded-md bg-surface px-2"
             />
             <div className="flex gap-2">
               <Input
@@ -536,10 +536,12 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
               <Checkbox
                 id="database-sidebar-save-password"
                 checked={saveCredential}
-                onChange={setSaveCredential}
-                ariaLabel="Save password securely"
+                onCheckedChange={setSaveCredential}
+                aria-label="Save password securely"
               />
-              <span className="font-sans text-text-lighter ui-text-sm">Save password securely</span>
+              <span className="font-sans text-subtle-foreground ui-text-sm">
+                Save password securely
+              </span>
             </label>
           </div>
         ) : !rootFolderPath ? (
@@ -626,11 +628,13 @@ export function DatabaseCommandContent({ isActive, onBack, onClose }: DatabaseCo
       ) : null}
 
       {error ? (
-        <div className="border-border border-t px-2 py-1.5 text-error ui-text-sm">{error}</div>
+        <div className="border-border border-t px-2 py-1.5 text-destructive ui-text-sm">
+          {error}
+        </div>
       ) : null}
 
       {isDraggingFile ? (
-        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border border-accent bg-primary-bg/85 text-accent ui-text-sm backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-xl border border-primary bg-background/85 text-primary ui-text-sm backdrop-blur-sm">
           Drop database file
         </div>
       ) : null}

@@ -1,62 +1,25 @@
-import { cva } from "class-variance-authority";
-import { CheckIcon as Check } from "@/ui/icons";
+import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
+import { CheckIcon } from "@/ui/icons";
 import { cn } from "@/utils/cn";
 
-interface CheckboxProps {
-  id?: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-  className?: string;
-  ariaLabel?: string;
-}
-
-const checkboxVariants = cva(
-  [
-    "flex items-center justify-center rounded-md border border-border bg-secondary-bg text-transparent transition-[transform,background-color,border-color,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] peer-active:scale-[var(--app-press-scale)]",
-    "peer-focus:ring-1 peer-focus:ring-accent/50",
-    "peer-checked:border-accent peer-checked:bg-accent peer-checked:text-white",
-  ],
-  {
-    variants: {
-      size: {
-        sm: "size-4",
-      },
-    },
-    defaultVariants: {
-      size: "sm",
-    },
-  },
-);
-
-export default function Checkbox({
-  id,
-  checked,
-  onChange,
-  disabled = false,
-  className,
-  ariaLabel,
-}: CheckboxProps) {
+function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (
-    <label
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
       className={cn(
-        "relative inline-flex cursor-pointer items-center",
-        disabled && "cursor-not-allowed opacity-50",
+        "peer relative inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-md border border-border bg-surface text-transparent outline-none transition-[transform,background-color,border-color,color,box-shadow] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] after:absolute after:-inset-x-3 after:-inset-y-2 active:scale-[var(--app-press-scale)] focus-visible:ring-2 focus-visible:ring-primary/20 data-checked:border-primary data-checked:bg-primary data-checked:text-white data-disabled:cursor-not-allowed data-disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20",
         className,
       )}
+      {...props}
     >
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => !disabled && onChange(e.target.checked)}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        className="peer sr-only"
-      />
-      <span className={checkboxVariants()}>
-        <Check strokeWidth={3} />
-      </span>
-    </label>
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="grid place-content-center text-current transition-none"
+      >
+        <CheckIcon className="size-3.5" strokeWidth={3} />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
   );
 }
+
+export { Checkbox };

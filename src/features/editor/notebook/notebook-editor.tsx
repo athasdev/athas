@@ -38,6 +38,7 @@ import { getBufferById } from "@/features/editor/utils/buffer-index";
 import { useHighlightedMarkdown } from "@/features/editor/markdown/use-highlighted-markdown";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription, EmptyMedia } from "@/ui/empty";
 import { cn } from "@/utils/cn";
 import { HighlightedCode } from "./highlighted-code";
 import { NotebookCodeCellEditor } from "./notebook-code-cell-editor";
@@ -210,14 +211,14 @@ function MarkdownOutput({ source }: { source: string }) {
   const html = useHighlightedMarkdown(source);
   return (
     <div
-      className="markdown-preview overflow-auto rounded-md border border-border bg-secondary-bg p-2.5 [&_.markdown-content]:max-w-none"
+      className="markdown-preview overflow-auto rounded-md border border-border bg-surface p-2.5 [&_.markdown-content]:max-w-none"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 }
 
 const outputClassName =
-  "m-0 overflow-auto rounded-md border border-border bg-secondary-bg p-2.5 font-mono text-[0.92em] leading-[1.55] text-text";
+  "m-0 overflow-auto rounded-md border border-border bg-surface p-2.5 font-mono text-[0.92em] leading-[1.55] text-foreground";
 
 function NotebookOutputView({ output }: { output: NotebookOutput }) {
   if (output.output_type === "stream") {
@@ -233,7 +234,12 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
       ? output.traceback.join("\n")
       : [output.ename, output.evalue].filter(Boolean).join(": ");
     return (
-      <pre className={cn(outputClassName, "whitespace-pre-wrap border-error/45 text-error")}>
+      <pre
+        className={cn(
+          outputClassName,
+          "whitespace-pre-wrap border-destructive/45 text-destructive",
+        )}
+      >
         <code>{traceback}</code>
       </pre>
     );
@@ -262,7 +268,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     if (svg) {
       return (
         <div
-          className="overflow-auto rounded-md border border-border bg-secondary-bg p-2.5"
+          className="overflow-auto rounded-md border border-border bg-surface p-2.5"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svg) }}
         />
       );
@@ -274,7 +280,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
         <iframe
           title="PDF output"
           src={`data:application/pdf;base64,${pdf}`}
-          className="h-[420px] w-full rounded-md border border-border bg-secondary-bg"
+          className="h-[420px] w-full rounded-md border border-border bg-surface"
         />
       );
     }
@@ -283,7 +289,7 @@ function NotebookOutputView({ output }: { output: NotebookOutput }) {
     if (html) {
       return (
         <div
-          className="overflow-auto rounded-md border border-border bg-secondary-bg p-2.5"
+          className="overflow-auto rounded-md border border-border bg-surface p-2.5"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
       );
@@ -411,7 +417,7 @@ function NotebookCellView({
       aria-selected={isSelected}
       className={cn(
         "group relative mb-4 grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-md border border-transparent py-1 pr-1 outline-none transition-colors",
-        isSelected && "border-accent/45 bg-accent/5",
+        isSelected && "border-primary/45 bg-primary/5",
         isDragging && "z-10 opacity-45",
       )}
       onFocus={() => onSelect(cellIndex)}
@@ -421,14 +427,14 @@ function NotebookCellView({
       <div
         className={cn(
           "absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-transparent transition-colors",
-          isSelected && "bg-accent",
+          isSelected && "bg-primary",
         )}
       />
       <div className="pt-[31px] text-right">
         <div
           ref={setActivatorNodeRef}
           aria-label="Move cell"
-          className="inline-flex cursor-grab touch-none items-center justify-end gap-1 rounded px-1 py-0.5 text-text-lighter transition-colors hover:bg-hover hover:text-text active:cursor-grabbing"
+          className="inline-flex cursor-grab touch-none items-center justify-end gap-1 rounded px-1 py-0.5 text-subtle-foreground transition-colors hover:bg-accent hover:text-foreground active:cursor-grabbing"
           onClick={() => onSelect(cellIndex)}
           {...attributes}
           {...listeners}
@@ -451,13 +457,13 @@ function NotebookCellView({
       </div>
       <div className="min-w-0">
         <div className="flex min-h-7 items-center justify-between gap-2 opacity-75 transition-opacity hover:opacity-100 focus-within:opacity-100">
-          <span className="font-mono text-[0.78em] text-text-lighter">{cell.cell_type}</span>
+          <span className="font-mono text-[0.78em] text-subtle-foreground">{cell.cell_type}</span>
           <div className="flex items-center gap-0.5">
             {isCode ? (
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="text-text-lighter hover:text-text"
+                className="text-subtle-foreground hover:text-foreground"
                 onClick={() => onRun(cellIndex)}
                 disabled={isRunning}
                 tooltip={isRunning ? "Running cell" : "Run cell"}
@@ -469,7 +475,7 @@ function NotebookCellView({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter hover:text-text"
+              className="text-subtle-foreground hover:text-foreground"
               onClick={() => onTypeChange(cellIndex, isCode ? "markdown" : "code")}
               tooltip={isCode ? "Convert to Markdown" : "Convert to Code"}
               tooltipSide="bottom"
@@ -479,7 +485,7 @@ function NotebookCellView({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter hover:text-text"
+              className="text-subtle-foreground hover:text-foreground"
               onClick={() => onInsertBelow(cellIndex, isCode ? "code" : "markdown")}
               tooltip="Insert cell below"
               tooltipSide="bottom"
@@ -489,7 +495,7 @@ function NotebookCellView({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter hover:text-text"
+              className="text-subtle-foreground hover:text-foreground"
               onClick={() => onDelete(cellIndex)}
               tooltip="Delete cell"
               tooltipSide="bottom"
@@ -499,7 +505,7 @@ function NotebookCellView({
             <Button
               variant="ghost"
               size="icon-xs"
-              className="text-text-lighter hover:text-text"
+              className="text-subtle-foreground hover:text-foreground"
               onClick={() => onEditToggle(cellIndex)}
               tooltip={isEditing ? "Preview cell" : "Edit cell"}
               tooltipSide="bottom"
@@ -519,7 +525,7 @@ function NotebookCellView({
             />
           ) : (
             <textarea
-              className="m-0 block min-h-[92px] w-full resize-y rounded-md border border-border bg-secondary-bg p-2.5 font-mono text-[0.92em] leading-[1.55] text-text outline-none focus:border-accent"
+              className="m-0 block min-h-[92px] w-full resize-y rounded-md border border-border bg-surface p-2.5 font-mono text-[0.92em] leading-[1.55] text-foreground outline-none focus:border-primary"
               value={source}
               spellCheck={isMarkdown}
               onChange={(event) => onSourceChange(cellIndex, event.target.value)}
@@ -769,14 +775,19 @@ export function NotebookEditor() {
 
   if (!parsed.ok) {
     return (
-      <div
+      <Empty
         data-notebook-editor
-        className="flex h-full items-center justify-center gap-2 overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text-lighter"
+        density="compact"
+        tone="error"
+        role="alert"
+        className="h-full overflow-auto rounded-none bg-background px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))]"
         style={{ fontSize, fontFamily: uiFontFamily }}
       >
-        <Warning weight="duotone" />
-        <span>{parsed.message}</span>
-      </div>
+        <EmptyMedia>
+          <Warning weight="duotone" />
+        </EmptyMedia>
+        <EmptyDescription>{parsed.message}</EmptyDescription>
+      </Empty>
     );
   }
 
@@ -785,7 +796,7 @@ export function NotebookEditor() {
   return (
     <div
       data-notebook-editor
-      className="h-full overflow-auto bg-primary-bg px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-text"
+      className="h-full overflow-auto bg-background px-[22px] py-[18px] pb-[calc(2rem+env(safe-area-inset-bottom))] text-foreground"
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >
       <div className="mx-auto w-[min(100%,980px)]">
@@ -793,7 +804,7 @@ export function NotebookEditor() {
           <Button
             variant="ghost"
             size="xs"
-            className="h-7 gap-1.5 text-text-lighter hover:text-text"
+            className="h-7 gap-1.5 text-subtle-foreground hover:text-foreground"
             onClick={() => handleAddCell("code")}
           >
             <Code weight="duotone" />
@@ -802,7 +813,7 @@ export function NotebookEditor() {
           <Button
             variant="ghost"
             size="xs"
-            className="h-7 gap-1.5 text-text-lighter hover:text-text"
+            className="h-7 gap-1.5 text-subtle-foreground hover:text-foreground"
             onClick={() => handleAddCell("markdown")}
           >
             <Text weight="duotone" />

@@ -7,12 +7,12 @@ import { EDITOR_CONSTANTS } from "@/features/editor/config/constants";
 import { evictLeastRecentAutoClosableBuffer } from "@/features/editor/stores/buffer-eviction";
 import { createPaneContent } from "@/features/editor/stores/buffer-content-factory";
 import {
-  closeNewTabInActivePane,
-  getWritablePaneForBuffer,
-  removeBufferFromPanes,
-  syncAndFocusBufferInPane,
-  syncBufferToPane,
-  syncPanePreviewForBuffer,
+  closeNewTabInActivePane as closeNewTabInActivePaneForWorkspace,
+  getWritablePaneForBuffer as getWritablePaneForWorkspace,
+  removeBufferFromPanes as removeBufferFromWorkspacePanes,
+  syncAndFocusBufferInPane as syncAndFocusBufferInWorkspacePane,
+  syncBufferToPane as syncBufferToWorkspacePane,
+  syncPanePreviewForBuffer as syncWorkspacePanePreviewForBuffer,
 } from "@/features/editor/stores/buffer-pane-sync";
 import {
   clearQueuedWorkspaceSessionSave,
@@ -21,7 +21,6 @@ import {
 import { detectLanguageFromFileName } from "@/features/editor/utils/language-detection";
 import { logger } from "@/features/editor/utils/logger";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
-import { useRecentFilesStore } from "@/features/file-system/stores/recent-files.store";
 import type { MultiFileDiff } from "@/features/git/types/git-diff.types";
 import type { GitDiff } from "@/features/git/types/git.types";
 import {
@@ -30,8 +29,9 @@ import {
   getBufferIndexById,
 } from "@/features/editor/utils/buffer-index";
 import { usePaneStore } from "@/features/panes/stores/pane.store";
+import { useProjectStore } from "@/features/window/stores/project.store";
 import { SINGLETON_TOOL_BUFFER_METADATA } from "@/features/panes/constants/tool-buffers";
-import { ensureBufferInPane } from "@/features/panes/utils/pane-buffer-actions";
+import { ensureBufferInPane as ensureBufferInWorkspacePane } from "@/features/panes/utils/pane-buffer-actions";
 import { defaultSettings } from "@/features/settings/config/default-settings";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { cleanupBufferHistoryTracking } from "@/features/editor/stores/buffer-history-tracking";
@@ -159,6 +159,7 @@ interface BufferActions {
   }) => string;
   openTerminalBuffer: (options?: {
     name?: string;
+    shell?: string;
     command?: string;
     workingDirectory?: string;
     remoteConnectionId?: string;
@@ -212,9 +213,10 @@ const generateBufferId = (path: string): string => {
   return `buffer_${path.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
 };
 
-const applyAutoEviction = (
+const applyWorkspaceAutoEviction = (
   buffers: PaneContent[],
   maxOpenTabs: number,
+  workspaceId: string,
   options?: { includePreviews?: boolean },
 ): PaneContent[] => {
   const { buffers: nextBuffers, evictedBuffer } = evictLeastRecentAutoClosableBuffer(
@@ -225,17 +227,18 @@ const applyAutoEviction = (
 
   if (evictedBuffer) {
     cleanupBufferHistoryTracking(evictedBuffer.id);
-    removeBufferFromPanes(evictedBuffer.id);
+    removeBufferFromWorkspacePanes(evictedBuffer.id, false, workspaceId);
   }
 
   return nextBuffers;
 };
 
-const getPaneReplacementBufferId = (
+const getWorkspacePaneReplacementBufferId = (
   closingBufferIds: string[],
   buffers: PaneContent[],
+  workspaceId: string,
 ): string | null => {
-  const paneStore = usePaneStore.getState();
+  const paneStore = usePaneStore.getStore(workspaceId).getState();
   const closingBufferIdSet = new Set(closingBufferIds);
   const activePane = paneStore.actions.getActivePane();
   const sourcePane =
@@ -437,8 +440,47 @@ const checkExtensionSupport = (path: string) => {
     });
 };
 
-const createBufferStore = () =>
-  createStore<BufferState>()(
+const scheduleExtensionSupportCheck = (path: string) => {
+  const idleScheduler = window as Window & {
+    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  };
+
+  if (idleScheduler.requestIdleCallback) {
+    idleScheduler.requestIdleCallback(() => checkExtensionSupport(path), { timeout: 500 });
+    return;
+  }
+
+  globalThis.setTimeout(() => checkExtensionSupport(path), 50);
+};
+
+const createBufferStore = (workspaceId: string) => {
+  const paneStore = usePaneStore.getStore(workspaceId);
+  const applyAutoEviction = (
+    buffers: PaneContent[],
+    maxOpenTabs: number,
+    options?: { includePreviews?: boolean },
+  ) => applyWorkspaceAutoEviction(buffers, maxOpenTabs, workspaceId, options);
+  const closeNewTabInActivePane = (buffers: PaneContent[]) =>
+    closeNewTabInActivePaneForWorkspace(buffers, workspaceId);
+  const ensureBufferInPane = (paneId: string, bufferId: string, setActive = true) =>
+    ensureBufferInWorkspacePane(paneId, bufferId, setActive, workspaceId);
+  const getPaneReplacementBufferId = (closingBufferIds: string[], buffers: PaneContent[]) =>
+    getWorkspacePaneReplacementBufferId(closingBufferIds, buffers, workspaceId);
+  const getWritablePaneForBuffer = (bufferId?: string) =>
+    getWritablePaneForWorkspace(bufferId, workspaceId);
+  const removeBufferFromPanes = (bufferId: string, preserveEmptyPane = false) =>
+    removeBufferFromWorkspacePanes(bufferId, preserveEmptyPane, workspaceId);
+  const syncAndFocusBufferInPane = (bufferId: string) =>
+    syncAndFocusBufferInWorkspacePane(bufferId, workspaceId);
+  const syncBufferToPane = (bufferId: string) => syncBufferToWorkspacePane(bufferId, workspaceId);
+  const syncPanePreviewForBuffer = (bufferId: string, isPreview: boolean) =>
+    syncWorkspacePanePreviewForBuffer(bufferId, isPreview, workspaceId);
+  const saveWorkspaceSession = (buffers: PaneContent[], activeBufferId: string | null) => {
+    const projectPath = useProjectStore.getStore(workspaceId).getState().rootFolderPath;
+    saveSessionToStore(projectPath, buffers, activeBufferId);
+  };
+
+  return createStore<BufferState>()(
     immer((set, get) => ({
       buffers: [],
       activeBufferId: null,
@@ -499,11 +541,10 @@ const createBufferStore = () =>
 
               // Track in recent files and check extensions (only for real files)
               if (shouldStartLsp(newBuffer)) {
-                useRecentFilesStore.getState().addOrUpdateRecentFile(spec.path, spec.name);
-                checkExtensionSupport(spec.path);
+                scheduleExtensionSupportCheck(spec.path);
               }
 
-              saveSessionToStore(get().buffers, get().activeBufferId);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 
@@ -544,7 +585,7 @@ const createBufferStore = () =>
               });
 
               syncBufferToPane(newBuffer.id);
-              saveSessionToStore(get().buffers, get().activeBufferId);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 
@@ -587,7 +628,7 @@ const createBufferStore = () =>
               });
 
               syncBufferToPane(newBuffer.id);
-              saveSessionToStore(get().buffers, get().activeBufferId);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 
@@ -641,7 +682,7 @@ const createBufferStore = () =>
                 state.activeBufferId = newBuffer.id;
               });
               syncBufferToPane(newBuffer.id);
-              saveSessionToStore(get().buffers, get().activeBufferId);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 
@@ -816,7 +857,7 @@ const createBufferStore = () =>
               });
 
               syncBufferToPane(newBuffer.id);
-              saveSessionToStore(get().buffers, get().activeBufferId);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
 
@@ -912,7 +953,7 @@ const createBufferStore = () =>
               });
 
               syncBufferToPane(newBuffer.id);
-              saveSessionToStore(get().buffers, get().activeBufferId);
+              saveWorkspaceSession(get().buffers, get().activeBufferId);
               return newBuffer.id;
             }
           }
@@ -1072,6 +1113,7 @@ const createBufferStore = () =>
 
         openTerminalBuffer: (options?: {
           name?: string;
+          shell?: string;
           command?: string;
           workingDirectory?: string;
           remoteConnectionId?: string;
@@ -1080,6 +1122,7 @@ const createBufferStore = () =>
           return get().actions.openContent({
             type: "terminal",
             name: options?.name,
+            shell: options?.shell,
             command: options?.command,
             workingDirectory: options?.workingDirectory,
             remoteConnectionId: options?.remoteConnectionId,
@@ -1220,7 +1263,7 @@ const createBufferStore = () =>
             syncAndFocusBufferInPane(newActiveId);
           }
 
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         closeBuffersBatch: (bufferIds: string[], skipSessionSave = false) => {
@@ -1255,7 +1298,7 @@ const createBufferStore = () =>
           }
 
           if (!skipSessionSave) {
-            saveSessionToStore(get().buffers, get().activeBufferId);
+            saveWorkspaceSession(get().buffers, get().activeBufferId);
           }
         },
 
@@ -1269,7 +1312,7 @@ const createBufferStore = () =>
           set((state) => {
             activateBufferInState(state, bufferId);
           });
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         showNewTabView: () => {
@@ -1316,7 +1359,7 @@ const createBufferStore = () =>
           });
 
           if (promotedPreviewBufferId) {
-            usePaneStore.getState().actions.clearPreviewBufferEverywhere(promotedPreviewBufferId);
+            paneStore.getState().actions.clearPreviewBufferEverywhere(promotedPreviewBufferId);
           }
         },
 
@@ -1395,8 +1438,8 @@ const createBufferStore = () =>
             }
           });
 
-          usePaneStore.getState().actions.setBufferPinnedEverywhere(bufferId, isPinned);
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          paneStore.getState().actions.setBufferPinnedEverywhere(bufferId, isPinned);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         openDatabaseBuffer: (
@@ -1421,8 +1464,8 @@ const createBufferStore = () =>
               buffer.isPreview = false;
             }
           });
-          usePaneStore.getState().actions.clearPreviewBufferEverywhere(bufferId);
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          paneStore.getState().actions.clearPreviewBufferEverywhere(bufferId);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         handleCloseOtherTabs: (keepBufferId: string) => {
@@ -1523,13 +1566,13 @@ const createBufferStore = () =>
             state.buffers = result;
           });
 
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         switchToNextBuffer: () => {
           const { buffers, activeBufferId } = get();
-          const paneStore = usePaneStore.getState();
-          const activePane = paneStore.actions.getActivePane();
+          const paneState = paneStore.getState();
+          const activePane = paneState.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
           const cyclableIds = getExistingPaneBufferIds(paneBufferIds, buffers);
@@ -1546,13 +1589,13 @@ const createBufferStore = () =>
           set((state) => {
             activateBufferInState(state, nextBufferId);
           });
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         switchToPreviousBuffer: () => {
           const { buffers, activeBufferId } = get();
-          const paneStore = usePaneStore.getState();
-          const activePane = paneStore.actions.getActivePane();
+          const paneState = paneStore.getState();
+          const activePane = paneState.actions.getActivePane();
           const paneBufferIds = activePane?.bufferIds ?? [];
 
           const cyclableIds = getExistingPaneBufferIds(paneBufferIds, buffers);
@@ -1569,7 +1612,7 @@ const createBufferStore = () =>
           set((state) => {
             activateBufferInState(state, prevBufferId);
           });
-          saveSessionToStore(get().buffers, get().activeBufferId);
+          saveWorkspaceSession(get().buffers, get().activeBufferId);
         },
 
         getActiveBuffer: (): PaneContent | null => {
@@ -1594,7 +1637,7 @@ const createBufferStore = () =>
 
           try {
             const content = await readFileContent(buffer.path);
-            useBufferStore.getState().actions.updateBufferContent(bufferId, content, false);
+            get().actions.updateBufferContent(bufferId, content, false);
             logger.debug("Editor", `[FileWatcher] Reloaded buffer from disk: ${buffer.path}`);
           } catch (error) {
             logger.error(
@@ -1728,7 +1771,10 @@ const createBufferStore = () =>
               // with the main file-open routing.
               const { useFileSystemStore } =
                 await import("@/features/file-system/stores/file-system.store");
-              await useFileSystemStore.getState().handleFileSelect(closedBuffer.path, false);
+              await useFileSystemStore
+                .getStore(workspaceId)
+                .getState()
+                .handleFileSelect(closedBuffer.path, false);
               reopenedBufferId = getBufferByPath(get().buffers, closedBuffer.path)?.id ?? null;
             }
 
@@ -1744,6 +1790,7 @@ const createBufferStore = () =>
       },
     })),
   );
+};
 
 export const useBufferStore = createSelectors(
   createWorkspaceScopedStore("editor-buffer", createBufferStore, isEqual),

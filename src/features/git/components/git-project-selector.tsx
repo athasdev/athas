@@ -129,7 +129,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
           variant="ghost"
           size="xs"
           className={cn(
-            "h-7 w-fit max-w-full min-w-0 justify-start gap-1.5 px-2.5 text-left text-accent/80 hover:text-accent focus-visible:text-accent",
+            "h-7 w-fit max-w-full min-w-0 justify-start gap-1.5 px-2.5 text-left text-primary/80 hover:text-primary focus-visible:text-primary",
           )}
           aria-haspopup="dialog"
           aria-expanded={isOpen}
@@ -139,8 +139,8 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
           <span className="ui-text-sm min-w-0 flex-1 truncate font-medium">{activeRepoLabel}</span>
           <CaretDown
             className={cn(
-              "size-3.5 shrink-0 text-accent/65 transition-transform",
-              isOpen && "rotate-180 text-accent",
+              "size-3.5 shrink-0 text-primary/65 transition-transform",
+              isOpen && "rotate-180 text-primary",
             )}
           />
         </Button>
@@ -206,7 +206,7 @@ const GitProjectSelector = ({ className, onRepositoryChange }: GitProjectSelecto
             </CommandFooterAction>
           ) : null}
           {selectionError ? (
-            <span className="ui-text-sm min-w-0 flex-1 truncate text-error/90">
+            <span className="ui-text-sm min-w-0 flex-1 truncate text-destructive/90">
               {selectionError}
             </span>
           ) : null}
@@ -240,7 +240,7 @@ function RepositoryRow({
         isCurrent ? (
           <Check className="size-3.5 text-success" />
         ) : (
-          <FolderOpen className="size-3.5 text-text-lighter" />
+          <FolderOpen className="size-3.5 text-subtle-foreground" />
         )
       }
       title={getFolderName(repoPath)}

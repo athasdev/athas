@@ -4,6 +4,7 @@ import { ChatCircleTextIcon as MessageSquare, DotsThreeIcon as MoreHorizontal } 
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { Button } from "@/ui/button";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ import {
   GitHubViewerHeader,
   GitHubViewerLoadingState,
   GitHubViewerShell,
+  GitHubViewerState,
 } from "./github-viewer-shell";
 
 interface GitHubIssueViewerProps {
@@ -297,19 +299,12 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
       }
     >
       {error ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="text-center">
-            <p className="font-sans ui-text-sm text-error">{error}</p>
-            <Button
-              onClick={() => void fetchIssue(true)}
-              variant="default"
-              size="xs"
-              className="mt-2 border border-error/40 text-error/90 hover:bg-error/10"
-            >
-              Retry
-            </Button>
-          </div>
-        </div>
+        <GitHubViewerState
+          description={error}
+          actionLabel="Retry"
+          onAction={() => void fetchIssue(true)}
+          tone="error"
+        />
       ) : details ? (
         <div className="w-full space-y-5">
           {isEditingDetails ? (
@@ -331,7 +326,9 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
               repoPath={repoPath}
             />
           ) : (
-            <p className="font-sans ui-text-sm italic text-text-lighter">No description provided</p>
+            <p className="font-sans ui-text-sm italic text-subtle-foreground">
+              No description provided
+            </p>
           )}
 
           <div className="w-full space-y-1">
@@ -345,10 +342,15 @@ const GitHubIssueViewer = memo(({ issueNumber, repoPath, bufferId }: GitHubIssue
                 />
               ))
             ) : (
-              <div className="flex items-center gap-2 px-1 py-2 text-text-lighter">
-                <MessageSquare className="size-4" />
-                <p className="font-sans ui-text-sm">No comments</p>
-              </div>
+              <Empty
+                density="compact"
+                className="min-h-0 flex-none items-start rounded-none px-1 py-2 text-left"
+              >
+                <EmptyDescription className="flex items-center gap-2">
+                  <MessageSquare className="size-4" />
+                  No comments
+                </EmptyDescription>
+              </Empty>
             )}
             {details.comments.length > visibleComments.length ? (
               <div className="px-1 py-2">

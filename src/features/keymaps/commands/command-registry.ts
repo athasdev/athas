@@ -109,6 +109,7 @@ import {
   zoomOut,
 } from "./view-command-actions";
 import {
+  createNewWindow,
   maximizeWindow,
   minimizeWindow,
   minimizeWindowAlt,
@@ -129,6 +130,13 @@ const fileCommands: Command[] = [
     category: "File",
     keybinding: "cmd+n",
     execute: showNewTab,
+  },
+  {
+    id: "workbench.newWindow",
+    title: "New Window",
+    category: "File",
+    keybinding: "cmd+shift+n",
+    execute: createNewWindow,
   },
   {
     id: "file.save",
@@ -253,6 +261,15 @@ const terminalCommands: Command[] = [
     keybinding: "cmd+w",
     execute: () => {
       window.dispatchEvent(new CustomEvent("close-active-terminal"));
+    },
+  },
+  {
+    id: "terminal.find",
+    title: "Find in Terminal",
+    category: "Terminal",
+    keybinding: "cmd+f",
+    execute: () => {
+      window.dispatchEvent(new CustomEvent("terminal-open-search"));
     },
   },
   {
@@ -971,6 +988,15 @@ const databaseCommands: Command[] = [
 ];
 
 const windowCommands: Command[] = [
+  {
+    id: "workbench.openSettings",
+    title: "Open Settings",
+    category: "Window",
+    keybinding: "cmd+,",
+    execute: () => {
+      useUIState.getState().setIsSettingsDialogVisible(true);
+    },
+  },
   {
     id: "window.toggleFullscreen",
     title: "Toggle Fullscreen",

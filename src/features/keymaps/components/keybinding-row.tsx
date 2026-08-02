@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { WarningCircleIcon as WarningCircle } from "@/ui/icons";
 import { cva } from "class-variance-authority";
+import { Alert, AlertDescription } from "@/ui/alert";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { TableCell, TableRow } from "@/ui/table";
 import KeybindingDisplay from "./keybinding";
 import { cn } from "@/utils/cn";
 import { useKeybindingConflicts } from "../hooks/use-keybinding-conflicts";
@@ -10,9 +12,6 @@ import { useKeymapStore } from "../stores/keymaps.store";
 import type { Command, Keybinding } from "../types/keymaps.types";
 import { KeybindingInput } from "./keybinding-input";
 
-export const keybindingTableGridCols = cva(
-  "grid-cols-[minmax(220px,2fr)_minmax(156px,1fr)_minmax(128px,1.25fr)_72px_92px]",
-);
 export const keybindingTableMinWidth = cva("min-w-[700px]");
 
 interface KeybindingRowProps {
@@ -69,97 +68,99 @@ export function KeybindingRow({ command, keybinding }: KeybindingRowProps) {
           : "User";
 
   return (
-    <div
-      className={cn(
-        "grid gap-4 border-b border-border px-2 py-2 transition-colors hover:bg-hover",
-        "gap-3 px-1.5 py-1.5",
-        keybindingTableGridCols(),
-        keybindingTableMinWidth(),
-        hasConflict && "bg-error/5 hover:bg-error/10",
-      )}
-    >
-      <div className="min-w-0">
-        <div className="font-sans ui-text-sm truncate text-text">{command.title}</div>
-        <div className="font-sans ui-text-sm mt-0.5 truncate text-text-lighter">
-          {command.category} • {command.id}
-        </div>
-      </div>
+    <>
+      <TableRow className={cn(hasConflict && "bg-destructive/5 hover:bg-destructive/10")}>
+        <TableCell className="min-w-0">
+          <div className="font-sans ui-text-sm truncate text-foreground">{command.title}</div>
+          <div className="font-sans ui-text-sm mt-0.5 truncate text-subtle-foreground">
+            {command.category} • {command.id}
+          </div>
+        </TableCell>
 
-      <div className="flex items-center">
-        {isEditing ? (
-          <KeybindingInput
-            commandId={command.id}
-            value={keybinding?.key}
-            onSave={handleSave}
-            onCancel={() => setIsEditing(false)}
-          />
-        ) : (
-          <Button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            variant="default"
-            size="xs"
-            className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-accent"
-            aria-label={`Edit keybinding for ${command.title}`}
+        <TableCell>
+          {isEditing ? (
+            <KeybindingInput
+              commandId={command.id}
+              value={keybinding?.key}
+              onSave={handleSave}
+              onCancel={() => setIsEditing(false)}
+            />
+          ) : (
+            <Button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              variant="default"
+              size="xs"
+              className="ui-text-sm flex h-7 w-full items-center justify-start px-1.5 hover:border hover:border-primary"
+              aria-label={`Edit keybinding for ${command.title}`}
+            >
+              {keybinding?.key ? (
+                <KeybindingDisplay binding={keybinding.key} />
+              ) : (
+                <span className="text-subtle-foreground">Not assigned</span>
+              )}
+            </Button>
+          )}
+        </TableCell>
+
+        <TableCell className="truncate text-subtle-foreground">
+          {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
+        </TableCell>
+
+        <TableCell>
+          <Badge
+            variant={isUserOverride ? "accent" : "default"}
+            size="compact"
+            className="h-6 min-w-[68px] px-2"
           >
-            {keybinding?.key ? (
-              <KeybindingDisplay binding={keybinding.key} />
-            ) : (
-              <span className="text-text-lighter">Not assigned</span>
+            {sourceLabel}
+          </Badge>
+        </TableCell>
+
+        <TableCell>
+          <div className="flex items-center gap-1">
+            {isUserOverride && (
+              <Button
+                type="button"
+                onClick={handleReset}
+                variant="ghost"
+                className="ui-text-sm text-subtle-foreground hover:text-foreground"
+                tooltip="Reset to default"
+                aria-label="Reset to default keybinding"
+                size="xs"
+              >
+                Reset
+              </Button>
             )}
-          </Button>
-        )}
-      </div>
-
-      <div className="font-sans ui-text-sm flex items-center truncate text-text-lighter">
-        {keybinding?.when || command.keybinding ? keybinding?.when || "-" : "-"}
-      </div>
-
-      <div className="flex items-center">
-        <Badge
-          variant={isUserOverride ? "accent" : "default"}
-          size="compact"
-          className="h-6 min-w-[68px] px-2"
-        >
-          {sourceLabel}
-        </Badge>
-      </div>
-
-      <div className="flex items-center gap-1">
-        {isUserOverride && (
-          <Button
-            type="button"
-            onClick={handleReset}
-            variant="ghost"
-            className="ui-text-sm text-text-lighter hover:text-text"
-            tooltip="Reset to default"
-            aria-label="Reset to default keybinding"
-            size="xs"
-          >
-            Reset
-          </Button>
-        )}
-        {keybinding && (
-          <Button
-            type="button"
-            onClick={handleRemove}
-            variant="ghost"
-            className="ui-text-sm text-text-lighter hover:text-error"
-            tooltip="Remove keybinding"
-            aria-label="Remove keybinding"
-            size="xs"
-          >
-            Remove
-          </Button>
-        )}
-      </div>
+            {keybinding && (
+              <Button
+                type="button"
+                onClick={handleRemove}
+                variant="ghost"
+                className="ui-text-sm text-subtle-foreground hover:text-destructive"
+                tooltip="Remove keybinding"
+                aria-label="Remove keybinding"
+                size="xs"
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
 
       {hasConflict && (
-        <div className="font-sans ui-text-sm col-span-5 flex items-start gap-1.5 rounded-lg border border-error/20 bg-error/5 px-2.5 py-2 text-error">
-          <WarningCircle className="mt-0.5 shrink-0" size={14} weight="duotone" />
-          <span>Conflicts with: {conflictingCommands.map((c) => c.title).join(", ")}</span>
-        </div>
+        <TableRow className="bg-destructive/5 hover:bg-destructive/5">
+          <TableCell colSpan={5} className="pt-0">
+            <Alert tone="error" className="py-1.5">
+              <WarningCircle />
+              <AlertDescription>
+                Conflicts with: {conflictingCommands.map((conflict) => conflict.title).join(", ")}
+              </AlertDescription>
+            </Alert>
+          </TableCell>
+        </TableRow>
       )}
-    </div>
+    </>
   );
 }

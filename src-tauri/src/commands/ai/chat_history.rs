@@ -32,6 +32,14 @@ pub async fn save_chat(
 }
 
 #[command]
+pub async fn update_chat_metadata(
+   app: crate::app_runtime::AppHandle,
+   chat: ChatData,
+) -> Result<(), String> {
+   repository(&app)?.update_chat_metadata(chat)
+}
+
+#[command]
 pub async fn load_all_chats(app: crate::app_runtime::AppHandle) -> Result<Vec<ChatData>, String> {
    repository(&app)?.load_all_chats()
 }

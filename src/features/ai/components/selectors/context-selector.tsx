@@ -13,13 +13,10 @@ import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-
 import type { FileItem } from "@/features/global-search/types/global-search.types";
 import { useProjectStore } from "@/features/window/stores/project.store";
 import { Button } from "@/ui/button";
+import { ComboboxActionItem } from "@/ui/combobox";
 import Input from "@/ui/input";
 import Badge from "@/ui/badge";
 import { cn } from "@/utils/cn";
-import {
-  chatComposerDropdownItemClassName,
-  chatComposerIconButtonClassName,
-} from "../input/chat-composer-control-styles";
 import { ComposerAttachedPanel } from "../input/composer-attached-panel";
 import { AIFileSelector } from "../mentions/ai-file-selector";
 
@@ -83,7 +80,6 @@ export function ContextSelector({
           <Button
             onClick={onToggleOpen}
             variant="ghost"
-            className={chatComposerIconButtonClassName()}
             tooltip="Add context"
             aria-label="Add context"
             aria-expanded={isOpen}
@@ -195,7 +191,7 @@ function ContextSelectorDropdownContent({
 
   return (
     <>
-      <div className="border-border/60 border-b bg-secondary-bg/95 px-1.5 py-1.5">
+      <div className="border-border/60 border-b bg-surface/95 px-1.5 py-1.5">
         <Input
           ref={searchInputRef}
           type="text"
@@ -262,16 +258,15 @@ function ContextSelectorDropdownContent({
           leadingContent={
             filteredContextBuffers.length > 0 ? (
               <>
-                <div className="ui-text-sm px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
+                <div className="ui-text-sm px-2 pt-1.5 pb-1 font-medium leading-row text-subtle-foreground/75">
                   Open tabs
                 </div>
                 {filteredContextBuffers.map((buffer) => {
                   const index = filteredContextBuffers.indexOf(buffer);
                   const isSelected = selectedBufferIds.has(buffer.id);
                   return (
-                    <button
+                    <ComboboxActionItem
                       key={buffer.id}
-                      type="button"
                       data-context-buffer-option
                       onClick={() => {
                         onToggleBuffer(buffer.id);
@@ -279,27 +274,25 @@ function ContextSelectorDropdownContent({
                       }}
                       onMouseEnter={() => setSelectedContextIndex(index)}
                       className={cn(
-                        chatComposerDropdownItemClassName(
-                          "flex min-h-7 w-full min-w-0 items-center gap-2 px-2 py-1",
-                        ),
+                        "flex min-h-7 w-full min-w-0 items-center gap-2 px-2 py-1",
                         boundedSelectedContextIndex === index
-                          ? "bg-selected text-text"
+                          ? "bg-selected text-foreground"
                           : isSelected
-                            ? "bg-hover/70 text-text"
-                            : "text-text hover:bg-hover focus:bg-hover focus:outline-none",
+                            ? "bg-accent/70 text-foreground"
+                            : "text-foreground hover:bg-accent focus:bg-accent focus:outline-none",
                         isSelected && boundedSelectedContextIndex !== index
-                          ? "shadow-[inset_0_0_0_1px_var(--color-border)]"
+                          ? "shadow-[inset_0_0_0_1px_var(--border)]"
                           : "",
                       )}
                     >
-                      <span className="flex size-3.5 shrink-0 items-center justify-center text-text-lighter [&_svg]:size-3">
+                      <span className="flex size-3.5 shrink-0 items-center justify-center text-subtle-foreground [&_svg]:size-3">
                         {getBufferContextIcon(buffer)}
                       </span>
                       <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                        <span className="min-w-0 max-w-[45%] shrink truncate text-text">
+                        <span className="min-w-0 max-w-[45%] shrink truncate text-foreground">
                           {buffer.name}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-text-lighter/70">
+                        <span className="min-w-0 flex-1 truncate text-subtle-foreground/70">
                           {getBufferContextDescription(buffer)}
                         </span>
                       </span>
@@ -308,7 +301,7 @@ function ContextSelectorDropdownContent({
                           added
                         </Badge>
                       )}
-                    </button>
+                    </ComboboxActionItem>
                   );
                 })}
               </>

@@ -5,6 +5,8 @@ import { useWorkspaceTabsStore } from "@/features/window/stores/workspace-tabs.s
 import { scanProjectIconFiles, type ProjectIconFile } from "@/features/window/utils/project-icons";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/ui/empty";
+import { Spinner } from "@/ui/spinner";
 import Tooltip from "@/ui/tooltip";
 
 function relativePath(fullPath: string, basePath: string): string {
@@ -87,15 +89,20 @@ const ProjectIconPicker = memo(
         }}
       >
         {loading ? (
-          <div className="ui-text-sm py-6 text-center text-text-lighter">Scanning for icons...</div>
+          <Empty density="compact" className="min-h-0 flex-none py-6">
+            <EmptyDescription>
+              <Spinner label="Scanning for icons" showLabel compact />
+            </EmptyDescription>
+          </Empty>
         ) : icons.length === 0 ? (
-          <div className="ui-text-sm py-6 text-center text-text-lighter">
-            No icon files found in this project.
-            <br />
-            <span className="ui-text-sm">
-              Looks for .ico, icon/logo/favicon .png and .svg files
-            </span>
-          </div>
+          <Empty density="compact" className="min-h-0 flex-none py-6">
+            <EmptyHeader>
+              <EmptyTitle>No icon files found in this project</EmptyTitle>
+              <EmptyDescription>
+                Looks for .ico, icon/logo/favicon .png and .svg files
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <div className="grid grid-cols-6 gap-1.5">
             {icons.map((icon) => (
@@ -105,7 +112,7 @@ const ProjectIconPicker = memo(
                   variant="ghost"
                   onClick={() => handleSelect(icon.path)}
                   className={`group size-12 border ${
-                    currentIcon === icon.path ? "border-accent bg-accent/10" : "border-border/50"
+                    currentIcon === icon.path ? "border-primary bg-primary/10" : "border-border/50"
                   }`}
                   aria-label={`Select ${icon.name} as project icon`}
                   size="icon"

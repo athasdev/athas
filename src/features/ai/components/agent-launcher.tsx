@@ -34,10 +34,10 @@ export function AgentLaunchInput({
     active ? state.buffers.filter((buffer) => buffer.type !== "agent") : [],
   );
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-  const createNewChat = useAIChatStore((state) => state.createNewChat);
-  const getCurrentAgentId = useAIChatStore((state) => state.getCurrentAgentId);
+  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
+  const getCurrentAgentId = useAIChatStore((state) => state.actions.getCurrentAgentId);
   const setPendingAgentLaunchRequest = useAIChatStore(
-    (state) => state.setPendingAgentLaunchRequest,
+    (state) => state.actions.setPendingAgentLaunchRequest,
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -251,8 +251,8 @@ export function AgentLaunchInput({
         disabled={!isSpeechRecognitionSupported}
         variant="ghost"
         className={cn(
-          "rounded-full text-text-lighter hover:text-text",
-          isListening && "bg-accent/12 text-accent",
+          "rounded-full text-subtle-foreground hover:text-foreground",
+          isListening && "bg-primary/12 text-primary",
         )}
         tooltip={
           !isSpeechRecognitionSupported
@@ -291,12 +291,12 @@ export function AgentLaunchInput({
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handlePromptKeyDown}
           placeholder="Ask anything..."
-          className="font-sans ui-text-base min-h-16 w-full resize-none bg-transparent px-1 py-1 text-text leading-6 outline-none placeholder:text-text-lighter"
+          className="font-sans ui-text-base min-h-16 w-full resize-none bg-transparent px-1 py-1 text-foreground leading-6 outline-none placeholder:text-subtle-foreground"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
         />
-        <div className="mt-2 flex min-w-0 items-center justify-between gap-2 border-border/45 border-t pt-2">
+        <div className="mt-2 flex min-w-0 items-center justify-between gap-2 pt-2">
           {contextControl}
           {agentControls}
         </div>
@@ -319,7 +319,7 @@ export function AgentLaunchInput({
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handlePromptKeyDown}
           placeholder="Ask an agent to do something..."
-          className="font-sans ui-text-base h-9 w-full bg-transparent px-1 text-text outline-none placeholder:text-text-lighter"
+          className="font-sans ui-text-base h-9 w-full bg-transparent px-1 text-foreground outline-none placeholder:text-subtle-foreground"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
@@ -340,7 +340,7 @@ export function AgentLauncher() {
     <Command
       isVisible={isVisible}
       onClose={close}
-      className="w-[min(820px,calc(100vw-32px))] overflow-visible rounded-[14px] border border-border/70 bg-primary-bg/96 p-2 shadow-[0_34px_110px_-48px_rgba(0,0,0,0.72)]"
+      className="w-[min(820px,calc(100vw-32px))] overflow-visible rounded-[14px] border border-border/70 bg-background/96 p-2 shadow-[0_34px_110px_-48px_rgba(0,0,0,0.72)]"
     >
       <AgentLaunchInput active={isVisible} autoFocus onRequestClose={close} />
     </Command>

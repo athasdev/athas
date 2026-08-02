@@ -1,14 +1,5 @@
-import { MagnifyingGlassIcon as Search } from "@/ui/icons";
-import {
-  Fragment,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { ClockIcon, MagnifyingGlassIcon as Search } from "@/ui/icons";
+import { Fragment, useEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
 import { useDebounce } from "use-debounce";
 import { useFffSearch } from "@/features/file-search/hooks/use-fff-search";
 import {
@@ -16,17 +7,14 @@ import {
   getNativeWorkspaceRootPaths,
 } from "@/features/file-search/utils/file-search-paths";
 import { useFileSearch } from "@/features/global-search/hooks/use-file-search";
-import { FileListItem } from "@/features/global-search/components/file-list-item";
 import type { FileCategory, FileItem } from "@/features/global-search/types/global-search.types";
 import type { FileEntry } from "@/features/file-system/types/app.types";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
-import { CommandEmpty, CommandList } from "@/ui/command";
-import Input from "@/ui/input";
+import { ThemedFileIcon } from "@/extensions/icon-themes/components/themed-file-icon";
+import { Combobox, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/ui/combobox";
+import { CommandItemBadge } from "@/ui/command";
 import { cn } from "@/utils/cn";
-import {
-  chatComposerDropdownHeaderClassName,
-  chatComposerDropdownListClassName,
-} from "../input/chat-composer-control-styles";
+import { getDirectoryPath } from "@/utils/path-helpers";
 
 interface AIFileSelectorProps {
   files: FileEntry[];
@@ -89,7 +77,6 @@ export function AIFileSelector({
   leadingContent,
   hasLeadingResults = false,
 }: AIFileSelectorProps) {
-  const listboxId = useId();
   const lastEmittedResultsSignatureRef = useRef<string | null>(null);
   const [debouncedQuery] = useDebounce(query, 50);
   const workspaceFolders = useFileSystemStore((state) => state.workspaceFolders);
@@ -153,106 +140,108 @@ export function AIFileSelector({
     return () => cancelAnimationFrame(frame);
   }, [autoFocusSearchInput, searchInputRef, showSearchInput]);
 
-  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (results.length === 0) return;
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      onSelectedIndexChange?.(Math.min(selectedIndex + 1, results.length - 1));
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      onSelectedIndexChange?.(Math.max(selectedIndex - 1, 0));
-      return;
-    }
-
-    if (event.key === "Home") {
-      event.preventDefault();
-      onSelectedIndexChange?.(0);
-      return;
-    }
-
-    if (event.key === "End") {
-      event.preventDefault();
-      onSelectedIndexChange?.(results.length - 1);
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === "Tab") {
-      event.preventDefault();
-      const selected = results[selectedIndex] ?? results[0];
-      onSelect(selected.file);
-    }
-  };
-
   return (
-    <>
+    <Combobox<FileItem>
+      items={resultFiles}
+      value={null}
+      onValueChange={(file) => {
+        if (file) onSelect(file);
+      }}
+      inputValue={query}
+      onInputValueChange={(nextQuery) => onQueryChange?.(nextQuery)}
+      onItemHighlighted={(file) => {
+        if (!file) return;
+        const index = resultFiles.findIndex((result) => result.path === file.path);
+        if (index >= 0) onSelectedIndexChange?.(index);
+      }}
+      itemToStringLabel={(file) => file.name}
+      itemToStringValue={(file) => file.path}
+      isItemEqualToValue={(left, right) => left.path === right.path}
+      filter={() => true}
+      autoHighlight
+    >
       {showSearchInput && (
-        <div className={cn(chatComposerDropdownHeaderClassName, compact && "px-1.5 py-1.5")}>
-          <Input
+        <div
+          className={cn(
+            "border-border/60 border-b bg-surface/95 px-2 py-2",
+            compact && "px-1.5 py-1.5",
+          )}
+        >
+          <ComboboxInput
             ref={searchInputRef}
-            type="text"
             placeholder="Search files..."
-            value={query}
-            onChange={(event) => onQueryChange?.(event.target.value)}
             variant="ghost"
             size={compact ? "xs" : "sm"}
             leftIcon={Search}
+            showTrigger={false}
             className="w-full"
             aria-label="Search files"
-            aria-activedescendant={
-              results.length > 0 ? `ai-file-selector-option-${selectedIndex}` : undefined
-            }
-            aria-controls={listboxId}
-            aria-expanded="true"
-            aria-autocomplete="list"
-            role="combobox"
-            onKeyDown={handleSearchKeyDown}
           />
         </div>
       )}
 
-      <CommandList>
-        <div
-          className={cn("items-container", chatComposerDropdownListClassName, listClassName)}
-          id={listboxId}
-          role="listbox"
-          aria-label="File list"
-        >
-          {leadingContent}
-          {results.length === 0 && !hasLeadingResults ? (
-            <CommandEmpty>{emptyLabel}</CommandEmpty>
-          ) : (
-            results.map(({ file, category, index }, resultIndex) => {
-              const previousCategory = results[resultIndex - 1]?.category;
-              const showCategoryHeader = category !== "other" && category !== previousCategory;
+      <ComboboxList
+        className={cn(
+          "items-container min-h-0 flex-1 overflow-y-auto bg-surface/95 p-1.5 [overscroll-behavior:contain]",
+          compact && "p-0",
+          listClassName,
+        )}
+        aria-label="File list"
+      >
+        {leadingContent}
+        {results.length === 0 && !hasLeadingResults ? (
+          <ComboboxEmpty>{emptyLabel}</ComboboxEmpty>
+        ) : (
+          results.map(({ file, category, index }, resultIndex) => {
+            const previousCategory = results[resultIndex - 1]?.category;
+            const showCategoryHeader = category !== "other" && category !== previousCategory;
+            const directoryPath = getDirectoryPath(file.path, rootFolderPath);
 
-              return (
-                <Fragment key={`${category}-${file.path}`}>
-                  {showCategoryHeader && (
-                    <div className="ui-text-base px-2 pt-1.5 pb-1 font-medium leading-[1.35] text-text-lighter/75">
-                      {categoryLabels[category]}
-                    </div>
+            return (
+              <Fragment key={`${category}-${file.path}`}>
+                {showCategoryHeader ? (
+                  <div
+                    className={cn(
+                      "px-2 font-medium text-subtle-foreground/75",
+                      compact
+                        ? "ui-text-sm pt-1 pb-0.5 leading-normal"
+                        : "ui-text-base pt-1.5 pb-1 leading-row",
+                    )}
+                  >
+                    {categoryLabels[category]}
+                  </div>
+                ) : null}
+                <ComboboxItem
+                  value={file}
+                  showIndicator={false}
+                  aria-selected={index === selectedIndex}
+                  className={cn(
+                    compact ? "min-h-7 gap-1.5 rounded-md py-1" : "min-h-8 gap-2 py-2",
+                    index === selectedIndex && "bg-selected",
                   )}
-                  <FileListItem
-                    id={`ai-file-selector-option-${index}`}
-                    file={file}
-                    category={category}
-                    index={index}
-                    isSelected={index === selectedIndex}
-                    onClick={() => onSelect(file)}
-                    onPreview={() => onSelectedIndexChange?.(index)}
-                    rootFolderPath={rootFolderPath}
-                    compact={compact}
-                  />
-                </Fragment>
-              );
-            })
-          )}
-        </div>
-      </CommandList>
-    </>
+                >
+                  <span className="grid size-4 shrink-0 place-items-center">
+                    <ThemedFileIcon fileName={file.name} isDir={false} />
+                  </span>
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span className="truncate text-foreground">{file.name}</span>
+                    {directoryPath ? (
+                      <span className="truncate text-subtle-foreground/80">{directoryPath}</span>
+                    ) : null}
+                  </span>
+                  {category === "open" ? (
+                    <CommandItemBadge>open</CommandItemBadge>
+                  ) : category === "recent" ? (
+                    <CommandItemBadge>
+                      <ClockIcon />
+                    </CommandItemBadge>
+                  ) : null}
+                </ComboboxItem>
+              </Fragment>
+            );
+          })
+        )}
+      </ComboboxList>
+    </Combobox>
   );
 }

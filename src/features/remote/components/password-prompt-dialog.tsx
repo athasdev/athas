@@ -2,8 +2,8 @@ import { EyeIcon as Eye, EyeSlashIcon as EyeOff } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
 import Dialog from "@/ui/dialog";
-import Input from "@/ui/input";
-import { cn } from "@/utils/cn";
+import { Field, FieldError, FieldLabel } from "@/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/ui/input-group";
 import type { RemoteConnection } from "../types/remote.types";
 
 interface PasswordPromptDialogProps {
@@ -32,21 +32,6 @@ const PasswordPromptDialog = ({
       setErrorMessage("");
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-          onClose();
-        } else if (event.key === "Enter" && password.trim() && !isConnecting) {
-          handleConnect();
-        }
-      };
-
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen, password, isConnecting]);
 
   if (!isOpen || !connection) return null;
 
@@ -104,17 +89,16 @@ const PasswordPromptDialog = ({
       }
     >
       <div className="space-y-4">
-        <p className="ui-text-sm text-text-lighter">
-          Enter the password for <span className="font-medium text-text">{connection.name}</span> (
+        <p className="ui-text-sm text-subtle-foreground">
+          Enter the password for{" "}
+          <span className="font-medium text-foreground">{connection.name}</span> (
           {connection.username}@{connection.host}:{connection.port})
         </p>
 
-        <div className="space-y-1.5">
-          <label htmlFor="password-prompt" className="ui-text-sm font-medium text-text">
-            Password
-          </label>
-          <div className="relative">
-            <Input
+        <Field data-invalid={Boolean(errorMessage)}>
+          <FieldLabel htmlFor="password-prompt">Password</FieldLabel>
+          <InputGroup>
+            <InputGroupInput
               id="password-prompt"
               type={showPassword ? "text" : "password"}
               value={password}
@@ -122,28 +106,30 @@ const PasswordPromptDialog = ({
                 setPassword(e.target.value);
                 setErrorMessage("");
               }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && password.trim() && !isConnecting) {
+                  event.preventDefault();
+                  void handleConnect();
+                }
+              }}
               placeholder="Enter password"
               autoFocus
-              className={cn("w-full pr-10", "focus:border-accent focus:ring-accent/30")}
               disabled={isConnecting}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setShowPassword(!showPassword)}
-              className={cn(
-                "-translate-y-1/2 absolute top-1/2 right-3 transform",
-                "text-text-lighter hover:text-text",
-              )}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              size="icon"
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </Button>
-          </div>
-        </div>
-
-        {errorMessage && <p className="ui-text-sm text-error">{errorMessage}</p>}
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                type="button"
+                variant="ghost"
+                onClick={() => setShowPassword(!showPassword)}
+                tooltip={showPassword ? "Hide password" : "Show password"}
+                size="icon-sm"
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+          <FieldError>{errorMessage}</FieldError>
+        </Field>
       </div>
     </Dialog>
   );

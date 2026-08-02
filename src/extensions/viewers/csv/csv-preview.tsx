@@ -78,7 +78,7 @@ export function CsvPreview() {
 
   return (
     <div
-      className="flex h-full flex-col overflow-hidden bg-primary-bg"
+      className="flex h-full flex-col overflow-hidden bg-background"
       style={{ fontSize: `${fontSize}px`, fontFamily: `${uiFontFamily}, sans-serif` }}
     >
       <TableView
@@ -90,7 +90,10 @@ export function CsvPreview() {
         actions={
           <div className="flex items-center gap-1">
             {/* Delimiter selector */}
-            <label htmlFor="csv-delimiter" className="font-sans mr-1 text-text-lighter ui-text-sm">
+            <label
+              htmlFor="csv-delimiter"
+              className="font-sans mr-1 text-subtle-foreground ui-text-sm"
+            >
               Delimiter
             </label>
             <Select
@@ -114,7 +117,7 @@ export function CsvPreview() {
               onClick={() => setHasHeader((v) => !v)}
               variant="default"
               size="xs"
-              className="h-6 gap-1 text-text-lighter"
+              className="h-6 gap-1 text-subtle-foreground"
               tooltip="Toggle header row"
             >
               <Rows /> {hasHeader ? "Header On" : "Header Off"}
@@ -124,7 +127,7 @@ export function CsvPreview() {
             <Button
               onClick={handleCopyCsv}
               variant="default"
-              className="h-6 gap-1 text-text-lighter"
+              className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as CSV"
               size="xs"
             >
@@ -135,7 +138,7 @@ export function CsvPreview() {
             <Button
               onClick={handleCopyJson}
               variant="default"
-              className="h-6 gap-1 text-text-lighter"
+              className="h-6 gap-1 text-subtle-foreground"
               tooltip="Copy as JSON"
               size="xs"
             >

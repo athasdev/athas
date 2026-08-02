@@ -35,7 +35,7 @@ export function BreadcrumbActionButton({ className, ...props }: BreadcrumbAction
     <Button
       variant="ghost"
       size="icon-xs"
-      className={cn("rounded text-text-lighter", className)}
+      className={cn("rounded text-subtle-foreground", className)}
       {...props}
     />
   );
@@ -204,8 +204,8 @@ export default function Breadcrumb({
 
   return (
     <>
-      <div className="flex min-h-7 select-none items-center justify-between bg-terniary-bg px-3 py-1">
-        <div className="font-sans flex min-w-0 items-center gap-2 text-text-lighter ui-text-sm">
+      <div className="flex min-h-7 select-none items-center justify-between bg-surface px-3 py-1">
+        <div className="font-sans flex min-w-0 items-center gap-2 text-subtle-foreground ui-text-sm">
           {showPath && showBreadcrumbPath ? (
             <>
               <FilePathBreadcrumb

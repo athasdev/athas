@@ -6,6 +6,10 @@ export function createPaneBeside(
   direction: SplitDirection,
   placement: SplitPlacement = "after",
   bufferId?: string,
+  workspaceId?: string,
 ): string | null {
-  return usePaneStore.getState().actions.splitPane(paneId, direction, bufferId, placement) ?? null;
+  const paneActions = (
+    workspaceId ? usePaneStore.getStore(workspaceId).getState() : usePaneStore.getState()
+  ).actions;
+  return paneActions.splitPane(paneId, direction, bufferId, placement) ?? null;
 }

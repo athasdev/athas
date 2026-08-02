@@ -18,15 +18,15 @@
         "description": "Light variant with warm, cozy colors",
         "appearance": "light",
         "colors": {
-          "primary-bg": "#eff1f5",
-          "secondary-bg": "#e6e9ef",
-          "text": "#4c4f69",
-          "text-light": "#6c6f85",
-          "text-lighter": "#9ca0b0",
+          "background": "#eff1f5",
+          "surface": "#e6e9ef",
+          "foreground": "#4c4f69",
+          "muted-foreground": "#6c6f85",
+          "subtle-foreground": "#9ca0b0",
           "border": "#bcc0cc",
-          "hover": "#dce0e8",
+          "accent": "#dce0e8",
           "selected": "#ccd0da",
-          "accent": "#1e66f5"
+          "primary": "#1e66f5"
         },
         "syntax": {
           "keyword": "#8839ef",
@@ -53,15 +53,15 @@
         "description": "Dark variant with soft, calm colors",
         "appearance": "dark",
         "colors": {
-          "primary-bg": "#303446",
-          "secondary-bg": "#292c3c",
-          "text": "#c6d0f5",
-          "text-light": "#b5bfe2",
-          "text-lighter": "#a5adce",
+          "background": "#303446",
+          "surface": "#292c3c",
+          "foreground": "#c6d0f5",
+          "muted-foreground": "#b5bfe2",
+          "subtle-foreground": "#a5adce",
           "border": "#51576d",
-          "hover": "#414559",
+          "accent": "#414559",
           "selected": "#51576d",
-          "accent": "#99d1db"
+          "primary": "#99d1db"
         },
         "syntax": {
           "keyword": "#ca9ee6",
@@ -88,15 +88,15 @@
         "description": "Medium dark variant with balanced contrast",
         "appearance": "dark",
         "colors": {
-          "primary-bg": "#24273a",
-          "secondary-bg": "#1e2030",
-          "text": "#cad3f5",
-          "text-light": "#b8c0e0",
-          "text-lighter": "#a5adcb",
+          "background": "#24273a",
+          "surface": "#1e2030",
+          "foreground": "#cad3f5",
+          "muted-foreground": "#b8c0e0",
+          "subtle-foreground": "#a5adcb",
           "border": "#494d64",
-          "hover": "#363a4f",
+          "accent": "#363a4f",
           "selected": "#494d64",
-          "accent": "#8aadf4"
+          "primary": "#8aadf4"
         },
         "syntax": {
           "keyword": "#c6a0f6",
@@ -123,15 +123,15 @@
         "description": "Darkest variant with warm, cozy colors",
         "appearance": "dark",
         "colors": {
-          "primary-bg": "#1e1e2e",
-          "secondary-bg": "#181825",
-          "text": "#cdd6f4",
-          "text-light": "#bac2de",
-          "text-lighter": "#a6adc8",
+          "background": "#1e1e2e",
+          "surface": "#181825",
+          "foreground": "#cdd6f4",
+          "muted-foreground": "#bac2de",
+          "subtle-foreground": "#a6adc8",
           "border": "#45475a",
-          "hover": "#313244",
+          "accent": "#313244",
           "selected": "#45475a",
-          "accent": "#89b4fa"
+          "primary": "#89b4fa"
         },
         "syntax": {
           "keyword": "#cba6f7",

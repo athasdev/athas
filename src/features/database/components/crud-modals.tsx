@@ -1,7 +1,7 @@
 import { PlusIcon, XIcon } from "@/ui/icons";
 import { useEffect, useState } from "react";
 import { Button } from "@/ui/button";
-import Checkbox from "@/ui/checkbox";
+import { Checkbox } from "@/ui/checkbox";
 import Dialog from "@/ui/dialog";
 import Input from "@/ui/input";
 import Select from "@/ui/select";
@@ -53,9 +53,9 @@ export const CreateRowModal = ({
             const fieldId = `create-row-field-${index}`;
             return (
               <div key={column.name} className="space-y-1">
-                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-text">
+                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-foreground">
                   {column.name}
-                  <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
+                  <span className="ml-1 text-subtle-foreground ui-text-sm">({column.type})</span>
                 </label>
                 <Input
                   id={fieldId}
@@ -139,9 +139,9 @@ export const EditRowModal = ({
             const fieldId = `edit-row-field-${index}`;
             return (
               <div key={column.name} className="space-y-1">
-                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-text">
+                <label htmlFor={fieldId} className="font-sans block ui-text-sm text-foreground">
                   {column.name}
-                  <span className="ml-1 text-text-lighter ui-text-sm">({column.type})</span>
+                  <span className="ml-1 text-subtle-foreground ui-text-sm">({column.type})</span>
                 </label>
                 <Input
                   id={fieldId}
@@ -225,7 +225,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
     <Dialog onClose={handleClose} title="Create New Table" icon={PlusIcon} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
-          <label htmlFor="table-name" className="font-sans block ui-text-sm text-text">
+          <label htmlFor="table-name" className="font-sans block ui-text-sm text-foreground">
             Table Name
           </label>
           <Input
@@ -238,7 +238,7 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
         </div>
 
         <div className="space-y-2">
-          <div className="font-sans block ui-text-sm text-text">Columns</div>
+          <div className="font-sans block ui-text-sm text-foreground">Columns</div>
           {columns.map((column, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -260,17 +260,17 @@ export const CreateTableModal = ({ isOpen, onClose, onSubmit }: CreateTableModal
                   { value: "BLOB", label: "BLOB" },
                 ]}
                 size="md"
-                className="bg-secondary-bg"
+                className="bg-surface"
               />
               <label
                 htmlFor={`column-not-null-${index}`}
-                className="font-sans flex items-center gap-1 text-text ui-text-sm"
+                className="font-sans flex items-center gap-1 text-foreground ui-text-sm"
               >
                 <Checkbox
                   id={`column-not-null-${index}`}
                   checked={column.notnull}
-                  onChange={(checked) => updateColumn(index, "notnull", checked)}
-                  ariaLabel={`Set ${column.name || `column ${index + 1}`} as not null`}
+                  onCheckedChange={(checked) => updateColumn(index, "notnull", checked)}
+                  aria-label={`Set ${column.name || `column ${index + 1}`} as not null`}
                 />
                 NOT NULL
               </label>

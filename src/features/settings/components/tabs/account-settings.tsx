@@ -20,8 +20,9 @@ import {
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Progress } from "@/ui/progress";
 import Switch from "@/ui/switch";
-import Section, { SettingRow } from "../settings-section";
+import Section, { SettingsView, SettingRow } from "../settings-section";
 
 export const AccountSettings = () => {
   const services = getServiceUrls();
@@ -101,21 +102,21 @@ export const AccountSettings = () => {
         : "Keep non-sensitive settings synced across your devices.";
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Account">
         <SettingRow
           label="Account"
           description="Sign in to access account and subscription features."
         >
           {isAuthenticated ? (
-            <span className="font-sans ui-text-base text-text-lighter">{user?.email}</span>
+            <span className="font-sans ui-text-base text-subtle-foreground">{user?.email}</span>
           ) : (
             <Button
               variant="default"
               onClick={signIn}
               disabled={isSigningIn}
               className="ui-text-base"
-              size="xs"
+              size="sm"
             >
               {isSigningIn ? "Signing In..." : "Sign In"}
             </Button>
@@ -131,12 +132,12 @@ export const AccountSettings = () => {
           >
             <div className="mb-3">
               <div className="min-w-0">
-                <div id="account-ai-usage-label" className="font-sans ui-text-base text-text">
+                <div id="account-ai-usage-label" className="font-sans ui-text-base text-foreground">
                   AI Usage
                 </div>
                 <div
                   id="account-ai-usage-description"
-                  className="font-sans ui-text-base text-text-lighter"
+                  className="font-sans ui-text-base text-subtle-foreground"
                 >
                   Monthly hosted AI usage across chat, agents, inline edits, generation, and other
                   Athas AI features.
@@ -146,30 +147,27 @@ export const AccountSettings = () => {
             {autocompleteUsage ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-sans ui-text-base text-text-lighter">Monthly usage</span>
-                  <span className="font-sans ui-text-base font-medium text-text">
+                  <span className="font-sans ui-text-base text-subtle-foreground">
+                    Monthly usage
+                  </span>
+                  <span className="font-sans ui-text-base font-medium text-foreground">
                     {formatUsdFromCents(autocompleteUsage.spendCents)} /{" "}
                     {formatUsdFromCents(autocompleteUsage.budgetCents)}
                   </span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-primary-bg/80">
-                  <div
-                    className="h-full rounded-full bg-accent transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]"
-                    style={{ width: `${usageProgress}%` }}
-                  />
-                </div>
+                <Progress value={usageProgress} size="md" aria-label="Hosted AI monthly usage" />
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-sans ui-text-base text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-subtle-foreground/70">
                     {formatUsageDate(autocompleteUsage.periodStart)} -{" "}
                     {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
-                  <span className="font-sans ui-text-base text-text-lighter/70">
+                  <span className="font-sans ui-text-base text-subtle-foreground/70">
                     Resets {formatUsageDate(autocompleteUsage.periodEnd)}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="font-sans ui-text-base text-text-lighter">Usage unavailable</div>
+              <div className="font-sans ui-text-base text-subtle-foreground">Usage unavailable</div>
             )}
           </div>
         )}
@@ -181,7 +179,7 @@ export const AccountSettings = () => {
                 <Badge
                   variant="default"
                   size="compact"
-                  className="bg-accent/10 font-normal text-accent"
+                  className="bg-primary/10 font-normal text-primary"
                 >
                   {planLabel}
                 </Badge>
@@ -190,7 +188,7 @@ export const AccountSettings = () => {
                 variant="default"
                 onClick={handleManagePlan}
                 className="ui-text-base"
-                size="xs"
+                size="sm"
               >
                 {isPaidPlan ? "Manage plan" : "Upgrade plan"}
               </Button>
@@ -231,6 +229,7 @@ export const AccountSettings = () => {
                 onClick={() => void handleSyncNow()}
                 className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
+                size="sm"
               >
                 {settingsSyncIsSyncing ? "Syncing..." : "Sync Now"}
               </Button>
@@ -245,6 +244,7 @@ export const AccountSettings = () => {
                 onClick={() => void handleRestoreFromCloud()}
                 className="ui-text-base"
                 disabled={settingsSyncIsSyncing}
+                size="sm"
               >
                 Restore
               </Button>
@@ -261,7 +261,7 @@ export const AccountSettings = () => {
               variant="default"
               onClick={handleManageAccount}
               className="ui-text-base"
-              size="xs"
+              size="sm"
             >
               Open Dashboard
             </Button>
@@ -273,12 +273,17 @@ export const AccountSettings = () => {
             label="Sign Out"
             description="End your current Athas account session on this device."
           >
-            <Button variant="default" onClick={() => void logout()} className="ui-text-base">
+            <Button
+              variant="default"
+              onClick={() => void logout()}
+              className="ui-text-base"
+              size="sm"
+            >
               Sign Out
             </Button>
           </SettingRow>
         )}
       </Section>
-    </div>
+    </SettingsView>
   );
 };

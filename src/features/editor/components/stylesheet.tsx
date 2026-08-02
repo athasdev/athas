@@ -62,6 +62,17 @@ export function EditorStylesheet() {
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
         }
+
+        body.selection-scope-active
+          [data-selection-scope-active="true"]
+          [data-selection-scope-exclude="true"],
+        body.selection-scope-active
+          [data-selection-scope-active="true"]
+          [data-selection-scope-exclude="true"] * {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+        }
       `}
     </style>
   );

@@ -29,6 +29,7 @@ import { useTerminalProfilesStore } from "@/features/terminal/stores/profiles.st
 import { useTerminalShellsStore } from "@/features/terminal/stores/shells.store";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { BOTTOM_PANE_ID } from "@/features/panes/constants/pane";
+import { getChromeNavigationIndex } from "@/features/layout/utils/chrome-keyboard";
 import { activateBufferInPaneAndSync } from "@/features/panes/utils/pane-activation";
 import { getOrCreatePaneDropTarget } from "@/features/panes/utils/pane-drop-actions";
 import {
@@ -41,7 +42,7 @@ import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { getAllTerminalProfiles } from "@/features/terminal/utils/terminal-profiles";
 import { Dropdown, MenuItemsList, type MenuItem } from "@/ui/dropdown";
 import { Button } from "@/ui/button";
-import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tabs";
+import { SortableTab, TabBarSurface, TabDndContext, useTabDragClickGuard } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 import {
   clearInternalTabDragData,
@@ -197,15 +198,17 @@ const ToolbarContextMenu = ({
 
   return (
     <Dropdown isOpen={isOpen} point={position} onClose={onClose} className="min-w-[180px]">
-      <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Terminal Width</div>
+      <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Terminal Width</div>
       <MenuItemsList items={modeItems} onItemSelect={onClose} />
       <div className="my-0.5 border-border/70 border-t" />
-      <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Tab Layout</div>
+      <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">Tab Layout</div>
       <MenuItemsList items={layoutItems} onItemSelect={onClose} />
       {currentLayout === "vertical" && (
         <>
           <div className="my-0.5 border-border/70 border-t" />
-          <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">Tab Position</div>
+          <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
+            Tab Position
+          </div>
           <MenuItemsList items={sidebarPositionItems} onItemSelect={onClose} />
         </>
       )}
@@ -313,11 +316,54 @@ const TerminalTabBar = ({
     });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "F2" && activeTerminalId) {
+  const handleKeyDown = (e: React.KeyboardEvent, terminalId: string) => {
+    const currentIndex = sortedTerminals.findIndex((terminal) => terminal.id === terminalId);
+    const currentTerminal = sortedTerminals[currentIndex];
+    if (!currentTerminal || currentIndex < 0) return;
+
+    if (e.key === "F2") {
       e.preventDefault();
       e.stopPropagation();
-      startRename(activeTerminalId);
+      startRename(terminalId);
+      return;
+    }
+
+    if ((e.shiftKey && e.key === "F10") || e.key === "ContextMenu") {
+      e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      setContextMenu({
+        isOpen: true,
+        position: { x: rect.left + 8, y: rect.bottom + 4 },
+        terminal: currentTerminal,
+      });
+      return;
+    }
+
+    const nextIndex = getChromeNavigationIndex(
+      e.key,
+      currentIndex,
+      sortedTerminals.length,
+      orientation,
+    );
+    if (nextIndex !== null) {
+      const nextTerminal = sortedTerminals[nextIndex];
+      if (!nextTerminal || nextIndex === currentIndex) return;
+
+      e.preventDefault();
+      onTabClick(nextTerminal.id);
+      tabRefs.current[nextIndex]?.focus();
+      return;
+    }
+
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onTabClick(terminalId);
+      return;
+    }
+
+    if ((e.key === "Delete" || e.key === "Backspace") && !currentTerminal.isPinned) {
+      e.preventDefault();
+      onTabClose(terminalId);
     }
   };
 
@@ -409,18 +455,30 @@ const TerminalTabBar = ({
       )}
     >
       {onSearchTerminal && (
-        <Tooltip content="Find in Terminal (Cmd/Ctrl+F)" side="bottom">
-          <Button onClick={onSearchTerminal} variant="ghost" size="icon-xs">
-            <Search />
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={onSearchTerminal}
+          variant="ghost"
+          size="icon-xs"
+          tooltip="Find in Terminal"
+          commandId="terminal.find"
+          tooltipSide="bottom"
+          aria-label="Find in terminal"
+        >
+          <Search />
+        </Button>
       )}
       <div className="flex shrink-0 items-center gap-0.5">
-        <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-          <Button onClick={onNewTerminal} variant="ghost" size="icon-xs">
-            <Plus />
-          </Button>
-        </Tooltip>
+        <Button
+          onClick={onNewTerminal}
+          variant="ghost"
+          size="icon-xs"
+          tooltip="New Terminal"
+          commandId="terminal.new"
+          tooltipSide="bottom"
+          aria-label="New terminal"
+        >
+          <Plus />
+        </Button>
         {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
           <Tooltip content="Choose Terminal Profile" side="bottom">
             <Button
@@ -487,7 +545,7 @@ const TerminalTabBar = ({
   const profileMenuItems: MenuItem[] = terminalProfiles.map((profile) => ({
     id: profile.id,
     label: profile.name,
-    icon: <TerminalIcon className="text-text-lighter" />,
+    icon: <TerminalIcon className="text-subtle-foreground" />,
     onClick: () => {
       onNewTerminalWithProfile?.(profile.id);
       closeProfileMenu();
@@ -545,6 +603,7 @@ const TerminalTabBar = ({
       source: "terminal-panel",
       terminalId: terminal.id,
       name: terminal.name,
+      shell: terminal.shell,
       initialCommand: terminal.initialCommand,
       currentDirectory: terminal.currentDirectory,
       remoteConnectionId: terminal.remoteConnectionId,
@@ -582,6 +641,7 @@ const TerminalTabBar = ({
       const bufferId = openTerminalBuffer({
         sessionId: terminal.id,
         name: terminal.name,
+        shell: terminal.shell,
         command: terminal.initialCommand,
         workingDirectory: terminal.currentDirectory,
         remoteConnectionId: terminal.remoteConnectionId,
@@ -638,32 +698,34 @@ const TerminalTabBar = ({
       <div
         className={cn(
           "flex min-h-8 items-center justify-between",
-          "border-border border-b bg-secondary-bg px-2 py-1.5",
+          "border-border border-b bg-surface px-2 py-1.5",
         )}
       >
         <div className="flex items-center gap-1.5">
-          <TerminalIcon className="text-text-lighter" />
-          <span className="font-sans ui-text-sm text-text-lighter">No terminals</span>
+          <TerminalIcon className="text-subtle-foreground" />
+          <span className="font-sans ui-text-sm text-subtle-foreground">No terminals</span>
         </div>
         {onNewTerminal && (
           <div className="flex items-center gap-0.5">
-            <Tooltip content="New Terminal (Cmd+T)" side="bottom">
-              <Button
-                onClick={onNewTerminal}
-                variant="ghost"
-                className="rounded-lg text-text-lighter"
-                size="icon-xs"
-              >
-                <Plus />
-              </Button>
-            </Tooltip>
+            <Button
+              onClick={onNewTerminal}
+              variant="ghost"
+              className="rounded-[var(--athas-chrome-radius)] text-subtle-foreground"
+              size="icon-xs"
+              commandId="terminal.new"
+              tooltip="New Terminal"
+              tooltipSide="bottom"
+              aria-label="New Terminal"
+            >
+              <Plus />
+            </Button>
             {onNewTerminalWithProfile && terminalProfiles.length > 1 && (
               <Tooltip content="Choose Terminal Profile" side="bottom">
                 <Button
                   ref={profileMenuButtonRef}
                   onClick={openProfileMenu}
                   variant="ghost"
-                  className="rounded-lg text-text-lighter"
+                  className="rounded-lg text-subtle-foreground"
                   size="icon-xs"
                 >
                   <ChevronDown />
@@ -706,7 +768,7 @@ const TerminalTabBar = ({
                 "min-w-0 flex-1 overflow-hidden",
                 orientation === "vertical"
                   ? "flex flex-col gap-0.5 px-1.5 py-1"
-                  : "flex items-end gap-0.5",
+                  : "flex items-center gap-0.5",
               )}
             >
               {pinnedTerminals.length > 0 && (
@@ -715,7 +777,7 @@ const TerminalTabBar = ({
                     "shrink-0",
                     orientation === "vertical"
                       ? "flex flex-col gap-0.5 pb-0.5"
-                      : "flex items-end gap-0.5 pr-0.5",
+                      : "flex items-center gap-0.5 pr-0.5",
                   )}
                 >
                   {pinnedTerminals.map((terminal) => {
@@ -743,7 +805,7 @@ const TerminalTabBar = ({
                             tabRef={() => {}}
                             onClick={() => onTabClick(terminal.id)}
                             onContextMenu={(e) => handleContextMenu(e, terminal)}
-                            onKeyDown={handleKeyDown}
+                            onKeyDown={(event) => handleKeyDown(event, terminal.id)}
                             handleTabClose={handleTabCloseWrapper}
                             handleTabPin={handleTabPin}
                             isEditing={editingTerminalId === terminal.id}
@@ -764,7 +826,7 @@ const TerminalTabBar = ({
                   "scrollbar-hidden min-w-0 flex-1",
                   orientation === "vertical"
                     ? "flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
-                    : "flex items-end gap-0.5 overflow-x-auto overflow-y-hidden",
+                    : "flex items-center gap-0.5 overflow-x-auto overflow-y-hidden",
                 )}
                 data-tab-container
                 onWheel={(e) => {
@@ -805,7 +867,7 @@ const TerminalTabBar = ({
                           tabRef={() => {}}
                           onClick={() => onTabClick(terminal.id)}
                           onContextMenu={(e) => handleContextMenu(e, terminal)}
-                          onKeyDown={handleKeyDown}
+                          onKeyDown={(event) => handleKeyDown(event, terminal.id)}
                           handleTabClose={handleTabCloseWrapper}
                           handleTabPin={handleTabPin}
                           isEditing={editingTerminalId === terminal.id}
@@ -829,7 +891,7 @@ const TerminalTabBar = ({
           {orientation === "vertical" && (
             <div
               className={cn(
-                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60",
+                "absolute top-0 z-10 h-full w-1 cursor-col-resize hover:bg-primary/40 active:bg-primary/60",
                 tabSidebarPosition === "right" ? "left-0" : "right-0",
               )}
               onMouseDown={(e) => {
@@ -951,7 +1013,9 @@ const TerminalTabBar = ({
             onClose={closeProfileMenu}
             className="w-[220px]"
           >
-            <div className="font-sans ui-text-sm px-2.5 py-1 text-text-lighter">New Terminal</div>
+            <div className="font-sans ui-text-sm px-2.5 py-1 text-subtle-foreground">
+              New Terminal
+            </div>
             <div className="my-0.5 border-border/70 border-t" />
             <MenuItemsList items={profileMenuItems} onItemSelect={closeProfileMenu} />
           </Dropdown>

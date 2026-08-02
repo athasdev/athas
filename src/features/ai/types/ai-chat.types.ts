@@ -9,6 +9,9 @@ import type { FileEntry } from "@/features/file-system/types/app.types";
 import type { PaneContent } from "@/features/panes/types/pane-content.types";
 import type { GenerativeUIComponent } from "@/extensions/ui/types/generative-ui";
 
+export type OutputStyle = "default" | "explanatory" | "learning" | "custom";
+export type ChatMode = "chat" | "plan";
+
 export interface ToolCall {
   id?: string;
   name: string;
@@ -75,6 +78,11 @@ export interface Chat {
   agentId: AgentType; // Which agent this chat uses
   acpSessionId?: string | null;
   workspacePath?: string | null;
+  providerId?: string | null;
+  modelId?: string | null;
+  branch?: string | null;
+  isPinned?: boolean;
+  archivedAt?: Date | null;
 }
 
 export interface ContextInfo {

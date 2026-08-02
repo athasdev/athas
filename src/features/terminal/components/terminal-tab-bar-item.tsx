@@ -3,7 +3,7 @@ import { memo, useCallback } from "react";
 import type { Terminal } from "@/features/terminal/types/terminal.types";
 import { Button } from "@/ui/button";
 import { InlineRenameInput } from "@/ui/input";
-import { TabBarTab } from "@/ui/tabs";
+import { TabBarTab } from "@/ui/tab-bar";
 import { cn } from "@/utils/cn";
 
 interface TerminalTabBarItemProps {
@@ -61,7 +61,7 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         <div className="relative">
           <div
             className={cn(
-              "drop-indicator absolute z-20 bg-accent",
+              "drop-indicator absolute z-20 bg-primary",
               orientation === "vertical"
                 ? "top-0 right-1 left-1 h-0.5"
                 : "top-1 bottom-1 left-0 w-0.5",
@@ -104,12 +104,12 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
                   : "opacity-0 group-hover/tab:opacity-100",
               )}
               tooltip={terminal.isPinned ? "Unpin terminal" : `Close ${terminal.name}`}
-              shortcut={terminal.isPinned ? undefined : "mod+w"}
+              commandId={terminal.isPinned ? undefined : "terminal.close"}
               tabIndex={-1}
               draggable={false}
             >
               {terminal.isPinned ? (
-                <Pin className="pointer-events-none select-none fill-current text-accent" />
+                <Pin className="pointer-events-none select-none fill-current text-primary" />
               ) : (
                 <X className="pointer-events-none select-none" />
               )}
@@ -138,11 +138,15 @@ const TerminalTabBarItem = memo(function TerminalTabBarItem({
         ) : (
           <span
             className={cn(
-              "font-sans ui-text-sm max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
+              "font-sans ui-text-chrome max-w-full select-none overflow-hidden text-ellipsis whitespace-nowrap",
               "text-left",
-              isActive ? "text-text" : "text-text-lighter",
+              isActive ? "text-foreground" : "text-subtle-foreground",
             )}
-            title={terminal.currentDirectory}
+            title={
+              terminal.currentDirectory
+                ? `${displayName} — ${terminal.currentDirectory}`
+                : displayName
+            }
           >
             {displayName}
           </span>

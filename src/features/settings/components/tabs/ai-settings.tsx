@@ -31,7 +31,7 @@ import { useUIState } from "@/features/window/stores/ui-state.store";
 import Badge from "@/ui/badge";
 import { Button } from "@/ui/button";
 import Input from "@/ui/input";
-import Section, { SETTINGS_CONTROL_WIDTHS, SettingRow } from "../settings-section";
+import Section, { SETTINGS_CONTROL_WIDTHS, SettingsView, SettingRow } from "../settings-section";
 import Select from "@/ui/select";
 import Switch from "@/ui/switch";
 import { ToggleGroup } from "@/ui/toggle-group";
@@ -374,7 +374,7 @@ export const AISettings = () => {
   const hasAutocompleteModels = autocompleteModels.length > 0;
 
   return (
-    <div className="space-y-4">
+    <SettingsView>
       <Section title="Athas Agent">
         <SettingRow
           label="Provider"
@@ -439,6 +439,7 @@ export const AISettings = () => {
             variant="default"
             onClick={() => setIsApiKeyManagerOpen(true)}
             className="w-fit"
+            size="sm"
           >
             <Key />
             <span>Manage keys</span>
@@ -459,6 +460,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={() => openCommandPaletteView(action.commandPaletteViewId)}
                 className="w-fit"
+                size="sm"
               >
                 <Icon />
                 <span>{action.buttonLabel}</span>
@@ -520,7 +522,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveCustomChatApiKey}
                 disabled={!customChatApiKeyInput.trim() || isSavingCustomChatApiKey}
-                size="xs"
+                size="sm"
               >
                 Save
               </Button>
@@ -530,7 +532,7 @@ export const AISettings = () => {
                   variant="default"
                   onClick={handleRemoveCustomChatApiKey}
                   disabled={isSavingCustomChatApiKey}
-                  size="xs"
+                  size="sm"
                 >
                   Remove
                 </Button>
@@ -573,11 +575,14 @@ export const AISettings = () => {
                 placeholder={DEFAULT_OLLAMA_BASE_URL}
                 spellCheck={false}
                 leftIcon={Globe}
-                className={cn("w-56 max-w-full", ollamaStatus === "error" && "border-error/60")}
+                className={cn(
+                  "w-56 max-w-full",
+                  ollamaStatus === "error" && "border-destructive/60",
+                )}
               />
               {ollamaStatus === "checking" && <Spinner label="Checking" compact />}
               {ollamaStatus === "ok" && <CheckCircle className="text-success" />}
-              {ollamaStatus === "error" && <AlertCircle className="text-error" />}
+              {ollamaStatus === "error" && <AlertCircle className="text-destructive" />}
               {ollamaUrl !== DEFAULT_OLLAMA_BASE_URL && (
                 <Button
                   type="button"
@@ -616,7 +621,7 @@ export const AISettings = () => {
                 variant="default"
                 onClick={handleSaveOllamaApiKey}
                 disabled={!ollamaApiKeyInput.trim() || isSavingOllamaKey}
-                size="xs"
+                size="sm"
               >
                 {isSavingOllamaKey ? "Saving…" : "Save"}
               </Button>
@@ -627,7 +632,7 @@ export const AISettings = () => {
                   onClick={handleRemoveOllamaApiKey}
                   title="Remove saved API key"
                   aria-label="Remove Ollama API key"
-                  className="text-error hover:bg-error/10"
+                  className="text-destructive hover:bg-destructive/10"
                   size="icon-xs"
                 >
                   <Trash2 />
@@ -643,7 +648,7 @@ export const AISettings = () => {
                   href="https://ollama.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-link hover:underline"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
                   Get key <ExternalLink className="size-3" />
                 </a>
@@ -705,7 +710,7 @@ export const AISettings = () => {
                     label: value.name,
                   }))}
                   onChange={(value) =>
-                    useAIChatStore.getState().changeSessionConfigOption(option.id, value)
+                    useAIChatStore.getState().actions.changeSessionConfigOption(option.id, value)
                   }
                   size="md"
                   variant="default"
@@ -903,7 +908,7 @@ export const AISettings = () => {
                         !aiCompletionAllowedByPolicy ||
                         isSavingCustomAutocompleteApiKey
                       }
-                      size="xs"
+                      size="sm"
                     >
                       Save
                     </Button>
@@ -912,7 +917,7 @@ export const AISettings = () => {
                         variant="default"
                         onClick={handleRemoveCustomAutocompleteApiKey}
                         disabled={!aiCompletionAllowedByPolicy || isSavingCustomAutocompleteApiKey}
-                        size="xs"
+                        size="sm"
                       >
                         Remove
                       </Button>
@@ -947,7 +952,7 @@ export const AISettings = () => {
             onConfirm={async () => {
               setIsClearingChats(true);
               try {
-                await useAIChatStore.getState().clearAllChats();
+                await useAIChatStore.getState().actions.clearAllChats();
                 showToast({ message: "Agent history cleared", type: "success" });
               } finally {
                 setIsClearingChats(false);
@@ -956,6 +961,6 @@ export const AISettings = () => {
           />
         </SettingRow>
       </Section>
-    </div>
+    </SettingsView>
   );
 };

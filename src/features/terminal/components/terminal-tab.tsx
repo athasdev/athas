@@ -7,6 +7,7 @@ interface TerminalTabProps {
   sessionId: string;
   bufferId: string;
   paneId?: string;
+  shell?: string;
   initialCommand?: string;
   workingDirectory?: string;
   remoteConnectionId?: string;
@@ -18,6 +19,7 @@ export function TerminalTab({
   sessionId,
   bufferId,
   paneId,
+  shell,
   initialCommand,
   workingDirectory,
   remoteConnectionId,
@@ -46,6 +48,7 @@ export function TerminalTab({
         isActive={isActive}
         isVisible={isVisible}
         onTerminalExit={handleTerminalExit}
+        shell={shell}
         initialCommand={initialCommand}
         workingDirectory={workingDirectory}
         remoteConnectionId={remoteConnectionId}

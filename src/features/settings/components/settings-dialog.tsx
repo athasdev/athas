@@ -12,8 +12,10 @@ import {
 } from "@/features/settings/lib/settings-search";
 import { useAuthStore } from "@/features/window/stores/auth.store";
 import { type SettingsTab, useUIState } from "@/features/window/stores/ui-state.store";
+import { Card } from "@/ui/card";
 import Dialog from "@/ui/dialog";
 import { Dropdown, type MenuItem } from "@/ui/dropdown";
+import { Empty, EmptyDescription } from "@/ui/empty";
 import Input from "@/ui/input";
 import { ScrollArea } from "@/ui/scroll-area";
 import type { SearchResult } from "../types/search.types";
@@ -120,7 +122,7 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
       id: tab.id,
       label: tab.label,
       icon: <Icon className="size-4" weight="duotone" />,
-      className: tab.id === activeTab ? "bg-hover text-text" : undefined,
+      className: tab.id === activeTab ? "bg-accent text-foreground" : undefined,
       onClick: () => handleTabChange(tab.id),
     };
   });
@@ -134,10 +136,30 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
   }, [isOpen, clearSearch]);
 
   useEffect(() => {
-    if (!isOpen || !selectedResultId) return;
+    if (!isOpen) return;
+
+    const clearSearchHighlights = () => {
+      const content = contentRef.current;
+      if (!content) return;
+
+      content
+        .querySelectorAll<HTMLElement>("[data-settings-search-active='true']")
+        .forEach((element) => element.removeAttribute("data-settings-search-active"));
+      content
+        .querySelectorAll<HTMLElement>("[data-settings-search-section-active='true']")
+        .forEach((element) => element.removeAttribute("data-settings-search-section-active"));
+    };
+
+    if (!selectedResultId) {
+      clearSearchHighlights();
+      return;
+    }
 
     const result = visibleSearchResults.find((item) => item.id === selectedResultId);
-    if (!result || result.tab !== activeTab) return;
+    if (!result || result.tab !== activeTab) {
+      clearSearchHighlights();
+      return;
+    }
 
     const frameId = window.requestAnimationFrame(() => {
       const content = contentRef.current;
@@ -153,19 +175,16 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
 
       if (!target) return;
 
-      content
-        .querySelectorAll<HTMLElement>("[data-settings-search-active='true']")
-        .forEach((element) => element.removeAttribute("data-settings-search-active"));
+      clearSearchHighlights();
+      section?.setAttribute("data-settings-search-section-active", "true");
       target.setAttribute("data-settings-search-active", "true");
       target.scrollIntoView({ block: "center" });
       target.focus({ preventScroll: true });
-
-      window.setTimeout(() => {
-        target.removeAttribute("data-settings-search-active");
-      }, 1600);
     });
 
-    return () => window.cancelAnimationFrame(frameId);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [activeTab, isOpen, selectedResultId, visibleSearchResults]);
 
   const renderTabContent = () => {
@@ -214,12 +233,12 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             <button
               ref={tabDropdownRef}
               type="button"
-              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-secondary-bg/50 px-2 text-left text-text transition-colors hover:bg-hover max-[720px]:inline-flex"
+              className="hidden h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-md border border-border/70 bg-surface/50 px-2 text-left text-foreground transition-colors hover:bg-accent max-[720px]:inline-flex"
               onClick={() => setIsTabDropdownOpen(true)}
             >
-              <ActiveTabIcon className="size-4 shrink-0 text-text-lighter" weight="duotone" />
+              <ActiveTabIcon className="size-4 shrink-0 text-subtle-foreground" weight="duotone" />
               <span className="truncate">{activeTabItem.label}</span>
-              <CaretDown className="size-3.5 shrink-0 text-text-lighter" />
+              <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
             </button>
           </>
         }
@@ -256,15 +275,16 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
         }
         classNames={{
           modal:
-            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
-          header: "max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
+            "h-[74vh] max-h-[820px] w-[90vw] max-w-[1120px] min-w-0 border-0 bg-surface max-[720px]:h-[86vh] max-[720px]:w-[calc(100vw-32px)] [&>div:first-child]:border-b-0",
+          header:
+            "bg-surface max-[720px]:grid max-[720px]:grid-cols-[minmax(0,1fr)_auto] max-[720px]:gap-2",
           title: "max-[720px]:min-w-0",
           headerActions: "max-[720px]:min-w-0",
-          content: "flex p-0",
+          content: "flex h-full p-0",
         }}
       >
         <div className="flex size-full min-w-0 overflow-hidden">
-          <div className="w-52 shrink-0 max-[720px]:hidden">
+          <div className="h-full w-52 shrink-0 max-[720px]:hidden">
             <SettingsVerticalTabs
               activeTab={activeTab}
               onTabChange={handleTabChange}
@@ -272,20 +292,26 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
             />
           </div>
 
-          <ScrollArea
-            className="min-w-0 flex-1"
-            contentClassName="p-3 max-[720px]:p-2"
-            viewportProps={{
-              ref: contentRef,
-              id: activePanelId,
-              role: "tabpanel",
-              "aria-labelledby": activeTabId,
-              "data-settings-content": "",
-              tabIndex: -1,
-            }}
+          <Card
+            variant="elevated"
+            size="flush"
+            className="mt-0 mr-2 mb-2 ml-0 min-w-0 flex-1 bg-background max-[720px]:ml-2"
           >
-            {renderTabContent()}
-          </ScrollArea>
+            <ScrollArea
+              className="min-w-0 flex-1"
+              contentClassName="p-3 max-[720px]:p-2"
+              viewportProps={{
+                ref: contentRef,
+                id: activePanelId,
+                role: "tabpanel",
+                "aria-labelledby": activeTabId,
+                "data-settings-content": "",
+                tabIndex: -1,
+              }}
+            >
+              {renderTabContent()}
+            </ScrollArea>
+          </Card>
         </div>
       </Dialog>
       <Dropdown
@@ -319,20 +345,23 @@ const SettingsDialog = ({ isOpen, onClose }: SettingsDialogProps) => {
                   onClick={() => navigateToSearchResult(result)}
                   className={[
                     "font-sans flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-colors",
-                    isSelected ? "bg-accent/10 text-accent" : "text-text hover:bg-hover",
+                    isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent",
                   ].join(" ")}
                 >
                   <span className="ui-text-base w-full truncate font-medium">{result.label}</span>
-                  <span className="ui-text-base w-full truncate text-text-lighter">
+                  <span className="ui-text-base w-full truncate text-subtle-foreground">
                     {SETTINGS_SEARCH_TAB_LABELS[result.tab]} / {result.section}
                   </span>
                 </button>
               );
             })
           ) : (
-            <div className="font-sans ui-text-base px-3 py-2 text-text-lighter">
-              No matching settings
-            </div>
+            <Empty
+              density="compact"
+              className="min-h-0 flex-none items-start rounded-none px-3 py-2 text-left"
+            >
+              <EmptyDescription>No matching settings</EmptyDescription>
+            </Empty>
           )}
         </div>
       </Dropdown>
