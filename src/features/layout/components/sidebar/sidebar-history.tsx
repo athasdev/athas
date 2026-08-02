@@ -6,6 +6,7 @@ import { useAIChatStore } from "@/features/ai/stores/ai-chat.store";
 import type { Chat } from "@/features/ai/types/ai-chat.types";
 import { getModelById, getProviderById } from "@/features/ai/types/providers.types";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
+import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useGitStore } from "@/features/git/stores/git.store";
 import { getProjectNameFromPath } from "@/features/layout/components/sidebar/sidebar-projects";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
@@ -36,21 +37,10 @@ import {
   SidebarListItem,
   SidebarSectionEmptyState,
   SidebarSectionHeader,
+  SidebarSectionLabel,
 } from "@/ui/sidebar";
 
 const AGENT_HISTORY_INLINE_LIMIT = 5;
-
-export function useNewAgentAction(onCreate?: () => void) {
-  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
-  const createNewChat = useAIChatStore((state) => state.actions.createNewChat);
-  const selectedAgentId = useAIChatStore((state) => state.selectedAgentId);
-
-  return useCallback(() => {
-    const chatId = createNewChat(selectedAgentId, { activate: false });
-    onCreate?.();
-    openAgentBuffer(chatId);
-  }, [createNewChat, onCreate, openAgentBuffer, selectedAgentId]);
-}
 
 function useActivityRailSectionCollapse(sectionId: "agents" | "terminals") {
   const collapsedSections = useSettingsStore(
@@ -101,6 +91,117 @@ function SidebarNewAgentButton({
   );
 }
 
+interface SidebarAgentHistoryRowProps {
+  chat: Chat;
+  active: boolean;
+  aiProviderId: string;
+  aiModelId: string;
+  currentBranch: string | null;
+  workspacePath: string | null;
+  onOpen: (chatId: string) => void;
+  onUpdateTitle: (chatId: string, title: string) => void;
+  onPinChange: (chatId: string, pinned: boolean) => void;
+  onArchive: (chatId: string) => void;
+  onDelete: (chatId: string) => void;
+}
+
+function SidebarAgentHistoryRow({
+  chat,
+  active,
+  aiProviderId,
+  aiModelId,
+  currentBranch,
+  workspacePath,
+  onOpen,
+  onUpdateTitle,
+  onPinChange,
+  onArchive,
+  onDelete,
+}: SidebarAgentHistoryRowProps) {
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(chat.title);
+
+  if (isRenaming) {
+    return (
+      <SidebarListEditor leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}>
+        <InlineRenameInput
+          value={renameValue}
+          onValueChange={setRenameValue}
+          onSubmit={(nextTitle) => {
+            if (nextTitle !== chat.title) onUpdateTitle(chat.id, nextTitle);
+            setIsRenaming(false);
+          }}
+          onCancel={() => setIsRenaming(false)}
+          aria-label={`Rename ${chat.title}`}
+        />
+      </SidebarListEditor>
+    );
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
+        <AgentSessionSidebarItem
+          title={chat.title}
+          active={active}
+          pinned={chat.isPinned}
+          providerIconId={
+            chat.agentId === "custom" ? chat.providerId || aiProviderId : chat.agentId || "custom"
+          }
+          agentLabel={
+            chat.agentId === "custom"
+              ? getProviderById(chat.providerId || aiProviderId)?.name ||
+                chat.providerId ||
+                aiProviderId
+              : chat.agentId.replace(/[-_]/g, " ")
+          }
+          modelLabel={
+            chat.agentId === "custom"
+              ? getModelById(chat.providerId || aiProviderId, chat.modelId || aiModelId)?.name ||
+                chat.modelId ||
+                aiModelId
+              : chat.modelId || "Agent default"
+          }
+          createdAt={chat.createdAt}
+          projectName={getProjectNameFromPath(chat.workspacePath || workspacePath || "")}
+          workspacePath={chat.workspacePath || workspacePath}
+          branch={chat.branch || currentBranch}
+          onOpen={() => onOpen(chat.id)}
+          onPinChange={(pinned) => onPinChange(chat.id, pinned)}
+          onArchive={() => onArchive(chat.id)}
+        />
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={() => onOpen(chat.id)}>
+          <OpenExternalIcon />
+          Open
+        </ContextMenuItem>
+        <ContextMenuItem
+          onClick={() => {
+            setRenameValue(chat.title);
+            setIsRenaming(true);
+          }}
+        >
+          <PencilSimpleLineIcon />
+          Rename
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onPinChange(chat.id, !chat.isPinned)}>
+          {chat.isPinned ? <PushPinSlashIcon /> : <PushPinIcon />}
+          {chat.isPinned ? "Unpin" : "Pin"}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onArchive(chat.id)}>
+          <ArchiveIcon />
+          Archive
+        </ContextMenuItem>
+        <ContextMenuItem variant="destructive" onClick={() => onDelete(chat.id)}>
+          <TrashIcon />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
+}
+
 export function SidebarAgentHistory({
   expanded,
   workspacePath,
@@ -119,8 +220,6 @@ export function SidebarAgentHistory({
   const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
   const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
   const { isCollapsed, toggleCollapsed } = useActivityRailSectionCollapse("agents");
-  const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
   const [olderAgentsMenu, setOlderAgentsMenu] = useState({
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -128,11 +227,8 @@ export function SidebarAgentHistory({
   const sortedChats = useMemo(
     () =>
       filterChatsByWorkspace(chats, workspacePath)
-        .filter((chat) => !chat.archivedAt)
-        .sort((left, right) => {
-          if (!!left.isPinned !== !!right.isPinned) return left.isPinned ? -1 : 1;
-          return right.lastMessageAt.getTime() - left.lastMessageAt.getTime();
-        }),
+        .filter((chat) => !chat.archivedAt && !chat.isPinned)
+        .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime()),
     [chats, workspacePath],
   );
   const visibleChats = sortedChats.slice(0, AGENT_HISTORY_INLINE_LIMIT);
@@ -150,10 +246,6 @@ export function SidebarAgentHistory({
     setOlderAgentsMenu({ isOpen: true, position: { x: rect.right + 6, y: rect.top } });
   }, []);
 
-  const startRenamingChat = useCallback((chat: Chat) => {
-    setRenamingChatId(chat.id);
-    setRenameValue(chat.title);
-  }, []);
   const olderAgentMenuItems = useMemo<MenuItem[]>(
     () =>
       olderChats.map((chat) => ({
@@ -179,87 +271,22 @@ export function SidebarAgentHistory({
       </div>
       {!isCollapsed ? (
         <>
-          {visibleChats.map((chat) =>
-            renamingChatId === chat.id ? (
-              <SidebarListEditor
-                key={chat.id}
-                leading={<ProviderIcon providerId={chat.agentId || "custom"} size={16} />}
-              >
-                <InlineRenameInput
-                  value={renameValue}
-                  onValueChange={setRenameValue}
-                  onSubmit={(nextTitle) => {
-                    if (nextTitle !== chat.title) updateChatTitle(chat.id, nextTitle);
-                    setRenamingChatId(null);
-                  }}
-                  onCancel={() => setRenamingChatId(null)}
-                  aria-label={`Rename ${chat.title}`}
-                />
-              </SidebarListEditor>
-            ) : (
-              <ContextMenu key={chat.id}>
-                <ContextMenuTrigger
-                  className="block"
-                  onContextMenu={(event) => event.stopPropagation()}
-                >
-                  <AgentSessionSidebarItem
-                    title={chat.title}
-                    active={chat.id === currentChatId}
-                    pinned={chat.isPinned}
-                    providerIconId={
-                      chat.agentId === "custom"
-                        ? chat.providerId || aiProviderId
-                        : chat.agentId || "custom"
-                    }
-                    agentLabel={
-                      chat.agentId === "custom"
-                        ? getProviderById(chat.providerId || aiProviderId)?.name ||
-                          chat.providerId ||
-                          aiProviderId
-                        : chat.agentId.replace(/[-_]/g, " ")
-                    }
-                    modelLabel={
-                      chat.agentId === "custom"
-                        ? getModelById(chat.providerId || aiProviderId, chat.modelId || aiModelId)
-                            ?.name ||
-                          chat.modelId ||
-                          aiModelId
-                        : chat.modelId || "Agent default"
-                    }
-                    createdAt={chat.createdAt}
-                    projectName={getProjectNameFromPath(chat.workspacePath || workspacePath || "")}
-                    workspacePath={chat.workspacePath || workspacePath}
-                    branch={chat.branch || currentBranch}
-                    onOpen={() => handleOpenChat(chat.id)}
-                    onPinChange={(isPinned) => setChatPinned(chat.id, isPinned)}
-                    onArchive={() => setChatArchived(chat.id, true)}
-                  />
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => handleOpenChat(chat.id)}>
-                    <OpenExternalIcon />
-                    Open
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => startRenamingChat(chat)}>
-                    <PencilSimpleLineIcon />
-                    Rename
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => setChatPinned(chat.id, !chat.isPinned)}>
-                    {chat.isPinned ? <PushPinSlashIcon /> : <PushPinIcon />}
-                    {chat.isPinned ? "Unpin" : "Pin"}
-                  </ContextMenuItem>
-                  <ContextMenuItem onClick={() => setChatArchived(chat.id, true)}>
-                    <ArchiveIcon />
-                    Archive
-                  </ContextMenuItem>
-                  <ContextMenuItem variant="destructive" onClick={() => deleteChat(chat.id)}>
-                    <TrashIcon />
-                    Delete
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            ),
-          )}
+          {visibleChats.map((chat) => (
+            <SidebarAgentHistoryRow
+              key={chat.id}
+              chat={chat}
+              active={chat.id === currentChatId}
+              aiProviderId={aiProviderId}
+              aiModelId={aiModelId}
+              currentBranch={currentBranch}
+              workspacePath={workspacePath}
+              onOpen={handleOpenChat}
+              onUpdateTitle={updateChatTitle}
+              onPinChange={setChatPinned}
+              onArchive={(chatId) => setChatArchived(chatId, true)}
+              onDelete={deleteChat}
+            />
+          ))}
           {olderChats.length > 0 ? (
             <SidebarListItem
               leading={<DotsThreeIcon className="size-4" />}
@@ -284,6 +311,158 @@ export function SidebarAgentHistory({
   );
 }
 
+export function SidebarPinnedItems({
+  expanded,
+  workspacePath,
+  showAgents,
+  showTerminals,
+}: {
+  expanded: boolean;
+  workspacePath: string | null;
+  showAgents: boolean;
+  showTerminals: boolean;
+}) {
+  const chats = useAIChatStore((state) => state.chats);
+  const currentChatId = useAIChatStore((state) => state.currentChatId);
+  const deleteChat = useAIChatStore((state) => state.actions.deleteChat);
+  const updateChatTitle = useAIChatStore((state) => state.actions.updateChatTitle);
+  const setChatPinned = useAIChatStore((state) => state.actions.setChatPinned);
+  const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
+  const aiProviderId = useSettingsStore((state) => state.settings.aiProviderId);
+  const aiModelId = useSettingsStore((state) => state.settings.aiModelId);
+  const currentBranch = useGitStore((state) => state.gitStatus?.branch ?? null);
+  const buffers = useBufferStore((state) => state.buffers);
+  const activeBufferId = useBufferStore((state) => state.activeBufferId);
+  const openAgentBuffer = useBufferStore.use.actions().openAgentBuffer;
+  const setActiveBuffer = useBufferStore.use.actions().setActiveBuffer;
+  const handleTabPin = useBufferStore.use.actions().handleTabPin;
+  const panelTerminals = useTerminalTabsStore((state) => state.terminals);
+  const activePanelTerminalId = useTerminalTabsStore((state) => state.activeTerminalId);
+  const dispatchTerminalAction = useTerminalTabsStore((state) => state.dispatch);
+  const isBottomPaneVisible = useUIState((state) => state.isBottomPaneVisible);
+  const bottomPaneActiveTab = useUIState((state) => state.bottomPaneActiveTab);
+  const setIsBottomPaneVisible = useUIState((state) => state.setIsBottomPaneVisible);
+  const setBottomPaneActiveTab = useUIState((state) => state.setBottomPaneActiveTab);
+
+  const pinnedChats = useMemo(
+    () =>
+      showAgents
+        ? filterChatsByWorkspace(chats, workspacePath)
+            .filter((chat) => !chat.archivedAt && chat.isPinned)
+            .sort((left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime())
+        : [],
+    [chats, showAgents, workspacePath],
+  );
+  const pinnedPanelTerminals = useMemo(
+    () => (showTerminals ? panelTerminals.filter((terminal) => terminal.isPinned) : []),
+    [panelTerminals, showTerminals],
+  );
+  const pinnedTerminalBuffers = useMemo(
+    () =>
+      showTerminals
+        ? buffers.filter((buffer) => buffer.type === "terminal" && buffer.isPinned)
+        : [],
+    [buffers, showTerminals],
+  );
+
+  const handleOpenPanelTerminal = useCallback(
+    (terminalId: string) => {
+      dispatchTerminalAction({ type: "SET_ACTIVE_TERMINAL", payload: { id: terminalId } });
+      setBottomPaneActiveTab("terminal");
+      setIsBottomPaneVisible(true);
+    },
+    [dispatchTerminalAction, setBottomPaneActiveTab, setIsBottomPaneVisible],
+  );
+
+  if (
+    !expanded ||
+    (pinnedChats.length === 0 &&
+      pinnedPanelTerminals.length === 0 &&
+      pinnedTerminalBuffers.length === 0)
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 w-full">
+      <SidebarSectionLabel>Pinned</SidebarSectionLabel>
+      {pinnedChats.map((chat) => (
+        <SidebarAgentHistoryRow
+          key={`agent-${chat.id}`}
+          chat={chat}
+          active={chat.id === currentChatId}
+          aiProviderId={aiProviderId}
+          aiModelId={aiModelId}
+          currentBranch={currentBranch}
+          workspacePath={workspacePath}
+          onOpen={openAgentBuffer}
+          onUpdateTitle={updateChatTitle}
+          onPinChange={setChatPinned}
+          onArchive={(chatId) => setChatArchived(chatId, true)}
+          onDelete={deleteChat}
+        />
+      ))}
+      {pinnedPanelTerminals.map((terminal) => (
+        <ContextMenu key={`panel-${terminal.id}`}>
+          <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
+            <SidebarListItem
+              active={
+                isBottomPaneVisible &&
+                bottomPaneActiveTab === "terminal" &&
+                terminal.id === activePanelTerminalId
+              }
+              leading={<TerminalIcon className="size-4" />}
+              onClick={() => handleOpenPanelTerminal(terminal.id)}
+            >
+              {terminal.name}
+            </SidebarListItem>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onClick={() => handleOpenPanelTerminal(terminal.id)}>
+              <OpenExternalIcon />
+              Open
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() =>
+                dispatchTerminalAction({
+                  type: "PIN_TERMINAL",
+                  payload: { id: terminal.id, isPinned: false },
+                })
+              }
+            >
+              <PushPinSlashIcon />
+              Unpin
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      ))}
+      {pinnedTerminalBuffers.map((terminal) => (
+        <ContextMenu key={`buffer-${terminal.id}`}>
+          <ContextMenuTrigger className="block" onContextMenu={(event) => event.stopPropagation()}>
+            <SidebarListItem
+              active={terminal.id === activeBufferId}
+              leading={<TerminalIcon className="size-4" />}
+              onClick={() => setActiveBuffer(terminal.id)}
+            >
+              {terminal.name}
+            </SidebarListItem>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onClick={() => setActiveBuffer(terminal.id)}>
+              <OpenExternalIcon />
+              Open
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => handleTabPin(terminal.id)}>
+              <PushPinSlashIcon />
+              Unpin
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      ))}
+    </div>
+  );
+}
+
 export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   const buffers = useBufferStore((state) => state.buffers);
   const activeBufferId = useBufferStore((state) => state.activeBufferId);
@@ -298,10 +477,14 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
   const { isCollapsed, toggleCollapsed } = useActivityRailSectionCollapse("terminals");
 
   const terminalBuffers = useMemo(
-    () => buffers.filter((buffer) => buffer.type === "terminal"),
+    () => buffers.filter((buffer) => buffer.type === "terminal" && !buffer.isPinned),
     [buffers],
   );
-  const terminalCount = panelTerminals.length + terminalBuffers.length;
+  const regularPanelTerminals = useMemo(
+    () => panelTerminals.filter((terminal) => !terminal.isPinned),
+    [panelTerminals],
+  );
+  const terminalCount = regularPanelTerminals.length + terminalBuffers.length;
 
   const showTerminalPanel = useCallback(() => {
     setBottomPaneActiveTab("terminal");
@@ -358,7 +541,7 @@ export function SidebarTerminalHistory({ expanded }: { expanded: boolean }) {
       </div>
       {!isCollapsed ? (
         <>
-          {panelTerminals.map((terminal) => (
+          {regularPanelTerminals.map((terminal) => (
             <SidebarListItem
               key={`panel-${terminal.id}`}
               active={

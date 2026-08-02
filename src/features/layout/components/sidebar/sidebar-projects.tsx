@@ -2,7 +2,6 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { useFileSystemStore } from "@/features/file-system/stores/file-system.store";
 import ProjectIconPicker from "@/features/window/components/project-icon-picker";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import type { ProjectTab } from "@/features/window/stores/workspace-tabs.store";
 import { createAppWindow } from "@/features/window/utils/create-app-window";
 import { findBestProjectIcon } from "@/features/window/utils/project-icons";
@@ -13,6 +12,15 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown";
 import {
   ChevronExpandYIcon,
   CopyIcon,
@@ -68,21 +76,23 @@ function ProjectGlyph({
 export function SidebarProjectSwitcher({
   expanded,
   project,
-  openProject = false,
+  projects,
+  isSwitchingProject,
+  onSelectProject,
 }: {
   expanded: boolean;
   project?: ProjectTab;
-  openProject?: boolean;
+  projects: ProjectTab[];
+  isSwitchingProject: boolean;
+  onSelectProject: (projectId: string) => void;
 }) {
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
-  const setIsProjectPickerVisible = useUIState((state) => state.setIsProjectPickerVisible);
+  const handleOpenFolder = useFileSystemStore((state) => state.handleOpenFolder);
   const [detectedIconPath, setDetectedIconPath] = useState<string | undefined>();
   const [iconPickerProject, setIconPickerProject] = useState<ProjectTab | null>(null);
-  const displayProject = openProject ? undefined : project;
-  const projectName = openProject
-    ? "Open Project"
-    : displayProject?.name || getProjectNameFromPath(rootFolderPath);
-  const projectPath = openProject ? undefined : displayProject?.path || rootFolderPath;
+  const displayProject = project;
+  const projectName = displayProject?.name || getProjectNameFromPath(rootFolderPath);
+  const projectPath = displayProject?.path || rootFolderPath;
   const customIcon = displayProject?.customIcon;
   const isRemote = isRemoteProjectPath(projectPath);
   const displayIconPath = customIcon ?? detectedIconPath;
@@ -111,45 +121,80 @@ export function SidebarProjectSwitcher({
 
   return (
     <>
-      <SidebarListItem
-        leading={
-          expanded ? (
-            <span
-              role={canChangeIcon ? "button" : undefined}
-              tabIndex={canChangeIcon ? 0 : undefined}
-              aria-label={canChangeIcon ? "Change project icon" : undefined}
-              className={cn(
-                "flex size-4 items-center justify-center rounded-md",
-                canChangeIcon &&
-                  "hover:bg-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
-              )}
-              onClick={(event) => {
-                if (!canChangeIcon || !displayProject) return;
-                event.stopPropagation();
-                setIconPickerProject(displayProject);
-              }}
-              onKeyDown={(event) => {
-                if (!canChangeIcon || !displayProject) return;
-                if (event.key !== "Enter" && event.key !== " ") return;
-                event.preventDefault();
-                event.stopPropagation();
-                setIconPickerProject(displayProject);
-              }}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <SidebarListItem
+              leading={
+                expanded ? (
+                  <span
+                    role={canChangeIcon ? "button" : undefined}
+                    tabIndex={canChangeIcon ? 0 : undefined}
+                    aria-label={canChangeIcon ? "Change project icon" : undefined}
+                    className={cn(
+                      "flex size-4 items-center justify-center rounded-md",
+                      canChangeIcon &&
+                        "hover:bg-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+                    )}
+                    onClick={(event) => {
+                      if (!canChangeIcon || !displayProject) return;
+                      event.stopPropagation();
+                      setIconPickerProject(displayProject);
+                    }}
+                    onKeyDown={(event) => {
+                      if (!canChangeIcon || !displayProject) return;
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setIconPickerProject(displayProject);
+                    }}
+                  >
+                    {projectGlyph}
+                  </span>
+                ) : (
+                  projectGlyph
+                )
+              }
+              iconOnly={!expanded}
+              trailing={expanded ? <ChevronExpandYIcon className="size-3.5" /> : undefined}
+              aria-label="Switch project"
+              title={expanded ? undefined : projectName}
             >
-              {projectGlyph}
-            </span>
-          ) : (
-            projectGlyph
-          )
-        }
-        iconOnly={!expanded}
-        trailing={expanded ? <ChevronExpandYIcon className="size-3.5" /> : undefined}
-        onClick={() => setIsProjectPickerVisible(true)}
-        aria-label={openProject ? "Open project switcher" : "Switch project"}
-        title={expanded ? undefined : projectName}
-      >
-        {projectName}
-      </SidebarListItem>
+              {projectName}
+            </SidebarListItem>
+          }
+        />
+        <DropdownMenuContent align="start" className="w-[var(--anchor-width)]">
+          {projects.length > 0 ? (
+            <>
+              <DropdownMenuRadioGroup
+                value={displayProject?.id ?? ""}
+                onValueChange={onSelectProject}
+              >
+                {projects.map((availableProject) => (
+                  <DropdownMenuRadioItem
+                    key={availableProject.id}
+                    value={availableProject.id}
+                    disabled={isSwitchingProject}
+                    closeOnClick
+                  >
+                    <ProjectGlyph
+                      projectPath={availableProject.path}
+                      iconPath={availableProject.customIcon}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{availableProject.name}</span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+          <DropdownMenuItem onClick={() => void handleOpenFolder()}>
+            <FolderOpenIcon />
+            Open project…
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {iconPickerProject ? (
         <ProjectIconPicker
           isOpen
@@ -162,7 +207,7 @@ export function SidebarProjectSwitcher({
   );
 }
 
-export function SidebarProjectIcons({
+export function SidebarProjectDots({
   projects,
   activeProjectId,
   isSwitchingProject,
@@ -180,7 +225,7 @@ export function SidebarProjectIcons({
 
   return (
     <>
-      <div className="scrollbar-hidden pointer-events-none absolute right-[var(--athas-workbench-gap)] bottom-1.5 left-0 z-20 flex items-center justify-center gap-(--athas-chrome-gap) overflow-x-auto px-2">
+      <div className="scrollbar-hidden pointer-events-none absolute right-[var(--athas-workbench-gap)] bottom-1.5 left-0 z-20 flex items-center justify-center overflow-x-auto px-2">
         {projects.map((project) => {
           const isRemote = isRemoteProjectPath(project.path);
           const isActive = project.id === activeProjectId;
@@ -191,8 +236,8 @@ export function SidebarProjectIcons({
                 role="button"
                 tabIndex={isSwitchingProject ? -1 : 0}
                 className={cn(
-                  "pointer-events-auto flex size-(--athas-chrome-hit-target) shrink-0 items-center justify-center rounded-[var(--athas-chrome-radius)] text-subtle-foreground outline-none transition-[opacity,color] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/40",
-                  isActive ? "opacity-100" : "opacity-55 hover:opacity-100",
+                  "group pointer-events-auto flex size-4 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                  isSwitchingProject && "cursor-default",
                 )}
                 aria-label={`${isActive ? "Current project" : "Switch to"} ${project.name}`}
                 aria-current={isActive ? "page" : undefined}
@@ -207,10 +252,14 @@ export function SidebarProjectIcons({
                   onSelectProject(project.id);
                 }}
               >
-                <ProjectGlyph
-                  projectPath={project.path}
-                  iconPath={project.customIcon}
-                  className="size-4"
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "size-1.5 rounded-full bg-foreground transition-[opacity,transform] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+                    isActive
+                      ? "scale-100 opacity-100"
+                      : "scale-75 opacity-25 group-hover:scale-100 group-hover:opacity-50",
+                  )}
                 />
               </ContextMenuTrigger>
               <ContextMenuContent side="top" sideOffset={6} align="center">

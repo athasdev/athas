@@ -153,7 +153,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
   const handleTitleBarContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     const interactiveTarget = target.closest(
-      "button, a, input, textarea, select, [role='tab'], [data-title-bar-project-tabs='true'], [contenteditable='true']",
+      "button, a, input, textarea, select, [role='tab'], [contenteditable='true']",
     );
 
     if (interactiveTarget) {
@@ -167,7 +167,7 @@ const TitleBar = ({ showMinimal = false }: TitleBarProps) => {
 
     const target = e.target as HTMLElement;
     const interactiveTarget = target.closest(
-      "button, a, input, textarea, select, [role='tab'], [data-title-bar-project-tabs='true'], [contenteditable='true']",
+      "button, a, input, textarea, select, [role='tab'], [contenteditable='true']",
     );
 
     if (interactiveTarget) return;

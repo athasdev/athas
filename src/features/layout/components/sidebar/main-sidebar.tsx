@@ -1,10 +1,4 @@
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotionConfig,
-  type PanInfo,
-} from "motion/react";
+import { animate, motion, useMotionValue, useReducedMotionConfig } from "motion/react";
 import {
   memo,
   useCallback,
@@ -26,17 +20,20 @@ import GitHubPRsView from "@/features/github/components/github-prs-view";
 import { SidebarPaneSelector } from "@/features/layout/components/sidebar/sidebar-pane-selector";
 import {
   SidebarAgentHistory,
+  SidebarPinnedItems,
   SidebarTerminalHistory,
-  useNewAgentAction,
 } from "@/features/layout/components/sidebar/sidebar-history";
+import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import {
-  SidebarProjectIcons,
+  SidebarProjectDots,
   SidebarProjectSwitcher,
 } from "@/features/layout/components/sidebar/sidebar-projects";
 import { useSidebarPaneController } from "@/features/layout/hooks/use-sidebar-pane-controller";
 import {
   getAdjacentProjectIndex,
   getProjectCarouselDirection,
+  getProjectSnapDuration,
+  getProjectSwipeBounds,
 } from "@/features/layout/utils/project-carousel";
 import { getSidebarPaneLevel, type SidebarView } from "@/features/layout/utils/sidebar-pane-utils";
 import { OutlineSidebar } from "@/features/outline/components/outline-sidebar";
@@ -104,12 +101,10 @@ const MIN_ACTIVITY_RAIL_WIDTH = 140;
 const MAX_ACTIVITY_RAIL_WIDTH = 320;
 const ACTIVITY_RAIL_HORIZONTAL_GUTTER = 8;
 const PROJECT_SWIPE_THRESHOLD_PX = 42;
-const PROJECT_SWIPE_VELOCITY_PX = 420;
-const PROJECT_WHEEL_END_DELAY_MS = 80;
-const PROJECT_BOUNDARY_TRAVEL_PX = 32;
+const PROJECT_WHEEL_END_DELAY_MS = 40;
+const PROJECT_WHEEL_COMMIT_PROGRESS = 0.82;
 const PROJECT_SNAP_TRANSITION = {
   type: "tween" as const,
-  duration: 0.14,
   ease: [0.2, 0.8, 0.2, 1] as const,
 };
 
@@ -165,7 +160,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   const [carouselTargetProjectId, setCarouselTargetProjectId] = useState<string | null>(null);
   const [loadingCarouselProjectId, setLoadingCarouselProjectId] = useState<string | null>(null);
   const [projectCarouselDirection, setProjectCarouselDirection] = useState<1 | -1>(1);
-  const [isProjectGestureSettling, setIsProjectGestureSettling] = useState(false);
   const prefersReducedMotion = useReducedMotionConfig();
   const projectGestureX = useMotionValue(0);
   const railRef = useRef<HTMLDivElement>(null);
@@ -321,7 +315,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
     setCarouselProjectId(activeProject?.id ?? null);
     setCarouselTargetProjectId(null);
     setLoadingCarouselProjectId(null);
-    setIsProjectGestureSettling(false);
   }, [activeProject?.id, projectCarouselEnabled, projectGestureX]);
 
   useEffect(() => {
@@ -414,39 +407,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
   );
 
   const railPanelWidth = expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH;
-
-  const settleProjectBoundary = useCallback(
-    async (direction: 1 | -1) => {
-      isProjectGestureSettlingRef.current = true;
-      flushSync(() => {
-        setProjectCarouselDirection(direction);
-        setCarouselTargetProjectId(null);
-        setIsProjectGestureSettling(true);
-      });
-
-      try {
-        projectGestureX.stop();
-        if (prefersReducedMotion) {
-          projectGestureX.jump(0);
-        } else {
-          const boundaryPosition =
-            -direction * Math.min(PROJECT_BOUNDARY_TRAVEL_PX, railPanelWidth / 4);
-          await animate(projectGestureX, boundaryPosition, PROJECT_SNAP_TRANSITION);
-          await animate(projectGestureX, 0, PROJECT_SNAP_TRANSITION);
-        }
-      } finally {
-        projectGestureX.jump(0);
-        isProjectGestureSettlingRef.current = false;
-        setIsProjectGestureSettling(false);
-      }
-
-      if (direction > 0) {
-        setIsProjectPickerVisible(true);
-      }
-    },
-    [prefersReducedMotion, projectGestureX, railPanelWidth, setIsProjectPickerVisible],
-  );
-
   const settleProjectGesture = useCallback(
     async (offset: 1 | -1, requestedProjectId?: string) => {
       if (
@@ -464,7 +424,8 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         ? projectTabs.findIndex((project) => project.id === requestedProjectId)
         : getAdjacentProjectIndex(carouselProjectIndex, offset, projectTabs.length);
       if (targetIndex === null || targetIndex < 0) {
-        await settleProjectBoundary(offset);
+        projectGestureX.stop();
+        projectGestureX.jump(0);
         return;
       }
 
@@ -479,11 +440,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
           setCarouselProjectId(targetProject.id);
           setCarouselTargetProjectId(null);
           setLoadingCarouselProjectId(targetWasReady ? null : targetProject.id);
-          setIsProjectGestureSettling(true);
           projectGestureX.jump(0);
         });
 
         try {
+          await waitForProjectCarouselPaint();
           const switched = await switchToProject(targetProject.id);
           if (!switched) {
             flushSync(() => {
@@ -505,7 +466,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         } finally {
           projectGestureX.jump(0);
           isProjectGestureSettlingRef.current = false;
-          setIsProjectGestureSettling(false);
         }
         return;
       }
@@ -514,31 +474,31 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         setProjectCarouselDirection(offset);
         setCarouselTargetProjectId(targetProject.id);
         setLoadingCarouselProjectId(targetWasReady ? null : targetProject.id);
-        setIsProjectGestureSettling(true);
       });
 
       try {
-        const switchPromise = switchToProject(targetProject.id);
         projectGestureX.stop();
         if (prefersReducedMotion) {
           projectGestureX.jump(-offset * railPanelWidth);
         } else {
-          await Promise.all([
-            animate(projectGestureX, -offset * railPanelWidth, PROJECT_SNAP_TRANSITION),
-            switchPromise,
-          ]);
+          const targetPosition = -offset * railPanelWidth;
+          await animate(projectGestureX, targetPosition, {
+            ...PROJECT_SNAP_TRANSITION,
+            duration: getProjectSnapDuration(projectGestureX.get(), targetPosition, railPanelWidth),
+          });
         }
 
-        const switched = await switchPromise;
+        flushSync(() => {
+          setCarouselProjectId(targetProject.id);
+          setCarouselTargetProjectId(null);
+          projectGestureX.jump(0);
+        });
+        await waitForProjectCarouselPaint();
+
+        const switched = await switchToProject(targetProject.id);
         if (!switched) {
-          if (prefersReducedMotion) {
-            projectGestureX.jump(0);
-          } else {
-            await animate(projectGestureX, 0, PROJECT_SNAP_TRANSITION);
-          }
           flushSync(() => {
             setCarouselProjectId(activeProject?.id ?? null);
-            setCarouselTargetProjectId(null);
             setLoadingCarouselProjectId(null);
           });
           return;
@@ -547,12 +507,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
         if (!targetWasReady) {
           await waitForProjectCarouselPaint();
         }
-        flushSync(() => {
-          setCarouselProjectId(targetProject.id);
-          setCarouselTargetProjectId(null);
-          setLoadingCarouselProjectId(null);
-          projectGestureX.jump(0);
-        });
+        setLoadingCarouselProjectId(null);
       } catch {
         flushSync(() => {
           setCarouselProjectId(activeProject?.id ?? null);
@@ -563,7 +518,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       } finally {
         projectGestureX.jump(0);
         isProjectGestureSettlingRef.current = false;
-        setIsProjectGestureSettling(false);
       }
     },
     [
@@ -577,7 +531,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       projectCarouselEnabled,
       projectTabs,
       railPanelWidth,
-      settleProjectBoundary,
       switchToProject,
     ],
   );
@@ -588,8 +541,11 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       projectGestureX.jump(0);
       return;
     }
-    void animate(projectGestureX, 0, PROJECT_SNAP_TRANSITION);
-  }, [prefersReducedMotion, projectGestureX]);
+    void animate(projectGestureX, 0, {
+      ...PROJECT_SNAP_TRANSITION,
+      duration: getProjectSnapDuration(projectGestureX.get(), 0, railPanelWidth),
+    });
+  }, [prefersReducedMotion, projectGestureX, railPanelWidth]);
 
   const handleProjectSelect = useCallback(
     (projectId: string) => {
@@ -610,40 +566,6 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       isSwitchingProject,
       projectCarouselEnabled,
       projectTabs,
-      settleProjectGesture,
-    ],
-  );
-
-  const handleProjectDragEnd = useCallback(
-    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      if (
-        !projectCarouselEnabled ||
-        isActivityRailResizing ||
-        isSwitchingProject ||
-        isProjectGestureSettlingRef.current ||
-        projectTabs.length === 0
-      ) {
-        return;
-      }
-
-      const shouldSwitch =
-        Math.abs(info.offset.x) >= PROJECT_SWIPE_THRESHOLD_PX ||
-        Math.abs(info.velocity.x) >= PROJECT_SWIPE_VELOCITY_PX;
-      if (!shouldSwitch) {
-        returnProjectGestureToOrigin();
-        return;
-      }
-
-      const horizontalIntent =
-        Math.abs(info.velocity.x) >= PROJECT_SWIPE_VELOCITY_PX ? info.velocity.x : info.offset.x;
-      void settleProjectGesture(horizontalIntent < 0 ? 1 : -1);
-    },
-    [
-      isActivityRailResizing,
-      isSwitchingProject,
-      projectCarouselEnabled,
-      projectTabs.length,
-      returnProjectGestureToOrigin,
       settleProjectGesture,
     ],
   );
@@ -676,11 +598,25 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       event.preventDefault();
       projectGestureX.stop();
       const maximumTravel = (railContentRef.current?.clientWidth ?? railPanelWidth) * 0.96;
-      const nextPosition = Math.min(
+      const swipeBounds = getProjectSwipeBounds(
+        Boolean(previousProject),
+        Boolean(nextProject),
         maximumTravel,
-        Math.max(-maximumTravel, projectGestureX.get() - event.deltaX),
+      );
+      const nextPosition = Math.min(
+        swipeBounds.right,
+        Math.max(swipeBounds.left, projectGestureX.get() - event.deltaX),
       );
       projectGestureX.jump(nextPosition);
+
+      if (Math.abs(nextPosition) >= railPanelWidth * PROJECT_WHEEL_COMMIT_PROGRESS) {
+        if (projectWheelEndTimerRef.current !== null) {
+          clearTimeout(projectWheelEndTimerRef.current);
+          projectWheelEndTimerRef.current = null;
+        }
+        void settleProjectGesture(nextPosition < 0 ? 1 : -1);
+        return;
+      }
 
       if (projectWheelEndTimerRef.current !== null) {
         clearTimeout(projectWheelEndTimerRef.current);
@@ -694,34 +630,29 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       finishProjectWheelGesture,
       isActivityRailResizing,
       isSwitchingProject,
+      nextProject,
+      previousProject,
       projectCarouselEnabled,
       projectGestureX,
       projectTabs.length,
       railPanelWidth,
+      settleProjectGesture,
     ],
   );
 
   const renderedRailWidth = `calc(${
     expanded ? activityRailWidth : COLLAPSED_ACTIVITY_RAIL_WIDTH
   }px + var(--athas-workbench-gap))`;
-  const canSwipeProjects =
-    projectCarouselEnabled &&
-    !isActivityRailResizing &&
-    !isSwitchingProject &&
-    !isProjectGestureSettling &&
-    projectTabs.length > 0;
-
   const renderProjectPanel = (
     project: ProjectTab | undefined,
     position: "previous" | "current" | "next",
   ) => {
     const isBoundaryPanel = position !== "current" && !project;
-    const opensProjectPicker = isBoundaryPanel && position === "next";
     const isLoadingProject = project?.id === loadingCarouselProjectId;
 
     return (
       <div
-        key={`${position}-${project?.id ?? (opensProjectPicker ? "open-project" : "boundary")}`}
+        key={`${position}-${project?.id ?? "boundary"}`}
         aria-hidden={position === "current" ? undefined : true}
         inert={position === "current" ? undefined : true}
         className={cn(
@@ -741,12 +672,16 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 : undefined,
         }}
       >
-        {opensProjectPicker && showActivityRailProjectSwitcher ? (
-          <SidebarProjectSwitcher expanded={expanded} openProject />
-        ) : isBoundaryPanel ? null : (
+        {isBoundaryPanel ? null : (
           <>
             {showActivityRailProjectSwitcher ? (
-              <SidebarProjectSwitcher expanded={expanded} project={project} />
+              <SidebarProjectSwitcher
+                expanded={expanded}
+                project={project}
+                projects={projectTabs}
+                isSwitchingProject={isSwitchingProject}
+                onSelectProject={handleProjectSelect}
+              />
             ) : null}
             {isLoadingProject ? (
               <SidebarEmptyState className="min-h-0 flex-1 self-stretch">
@@ -771,6 +706,12 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                   compact={!expanded}
                   showLabels={expanded}
                   orientation="vertical"
+                />
+                <SidebarPinnedItems
+                  expanded={expanded}
+                  workspacePath={project?.path ?? null}
+                  showAgents={showActivityRailAgentHistory}
+                  showTerminals={coreFeatures.terminal && showActivityRailTerminals}
                 />
                 {showActivityRailAgentHistory ? (
                   <SidebarAgentHistory expanded={expanded} workspacePath={project?.path ?? null} />
@@ -801,20 +742,13 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
       >
         <motion.div
           ref={railContentRef}
-          drag={canSwipeProjects ? "x" : false}
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={1}
-          dragMomentum={false}
-          onDragEnd={handleProjectDragEnd}
           onWheel={projectCarouselEnabled ? handleProjectWheel : undefined}
           className={cn(
             "absolute inset-y-0 left-0 shrink-0 will-change-transform",
-            canSwipeProjects && "cursor-grab active:cursor-grabbing",
             !isActivityRailResizing &&
               "transition-[width] duration-[var(--app-duration-normal)] ease-[var(--app-ease-smooth)]",
           )}
           style={{
-            touchAction: "pan-y",
             width: expanded
               ? railPanelWidth
               : `calc(${railPanelWidth}px + var(--athas-workbench-gap))`,
@@ -826,7 +760,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
           {projectCarouselEnabled ? renderProjectPanel(renderedNextProject, "next") : null}
         </motion.div>
         {expanded && projectCarouselEnabled && showActivityRailProjectIcons ? (
-          <SidebarProjectIcons
+          <SidebarProjectDots
             projects={projectTabs}
             activeProjectId={carouselProject?.id}
             isSwitchingProject={isSwitchingProject}
@@ -927,7 +861,7 @@ export const SidebarActivityRail = memo(({ expanded = false }: SidebarActivityRa
                 }
               >
                 <FolderIcon />
-                Project Icons
+                Project Dots
               </ContextMenuCheckboxItem>
             </ContextMenuGroup>
             {hasHiddenActivityRailItems ? (

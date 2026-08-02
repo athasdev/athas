@@ -4,7 +4,6 @@ import { animate, motion, useMotionValue } from "motion/react";
 import {
   forwardRef,
   useEffect,
-  useLayoutEffect,
   useState,
   type ComponentProps,
   type ReactNode,
@@ -12,13 +11,6 @@ import {
 } from "react";
 import Badge from "@/ui/badge";
 import { Button, type ButtonProps } from "@/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown";
 import { SearchField } from "@/ui/search";
 import Tooltip from "@/ui/tooltip";
 import {
@@ -266,7 +258,7 @@ export function SidebarListItem({
     <button
       type="button"
       className={cn(
-        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 cursor-pointer items-center gap-(--athas-chrome-gap-loose) rounded-[var(--athas-chrome-radius)] px-2 py-1 text-left text-subtle-foreground transition-[background-color,color]",
+        "font-sans ui-text-chrome flex min-h-(--athas-tab-height) w-full min-w-0 items-center gap-(--athas-chrome-gap-loose) rounded-[var(--athas-chrome-radius)] px-2 py-1 text-left text-subtle-foreground transition-[background-color,color]",
         "hover:bg-accent/70 hover:text-foreground focus-visible:bg-accent/70 focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
         active && "bg-accent/80 text-foreground",
         iconOnly && "justify-center gap-0 px-0",
@@ -441,25 +433,18 @@ export function SidebarTabBar({
   items,
   value,
   onChange,
-  appearance = "pills",
   className,
 }: {
   items: SidebarSectionSwitcherItem[];
   value: string;
   onChange: (value: string) => void;
-  appearance?: "grouped" | "pills";
   className?: string;
 }) {
   return (
     <div
       className={cn("flex h-(--athas-pane-header-height) shrink-0 items-center px-3", className)}
     >
-      <SidebarSectionSwitcher
-        items={items}
-        value={value}
-        appearance={appearance}
-        onChange={onChange}
-      />
+      <SidebarSectionSwitcher items={items} value={value} onChange={onChange} />
     </div>
   );
 }
@@ -543,152 +528,55 @@ export function SidebarSectionPager({
   );
 }
 
-export function SidebarSectionSwitcher({
+function SidebarSectionSwitcher({
   items,
   value,
   onChange,
-  appearance = "grouped",
 }: {
   items: SidebarSectionSwitcherItem[];
   value: string;
   onChange: (value: string) => void;
-  appearance?: "grouped" | "pills";
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const measurementRef = useRef<HTMLDivElement>(null);
-  const [isCompact, setIsCompact] = useState(false);
-  const activeItem = items.find((item) => item.id === value) ?? items[0];
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    const measurement = measurementRef.current;
-    if (!container || !measurement) return;
-
-    const updateCompactState = () => {
-      setIsCompact(measurement.scrollWidth > container.clientWidth);
-    };
-
-    updateCompactState();
-    const resizeObserver = new ResizeObserver(updateCompactState);
-    resizeObserver.observe(container);
-    resizeObserver.observe(measurement);
-    return () => resizeObserver.disconnect();
-  }, []);
-
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        "relative mx-auto w-full min-w-0 max-w-full shrink-0",
-        appearance === "pills" && "scrollbar-hidden overflow-x-auto",
-      )}
-    >
+    <div className="scrollbar-hidden relative w-full min-w-0 max-w-full shrink-0 overflow-x-auto">
       <div
-        ref={measurementRef}
-        aria-hidden
-        className="pointer-events-none invisible absolute flex h-7 w-max items-center gap-1 p-0.5"
+        role="tablist"
+        className="flex h-7 w-max max-w-none select-none items-center justify-start gap-1.5"
       >
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="font-sans ui-text-sm flex h-6 max-w-32 items-center justify-center gap-1.5 rounded-full px-2"
-          >
-            {item.icon ? (
-              <span className="flex size-4 shrink-0 items-center justify-center">{item.icon}</span>
-            ) : null}
-            <span className="whitespace-nowrap">{item.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {appearance === "grouped" && isCompact && activeItem ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button
-                type="button"
-                className="font-sans ui-text-sm mx-auto flex h-7 max-w-full items-center justify-center gap-1.5 rounded-full bg-accent px-2 text-foreground outline-none transition-colors hover:bg-accent/80"
-              />
-            }
-          >
-            {activeItem.icon ? (
-              <span className="flex size-4 shrink-0 items-center justify-center">
-                {activeItem.icon}
-              </span>
-            ) : null}
-            <span className="min-w-0 truncate whitespace-nowrap">{activeItem.label}</span>
-            <CaretDown className="size-3.5 shrink-0 text-subtle-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="!min-w-0 w-max max-w-[min(220px,calc(100vw-16px))] rounded-xl p-1"
-          >
-            <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
-              {items.map((item) => (
-                <DropdownMenuRadioItem
-                  key={item.id}
-                  value={item.id}
-                  disabled={item.disabled}
-                  closeOnClick
-                  className="h-7 min-w-32 justify-start gap-2 rounded-lg py-0"
-                >
+        {items.map((item) => {
+          const selected = item.id === value;
+          const button = (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              aria-label={item.label}
+              disabled={item.disabled}
+              className={cn(
+                "font-sans ui-text-sm flex h-6 min-w-0 max-w-32 shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 outline-none shadow-[var(--shadow-card)] transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--app-duration-fast)] ease-[var(--app-ease-smooth)]",
+                selected
+                  ? "border-border/60 bg-accent/85 text-foreground"
+                  : "border-border/45 bg-surface/80 text-subtle-foreground hover:border-border/70 hover:bg-accent/65 hover:text-foreground",
+                item.disabled && "cursor-not-allowed opacity-50",
+              )}
+              onClick={() => onChange(item.id)}
+            >
+              {item.icon ? (
+                <span className="flex size-4 shrink-0 items-center justify-center">
                   {item.icon}
-                  {item.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : (
-        <div
-          role="tablist"
-          className={cn(
-            "flex h-7 w-fit max-w-full select-none items-center rounded-full",
-            appearance === "grouped"
-              ? "mx-auto justify-center gap-1 bg-surface/45 p-0.5"
-              : "w-max max-w-none justify-start gap-1.5",
-          )}
-        >
-          {items.map((item) => {
-            const selected = item.id === value;
-            const button = (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                aria-label={item.label}
-                disabled={item.disabled}
-                className={cn(
-                  "font-sans ui-text-sm flex h-6 min-w-0 max-w-32 shrink-0 items-center justify-center gap-1.5 rounded-full px-2 outline-none transition-[background-color,border-color,color,width,padding]",
-                  appearance === "pills" && "border",
-                  selected
-                    ? appearance === "pills"
-                      ? "border-border bg-accent text-foreground"
-                      : "bg-accent text-foreground"
-                    : appearance === "pills"
-                      ? "border-border/70 bg-background text-subtle-foreground hover:bg-accent/70 hover:text-foreground"
-                      : "text-subtle-foreground hover:bg-accent/70 hover:text-foreground",
-                  item.disabled && "cursor-not-allowed opacity-50",
-                )}
-                onClick={() => onChange(item.id)}
-              >
-                {item.icon ? (
-                  <span className="flex size-4 shrink-0 items-center justify-center">
-                    {item.icon}
-                  </span>
-                ) : null}
-                <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
-              </button>
-            );
+                </span>
+              ) : null}
+              <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
+            </button>
+          );
 
-            return (
-              <Tooltip key={item.id} content={item.label} side="bottom">
-                {button}
-              </Tooltip>
-            );
-          })}
-        </div>
-      )}
+          return (
+            <Tooltip key={item.id} content={item.label} side="bottom">
+              {button}
+            </Tooltip>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -80,9 +80,6 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  [data-title-bar-project-tabs="true"]
-  [role="tab"],
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-title-project-add-button {
   border-color: var(--athas-glass-control-border) !important;
   background: var(--athas-glass-control-bg) !important;
@@ -92,29 +89,11 @@ html:is(.platform-macos, .platform-windows):not([data-window-transparency="disab
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  [data-title-bar-project-tabs="true"]
-  [role="tab"][data-active="true"] {
-  background: var(--athas-glass-control-active-bg) !important;
-  color: var(--athas-chrome-icon-active-color) !important;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-title-project-surface:hover,
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  [data-title-bar-project-tabs="true"]
-  [role="tab"]:hover,
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
   .athas-title-project-add-button:hover {
   background: var(--athas-chrome-control-hover-bg) !important;
   color: var(--athas-chrome-icon-hover-color) !important;
-}
-
-html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])
-  .athas-title-project-tabs-list {
-  border-color: var(--athas-glass-control-border) !important;
-  background: color-mix(in srgb, var(--athas-glass-control-bg) 82%, transparent) !important;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 
 html:is(.platform-macos, .platform-windows):not([data-window-transparency="disabled"])

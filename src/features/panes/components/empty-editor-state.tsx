@@ -8,6 +8,7 @@ import {
 } from "@/ui/icons";
 import { useCallback } from "react";
 import { AgentLaunchInput } from "@/features/ai/components/agent-launcher";
+import { useNewAgentAction } from "@/features/ai/hooks/use-new-agent-action";
 import { useBufferStore } from "@/features/editor/stores/buffer.store";
 import { readFileContent } from "@/features/file-system/controllers/file-operations";
 import { openFile } from "@/features/file-system/controllers/platform";
@@ -39,8 +40,7 @@ const quickActionIconClassName =
   "flex size-7 items-center justify-center rounded-md text-subtle-foreground group-hover:text-foreground";
 
 export function EmptyEditorState() {
-  const { openTerminalBuffer, openAgentBuffer, openWebViewerBuffer, openBuffer } =
-    useBufferStore.use.actions();
+  const { openTerminalBuffer, openWebViewerBuffer, openBuffer } = useBufferStore.use.actions();
   const handleOpenFolder = useFileSystemStore.use.handleOpenFolder();
   const webViewerEnabled = useSettingsStore((state) => state.settings.coreFeatures.webViewer);
 
@@ -48,9 +48,7 @@ export function EmptyEditorState() {
     openTerminalBuffer();
   }, [openTerminalBuffer]);
 
-  const handleOpenAgent = useCallback(() => {
-    openAgentBuffer();
-  }, [openAgentBuffer]);
+  const handleOpenAgent = useNewAgentAction();
 
   const handleOpenWebViewer = useCallback(() => {
     openWebViewerBuffer("https://");
@@ -117,9 +115,7 @@ export function EmptyEditorState() {
             <EmptyTitle className="ui-text-lg">Where should we begin?</EmptyTitle>
           </EmptyHeader>
 
-          <div className="w-full rounded-xl border border-border/70 bg-surface/16 p-3">
-            <AgentLaunchInput active autoFocus variant="hero" />
-          </div>
+          <AgentLaunchInput active autoFocus />
 
           <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
             {quickActions.map((item) => (

@@ -3,6 +3,7 @@ import {
   ArrowUpIcon as ArrowUp,
   ClockCounterClockwiseIcon as History,
   MagnifyingGlassIcon as Search,
+  PlusIcon as Plus,
   XIcon as X,
 } from "@/ui/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,7 +11,6 @@ import { ProviderIcon } from "@/features/ai/components/icons/provider-icons";
 import { filterChatsByWorkspace } from "@/features/ai/lib/ai-workspace-scope";
 import { useSettingsStore } from "@/features/settings/stores/settings.store";
 import { useProjectStore } from "@/features/window/stores/project.store";
-import { useUIState } from "@/features/window/stores/ui-state.store";
 import { Button } from "@/ui/button";
 import Input, { InlineRenameInput } from "@/ui/input";
 import {
@@ -21,7 +21,7 @@ import {
 import { cn } from "@/utils/cn";
 import { useAIChatStore } from "../../stores/ai-chat.store";
 import ChatHistoryDropdown from "../history/chat-history-dropdown";
-import { AgentSelector } from "../selectors/agent-selector";
+import { useNewAgentAction } from "../../hooks/use-new-agent-action";
 
 function EditableChatTitle({
   title,
@@ -113,7 +113,7 @@ export function ChatHeader({
   const updateChatTitle = useAIChatStore((state) => state.actions.updateChatTitle);
   const setChatArchived = useAIChatStore((state) => state.actions.setChatArchived);
 
-  const { openSettingsDialog } = useUIState();
+  const handleNewAgent = useNewAgentAction();
   const effectiveChatId = chatId ?? currentChatId;
   const currentChat = chats.find((chat) => chat.id === effectiveChatId);
   const currentAgentId = currentChat?.agentId ?? selectedAgentId;
@@ -185,11 +185,17 @@ export function ChatHeader({
             <History />
           </Button>
 
-          <AgentSelector
-            variant="header"
-            selectedAgentId={currentAgentId}
-            onOpenSettings={() => openSettingsDialog("ai")}
-          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={handleNewAgent}
+            tooltip="New Agent"
+            tooltipSide="bottom"
+            aria-label="New Agent"
+          >
+            <Plus />
+          </Button>
         </div>
       </div>
 
