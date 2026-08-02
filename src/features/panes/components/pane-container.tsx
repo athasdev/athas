@@ -231,8 +231,8 @@ function BufferPreviewCard({ buffer }: { buffer: PaneRenderBuffer }) {
 }
 
 function PullRequestPreviewCard({ buffer }: { buffer: PullRequestContent }) {
-  const selectedPRDetails = useGitHubStore((state) => state.selectedPRDetails);
-  const selectedPRComments = useGitHubStore((state) => state.selectedPRComments);
+  const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
+  const selectedPRComments = useGitHubStore.use.selectedPRComments();
   const details = selectedPRDetails?.number === buffer.prNumber ? selectedPRDetails : null;
   const fileCount = details ? details.changedFiles : null;
   const commentCount = details ? selectedPRComments.length : null;

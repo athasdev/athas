@@ -155,7 +155,7 @@ const CommandPaletteContent = ({ commandPaletteInitialView }: CommandPaletteCont
   const lspStatus = useLspStore.use.lspStatus();
   const rootFolderPath = useFileSystemStore((state) => state.rootFolderPath);
   const activeRepoPath = useRepositoryStore.use.activeRepoPath();
-  const { checkAuth: checkGitHubAuth } = useGitHubStore().actions;
+  const { checkAuth: checkGitHubAuth } = useGitHubStore.use.actions();
   const extensionCommands = useUIExtensionStore.use.commands();
   const extensionViews = useCommandPaletteViews();
   const { showToast } = useToast();

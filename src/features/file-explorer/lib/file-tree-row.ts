@@ -10,5 +10,3 @@ export function getFileTreeRowHeight(uiFontSize: number): number {
 
   return Number(height.toFixed(2));
 }
-
-export const FILE_TREE_ROW_CLASS_NAME = "gap-1.5 px-1.5 py-1 ui-text-sm leading-[1.35]";

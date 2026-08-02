@@ -49,7 +49,7 @@ export const GitFileItem = ({
     <SidebarTreeRow
       depth={indentLevel}
       className={cn(
-        "group grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-[1.35]",
+        "group grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center overflow-hidden leading-row",
         className,
       )}
       onClick={onClick}
@@ -78,7 +78,7 @@ export const GitFileItem = ({
       >
         <span
           className={cn(
-            "block min-w-0 truncate whitespace-nowrap leading-[1.35]",
+            "block min-w-0 truncate whitespace-nowrap leading-row",
             showDirectory ? "shrink-0 basis-auto max-w-[45%]" : "flex-1",
             "text-foreground",
           )}
@@ -86,7 +86,7 @@ export const GitFileItem = ({
           {fileName}
         </span>
         {showDirectory && directory && (
-          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-[1.35] text-subtle-foreground/80">
+          <span className="ui-text-sm block min-w-0 flex-1 truncate whitespace-nowrap leading-row text-subtle-foreground/80">
             {directory}
           </span>
         )}
@@ -95,7 +95,7 @@ export const GitFileItem = ({
         {hasDiffStats && (
           <div
             className={cn(
-              "flex max-w-[4.75rem] shrink-0 items-center justify-end overflow-hidden leading-[1.35] tabular-nums",
+              "flex max-w-[4.75rem] shrink-0 items-center justify-end overflow-hidden leading-row tabular-nums",
               compactGitStatusBadges ? "ui-text-sm gap-0.5" : "ui-text-sm gap-1",
             )}
           >

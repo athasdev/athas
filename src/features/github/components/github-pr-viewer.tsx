@@ -97,19 +97,17 @@ const GitHubPRViewer = memo(({ prNumber }: GitHubPRViewerProps) => {
     );
     return buffer?.type === "pullRequest" ? buffer : undefined;
   });
-  const {
-    selectedPRDetails,
-    selectedPRDiff,
-    selectedPRFiles,
-    selectedPRComments,
-    isLoadingDetails,
-    isLoadingContent,
-    detailsError,
-    contentError,
-  } = useGitHubStore();
+  const selectedPRDetails = useGitHubStore.use.selectedPRDetails();
+  const selectedPRDiff = useGitHubStore.use.selectedPRDiff();
+  const selectedPRFiles = useGitHubStore.use.selectedPRFiles();
+  const selectedPRComments = useGitHubStore.use.selectedPRComments();
+  const isLoadingDetails = useGitHubStore.use.isLoadingDetails();
+  const isLoadingContent = useGitHubStore.use.isLoadingContent();
+  const detailsError = useGitHubStore.use.detailsError();
+  const contentError = useGitHubStore.use.contentError();
   const updateBuffer = useBufferStore.use.actions().updateBuffer;
   const { selectPR, fetchPRContent, fetchPRs, openPRInBrowser, checkoutPR } =
-    useGitHubStore().actions;
+    useGitHubStore.use.actions();
   const repoPath = prBuffer?.repoPath ?? selectedRepoPath ?? rootFolderPath;
 
   const [activeTab, setActiveTab] = useState<TabType>(() =>
