@@ -128,13 +128,13 @@ async fn run_request(request: SidecarRequest) -> Result<Value, String> {
       return Err("Database sidecar command is required".to_string());
    }
 
-   if let Some(command_provider_id) = provider_id_for_command(command)? {
-      if command_provider_id != provider_id {
-         return Err(format!(
-            "Database command {} does not belong to provider {}",
-            command, provider_id
-         ));
-      }
+   if let Some(command_provider_id) = provider_id_for_command(command)?
+      && command_provider_id != provider_id
+   {
+      return Err(format!(
+         "Database command {} does not belong to provider {}",
+         command, provider_id
+      ));
    }
 
    #[cfg(test)]
