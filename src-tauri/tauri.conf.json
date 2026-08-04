@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Athas",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "identifier": "com.code.athas",
   "build": {
     "beforeDevCommand": "bunx vp dev",
@@ -67,7 +67,7 @@
     "linux": {},
     "windows": {
       "wix": {
-        "version": "0.10.900"
+        "version": "0.11.900"
       }
     }
   },
