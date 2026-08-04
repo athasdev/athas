@@ -40,8 +40,9 @@ export class OpenRouterProvider extends AIProvider {
   buildHeaders(apiKey?: string): ProviderHeaders {
     const headers: ProviderHeaders = {
       "Content-Type": "application/json",
+      Accept: "text/event-stream, application/json",
       "HTTP-Referer": "https://localhost",
-      "X-Title": "Code Editor",
+      "X-Title": "Athas",
     };
 
     if (apiKey) {
@@ -55,7 +56,7 @@ export class OpenRouterProvider extends AIProvider {
     return {
       model: request.modelId,
       messages: request.messages,
-      max_tokens: request.maxTokens,
+      max_completion_tokens: request.maxTokens,
       temperature: request.temperature,
       stream: true,
     };

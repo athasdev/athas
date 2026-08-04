@@ -19,6 +19,7 @@ import { isOllamaCloudUrl } from "@/features/ai/services/providers/ollama-provid
 import { processStreamingResponse } from "@/utils/stream-utils";
 import { getProviderApiToken } from "@/features/ai/services/ai-token-service";
 import { canUseHostedProvider } from "@/features/ai/lib/provider-access";
+import { resolveChatCompletionTokenLimit } from "@/features/ai/lib/chat-completion-budget";
 import {
   getCustomProviderApiToken,
   resolveCustomProviderBaseUrl,
@@ -314,7 +315,7 @@ export const getChatCompletionStream = async (
     const streamRequest = {
       modelId,
       messages,
-      maxTokens: Math.min(1000, Math.floor(model.maxTokens * 0.25)),
+      maxTokens: resolveChatCompletionTokenLimit(model.maxTokens),
       temperature: 0.7,
       apiKey: apiKey || undefined,
     };

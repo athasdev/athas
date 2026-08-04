@@ -12,8 +12,11 @@ interface StreamHandlers {
 interface SSEData {
   // OpenAI/OpenRouter format
   choices?: Array<{
-    delta?: { content?: string };
-    message?: { content?: string };
+    delta?: OpenAIMessageContent;
+    message?: OpenAIMessageContent;
+    text?: unknown;
+    finish_reason?: string | null;
+    error?: SSEError;
   }>;
   error?: SSEError;
   response?: {
@@ -42,10 +45,25 @@ interface SSEError {
   message?: string;
 }
 
+interface OpenAIMessageContent {
+  content?: unknown;
+  refusal?: unknown;
+  reasoning?: unknown;
+  reasoning_details?: unknown;
+  tool_calls?: unknown;
+}
+
 class SSEStreamParser {
   private buffer = "";
   private decoder = new TextDecoder();
   private isComplete = false;
+  private streamFormat: "unknown" | "sse" | "json" = "unknown";
+  private sseDataLines: string[] = [];
+  private jsonBuffer = "";
+  private hasVisibleContent = false;
+  private hasReasoning = false;
+  private hasToolCalls = false;
+  private finishReason: string | null = null;
   private v0Content: unknown[] = [];
   private v0PlainText = "";
   private v0LastChatSummary = "";
@@ -67,22 +85,25 @@ class SSEStreamParser {
           break;
         }
 
-        // Decode the chunk and add to buffer
         this.buffer += this.decoder.decode(value, { stream: true });
-
-        // Process complete lines
         const lines = this.buffer.split("\n");
-        this.buffer = lines.pop() || ""; // Keep the incomplete line in buffer
+        this.buffer = lines.pop() || "";
 
         for (const line of lines) {
-          this.processLine(line);
+          this.processTransportLine(line);
         }
       }
 
       this.buffer += this.decoder.decode();
-      if (this.buffer.trim()) {
-        this.processLine(this.buffer);
-        this.buffer = "";
+      if (this.buffer) {
+        this.processTransportLine(this.buffer);
+      }
+      this.buffer = "";
+
+      if (this.streamFormat === "sse") {
+        this.dispatchSSEEvent();
+      } else if (this.streamFormat === "json") {
+        this.dispatchJSONBuffer(true);
       }
 
       this.complete();
@@ -94,99 +115,167 @@ class SSEStreamParser {
     }
   }
 
-  private processLine(line: string): void {
+  private processTransportLine(line: string): void {
     if (this.isComplete) return;
 
-    const trimmedLine = line.trim();
+    const normalizedLine = line.endsWith("\r") ? line.slice(0, -1) : line;
+    const trimmedLine = normalizedLine.trim();
 
-    if (trimmedLine === "") return;
-    // Skip SSE event type lines (e.g. "event: content_block_delta")
-    if (trimmedLine.startsWith("event:")) return;
-    const jsonPayload = trimmedLine.startsWith("data:")
-      ? trimmedLine.slice(5).trimStart()
-      : trimmedLine.startsWith("{")
-        ? trimmedLine
-        : null;
+    if (this.streamFormat === "unknown") {
+      if (!trimmedLine) return;
+      this.streamFormat = isSSEField(trimmedLine) ? "sse" : "json";
+    }
+
+    if (this.streamFormat === "json") {
+      this.jsonBuffer += `${normalizedLine}\n`;
+      this.dispatchJSONBuffer(false);
+      return;
+    }
+
+    if (!trimmedLine) {
+      this.dispatchSSEEvent();
+      return;
+    }
+    if (trimmedLine.startsWith(":")) return;
+    if (trimmedLine.startsWith("data:")) {
+      this.sseDataLines.push(trimmedLine.slice(5).trimStart());
+    }
+  }
+
+  private dispatchSSEEvent(): void {
+    if (this.isComplete || this.sseDataLines.length === 0) return;
+    const payload = this.sseDataLines.join("\n");
+    this.sseDataLines = [];
+    this.processPayloadText(payload);
+  }
+
+  private dispatchJSONBuffer(isFinal: boolean): void {
+    if (this.isComplete || !this.jsonBuffer.trim()) return;
+
+    try {
+      const payload = JSON.parse(this.jsonBuffer) as unknown;
+      this.jsonBuffer = "";
+      this.processPayload(payload);
+    } catch (parseError) {
+      if (!isFinal) return;
+      console.warn("Failed to parse streaming JSON:", parseError);
+      this.fail("The provider returned a malformed JSON response.");
+    }
+  }
+
+  private processPayloadText(jsonPayload: string): void {
+    if (this.isComplete) return;
+    if (!jsonPayload.trim()) return;
 
     if (jsonPayload === "[DONE]") {
       this.complete();
       return;
     }
 
-    if (jsonPayload) {
-      try {
-        const data = JSON.parse(jsonPayload) as SSEData;
-
-        const streamError = data.error || data.response?.error;
-        if (streamError) {
-          const code = streamError.code ?? "unknown";
-          const message = streamError.message?.trim();
-          this.fail(
-            `Streaming API error: ${code}${message ? ` ${message}` : ""}|||${JSON.stringify(streamError)}`,
-          );
-          return;
-        }
-
-        // Handle different response formats
-        let content = "";
-
-        if (data.type === "connected") {
-          return;
-        }
-        if (data.type === "done") {
-          this.complete();
-          return;
-        }
-        if (data.object?.startsWith("chat")) {
-          const chatSummary = formatV0ChatSummary(data);
-          if (chatSummary && chatSummary !== this.v0LastChatSummary) {
-            this.v0LastChatSummary = chatSummary;
-            this.handlers.onChunk(`${this.v0PlainText ? "\n\n" : ""}${chatSummary}`);
-          }
-          if (isTerminalV0ChatEvent(data)) {
-            this.complete();
-          }
-          return;
-        }
-
-        // OpenAI/OpenRouter format
-        if (data.choices?.[0]) {
-          const choice = data.choices[0];
-          if (choice.delta?.content) {
-            content = choice.delta.content;
-          } else if (choice.message?.content) {
-            content = choice.message.content;
-          }
-        }
-        // Anthropic format: content_block_delta with delta.text
-        else if (data.type === "content_block_delta" && data.delta?.text) {
-          content = data.delta.text;
-        }
-        // Gemini format
-        else if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          content = data.candidates[0].content.parts[0].text;
-        }
-        // v0 Platform API format: jsondiffpatch deltas over message binary content.
-        else if (data.delta) {
-          this.v0Content = applyV0Delta(this.v0Content, data.delta);
-          const nextText = extractV0PlainText(this.v0Content);
-          content = nextText.startsWith(this.v0PlainText)
-            ? nextText.slice(this.v0PlainText.length)
-            : nextText;
-          this.v0PlainText = nextText;
-        }
-
-        if (content) {
-          this.handlers.onChunk(content);
-        }
-      } catch (parseError) {
-        console.warn("Failed to parse SSE data:", parseError, "Raw data:", trimmedLine);
-      }
+    try {
+      this.processPayload(JSON.parse(jsonPayload) as unknown);
+    } catch (parseError) {
+      console.warn("Failed to parse SSE data:", parseError, "Raw data:", jsonPayload);
+      this.fail("The provider returned a malformed streaming event.");
     }
+  }
+
+  private processPayload(payload: unknown): void {
+    if (this.isComplete) return;
+
+    if (Array.isArray(payload)) {
+      for (const item of payload) {
+        this.processPayload(item);
+      }
+      return;
+    }
+    if (!isRecord(payload)) return;
+
+    const data = payload as SSEData;
+
+    const firstChoice = data.choices?.[0];
+    const streamError = data.error || data.response?.error || firstChoice?.error;
+    if (streamError) {
+      const code = streamError.code ?? "unknown";
+      const message = streamError.message?.trim();
+      this.fail(
+        `Streaming API error: ${code}${message ? ` ${message}` : ""}|||${JSON.stringify(streamError)}`,
+      );
+      return;
+    }
+
+    let content = "";
+
+    if (data.type === "connected") return;
+    if (data.type === "done") {
+      this.complete();
+      return;
+    }
+    if (data.object === "chat") {
+      const chatSummary = formatV0ChatSummary(data);
+      if (chatSummary && chatSummary !== this.v0LastChatSummary) {
+        this.v0LastChatSummary = chatSummary;
+        this.emitContent(`${this.v0PlainText ? "\n\n" : ""}${chatSummary}`);
+      }
+      if (isTerminalV0ChatEvent(data)) {
+        this.complete();
+      }
+      return;
+    }
+
+    if (firstChoice) {
+      const message = firstChoice.delta || firstChoice.message;
+      content = extractVisibleMessageText(message) || extractTextContent(firstChoice.text);
+      this.hasReasoning ||= hasResponseValue(message?.reasoning, message?.reasoning_details);
+      this.hasToolCalls ||= hasResponseValue(message?.tool_calls);
+      this.finishReason = firstChoice.finish_reason ?? this.finishReason;
+      if (this.finishReason === "error") {
+        this.fail("The provider ended the stream with an unspecified generation error.");
+        return;
+      }
+    } else if (data.type === "content_block_delta" && data.delta?.text) {
+      content = data.delta.text;
+    } else if (data.candidates?.[0]?.content?.parts) {
+      content = data.candidates[0].content.parts
+        .map((part) => extractTextContent(part.text))
+        .join("");
+    } else if (data.delta) {
+      this.v0Content = applyV0Delta(this.v0Content, data.delta);
+      const nextText = extractV0PlainText(this.v0Content);
+      content = nextText.startsWith(this.v0PlainText)
+        ? nextText.slice(this.v0PlainText.length)
+        : nextText;
+      this.v0PlainText = nextText;
+    }
+
+    if (content) {
+      this.emitContent(content);
+    }
+  }
+
+  private emitContent(content: string): void {
+    this.hasVisibleContent ||= Boolean(content.trim());
+    this.handlers.onChunk(content);
   }
 
   private complete(): void {
     if (this.isComplete) return;
+
+    if (!this.hasVisibleContent && this.finishReason === "length") {
+      this.fail(
+        "The model reached its completion token limit before producing visible answer text.",
+      );
+      return;
+    }
+    if (!this.hasVisibleContent && this.hasToolCalls) {
+      this.fail("The provider returned a tool call that Athas did not request or cannot execute.");
+      return;
+    }
+    if (!this.hasVisibleContent && this.hasReasoning) {
+      this.fail("The model returned reasoning data but no visible answer text.");
+      return;
+    }
+
     this.isComplete = true;
     this.handlers.onComplete();
   }
@@ -196,6 +285,34 @@ class SSEStreamParser {
     this.isComplete = true;
     this.handlers.onError(error);
   }
+}
+
+function isSSEField(line: string): boolean {
+  return line.startsWith(":") || /^(data|event|id|retry):/.test(line);
+}
+
+function extractVisibleMessageText(message: OpenAIMessageContent | undefined): string {
+  if (!message) return "";
+  return extractTextContent(message.content) || extractTextContent(message.refusal);
+}
+
+function extractTextContent(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(extractTextContent).join("");
+  if (!isRecord(value)) return "";
+
+  if (typeof value.text === "string") return value.text;
+  if (isRecord(value.text) && typeof value.text.value === "string") return value.text.value;
+  if (typeof value.content === "string") return value.content;
+  return "";
+}
+
+function hasResponseValue(...values: unknown[]): boolean {
+  return values.some((value) => {
+    if (typeof value === "string") return Boolean(value.trim());
+    if (Array.isArray(value)) return value.length > 0;
+    return isRecord(value) && Object.keys(value).length > 0;
+  });
 }
 
 function applyV0Delta(currentValue: unknown, delta: unknown): unknown[] {

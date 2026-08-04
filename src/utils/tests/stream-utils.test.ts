@@ -151,6 +151,27 @@ describe("processStreamingResponse", () => {
     expect(completeCount).toBe(0);
   });
 
+  it("does not mistake OpenRouter chat completion chunks for v0 chat metadata", async () => {
+    const chunks: string[] = [];
+
+    await processStreamingResponse(
+      streamResponse([
+        `data: ${JSON.stringify({
+          id: "gen-test",
+          object: "chat.completion.chunk",
+          model: "openai/gpt-5.4-mini",
+          choices: [{ index: 0, delta: { content: "OpenRouter response" } }],
+        })}\n\n`,
+        "data: [DONE]\n\n",
+      ]),
+      (chunk) => chunks.push(chunk),
+      () => {},
+      () => {},
+    );
+
+    expect(chunks).toEqual(["OpenRouter response"]);
+  });
+
   it("handles compact SSE events without a trailing newline", async () => {
     const chunks: string[] = [];
     let completeCount = 0;
@@ -179,5 +200,106 @@ describe("processStreamingResponse", () => {
     );
 
     expect(chunks).toEqual(["Buffered response"]);
+  });
+
+  it("joins multi-line SSE data fields and ignores keep-alive comments", async () => {
+    const chunks: string[] = [];
+
+    await processStreamingResponse(
+      streamResponse([
+        ": OPENROUTER PROCESSING\r\n\r\n",
+        'event: message\r\ndata: {"choices":[{"delta":\r\ndata: {"content":"Hello"}}]}\r\n\r\n',
+        "data: [DONE]\r\n\r\n",
+      ]),
+      (chunk) => chunks.push(chunk),
+      () => {},
+      () => {},
+    );
+
+    expect(chunks).toEqual(["Hello"]);
+  });
+
+  it("extracts text and refusal strings from structured OpenAI content", async () => {
+    const chunks: string[] = [];
+
+    await processStreamingResponse(
+      streamResponse([
+        [
+          "data: ",
+          JSON.stringify({
+            choices: [
+              {
+                delta: {
+                  content: [
+                    { type: "text", text: "Structured " },
+                    { type: "output_text", text: { value: "response" } },
+                  ],
+                },
+              },
+            ],
+          }),
+          "\n\n",
+        ].join(""),
+        `data: ${JSON.stringify({ choices: [{ delta: { refusal: "Cannot comply." } }] })}\n\n`,
+        "data: [DONE]\n\n",
+      ]),
+      (chunk) => chunks.push(chunk),
+      () => {},
+      () => {},
+    );
+
+    expect(chunks).toEqual(["Structured response", "Cannot comply."]);
+  });
+
+  it("reports a token-limited reasoning-only response instead of completing empty", async () => {
+    const errors: string[] = [];
+    let completeCount = 0;
+
+    await processStreamingResponse(
+      streamResponse([
+        `data: ${JSON.stringify({
+          choices: [
+            {
+              delta: {
+                reasoning_details: [{ type: "reasoning.text", text: "Working" }],
+              },
+            },
+          ],
+        })}\n\n`,
+        `data: ${JSON.stringify({
+          choices: [{ delta: { content: "" }, finish_reason: "length" }],
+        })}\n\n`,
+        "data: [DONE]\n\n",
+      ]),
+      () => {},
+      () => {
+        completeCount += 1;
+      },
+      (error) => errors.push(error),
+    );
+
+    expect(errors).toEqual([
+      "The model reached its completion token limit before producing visible answer text.",
+    ]);
+    expect(completeCount).toBe(0);
+  });
+
+  it("parses a pretty-printed JSON response body", async () => {
+    const chunks: string[] = [];
+
+    await processStreamingResponse(
+      streamResponse([
+        "{\n",
+        '  "choices": [{\n',
+        '    "message": { "content": "Pretty response" }\n',
+        "  }]\n",
+        "}\n",
+      ]),
+      (chunk) => chunks.push(chunk),
+      () => {},
+      () => {},
+    );
+
+    expect(chunks).toEqual(["Pretty response"]);
   });
 });
